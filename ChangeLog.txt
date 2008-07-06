@@ -1,0 +1,4 @@
+- Created NameServer project
+- Created FileSystemEntry, File and Directory classes to represent the file system namespace.
+- Added unit tests for those classes.
+- Set up preliminary log4net configuration.
