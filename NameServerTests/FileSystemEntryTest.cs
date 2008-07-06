@@ -72,7 +72,7 @@ namespace NameServerTests
         public void DateCreatedTest()
         {
             DateTime expected = DateTime.Now;
-            FileSystemEntry target = new File("testname", expected);
+            FileSystemEntry target = new File(null, "testname", expected);
             Assert.AreEqual(target.DateCreated, expected);
         }
 
@@ -83,12 +83,33 @@ namespace NameServerTests
         public void NameTest()
         {
             string expected = "testname";
-            FileSystemEntry target = new File(expected, DateTime.Now);
+            FileSystemEntry target = new File(null, expected, DateTime.Now);
 
             Assert.AreEqual(target.Name, expected);
             expected = "newname";
             target.Name = expected;
             Assert.AreEqual(target.Name, expected);
+        }
+
+        [TestMethod]
+        public void ParentTest()
+        {
+            Directory parent = new Directory(null, "directory", DateTime.Now);
+            Assert.IsNull(parent.Parent);
+            File target = new File(parent, "file", DateTime.Now);
+            Assert.AreEqual(parent, target.Parent);
+            Assert.AreEqual(target, parent.Children[0]);
+        }
+
+        [TestMethod]
+        public void FullPathTest()
+        {
+            Directory root = new Directory(null, "", DateTime.UtcNow);
+            Assert.AreEqual("/", root.FullPath);
+            Directory dir = new Directory(root, "test", DateTime.UtcNow);
+            Assert.AreEqual("/test", dir.FullPath);
+            File file = new File(dir, "myfile", DateTime.UtcNow);
+            Assert.AreEqual("/test/myfile", file.FullPath);
         }
     }
 }

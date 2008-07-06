@@ -15,10 +15,11 @@ namespace NameServer
         /// <summary>
         /// Initializes a new instance of the <see cref="Directory"/> class.
         /// </summary>
+        /// <param name="parent">The parent of the directory. May be <see langword="null" />.</param>
         /// <param name="name">The name of the directory.</param>
         /// <param name="dateCreated">The date the directory was created.</param>
-        public Directory(string name, DateTime dateCreated)
-            : base(name, dateCreated)
+        public Directory(Directory parent, string name, DateTime dateCreated)
+            : base(parent, name, dateCreated)
         {
         }
 

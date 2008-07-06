@@ -1,18 +1,15 @@
 ﻿using NameServer;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using System;
-using System.Collections.Generic;
-
 namespace NameServerTests
 {
     
     
     /// <summary>
-    ///This is a test class for DirectoryTest and is intended
-    ///to contain all DirectoryTest Unit Tests
+    ///This is a test class for FileSystemTest and is intended
+    ///to contain all FileSystemTest Unit Tests
     ///</summary>
     [TestClass()]
-    public class DirectoryTest
+    public class FileSystemTest
     {
 
 
@@ -66,50 +63,25 @@ namespace NameServerTests
 
 
         /// <summary>
-        ///A test for Children
+        ///A test for CreateDirectory
         ///</summary>
         [TestMethod()]
-        public void ChildrenTest()
+        public void CreateDirectoryTest()
         {
-            Directory target = new Directory(null, "testname", DateTime.Now);
-            Assert.AreEqual(target.Children.Count, 0);
-            File newItem = new File(target, "testfile", DateTime.Now);
-            Assert.AreEqual(target.Children.Count, 1);
-            Assert.AreEqual(target.Children[0], newItem);
+            FileSystem target = new FileSystem(); // TODO: Initialize to an appropriate value
+            string path = string.Empty; // TODO: Initialize to an appropriate value
+            target.CreateDirectory(path);
+            Assert.Inconclusive("A method that does not return a value cannot be verified.");
         }
 
         /// <summary>
-        ///A test for Directory Constructor
+        ///A test for FileSystem Constructor
         ///</summary>
         [TestMethod()]
-        [DeploymentItem("NameServer.exe")]
-        public void DirectoryConstructorTest()
+        public void FileSystemConstructorTest()
         {
-            string name = "testname";
-            DateTime dateCreated = DateTime.Now;
-            Directory target = new Directory(null, name, dateCreated);
-            Assert.AreEqual(target.Name, name);
-            Assert.AreEqual(target.DateCreated, dateCreated);
-            Assert.AreEqual(target.Children.Count, 0);
-            Assert.IsNull(target.Parent);
-        }
-
-        [TestMethod()]
-        [ExpectedException(typeof(System.ArgumentNullException))]
-        public void DirectoryConstructorNullNameTest()
-        {
-            string name = null;
-            DateTime dateCreated = DateTime.Now;
-            Directory target = new Directory(null, name, dateCreated);
-        }
-
-        [TestMethod()]
-        [ExpectedException(typeof(System.ArgumentException))]
-        public void DirectoryConstructorInvalidNameTest()
-        {
-            string name = "he/lo";
-            DateTime dateCreated = DateTime.Now;
-            Directory target = new Directory(null, name, dateCreated);
+            FileSystem target = new FileSystem();
+            Assert.Inconclusive("TODO: Implement code to verify target");
         }
     }
 }

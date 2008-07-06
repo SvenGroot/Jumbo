@@ -52,6 +52,7 @@
   <ItemGroup>
     <Compile Include="DirectoryTest.cs" />
     <Compile Include="FileSystemEntryTest.cs" />
+    <Compile Include="FileSystemTest.cs" />
     <Compile Include="FileTest.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

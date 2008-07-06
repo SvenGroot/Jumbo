@@ -72,9 +72,10 @@ namespace NameServerTests
         {
             string name = "testname";
             DateTime dateCreated = DateTime.Now;
-            File target = new File(name, dateCreated);
+            File target = new File(null, name, dateCreated);
             Assert.AreEqual(target.Name, name);
             Assert.AreEqual(target.DateCreated, dateCreated);
+            Assert.IsNull(target.Parent);
         }
 
         [TestMethod()]
@@ -83,16 +84,16 @@ namespace NameServerTests
         {
             string name = null;
             DateTime dateCreated = DateTime.Now;
-            File target = new File(name, dateCreated);
+            File target = new File(null, name, dateCreated);
         }
 
         [TestMethod()]
         [ExpectedException(typeof(System.ArgumentException))]
-        public void FileConstructorEmptyNameTest()
+        public void FileConstructorInvalidNameTest()
         {
-            string name = string.Empty;
+            string name = "he/lo";
             DateTime dateCreated = DateTime.Now;
-            File target = new File(name, dateCreated);
+            File target = new File(null, name, dateCreated);
         }
     }
 }

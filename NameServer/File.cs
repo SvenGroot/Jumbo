@@ -13,10 +13,11 @@ namespace NameServer
         /// <summary>
         /// Initializes a new instance of the <see cref="File"/> class.
         /// </summary>
+        /// <param name="parent">The parent of the file. May be <see langword="null" />.</param>
         /// <param name="name">The name of the file.</param>
         /// <param name="dateCreated">The date the file was created.</param>
-        public File(string name, DateTime dateCreated)
-            : base(name, dateCreated)
+        public File(Directory parent, string name, DateTime dateCreated)
+            : base(parent, name, dateCreated)
         {
         }
     }
