@@ -92,16 +92,6 @@ namespace NameServerTests
         }
 
         [TestMethod]
-        public void ParentTest()
-        {
-            Directory parent = new Directory(null, "directory", DateTime.Now);
-            Assert.IsNull(parent.Parent);
-            File target = new File(parent, "file", DateTime.Now);
-            Assert.AreEqual(parent, target.Parent);
-            Assert.AreEqual(target, parent.Children[0]);
-        }
-
-        [TestMethod]
         public void FullPathTest()
         {
             Directory root = new Directory(null, "", DateTime.UtcNow);
@@ -111,5 +101,40 @@ namespace NameServerTests
             File file = new File(dir, "myfile", DateTime.UtcNow);
             Assert.AreEqual("/test/myfile", file.FullPath);
         }
+
+        [TestMethod]
+        public void ShallowCloneTest()
+        {
+            /* Create directory structure
+             * /
+             * /child1/
+             * /child1/child2
+             * /child1/child2/child4
+             * /child1/child3
+             * /child1/child3/child5
+             */
+            Directory root = new Directory(null, "", DateTime.UtcNow);
+            Directory child1 = new Directory(root, "child1", DateTime.UtcNow);
+            Directory child2 = new Directory(child1, "child2", DateTime.UtcNow);
+            Directory child3 = new Directory(child1, "child3", DateTime.UtcNow);
+            File child4 = new File(child2, "child4", DateTime.UtcNow);
+            Directory child5 = new Directory(child3, "child5", DateTime.UtcNow);
+
+            Directory clone = (Directory)child1.ShallowClone();
+            Assert.AreEqual("child1", clone.Name);
+            Assert.AreEqual("/child1", clone.FullPath);
+            //Assert.IsNull(clone.Parent);
+            Assert.AreEqual(2, clone.Children.Count);
+            Assert.AreNotEqual(child1.Children, clone.Children);
+            Assert.AreEqual("child2", clone.Children[0].Name);
+            Assert.AreEqual("child3", clone.Children[1].Name);
+            Assert.AreEqual("/child1/child2", clone.Children[0].FullPath);
+            Assert.AreEqual("/child1/child3", clone.Children[1].FullPath);
+            // Check the level below the children wasn't cloned.
+            Assert.AreEqual(0, ((Directory)clone.Children[0]).Children.Count);
+            Assert.AreEqual(0, ((Directory)clone.Children[1]).Children.Count);
+        }
+
+        
     }
 }

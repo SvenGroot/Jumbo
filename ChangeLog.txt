@@ -5,3 +5,11 @@
 
 - Added Parent tracking to FileSystemEntry, and FullPath property.
 - Added FileSystem class, added CreateDirectory function (not yet tested).
+
+- Added single level clone functionality to FileSystemEntry
+- Made FileSystemEntry.Parent private
+- Made FileSystem.CreateDirectory return a clone of the created directory
+- Added FileSystem.GetDirectoryInfo function
+- Added FileSystem unit tests
+- Added FileSystem.CreateFile function.
+- Added EditLog class

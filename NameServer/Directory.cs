@@ -30,5 +30,25 @@ namespace NameServer
         {
             get { return _children; }
         }
+
+        /// <summary>
+        /// Creates a clone of the current entry.
+        /// </summary>
+        /// <param name="levels">The number of levels in the file system hierarchy to clone.</param>
+        /// <returns>A clone of this object.</returns>
+        internal override FileSystemEntry Clone(int levels)
+        {
+            Directory clone = (Directory)base.Clone(levels);
+            clone._children = new List<FileSystemEntry>();
+            if( levels > 1 )
+            {
+                foreach( FileSystemEntry child in Children )
+                {
+                    FileSystemEntry childClone = child.Clone(levels - 1);
+                    clone.Children.Add(childClone);
+                }
+            }
+            return clone;
+        }
     }
 }

@@ -10,6 +10,8 @@ namespace NameServer
     /// </summary>
     abstract class FileSystemEntry
     {
+        private string _fullPath; // Used by cloned objects because they don't have parent set.
+
         /// <summary>
         /// Initializes a new instance of the <see cref="FileSystemEntry"/> class.
         /// </summary>
@@ -46,9 +48,9 @@ namespace NameServer
         public DateTime DateCreated { get; private set; }
 
         /// <summary>
-        /// Gets the parent directory of the file system entry.
+        /// Gets the parent directory of the file system entry. This will be <see langword="null"/> on objects created by <see cref="ShallowClone" />.
         /// </summary>
-        public Directory Parent { get; private set; }
+        private Directory Parent { get; set; }
 
         /// <summary>
         /// Gets the absolute path of the file system entry.
@@ -57,7 +59,9 @@ namespace NameServer
         {
             get
             {
-                if( Parent == null )
+                if( _fullPath != null )
+                    return _fullPath; // An object created by the Clone method will not have the parent set, but it will have this field set.
+                else if( Parent == null )
                     return FileSystem.DirectorySeparator.ToString();
                 else
                 {
@@ -66,6 +70,28 @@ namespace NameServer
                     return path.ToString();
                 }
             }
+        }
+
+        /// <summary>
+        /// Creates a clone that contains the direct children of this entry (if it's a directory), but not their children.
+        /// </summary>
+        /// <returns>A clone of this object.</returns>
+        public FileSystemEntry ShallowClone()
+        {
+            return Clone(2);
+        }
+
+        /// <summary>
+        /// Creates a clone of the current entry.
+        /// </summary>
+        /// <param name="levels">The number of levels in the file system hierarchy to clone.</param>
+        /// <returns>A clone of this object.</returns>
+        internal virtual FileSystemEntry Clone(int levels)
+        {
+            FileSystemEntry clone = (FileSystemEntry)MemberwiseClone();
+            clone.Parent = null;
+            clone._fullPath = FullPath;
+            return clone;
         }
 
         private void BuildPath(StringBuilder path)
