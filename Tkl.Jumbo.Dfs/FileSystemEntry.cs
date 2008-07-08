@@ -3,14 +3,19 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-namespace NameServer
+namespace Tkl.Jumbo.Dfs
 {
     /// <summary>
     /// Represents a file or directory in the distributed file system namespace.
     /// </summary>
-    abstract class FileSystemEntry
+    public abstract class FileSystemEntry
     {
         private string _fullPath; // Used by cloned objects because they don't have parent set.
+
+        /// <summary>
+        /// The character that separates directory names in a path.
+        /// </summary>
+        public const char DirectorySeparator = '/';
 
         /// <summary>
         /// Initializes a new instance of the <see cref="FileSystemEntry"/> class.
@@ -24,7 +29,7 @@ namespace NameServer
         {
             if( name == null )
                 throw new ArgumentNullException("name");
-            if( name.Contains(FileSystem.DirectorySeparator) )
+            if( name.Contains(DirectorySeparator) )
                 throw new ArgumentException("Empty file or directory names are not allowed.", "name");
 
             Name = name;
@@ -62,7 +67,7 @@ namespace NameServer
                 if( _fullPath != null )
                     return _fullPath; // An object created by the Clone method will not have the parent set, but it will have this field set.
                 else if( Parent == null )
-                    return FileSystem.DirectorySeparator.ToString();
+                    return DirectorySeparator.ToString();
                 else
                 {
                     StringBuilder path = new StringBuilder();
@@ -99,7 +104,7 @@ namespace NameServer
             if( Parent != null )
             {
                 Parent.BuildPath(path);
-                path.Append(FileSystem.DirectorySeparator);
+                path.Append(DirectorySeparator);
                 path.Append(Name);
             }
         }

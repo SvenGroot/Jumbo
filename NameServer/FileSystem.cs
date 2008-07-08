@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using Tkl.Jumbo.Dfs;
 
 namespace NameServer
 {
@@ -13,11 +14,6 @@ namespace NameServer
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(FileSystem));
         private Directory _root = new Directory(null, string.Empty, DateTime.UtcNow);
         private EditLog _editLog;
-
-        /// <summary>
-        /// The character that separates directory names in a path.
-        /// </summary>
-        public const char DirectorySeparator = '/';
 
         /// <summary>
         /// Initializes a new instance of the <see cref="FileSystem"/> class.
@@ -178,7 +174,7 @@ namespace NameServer
 
         private static void ExtractDirectoryAndFileName(string path, out string directory, out string name)
         {
-            int index = path.LastIndexOf(DirectorySeparator);
+            int index = path.LastIndexOf(FileSystemEntry.DirectorySeparator);
             if( index == -1 )
                 throw new ArgumentException("Path is not rooted.", "path");
             directory = path.Substring(0, index);
@@ -194,7 +190,7 @@ namespace NameServer
             if( !path.StartsWith("/") )
                 throw new ArgumentException("Path is not an absolute path.", "path");
 
-            string[] components = path.Split(DirectorySeparator);
+            string[] components = path.Split(FileSystemEntry.DirectorySeparator);
 
             lock( _root )
             {
@@ -249,8 +245,8 @@ namespace NameServer
         private string AppendPath(string parent, string child)
         {
             string result = parent;
-            if( !parent.EndsWith(DirectorySeparator.ToString()) )
-                result += DirectorySeparator;
+            if( !parent.EndsWith(FileSystemEntry.DirectorySeparator.ToString()) )
+                result += FileSystemEntry.DirectorySeparator;
             return result + child;
         }
 

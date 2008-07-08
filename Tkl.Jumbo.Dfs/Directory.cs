@@ -3,12 +3,12 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-namespace NameServer
+namespace Tkl.Jumbo.Dfs
 {
     /// <summary>
     /// Represents a directory in the distributed file system namespace.
     /// </summary>
-    class Directory : FileSystemEntry
+    public class Directory : FileSystemEntry
     {
         private List<FileSystemEntry> _children = new List<FileSystemEntry>();
 

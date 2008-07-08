@@ -3,12 +3,12 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-namespace NameServer
+namespace Tkl.Jumbo.Dfs
 {
     /// <summary>
     /// Represents a file in the distributed file system.
     /// </summary>
-    class File : FileSystemEntry 
+    public class File : FileSystemEntry 
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="File"/> class.

@@ -1,6 +1,7 @@
 ﻿using NameServer;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
+using Tkl.Jumbo.Dfs;
 
 namespace NameServerTests
 {

@@ -58,6 +58,12 @@
   <ItemGroup>
     <None Include="App.config" />
   </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Tkl.Jumbo.Dfs\Tkl.Jumbo.Dfs.csproj">
+      <Project>{67D71A3A-4FDA-4136-8423-07A7C1592E65}</Project>
+      <Name>Tkl.Jumbo.Dfs</Name>
+    </ProjectReference>
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
