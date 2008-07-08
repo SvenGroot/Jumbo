@@ -18,19 +18,10 @@ namespace NameServer
         /// <summary>
         /// Initializes a new instance of the <see cref="EditLog"/> class.
         /// </summary>
-        /// <param name="fileSystem">The file system that this class is logging for.</param>
-        /// <param name="replayLog"><see langword="true" /> if you wish to recreate the file system from the log file; <see langword="false" /> if you wish to start a new file system (this erases the old log file, if any).</param>
-        public EditLog(FileSystem fileSystem, bool replayLog)
+        /// <param name="appendLog"><see cref="true"/> to continue an existing log file; <see cref="false"/> to create a new one.</param>
+        public EditLog(bool appendLog)
         {
-            if( fileSystem == null )
-                throw new ArgumentNullException("fileSystem");
-
-            if( replayLog )
-                ReplayLog(fileSystem);
-            else
-                System.IO.File.Delete("EditLog.log");
-
-            _logFile = new StreamWriter("EditLog.log", true);
+            _logFile = new StreamWriter("EditLog.log", appendLog);
         }
 
         /// <summary>
@@ -61,28 +52,37 @@ namespace NameServer
         }
 
         /// <summary>
-        /// Replays the log file and returns the resulting file system.
+        /// Replays the log file.
         /// </summary>
-        private static void ReplayLog(FileSystem fileSystem)
+        public void ReplayLog(FileSystem fileSystem)
         {
-            using( TextReader reader = System.IO.File.OpenText("EditLog.log") )
+            try
             {
-                // TODO: Get the actual root creation time from somewhere.
-                string line;
-                while( (line = reader.ReadLine()) != null )
+                _logFile.Dispose();
+                _logFile = null;
+                using( TextReader reader = System.IO.File.OpenText("EditLog.log") )
                 {
-                    string[] parts = line.Split(':');
-                    FileSystemMutation mutation = (FileSystemMutation)Enum.Parse(typeof(FileSystemMutation), parts[0]);
-                    switch( mutation )
+                    // TODO: Get the actual root creation time from somewhere.
+                    string line;
+                    while( (line = reader.ReadLine()) != null )
                     {
-                    case FileSystemMutation.CreateDirectory:
-                        fileSystem.CreateDirectory(parts[1]);
-                        break;
-                    case FileSystemMutation.CreateFile:
-                        fileSystem.CreateFile(parts[1]);
-                        break;
+                        string[] parts = line.Split(':');
+                        FileSystemMutation mutation = (FileSystemMutation)Enum.Parse(typeof(FileSystemMutation), parts[0]);
+                        switch( mutation )
+                        {
+                        case FileSystemMutation.CreateDirectory:
+                            fileSystem.CreateDirectory(parts[1]);
+                            break;
+                        case FileSystemMutation.CreateFile:
+                            fileSystem.CreateFile(parts[1]);
+                            break;
+                        }
                     }
                 }
+            }
+            finally
+            {
+                _logFile = new StreamWriter("EditLog.log", true);
             }
         }
 

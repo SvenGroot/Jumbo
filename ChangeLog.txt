@@ -15,3 +15,6 @@
 - Added EditLog class
 
 - Added log replaying capability (untested)
+
+- Added tests for log replaying
+- Created Tkl.Jumbo.Dfs library

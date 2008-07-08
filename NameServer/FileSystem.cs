@@ -33,7 +33,9 @@ namespace NameServer
         /// <param name="replayLog"><see langword="true"/> to initialize the file system from an existing log file; <see langword="false" />  to create a new file system.</param>
         public FileSystem(bool replayLog)
         {
-            _editLog = new EditLog(this, replayLog);
+            _editLog = new EditLog(replayLog);
+            if( replayLog )
+                _editLog.ReplayLog(this);
         }
 
         /// <summary>

@@ -405,6 +405,26 @@ namespace NameServerTests
                 }
                 target.GetFileInfo("/test/foo");
             }
-        }    
+        }
+
+        [TestMethod]
+        public void FileSystemConstructorTest()
+        {
+            using( FileSystem target = new FileSystem() )
+            {
+                Assert.AreEqual(0, target.GetDirectoryInfo("/").Children.Count);
+                target.CreateDirectory("/test");
+                target.CreateFile("/test/test2");
+            }
+            long size = new System.IO.FileInfo("EditLog.log").Length;
+            using( FileSystem target = new FileSystem(true) )
+            {
+                Assert.AreEqual(1, target.GetDirectoryInfo("/").Children.Count);
+                Assert.AreEqual(1, target.GetDirectoryInfo("/test").Children.Count);
+                Assert.IsNotNull(target.GetFileInfo("/test/test2"));
+            }
+            // Replaying the log file must not cause the log file to change.
+            Assert.AreEqual(size, new System.IO.FileInfo("EditLog.log").Length);
+        }
     }
 }
