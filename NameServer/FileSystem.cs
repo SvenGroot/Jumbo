@@ -9,7 +9,7 @@ namespace NameServer
     /// <summary>
     /// Manages the file system namespace.
     /// </summary>
-    class FileSystem : IDisposable
+    class FileSystem
     {
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(FileSystem));
         private Directory _root = new Directory(null, string.Empty, DateTime.UtcNow);
@@ -29,9 +29,14 @@ namespace NameServer
         /// <param name="replayLog"><see langword="true"/> to initialize the file system from an existing log file; <see langword="false" />  to create a new file system.</param>
         public FileSystem(bool replayLog)
         {
+            _log.Info("++++ FileSystem created.");
             _editLog = new EditLog(replayLog);
             if( replayLog )
+            {
+                _log.Info("Replaying log file.");
                 _editLog.ReplayLog(this);
+                _log.Info("Replaying log file finished.");
+            }
         }
 
         /// <summary>
@@ -53,9 +58,31 @@ namespace NameServer
         /// <exception cref="ArgumentException"><paramref name="path"/> is not an absolute path, contains an empty component, or contains a file name.</exception>
         public Directory CreateDirectory(string path)
         {
+            return CreateDirectory(path, DateTime.UtcNow);
+        }
+
+        /// <summary>
+        /// Creates a new directory in the file system.
+        /// </summary>
+        /// <param name="path">The full path of the new directory.</param>
+        /// <returns>A <see cref="Directory"/> object representing the newly created directory.</returns>
+        /// <remarks>
+        /// <para>
+        ///   If the directory already existed, no changes are made and the existing directory is returned.
+        /// </para>
+        /// <para>
+        ///   The returned <see cref="Directory"/> object is a shallow copy and cannot be used to modify the internal
+        ///   state of the file system. It contains information only about the direct children of the directory, not any
+        ///   further descendants.
+        /// </para>
+        /// </remarks>
+        /// <exception cref="ArgumentNullException"><paramref name="path"/> is <see langword="null" />.</exception>
+        /// <exception cref="ArgumentException"><paramref name="path"/> is not an absolute path, contains an empty component, or contains a file name.</exception>
+        public Directory CreateDirectory(string path, DateTime dateCreated)
+        {
             _log.DebugFormat("CreateDirectory: path = \"{0}\"", path);
 
-            Directory result = GetDirectoryInternal(path, true);
+            Directory result = GetDirectoryInternal(path, true, dateCreated);
             if( result != null )
                 result = (Directory)result.ShallowClone();
             return result;
@@ -77,7 +104,7 @@ namespace NameServer
         {
             _log.DebugFormat("GetDirectory: path = \"{0}\"", path);
 
-            Directory result = GetDirectoryInternal(path, false);
+            Directory result = GetDirectoryInternal(path, false, DateTime.Now);
             if( result != null )
                 result = (Directory)result.ShallowClone();
             return result;
@@ -97,6 +124,23 @@ namespace NameServer
         /// <exception cref="DirectoryNotFoundException"><paramref name="directory"/> does not exist.</exception>
         public File CreateFile(string path)
         {
+            return CreateFile(path, DateTime.UtcNow);
+        }
+
+        /// <summary>
+        /// Creates a new file in the specified directory.
+        /// </summary>
+        /// <param name="path">The full path of the new file.</param>
+        /// <returns>A <see cref="File"/> object referring to the new file.</returns>
+        /// <remarks>
+        ///   The returned <see cref="File"/> object is a shallow copy and cannot be used to modify the internal
+        ///   state of the file system.
+        /// </remarks>
+        /// <exception cref="ArgumentNullException"><paramref name="directory"/> is <see langword="null" />, or <paramref name="name"/> is <see langword="null"/> or an empty string..</exception>
+        /// <exception cref="ArgumentException"><paramref name="directory"/> is not an absolute path, contains an empty component, contains a file name, or <paramref name="name"/> refers to an existing file or directory.</exception>
+        /// <exception cref="DirectoryNotFoundException"><paramref name="directory"/> does not exist.</exception>
+        public File CreateFile(string path, DateTime dateCreated)
+        {
             if( path == null )
                 throw new ArgumentNullException("path");
 
@@ -110,14 +154,14 @@ namespace NameServer
 
             lock( _root )
             {
-                Directory parent = GetDirectoryInternal(directory, false);
+                Directory parent = GetDirectoryInternal(directory, false, DateTime.Now);
                 if( parent == null )
                     throw new System.IO.DirectoryNotFoundException("The specified directory does not exist.");
 
                 if( FindEntry(parent, name) != null )
                     throw new ArgumentException("The specified directory already has a file or directory with the specified name.", "name");
                 
-                return (File)CreateFile(parent, name).ShallowClone();
+                return (File)CreateFile(parent, name, dateCreated).ShallowClone();
             }
         }
 
@@ -148,7 +192,7 @@ namespace NameServer
 
             lock( _root )
             {
-                Directory parent = GetDirectoryInternal(directory, false);
+                Directory parent = GetDirectoryInternal(directory, false, DateTime.Now);
                 if( parent == null )
                     throw new System.IO.DirectoryNotFoundException("The specified directory does not exist.");
 
@@ -157,12 +201,6 @@ namespace NameServer
                     return (File)result.ShallowClone();
                 return null;
             }
-        }
-
-        protected virtual void Dispose(bool disposing)
-        {
-            if( disposing )
-                _editLog.Dispose();
         }
 
         private FileSystemEntry FindEntry(Directory parent, string name)
@@ -183,7 +221,7 @@ namespace NameServer
                 directory = "/";
         }
 
-        private Directory GetDirectoryInternal(string path, bool create)
+        private Directory GetDirectoryInternal(string path, bool create, DateTime creationDate)
         {
             if( path == null )
                 throw new ArgumentNullException("path");
@@ -212,7 +250,7 @@ namespace NameServer
                     if( entry == null )
                     {
                         if( create )
-                            currentDirectory = CreateDirectory(currentDirectory, component);
+                            currentDirectory = CreateDirectory(currentDirectory, component, creationDate);
                         else
                             return null;
                     }
@@ -228,18 +266,18 @@ namespace NameServer
             }
         }
 
-        private Directory CreateDirectory(Directory parent, string name)
+        private Directory CreateDirectory(Directory parent, string name, DateTime dateCreated)
         {
             _log.InfoFormat("Creating directory \"{0}\" inside \"{1}\"", name, parent.FullPath);
-            _editLog.LogMutation(FileSystemMutation.CreateDirectory, AppendPath(parent.FullPath, name));
-            return new Directory(parent, name, DateTime.UtcNow);
+            _editLog.LogMutation(FileSystemMutation.CreateDirectory, AppendPath(parent.FullPath, name), dateCreated);
+            return new Directory(parent, name, dateCreated);
         }
 
-        private File CreateFile(Directory parent, string name)
+        private File CreateFile(Directory parent, string name, DateTime dateCreated)
         {
             _log.InfoFormat("Creating file \"{0}\" inside \"{1}\"", name, parent.FullPath);
-            _editLog.LogMutation(FileSystemMutation.CreateFile, AppendPath(parent.FullPath, name));
-            return new File(parent, name, DateTime.UtcNow);
+            _editLog.LogMutation(FileSystemMutation.CreateFile, AppendPath(parent.FullPath, name), dateCreated);
+            return new File(parent, name, dateCreated);
         }
 
         private string AppendPath(string parent, string child)
@@ -249,14 +287,5 @@ namespace NameServer
                 result += FileSystemEntry.DirectorySeparator;
             return result + child;
         }
-
-        #region IDisposable Members
-
-        public void Dispose()
-        {
-            Dispose(true);
-        }
-
-        #endregion
     }
 }

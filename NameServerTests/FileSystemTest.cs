@@ -5,8 +5,8 @@ using Tkl.Jumbo.Dfs;
 
 namespace NameServerTests
 {
-    
-    
+
+
     /// <summary>
     ///This is a test class for FileSystemTest and is intended
     ///to contain all FileSystemTest Unit Tests
@@ -71,66 +71,58 @@ namespace NameServerTests
         [TestMethod()]
         public void CreateDirectoryTest()
         {
-            using( FileSystem target = new FileSystem() )
-            {
-                string path = "/foo/bar";
-                Directory result = target.CreateDirectory(path);
-                Assert.AreEqual(path, result.FullPath);
-                Assert.AreEqual("bar", result.Name);
-                Assert.AreEqual(0, result.Children.Count);
-                Assert.IsTrue((result.DateCreated - DateTime.UtcNow).TotalSeconds < 1);
-                DateTime oldDate = result.DateCreated;
-                path = "/foo/bar/test";
-                result = target.CreateDirectory(path);
-                Assert.AreEqual(path, result.FullPath);
-                Assert.AreEqual("test", result.Name);
-                Assert.AreEqual(0, result.Children.Count);
-                Assert.IsTrue((result.DateCreated - DateTime.UtcNow).TotalSeconds < 1);
-                // Recreating an old directory should return information about the existing one.
-                path = "/foo/bar";
-                result = target.CreateDirectory(path);
-                Assert.AreEqual(path, result.FullPath);
-                Assert.AreEqual("bar", result.Name);
-                Assert.AreEqual(1, result.Children.Count);
-                Assert.AreEqual(oldDate, result.DateCreated);
-            }
+            FileSystem target = new FileSystem();
+            string path = "/foo/bar";
+            Directory result = target.CreateDirectory(path);
+            Assert.AreEqual(path, result.FullPath);
+            Assert.AreEqual("bar", result.Name);
+            Assert.AreEqual(0, result.Children.Count);
+            Assert.IsTrue((result.DateCreated - DateTime.UtcNow).TotalSeconds < 1);
+            DateTime oldDate = result.DateCreated;
+            path = "/foo/bar/test";
+            result = target.CreateDirectory(path);
+            Assert.AreEqual(path, result.FullPath);
+            Assert.AreEqual("test", result.Name);
+            Assert.AreEqual(0, result.Children.Count);
+            Assert.IsTrue((result.DateCreated - DateTime.UtcNow).TotalSeconds < 1);
+            // Recreating an old directory should return information about the existing one.
+            path = "/foo/bar";
+            result = target.CreateDirectory(path);
+            Assert.AreEqual(path, result.FullPath);
+            Assert.AreEqual("bar", result.Name);
+            Assert.AreEqual(1, result.Children.Count);
+            Assert.AreEqual(oldDate, result.DateCreated);
         }
 
         [TestMethod]
         [ExpectedException(typeof(ArgumentNullException))]
         public void CreateDirectoryPathNullTest()
         {
-            using( FileSystem target = new FileSystem() )
-            {
-                target.CreateDirectory(null);
-            }
+            FileSystem target = new FileSystem();
+            target.CreateDirectory(null);
         }
 
         [TestMethod]
         [ExpectedException(typeof(ArgumentException))]
         public void CreateDirectoryNotRootedTest()
         {
-            using( FileSystem target = new FileSystem() )
-            {
-                target.CreateDirectory("test/foo");
-            }
+            FileSystem target = new FileSystem();
+            target.CreateDirectory("test/foo");
         }
 
         [TestMethod]
         [ExpectedException(typeof(ArgumentException))]
         public void CreateDirectoryEmptyComponentTest()
         {
-            using( FileSystem target = new FileSystem() )
+            FileSystem target = new FileSystem();
+            try
             {
-                try
-                {
-                    target.CreateDirectory("/test//");
-                }
-                catch( ArgumentException )
-                {
-                    Assert.IsNull(target.GetDirectoryInfo("/test"));
-                    throw;
-                }
+                target.CreateDirectory("/test//");
+            }
+            catch( ArgumentException )
+            {
+                Assert.IsNull(target.GetDirectoryInfo("/test"));
+                throw;
             }
         }
 
@@ -138,293 +130,250 @@ namespace NameServerTests
         [ExpectedException(typeof(ArgumentException))]
         public void CreateDirectoryPathContainsFileTest()
         {
-            using( FileSystem target = new FileSystem() )
+            FileSystem target = new FileSystem();
+            try
             {
-                try
-                {
-                    target.CreateFile("/test");
-                }
-                catch( ArgumentException )
-                {
-                    Assert.Fail("Premature exception");
-                }
-                target.CreateDirectory("/test/foo");
+                target.CreateFile("/test");
             }
+            catch( ArgumentException )
+            {
+                Assert.Fail("Premature exception");
+            }
+            target.CreateDirectory("/test/foo");
         }
 
         [TestMethod]
         public void GetDirectoryTest()
         {
-            using( FileSystem target = new FileSystem() )
-            {
-                Directory result = target.GetDirectoryInfo("/");
-                Assert.AreEqual("", result.Name);
-                Assert.AreEqual("/", result.FullPath);
+            FileSystem target = new FileSystem();
+            Directory result = target.GetDirectoryInfo("/");
+            Assert.AreEqual("", result.Name);
+            Assert.AreEqual("/", result.FullPath);
 
-                string path = "/foo/bar/baz";
-                Directory temp = target.CreateDirectory(path);
-                DateTime date = temp.DateCreated;
-                path = "/foo/bar";
-                result = target.GetDirectoryInfo(path);
-                Assert.AreEqual(path, result.FullPath);
-                Assert.AreEqual("bar", result.Name);
-                Assert.AreEqual(1, result.Children.Count);
-                Assert.AreEqual(date, result.DateCreated);
+            string path = "/foo/bar/baz";
+            Directory temp = target.CreateDirectory(path);
+            DateTime date = temp.DateCreated;
+            path = "/foo/bar";
+            result = target.GetDirectoryInfo(path);
+            Assert.AreEqual(path, result.FullPath);
+            Assert.AreEqual("bar", result.Name);
+            Assert.AreEqual(1, result.Children.Count);
+            Assert.AreEqual(date, result.DateCreated);
 
-                Assert.IsNull(target.GetDirectoryInfo("/test"));
-                Assert.IsNull(target.GetDirectoryInfo("/foo/bar/test"));
-            }
+            Assert.IsNull(target.GetDirectoryInfo("/test"));
+            Assert.IsNull(target.GetDirectoryInfo("/foo/bar/test"));
         }
 
         [TestMethod]
         [ExpectedException(typeof(ArgumentNullException))]
         public void GetDirectoryPathNullTest()
         {
-            using( FileSystem target = new FileSystem() )
-            {
-                target.GetDirectoryInfo(null);
-            }
+            FileSystem target = new FileSystem();
+            target.GetDirectoryInfo(null);
         }
 
         [TestMethod]
         [ExpectedException(typeof(ArgumentException))]
         public void GetDirectoryEmptyComponentTest()
         {
-            using( FileSystem target = new FileSystem() )
-            {
-                target.GetDirectoryInfo("/test//");
-            }
+            FileSystem target = new FileSystem();
+            target.GetDirectoryInfo("/test//");
         }
 
         [TestMethod]
         [ExpectedException(typeof(ArgumentException))]
         public void GetDirectoryNotRootedTest()
         {
-            using( FileSystem target = new FileSystem() )
-            {
-                target.GetDirectoryInfo("test/foo");
-            }
+            FileSystem target = new FileSystem();
+            target.GetDirectoryInfo("test/foo");
         }
 
         [TestMethod]
         [ExpectedException(typeof(ArgumentException))]
         public void GetDirectoryPathContainsFileTest()
         {
-            using( FileSystem target = new FileSystem() )
+            FileSystem target = new FileSystem();
+            try
             {
-                try
-                {
-                    target.CreateFile("/test");
-                }
-                catch( ArgumentException )
-                {
-                    Assert.Fail("Premature exception");
-                }
-                target.GetDirectoryInfo("/test/foo");
+                target.CreateFile("/test");
             }
+            catch( ArgumentException )
+            {
+                Assert.Fail("Premature exception");
+            }
+            target.GetDirectoryInfo("/test/foo");
         }
 
         [TestMethod]
         public void CreateFileTest()
         {
-            using( FileSystem target = new FileSystem() )
-            {
-                target.CreateDirectory("/test");
-                File result = target.CreateFile("/test/file");
-                Assert.AreEqual("file", result.Name);
-                Assert.AreEqual("/test/file", result.FullPath);
-                Assert.IsTrue((result.DateCreated - DateTime.UtcNow).TotalSeconds < 1);
-            }
+            FileSystem target = new FileSystem();
+            target.CreateDirectory("/test");
+            File result = target.CreateFile("/test/file");
+            Assert.AreEqual("file", result.Name);
+            Assert.AreEqual("/test/file", result.FullPath);
+            Assert.IsTrue((result.DateCreated - DateTime.UtcNow).TotalSeconds < 1);
         }
 
         [TestMethod]
         [ExpectedException(typeof(ArgumentNullException))]
         public void CreateFilePathNullTest()
         {
-            using( FileSystem target = new FileSystem() )
-            {
-                target.CreateFile(null);
-            }
+            FileSystem target = new FileSystem();
+            target.CreateFile(null);
         }
 
         [TestMethod]
         [ExpectedException(typeof(ArgumentException))]
         public void CreateFileNameEmptyTest()
         {
-            using( FileSystem target = new FileSystem() )
-            {
-                target.CreateFile("/test/");
-            }
+            FileSystem target = new FileSystem();
+            target.CreateFile("/test/");
         }
-        
+
         [TestMethod]
         [ExpectedException(typeof(ArgumentException))]
         public void CreateFileDirectoryNotRootedTest()
         {
-            using( FileSystem target = new FileSystem() )
-            {
-                target.CreateFile("test/foo/test");
-            }
+            FileSystem target = new FileSystem();
+            target.CreateFile("test/foo/test");
         }
 
         [TestMethod]
         [ExpectedException(typeof(ArgumentException))]
         public void CreateFileDirectoryEmptyComponentTest()
         {
-            using( FileSystem target = new FileSystem() )
-            {
-                target.CreateFile("/test//test");
-            }
+            FileSystem target = new FileSystem();
+            target.CreateFile("/test//test");
         }
 
         [TestMethod]
         [ExpectedException(typeof(System.IO.DirectoryNotFoundException))]
         public void CreateFileDirectoryNotFoundTest()
         {
-            using( FileSystem target = new FileSystem() )
-            {
-                target.CreateFile("/test/test");
-            }
+            FileSystem target = new FileSystem();
+            target.CreateFile("/test/test");
         }
 
         [TestMethod]
         [ExpectedException(typeof(ArgumentException))]
         public void CreateFileExistingEntryTest()
         {
-            using( FileSystem target = new FileSystem() )
+            FileSystem target = new FileSystem();
+            try
             {
-                try
-                {
-                    target.CreateFile("/target");
-                }
-                catch( ArgumentException )
-                {
-                    Assert.Fail("Exception thrown too early");
-                }
                 target.CreateFile("/target");
             }
+            catch( ArgumentException )
+            {
+                Assert.Fail("Exception thrown too early");
+            }
+            target.CreateFile("/target");
         }
 
         [TestMethod]
         [ExpectedException(typeof(ArgumentException))]
         public void CreateFilePathContainsFileTest()
         {
-            using( FileSystem target = new FileSystem() )
+            FileSystem target = new FileSystem();
+            try
             {
-                try
-                {
-                    target.CreateFile("/test");
-                }
-                catch( ArgumentException )
-                {
-                    Assert.Fail("Premature exception");
-                }
-                target.CreateFile("/test/foo");
+                target.CreateFile("/test");
             }
+            catch( ArgumentException )
+            {
+                Assert.Fail("Premature exception");
+            }
+            target.CreateFile("/test/foo");
         }
 
         [TestMethod]
         public void GetFileInfoTest()
         {
-            using( FileSystem target = new FileSystem() )
-            {
-                target.CreateDirectory("/test");
-                File file = target.CreateFile("/test/file");
-                DateTime date = file.DateCreated;
-                File result = target.GetFileInfo("/test/file");
-                Assert.AreEqual("file", result.Name);
-                Assert.AreEqual("/test/file", result.FullPath);
-                Assert.AreEqual(date, result.DateCreated);
+            FileSystem target = new FileSystem();
+            target.CreateDirectory("/test");
+            File file = target.CreateFile("/test/file");
+            DateTime date = file.DateCreated;
+            File result = target.GetFileInfo("/test/file");
+            Assert.AreEqual("file", result.Name);
+            Assert.AreEqual("/test/file", result.FullPath);
+            Assert.AreEqual(date, result.DateCreated);
 
-                Assert.IsNull(target.GetFileInfo("/asdf"));
-                Assert.IsNull(target.GetFileInfo("/test"));
-            }
+            Assert.IsNull(target.GetFileInfo("/asdf"));
+            Assert.IsNull(target.GetFileInfo("/test"));
         }
 
         [TestMethod]
         [ExpectedException(typeof(ArgumentNullException))]
         public void GetFileInfoPathNullTest()
         {
-            using( FileSystem target = new FileSystem() )
-            {
-                target.GetFileInfo(null);
-            }
+            FileSystem target = new FileSystem();
+            target.GetFileInfo(null);
         }
 
         [TestMethod]
         [ExpectedException(typeof(ArgumentException))]
         public void GetFileInfoNameEmptyTest()
         {
-            using( FileSystem target = new FileSystem() )
-            {
-                target.GetFileInfo("/test/");
-            }
+            FileSystem target = new FileSystem();
+            target.GetFileInfo("/test/");
         }
 
         [TestMethod]
         [ExpectedException(typeof(ArgumentException))]
         public void GetFileInfoDirectoryNotRootedTest()
         {
-            using( FileSystem target = new FileSystem() )
-            {
-                target.GetFileInfo("test");
-            }
+            FileSystem target = new FileSystem();
+            target.GetFileInfo("test");
         }
 
         [TestMethod]
         [ExpectedException(typeof(ArgumentException))]
         public void GetFileInfoDirectoryEmptyComponentTest()
         {
-            using( FileSystem target = new FileSystem() )
-            {
-                target.GetFileInfo("/test//test");
-            }
+            FileSystem target = new FileSystem();
+            target.GetFileInfo("/test//test");
         }
 
         [TestMethod]
         [ExpectedException(typeof(System.IO.DirectoryNotFoundException))]
         public void GetFileInfoDirectoryNotFoundTest()
         {
-            using( FileSystem target = new FileSystem() )
-            {
-                target.GetFileInfo("/test/test");
-            }
+            FileSystem target = new FileSystem();
+            target.GetFileInfo("/test/test");
         }
 
         [TestMethod]
         [ExpectedException(typeof(ArgumentException))]
         public void GetFileInfoPathContainsFileTest()
         {
-            using( FileSystem target = new FileSystem() )
+            FileSystem target = new FileSystem();
+            try
             {
-                try
-                {
-                    target.CreateFile("/test");
-                }
-                catch( ArgumentException )
-                {
-                    Assert.Fail("Premature exception");
-                }
-                target.GetFileInfo("/test/foo");
+                target.CreateFile("/test");
             }
+            catch( ArgumentException )
+            {
+                Assert.Fail("Premature exception");
+            }
+            target.GetFileInfo("/test/foo");
         }
 
         [TestMethod]
         public void FileSystemConstructorTest()
         {
-            using( FileSystem target = new FileSystem() )
-            {
-                Assert.AreEqual(0, target.GetDirectoryInfo("/").Children.Count);
-                target.CreateDirectory("/test");
-                target.CreateFile("/test/test2");
-            }
+            FileSystem target = new FileSystem();
+            Assert.AreEqual(0, target.GetDirectoryInfo("/").Children.Count);
+            target.CreateDirectory("/test");
+            File f = target.CreateFile("/test/test2");
+            DateTime date = f.DateCreated;
             long size = new System.IO.FileInfo("EditLog.log").Length;
-            using( FileSystem target = new FileSystem(true) )
-            {
-                Assert.AreEqual(1, target.GetDirectoryInfo("/").Children.Count);
-                Assert.AreEqual(1, target.GetDirectoryInfo("/test").Children.Count);
-                Assert.IsNotNull(target.GetFileInfo("/test/test2"));
-            }
+            target = new FileSystem(true);
+            Assert.AreEqual(1, target.GetDirectoryInfo("/").Children.Count);
+            Assert.AreEqual(1, target.GetDirectoryInfo("/test").Children.Count);
+            f = target.GetFileInfo("/test/test2");
+            Assert.IsNotNull(f);
+            Assert.AreEqual(date, f.DateCreated);
             // Replaying the log file must not cause the log file to change.
             Assert.AreEqual(size, new System.IO.FileInfo("EditLog.log").Length);
         }

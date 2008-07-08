@@ -20,3 +20,7 @@
 - Created Tkl.Jumbo.Dfs library
 
 - Made sure everything compiles and runs with the new library layout.
+
+- Added remoting config
+- Added NameServer class
+- Created simple client for ad-hoc testing.

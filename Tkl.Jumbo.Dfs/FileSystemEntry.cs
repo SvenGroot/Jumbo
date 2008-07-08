@@ -8,6 +8,7 @@ namespace Tkl.Jumbo.Dfs
     /// <summary>
     /// Represents a file or directory in the distributed file system namespace.
     /// </summary>
+    [Serializable]
     public abstract class FileSystemEntry
     {
         private string _fullPath; // Used by cloned objects because they don't have parent set.

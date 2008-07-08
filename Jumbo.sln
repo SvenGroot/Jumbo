@@ -21,6 +21,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NameServerTests", "NameServ
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Tkl.Jumbo.Dfs", "Tkl.Jumbo.Dfs\Tkl.Jumbo.Dfs.csproj", "{67D71A3A-4FDA-4136-8423-07A7C1592E65}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ClientSample", "ClientSample\ClientSample.csproj", "{53A1AE9C-A90B-4832-AC6E-1F1B19B24153}"
+EndProject
 Global
 	GlobalSection(TestCaseManagementSettings) = postSolution
 		CategoryFile = Jumbo.vsmdi
@@ -42,6 +44,10 @@ Global
 		{67D71A3A-4FDA-4136-8423-07A7C1592E65}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{67D71A3A-4FDA-4136-8423-07A7C1592E65}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{67D71A3A-4FDA-4136-8423-07A7C1592E65}.Release|Any CPU.Build.0 = Release|Any CPU
+		{53A1AE9C-A90B-4832-AC6E-1F1B19B24153}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{53A1AE9C-A90B-4832-AC6E-1F1B19B24153}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{53A1AE9C-A90B-4832-AC6E-1F1B19B24153}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{53A1AE9C-A90B-4832-AC6E-1F1B19B24153}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

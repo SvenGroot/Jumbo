@@ -1,0 +1,49 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+
+namespace Tkl.Jumbo.Dfs
+{
+    /// <summary>
+    /// Defines the interface used by clients to communicate with the NameServer.
+    /// </summary>
+    public interface IClientProtocol
+    {
+        /// <summary>
+        /// Creates the specified directory in the distributed file system.
+        /// </summary>
+        /// <param name="path">The path of the directory to create.</param>
+        /// <exception cref="ArgumentNullException"><paramref name="path"/> is <see langword="null" />.</exception>
+        /// <exception cref="ArgumentException"><paramref name="path"/> is not an absolute path, contains an empty component, or contains a file name.</exception>
+        void CreateDirectory(string path);
+
+        /// <summary>
+        /// Gets information about a directory in the file system.
+        /// </summary>
+        /// <param name="path">The full path of the directory.</param>
+        /// <returns>A <see cref="Directory"/> object representing the directory.</returns>
+        /// <exception cref="ArgumentNullException"><paramref name="path"/> is <see langword="null" />.</exception>
+        /// <exception cref="ArgumentException"><paramref name="path"/> is not an absolute path, contains an empty component, or contains a file name.</exception>
+        Directory GetDirectoryInfo(string path);
+
+        /// <summary>
+        /// Creates a new file in the specified directory.
+        /// </summary>
+        /// <param name="path">The full path of the new file.</param>
+        /// <exception cref="ArgumentNullException"><paramref name="directory"/> is <see langword="null" />, or <paramref name="name"/> is <see langword="null"/> or an empty string..</exception>
+        /// <exception cref="ArgumentException"><paramref name="directory"/> is not an absolute path, contains an empty component, contains a file name, or <paramref name="name"/> refers to an existing file or directory.</exception>
+        /// <exception cref="DirectoryNotFoundException"><paramref name="directory"/> does not exist.</exception>
+        void CreateFile(string path); // TODO: Once datanodes are working, this needs to return block info (and probably needs a different name too)
+
+        /// <summary>
+        /// Gets information about a file.
+        /// </summary>
+        /// <param name="path">The full path of the file.</param>
+        /// <returns>A <see cref="File"/> object referring to the file.</returns>
+        /// <exception cref="ArgumentNullException"><paramref name="directory"/> is <see langword="null" />, or <paramref name="name"/> is <see langword="null"/> or an empty string..</exception>
+        /// <exception cref="ArgumentException"><paramref name="directory"/> is not an absolute path, contains an empty component, contains a file name, or <paramref name="name"/> refers to an existing file or directory.</exception>
+        /// <exception cref="DirectoryNotFoundException"><paramref name="directory"/> does not exist.</exception>
+        File GetFileInfo(string path);
+    }
+}

@@ -8,6 +8,7 @@ namespace Tkl.Jumbo.Dfs
     /// <summary>
     /// Represents a directory in the distributed file system namespace.
     /// </summary>
+    [Serializable]
     public class Directory : FileSystemEntry
     {
         private List<FileSystemEntry> _children = new List<FileSystemEntry>();

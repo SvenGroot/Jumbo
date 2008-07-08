@@ -8,6 +8,7 @@ namespace Tkl.Jumbo.Dfs
     /// <summary>
     /// Represents a file in the distributed file system.
     /// </summary>
+    [Serializable]
     public class File : FileSystemEntry 
     {
         /// <summary>
