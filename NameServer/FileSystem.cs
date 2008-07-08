@@ -8,15 +8,33 @@ namespace NameServer
     /// <summary>
     /// Manages the file system namespace.
     /// </summary>
-    class FileSystem
+    class FileSystem : IDisposable
     {
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(FileSystem));
         private Directory _root = new Directory(null, string.Empty, DateTime.UtcNow);
+        private EditLog _editLog;
 
         /// <summary>
         /// The character that separates directory names in a path.
         /// </summary>
         public const char DirectorySeparator = '/';
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="FileSystem"/> class.
+        /// </summary>
+        public FileSystem()
+            : this(false)
+        {
+        }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="FileSystem"/> class.
+        /// </summary>
+        /// <param name="replayLog"><see langword="true"/> to initialize the file system from an existing log file; <see langword="false" />  to create a new file system.</param>
+        public FileSystem(bool replayLog)
+        {
+            _editLog = new EditLog(this, replayLog);
+        }
 
         /// <summary>
         /// Creates a new directory in the file system.
@@ -143,6 +161,12 @@ namespace NameServer
             }
         }
 
+        protected virtual void Dispose(bool disposing)
+        {
+            if( disposing )
+                _editLog.Dispose();
+        }
+
         private FileSystemEntry FindEntry(Directory parent, string name)
         {
             return (from child in parent.Children
@@ -209,13 +233,32 @@ namespace NameServer
         private Directory CreateDirectory(Directory parent, string name)
         {
             _log.InfoFormat("Creating directory \"{0}\" inside \"{1}\"", name, parent.FullPath);
+            _editLog.LogMutation(FileSystemMutation.CreateDirectory, AppendPath(parent.FullPath, name));
             return new Directory(parent, name, DateTime.UtcNow);
         }
 
         private File CreateFile(Directory parent, string name)
         {
             _log.InfoFormat("Creating file \"{0}\" inside \"{1}\"", name, parent.FullPath);
+            _editLog.LogMutation(FileSystemMutation.CreateFile, AppendPath(parent.FullPath, name));
             return new File(parent, name, DateTime.UtcNow);
         }
+
+        private string AppendPath(string parent, string child)
+        {
+            string result = parent;
+            if( !parent.EndsWith(DirectorySeparator.ToString()) )
+                result += DirectorySeparator;
+            return result + child;
+        }
+
+        #region IDisposable Members
+
+        public void Dispose()
+        {
+            Dispose(true);
+        }
+
+        #endregion
     }
 }

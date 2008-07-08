@@ -13,3 +13,5 @@
 - Added FileSystem unit tests
 - Added FileSystem.CreateFile function.
 - Added EditLog class
+
+- Added log replaying capability (untested)
