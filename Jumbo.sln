@@ -15,6 +15,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		ChangeLog.txt = ChangeLog.txt
 		Jumbo.vsmdi = Jumbo.vsmdi
 		LocalTestRun.testrunconfig = LocalTestRun.testrunconfig
+		Notes.txt = Notes.txt
 	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NameServerTests", "NameServerTests\NameServerTests.csproj", "{34CCD4B0-E99B-4488-8FBE-6F19D386AE8A}"
