@@ -45,10 +45,14 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="DataServerCommand.cs" />
     <Compile Include="Directory.cs" />
     <Compile Include="File.cs" />
     <Compile Include="FileSystemEntry.cs" />
+    <Compile Include="HeartbeatData.cs" />
+    <Compile Include="HeartbeatResponse.cs" />
     <Compile Include="INameServerClientProtocol.cs" />
+    <Compile Include="INameServerHeartbeatProtocol.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
