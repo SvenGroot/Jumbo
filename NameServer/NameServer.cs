@@ -9,7 +9,7 @@ namespace NameServer
     /// <summary>
     /// RPC server for the NameServer.
     /// </summary>
-    class NameServer : MarshalByRefObject, INameNodeClientProtocol
+    class NameServer : MarshalByRefObject, INameServerClientProtocol
     {
         private FileSystem _fileSystem = new FileSystem(true);
 

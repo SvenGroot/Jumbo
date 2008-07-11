@@ -8,7 +8,7 @@ namespace Tkl.Jumbo.Dfs
     /// <summary>
     /// Defines the interface used by clients to communicate with the NameServer.
     /// </summary>
-    public interface INameNodeClientProtocol
+    public interface INameServerClientProtocol
     {
         /// <summary>
         /// Creates the specified directory in the distributed file system.
