@@ -13,7 +13,7 @@ namespace ClientSample
         {
             RemotingConfiguration.Configure("ClientSample.exe.config", false);
             var types = RemotingConfiguration.GetRegisteredWellKnownClientTypes();
-            IClientProtocol nameServer = (IClientProtocol)Activator.GetObject(types[0].ObjectType, types[0].ObjectUrl);
+            INameNodeClientProtocol nameServer = (INameNodeClientProtocol)Activator.GetObject(types[0].ObjectType, types[0].ObjectUrl);
             //nameServer.CreateDirectory("/test/foo");
             //nameServer.CreateFile("/test/bar");
             File f = nameServer.GetFileInfo("/test/bar");
