@@ -24,3 +24,5 @@
 - Added remoting config
 - Added NameServer class
 - Created simple client for ad-hoc testing.
+
+- Updated to Subversion 1.5, AnkhSVN 2.0
