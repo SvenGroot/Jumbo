@@ -147,19 +147,13 @@ namespace NameServer
 
             _log.DebugFormat("CreateFile: path = \"{0}\"", path);
 
-            string directory;
-            string name;
-            ExtractDirectoryAndFileName(path, out directory, out name);
-            if( string.IsNullOrEmpty(name) )
-                throw new ArgumentException("No file name specified.");
-
             lock( _root )
             {
-                Directory parent = GetDirectoryInternal(directory, false, DateTime.Now);
-                if( parent == null )
-                    throw new System.IO.DirectoryNotFoundException("The specified directory does not exist.");
-
-                if( FindEntry(parent, name) != null )
+                string name;
+                Directory parent;
+                File file;
+                FindFile(path, out name, out parent, out file);
+                if( file != null )
                     throw new ArgumentException("The specified directory already has a file or directory with the specified name.", "name");
                 
                 return (File)CreateFile(parent, name, dateCreated).ShallowClone();
@@ -185,25 +179,57 @@ namespace NameServer
 
             _log.DebugFormat("GetFileInfo: path = \"{0}\"", path);
 
-            string directory;
-            string name;
-            ExtractDirectoryAndFileName(path, out directory, out name);
-            if( string.IsNullOrEmpty(name) )
-                throw new ArgumentException("No file name specified.");
-
             lock( _root )
             {
-                Directory parent = GetDirectoryInternal(directory, false, DateTime.Now);
-                if( parent == null )
-                    throw new System.IO.DirectoryNotFoundException("The specified directory does not exist.");
-
-                File result = FindEntry(parent, name) as File;
+                File result = GetFileInfoInternal(path);
                 if( result != null )
                     return (File)result.ShallowClone();
                 return null;
             }
         }
 
+        public Guid AppendBlock(string path)
+        {
+            lock( _root )
+            {
+                File file = GetFileInfoInternal(path);
+                if( file == null )
+                    throw new System.IO.FileNotFoundException(string.Format("The file '{0}' does not exist.", path));
+                if( file.IsOpenForWriting )
+                    throw new InvalidOperationException(string.Format("The file '{0}' is not open for writing.", path));
+
+                // TODO: Existing blocks must be checked for replication first
+                Guid blockID = Guid.NewGuid();
+                file.Blocks.Add(blockID);
+                return blockID;
+            }
+
+        }
+
+        private File GetFileInfoInternal(string path)
+        {
+            string name;
+            Directory parent;
+            File result;
+            FindFile(path, out name, out parent, out result);
+            return result;
+        }
+
+        private void FindFile(string path, out string name, out Directory parent, out File file)
+        {
+            string directory;
+
+            ExtractDirectoryAndFileName(path, out directory, out name);
+            if( string.IsNullOrEmpty(name) )
+                throw new ArgumentException("No file name specified.");
+
+            parent = GetDirectoryInternal(directory, false, DateTime.Now);
+            if( parent == null )
+                throw new System.IO.DirectoryNotFoundException("The specified directory does not exist.");
+
+            file = (File)FindEntry(parent, name);
+        }
+        
         private FileSystemEntry FindEntry(Directory parent, string name)
         {
             return (from child in parent.Children

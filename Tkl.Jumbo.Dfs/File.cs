@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Collections.ObjectModel;
 
 namespace Tkl.Jumbo.Dfs
 {
@@ -11,6 +12,8 @@ namespace Tkl.Jumbo.Dfs
     [Serializable]
     public class File : FileSystemEntry 
     {
+        private readonly List<Guid> _blocks = new List<Guid>();
+
         /// <summary>
         /// Initializes a new instance of the <see cref="File"/> class.
         /// </summary>
@@ -21,5 +24,14 @@ namespace Tkl.Jumbo.Dfs
             : base(parent, name, dateCreated)
         {
         }
+
+        public IList<Guid> Blocks
+        {
+            get { return _blocks; }
+        }
+
+        public bool IsOpenForWriting { get; set; }
+
+
     }
 }

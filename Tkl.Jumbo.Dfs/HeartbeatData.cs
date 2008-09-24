@@ -12,9 +12,10 @@ namespace Tkl.Jumbo.Dfs
     public class HeartbeatData
     {
         /// <summary>
-        /// Gets or sets the <see cref="Guid"/> identifying the data server.
+        /// Gets or sets what information is included in the heartbeat.
         /// </summary>
-        public Guid DataServerId { get; set; }
+        public HeartbeatFlags Flags { get; set; }
+
         /// <summary>
         /// Gets or sets a list of blocks that are stored on the DataServer.
         /// </summary>

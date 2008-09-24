@@ -37,8 +37,11 @@ namespace Tkl.Jumbo.Dfs
             LogicalCallContext context = (LogicalCallContext)requestMsg.Properties["__CallContext"];
             string hostName = (string)context.GetData("HostName");
             log4net.ThreadContext.Properties["ClientHostName"] = hostName;
+            ServerContext.Current = new ServerContext { ClientHostName = hostName };
 
-            return _nextChannelSink.ProcessMessage(sinkStack, requestMsg, requestHeaders, requestStream, out responseMsg, out responseHeaders, out responseStream);
+            var result = _nextChannelSink.ProcessMessage(sinkStack, requestMsg, requestHeaders, requestStream, out responseMsg, out responseHeaders, out responseStream);
+            ServerContext.Current = null;
+            return result;
         }
 
         #endregion
