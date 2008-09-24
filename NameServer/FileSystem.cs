@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using Tkl.Jumbo.Dfs;
+using System.Runtime.Remoting.Messaging;
 
 namespace NameServer
 {
@@ -182,7 +183,7 @@ namespace NameServer
             if( path == null )
                 throw new ArgumentNullException("name");
 
-            _log.DebugFormat("CreateFile: path = \"{0}\"", path);
+            _log.DebugFormat("GetFileInfo: path = \"{0}\"", path);
 
             string directory;
             string name;
