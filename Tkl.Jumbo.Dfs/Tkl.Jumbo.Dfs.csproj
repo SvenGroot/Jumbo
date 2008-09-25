@@ -50,13 +50,13 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Block.cs" />
+    <Compile Include="BlockReportData.cs" />
     <Compile Include="ClientChannelSinkProvider.cs" />
     <Compile Include="DataServerCommand.cs" />
     <Compile Include="Directory.cs" />
     <Compile Include="File.cs" />
     <Compile Include="FileSystemEntry.cs" />
     <Compile Include="HeartbeatData.cs" />
-    <Compile Include="HeartbeatFlags.cs" />
     <Compile Include="HeartbeatResponse.cs" />
     <Compile Include="ClientChannelSink.cs" />
     <Compile Include="INameServerClientProtocol.cs" />

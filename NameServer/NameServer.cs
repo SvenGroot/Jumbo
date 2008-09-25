@@ -13,14 +13,22 @@ namespace NameServer
     class NameServer : MarshalByRefObject, INameServerClientProtocol, INameServerHeartbeatProtocol
     {
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(NameServer));
-        private readonly FileSystem _fileSystem;
-        private readonly Dictionary<string, DataServerInfo> _dataServers = new Dictionary<string, DataServerInfo>();
         private const int _replicationFactor = 1; // TODO: Replace with configuration value
         private Random _random = new Random();
 
+        private readonly FileSystem _fileSystem;
+        private readonly Dictionary<string, DataServerInfo> _dataServers = new Dictionary<string, DataServerInfo>();
+        private readonly Dictionary<Guid, BlockInfo> _blocks = new Dictionary<Guid, BlockInfo>();
+        private readonly Dictionary<Guid, BlockInfo> _underReplicatedBlocks = new Dictionary<Guid, BlockInfo>();
+
         public NameServer()
+            : this(true)
         {
-            _fileSystem = new FileSystem(this, true);
+        }
+
+        public NameServer(bool replayLog)
+        {
+            _fileSystem = new FileSystem(this, replayLog);
         }
 
         public override object InitializeLifetimeService()
@@ -32,6 +40,20 @@ namespace NameServer
         public void CheckBlockReplication(IEnumerable<Guid> blocks)
         {
             // TODO: Implement
+        }
+
+        public FileSystem FileSystem
+        {
+            get { return _fileSystem; }
+        }
+
+        public void NotifyNewBlock(File file, Guid blockId)
+        {
+            // Called by FileSystem when a block is added to a file.
+            lock( _underReplicatedBlocks )
+            {
+                _underReplicatedBlocks.Add(blockId, new BlockInfo(file));
+            }
         }
 
         #region IClientProtocol Members
@@ -71,7 +93,9 @@ namespace NameServer
             {
                 int server = _random.Next(unassignedDataServers.Count);
                 dataServers.Add(unassignedDataServers[x].HostName);
+                unassignedDataServers.RemoveAt(x);
             }
+            return new Block() { BlockID = blockId, DataServers = dataServers };
         }
 
         #endregion
@@ -106,9 +130,11 @@ namespace NameServer
 
         #endregion
 
+
         private void ProcessHeartbeat(HeartbeatData data, DataServerInfo dataServer)
         {
-            if( (data.Flags & HeartbeatFlags.BlockReport) != 0 )
+            BlockReportData blockReport = data as BlockReportData;
+            if( blockReport != null )
             {
                 if( dataServer.HasReportedBlocks )
                     _log.Warn("Duplicate block report, ignoring.");
@@ -116,7 +142,7 @@ namespace NameServer
                 {
                     _log.Info("Received block report.");
                     dataServer.HasReportedBlocks = true;
-                    dataServer.Blocks = data.Blocks;
+                    dataServer.Blocks = blockReport.Blocks;
                     // TODO: Record data servers per block.
                 }
             }

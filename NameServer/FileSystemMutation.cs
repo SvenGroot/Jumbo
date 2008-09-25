@@ -8,6 +8,7 @@ namespace NameServer
     enum FileSystemMutation
     {
         CreateDirectory,
-        CreateFile
+        CreateFile,
+        AppendBlock
     }
 }

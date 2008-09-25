@@ -71,7 +71,8 @@ namespace NameServerTests
         [TestMethod()]
         public void CreateDirectoryTest()
         {
-            FileSystem target = new FileSystem(new NameServer.NameServer());
+            NameServer.NameServer nameServer = new NameServer.NameServer(false);
+            FileSystem target = nameServer.FileSystem;
             string path = "/foo/bar";
             Directory result = target.CreateDirectory(path);
             Assert.AreEqual(path, result.FullPath);
@@ -98,7 +99,8 @@ namespace NameServerTests
         [ExpectedException(typeof(ArgumentNullException))]
         public void CreateDirectoryPathNullTest()
         {
-            FileSystem target = new FileSystem(new NameServer.NameServer());
+            NameServer.NameServer nameServer = new NameServer.NameServer(false);
+            FileSystem target = nameServer.FileSystem;
             target.CreateDirectory(null);
         }
 
@@ -106,7 +108,8 @@ namespace NameServerTests
         [ExpectedException(typeof(ArgumentException))]
         public void CreateDirectoryNotRootedTest()
         {
-            FileSystem target = new FileSystem(new NameServer.NameServer());
+            NameServer.NameServer nameServer = new NameServer.NameServer(false);
+            FileSystem target = nameServer.FileSystem;
             target.CreateDirectory("test/foo");
         }
 
@@ -114,7 +117,8 @@ namespace NameServerTests
         [ExpectedException(typeof(ArgumentException))]
         public void CreateDirectoryEmptyComponentTest()
         {
-            FileSystem target = new FileSystem(new NameServer.NameServer());
+            NameServer.NameServer nameServer = new NameServer.NameServer(false);
+            FileSystem target = nameServer.FileSystem;
             try
             {
                 target.CreateDirectory("/test//");
@@ -130,7 +134,8 @@ namespace NameServerTests
         [ExpectedException(typeof(ArgumentException))]
         public void CreateDirectoryPathContainsFileTest()
         {
-            FileSystem target = new FileSystem(new NameServer.NameServer());
+            NameServer.NameServer nameServer = new NameServer.NameServer(false);
+            FileSystem target = nameServer.FileSystem;
             try
             {
                 target.CreateFile("/test");
@@ -145,7 +150,8 @@ namespace NameServerTests
         [TestMethod]
         public void GetDirectoryTest()
         {
-            FileSystem target = new FileSystem(new NameServer.NameServer());
+            NameServer.NameServer nameServer = new NameServer.NameServer(false);
+            FileSystem target = nameServer.FileSystem;
             Directory result = target.GetDirectoryInfo("/");
             Assert.AreEqual("", result.Name);
             Assert.AreEqual("/", result.FullPath);
@@ -168,7 +174,8 @@ namespace NameServerTests
         [ExpectedException(typeof(ArgumentNullException))]
         public void GetDirectoryPathNullTest()
         {
-            FileSystem target = new FileSystem(new NameServer.NameServer());
+            NameServer.NameServer nameServer = new NameServer.NameServer(false);
+            FileSystem target = nameServer.FileSystem;
             target.GetDirectoryInfo(null);
         }
 
@@ -176,7 +183,8 @@ namespace NameServerTests
         [ExpectedException(typeof(ArgumentException))]
         public void GetDirectoryEmptyComponentTest()
         {
-            FileSystem target = new FileSystem(new NameServer.NameServer());
+            NameServer.NameServer nameServer = new NameServer.NameServer(false);
+            FileSystem target = nameServer.FileSystem;
             target.GetDirectoryInfo("/test//");
         }
 
@@ -184,7 +192,8 @@ namespace NameServerTests
         [ExpectedException(typeof(ArgumentException))]
         public void GetDirectoryNotRootedTest()
         {
-            FileSystem target = new FileSystem(new NameServer.NameServer());
+            NameServer.NameServer nameServer = new NameServer.NameServer(false);
+            FileSystem target = nameServer.FileSystem;
             target.GetDirectoryInfo("test/foo");
         }
 
@@ -192,7 +201,8 @@ namespace NameServerTests
         [ExpectedException(typeof(ArgumentException))]
         public void GetDirectoryPathContainsFileTest()
         {
-            FileSystem target = new FileSystem(new NameServer.NameServer());
+            NameServer.NameServer nameServer = new NameServer.NameServer(false);
+            FileSystem target = nameServer.FileSystem;
             try
             {
                 target.CreateFile("/test");
@@ -207,7 +217,8 @@ namespace NameServerTests
         [TestMethod]
         public void CreateFileTest()
         {
-            FileSystem target = new FileSystem(new NameServer.NameServer());
+            NameServer.NameServer nameServer = new NameServer.NameServer(false);
+            FileSystem target = nameServer.FileSystem;
             target.CreateDirectory("/test");
             File result = target.CreateFile("/test/file");
             Assert.AreEqual("file", result.Name);
@@ -219,7 +230,8 @@ namespace NameServerTests
         [ExpectedException(typeof(ArgumentNullException))]
         public void CreateFilePathNullTest()
         {
-            FileSystem target = new FileSystem(new NameServer.NameServer());
+            NameServer.NameServer nameServer = new NameServer.NameServer(false);
+            FileSystem target = nameServer.FileSystem;
             target.CreateFile(null);
         }
 
@@ -227,7 +239,8 @@ namespace NameServerTests
         [ExpectedException(typeof(ArgumentException))]
         public void CreateFileNameEmptyTest()
         {
-            FileSystem target = new FileSystem(new NameServer.NameServer());
+            NameServer.NameServer nameServer = new NameServer.NameServer(false);
+            FileSystem target = nameServer.FileSystem;
             target.CreateFile("/test/");
         }
 
@@ -235,7 +248,8 @@ namespace NameServerTests
         [ExpectedException(typeof(ArgumentException))]
         public void CreateFileDirectoryNotRootedTest()
         {
-            FileSystem target = new FileSystem(new NameServer.NameServer());
+            NameServer.NameServer nameServer = new NameServer.NameServer(false);
+            FileSystem target = nameServer.FileSystem;
             target.CreateFile("test/foo/test");
         }
 
@@ -243,7 +257,8 @@ namespace NameServerTests
         [ExpectedException(typeof(ArgumentException))]
         public void CreateFileDirectoryEmptyComponentTest()
         {
-            FileSystem target = new FileSystem(new NameServer.NameServer());
+            NameServer.NameServer nameServer = new NameServer.NameServer(false);
+            FileSystem target = nameServer.FileSystem;
             target.CreateFile("/test//test");
         }
 
@@ -251,7 +266,8 @@ namespace NameServerTests
         [ExpectedException(typeof(System.IO.DirectoryNotFoundException))]
         public void CreateFileDirectoryNotFoundTest()
         {
-            FileSystem target = new FileSystem(new NameServer.NameServer());
+            NameServer.NameServer nameServer = new NameServer.NameServer(false);
+            FileSystem target = nameServer.FileSystem;
             target.CreateFile("/test/test");
         }
 
@@ -259,7 +275,8 @@ namespace NameServerTests
         [ExpectedException(typeof(ArgumentException))]
         public void CreateFileExistingFileTest()
         {
-            FileSystem target = new FileSystem(new NameServer.NameServer());
+            NameServer.NameServer nameServer = new NameServer.NameServer(false);
+            FileSystem target = nameServer.FileSystem;
             try
             {
                 target.CreateFile("/target");
@@ -275,7 +292,8 @@ namespace NameServerTests
         [ExpectedException(typeof(ArgumentException))]
         public void CreateFileExistingDirectoryTest()
         {
-            FileSystem target = new FileSystem(new NameServer.NameServer());
+            NameServer.NameServer nameServer = new NameServer.NameServer(false);
+            FileSystem target = nameServer.FileSystem;
             try
             {
                 target.CreateDirectory("/target");
@@ -291,7 +309,8 @@ namespace NameServerTests
         [ExpectedException(typeof(ArgumentException))]
         public void CreateFilePathContainsFileTest()
         {
-            FileSystem target = new FileSystem(new NameServer.NameServer());
+            NameServer.NameServer nameServer = new NameServer.NameServer(false);
+            FileSystem target = nameServer.FileSystem;
             try
             {
                 target.CreateFile("/test");
@@ -306,7 +325,8 @@ namespace NameServerTests
         [TestMethod]
         public void GetFileInfoTest()
         {
-            FileSystem target = new FileSystem(new NameServer.NameServer());
+            NameServer.NameServer nameServer = new NameServer.NameServer(false);
+            FileSystem target = nameServer.FileSystem;
             target.CreateDirectory("/test");
             File file = target.CreateFile("/test/file");
             DateTime date = file.DateCreated;
@@ -323,7 +343,8 @@ namespace NameServerTests
         [ExpectedException(typeof(ArgumentNullException))]
         public void GetFileInfoPathNullTest()
         {
-            FileSystem target = new FileSystem(new NameServer.NameServer());
+            NameServer.NameServer nameServer = new NameServer.NameServer(false);
+            FileSystem target = nameServer.FileSystem;
             target.GetFileInfo(null);
         }
 
@@ -331,7 +352,8 @@ namespace NameServerTests
         [ExpectedException(typeof(ArgumentException))]
         public void GetFileInfoNameEmptyTest()
         {
-            FileSystem target = new FileSystem(new NameServer.NameServer());
+            NameServer.NameServer nameServer = new NameServer.NameServer(false);
+            FileSystem target = nameServer.FileSystem;
             target.GetFileInfo("/test/");
         }
 
@@ -339,7 +361,8 @@ namespace NameServerTests
         [ExpectedException(typeof(ArgumentException))]
         public void GetFileInfoDirectoryNotRootedTest()
         {
-            FileSystem target = new FileSystem(new NameServer.NameServer());
+            NameServer.NameServer nameServer = new NameServer.NameServer(false);
+            FileSystem target = nameServer.FileSystem;
             target.GetFileInfo("test");
         }
 
@@ -347,7 +370,8 @@ namespace NameServerTests
         [ExpectedException(typeof(ArgumentException))]
         public void GetFileInfoDirectoryEmptyComponentTest()
         {
-            FileSystem target = new FileSystem(new NameServer.NameServer());
+            NameServer.NameServer nameServer = new NameServer.NameServer(false);
+            FileSystem target = nameServer.FileSystem;
             target.GetFileInfo("/test//test");
         }
 
@@ -355,7 +379,8 @@ namespace NameServerTests
         [ExpectedException(typeof(System.IO.DirectoryNotFoundException))]
         public void GetFileInfoDirectoryNotFoundTest()
         {
-            FileSystem target = new FileSystem(new NameServer.NameServer());
+            NameServer.NameServer nameServer = new NameServer.NameServer(false);
+            FileSystem target = nameServer.FileSystem;
             target.GetFileInfo("/test/test");
         }
 
@@ -363,7 +388,8 @@ namespace NameServerTests
         [ExpectedException(typeof(ArgumentException))]
         public void GetFileInfoPathContainsFileTest()
         {
-            FileSystem target = new FileSystem(new NameServer.NameServer());
+            NameServer.NameServer nameServer = new NameServer.NameServer(false);
+            FileSystem target = nameServer.FileSystem;
             try
             {
                 target.CreateFile("/test");
@@ -378,20 +404,44 @@ namespace NameServerTests
         [TestMethod]
         public void FileSystemConstructorTest()
         {
-            FileSystem target = new FileSystem(new NameServer.NameServer());
+            NameServer.NameServer nameServer = new NameServer.NameServer(false);
+            FileSystem target = nameServer.FileSystem;
             Assert.AreEqual(0, target.GetDirectoryInfo("/").Children.Count);
             target.CreateDirectory("/test");
             File f = target.CreateFile("/test/test2");
             DateTime date = f.DateCreated;
+            Guid blockId = target.AppendBlock("/test/test2");
             long size = new System.IO.FileInfo("EditLog.log").Length;
-            target = new FileSystem(new NameServer.NameServer(), true);
+
+            nameServer = new NameServer.NameServer(true);
+            target = nameServer.FileSystem;
             Assert.AreEqual(1, target.GetDirectoryInfo("/").Children.Count);
             Assert.AreEqual(1, target.GetDirectoryInfo("/test").Children.Count);
             f = target.GetFileInfo("/test/test2");
             Assert.IsNotNull(f);
             Assert.AreEqual(date, f.DateCreated);
+            Assert.AreEqual(1, f.Blocks.Count);
+            Assert.AreEqual(blockId, f.Blocks[0]);
             // Replaying the log file must not cause the log file to change.
             Assert.AreEqual(size, new System.IO.FileInfo("EditLog.log").Length);
+        }
+
+        /// <summary>
+        ///A test for AppendBlock
+        ///</summary>
+        [TestMethod()]
+        public void AppendBlockTest()
+        {
+            NameServer.NameServer nameServer = new NameServer.NameServer();
+            FileSystem target = new FileSystem(nameServer);
+            string path = "/test";
+            target.CreateFile(path);
+            Guid expected;
+            expected = target.AppendBlock(path);
+            File file = target.GetFileInfo(path);
+            Assert.AreEqual(1, file.Blocks.Count);
+            Guid actual = file.Blocks[0];
+            Assert.AreEqual(expected, actual);
         }
     }
 }

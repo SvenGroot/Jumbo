@@ -44,6 +44,11 @@ namespace NameServer
             }
         }
 
+        public NameServer NameServer
+        {
+            get { return _nameServer; }
+        }
+
         /// <summary>
         /// Creates a new directory in the file system.
         /// </summary>
@@ -194,6 +199,15 @@ namespace NameServer
 
         public Guid AppendBlock(string path)
         {
+            Guid blockID = Guid.NewGuid();
+            AppendBlock(path, blockID, true);
+            return blockID;
+        }
+
+        public void AppendBlock(string path, Guid blockID, bool checkReplication)
+        {
+            // checkReplication is provided so we can skip that while replaying the log file.
+
             lock( _root )
             {
                 File file = GetFileInfoInternal(path);
@@ -202,13 +216,13 @@ namespace NameServer
                 if( file.IsOpenForWriting )
                     throw new InvalidOperationException(string.Format("The file '{0}' is not open for writing.", path));
 
-                _nameServer.CheckBlockReplication(file.Blocks);
+                if( checkReplication )
+                    NameServer.CheckBlockReplication(file.Blocks);
 
-                Guid blockID = Guid.NewGuid();
+                _editLog.LogAppendBlock(path, DateTime.UtcNow, blockID);
                 file.Blocks.Add(blockID);
-                return blockID;
+                NameServer.NotifyNewBlock(file, blockID);
             }
-
         }
 
         private File GetFileInfoInternal(string path)
@@ -308,14 +322,14 @@ namespace NameServer
         private Directory CreateDirectory(Directory parent, string name, DateTime dateCreated)
         {
             _log.InfoFormat("Creating directory \"{0}\" inside \"{1}\"", name, parent.FullPath);
-            _editLog.LogMutation(FileSystemMutation.CreateDirectory, AppendPath(parent.FullPath, name), dateCreated);
+            _editLog.LogCreateDirectory(AppendPath(parent.FullPath, name), dateCreated);
             return new Directory(parent, name, dateCreated);
         }
 
         private File CreateFile(Directory parent, string name, DateTime dateCreated)
         {
             _log.InfoFormat("Creating file \"{0}\" inside \"{1}\"", name, parent.FullPath);
-            _editLog.LogMutation(FileSystemMutation.CreateFile, AppendPath(parent.FullPath, name), dateCreated);
+            _editLog.LogCreateFile(AppendPath(parent.FullPath, name), dateCreated);
             return new File(parent, name, dateCreated);
         }
 

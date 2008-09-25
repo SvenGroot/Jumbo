@@ -25,34 +25,28 @@ namespace NameServer
                 System.IO.File.Delete("EditLog.log");
         }
 
-        /// <summary>
-        /// Log a file system mutation to the edit log.
-        /// </summary>
-        /// <param name="mutation">The mutation that took place.</param>
-        /// <param name="path">The DFS path that was changed.</param>
-        public void LogMutation(FileSystemMutation mutation, string path, DateTime date)
+        public void LogCreateDirectory(string path, DateTime date)
         {
             if( path == null )
                 throw new ArgumentNullException("path");
 
-            if( _loggingEnabled )
-            {
-                try
-                {
-                    lock( _logFileLock )
-                    {
-                        using( TextWriter writer = new StreamWriter("EditLog.log", true) )
-                        {
-                            writer.WriteLine(string.Format(System.Globalization.CultureInfo.InvariantCulture, "{0}:{1:yyyyMMddHHmmss.fffffff}:{2}", mutation, date, path));
-                        }
-                    }
-                }
-                catch( IOException ex )
-                {
-                    HandleLoggingError(ex);
-                    throw;
-                }
-            }
+            LogMutation("{0}:{1:yyyyMMddHHmmss.fffffff}:{2}", FileSystemMutation.CreateDirectory, date, path);
+        }
+
+        public void LogCreateFile(string path, DateTime date)
+        {
+            if( path == null )
+                throw new ArgumentNullException("path");
+
+            LogMutation("{0}:{1:yyyyMMddHHmmss.fffffff}:{2}", FileSystemMutation.CreateFile, date, path);
+        }
+
+        public void LogAppendBlock(string path, DateTime date, Guid blockId)
+        {
+            if( path == null )
+                throw new ArgumentNullException("path");
+
+            LogMutation("{0}:{1:yyyyMMddHHmmss.fffffff}:{2}:{3}", FileSystemMutation.AppendBlock, date, path, blockId);
         }
 
         /// <summary>
@@ -82,6 +76,9 @@ namespace NameServer
                             case FileSystemMutation.CreateFile:
                                 fileSystem.CreateFile(parts[2], date);
                                 break;
+                            case FileSystemMutation.AppendBlock:
+                                fileSystem.AppendBlock(parts[2], new Guid(parts[3]), false);
+                                break;
                             }
                         }
                     }
@@ -96,6 +93,28 @@ namespace NameServer
         private void HandleLoggingError(Exception ex)
         {
             _log.Error("Unable to log file system mutation.", ex);
+        }
+
+        private void LogMutation(string format, params object[] parameters)
+        {
+            if( _loggingEnabled )
+            {
+                try
+                {
+                    lock( _logFileLock )
+                    {
+                        using( TextWriter writer = new StreamWriter("EditLog.log", true) )
+                        {
+                            writer.WriteLine(string.Format(System.Globalization.CultureInfo.InvariantCulture, format, parameters));
+                        }
+                    }
+                }
+                catch( IOException ex )
+                {
+                    HandleLoggingError(ex);
+                    throw;
+                }
+            }
         }
     }
 }
