@@ -13,13 +13,25 @@ namespace NameServer
     class NameServer : MarshalByRefObject, INameServerClientProtocol, INameServerHeartbeatProtocol
     {
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(NameServer));
-        private readonly FileSystem _fileSystem = new FileSystem(true);
+        private readonly FileSystem _fileSystem;
         private readonly Dictionary<string, DataServerInfo> _dataServers = new Dictionary<string, DataServerInfo>();
+        private const int _replicationFactor = 1; // TODO: Replace with configuration value
+        private Random _random = new Random();
+
+        public NameServer()
+        {
+            _fileSystem = new FileSystem(this, true);
+        }
 
         public override object InitializeLifetimeService()
         {
             // This causes the object to live forever.
             return null;
+        }
+
+        public void CheckBlockReplication(IEnumerable<Guid> blocks)
+        {
+            // TODO: Implement
         }
 
         #region IClientProtocol Members
@@ -47,10 +59,19 @@ namespace NameServer
 
         public Block AppendBlock(string path)
         {
-            throw new NotImplementedException();
-            //Guid blockId = _fileSystem.AppendBlock(path);
+            if( _dataServers.Count < _replicationFactor )
+                throw new InvalidOperationException("Insufficient data servers.");
+
+            Guid blockId = _fileSystem.AppendBlock(path);
             
-            // TODO: Pick data servers
+            // TODO: Better selection policy.
+            List<DataServerInfo> unassignedDataServers = new List<DataServerInfo>(_dataServers.Values);
+            List<string> dataServers = new List<string>(_replicationFactor);
+            for( int x = 0; x < _replicationFactor; ++x )
+            {
+                int server = _random.Next(unassignedDataServers.Count);
+                dataServers.Add(unassignedDataServers[x].HostName);
+            }
         }
 
         #endregion

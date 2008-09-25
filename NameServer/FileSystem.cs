@@ -15,12 +15,13 @@ namespace NameServer
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(FileSystem));
         private Directory _root = new Directory(null, string.Empty, DateTime.UtcNow);
         private EditLog _editLog;
+        private NameServer _nameServer;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="FileSystem"/> class.
         /// </summary>
-        public FileSystem()
-            : this(false)
+        public FileSystem(NameServer nameServer)
+            : this(nameServer, false)
         {
         }
 
@@ -28,8 +29,11 @@ namespace NameServer
         /// Initializes a new instance of the <see cref="FileSystem"/> class.
         /// </summary>
         /// <param name="replayLog"><see langword="true"/> to initialize the file system from an existing log file; <see langword="false" />  to create a new file system.</param>
-        public FileSystem(bool replayLog)
+        public FileSystem(NameServer nameServer, bool replayLog)
         {
+            if( nameServer == null )
+                throw new ArgumentNullException("nameServer");
+            _nameServer = nameServer;
             _log.Info("++++ FileSystem created.");
             _editLog = new EditLog(replayLog);
             if( replayLog )
@@ -151,9 +155,9 @@ namespace NameServer
             {
                 string name;
                 Directory parent;
-                File file;
-                FindFile(path, out name, out parent, out file);
-                if( file != null )
+                FileSystemEntry entry;
+                FindEntry(path, out name, out parent, out entry);
+                if( entry != null )
                     throw new ArgumentException("The specified directory already has a file or directory with the specified name.", "name");
                 
                 return (File)CreateFile(parent, name, dateCreated).ShallowClone();
@@ -198,7 +202,8 @@ namespace NameServer
                 if( file.IsOpenForWriting )
                     throw new InvalidOperationException(string.Format("The file '{0}' is not open for writing.", path));
 
-                // TODO: Existing blocks must be checked for replication first
+                _nameServer.CheckBlockReplication(file.Blocks);
+
                 Guid blockID = Guid.NewGuid();
                 file.Blocks.Add(blockID);
                 return blockID;
@@ -217,6 +222,13 @@ namespace NameServer
 
         private void FindFile(string path, out string name, out Directory parent, out File file)
         {
+            FileSystemEntry entry;
+            FindEntry(path, out name, out parent, out entry);
+            file = entry as File;
+        }
+
+        private void FindEntry(string path, out string name, out Directory parent, out FileSystemEntry file)
+        {
             string directory;
 
             ExtractDirectoryAndFileName(path, out directory, out name);
@@ -227,7 +239,7 @@ namespace NameServer
             if( parent == null )
                 throw new System.IO.DirectoryNotFoundException("The specified directory does not exist.");
 
-            file = (File)FindEntry(parent, name);
+            file = FindEntry(parent, name);
         }
         
         private FileSystemEntry FindEntry(Directory parent, string name)
@@ -263,7 +275,7 @@ namespace NameServer
                     return _root;
 
                 // First check for empty components so we don't have to roll back changes if there are any.
-                // Count must be 1 because the firs component will always be empty.
+                // Count must be 1 because the first component will always be empty.
                 if( (from c in components where c.Length == 0 select c).Count() > 1 )
                     throw new ArgumentException("Path contains an empty components.", "path");
 
