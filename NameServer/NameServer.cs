@@ -142,7 +142,7 @@ namespace NameServer
                 {
                     _log.Info("Received block report.");
                     dataServer.HasReportedBlocks = true;
-                    dataServer.Blocks = blockReport.Blocks;
+                    dataServer.Blocks = new List<Guid>(blockReport.Blocks);
                     // TODO: Record data servers per block.
                 }
             }

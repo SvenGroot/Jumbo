@@ -11,6 +11,6 @@ namespace Tkl.Jumbo.Dfs
     [Serializable]
     public class BlockReportData : HeartbeatData
     {
-        public List<Guid> Blocks { get; set; }
+        public Guid[] Blocks { get; set; }
     }
 }

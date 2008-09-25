@@ -8,6 +8,7 @@ namespace Tkl.Jumbo.Dfs
     /// <summary>
     /// Provides information about a block of a file.
     /// </summary>
+    [Serializable]
     public class Block
     {
         /// <summary>

@@ -52,7 +52,9 @@
     <Compile Include="Block.cs" />
     <Compile Include="BlockReportData.cs" />
     <Compile Include="ClientChannelSinkProvider.cs" />
+    <Compile Include="CRC32.cs" />
     <Compile Include="DataServerClientProtocolHeader.cs" />
+    <Compile Include="DataServerCommand.cs" />
     <Compile Include="DataServerHeartbeatCommand.cs" />
     <Compile Include="Directory.cs" />
     <Compile Include="File.cs" />
