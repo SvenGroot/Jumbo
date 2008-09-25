@@ -121,7 +121,7 @@ namespace NameServer
 
                 if( !dataServer.HasReportedBlocks )
                 {
-                    return new HeartbeatResponse(DataServerCommand.ReportBlocks);
+                    return new HeartbeatResponse(DataServerHeartbeatCommand.ReportBlocks);
                 }
             }
 

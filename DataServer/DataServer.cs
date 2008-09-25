@@ -55,7 +55,7 @@ namespace DataServer
         {
             switch( response.Command )
             {
-            case DataServerCommand.ReportBlocks:
+            case DataServerHeartbeatCommand.ReportBlocks:
                 _log.Info("Received ReportBlocks command.");
                 _reportBlocks = true;
                 break;

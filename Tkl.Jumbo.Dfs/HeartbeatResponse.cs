@@ -11,9 +11,9 @@ namespace Tkl.Jumbo.Dfs
     [Serializable]
     public class HeartbeatResponse
     {
-        public HeartbeatResponse() : this(DataServerCommand.None) { }
+        public HeartbeatResponse() : this(DataServerHeartbeatCommand.None) { }
 
-        public HeartbeatResponse(DataServerCommand command)
+        public HeartbeatResponse(DataServerHeartbeatCommand command)
         {
             Command = command;
         }
@@ -22,6 +22,6 @@ namespace Tkl.Jumbo.Dfs
         /// <summary>
         /// Gets or sets the command that the NameServer is giving to the DataServer.
         /// </summary>
-        public DataServerCommand Command { get; set; }
+        public DataServerHeartbeatCommand Command { get; set; }
     }
 }
