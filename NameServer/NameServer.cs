@@ -32,6 +32,16 @@ namespace NameServer
         public NameServer(bool replayLog)
         {
             _fileSystem = new FileSystem(this, replayLog);
+            // After replaying the log files any pending blocks are considered to be underreplicated because data files
+            // should already have them. 
+            foreach( var block in _pendingBlocks )
+            {
+                // If the file's block list doesn't contain this block, it means there was no commit command for that block in 
+                // the log file.
+                if( block.Value.File.Blocks.Contains(block.Key) )
+                    _underReplicatedBlocks.Add(block.Key, block.Value);
+            }
+            _pendingBlocks.Clear();
         }
 
         public override object InitializeLifetimeService()
@@ -117,8 +127,11 @@ namespace NameServer
                     _dataServers.Add(hostName, dataServer);
                 }
 
-                foreach( HeartbeatData item in data )
-                    ProcessHeartbeat(item, dataServer);
+                if( data != null )
+                {
+                    foreach( HeartbeatData item in data )
+                        ProcessHeartbeat(item, dataServer);
+                }
 
                 if( !dataServer.HasReportedBlocks )
                 {
@@ -179,7 +192,10 @@ namespace NameServer
                         block.DataServers.Add(dataServer);
                         if( block.DataServers.Count >= _replicationFactor )
                         {
-                            // TODO: We need to update the size of the file, and log that as well in the edit log.
+                            // TODO: We need to record the total size of the file somewhere, and record that in the file system only when
+                            // the file is completed.
+                            _log.InfoFormat("Block {0} is now fully replicated and is being committed.", newBlock.BlockID);
+                            _fileSystem.CommitBlock(block.File.FullPath, newBlock.BlockID, newBlock.Size);
                             _pendingBlocks.Remove(newBlock.BlockID);
                             _blocks.Add(newBlock.BlockID, block);
                         }

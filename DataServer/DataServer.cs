@@ -56,6 +56,7 @@ namespace DataServer
                 if( _blocks.Contains(blockID) || _pendingBlocks.Contains(blockID) )
                     throw new ArgumentException("Existing block ID.");
                 _pendingBlocks.Add(blockID);
+                System.IO.Directory.CreateDirectory(_temporaryBlockStorageDirectory);
                 return System.IO.File.Create(Path.Combine(_temporaryBlockStorageDirectory, blockID.ToString()));
             }
         }

@@ -9,6 +9,7 @@ namespace NameServer
     {
         CreateDirectory,
         CreateFile,
-        AppendBlock
+        AppendBlock,
+        CommitBlock
     }
 }

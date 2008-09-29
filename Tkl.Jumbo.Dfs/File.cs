@@ -30,8 +30,8 @@ namespace Tkl.Jumbo.Dfs
             get { return _blocks; }
         }
 
-        public bool IsOpenForWriting { get; set; }
+        //public bool IsOpenForWriting { get; set; }
 
-
+        public long Size { get; set; }
     }
 }

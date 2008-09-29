@@ -16,6 +16,7 @@ namespace NameServer
         private Directory _root = new Directory(null, string.Empty, DateTime.UtcNow);
         private EditLog _editLog;
         private NameServer _nameServer;
+        private Dictionary<string, PendingFile> _pendingFiles = new Dictionary<string, PendingFile>();
 
         /// <summary>
         /// Initializes a new instance of the <see cref="FileSystem"/> class.
@@ -41,6 +42,8 @@ namespace NameServer
                 _log.Info("Replaying log file.");
                 _editLog.ReplayLog(this);
                 _log.Info("Replaying log file finished.");
+                // TODO: After replaying the log file and pending files should be committed, however, pending blocks in those files
+                // should probably be committed.
             }
         }
 
@@ -157,7 +160,7 @@ namespace NameServer
                 if( entry != null )
                     throw new ArgumentException("The specified directory already has a file or directory with the specified name.", "name");
                 
-                File file = CreateFile(parent, name, dateCreated);
+                PendingFile file = CreateFile(parent, name, dateCreated);
                 if( appendBlock )
                 {
                     Guid blockID = NewBlockID();
@@ -199,6 +202,7 @@ namespace NameServer
 
         public Guid AppendBlock(string path)
         {
+            _log.DebugFormat("AppendBlock: path = \"{0}\"", path);
             Guid blockID = NewBlockID();
             AppendBlock(path, blockID, true);
             return blockID;
@@ -206,14 +210,39 @@ namespace NameServer
 
         public void AppendBlock(string path, Guid blockID, bool checkReplication)
         {
+            // TODO: Only allow new blocks if the file so far is a whole number of blocks.
             // checkReplication is provided so we can skip that while replaying the log file.
 
             lock( _root )
             {
-                File file = GetFileInfoInternal(path);
-                if( file == null )
-                    throw new System.IO.FileNotFoundException(string.Format("The file '{0}' does not exist.", path));
+                PendingFile file;
+                if( !_pendingFiles.TryGetValue(path, out file) )
+                    throw new InvalidOperationException(string.Format("The file '{0}' does not exist or is not open for writing.", path));
+
                 AppendBlock(file, blockID, checkReplication);
+                //File file = GetFileInfoInternal(path);
+                //if( file == null )
+                //    throw new System.IO.FileNotFoundException(string.Format("The file '{0}' does not exist.", path));
+                //AppendBlock(file, blockID, checkReplication);
+            }
+        }
+
+        public void CommitBlock(string path, Guid blockID, int size)
+        {
+            _log.DebugFormat("CommitBlock: path = \"{0}\", blockID = {1}, size = {2}", path, blockID, size);
+            lock( _root )
+            {
+                PendingFile file;
+                if( !_pendingFiles.TryGetValue(path, out file) )
+                    throw new InvalidOperationException(string.Format("The file '{0}' does not exist or is not open for writing.", path));
+
+                if( file.PendingBlock == null || file.PendingBlock != blockID )
+                    throw new InvalidOperationException("No block to commit.");
+
+                _editLog.LogCommitBlock(path, DateTime.UtcNow, blockID, size);
+                file.File.Blocks.Add(file.PendingBlock.Value);
+                file.File.Size += size;
+                file.PendingBlock = null;
             }
         }
 
@@ -222,18 +251,32 @@ namespace NameServer
             return Guid.NewGuid();
         }
 
-        private void AppendBlock(File file, Guid blockID, bool checkReplication)
+        private void AppendBlock(PendingFile file, Guid blockID, bool checkReplication)
         {
-            if( !file.IsOpenForWriting )
-                throw new InvalidOperationException(string.Format("The file '{0}' is not open for writing.", file.FullPath));
+            if( file.PendingBlock != null )
+                throw new Exception("Cannot add a block to a file with a pending block."); // TODO: Handle properly.
 
             if( checkReplication )
-                NameServer.CheckBlockReplication(file.Blocks);
+                NameServer.CheckBlockReplication(file.File.Blocks);
 
-            _editLog.LogAppendBlock(file.FullPath, DateTime.UtcNow, blockID);
-            file.Blocks.Add(blockID);
-            NameServer.NotifyNewBlock(file, blockID);
+            _log.InfoFormat("Appending new block {0} to file {1}", blockID, file.File.FullPath);
+            _editLog.LogAppendBlock(file.File.FullPath, DateTime.UtcNow, blockID);
+            file.PendingBlock = blockID;
+            NameServer.NotifyNewBlock(file.File, blockID);
         }
+
+        //private void AppendBlock(File file, Guid blockID, bool checkReplication)
+        //{
+        //    if( !file.IsOpenForWriting )
+        //        throw new InvalidOperationException(string.Format("The file '{0}' is not open for writing.", file.FullPath));
+
+        //    if( checkReplication )
+        //        NameServer.CheckBlockReplication(file.Blocks);
+
+        //    _editLog.LogAppendBlock(file.FullPath, DateTime.UtcNow, blockID);
+        //    file.Blocks.Add(blockID);
+        //    NameServer.NotifyNewBlock(file, blockID);
+        //}
 
         private File GetFileInfoInternal(string path)
         {
@@ -336,11 +379,16 @@ namespace NameServer
             return new Directory(parent, name, dateCreated);
         }
 
-        private File CreateFile(Directory parent, string name, DateTime dateCreated)
+        private PendingFile CreateFile(Directory parent, string name, DateTime dateCreated)
         {
             _log.InfoFormat("Creating file \"{0}\" inside \"{1}\"", name, parent.FullPath);
             _editLog.LogCreateFile(AppendPath(parent.FullPath, name), dateCreated);
-            return new File(parent, name, dateCreated) { IsOpenForWriting = true };
+            PendingFile result = new PendingFile(new File(parent, name, dateCreated));
+            lock( _pendingFiles )
+            {
+                _pendingFiles.Add(result.File.FullPath, result);
+            }
+            return result;
         }
 
         private string AppendPath(string parent, string child)

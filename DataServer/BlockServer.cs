@@ -121,6 +121,7 @@ namespace DataServer
                 }
             }
             _log.InfoFormat("Writing block {0} complete.", header.BlockID);
+            _dataServer.CompleteBlock(header.BlockID, header.DataSize);
         }
     }
 }

@@ -22,8 +22,7 @@ namespace ClientSample
             //nameServer.CreateFile("/test/bar");
             //File f = nameServer.GetFileInfo("/test/bar");
             System.Threading.Thread.Sleep(3000); // wait for data server to report to name server
-            nameServer.CreateFile("/test");
-            BlockAssignment b = nameServer.AppendBlock("/test");
+            BlockAssignment b = nameServer.CreateFile("/test");
 
             using( TcpClient client = new TcpClient(b.DataServers[0], 9001) )
             {
