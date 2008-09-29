@@ -124,32 +124,24 @@ namespace NameServer
         /// Creates a new file in the specified directory.
         /// </summary>
         /// <param name="path">The full path of the new file.</param>
-        /// <returns>A <see cref="File"/> object referring to the new file.</returns>
-        /// <remarks>
-        ///   The returned <see cref="File"/> object is a shallow copy and cannot be used to modify the internal
-        ///   state of the file system.
-        /// </remarks>
+        /// <returns>The block ID of the first block of the new file.</returns>
         /// <exception cref="ArgumentNullException"><paramref name="directory"/> is <see langword="null" />, or <paramref name="name"/> is <see langword="null"/> or an empty string..</exception>
         /// <exception cref="ArgumentException"><paramref name="directory"/> is not an absolute path, contains an empty component, contains a file name, or <paramref name="name"/> refers to an existing file or directory.</exception>
         /// <exception cref="DirectoryNotFoundException"><paramref name="directory"/> does not exist.</exception>
-        public File CreateFile(string path)
+        public Guid CreateFile(string path)
         {
-            return CreateFile(path, DateTime.UtcNow);
+            return CreateFile(path, DateTime.UtcNow, true).Value;
         }
 
         /// <summary>
         /// Creates a new file in the specified directory.
         /// </summary>
         /// <param name="path">The full path of the new file.</param>
-        /// <returns>A <see cref="File"/> object referring to the new file.</returns>
-        /// <remarks>
-        ///   The returned <see cref="File"/> object is a shallow copy and cannot be used to modify the internal
-        ///   state of the file system.
-        /// </remarks>
+        /// <returns>The block ID of the first block of the new file.</returns>
         /// <exception cref="ArgumentNullException"><paramref name="directory"/> is <see langword="null" />, or <paramref name="name"/> is <see langword="null"/> or an empty string..</exception>
         /// <exception cref="ArgumentException"><paramref name="directory"/> is not an absolute path, contains an empty component, contains a file name, or <paramref name="name"/> refers to an existing file or directory.</exception>
         /// <exception cref="DirectoryNotFoundException"><paramref name="directory"/> does not exist.</exception>
-        public File CreateFile(string path, DateTime dateCreated)
+        public Guid? CreateFile(string path, DateTime dateCreated, bool appendBlock)
         {
             if( path == null )
                 throw new ArgumentNullException("path");
@@ -165,7 +157,15 @@ namespace NameServer
                 if( entry != null )
                     throw new ArgumentException("The specified directory already has a file or directory with the specified name.", "name");
                 
-                return (File)CreateFile(parent, name, dateCreated).ShallowClone();
+                File file = CreateFile(parent, name, dateCreated);
+                if( appendBlock )
+                {
+                    Guid blockID = NewBlockID();
+                    AppendBlock(file, blockID, true);
+                    return blockID;
+                }
+                else
+                    return null;
             }
         }
 
@@ -199,7 +199,7 @@ namespace NameServer
 
         public Guid AppendBlock(string path)
         {
-            Guid blockID = Guid.NewGuid();
+            Guid blockID = NewBlockID();
             AppendBlock(path, blockID, true);
             return blockID;
         }
@@ -213,16 +213,26 @@ namespace NameServer
                 File file = GetFileInfoInternal(path);
                 if( file == null )
                     throw new System.IO.FileNotFoundException(string.Format("The file '{0}' does not exist.", path));
-                if( file.IsOpenForWriting )
-                    throw new InvalidOperationException(string.Format("The file '{0}' is not open for writing.", path));
-
-                if( checkReplication )
-                    NameServer.CheckBlockReplication(file.Blocks);
-
-                _editLog.LogAppendBlock(path, DateTime.UtcNow, blockID);
-                file.Blocks.Add(blockID);
-                NameServer.NotifyNewBlock(file, blockID);
+                AppendBlock(file, blockID, checkReplication);
             }
+        }
+
+        private Guid NewBlockID()
+        {
+            return Guid.NewGuid();
+        }
+
+        private void AppendBlock(File file, Guid blockID, bool checkReplication)
+        {
+            if( !file.IsOpenForWriting )
+                throw new InvalidOperationException(string.Format("The file '{0}' is not open for writing.", file.FullPath));
+
+            if( checkReplication )
+                NameServer.CheckBlockReplication(file.Blocks);
+
+            _editLog.LogAppendBlock(file.FullPath, DateTime.UtcNow, blockID);
+            file.Blocks.Add(blockID);
+            NameServer.NotifyNewBlock(file, blockID);
         }
 
         private File GetFileInfoInternal(string path)
@@ -330,7 +340,7 @@ namespace NameServer
         {
             _log.InfoFormat("Creating file \"{0}\" inside \"{1}\"", name, parent.FullPath);
             _editLog.LogCreateFile(AppendPath(parent.FullPath, name), dateCreated);
-            return new File(parent, name, dateCreated);
+            return new File(parent, name, dateCreated) { IsOpenForWriting = true };
         }
 
         private string AppendPath(string parent, string child)

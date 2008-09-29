@@ -9,7 +9,7 @@ namespace Tkl.Jumbo.Dfs
     /// Provides information about a block of a file.
     /// </summary>
     [Serializable]
-    public class Block
+    public class BlockAssignment
     {
         /// <summary>
         /// Gets or sets the unique identifier of this block.

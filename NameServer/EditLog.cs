@@ -74,7 +74,7 @@ namespace NameServer
                                 fileSystem.CreateDirectory(parts[2], date);
                                 break;
                             case FileSystemMutation.CreateFile:
-                                fileSystem.CreateFile(parts[2], date);
+                                fileSystem.CreateFile(parts[2], date, false);
                                 break;
                             case FileSystemMutation.AppendBlock:
                                 fileSystem.AppendBlock(parts[2], new Guid(parts[3]), false);

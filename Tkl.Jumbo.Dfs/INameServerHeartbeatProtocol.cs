@@ -14,7 +14,7 @@ namespace Tkl.Jumbo.Dfs
         /// Sends a heartbeat to the name server.
         /// </summary>
         /// <param name="data">The data for the heartbeat.</param>
-        /// <returns>The <see cref="HeartbeatReponse"/> for the heartbeat.</returns>
-        HeartbeatResponse Heartbeat(HeartbeatData data);
+        /// <returns>An array of <see cref="HeartbeatReponse"/> for the heartbeat.</returns>
+        HeartbeatResponse Heartbeat(HeartbeatData[] data);
     }
 }

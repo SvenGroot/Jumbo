@@ -80,6 +80,8 @@ namespace DataServer
 
                 if( header.Command == DataServerCommand.WriteBlock )
                 {
+                    if( header.DataSize > _dataServer.BlockSize )
+                        throw new Exception(); // TODO: Handle this properly
                     WriteBlock(stream, header);
                 }
             }
@@ -106,8 +108,6 @@ namespace DataServer
                     {
                         bytesRead += reader.Read(buffer, bytesRead, packetSize - bytesRead);
                     }
-                    //if( bytesRead != packetSize )
-                    //    throw new Exception(); // TODO: Handle this properly
 
                     computedChecksum.Update(buffer, 0, packetSize);
                     if( computedChecksum.Value != checksum )

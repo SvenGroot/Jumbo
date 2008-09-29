@@ -34,7 +34,7 @@ namespace Tkl.Jumbo.Dfs
         /// <exception cref="ArgumentNullException"><paramref name="directory"/> is <see langword="null" />, or <paramref name="name"/> is <see langword="null"/> or an empty string..</exception>
         /// <exception cref="ArgumentException"><paramref name="directory"/> is not an absolute path, contains an empty component, contains a file name, or <paramref name="name"/> refers to an existing file or directory.</exception>
         /// <exception cref="DirectoryNotFoundException"><paramref name="directory"/> does not exist.</exception>
-        void CreateFile(string path); // TODO: Once datanodes are working, this needs to return block info (and probably needs a different name too)
+        BlockAssignment CreateFile(string path);
 
         /// <summary>
         /// Gets information about a file.
@@ -54,6 +54,11 @@ namespace Tkl.Jumbo.Dfs
         /// <exception cref="ArgumentNullException"><paramref name="directory"/> is <see langword="null" />, or <paramref name="name"/> is <see langword="null"/> or an empty string..</exception>
         /// <exception cref="ArgumentException"><paramref name="directory"/> is not an absolute path, contains an empty component, contains a file name, or <paramref name="name"/> refers to an existing file or directory.</exception>
         /// <exception cref="DirectoryNotFoundException"><paramref name="directory"/> does not exist.</exception>
-        Block AppendBlock(string path);
+        BlockAssignment AppendBlock(string path);
+
+        /// <summary>
+        /// Gets the size of a single block in a file.
+        /// </summary>
+        int BlockSize { get; }
     }
 }

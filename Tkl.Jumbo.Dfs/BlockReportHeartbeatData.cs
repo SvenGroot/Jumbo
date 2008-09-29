@@ -9,7 +9,7 @@ namespace Tkl.Jumbo.Dfs
     /// Provides heartbeat data for a block report.
     /// </summary>
     [Serializable]
-    public class BlockReportData : HeartbeatData
+    public class BlockReportHeartbeatData : HeartbeatData
     {
         public Guid[] Blocks { get; set; }
     }

@@ -29,9 +29,10 @@ namespace DataServer
         {
             var types = RemotingConfiguration.GetRegisteredWellKnownClientTypes();
             INameServerHeartbeatProtocol nameServer = (INameServerHeartbeatProtocol)Activator.GetObject(types[0].ObjectType, types[0].ObjectUrl);
+            INameServerClientProtocol nameServerClient = (INameServerClientProtocol)Activator.GetObject(typeof(INameServerClientProtocol), types[0].ObjectUrl);
 
             _log.Info("---- Data Server is starting ----");
-            DataServer server = new DataServer(nameServer);
+            DataServer server = new DataServer(nameServer, nameServerClient);
             server.Run();
         }
 

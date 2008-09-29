@@ -220,10 +220,12 @@ namespace NameServerTests
             NameServer.NameServer nameServer = new NameServer.NameServer(false);
             FileSystem target = nameServer.FileSystem;
             target.CreateDirectory("/test");
-            File result = target.CreateFile("/test/file");
+            target.CreateFile("/test/file");
+            File result = target.GetFileInfo("/test/file");
             Assert.AreEqual("file", result.Name);
             Assert.AreEqual("/test/file", result.FullPath);
             Assert.IsTrue((result.DateCreated - DateTime.UtcNow).TotalSeconds < 1);
+            Assert.IsTrue(result.IsOpenForWriting);
         }
 
         [TestMethod]
@@ -328,8 +330,8 @@ namespace NameServerTests
             NameServer.NameServer nameServer = new NameServer.NameServer(false);
             FileSystem target = nameServer.FileSystem;
             target.CreateDirectory("/test");
-            File file = target.CreateFile("/test/file");
-            DateTime date = file.DateCreated;
+            DateTime date = DateTime.UtcNow;
+            target.CreateFile("/test/file", date, true);
             File result = target.GetFileInfo("/test/file");
             Assert.AreEqual("file", result.Name);
             Assert.AreEqual("/test/file", result.FullPath);
@@ -408,9 +410,10 @@ namespace NameServerTests
             FileSystem target = nameServer.FileSystem;
             Assert.AreEqual(0, target.GetDirectoryInfo("/").Children.Count);
             target.CreateDirectory("/test");
-            File f = target.CreateFile("/test/test2");
-            DateTime date = f.DateCreated;
-            Guid blockId = target.AppendBlock("/test/test2");
+            DateTime date = DateTime.UtcNow;
+            Guid blockID1 = target.CreateFile("/test/test2", date, true).Value;
+            File f = target.GetFileInfo("/test/test2");
+            Guid blockID2 = target.AppendBlock("/test/test2");
             long size = new System.IO.FileInfo("EditLog.log").Length;
 
             nameServer = new NameServer.NameServer(true);
@@ -420,8 +423,9 @@ namespace NameServerTests
             f = target.GetFileInfo("/test/test2");
             Assert.IsNotNull(f);
             Assert.AreEqual(date, f.DateCreated);
-            Assert.AreEqual(1, f.Blocks.Count);
-            Assert.AreEqual(blockId, f.Blocks[0]);
+            Assert.AreEqual(2, f.Blocks.Count);
+            Assert.AreEqual(blockID1, f.Blocks[0]);
+            Assert.AreEqual(blockID2, f.Blocks[1]);
             // Replaying the log file must not cause the log file to change.
             Assert.AreEqual(size, new System.IO.FileInfo("EditLog.log").Length);
         }
@@ -436,11 +440,13 @@ namespace NameServerTests
             FileSystem target = new FileSystem(nameServer);
             string path = "/test";
             target.CreateFile(path);
-            Guid expected;
-            expected = target.AppendBlock(path);
             File file = target.GetFileInfo(path);
             Assert.AreEqual(1, file.Blocks.Count);
-            Guid actual = file.Blocks[0];
+            Guid expected;
+            expected = target.AppendBlock(path);
+            file = target.GetFileInfo(path);
+            Assert.AreEqual(2, file.Blocks.Count);
+            Guid actual = file.Blocks[1];
             Assert.AreEqual(expected, actual);
         }
     }
