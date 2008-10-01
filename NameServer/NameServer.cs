@@ -113,6 +113,20 @@ namespace NameServer
             _fileSystem.CloseFile(path);
         }
 
+        public string[] GetDataServersForBlock(Guid blockID)
+        {
+            lock( _blocks )
+            {
+                // TODO: Deal with under-replicated blocks.
+                BlockInfo block;
+                if( !_blocks.TryGetValue(blockID, out block) )
+                    throw new ArgumentException("Invalid block ID.");
+
+                return (from server in block.DataServers
+                        select server.HostName).ToArray();
+            }
+        }
+
         #endregion
 
         #region INameServerHeartbeatProtocol Members

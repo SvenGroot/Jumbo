@@ -22,11 +22,56 @@ namespace ClientSample
             //nameServer.CreateFile("/test/bar");
             //File f = nameServer.GetFileInfo("/test/bar");
             System.Threading.Thread.Sleep(3000); // wait for data server to report to name server
-            BlockAssignment b = nameServer.CreateFile("/test");
-            //nameServer.GetFileInfo("/test");
+            //BlockAssignment b = nameServer.CreateFile("/test");
+            //WriteBlock(b);
+            //nameServer.CloseFile("/test");
 
-            WriteBlock(b);
-            nameServer.CloseFile("/test");
+            Tkl.Jumbo.Dfs.File file = nameServer.GetFileInfo("/test");
+            string[] servers = nameServer.GetDataServersForBlock(file.Blocks[0]);
+            using( TcpClient client = new TcpClient(servers[0], 9001) )
+            {
+                DataServerClientProtocolReadHeader header = new DataServerClientProtocolReadHeader();
+                header.BlockID = file.Blocks[0];
+                header.Offset = 100000;
+                header.Size = 100000;
+
+                using( NetworkStream stream = client.GetStream() )
+                {
+                    BinaryFormatter formatter = new BinaryFormatter();
+                    formatter.Serialize(stream, header);
+                    int _packetSize = 64 * 1024;
+
+                    using( BinaryReader reader = new BinaryReader(stream) )
+                    using( BinaryWriter writer = new BinaryWriter(System.IO.File.Create("test.txt")) )
+                    {
+                        int offset = reader.ReadInt32();
+                        int size = reader.ReadInt32();
+
+                        int sizeRemaining = size;
+                        byte[] buffer = new byte[_packetSize];
+                        Crc32 computedChecksum = new Crc32();
+                        while( sizeRemaining > 0 )
+                        {
+                            uint checksum = reader.ReadUInt32();
+                            computedChecksum.Reset();
+                            int packetSize = Math.Min(sizeRemaining, _packetSize);
+                            int bytesRead = 0;
+                            while( bytesRead < packetSize )
+                            {
+                                bytesRead += reader.Read(buffer, bytesRead, packetSize - bytesRead);
+                            }
+
+                            computedChecksum.Update(buffer, 0, packetSize);
+                            if( computedChecksum.Value != checksum )
+                                throw new Exception(); // TODO: handle this properly
+
+                            writer.Write(buffer, 0, packetSize);
+                            sizeRemaining -= packetSize;
+                        }
+
+                    }
+                }
+            }
             Console.ReadKey();
         }
 
@@ -34,8 +79,7 @@ namespace ClientSample
         {
             using( TcpClient client = new TcpClient(b.DataServers[0], 9001) )
             {
-                DataServerClientProtocolHeader header = new DataServerClientProtocolHeader();
-                header.Command = DataServerCommand.WriteBlock;
+                DataServerClientProtocolWriteHeader header = new DataServerClientProtocolWriteHeader();
                 header.BlockID = b.BlockID;
                 header.DataServers = null;
                 header.DataSize = 10000000;

@@ -62,6 +62,8 @@ namespace Tkl.Jumbo.Dfs
         /// <param name="path">The path of the file to close.</param>
         void CloseFile(string path);
 
+        string[] GetDataServersForBlock(Guid blockID);
+
         /// <summary>
         /// Gets the size of a single block in a file.
         /// </summary>

@@ -75,19 +75,33 @@ namespace DataServer
         {
             using( NetworkStream stream = client.GetStream() )
             {
+                // TODO: Return error codes on invalid header etc.
                 BinaryFormatter formatter = new BinaryFormatter();
                 DataServerClientProtocolHeader header = (DataServerClientProtocolHeader)formatter.Deserialize(stream);
 
-                if( header.Command == DataServerCommand.WriteBlock )
+                switch( header.Command )
                 {
-                    if( header.DataSize > _dataServer.BlockSize )
-                        throw new Exception(); // TODO: Handle this properly
-                    WriteBlock(stream, header);
+                case DataServerCommand.WriteBlock:
+                    DataServerClientProtocolWriteHeader writeHeader = header as DataServerClientProtocolWriteHeader;
+                    if( writeHeader != null )
+                    {
+                        if( writeHeader.DataSize > _dataServer.BlockSize )
+                            throw new Exception(); // TODO: Handle this properly
+                        WriteBlock(stream, writeHeader);
+                    }
+                    break;
+                case DataServerCommand.ReadBlock:
+                    DataServerClientProtocolReadHeader readHeader = header as DataServerClientProtocolReadHeader;
+                    if( readHeader != null )
+                    {
+                        ReadBlock(stream, readHeader);
+                    }
+                    break;
                 }
             }
         }
 
-        private void WriteBlock(NetworkStream stream, DataServerClientProtocolHeader header)
+        private void WriteBlock(NetworkStream stream, DataServerClientProtocolWriteHeader header)
         {
             _log.InfoFormat("Block write command received: block {0}, size {1}.", header.BlockID, header.DataSize);
             int sizeRemaining = header.DataSize;
@@ -98,10 +112,11 @@ namespace DataServer
             using( BinaryWriter writer = new BinaryWriter(blockFile) )
             {
                 byte[] buffer = new byte[_packetSize];
+                Crc32 computedChecksum = new Crc32();
                 while( sizeRemaining > 0 )
                 {
                     uint checksum = reader.ReadUInt32();
-                    Crc32 computedChecksum = new Crc32();
+                    computedChecksum.Reset();
                     int packetSize = Math.Min(sizeRemaining, _packetSize);
                     int bytesRead = 0;
                     while( bytesRead < packetSize )
@@ -122,6 +137,57 @@ namespace DataServer
             }
             _log.InfoFormat("Writing block {0} complete.", header.BlockID);
             _dataServer.CompleteBlock(header.BlockID, header.DataSize);
+        }
+
+        private void ReadBlock(NetworkStream stream, DataServerClientProtocolReadHeader header)
+        {
+            _log.InfoFormat("Block read command received: block {0}, offset {1}, size {2}.", header.BlockID, header.Offset, header.Size);
+            int packetOffset = header.Offset / _packetSize;
+            int offset = packetOffset * _packetSize; // Round down to the nearest packet.
+            // File offset has to take CRCs into account.
+            int fileOffset = packetOffset * (_packetSize + sizeof(uint));
+
+            int endPacketOffset = (header.Offset + header.Size) / _packetSize;
+            if( (header.Offset + header.Size) % _packetSize != 0 )
+                ++endPacketOffset;
+            int endOffset = endPacketOffset * _packetSize;
+            int endFileOffset = endPacketOffset * (_packetSize + sizeof(uint));
+
+            using( FileStream blockFile = _dataServer.OpenBlock(header.BlockID) )
+            using( BinaryReader reader = new BinaryReader(blockFile) )
+            using( BinaryWriter writer = new BinaryWriter(stream) )
+            {
+                if( fileOffset > blockFile.Length || endFileOffset > blockFile.Length )
+                    throw new ArgumentOutOfRangeException(); // TODO: Handle properly.
+
+                writer.Write(offset);
+                writer.Write(endOffset - offset);
+
+                byte[] buffer = new byte[_packetSize];
+                blockFile.Seek(fileOffset, SeekOrigin.Begin);
+                int sizeRemaining = endOffset - offset;
+                Crc32 computedCrc = new Crc32();
+                while( sizeRemaining > 0 )
+                {
+                    uint crc = reader.ReadUInt32();
+                    computedCrc.Reset();
+                    int packetSize = Math.Min(sizeRemaining, _packetSize);
+                    int bytesRead = reader.Read(buffer, 0, packetSize);
+                    if( bytesRead < packetSize )
+                        throw new Exception("Invalid amount read.");
+
+                    computedCrc.Update(buffer);
+                    if( computedCrc.Value != crc )
+                    {
+                        throw new Exception("Incorrect CRC."); // TODO: Handle this properly.
+                    }
+
+                    writer.Write(crc);
+                    writer.Write(buffer, 0, packetSize);
+
+                    sizeRemaining -= packetSize;
+                }
+            }
         }
     }
 }

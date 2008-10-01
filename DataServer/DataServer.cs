@@ -63,6 +63,28 @@ namespace DataServer
             }
         }
 
+        public FileStream OpenBlock(Guid blockID)
+        {
+            lock( _blocks )
+            {
+                if( !_blocks.Contains(blockID) )
+                    throw new ArgumentException("Invalid block.");
+
+                return System.IO.File.OpenRead(Path.Combine(_blockStorageDirectory, blockID.ToString()));
+            }
+        }
+
+        public int GetBlockSize(Guid blockID)
+        {
+            lock( _blocks )
+            {
+                if( !_blocks.Contains(blockID) )
+                    throw new ArgumentException("Invalid block.");
+
+                return (int)new FileInfo(Path.Combine(_blockStorageDirectory, blockID.ToString())).Length;
+            }
+        }
+
         public void CompleteBlock(Guid blockID, int size)
         {
             lock( _blocks )
