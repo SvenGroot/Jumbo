@@ -10,6 +10,7 @@ namespace NameServer
         CreateDirectory,
         CreateFile,
         AppendBlock,
-        CommitBlock
+        CommitBlock,
+        CommitFile
     }
 }

@@ -23,7 +23,15 @@ namespace ClientSample
             //File f = nameServer.GetFileInfo("/test/bar");
             System.Threading.Thread.Sleep(3000); // wait for data server to report to name server
             BlockAssignment b = nameServer.CreateFile("/test");
+            //nameServer.GetFileInfo("/test");
 
+            WriteBlock(b);
+            nameServer.CloseFile("/test");
+            Console.ReadKey();
+        }
+
+        private static void WriteBlock(BlockAssignment b)
+        {
             using( TcpClient client = new TcpClient(b.DataServers[0], 9001) )
             {
                 DataServerClientProtocolHeader header = new DataServerClientProtocolHeader();
@@ -57,7 +65,6 @@ namespace ClientSample
                     }
                 }
             }
-            Console.ReadKey();
         }
     }
 }

@@ -108,6 +108,11 @@ namespace NameServer
             return AssignBlockToDataServers(blockId);
         }
 
+        public void CloseFile(string path)
+        {
+            _fileSystem.CloseFile(path);
+        }
+
         #endregion
 
         #region INameServerHeartbeatProtocol Members
@@ -157,18 +162,36 @@ namespace NameServer
                     _log.Info("Received block report.");
                     dataServer.HasReportedBlocks = true;
                     dataServer.Blocks = new List<Guid>(blockReport.Blocks);
-                    // TODO: Record data servers per block.
                     foreach( Guid block in dataServer.Blocks )
                     {
                         BlockInfo info;
                         lock( _blocks )
                         {
-                            if( _blocks.TryGetValue(block, out info) )
+                            lock( _underReplicatedBlocks )
                             {
-                                info.DataServers.Add(dataServer);
+                                if( _blocks.TryGetValue(block, out info) )
+                                {
+                                    info.DataServers.Add(dataServer);
+                                    _log.DebugFormat("Dataserver {0} has block ID {1}", dataServer.HostName, block);
+                                }
+                                else if( _underReplicatedBlocks.TryGetValue(block, out info) )
+                                {
+                                    info.DataServers.Add(dataServer);
+                                    _log.DebugFormat("Dataserver {0} has block ID {1}", dataServer.HostName, block);
+                                    if( info.DataServers.Count >= _replicationFactor )
+                                    {
+                                        _log.InfoFormat("Block {0} has reached sufficient replication level.", block);
+                                        _underReplicatedBlocks.Remove(block);
+                                        _blocks.Add(block, info);
+                                    }
+                                }
+                                else
+                                {
+                                    _log.WarnFormat("Dataserver {0} reported unknown block {1}.", dataServer.HostName, block);
+                                    // TODO: Inform the data server to delete the block.
+                                }
                             }
                         }
-                        // TODO: Underreplicated blocks (pending blocks not possible here).
                     }
                 }
             }
@@ -194,7 +217,7 @@ namespace NameServer
                         {
                             // TODO: We need to record the total size of the file somewhere, and record that in the file system only when
                             // the file is completed.
-                            _log.InfoFormat("Block {0} is now fully replicated and is being committed.", newBlock.BlockID);
+                            _log.InfoFormat("Pending block {0} is now fully replicated and is being committed.", newBlock.BlockID);
                             _fileSystem.CommitBlock(block.File.FullPath, newBlock.BlockID, newBlock.Size);
                             _pendingBlocks.Remove(newBlock.BlockID);
                             _blocks.Add(newBlock.BlockID, block);

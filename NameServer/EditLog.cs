@@ -57,6 +57,14 @@ namespace NameServer
             LogMutation("{0}:{1:yyyyMMddHHmmss.fffffff}:{2}:{3}:{4}", FileSystemMutation.CommitBlock, date, path, blockId, size);
         }
 
+        public void LogCommitFile(string path, bool discardPendingBlocks)
+        {
+            if( path == null )
+                throw new ArgumentNullException("path");
+
+            LogMutation("{0}:{1:yyyyMMddHHmmss.fffffff}:{2}:{3}", FileSystemMutation.CommitFile, DateTime.UtcNow, path, discardPendingBlocks);
+        }
+
         /// <summary>
         /// Replays the log file.
         /// </summary>
@@ -89,6 +97,9 @@ namespace NameServer
                                 break;
                             case FileSystemMutation.CommitBlock:
                                 fileSystem.CommitBlock(parts[2], new Guid(parts[3]), Convert.ToInt32(parts[4]));
+                                break;
+                            case FileSystemMutation.CommitFile:
+                                fileSystem.CloseFile(parts[2], Convert.ToBoolean(parts[3]));
                                 break;
                             }
                         }

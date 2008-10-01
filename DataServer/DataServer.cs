@@ -31,6 +31,8 @@ namespace DataServer
 
             _nameServer = nameServer;
             _nameServerClient = nameServerClient;
+
+            LoadBlocks();
         }
 
         public long BlockSize { get; private set; }
@@ -115,6 +117,31 @@ namespace DataServer
             lock( _pendingHeartbeatData )
             {
                 _pendingHeartbeatData.Add(data);
+            }
+        }
+
+        private void LoadBlocks()
+        {
+            // Since this'll be likely only done on object construction, the lock isn't strictly needed.
+            // It doesn't hurt though.
+            lock( _blocks )
+            {
+                _log.InfoFormat("Loading blocks...");
+                string[] files = System.IO.Directory.GetFiles(_blockStorageDirectory);
+                foreach( string file in files )
+                {
+                    string fileName = Path.GetFileName(file);
+                    try
+                    {
+                        Guid blockID = new Guid(fileName);
+                        _log.DebugFormat("- Block ID: {0}", blockID);
+                        _blocks.Add(blockID);
+                    }
+                    catch( FormatException )
+                    {
+                        _log.WarnFormat("The name of file '{0}' in the block storage directory is not a valid GUID.", fileName);
+                    }
+                }
             }
         }
     }

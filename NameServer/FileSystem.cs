@@ -42,8 +42,14 @@ namespace NameServer
                 _log.Info("Replaying log file.");
                 _editLog.ReplayLog(this);
                 _log.Info("Replaying log file finished.");
-                // TODO: After replaying the log file and pending files should be committed, however, pending blocks in those files
-                // should probably be committed.
+                var pendingFiles = _pendingFiles.Keys.ToArray(); // make a copy
+                foreach( var file in pendingFiles )
+                {
+                    // TODO: I'm not sure this is the right thing to do since there's no obvious way for the users to tell
+                    // that a file is incomplete. Perhaps we should rename or move it instead.
+                    _log.WarnFormat("!!! File {0} was not committed before previous data server shutdown.", file);
+                    CloseFile(file, true); // discard uncommitted blocks.
+                }
             }
         }
 
@@ -200,6 +206,14 @@ namespace NameServer
             }
         }
 
+        /// <summary>
+        /// Appends a block to an existing file.
+        /// </summary>
+        /// <param name="path">The path of the file to append the block to.</param>
+        /// <returns>The block ID of the the new block.</returns>
+        /// <remarks>
+        /// The file must be open for writing.
+        /// </remarks>
         public Guid AppendBlock(string path)
         {
             _log.DebugFormat("AppendBlock: path = \"{0}\"", path);
@@ -208,6 +222,12 @@ namespace NameServer
             return blockID;
         }
 
+        /// <summary>
+        /// Appens the specified block to a file. This function is meant for log file replaying.
+        /// </summary>
+        /// <param name="path">The path of the file to append the block to.</param>
+        /// <param name="blockID">The ID of the block to append.</param>
+        /// <param name="checkReplication"><see langword="true"/> to check all existing blocks for replication before appending the new block; <see langword="false"/> to skip the replication check.</param>
         public void AppendBlock(string path, Guid blockID, bool checkReplication)
         {
             // TODO: Only allow new blocks if the file so far is a whole number of blocks.
@@ -216,7 +236,7 @@ namespace NameServer
             lock( _root )
             {
                 PendingFile file;
-                if( !_pendingFiles.TryGetValue(path, out file) )
+                if( !(_pendingFiles.TryGetValue(path, out file) && file.File.IsOpenForWriting) )
                     throw new InvalidOperationException(string.Format("The file '{0}' does not exist or is not open for writing.", path));
 
                 AppendBlock(file, blockID, checkReplication);
@@ -227,6 +247,12 @@ namespace NameServer
             }
         }
 
+        /// <summary>
+        /// Commit a pending block and add it to the list of blocks for that file.
+        /// </summary>
+        /// <param name="path">The file whose block to commit.</param>
+        /// <param name="blockID">The ID of the block to commit.</param>
+        /// <param name="size">The size of the committed block. This is used to update the size of the file.</param>
         public void CommitBlock(string path, Guid blockID, int size)
         {
             _log.DebugFormat("CommitBlock: path = \"{0}\", blockID = {1}, size = {2}", path, blockID, size);
@@ -243,6 +269,53 @@ namespace NameServer
                 file.File.Blocks.Add(file.PendingBlock.Value);
                 file.File.Size += size;
                 file.PendingBlock = null;
+                if( !file.File.IsOpenForWriting )
+                {
+                    _log.DebugFormat("File {0} is no longer pending.", path);
+                    _pendingFiles.Remove(path);                   
+                }
+            }
+        }
+
+        /// <summary>
+        /// Closes a file that is open for writing.
+        /// </summary>
+        /// <param name="path">The path of the file to close.</param>
+        public void CloseFile(string path)
+        {
+            CloseFile(path, false);
+        }
+
+        /// <summary>
+        /// Closes a file that is open for writing.
+        /// </summary>
+        /// <param name="path">The path of the file to close.</param>
+        /// <param name="discardPendingBlocks"><see langword="true"/> to discard pending blocks.</param>
+        public void CloseFile(string path, bool discardPendingBlocks)
+        {
+            // TODO: Once we have leases and stuff, only the client holding the file open may do this.
+            _log.DebugFormat("CloseFile: path = \"{0}\", discardPendingBlocks = {1}", path, discardPendingBlocks);
+            lock( _root )
+            {
+                PendingFile file;
+                if( !(_pendingFiles.TryGetValue(path, out file) && file.File.IsOpenForWriting) )
+                    throw new InvalidOperationException(string.Format("The file '{0}' does not exist or is not open for writing.", path));
+
+                if( discardPendingBlocks )
+                {
+                    if( file.PendingBlock != null )
+                        _log.DebugFormat("Discarding pending block {0} for file {1}", file.PendingBlock, path);
+                    file.PendingBlock = null;
+                }
+
+                _log.InfoFormat("Closing file {0}", path);
+                _editLog.LogCommitFile(path, discardPendingBlocks);
+                file.File.IsOpenForWriting = false;
+                if( file.PendingBlock == null )
+                {
+                    _log.DebugFormat("File {0} is no longer pending.", path);
+                    _pendingFiles.Remove(path);
+                }
             }
         }
 
@@ -383,7 +456,7 @@ namespace NameServer
         {
             _log.InfoFormat("Creating file \"{0}\" inside \"{1}\"", name, parent.FullPath);
             _editLog.LogCreateFile(AppendPath(parent.FullPath, name), dateCreated);
-            PendingFile result = new PendingFile(new File(parent, name, dateCreated));
+            PendingFile result = new PendingFile(new File(parent, name, dateCreated) { IsOpenForWriting = true });
             lock( _pendingFiles )
             {
                 _pendingFiles.Add(result.File.FullPath, result);
