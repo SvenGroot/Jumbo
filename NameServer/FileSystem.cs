@@ -48,7 +48,7 @@ namespace NameServer
                     // TODO: I'm not sure this is the right thing to do since there's no obvious way for the users to tell
                     // that a file is incomplete. Perhaps we should rename or move it instead.
                     _log.WarnFormat("!!! File {0} was not committed before previous data server shutdown.", file);
-                    CloseFile(file, true); // discard uncommitted blocks.
+                    CloseFile(file);
                 }
             }
         }
@@ -283,33 +283,21 @@ namespace NameServer
         /// <param name="path">The path of the file to close.</param>
         public void CloseFile(string path)
         {
-            CloseFile(path, false);
-        }
-
-        /// <summary>
-        /// Closes a file that is open for writing.
-        /// </summary>
-        /// <param name="path">The path of the file to close.</param>
-        /// <param name="discardPendingBlocks"><see langword="true"/> to discard pending blocks.</param>
-        public void CloseFile(string path, bool discardPendingBlocks)
-        {
             // TODO: Once we have leases and stuff, only the client holding the file open may do this.
-            _log.DebugFormat("CloseFile: path = \"{0}\", discardPendingBlocks = {1}", path, discardPendingBlocks);
+            _log.DebugFormat("CloseFile: path = \"{0}\"", path);
             lock( _root )
             {
                 PendingFile file;
                 if( !(_pendingFiles.TryGetValue(path, out file) && file.File.IsOpenForWriting) )
                     throw new InvalidOperationException(string.Format("The file '{0}' does not exist or is not open for writing.", path));
 
-                if( discardPendingBlocks )
+                if( file.PendingBlock != null )
                 {
-                    if( file.PendingBlock != null )
-                        _log.DebugFormat("Discarding pending block {0} for file {1}", file.PendingBlock, path);
-                    file.PendingBlock = null;
+                    throw new InvalidOperationException(string.Format("The file '{0}' cannot be closed because it has pending block {1}.", path, file.PendingBlock.Value));
                 }
 
                 _log.InfoFormat("Closing file {0}", path);
-                _editLog.LogCommitFile(path, discardPendingBlocks);
+                _editLog.LogCommitFile(path);
                 file.File.IsOpenForWriting = false;
                 if( file.PendingBlock == null )
                 {

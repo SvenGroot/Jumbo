@@ -55,6 +55,7 @@
     <Compile Include="CRC32.cs" />
     <Compile Include="DataServerClientProtocolHeader.cs" />
     <Compile Include="DataServerClientProtocolReadHeader.cs" />
+    <Compile Include="DataServerClientProtocolResult.cs" />
     <Compile Include="DataServerClientProtocolWriteHeader.cs" />
     <Compile Include="DataServerCommand.cs" />
     <Compile Include="DataServerHeartbeatCommand.cs" />

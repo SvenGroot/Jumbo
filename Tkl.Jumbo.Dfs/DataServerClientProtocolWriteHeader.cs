@@ -20,13 +20,5 @@ namespace Tkl.Jumbo.Dfs
         /// Used only when <see cref="Command"/> is <see cref="DataServerCommand.Write"/>.
         /// </remarks>
         public string[] DataServers { get; set; }
-
-        /// <summary>
-        /// Gets or sets the size of the block to be written.
-        /// </summary>
-        /// <remarks>
-        /// Used only when <see cref="Command"/> is <see cref="DataServerCommand.Write"/>. This does not include checksum values.
-        /// </remarks>
-        public int DataSize { get; set; }
     }
 }

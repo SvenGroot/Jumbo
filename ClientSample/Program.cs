@@ -30,7 +30,7 @@ namespace ClientSample
             //string[] servers = nameServer.GetDataServersForBlock(file.Blocks[0]);
             //ReadBlock(file, servers);
 
-            using( FileStream input = System.IO.File.OpenRead(@"F:\Sven\Downloads\f1pc12fsx1.02.exe") )
+            using( FileStream input = System.IO.File.OpenRead(@"D:\Sven\Downloads\Windows Mobile 5.0 Pocket PC SDK.msi") )
             using( DfsOutputStream stream = new DfsOutputStream(nameServer, "/myfile") )
             {
                 byte[] buffer = new byte[4096];
@@ -99,7 +99,7 @@ namespace ClientSample
                 DataServerClientProtocolWriteHeader header = new DataServerClientProtocolWriteHeader();
                 header.BlockID = b.BlockID;
                 header.DataServers = null;
-                header.DataSize = 10000000;
+                int size = 10000000;
 
                 using( NetworkStream stream = client.GetStream() )
                 {
@@ -110,7 +110,7 @@ namespace ClientSample
                     {
                         Random rnd = new Random();
                         int packetSize = 64 * 1024;
-                        for( int sizeRemaining = header.DataSize; sizeRemaining > 0; sizeRemaining -= packetSize )
+                        for( int sizeRemaining = size; sizeRemaining > 0; sizeRemaining -= packetSize )
                         {
 
                             byte[] buffer = new byte[Math.Min(sizeRemaining, packetSize)];
@@ -121,6 +121,8 @@ namespace ClientSample
                             Crc32 crc = new Crc32();
                             crc.Update(buffer);
                             writer.Write((uint)crc.Value);
+                            writer.Write(buffer.Length);
+                            writer.Write(!(sizeRemaining - packetSize > 0));
                             writer.Write(buffer);
                         }
                     }

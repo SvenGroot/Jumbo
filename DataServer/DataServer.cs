@@ -23,6 +23,7 @@ namespace DataServer
         private List<Guid> _blocks = new List<Guid>();
         private List<Guid> _pendingBlocks = new List<Guid>();
         private BlockServer _blockServer; // listens for TCP connections.
+        private BlockServer _blockServerIPv4;
 
         public DataServer(INameServerHeartbeatProtocol nameServer, INameServerClientProtocol nameServerClient)
         {
@@ -41,8 +42,18 @@ namespace DataServer
         {
             _log.Info("Data server main loop starting.");
             BlockSize = _nameServerClient.BlockSize;
-            _blockServer = new BlockServer(this);
-            _blockServer.RunAsync();
+            if( System.Net.Sockets.Socket.OSSupportsIPv6 )
+            {
+                _blockServer = new BlockServer(this, System.Net.IPAddress.IPv6Any);
+                _blockServer.RunAsync();
+                _blockServerIPv4 = new BlockServer(this, System.Net.IPAddress.Any);
+                _blockServerIPv4.RunAsync();
+            }
+            else
+            {
+                _blockServer = new BlockServer(this, System.Net.IPAddress.Any);
+                _blockServer.RunAsync();
+            }
             while( true )
             {
                 SendHeartbeat();
@@ -98,6 +109,9 @@ namespace DataServer
                 _blocks.Add(blockID);
             }
             AddDataForNextHeartbeat(new NewBlockHeartbeatData() { BlockID = blockID, Size = size });
+            // We send the heartbeat immediately so the client knows that when the server comes back to him, the name server
+            // knows about the block being committed.
+            SendHeartbeat();
         }
 
         private void SendHeartbeat()
