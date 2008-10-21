@@ -26,8 +26,26 @@ namespace ClientSample
             //WriteBlock(b);
             //nameServer.CloseFile("/test");
 
-            Tkl.Jumbo.Dfs.File file = nameServer.GetFileInfo("/test");
-            string[] servers = nameServer.GetDataServersForBlock(file.Blocks[0]);
+            //Tkl.Jumbo.Dfs.File file = nameServer.GetFileInfo("/test");
+            //string[] servers = nameServer.GetDataServersForBlock(file.Blocks[0]);
+            //ReadBlock(file, servers);
+
+            using( FileStream input = System.IO.File.OpenRead(@"F:\Sven\Downloads\f1pc12fsx1.02.exe") )
+            using( DfsOutputStream stream = new DfsOutputStream(nameServer, "/myfile") )
+            {
+                byte[] buffer = new byte[4096];
+                int bytesRead;
+                while( (bytesRead = input.Read(buffer, 0, buffer.Length)) > 0 )
+                {
+                    stream.Write(buffer, 0, bytesRead);
+                }
+            }
+
+            Console.ReadKey();
+        }
+
+        private static void ReadBlock(Tkl.Jumbo.Dfs.File file, string[] servers)
+        {
             using( TcpClient client = new TcpClient(servers[0], 9001) )
             {
                 DataServerClientProtocolReadHeader header = new DataServerClientProtocolReadHeader();
@@ -72,7 +90,6 @@ namespace ClientSample
                     }
                 }
             }
-            Console.ReadKey();
         }
 
         private static void WriteBlock(BlockAssignment b)
