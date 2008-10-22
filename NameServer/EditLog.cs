@@ -57,12 +57,20 @@ namespace NameServer
             LogMutation("{0}:{1:yyyyMMddHHmmss.fffffff}:{2}:{3}:{4}", FileSystemMutation.CommitBlock, date, path, blockId, size);
         }
 
-        public void LogCommitFile(string path)
+        public void LogCommitFile(string path, bool discardPendingBlocks)
         {
             if( path == null )
                 throw new ArgumentNullException("path");
 
-            LogMutation("{0}:{1:yyyyMMddHHmmss.fffffff}:{2}", FileSystemMutation.CommitFile, DateTime.UtcNow, path);
+            LogMutation("{0}:{1:yyyyMMddHHmmss.fffffff}:{2}:{3}", FileSystemMutation.CommitFile, DateTime.UtcNow, path, discardPendingBlocks);
+        }
+
+        public void LogDelete(string path, bool recursive)
+        {
+            if( path == null )
+                throw new ArgumentNullException("path");
+
+            LogMutation("{0}:{1:yyyyMMddHHmmss.fffffff}:{2}:{3}", FileSystemMutation.Delete, DateTime.UtcNow, path, recursive);
         }
 
         /// <summary>
@@ -99,7 +107,10 @@ namespace NameServer
                                 fileSystem.CommitBlock(parts[2], new Guid(parts[3]), Convert.ToInt32(parts[4]));
                                 break;
                             case FileSystemMutation.CommitFile:
-                                fileSystem.CloseFile(parts[2]);
+                                fileSystem.CloseFile(parts[2], Convert.ToBoolean(parts[3]));
+                                break;
+                            case FileSystemMutation.Delete:
+                                fileSystem.Delete(parts[2], Convert.ToBoolean(parts[3]));
                                 break;
                             }
                         }

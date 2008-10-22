@@ -46,8 +46,11 @@ namespace DataServer
             {
                 _blockServer = new BlockServer(this, System.Net.IPAddress.IPv6Any);
                 _blockServer.RunAsync();
-                _blockServerIPv4 = new BlockServer(this, System.Net.IPAddress.Any);
-                _blockServerIPv4.RunAsync();
+                if( ConfigurationManager.AppSettings["ListenIPv4WhenIPv6Available"] == "true" )
+                {
+                    _blockServerIPv4 = new BlockServer(this, System.Net.IPAddress.Any);
+                    _blockServerIPv4.RunAsync();
+                }
             }
             else
             {

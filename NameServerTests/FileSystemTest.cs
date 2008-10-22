@@ -229,6 +229,27 @@ namespace NameServerTests
         }
 
         [TestMethod]
+        public void DeleteTest()
+        {
+            NameServer.NameServer nameServer = new NameServer.NameServer(false);
+            FileSystem target = nameServer.FileSystem;
+            target.CreateDirectory("/test1");
+            target.CreateFile("/test1/test2");
+            target.CloseFile("/test1/test2", true);
+            target.CreateFile("/test1/test3");
+            target.CloseFile("/test1/test3", true);
+
+            bool result = target.Delete("/test1/test2", false);
+            Assert.IsTrue(result);
+            result = target.Delete("/test1/test2", false);
+            Assert.IsFalse(result);
+            result = target.Delete("/test1", true);
+            Assert.IsTrue(result);
+            Directory dir = target.GetDirectoryInfo("/test1");
+            Assert.IsNull(dir);
+        }
+
+        [TestMethod]
         [ExpectedException(typeof(ArgumentNullException))]
         public void CreateFilePathNullTest()
         {
@@ -415,6 +436,14 @@ namespace NameServerTests
             target.CommitBlock("/test/test2", blockID1, nameServer.BlockSize);
             Guid blockID2 = target.AppendBlock("/test/test2");
             target.CommitBlock("/test/test2", blockID2, 10);
+            target.CloseFile("/test/test2");
+            Guid blockID3 = target.CreateFile("/test/test3", date, true).Value;
+            target.CommitBlock("/test/test3", blockID3, nameServer.BlockSize);
+            target.CloseFile("/test/test3");
+            target.Delete("/test/test3", false);
+            target.CreateDirectory("/dir1");
+            target.CreateDirectory("/dir1/dir2");
+            target.Delete("/dir1", true);
             long size = new System.IO.FileInfo("EditLog.log").Length;
 
             nameServer = new NameServer.NameServer(true);
@@ -428,6 +457,10 @@ namespace NameServerTests
             Assert.AreEqual(blockID1, f.Blocks[0]);
             Assert.AreEqual(blockID2, f.Blocks[1]);
             Assert.AreEqual(nameServer.BlockSize + 10, f.Size);
+            f = target.GetFileInfo("/test/test3");
+            Assert.IsNull(f);
+            Directory d = target.GetDirectoryInfo("/dir1");
+            Assert.IsNull(d);
             // Replaying the log file must not cause the log file to change.
             Assert.AreEqual(size, new System.IO.FileInfo("EditLog.log").Length);
         }

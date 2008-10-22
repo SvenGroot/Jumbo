@@ -11,6 +11,7 @@ namespace NameServer
         CreateFile,
         AppendBlock,
         CommitBlock,
-        CommitFile
+        CommitFile,
+        Delete
     }
 }

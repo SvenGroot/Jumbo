@@ -27,6 +27,7 @@ namespace DataServer
 
         public BlockServer(DataServer dataServer, IPAddress bindAddress)
         {
+            _log.InfoFormat("Starting block server on {0}", bindAddress);
             if( dataServer == null )
                 throw new ArgumentNullException("dataServer");
 

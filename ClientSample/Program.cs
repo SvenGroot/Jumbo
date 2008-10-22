@@ -21,7 +21,8 @@ namespace ClientSample
             //nameServer.CreateDirectory("/test/foo");
             //nameServer.CreateFile("/test/bar");
             //File f = nameServer.GetFileInfo("/test/bar");
-            System.Threading.Thread.Sleep(3000); // wait for data server to report to name server
+            Console.ReadKey();
+            //System.Threading.Thread.Sleep(3000); // wait for data server to report to name server
             //BlockAssignment b = nameServer.CreateFile("/test");
             //WriteBlock(b);
             //nameServer.CloseFile("/test");
@@ -30,7 +31,9 @@ namespace ClientSample
             //string[] servers = nameServer.GetDataServersForBlock(file.Blocks[0]);
             //ReadBlock(file, servers);
 
-            using( FileStream input = System.IO.File.OpenRead(@"D:\Sven\Downloads\Windows Mobile 5.0 Pocket PC SDK.msi") )
+            nameServer.Delete("/myfile", false);
+
+            using( FileStream input = System.IO.File.OpenRead(args[0]) )
             using( DfsOutputStream stream = new DfsOutputStream(nameServer, "/myfile") )
             {
                 byte[] buffer = new byte[4096];

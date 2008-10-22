@@ -93,6 +93,11 @@ namespace NameServer
             return AssignBlockToDataServers(guid);
         }
 
+        public bool Delete(string path, bool recursive)
+        {
+            return _fileSystem.Delete(path, recursive);
+        }
+
         public File GetFileInfo(string path)
         {
             return _fileSystem.GetFileInfo(path);

@@ -37,6 +37,14 @@ namespace Tkl.Jumbo.Dfs
         BlockAssignment CreateFile(string path);
 
         /// <summary>
+        /// Deletes the specified file or directory.
+        /// </summary>
+        /// <param name="path">The path of the file or directory to delete.</param>
+        /// <param name="recursive"><see langword="true"/> to delete all children if <paramref name="path"/> refers to a directory; otherwise <see langword="false"/>.</param>
+        /// <returns><see langword="true"/> if the file was deleted; <see langword="false"/> if it doesn't exist.</returns>
+        bool Delete(string path, bool recursive);
+
+        /// <summary>
         /// Gets information about a file.
         /// </summary>
         /// <param name="path">The full path of the file.</param>

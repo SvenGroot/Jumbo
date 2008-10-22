@@ -25,6 +25,7 @@ namespace Tkl.Jumbo.Dfs
         private int _blockBytesWritten;
         private readonly byte[] _buffer = new byte[_packetSize];
         private int _bufferPos;
+        private bool _disposed = false;
 
         public DfsOutputStream(INameServerClientProtocol nameServer, string path)
         {
@@ -100,6 +101,7 @@ namespace Tkl.Jumbo.Dfs
 
         public override void Write(byte[] buffer, int offset, int count)
         {
+            CheckDisposed();
             int bufferPos = 0;
             while( bufferPos < buffer.Length )
             {
@@ -130,15 +132,19 @@ namespace Tkl.Jumbo.Dfs
         protected override void Dispose(bool disposing)
         {
             base.Dispose(disposing);
-            if( _bufferPos > 0 && _dataServerWriter != null )
+            if( !_disposed )
             {
-                WritePacket(_dataServerWriter, _dataServerReader, _buffer, _bufferPos, true);
-                _bufferPos = 0;
-            }
-            _nameServer.CloseFile(_path);
-            if( disposing )
-            {
-                CloseDataServerConnection();
+                _disposed = true;
+                if( _bufferPos > 0 && _dataServerWriter != null )
+                {
+                    WritePacket(_dataServerWriter, _dataServerReader, _buffer, _bufferPos, true);
+                    _bufferPos = 0;
+                }
+                _nameServer.CloseFile(_path);
+                if( disposing )
+                {
+                    CloseDataServerConnection();
+                }
             }
         }
 
@@ -164,6 +170,12 @@ namespace Tkl.Jumbo.Dfs
                 ((IDisposable)_blockServerClient).Dispose();
                 _blockServerClient = null;
             }
+        }
+
+        private void CheckDisposed()
+        {
+            if( _disposed )
+                throw new ObjectDisposedException(typeof(DfsOutputStream).FullName);
         }
 
         private void StartWritingBlock(bool newBlock)

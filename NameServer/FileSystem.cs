@@ -48,7 +48,7 @@ namespace NameServer
                     // TODO: I'm not sure this is the right thing to do since there's no obvious way for the users to tell
                     // that a file is incomplete. Perhaps we should rename or move it instead.
                     _log.WarnFormat("!!! File {0} was not committed before previous data server shutdown.", file);
-                    CloseFile(file);
+                    CloseFile(file, true); // discard uncommitted blocks.
                 }
             }
         }
@@ -283,6 +283,16 @@ namespace NameServer
         /// <param name="path">The path of the file to close.</param>
         public void CloseFile(string path)
         {
+            CloseFile(path, false);
+        }
+
+        /// <summary>
+        /// Closes a file that is open for writing.
+        /// </summary>
+        /// <param name="path">The path of the file to close.</param>
+        /// <param name="discardPendingBlocks"><see langword="true"/> to discard pending blocks.</param>
+        public void CloseFile(string path, bool discardPendingBlocks)
+        {
             // TODO: Once we have leases and stuff, only the client holding the file open may do this.
             _log.DebugFormat("CloseFile: path = \"{0}\"", path);
             lock( _root )
@@ -293,17 +303,57 @@ namespace NameServer
 
                 if( file.PendingBlock != null )
                 {
-                    throw new InvalidOperationException(string.Format("The file '{0}' cannot be closed because it has pending block {1}.", path, file.PendingBlock.Value));
+                    if( discardPendingBlocks )
+                        file.PendingBlock = null;
+                    else
+                        throw new InvalidOperationException(string.Format("The file '{0}' cannot be closed because it has pending block {1}.", path, file.PendingBlock.Value));
                 }
 
                 _log.InfoFormat("Closing file {0}", path);
-                _editLog.LogCommitFile(path);
+                _editLog.LogCommitFile(path, discardPendingBlocks);
                 file.File.IsOpenForWriting = false;
-                if( file.PendingBlock == null )
+                _pendingFiles.Remove(path);
+            }
+        }
+
+        /// <summary>
+        /// Deletes the specified file or directory.
+        /// </summary>
+        /// <param name="path">The path of the file or directory to delete.</param>
+        /// <param name="recursive"><see langword="true"/> to delete all children if <paramref name="path"/> refers to a directory; otherwise <see langword="false"/>.</param>
+        /// <returns><see langword="true"/> if the file was deleted; <see langword="false"/> if it doesn't exist.</returns>
+        public bool Delete(string path, bool recursive)
+        {
+            _log.DebugFormat("Delete: path = \"{0}\", recursive = {1}", path, recursive);
+            string name;
+            Directory parent;
+            FileSystemEntry entry;
+            // The entire operation must be locked, otherwise it opens up the possibility of someone else deleting
+            // the file. TODO: I don't think the entire file system needs to be locked; we can perhaps create a separate
+            // lock just for deleting and lock the file system only when doing the delete?
+            lock( _root )
+            {
+                try
                 {
-                    _log.DebugFormat("File {0} is no longer pending.", path);
-                    _pendingFiles.Remove(path);
+                    FindEntry(path, out name, out parent, out entry);
                 }
+                catch( System.IO.DirectoryNotFoundException )
+                {
+                    return false;
+                }
+
+                if( entry == null )
+                    return false;
+
+                Directory dir = entry as Directory;
+                if( dir != null && dir.Children.Count > 0 && !recursive )
+                    throw new InvalidOperationException("The specified directory is not empty.");
+                File file = entry as File;
+                if( file != null && file.IsOpenForWriting )
+                    throw new InvalidOperationException("The specified file is open for writing.");
+
+                DeleteInternal(parent, entry, recursive);
+                return true;
             }
         }
 
@@ -355,6 +405,9 @@ namespace NameServer
             file = entry as File;
         }
 
+        /// <summary>
+        /// Note: This function must be called with _root already locked.
+        /// </summary>
         private void FindEntry(string path, out string name, out Directory parent, out FileSystemEntry file)
         {
             string directory;
@@ -450,6 +503,14 @@ namespace NameServer
                 _pendingFiles.Add(result.File.FullPath, result);
             }
             return result;
+        }
+
+        private void DeleteInternal(Directory parent, FileSystemEntry entry, bool recursive)
+        {
+            _log.InfoFormat("Deleting file system entry \"{0}\"", entry.FullPath);
+            _editLog.LogDelete(entry.FullPath, recursive);
+            parent.Children.Remove(entry);
+            // TODO: Some kind of worker thread is needed to periodically check for invalidated blocks.
         }
 
         private string AppendPath(string parent, string child)
