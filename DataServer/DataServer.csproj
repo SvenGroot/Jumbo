@@ -52,6 +52,7 @@
   <ItemGroup>
     <Compile Include="BlockServer.cs" />
     <Compile Include="DataServer.cs" />
+    <Compile Include="ExtensionMethods.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

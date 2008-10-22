@@ -68,7 +68,9 @@
     <Compile Include="ClientChannelSink.cs" />
     <Compile Include="INameServerClientProtocol.cs" />
     <Compile Include="INameServerHeartbeatProtocol.cs" />
+    <Compile Include="InvalidChecksumException.cs" />
     <Compile Include="NewBlockHeartbeatData.cs" />
+    <Compile Include="Packet.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="ServerChannelSink.cs" />
     <Compile Include="ServerChannelSinkProvider.cs" />

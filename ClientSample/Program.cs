@@ -21,28 +21,29 @@ namespace ClientSample
             //nameServer.CreateDirectory("/test/foo");
             //nameServer.CreateFile("/test/bar");
             //File f = nameServer.GetFileInfo("/test/bar");
+            Console.WriteLine("Press any key to start");
             Console.ReadKey();
             //System.Threading.Thread.Sleep(3000); // wait for data server to report to name server
             //BlockAssignment b = nameServer.CreateFile("/test");
             //WriteBlock(b);
             //nameServer.CloseFile("/test");
 
-            //Tkl.Jumbo.Dfs.File file = nameServer.GetFileInfo("/test");
-            //string[] servers = nameServer.GetDataServersForBlock(file.Blocks[0]);
-            //ReadBlock(file, servers);
+            Tkl.Jumbo.Dfs.File file = nameServer.GetFileInfo("/myfile");
+            string[] servers = nameServer.GetDataServersForBlock(file.Blocks[0]);
+            ReadBlock(file, servers);
 
-            nameServer.Delete("/myfile", false);
+            //nameServer.Delete("/myfile", false);
 
-            using( FileStream input = System.IO.File.OpenRead(args[0]) )
-            using( DfsOutputStream stream = new DfsOutputStream(nameServer, "/myfile") )
-            {
-                byte[] buffer = new byte[4096];
-                int bytesRead;
-                while( (bytesRead = input.Read(buffer, 0, buffer.Length)) > 0 )
-                {
-                    stream.Write(buffer, 0, bytesRead);
-                }
-            }
+            //using( FileStream input = System.IO.File.OpenRead(args[0]) )
+            //using( DfsOutputStream stream = new DfsOutputStream(nameServer, "/myfile") )
+            //{
+            //    byte[] buffer = new byte[4096];
+            //    int bytesRead;
+            //    while( (bytesRead = input.Read(buffer, 0, buffer.Length)) > 0 )
+            //    {
+            //        stream.Write(buffer, 0, bytesRead);
+            //    }
+            //}
 
             Console.ReadKey();
         }
@@ -56,42 +57,36 @@ namespace ClientSample
                 header.Offset = 100000;
                 header.Size = 100000;
 
+                int receivedSize = 0;
                 using( NetworkStream stream = client.GetStream() )
                 {
                     BinaryFormatter formatter = new BinaryFormatter();
                     formatter.Serialize(stream, header);
-                    int _packetSize = 64 * 1024;
 
                     using( BinaryReader reader = new BinaryReader(stream) )
-                    using( BinaryWriter writer = new BinaryWriter(System.IO.File.Create("test.txt")) )
+                    using( FileStream result = System.IO.File.Create("test.txt") )
                     {
+                        DataServerClientProtocolResult status = (DataServerClientProtocolResult)reader.ReadInt32();
+                        if( status != DataServerClientProtocolResult.Ok )
+                            throw new Exception("AARGH!");
                         int offset = reader.ReadInt32();
-                        int size = reader.ReadInt32();
 
-                        int sizeRemaining = size;
-                        byte[] buffer = new byte[_packetSize];
-                        Crc32 computedChecksum = new Crc32();
-                        while( sizeRemaining > 0 )
+                        Packet packet = new Packet();
+                        while( !packet.IsLastPacket )
                         {
-                            uint checksum = reader.ReadUInt32();
-                            computedChecksum.Reset();
-                            int packetSize = Math.Min(sizeRemaining, _packetSize);
-                            int bytesRead = 0;
-                            while( bytesRead < packetSize )
-                            {
-                                bytesRead += reader.Read(buffer, bytesRead, packetSize - bytesRead);
-                            }
+                            status = (DataServerClientProtocolResult)reader.ReadInt32();
+                            if( status != DataServerClientProtocolResult.Ok )
+                                throw new Exception("AARGH!");
+                            packet.Read(reader, false);
 
-                            computedChecksum.Update(buffer, 0, packetSize);
-                            if( computedChecksum.Value != checksum )
-                                throw new Exception(); // TODO: handle this properly
+                            receivedSize += packet.Size;
 
-                            writer.Write(buffer, 0, packetSize);
-                            sizeRemaining -= packetSize;
+                            packet.WriteDataOnly(result);
                         }
 
                     }
                 }
+                Console.WriteLine(receivedSize);
             }
         }
 

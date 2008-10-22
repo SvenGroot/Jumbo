@@ -18,8 +18,6 @@ namespace DataServer
     {
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(BlockServer));
 
-        private const int _packetSize = 64 * 1024; // 64KB
-
         private AutoResetEvent _connectionEvent = new AutoResetEvent(false);
         private TcpListener _listener;
         private Thread _listenerThread;
@@ -88,21 +86,21 @@ namespace DataServer
                     DataServerClientProtocolWriteHeader writeHeader = header as DataServerClientProtocolWriteHeader;
                     if( writeHeader != null )
                     {
-                        WriteBlock(stream, writeHeader);
+                        ReceiveBlock(stream, writeHeader);
                     }
                     break;
                 case DataServerCommand.ReadBlock:
                     DataServerClientProtocolReadHeader readHeader = header as DataServerClientProtocolReadHeader;
                     if( readHeader != null )
                     {
-                        ReadBlock(stream, readHeader);
+                        SendBlock(stream, readHeader);
                     }
                     break;
                 }
             }
         }
 
-        private void WriteBlock(NetworkStream stream, DataServerClientProtocolWriteHeader header)
+        private void ReceiveBlock(NetworkStream stream, DataServerClientProtocolWriteHeader header)
         {
             _log.InfoFormat("Block write command received for block {0}", header.BlockID);
             int blockSize = 0;
@@ -115,100 +113,92 @@ namespace DataServer
                 using( BinaryWriter writer = new BinaryWriter(blockFile) )
                 {
                     // Send an OK for the header.
-                    clientWriter.Write((int)DataServerClientProtocolResult.Ok);
-                    clientWriter.Flush();
-                    byte[] buffer = new byte[_packetSize];
-                    Crc32 computedChecksum = new Crc32();
-                    bool lastPacket = false;
-                    while( !lastPacket )
+                    clientWriter.WriteResult(DataServerClientProtocolResult.Ok);
+                    Packet packet = new Packet();
+                    while( !packet.IsLastPacket )
                     {
-                        uint checksum = reader.ReadUInt32();
-                        int packetSize = reader.ReadInt32();
-                        // TODO: Validate packetSize
-                        lastPacket = reader.ReadBoolean();
-                        computedChecksum.Reset();
-                        int bytesRead = 0;
-                        while( bytesRead < packetSize )
+                        try
                         {
-                            bytesRead += reader.Read(buffer, bytesRead, packetSize - bytesRead);
+                            packet.Read(reader, false);
                         }
-
-                        blockSize += packetSize;
-                        computedChecksum.Update(buffer, 0, packetSize);
-                        if( computedChecksum.Value != checksum )
+                        catch( InvalidChecksumException )
                         {
-                            clientWriter.Write((int)DataServerClientProtocolResult.Error); // TODO: handle this properly
-                            clientWriter.Flush();
+                            clientWriter.WriteResult(DataServerClientProtocolResult.Error); // TODO: better status code
                             _log.ErrorFormat("Invalid checksum on packet of block {0}", header.BlockID);
                             return;
                         }
 
+                        blockSize += packet.Size;
+
                         // TODO: Forward the packet to the other servers.
 
-                        writer.Write(checksum);
-                        writer.Write(buffer, 0, packetSize);
+                        packet.Write(writer, true);
 
-                        if( !lastPacket )
+                        if( !packet.IsLastPacket )
                         {
-                            clientWriter.Write((int)DataServerClientProtocolResult.Ok);
-                            clientWriter.Flush();
+                            clientWriter.WriteResult(DataServerClientProtocolResult.Ok);
                         }
                     }
                 }
                 _log.InfoFormat("Writing block {0} complete.", header.BlockID);
                 _dataServer.CompleteBlock(header.BlockID, blockSize);
-                clientWriter.Write((int)DataServerClientProtocolResult.Ok);
-                clientWriter.Flush();
+                clientWriter.WriteResult(DataServerClientProtocolResult.Ok);
             }
         }
 
-        private void ReadBlock(NetworkStream stream, DataServerClientProtocolReadHeader header)
+        private void SendBlock(NetworkStream stream, DataServerClientProtocolReadHeader header)
         {
             _log.InfoFormat("Block read command received: block {0}, offset {1}, size {2}.", header.BlockID, header.Offset, header.Size);
-            int packetOffset = header.Offset / _packetSize;
-            int offset = packetOffset * _packetSize; // Round down to the nearest packet.
+            int packetOffset = header.Offset / Packet.PacketSize;
+            int offset = packetOffset * Packet.PacketSize; // Round down to the nearest packet.
             // File offset has to take CRCs into account.
-            int fileOffset = packetOffset * (_packetSize + sizeof(uint));
+            int fileOffset = packetOffset * (Packet.PacketSize + sizeof(uint));
 
-            int endPacketOffset = (header.Offset + header.Size) / _packetSize;
-            if( (header.Offset + header.Size) % _packetSize != 0 )
-                ++endPacketOffset;
-            int endOffset = endPacketOffset * _packetSize;
-            int endFileOffset = endPacketOffset * (_packetSize + sizeof(uint));
+            int endPacketOffset = (header.Offset + header.Size) / Packet.PacketSize;
+            int endOffset = endPacketOffset * Packet.PacketSize;
+            int endFileOffset = endPacketOffset * (Packet.PacketSize + sizeof(uint));
 
+            // TODO: Error code if file doesn't exist.
             using( FileStream blockFile = _dataServer.OpenBlock(header.BlockID) )
             using( BinaryReader reader = new BinaryReader(blockFile) )
             using( BinaryWriter writer = new BinaryWriter(stream) )
             {
-                if( fileOffset > blockFile.Length || endFileOffset > blockFile.Length )
-                    throw new ArgumentOutOfRangeException(); // TODO: Handle properly.
+                if( fileOffset > blockFile.Length || endFileOffset >= blockFile.Length )
+                {
+                    writer.WriteResult(DataServerClientProtocolResult.Error);
+                    return;
+                }
 
+                writer.WriteResult(DataServerClientProtocolResult.Ok);
+                // Inform the client of the actual offset.
                 writer.Write(offset);
-                writer.Write(endOffset - offset);
 
-                byte[] buffer = new byte[_packetSize];
+                Packet packet = new Packet();
                 blockFile.Seek(fileOffset, SeekOrigin.Begin);
                 int sizeRemaining = endOffset - offset;
-                Crc32 computedCrc = new Crc32();
-                while( sizeRemaining > 0 )
+                while( sizeRemaining >= 0 )
                 {
-                    uint crc = reader.ReadUInt32();
-                    computedCrc.Reset();
-                    int packetSize = Math.Min(sizeRemaining, _packetSize);
-                    int bytesRead = reader.Read(buffer, 0, packetSize);
-                    if( bytesRead < packetSize )
-                        throw new Exception("Invalid amount read.");
-
-                    computedCrc.Update(buffer);
-                    if( computedCrc.Value != crc )
+                    try
                     {
-                        throw new Exception("Incorrect CRC."); // TODO: Handle this properly.
+                        packet.Read(reader, true);
+                    }
+                    catch( InvalidChecksumException )
+                    {
+                        writer.WriteResult(DataServerClientProtocolResult.Error);
+                        // TODO: We need to inform the nameserver we have an invalid block.
+                        return;
                     }
 
-                    writer.Write(crc);
-                    writer.Write(buffer, 0, packetSize);
+                    if( sizeRemaining == 0 )
+                        packet.IsLastPacket = true;
 
-                    sizeRemaining -= packetSize;
+                    writer.WriteResult(DataServerClientProtocolResult.Ok);
+
+                    packet.Write(writer, false);
+
+                    // assertion to check if we don't jump over zero.
+                    System.Diagnostics.Debug.Assert(sizeRemaining > 0 ? sizeRemaining - packet.Size >= 0 : true);
+                    sizeRemaining -= packet.Size;
                 }
             }
         }

@@ -200,12 +200,8 @@ namespace Tkl.Jumbo.Dfs
         
         private static void WritePacket(BinaryWriter writer, BinaryReader reader, byte[] buffer, int length, bool finalPacket)
         {
-            Crc32 checksum = new Crc32();
-            checksum.Update(buffer, 0, length);
-            writer.Write((uint)checksum.Value);
-            writer.Write(length);
-            writer.Write(finalPacket);
-            writer.Write(buffer, 0, length);
+            Packet packet = new Packet(buffer, length, finalPacket);
+            packet.Write(writer, false);
             DataServerClientProtocolResult result = (DataServerClientProtocolResult)reader.ReadInt32();
             if( result != DataServerClientProtocolResult.Ok )
             {
