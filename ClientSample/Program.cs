@@ -36,6 +36,8 @@ namespace ClientSample
 
             //ReadFile(nameServer);
 
+            Console.WriteLine("Done, press any key to exit");
+
             Console.ReadKey();
         }
 

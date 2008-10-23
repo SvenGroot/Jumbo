@@ -261,13 +261,45 @@ namespace NameServer
                 throw new DfsException("Insufficient data servers to replicate new block.");
             // TODO: Better selection policy.
             List<DataServerInfo> unassignedDataServers = new List<DataServerInfo>(_dataServers.Values);
+
+            int serversNeeded = _replicationFactor;
             List<ServerAddress> dataServers = new List<ServerAddress>(_replicationFactor);
-            for( int x = 0; x < _replicationFactor; ++x )
+
+            // Check if any data servers are running on the client's own system.
+            var clientHostName = ServerContext.Current.ClientHostName;
+            var localServers = (from server in unassignedDataServers
+                                where server.Address.HostName == ServerContext.Current.ClientHostName
+                                select server).ToArray();
+
+            if( localServers.Length > 0 )
+            {
+                if( localServers.Length == 1 )
+                {
+                    dataServers.Add(localServers[0].Address);
+                    unassignedDataServers.Remove(localServers[0]);
+                }
+                else
+                {
+                    int server = _random.Next(localServers.Length);
+                    dataServers.Add(localServers[server].Address);
+                    unassignedDataServers.Remove(localServers[server]);
+                }
+                --serversNeeded;
+            }
+
+            for( int x = 0; x < serversNeeded; ++x )
             {
                 int server = _random.Next(unassignedDataServers.Count);
                 dataServers.Add(unassignedDataServers[server].Address);
                 unassignedDataServers.RemoveAt(server);
             }
+
+            if( _log.IsInfoEnabled )
+            {
+                foreach( ServerAddress address in dataServers )
+                    _log.InfoFormat("Assigned data server for block {0}: {1}", blockId, address);
+            }
+
             return new BlockAssignment() { BlockID = blockId, DataServers = dataServers };
         }
     }
