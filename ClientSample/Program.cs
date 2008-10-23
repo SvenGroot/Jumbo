@@ -8,6 +8,7 @@ using System.Net.Sockets;
 using System.Net;
 using System.Runtime.Serialization.Formatters.Binary;
 using System.IO;
+using System.Diagnostics;
 
 namespace ClientSample
 {
@@ -23,6 +24,8 @@ namespace ClientSample
             //File f = nameServer.GetFileInfo("/test/bar");
             Console.WriteLine("Press any key to start");
             Console.ReadKey();
+            Stopwatch sw = new Stopwatch();
+            sw.Start();
             //System.Threading.Thread.Sleep(3000); // wait for data server to report to name server
             //BlockAssignment b = nameServer.CreateFile("/test");
             //WriteBlock(b);
@@ -34,6 +37,8 @@ namespace ClientSample
 
             WriteFile(args, nameServer);
 
+            sw.Stop();
+            Console.WriteLine(sw.Elapsed);
             //ReadFile(nameServer);
 
             Console.WriteLine("Done, press any key to exit");

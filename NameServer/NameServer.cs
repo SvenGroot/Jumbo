@@ -257,10 +257,16 @@ namespace NameServer
 
         private BlockAssignment AssignBlockToDataServers(Guid blockId)
         {
+            // TODO: This really ought to be checked before the CreateFile is logged.
             if( _dataServers.Count < _replicationFactor )
                 throw new DfsException("Insufficient data servers to replicate new block.");
+
             // TODO: Better selection policy.
-            List<DataServerInfo> unassignedDataServers = new List<DataServerInfo>(_dataServers.Values);
+            List<DataServerInfo> unassignedDataServers;
+            lock( _dataServers )
+            {
+                unassignedDataServers = new List<DataServerInfo>(_dataServers.Values);
+            }
 
             int serversNeeded = _replicationFactor;
             List<ServerAddress> dataServers = new List<ServerAddress>(_replicationFactor);

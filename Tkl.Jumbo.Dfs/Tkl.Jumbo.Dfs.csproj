@@ -51,6 +51,7 @@
   <ItemGroup>
     <Compile Include="BlockAssignment.cs" />
     <Compile Include="BlockReportHeartbeatData.cs" />
+    <Compile Include="BlockSender.cs" />
     <Compile Include="ClientChannelSinkProvider.cs" />
     <Compile Include="CRC32.cs" />
     <Compile Include="DataServerClientProtocolHeader.cs" />
