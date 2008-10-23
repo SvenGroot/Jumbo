@@ -16,7 +16,6 @@ namespace DataServer
         private static readonly string _blockStorageDirectory = ConfigurationManager.AppSettings["BlockStorage"];
         private static readonly string _temporaryBlockStorageDirectory = Path.Combine(_blockStorageDirectory, "temp");
         private static readonly int _port = Convert.ToInt32(ConfigurationManager.AppSettings["Port"]);
-        private static readonly ServerAddress _localAddress = new ServerAddress(System.Net.Dns.GetHostName(), _port);
 
         private INameServerHeartbeatProtocol _nameServer;
         private INameServerClientProtocol _nameServerClient;
@@ -40,8 +39,12 @@ namespace DataServer
 
         public long BlockSize { get; private set; }
 
+        public ServerAddress LocalAddress { get; private set; }
+
         public void Run()
         {
+            LocalAddress = new ServerAddress(System.Net.Dns.GetHostName(), _port);
+
             _log.Info("Data server main loop starting.");
             BlockSize = _nameServerClient.BlockSize;
             if( System.Net.Sockets.Socket.OSSupportsIPv6 )
@@ -133,7 +136,7 @@ namespace DataServer
                     _pendingHeartbeatData.Clear();
                 }
             }
-            HeartbeatResponse response = _nameServer.Heartbeat(_localAddress, data);
+            HeartbeatResponse response = _nameServer.Heartbeat(LocalAddress, data);
             if( response != null )
                 ProcessResponse(response);
         }

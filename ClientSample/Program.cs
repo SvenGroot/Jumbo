@@ -32,9 +32,9 @@ namespace ClientSample
             //string[] servers = nameServer.GetDataServersForBlock(file.Blocks[0]);
             //ReadBlock(file, servers);
 
-            //WriteFile(args, nameServer);
+            WriteFile(args, nameServer);
 
-            ReadFile(nameServer);
+            //ReadFile(nameServer);
 
             Console.ReadKey();
         }

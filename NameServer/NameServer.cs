@@ -14,7 +14,7 @@ namespace NameServer
     class NameServer : MarshalByRefObject, INameServerClientProtocol, INameServerHeartbeatProtocol
     {
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(NameServer));
-        private const int _replicationFactor = 1; // TODO: Replace with configuration value
+        private static readonly int _replicationFactor = Convert.ToInt32(ConfigurationManager.AppSettings["ReplicationFactor"]);
         private static readonly int _blockSize = Convert.ToInt32(ConfigurationManager.AppSettings["BlockSize"]);
         private Random _random = new Random();
 
@@ -149,7 +149,7 @@ namespace NameServer
                 {
                     _log.InfoFormat("A new data server has reported in at {0}", address);
                     if( address.HostName != ServerContext.Current.ClientHostName )
-                        _log.WarnFormat("The data server reported a different hostname than is indicated in the ServerContext.");
+                        _log.Warn("The data server reported a different hostname than is indicated in the ServerContext.");
                     dataServer = new DataServerInfo(address); // TODO: Real port number
                     _dataServers.Add(address, dataServer);
                 }
@@ -224,7 +224,7 @@ namespace NameServer
                 if( !dataServer.HasReportedBlocks )
                     throw new Exception("A new block added to an uninitialized data server."); // TODO: Handle properly.
 
-                _log.InfoFormat("Data server reports it has received block {0} of size {1}.", newBlock.BlockID, newBlock.Size);
+                _log.InfoFormat("Data server {2} reports it has received block {0} of size {1}.", newBlock.BlockID, newBlock.Size, dataServer.Address);
 
                 BlockInfo block;
                 lock( _blocks )
@@ -257,14 +257,16 @@ namespace NameServer
 
         private BlockAssignment AssignBlockToDataServers(Guid blockId)
         {
+            if( _dataServers.Count < _replicationFactor )
+                throw new DfsException("Insufficient data servers to replicate new block.");
             // TODO: Better selection policy.
             List<DataServerInfo> unassignedDataServers = new List<DataServerInfo>(_dataServers.Values);
             List<ServerAddress> dataServers = new List<ServerAddress>(_replicationFactor);
             for( int x = 0; x < _replicationFactor; ++x )
             {
                 int server = _random.Next(unassignedDataServers.Count);
-                dataServers.Add(unassignedDataServers[x].Address);
-                unassignedDataServers.RemoveAt(x);
+                dataServers.Add(unassignedDataServers[server].Address);
+                unassignedDataServers.RemoveAt(server);
             }
             return new BlockAssignment() { BlockID = blockId, DataServers = dataServers };
         }

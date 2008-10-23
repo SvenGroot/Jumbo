@@ -19,6 +19,6 @@ namespace Tkl.Jumbo.Dfs
         /// <remarks>
         /// Used only when <see cref="Command"/> is <see cref="DataServerCommand.Write"/>.
         /// </remarks>
-        public string[] DataServers { get; set; }
+        public ServerAddress[] DataServers { get; set; }
     }
 }

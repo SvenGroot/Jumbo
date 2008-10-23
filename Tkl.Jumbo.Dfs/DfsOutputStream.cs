@@ -187,7 +187,7 @@ namespace Tkl.Jumbo.Dfs
             _blockServerClient = new TcpClient(server.HostName, server.Port);
             DataServerClientProtocolWriteHeader header = new DataServerClientProtocolWriteHeader();
             header.BlockID = _currentBlock.BlockID;
-            header.DataServers = null;
+            header.DataServers = _currentBlock.DataServers.ToArray();
             _dataServerStream = _blockServerClient.GetStream();
             BinaryFormatter formatter = new BinaryFormatter();
             formatter.Serialize(_dataServerStream, header);

@@ -104,14 +104,48 @@ namespace DataServer
         {
             _log.InfoFormat("Block write command received for block {0}", header.BlockID);
             int blockSize = 0;
+            DataServerClientProtocolResult forwardResult;
 
             // TODO: If something goes wrong, the block must be deleted.
             using( BinaryWriter clientWriter = new BinaryWriter(stream) )
             using( BinaryReader reader = new BinaryReader(stream) )
             {
+                if( header.DataServers.Length == 0 || !header.DataServers[0].Equals(_dataServer.LocalAddress) )
+                {
+                    _log.ErrorFormat("This server was not the first server in the list of remaining servers for the block.");
+                    clientWriter.WriteResult(DataServerClientProtocolResult.Error);
+                    return;
+                }
                 using( FileStream blockFile = _dataServer.AddNewBlock(header.BlockID) )
                 using( BinaryWriter writer = new BinaryWriter(blockFile) )
+                using( TcpClient forwardClient = header.DataServers.Length > 1 ? new TcpClient(header.DataServers[1].HostName, header.DataServers[1].Port) : null )
+                using( NetworkStream forwardStream = forwardClient == null ? null : forwardClient.GetStream() )
+                using( BinaryWriter forwardWriter = forwardClient == null ? null : new BinaryWriter(forwardStream) )
+                using( BinaryReader forwardReader = forwardClient == null ? null : new BinaryReader(forwardStream) )
                 {
+                    if( forwardClient != null )
+                    {
+                        BinaryFormatter formatter = new BinaryFormatter();
+                        DataServerClientProtocolWriteHeader forwardHeader = new DataServerClientProtocolWriteHeader();
+                        forwardHeader.Command = header.Command;
+                        forwardHeader.BlockID = header.BlockID;
+                        forwardHeader.DataServers = new ServerAddress[header.DataServers.Length - 1];
+                        Array.Copy(header.DataServers, 1, forwardHeader.DataServers, 0, forwardHeader.DataServers.Length);
+                        formatter.Serialize(forwardStream, forwardHeader);
+                        forwardResult = (DataServerClientProtocolResult)forwardReader.ReadInt32();
+                        if( forwardResult != DataServerClientProtocolResult.Ok )
+                        {
+                            _log.ErrorFormat("The next data server {0} did not accept the request header for block {1}.", header.DataServers[1], header.BlockID);
+                            clientWriter.WriteResult(DataServerClientProtocolResult.Error);
+                            return;
+                        }
+                        _log.InfoFormat("Connected to {0} to forward block {1}.", header.DataServers[1], header.BlockID);
+                    }
+                    else
+                    {
+                        _log.DebugFormat("This is the last server in the list for block {0}.", header.BlockID);
+                    }
+
                     // Send an OK for the header.
                     clientWriter.WriteResult(DataServerClientProtocolResult.Ok);
                     Packet packet = new Packet();
@@ -130,7 +164,17 @@ namespace DataServer
 
                         blockSize += packet.Size;
 
-                        // TODO: Forward the packet to the other servers.
+                        if( forwardWriter != null )
+                        {
+                            packet.Write(forwardWriter, false);
+                            forwardResult = (DataServerClientProtocolResult)forwardReader.ReadInt32();
+                            if( forwardResult != DataServerClientProtocolResult.Ok )
+                            {
+                                _log.ErrorFormat("The next data server {0} encountered an error writing a packet of block {1}.", header.DataServers[1], header.BlockID);
+                                clientWriter.WriteResult(DataServerClientProtocolResult.Error);
+                                return;
+                            }
+                        }
 
                         packet.Write(writer, true);
 
