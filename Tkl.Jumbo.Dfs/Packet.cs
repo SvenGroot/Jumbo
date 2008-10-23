@@ -37,6 +37,11 @@ namespace Tkl.Jumbo.Dfs
             }
         }
 
+        public void CopyTo(int sourceOffset, byte[] buffer, int destOffset, int count)
+        {
+            Array.Copy(_data, sourceOffset, buffer, destOffset, Math.Min(count, Size - sourceOffset));
+        }
+
         private void RecomputeChecksum()
         {
             _checksum.Reset();

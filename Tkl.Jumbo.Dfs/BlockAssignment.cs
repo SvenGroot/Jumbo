@@ -19,6 +19,6 @@ namespace Tkl.Jumbo.Dfs
         /// <summary>
         /// Gets or sets the data servers that have this block.
         /// </summary>
-        public List<string> DataServers { get; set; }
+        public List<ServerAddress> DataServers { get; set; }
     }
 }

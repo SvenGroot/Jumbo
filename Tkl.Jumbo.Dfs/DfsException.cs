@@ -6,7 +6,7 @@ using System.Text;
 namespace Tkl.Jumbo.Dfs
 {
     [global::System.Serializable]
-    public class InvalidChecksumException : DfsException
+    public class DfsException : Exception
     {
         //
         // For guidelines regarding the creation of new exception types, see
@@ -15,10 +15,10 @@ namespace Tkl.Jumbo.Dfs
         //    http://msdn.microsoft.com/library/default.asp?url=/library/en-us/dncscol/html/csharp07192001.asp
         //
 
-        public InvalidChecksumException() { }
-        public InvalidChecksumException(string message) : base(message) { }
-        public InvalidChecksumException(string message, Exception inner) : base(message, inner) { }
-        protected InvalidChecksumException(
+        public DfsException() { }
+        public DfsException(string message) : base(message) { }
+        public DfsException(string message, Exception inner) : base(message, inner) { }
+        protected DfsException(
           System.Runtime.Serialization.SerializationInfo info,
           System.Runtime.Serialization.StreamingContext context)
             : base(info, context) { }

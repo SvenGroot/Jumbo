@@ -2,17 +2,23 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using Tkl.Jumbo.Dfs;
 
 namespace NameServer
 {
     class DataServerInfo
     {
-        public DataServerInfo(string hostName)
+        public DataServerInfo(string hostName, int port)
         {
-            HostName = hostName;
+            Address = new ServerAddress(hostName, port);
         }
 
-        public string HostName { get; private set; }
+        public DataServerInfo(ServerAddress address)
+        {
+            Address = address;
+        }
+
+        public ServerAddress Address { get; private set; }
 
         public bool HasReportedBlocks { get; set; }
 

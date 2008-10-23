@@ -19,7 +19,7 @@ namespace NameServer
         private Random _random = new Random();
 
         private readonly FileSystem _fileSystem;
-        private readonly Dictionary<string, DataServerInfo> _dataServers = new Dictionary<string, DataServerInfo>();
+        private readonly Dictionary<ServerAddress, DataServerInfo> _dataServers = new Dictionary<ServerAddress, DataServerInfo>();
         private readonly Dictionary<Guid, BlockInfo> _blocks = new Dictionary<Guid, BlockInfo>();
         private readonly Dictionary<Guid, BlockInfo> _pendingBlocks = new Dictionary<Guid, BlockInfo>();
         private readonly Dictionary<Guid, BlockInfo> _underReplicatedBlocks = new Dictionary<Guid, BlockInfo>();
@@ -118,7 +118,7 @@ namespace NameServer
             _fileSystem.CloseFile(path);
         }
 
-        public string[] GetDataServersForBlock(Guid blockID)
+        public ServerAddress[] GetDataServersForBlock(Guid blockID)
         {
             lock( _blocks )
             {
@@ -128,7 +128,7 @@ namespace NameServer
                     throw new ArgumentException("Invalid block ID.");
 
                 return (from server in block.DataServers
-                        select server.HostName).ToArray();
+                        select server.Address).ToArray();
             }
         }
 
@@ -136,19 +136,22 @@ namespace NameServer
 
         #region INameServerHeartbeatProtocol Members
 
-        public HeartbeatResponse Heartbeat(HeartbeatData[] data)
+        public HeartbeatResponse Heartbeat(ServerAddress address, HeartbeatData[] data)
         {
             //_log.Debug("Data server heartbeat received.");
+            if( address == null )
+                throw new ArgumentNullException("address");
 
-            string hostName = ServerContext.Current.ClientHostName;
             DataServerInfo dataServer;
             lock( _dataServers )
             {
-                if( !_dataServers.TryGetValue(hostName, out dataServer) )
+                if( !_dataServers.TryGetValue(address, out dataServer) )
                 {
-                    _log.Info("A new data server has reported in.");
-                    dataServer = new DataServerInfo(hostName);
-                    _dataServers.Add(hostName, dataServer);
+                    _log.InfoFormat("A new data server has reported in at {0}", address);
+                    if( address.HostName != ServerContext.Current.ClientHostName )
+                        _log.WarnFormat("The data server reported a different hostname than is indicated in the ServerContext.");
+                    dataServer = new DataServerInfo(address); // TODO: Real port number
+                    _dataServers.Add(address, dataServer);
                 }
 
                 if( data != null )
@@ -191,12 +194,12 @@ namespace NameServer
                                 if( _blocks.TryGetValue(block, out info) )
                                 {
                                     info.DataServers.Add(dataServer);
-                                    _log.DebugFormat("Dataserver {0} has block ID {1}", dataServer.HostName, block);
+                                    _log.DebugFormat("Dataserver {0} has block ID {1}", dataServer.Address, block);
                                 }
                                 else if( _underReplicatedBlocks.TryGetValue(block, out info) )
                                 {
                                     info.DataServers.Add(dataServer);
-                                    _log.DebugFormat("Dataserver {0} has block ID {1}", dataServer.HostName, block);
+                                    _log.DebugFormat("Dataserver {0} has block ID {1}", dataServer.Address, block);
                                     if( info.DataServers.Count >= _replicationFactor )
                                     {
                                         _log.InfoFormat("Block {0} has reached sufficient replication level.", block);
@@ -206,7 +209,7 @@ namespace NameServer
                                 }
                                 else
                                 {
-                                    _log.WarnFormat("Dataserver {0} reported unknown block {1}.", dataServer.HostName, block);
+                                    _log.WarnFormat("Dataserver {0} reported unknown block {1}.", dataServer.Address, block);
                                     // TODO: Inform the data server to delete the block.
                                 }
                             }
@@ -256,11 +259,11 @@ namespace NameServer
         {
             // TODO: Better selection policy.
             List<DataServerInfo> unassignedDataServers = new List<DataServerInfo>(_dataServers.Values);
-            List<string> dataServers = new List<string>(_replicationFactor);
+            List<ServerAddress> dataServers = new List<ServerAddress>(_replicationFactor);
             for( int x = 0; x < _replicationFactor; ++x )
             {
                 int server = _random.Next(unassignedDataServers.Count);
-                dataServers.Add(unassignedDataServers[x].HostName);
+                dataServers.Add(unassignedDataServers[x].Address);
                 unassignedDataServers.RemoveAt(x);
             }
             return new BlockAssignment() { BlockID = blockId, DataServers = dataServers };

@@ -23,13 +23,13 @@ namespace DataServer
         private Thread _listenerThread;
         private DataServer _dataServer;
 
-        public BlockServer(DataServer dataServer, IPAddress bindAddress)
+        public BlockServer(DataServer dataServer, IPAddress bindAddress, int port)
         {
             _log.InfoFormat("Starting block server on {0}", bindAddress);
             if( dataServer == null )
                 throw new ArgumentNullException("dataServer");
 
-            _listener = new TcpListener(bindAddress, 9001); // TODO: Get port from configuration
+            _listener = new TcpListener(bindAddress, port);
             _dataServer = dataServer;
         }
 
@@ -201,6 +201,7 @@ namespace DataServer
                     sizeRemaining -= packet.Size;
                 }
             }
+            _log.InfoFormat("Finished sending block {0}", header.BlockID);
         }
     }
 }

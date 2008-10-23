@@ -28,24 +28,43 @@ namespace ClientSample
             //WriteBlock(b);
             //nameServer.CloseFile("/test");
 
-            Tkl.Jumbo.Dfs.File file = nameServer.GetFileInfo("/myfile");
-            string[] servers = nameServer.GetDataServersForBlock(file.Blocks[0]);
-            ReadBlock(file, servers);
+            //Tkl.Jumbo.Dfs.File file = nameServer.GetFileInfo("/myfile");
+            //string[] servers = nameServer.GetDataServersForBlock(file.Blocks[0]);
+            //ReadBlock(file, servers);
 
-            //nameServer.Delete("/myfile", false);
+            //WriteFile(args, nameServer);
 
-            //using( FileStream input = System.IO.File.OpenRead(args[0]) )
-            //using( DfsOutputStream stream = new DfsOutputStream(nameServer, "/myfile") )
-            //{
-            //    byte[] buffer = new byte[4096];
-            //    int bytesRead;
-            //    while( (bytesRead = input.Read(buffer, 0, buffer.Length)) > 0 )
-            //    {
-            //        stream.Write(buffer, 0, bytesRead);
-            //    }
-            //}
+            ReadFile(nameServer);
 
             Console.ReadKey();
+        }
+
+        private static void WriteFile(string[] args, INameServerClientProtocol nameServer)
+        {
+            nameServer.Delete("/myfile", false);
+
+            using( FileStream input = System.IO.File.OpenRead(args[0]) )
+            using( DfsOutputStream stream = new DfsOutputStream(nameServer, "/myfile") )
+            {
+                byte[] buffer = new byte[4096];
+                int bytesRead;
+                while( (bytesRead = input.Read(buffer, 0, buffer.Length)) > 0 )
+                {
+                    stream.Write(buffer, 0, bytesRead);
+                }
+            }
+        }
+
+        private static void ReadFile(INameServerClientProtocol nameServer)
+        {
+            using( FileStream output = System.IO.File.Create("test.dat") )
+            using( DfsInputStream input = new DfsInputStream(nameServer, "/myfile") )
+            {
+                byte[] buffer = new byte[100000];
+                input.Position = 100000;
+                input.Read(buffer, 0, buffer.Length);
+                output.Write(buffer, 0, buffer.Length);
+            }
         }
 
         private static void ReadBlock(Tkl.Jumbo.Dfs.File file, string[] servers)
@@ -92,40 +111,40 @@ namespace ClientSample
 
         private static void WriteBlock(BlockAssignment b)
         {
-            using( TcpClient client = new TcpClient(b.DataServers[0], 9001) )
-            {
-                DataServerClientProtocolWriteHeader header = new DataServerClientProtocolWriteHeader();
-                header.BlockID = b.BlockID;
-                header.DataServers = null;
-                int size = 10000000;
+            //using( TcpClient client = new TcpClient(b.DataServers[0].HostName, 9001) )
+            //{
+            //    DataServerClientProtocolWriteHeader header = new DataServerClientProtocolWriteHeader();
+            //    header.BlockID = b.BlockID;
+            //    header.DataServers = null;
+            //    int size = 10000000;
 
-                using( NetworkStream stream = client.GetStream() )
-                {
-                    BinaryFormatter formatter = new BinaryFormatter();
-                    formatter.Serialize(stream, header);
+            //    using( NetworkStream stream = client.GetStream() )
+            //    {
+            //        BinaryFormatter formatter = new BinaryFormatter();
+            //        formatter.Serialize(stream, header);
 
-                    using( BinaryWriter writer = new BinaryWriter(stream) )
-                    {
-                        Random rnd = new Random();
-                        int packetSize = 64 * 1024;
-                        for( int sizeRemaining = size; sizeRemaining > 0; sizeRemaining -= packetSize )
-                        {
+            //        using( BinaryWriter writer = new BinaryWriter(stream) )
+            //        {
+            //            Random rnd = new Random();
+            //            int packetSize = 64 * 1024;
+            //            for( int sizeRemaining = size; sizeRemaining > 0; sizeRemaining -= packetSize )
+            //            {
 
-                            byte[] buffer = new byte[Math.Min(sizeRemaining, packetSize)];
-                            for( int x = 0; x < buffer.Length; ++x )
-                            {
-                                buffer[x] = (byte)rnd.Next('a', 'z');
-                            }
-                            Crc32 crc = new Crc32();
-                            crc.Update(buffer);
-                            writer.Write((uint)crc.Value);
-                            writer.Write(buffer.Length);
-                            writer.Write(!(sizeRemaining - packetSize > 0));
-                            writer.Write(buffer);
-                        }
-                    }
-                }
-            }
+            //                byte[] buffer = new byte[Math.Min(sizeRemaining, packetSize)];
+            //                for( int x = 0; x < buffer.Length; ++x )
+            //                {
+            //                    buffer[x] = (byte)rnd.Next('a', 'z');
+            //                }
+            //                Crc32 crc = new Crc32();
+            //                crc.Update(buffer);
+            //                writer.Write((uint)crc.Value);
+            //                writer.Write(buffer.Length);
+            //                writer.Write(!(sizeRemaining - packetSize > 0));
+            //                writer.Write(buffer);
+            //            }
+            //        }
+            //    }
+            //}
         }
     }
 }

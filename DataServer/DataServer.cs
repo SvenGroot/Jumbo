@@ -15,6 +15,8 @@ namespace DataServer
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(DataServer));
         private static readonly string _blockStorageDirectory = ConfigurationManager.AppSettings["BlockStorage"];
         private static readonly string _temporaryBlockStorageDirectory = Path.Combine(_blockStorageDirectory, "temp");
+        private static readonly int _port = Convert.ToInt32(ConfigurationManager.AppSettings["Port"]);
+        private static readonly ServerAddress _localAddress = new ServerAddress(System.Net.Dns.GetHostName(), _port);
 
         private INameServerHeartbeatProtocol _nameServer;
         private INameServerClientProtocol _nameServerClient;
@@ -44,19 +46,20 @@ namespace DataServer
             BlockSize = _nameServerClient.BlockSize;
             if( System.Net.Sockets.Socket.OSSupportsIPv6 )
             {
-                _blockServer = new BlockServer(this, System.Net.IPAddress.IPv6Any);
+                _blockServer = new BlockServer(this, System.Net.IPAddress.IPv6Any, _port);
                 _blockServer.RunAsync();
                 if( ConfigurationManager.AppSettings["ListenIPv4WhenIPv6Available"] == "true" )
                 {
-                    _blockServerIPv4 = new BlockServer(this, System.Net.IPAddress.Any);
+                    _blockServerIPv4 = new BlockServer(this, System.Net.IPAddress.Any, _port);
                     _blockServerIPv4.RunAsync();
                 }
             }
             else
             {
-                _blockServer = new BlockServer(this, System.Net.IPAddress.Any);
+                _blockServer = new BlockServer(this, System.Net.IPAddress.Any, _port);
                 _blockServer.RunAsync();
             }
+
             while( true )
             {
                 SendHeartbeat();
@@ -130,7 +133,7 @@ namespace DataServer
                     _pendingHeartbeatData.Clear();
                 }
             }
-            HeartbeatResponse response = _nameServer.Heartbeat(data);
+            HeartbeatResponse response = _nameServer.Heartbeat(_localAddress, data);
             if( response != null )
                 ProcessResponse(response);
         }

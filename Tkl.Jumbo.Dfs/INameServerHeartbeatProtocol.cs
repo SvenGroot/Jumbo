@@ -15,6 +15,6 @@ namespace Tkl.Jumbo.Dfs
         /// </summary>
         /// <param name="data">The data for the heartbeat.</param>
         /// <returns>An array of <see cref="HeartbeatReponse"/> for the heartbeat.</returns>
-        HeartbeatResponse Heartbeat(HeartbeatData[] data);
+        HeartbeatResponse Heartbeat(ServerAddress address, HeartbeatData[] data);
     }
 }

@@ -102,8 +102,9 @@ namespace Tkl.Jumbo.Dfs
         public override void Write(byte[] buffer, int offset, int count)
         {
             CheckDisposed();
-            int bufferPos = 0;
-            while( bufferPos < buffer.Length )
+            int bufferPos = offset;
+            int end = offset + count;
+            while( bufferPos < end )
             {
                 if( _bufferPos == _buffer.Length )
                 {
@@ -121,7 +122,7 @@ namespace Tkl.Jumbo.Dfs
                     }
                 } 
                 int bufferRemaining = _buffer.Length - _bufferPos;
-                int writeSize = Math.Min(buffer.Length - bufferPos, bufferRemaining);
+                int writeSize = Math.Min(end, bufferRemaining);
                 Array.Copy(buffer, bufferPos, _buffer, _bufferPos, writeSize);
                 _bufferPos += writeSize;
                 bufferPos += writeSize;
@@ -182,7 +183,8 @@ namespace Tkl.Jumbo.Dfs
         {
             if( newBlock )
                 _currentBlock = _nameServer.AppendBlock(_path);
-            _blockServerClient = new TcpClient(_currentBlock.DataServers[0], 9001);
+            ServerAddress server = _currentBlock.DataServers[0];
+            _blockServerClient = new TcpClient(server.HostName, server.Port);
             DataServerClientProtocolWriteHeader header = new DataServerClientProtocolWriteHeader();
             header.BlockID = _currentBlock.BlockID;
             header.DataServers = null;
