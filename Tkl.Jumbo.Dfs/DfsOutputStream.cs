@@ -14,14 +14,10 @@ namespace Tkl.Jumbo.Dfs
     /// </summary>
     public class DfsOutputStream : Stream
     {
-        private BlockAssignment _currentBlock;
+        private BlockSender _sender;
         private const int _packetSize = 0x10000;
         private readonly INameServerClientProtocol _nameServer;
         private readonly string _path;
-        private TcpClient _blockServerClient;
-        private NetworkStream _dataServerStream;
-        private BinaryWriter _dataServerWriter;
-        private BinaryReader _dataServerReader;
         private int _blockBytesWritten;
         private readonly byte[] _buffer = new byte[_packetSize];
         private int _bufferPos;
@@ -35,10 +31,9 @@ namespace Tkl.Jumbo.Dfs
                 throw new ArgumentNullException("path");
 
             BlockSize = nameServer.BlockSize;
-            _currentBlock = nameServer.CreateFile(path);
             _nameServer = nameServer;
             _path = path;
-            StartWritingBlock(false);
+            _sender = new BlockSender(nameServer.CreateFile(path));
         }
 
         ~DfsOutputStream()
@@ -102,22 +97,24 @@ namespace Tkl.Jumbo.Dfs
         public override void Write(byte[] buffer, int offset, int count)
         {
             CheckDisposed();
+            _sender.ThrowIfErrorOccurred();
             int bufferPos = offset;
             int end = offset + count;
             while( bufferPos < end )
             {
                 if( _bufferPos == _buffer.Length )
                 {
-                    // TODO: Check if it's the end of the block, if so use true and request new block.
                     System.Diagnostics.Debug.Assert(_blockBytesWritten + _bufferPos <= BlockSize);
                     bool finalPacket = _blockBytesWritten + _bufferPos == BlockSize;
-                    WritePacket(_dataServerWriter, _dataServerReader, _buffer, _bufferPos, finalPacket);
+                    WritePacket(_buffer, _bufferPos, finalPacket);
                     _blockBytesWritten += _bufferPos;
                     _bufferPos = 0;
                     if( finalPacket )
                     {
-                        CloseDataServerConnection();
-                        StartWritingBlock(true);
+                        // TODO: Do we really want to wait here? We could just let it run in the background and continue on our
+                        // merry way. That would require keeping track of them so we know in Dispose when we're really finished.
+                        _sender.WaitForConfirmations();
+                        _sender = new BlockSender(_nameServer.AppendBlock(_path));
                         _blockBytesWritten = 0;
                     }
                 } 
@@ -136,40 +133,14 @@ namespace Tkl.Jumbo.Dfs
             if( !_disposed )
             {
                 _disposed = true;
-                if( _bufferPos > 0 && _dataServerWriter != null )
+                if( _bufferPos > 0 && _sender != null )
                 {
-                    WritePacket(_dataServerWriter, _dataServerReader, _buffer, _bufferPos, true);
+                    WritePacket(_buffer, _bufferPos, true);
                     _bufferPos = 0;
                 }
+                _sender.WaitForConfirmations();
+                _sender.ThrowIfErrorOccurred();
                 _nameServer.CloseFile(_path);
-                if( disposing )
-                {
-                    CloseDataServerConnection();
-                }
-            }
-        }
-
-        private void CloseDataServerConnection()
-        {
-            if( _dataServerReader != null )
-            {
-                ((IDisposable)_dataServerReader).Dispose();
-                _dataServerReader = null;
-            }
-            if( _dataServerWriter != null )
-            {
-                ((IDisposable)_dataServerWriter).Dispose();
-                _dataServerWriter = null;
-            }
-            if( _dataServerStream != null )
-            {
-                _dataServerStream.Close();
-                _dataServerStream = null;
-            }
-            if( _blockServerClient != null )
-            {
-                ((IDisposable)_blockServerClient).Dispose();
-                _blockServerClient = null;
             }
         }
 
@@ -178,37 +149,11 @@ namespace Tkl.Jumbo.Dfs
             if( _disposed )
                 throw new ObjectDisposedException(typeof(DfsOutputStream).FullName);
         }
-
-        private void StartWritingBlock(bool newBlock)
-        {
-            if( newBlock )
-                _currentBlock = _nameServer.AppendBlock(_path);
-            ServerAddress server = _currentBlock.DataServers[0];
-            _blockServerClient = new TcpClient(server.HostName, server.Port);
-            DataServerClientProtocolWriteHeader header = new DataServerClientProtocolWriteHeader();
-            header.BlockID = _currentBlock.BlockID;
-            header.DataServers = _currentBlock.DataServers.ToArray();
-            _dataServerStream = _blockServerClient.GetStream();
-            BinaryFormatter formatter = new BinaryFormatter();
-            formatter.Serialize(_dataServerStream, header);
-            _dataServerWriter = new BinaryWriter(_dataServerStream);
-            _dataServerReader = new BinaryReader(_dataServerStream);
-            DataServerClientProtocolResult result = (DataServerClientProtocolResult)_dataServerReader.ReadInt32();
-            if( result != DataServerClientProtocolResult.Ok )
-            {
-                throw new Exception("Couldn't write block to server."); // TODO: Custom exception.
-            }
-        }
         
-        private static void WritePacket(BinaryWriter writer, BinaryReader reader, byte[] buffer, int length, bool finalPacket)
+        private void WritePacket(byte[] buffer, int length, bool finalPacket)
         {
             Packet packet = new Packet(buffer, length, finalPacket);
-            packet.Write(writer, false);
-            DataServerClientProtocolResult result = (DataServerClientProtocolResult)reader.ReadInt32();
-            if( result != DataServerClientProtocolResult.Ok )
-            {
-                throw new Exception("Couldn't write block to server."); // TODO: Custom exception.
-            }
+            _sender.AddPacket(packet);
         }
     }
 }

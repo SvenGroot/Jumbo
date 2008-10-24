@@ -73,4 +73,8 @@
   <Target Name="AfterBuild">
   </Target>
   -->
+  <PropertyGroup>
+    <PostBuildEvent>REM IF "$(ConfigurationName)"=="Release" "$(FrameworkSDKDir)Bin\SignTool" sign /t http://timestamp.comodoca.com/authenticode "$(TargetPath)"
+"$(FrameworkSDKDir)Bin\SignTool" sign /t http://timestamp.comodoca.com/authenticode "$(TargetPath)"</PostBuildEvent>
+  </PropertyGroup>
 </Project>
