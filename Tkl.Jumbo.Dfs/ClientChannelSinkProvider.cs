@@ -7,6 +7,9 @@ using System.Collections;
 
 namespace Tkl.Jumbo.Dfs
 {
+    /// <summary>
+    /// .Net remoting channel sink provider responsible for creating the <see cref="ClientChannelSink"/>.
+    /// </summary>
     public class ClientChannelSinkProvider : IClientChannelSinkProvider
     {
         public ClientChannelSinkProvider() { }

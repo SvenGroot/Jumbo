@@ -6,11 +6,14 @@ using System.Text;
 namespace Tkl.Jumbo.Dfs
 {
     /// <summary>
-    /// Provides heartbeat data for a block report.
+    /// Represents the data sent during a heartbeat when the data server is sending a block report.
     /// </summary>
     [Serializable]
     public class BlockReportHeartbeatData : HeartbeatData
     {
+        /// <summary>
+        /// Gets or sets the the block IDs of the blocks that this data server has.
+        /// </summary>
         public Guid[] Blocks { get; set; }
     }
 }

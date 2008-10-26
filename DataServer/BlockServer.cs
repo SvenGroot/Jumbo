@@ -143,7 +143,7 @@ namespace DataServer
                         {
                             packet.Read(reader, false);
                         }
-                        catch( InvalidChecksumException )
+                        catch( InvalidPacketException )
                         {
                             clientWriter.WriteResult(DataServerClientProtocolResult.Error); // TODO: better status code
                             _log.ErrorFormat("Invalid checksum on packet of block {0}", header.BlockID);
@@ -237,7 +237,7 @@ namespace DataServer
                     {
                         packet.Read(reader, true);
                     }
-                    catch( InvalidChecksumException )
+                    catch( InvalidPacketException )
                     {
                         writer.WriteResult(DataServerClientProtocolResult.Error);
                         // TODO: We need to inform the nameserver we have an invalid block.

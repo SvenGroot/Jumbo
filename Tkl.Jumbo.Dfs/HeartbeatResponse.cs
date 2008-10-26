@@ -20,8 +20,8 @@ namespace Tkl.Jumbo.Dfs
 
 
         /// <summary>
-        /// Gets or sets the command that the NameServer is giving to the DataServer.
+        /// Gets the command that the NameServer is giving to the DataServer.
         /// </summary>
-        public DataServerHeartbeatCommand Command { get; set; }
+        public DataServerHeartbeatCommand Command { get; private set; }
     }
 }

@@ -7,6 +7,10 @@ using System.Runtime.Remoting.Messaging;
 
 namespace Tkl.Jumbo.Dfs
 {
+    /// <summary>
+    /// .Net Remoting channel sink responsible for adding the host name to the calling context
+    /// when calling a remote method.
+    /// </summary>
     class ClientChannelSink : BaseChannelObjectWithProperties, IMessageSink, IClientChannelSink
     {
         private readonly IMessageSink _nextMessageSink;

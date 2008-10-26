@@ -10,7 +10,13 @@ namespace Tkl.Jumbo.Dfs
     /// </summary>
     public enum DataServerHeartbeatCommand
     {
+        /// <summary>
+        /// The name server doesn't have any tasks for the data server to perform.
+        /// </summary>
         None,
+        /// <summary>
+        /// The name server wants the data server to send a full list of all its blocks.
+        /// </summary>
         ReportBlocks
     }
 }

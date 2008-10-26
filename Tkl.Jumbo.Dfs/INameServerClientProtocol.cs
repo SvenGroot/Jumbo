@@ -70,10 +70,15 @@ namespace Tkl.Jumbo.Dfs
         /// <param name="path">The path of the file to close.</param>
         void CloseFile(string path);
 
+        /// <summary>
+        /// Gets the list of data servers that have the specified block.
+        /// </summary>
+        /// <param name="blockID">The <see cref="Guid"/> identifying the block.</param>
+        /// <returns>A list of <see cref="ServerAddress"/> objects that give the addresses of the servers that have this block.</returns>
         ServerAddress[] GetDataServersForBlock(Guid blockID);
 
         /// <summary>
-        /// Gets the size of a single block in a file.
+        /// Gets the maximum size of a single block in a file.
         /// </summary>
         int BlockSize { get; }
     }
