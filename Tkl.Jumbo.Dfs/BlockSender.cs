@@ -136,7 +136,6 @@ namespace Tkl.Jumbo.Dfs
         /// Forward packet confirmations to the specified writer.
         /// </summary>
         /// <param name="writer">The <see cref="BinaryWriter"/> to write the confirmations to.</param>
-        [MethodImpl(MethodImplOptions.Synchronized)]
         public void ForwardConfirmations(BinaryWriter writer)
         {
             if( _lastResult != DataServerClientProtocolResult.Ok )
@@ -148,11 +147,9 @@ namespace Tkl.Jumbo.Dfs
                 // This function is not meant to be called from more than one thread; if it were
                 // to be called from more than one thread a race condition in this loop could cause
                 // too many confirmations to be sent.
-                // A lock-free method to solve this exists with Interlocked.CompareExchange, however
-                // that would cause this loop to iterate needlessly if the result reader thread interrupts
-                // this function and increments the value, which is perfectly safe.
-                // Because this function isn't going to be called from more than one thread, I chose not
-                // to do that. I marked the function as synchronised as a precaution.
+                // This is not an issue because while this class uses threads internally, it's
+                // public interface is not meant to be thread-safe and indeed won't be used
+                // from multiple threads.
                 while( _receivedConfirmations > 0 )
                 {
                     writer.Write((int)DataServerClientProtocolResult.Ok);
