@@ -23,7 +23,6 @@ namespace Tkl.Jumbo.Dfs
 
         private readonly byte[] _data = new byte[PacketSize];
         private readonly Crc32 _checksum = new Crc32();
-        private int _size;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="Packet"/> class with no data.
@@ -44,7 +43,7 @@ namespace Tkl.Jumbo.Dfs
                 throw new ArgumentNullException("data");
             if( size < 0 || size > data.Length || size > PacketSize )
                 throw new ArgumentOutOfRangeException("size");
-            if( !IsLastPacket && size != PacketSize )
+            if( !isLastPacket && size != PacketSize )
                 throw new ArgumentException("The packet has an invalid size.");
 
             Array.Copy(data, _data, size);
