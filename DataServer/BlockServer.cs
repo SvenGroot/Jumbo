@@ -117,53 +117,67 @@ namespace DataServerApplication
             using( BinaryWriter clientWriter = new BinaryWriter(stream) )
             using( BinaryReader reader = new BinaryReader(stream) )
             {
-                if( header.DataServers.Length == 0 || !header.DataServers[0].Equals(_dataServer.LocalAddress) )
+                try
                 {
-                    _log.ErrorFormat("This server was not the first server in the list of remaining servers for the block.");
-                    clientWriter.WriteResult(DataServerClientProtocolResult.Error);
-                    return;
-                }
-                BlockSender forwarder = null;
-                using( FileStream blockFile = _dataServer.AddNewBlock(header.BlockID) )
-                using( BinaryWriter fileWriter = new BinaryWriter(blockFile) )
-                {
-                    if( header.DataServers.Length > 1 )
+                    if( header.DataServers.Length == 0 || !header.DataServers[0].Equals(_dataServer.LocalAddress) )
                     {
-                        ServerAddress[] forwardServers = new ServerAddress[header.DataServers.Length - 1];
-                        Array.Copy(header.DataServers, 1, forwardServers, 0, forwardServers.Length);
-                        forwarder = new BlockSender(header.BlockID, forwardServers);
-                        _log.InfoFormat("Connected to {0} to forward block {1}.", header.DataServers[1], header.BlockID);
-                    }
-                    else
-                    {
-                        _log.DebugFormat("This is the last server in the list for block {0}.", header.BlockID);
-                        // Send an OK for the header. We don't do this when forwarding since the BlockSender will do it
-                        // when it receives the ok from the forwarded server.
-                        clientWriter.WriteResult(DataServerClientProtocolResult.Ok);
-                    }
-
-                    if( !ReceivePackets(header, ref blockSize, clientWriter, reader, forwarder, fileWriter) )
+                        _log.ErrorFormat("This server was not the first server in the list of remaining servers for the block.");
+                        clientWriter.WriteResult(DataServerClientProtocolResult.Error);
                         return;
-
-                    if( forwarder != null )
-                    {
-                        _log.Debug("Waiting for confirmations.");
-                        forwarder.WaitForConfirmations();
-                        _log.Debug("Waiting for confirmations complete.");
                     }
-                    if( forwarder != null )
+                    BlockSender forwarder = null;
+                    using( FileStream blockFile = _dataServer.AddNewBlock(header.BlockID) )
+                    using( BinaryWriter fileWriter = new BinaryWriter(blockFile) )
                     {
-                        if( !CheckForwarderError(header, forwarder) )
-                            return;
-                    }                        
-                }
+                        if( header.DataServers.Length > 1 )
+                        {
+                            ServerAddress[] forwardServers = new ServerAddress[header.DataServers.Length - 1];
+                            Array.Copy(header.DataServers, 1, forwardServers, 0, forwardServers.Length);
+                            forwarder = new BlockSender(header.BlockID, forwardServers);
+                            _log.InfoFormat("Connected to {0} to forward block {1}.", header.DataServers[1], header.BlockID);
+                        }
+                        else
+                        {
+                            _log.DebugFormat("This is the last server in the list for block {0}.", header.BlockID);
+                            // Send an OK for the header. We don't do this when forwarding since the BlockSender will do it
+                            // when it receives the ok from the forwarded server.
+                            clientWriter.WriteResult(DataServerClientProtocolResult.Ok);
+                        }
 
-                _log.InfoFormat("Writing block {0} complete.", header.BlockID);
-                _dataServer.CompleteBlock(header.BlockID, blockSize);
-                if( forwarder == null )
-                    clientWriter.WriteResult(DataServerClientProtocolResult.Ok);
-                else
-                    forwarder.ForwardConfirmations(clientWriter);
+                        if( !ReceivePackets(header, ref blockSize, clientWriter, reader, forwarder, fileWriter) )
+                            return;
+
+                        if( forwarder != null )
+                        {
+                            _log.Debug("Waiting for confirmations.");
+                            forwarder.WaitForConfirmations();
+                            _log.Debug("Waiting for confirmations complete.");
+                        }
+                        if( forwarder != null )
+                        {
+                            if( !CheckForwarderError(header, forwarder) )
+                                return;
+                        }
+                    }
+
+                    _log.InfoFormat("Writing block {0} complete.", header.BlockID);
+                    _dataServer.CompleteBlock(header.BlockID, blockSize);
+                    if( forwarder == null )
+                        clientWriter.WriteResult(DataServerClientProtocolResult.Ok);
+                    else
+                        forwarder.ForwardConfirmations(clientWriter);
+                }
+                catch( Exception )
+                {
+                    try
+                    {
+                        clientWriter.WriteResult(DataServerClientProtocolResult.Error);
+                    }
+                    catch( Exception )
+                    {
+                    }
+                    throw;
+                }
             }
         }
 
@@ -233,53 +247,78 @@ namespace DataServerApplication
             // File offset has to take CRCs into account.
             int fileOffset = packetOffset * (Packet.PacketSize + sizeof(uint));
 
-            int endPacketOffset = (header.Offset + header.Size) / Packet.PacketSize;
-            int endOffset = endPacketOffset * Packet.PacketSize;
-            int endFileOffset = endPacketOffset * (Packet.PacketSize + sizeof(uint));
+            int endPacketOffset = 0;
+            int endOffset = 0;
+            int endFileOffset = 0;
 
-            // TODO: Error code if file doesn't exist.
-            using( FileStream blockFile = _dataServer.OpenBlock(header.BlockID) )
-            using( BinaryReader reader = new BinaryReader(blockFile) )
-            using( BinaryWriter writer = new BinaryWriter(stream) )
+            BlockSender sender = new BlockSender(header.BlockID, stream, offset);
+            try
             {
-                if( fileOffset > blockFile.Length || endFileOffset >= blockFile.Length )
+                using( FileStream blockFile = _dataServer.OpenBlock(header.BlockID) )
+                using( BinaryReader reader = new BinaryReader(blockFile) )
                 {
-                    writer.WriteResult(DataServerClientProtocolResult.Error);
-                    return;
-                }
-
-                writer.WriteResult(DataServerClientProtocolResult.Ok);
-                // Inform the client of the actual offset.
-                writer.Write(offset);
-
-                Packet packet = new Packet();
-                blockFile.Seek(fileOffset, SeekOrigin.Begin);
-                int sizeRemaining = endOffset - offset;
-                while( sizeRemaining >= 0 )
-                {
-                    try
+                    if( header.Size >= 0 )
                     {
-                        packet.Read(reader, true);
+                        endPacketOffset = (header.Offset + header.Size) / Packet.PacketSize;
                     }
-                    catch( InvalidPacketException )
+                    else
                     {
-                        writer.WriteResult(DataServerClientProtocolResult.Error);
-                        // TODO: We need to inform the nameserver we have an invalid block.
+                        endPacketOffset = blockFile.Length / Packet.PacketSize;
+                    }
+                    if( (header.Offset + header.Size) % Packet.PacketSize == 0 )
+                        --endPacketOffset;
+                    endOffset = endPacketOffset * Packet.PacketSize;
+                    endFileOffset = endPacketOffset * (Packet.PacketSize + sizeof(uint));
+
+                    if( fileOffset > blockFile.Length || endFileOffset >= blockFile.Length )
+                    {
+                        _log.ErrorFormat("Requested offsets are out of range.");
+                        sender.LastResult = DataServerClientProtocolResult.Error;
+                        sender.WaitForConfirmations();
                         return;
                     }
 
-                    if( sizeRemaining == 0 )
-                        packet.IsLastPacket = true;
+                    blockFile.Seek(fileOffset, SeekOrigin.Begin);
+                    int sizeRemaining = endOffset - offset;
+                    while( sizeRemaining >= 0 )
+                    {
+                        Packet packet = new Packet();
+                        try
+                        {
+                            packet.Read(reader, true);
+                        }
+                        catch( InvalidPacketException )
+                        {
+                            sender.LastResult = DataServerClientProtocolResult.Error;
+                            sender.WaitForConfirmations();
+                            return;
+                        }
 
-                    writer.WriteResult(DataServerClientProtocolResult.Ok);
+                        if( sizeRemaining == 0 )
+                            packet.IsLastPacket = true;
 
-                    packet.Write(writer, false);
+                        sender.AddPacket(packet);
 
-                    // assertion to check if we don't jump over zero.
-                    System.Diagnostics.Debug.Assert(sizeRemaining > 0 ? sizeRemaining - packet.Size >= 0 : true);
-                    sizeRemaining -= packet.Size;
+                        // assertion to check if we don't jump over zero.
+                        System.Diagnostics.Debug.Assert(sizeRemaining > 0 ? sizeRemaining - packet.Size >= 0 : true);
+                        sizeRemaining -= packet.Size;
+                    }
                 }
             }
+            catch( Exception )
+            {
+                try
+                {
+                    sender.LastResult = DataServerClientProtocolResult.Error;
+                    sender.WaitForConfirmations();
+                }
+                catch( Exception )
+                {
+                }
+                throw;
+            }
+            _log.InfoFormat("Waiting for sending to finish for block {0}", header.BlockID);
+            sender.WaitForConfirmations();
             _log.InfoFormat("Finished sending block {0}", header.BlockID);
         }
     }

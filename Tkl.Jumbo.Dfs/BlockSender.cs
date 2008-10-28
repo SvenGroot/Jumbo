@@ -29,6 +29,7 @@ namespace Tkl.Jumbo.Dfs
         private bool _hasLastPacket;
         private readonly Guid _blockID;
         private readonly ServerAddress[] _dataServers;
+        private int _offset;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="BlockSender"/> class for the specified block assignment.
@@ -62,8 +63,19 @@ namespace Tkl.Jumbo.Dfs
             _sendPacketsThread.Start();
         }
 
+        public BlockSender(Guid blockID, NetworkStream stream, int offset)
+        {
+            if( stream == null )
+                throw new ArgumentNullException("stream");
+
+            _offset = offset;
+            _blockID = blockID;
+            _sendPacketsThread = new Thread(SendPacketsThread) { Name = "SendPackets" };
+            _sendPacketsThread.Start(stream);
+        }
+
         /// <summary>
-        /// Gets the last <see cref="DataServerClientProtocolResult"/> sent by the data server.
+        /// Gets or sets the last <see cref="DataServerClientProtocolResult"/> sent by the data server.
         /// </summary>
         /// <remarks>
         /// If this property is anything other than <see cref="DataServerClientProtocolResult.Ok"/>, the
@@ -72,6 +84,11 @@ namespace Tkl.Jumbo.Dfs
         public DataServerClientProtocolResult LastResult
         {
             get { return _lastResult; }
+            set 
+            {
+                _lastResult = value;
+                _packetsToSendEvent.Set();
+            }
         }
 
         /// <summary>
@@ -166,30 +183,47 @@ namespace Tkl.Jumbo.Dfs
             }
         }
 
-        private void SendPacketsThread()
+        private void SendPacketsThread(object data)
         {
+            NetworkStream stream = (NetworkStream)data;
+            TcpClient client = null;
+            bool disposeClient = false;
             try
             {
-                ServerAddress server = _dataServers[0];
-                using( TcpClient client = new TcpClient(server.HostName, server.Port) )
-                using( NetworkStream stream = client.GetStream() )
+                if( stream == null )
+                {
+                    ServerAddress server = _dataServers[0];
+                    disposeClient = true;
+                    client = new TcpClient(server.HostName, server.Port);
+                    stream = client.GetStream();
+                }
                 using( BinaryWriter writer = new BinaryWriter(stream) )
                 using( BinaryReader reader = new BinaryReader(stream) )
                 {
-                    // TODO: Configurable timeouts
-                    stream.ReadTimeout = 30000;
-                    stream.WriteTimeout = 30000;
+                    // If the data server is using this class to return data to the client, we don't need to send
+                    // a header or listen for results. We do need to send an initial OK and the offset.
+                    if( _dataServers == null )
+                    {
+                        writer.Write((int)DataServerClientProtocolResult.Ok);
+                        writer.Write(_offset);
+                    }
+                    else
+                    {
+                        // TODO: Configurable timeouts
+                        stream.ReadTimeout = 30000;
+                        stream.WriteTimeout = 30000;
 
-                    _resultReaderThread = new Thread((obj) => ResultReaderThread((BinaryReader)obj));
-                    _resultReaderThread.Name = "ResultReader";
-                    _resultReaderThread.Start(reader);
+                        _resultReaderThread = new Thread((obj) => ResultReaderThread((BinaryReader)obj));
+                        _resultReaderThread.Name = "ResultReader";
+                        _resultReaderThread.Start(reader);
 
-                    // Send the header
-                    DataServerClientProtocolWriteHeader header = new DataServerClientProtocolWriteHeader();
-                    header.BlockID = _blockID;
-                    header.DataServers = _dataServers;
-                    BinaryFormatter formatter = new BinaryFormatter();
-                    formatter.Serialize(stream, header);
+                        // Send the header
+                        DataServerClientProtocolWriteHeader header = new DataServerClientProtocolWriteHeader();
+                        header.BlockID = _blockID;
+                        header.DataServers = _dataServers;
+                        BinaryFormatter formatter = new BinaryFormatter();
+                        formatter.Serialize(stream, header);
+                    }
 
                     // Increment required confirmations because the server will send one for the header.
                     Interlocked.Increment(ref _requiredConfirmations);
@@ -217,6 +251,10 @@ namespace Tkl.Jumbo.Dfs
                                 // so if _requiredConfirmations reaches zero it's done.
                                 _finished = true;
                             }
+                            if( _dataServers == null )
+                            {
+                                writer.Write((int)DataServerClientProtocolResult.Ok);
+                            }
                             packet.Write(writer, false);
                             _requiredConfirmationsEvent.Set();
                         }
@@ -224,15 +262,30 @@ namespace Tkl.Jumbo.Dfs
                             _packetsToSendEvent.WaitOne();
                     }
 
-                    // We must wait for the result reader thread to finish; it's using the network connection
-                    // so we can't close that.
-                    _resultReaderThread.Join();
+                    if( _resultReaderThread != null )
+                    {
+                        // We must wait for the result reader thread to finish; it's using the network connection
+                        // so we can't close that.
+                        _resultReaderThread.Join();
+                    }
+                    if( _dataServers == null && _lastResult != DataServerClientProtocolResult.Ok )
+                        writer.Write((int)_lastResult);
                 }
             }
             catch( Exception ex )
             {
                 _lastException = ex;
                 _lastResult = DataServerClientProtocolResult.Error;
+            }
+            finally
+            {
+                if( disposeClient )
+                {
+                    if( stream != null )
+                        stream.Dispose();
+                    if( client != null )
+                        ((IDisposable)client).Dispose();
+                }
             }
         }
 
