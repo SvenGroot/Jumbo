@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using Tkl.Jumbo.Dfs;
 
-namespace NameServer
+namespace NameServerApplication
 {
     class DataServerInfo
     {

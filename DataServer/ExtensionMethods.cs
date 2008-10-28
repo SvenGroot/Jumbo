@@ -5,7 +5,7 @@ using System.Text;
 using Tkl.Jumbo.Dfs;
 using System.IO;
 
-namespace DataServer
+namespace DataServerApplication
 {
     static class ExtensionMethods
     {

@@ -22,6 +22,7 @@ namespace Tkl.Jumbo.Dfs
         private AutoResetEvent _packetsToSendEvent = new AutoResetEvent(false);
         private AutoResetEvent _requiredConfirmationsEvent = new AutoResetEvent(false);
         private volatile DataServerClientProtocolResult _lastResult = DataServerClientProtocolResult.Ok;
+        private volatile Exception _lastException;
         private Thread _sendPacketsThread;
         private Thread _resultReaderThread;
         private volatile bool _finished;
@@ -62,7 +63,7 @@ namespace Tkl.Jumbo.Dfs
         }
 
         /// <summary>
-        /// Gets or sets the last <see cref="DataServerClientProtocolResult"/> sent by the data server.
+        /// Gets the last <see cref="DataServerClientProtocolResult"/> sent by the data server.
         /// </summary>
         /// <remarks>
         /// If this property is anything other than <see cref="DataServerClientProtocolResult.Ok"/>, the
@@ -71,6 +72,14 @@ namespace Tkl.Jumbo.Dfs
         public DataServerClientProtocolResult LastResult
         {
             get { return _lastResult; }
+        }
+
+        /// <summary>
+        /// Gets the last <see cref="Exception"/> that occurred while sending the packets.
+        /// </summary>
+        public Exception LastException
+        {
+            get { return _lastException; }
         }
 
         /// <summary>
@@ -127,9 +136,8 @@ namespace Tkl.Jumbo.Dfs
         /// <exception cref="DfsException">There was an error sending a packet to the server.</exception>
         public void ThrowIfErrorOccurred()
         {
-            // TODO: Also throw if an exception occurred in one of the threads.
             if( _lastResult != DataServerClientProtocolResult.Ok )
-                throw new DfsException("There was an error sending a packet to the server.");
+                throw new DfsException("There was an error sending a packet to the server.", _lastException);
         }
 
         /// <summary>
@@ -160,81 +168,102 @@ namespace Tkl.Jumbo.Dfs
 
         private void SendPacketsThread()
         {
-            // TODO: error handling.
-            ServerAddress server = _dataServers[0];
-            using( TcpClient client = new TcpClient(server.HostName, server.Port) )
-            using( NetworkStream stream = client.GetStream() )
-            using( BinaryWriter writer = new BinaryWriter(stream) )
-            using( BinaryReader reader = new BinaryReader(stream) )
+            try
             {
-                _resultReaderThread = new Thread((obj) => ResultReaderThread((BinaryReader)obj));
-                _resultReaderThread.Name = "ResultReader";
-                _resultReaderThread.Start(reader);
-
-                // Send the header
-                DataServerClientProtocolWriteHeader header = new DataServerClientProtocolWriteHeader();
-                header.BlockID = _blockID;
-                header.DataServers = _dataServers;
-                BinaryFormatter formatter = new BinaryFormatter();
-                formatter.Serialize(stream, header);
-
-                // Increment required confirmations because the server will send one for the header.
-                Interlocked.Increment(ref _requiredConfirmations);
-                _requiredConfirmationsEvent.Set();
-
-                // Start sending packets; stop when an error occurs or we've sent the last packet.
-                Packet packet = null;
-                while( (packet == null || !packet.IsLastPacket) && _lastResult == DataServerClientProtocolResult.Ok )
+                ServerAddress server = _dataServers[0];
+                using( TcpClient client = new TcpClient(server.HostName, server.Port) )
+                using( NetworkStream stream = client.GetStream() )
+                using( BinaryWriter writer = new BinaryWriter(stream) )
+                using( BinaryReader reader = new BinaryReader(stream) )
                 {
-                    packet = null;
-                    lock( _packetsToSend )
-                    {
-                        if( _packetsToSend.Count > 0 )
-                        {
-                            packet = _packetsToSend.Dequeue();
-                        }
-                    }
-                    if( packet != null )
-                    {
-                        int newValue = Interlocked.Increment(ref _requiredConfirmations);
+                    // TODO: Configurable timeouts
+                    stream.ReadTimeout = 30000;
+                    stream.WriteTimeout = 30000;
 
-                        if( packet.IsLastPacket )
+                    _resultReaderThread = new Thread((obj) => ResultReaderThread((BinaryReader)obj));
+                    _resultReaderThread.Name = "ResultReader";
+                    _resultReaderThread.Start(reader);
+
+                    // Send the header
+                    DataServerClientProtocolWriteHeader header = new DataServerClientProtocolWriteHeader();
+                    header.BlockID = _blockID;
+                    header.DataServers = _dataServers;
+                    BinaryFormatter formatter = new BinaryFormatter();
+                    formatter.Serialize(stream, header);
+
+                    // Increment required confirmations because the server will send one for the header.
+                    Interlocked.Increment(ref _requiredConfirmations);
+                    _requiredConfirmationsEvent.Set();
+
+                    // Start sending packets; stop when an error occurs or we've sent the last packet.
+                    Packet packet = null;
+                    while( (packet == null || !packet.IsLastPacket) && _lastResult == DataServerClientProtocolResult.Ok )
+                    {
+                        packet = null;
+                        lock( _packetsToSend )
                         {
-                            // Set finished to let the result reader thread know the last packet has been sent,
-                            // so if _requiredConfirmations reaches zero it's done.
-                            _finished = true;
+                            if( _packetsToSend.Count > 0 )
+                            {
+                                packet = _packetsToSend.Dequeue();
+                            }
                         }
-                        packet.Write(writer, false);
-                        _requiredConfirmationsEvent.Set();
+                        if( packet != null )
+                        {
+                            int newValue = Interlocked.Increment(ref _requiredConfirmations);
+
+                            if( packet.IsLastPacket )
+                            {
+                                // Set finished to let the result reader thread know the last packet has been sent,
+                                // so if _requiredConfirmations reaches zero it's done.
+                                _finished = true;
+                            }
+                            packet.Write(writer, false);
+                            _requiredConfirmationsEvent.Set();
+                        }
+                        else
+                            _packetsToSendEvent.WaitOne();
                     }
-                    else
-                        _packetsToSendEvent.WaitOne();
+
+                    // We must wait for the result reader thread to finish; it's using the network connection
+                    // so we can't close that.
+                    _resultReaderThread.Join();
                 }
-
-                // We must wait for the result reader thread to finish; it's using the network connection
-                // so we can't close that.
-                _resultReaderThread.Join();
+            }
+            catch( Exception ex )
+            {
+                _lastException = ex;
+                _lastResult = DataServerClientProtocolResult.Error;
             }
         }
 
         private void ResultReaderThread(BinaryReader reader)
         {
-            // TODO: Timeouts & error handling
-            while( !(_finished && _requiredConfirmations == 0) && _lastResult == DataServerClientProtocolResult.Ok )
+            try
             {
-                if( _requiredConfirmations > 0 )
+                while( !(_finished && _requiredConfirmations == 0) && _lastResult == DataServerClientProtocolResult.Ok )
                 {
-                    DataServerClientProtocolResult result = (DataServerClientProtocolResult)reader.ReadInt32();
-                    if( result != DataServerClientProtocolResult.Ok )
+                    if( _requiredConfirmations > 0 )
                     {
-                        _lastResult = result;
-                        break;
+                        DataServerClientProtocolResult result = (DataServerClientProtocolResult)reader.ReadInt32();
+                        if( result != DataServerClientProtocolResult.Ok )
+                        {
+                            _lastResult = result;
+                            break;
+                        }
+                        Interlocked.Decrement(ref _requiredConfirmations);
+                        Interlocked.Increment(ref _receivedConfirmations);
                     }
-                    Interlocked.Decrement(ref _requiredConfirmations);
-                    Interlocked.Increment(ref _receivedConfirmations);
+                    else
+                        _requiredConfirmationsEvent.WaitOne();
                 }
-                else
-                    _requiredConfirmationsEvent.WaitOne();
+            }
+            catch( Exception ex )
+            {
+                // There is a race condition here that could cause the read thread to overwrite an exception thrown from 
+                // the write thread but for the moment I don't care.
+                if( _lastException == null )
+                    _lastException = ex;
+                _lastResult = DataServerClientProtocolResult.Error;
             }
         }
     }

@@ -3,8 +3,12 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Runtime.Remoting;
+using Tkl.Jumbo.Dfs;
+using System.Runtime.Remoting.Channels;
+using System.Runtime.Remoting.Channels.Tcp;
+using System.Collections;
 
-namespace NameServer
+namespace NameServerApplication
 {
     /// <summary>
     /// Contains the entry point for the NameServer.
@@ -17,9 +21,10 @@ namespace NameServer
         {
             AppDomain.CurrentDomain.UnhandledException += new UnhandledExceptionEventHandler(CurrentDomain_UnhandledException);
             System.Threading.Thread.CurrentThread.Name = "main";
+            NameServer.Run();
+
             _log.Info("---- NameServer is starting ----");
-            RemotingConfiguration.Configure("NameServer.exe.config", false);
-            _log.Info("RPC server started.");
+
             Console.ReadKey();
             _log.Info("---- NameServer is shutting down ----");
         }

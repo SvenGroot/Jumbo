@@ -16,9 +16,7 @@ namespace ClientSample
     {
         static void Main(string[] args)
         {
-            RemotingConfiguration.Configure("ClientSample.exe.config", false);
-            var types = RemotingConfiguration.GetRegisteredWellKnownClientTypes();
-            INameServerClientProtocol nameServer = (INameServerClientProtocol)Activator.GetObject(types[0].ObjectType, types[0].ObjectUrl);
+            INameServerClientProtocol nameServer = DfsClient.CreateNameServerClient();
             //nameServer.CreateDirectory("/test/foo");
             //nameServer.CreateFile("/test/bar");
             //File f = nameServer.GetFileInfo("/test/bar");
@@ -31,15 +29,16 @@ namespace ClientSample
             //WriteBlock(b);
             //nameServer.CloseFile("/test");
 
-            //Tkl.Jumbo.Dfs.File file = nameServer.GetFileInfo("/myfile");
-            //string[] servers = nameServer.GetDataServersForBlock(file.Blocks[0]);
-            //ReadBlock(file, servers);
+            //WriteFile(args, nameServer);
 
-            WriteFile(args, nameServer);
+            Tkl.Jumbo.Dfs.File file = nameServer.GetFileInfo("/myfile");
+            ServerAddress[] servers = nameServer.GetDataServersForBlock(file.Blocks[0]);
+            ReadBlock(file, servers, nameServer.BlockSize);
+
+            //ReadFile(nameServer);
 
             sw.Stop();
             Console.WriteLine(sw.Elapsed);
-            //ReadFile(nameServer);
 
             Console.WriteLine("Done, press any key to exit");
 
@@ -74,14 +73,14 @@ namespace ClientSample
             }
         }
 
-        private static void ReadBlock(Tkl.Jumbo.Dfs.File file, string[] servers)
+        private static void ReadBlock(Tkl.Jumbo.Dfs.File file, ServerAddress[] servers, int blockSize)
         {
-            using( TcpClient client = new TcpClient(servers[0], 9001) )
+            using( TcpClient client = new TcpClient(servers[0].HostName, servers[0].Port) )
             {
                 DataServerClientProtocolReadHeader header = new DataServerClientProtocolReadHeader();
                 header.BlockID = file.Blocks[0];
-                header.Offset = 100000;
-                header.Size = 100000;
+                header.Offset = 0;
+                header.Size = blockSize;
 
                 int receivedSize = 0;
                 using( NetworkStream stream = client.GetStream() )

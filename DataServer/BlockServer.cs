@@ -9,7 +9,7 @@ using Tkl.Jumbo.Dfs;
 using System.Runtime.Serialization.Formatters.Binary;
 using System.IO;
 
-namespace DataServer
+namespace DataServerApplication
 {
     /// <summary>
     /// Provides a TCP server that clients can use to read and write blocks to the data server.
@@ -74,29 +74,36 @@ namespace DataServer
 
         private void HandleConnection(TcpClient client)
         {
-            using( NetworkStream stream = client.GetStream() )
+            try
             {
-                // TODO: Return error codes on invalid header etc.
-                BinaryFormatter formatter = new BinaryFormatter();
-                DataServerClientProtocolHeader header = (DataServerClientProtocolHeader)formatter.Deserialize(stream);
-
-                switch( header.Command )
+                using( NetworkStream stream = client.GetStream() )
                 {
-                case DataServerCommand.WriteBlock:
-                    DataServerClientProtocolWriteHeader writeHeader = header as DataServerClientProtocolWriteHeader;
-                    if( writeHeader != null )
+                    // TODO: Return error codes on invalid header etc.
+                    BinaryFormatter formatter = new BinaryFormatter();
+                    DataServerClientProtocolHeader header = (DataServerClientProtocolHeader)formatter.Deserialize(stream);
+
+                    switch( header.Command )
                     {
-                        ReceiveBlock(stream, writeHeader);
+                    case DataServerCommand.WriteBlock:
+                        DataServerClientProtocolWriteHeader writeHeader = header as DataServerClientProtocolWriteHeader;
+                        if( writeHeader != null )
+                        {
+                            ReceiveBlock(stream, writeHeader);
+                        }
+                        break;
+                    case DataServerCommand.ReadBlock:
+                        DataServerClientProtocolReadHeader readHeader = header as DataServerClientProtocolReadHeader;
+                        if( readHeader != null )
+                        {
+                            SendBlock(stream, readHeader);
+                        }
+                        break;
                     }
-                    break;
-                case DataServerCommand.ReadBlock:
-                    DataServerClientProtocolReadHeader readHeader = header as DataServerClientProtocolReadHeader;
-                    if( readHeader != null )
-                    {
-                        SendBlock(stream, readHeader);
-                    }
-                    break;
                 }
+            }
+            catch( Exception ex )
+            {
+                _log.Error("An error occurred handling a client connection.", ex);
             }
         }
 
@@ -118,7 +125,7 @@ namespace DataServer
                 }
                 BlockSender forwarder = null;
                 using( FileStream blockFile = _dataServer.AddNewBlock(header.BlockID) )
-                using( BinaryWriter writer = new BinaryWriter(blockFile) )
+                using( BinaryWriter fileWriter = new BinaryWriter(blockFile) )
                 {
                     if( header.DataServers.Length > 1 )
                     {
@@ -135,49 +142,8 @@ namespace DataServer
                         clientWriter.WriteResult(DataServerClientProtocolResult.Ok);
                     }
 
-                    Packet packet;
-                    do
-                    {
-                        packet = new Packet();
-                        try
-                        {
-                            packet.Read(reader, false);
-                        }
-                        catch( InvalidPacketException )
-                        {
-                            clientWriter.WriteResult(DataServerClientProtocolResult.Error); // TODO: better status code
-                            _log.ErrorFormat("Invalid checksum on packet of block {0}", header.BlockID);
-                            return;
-                        }
-
-                        blockSize += packet.Size;
-
-                        if( forwarder != null )
-                        {
-                            if( forwarder.LastResult == DataServerClientProtocolResult.Error )
-                            {
-                                _log.ErrorFormat("The next data server {0} encountered an error writing a packet of block {1}.", header.DataServers[1], header.BlockID);
-                                return;
-                            }
-                            forwarder.AddPacket(packet);
-                        }
-
-                        packet.Write(writer, true);
-
-                        if( !packet.IsLastPacket )
-                        {
-                            if( forwarder == null )
-                            {
-                                // For the last Ok, wait until all the data servers have acknowledged the packet
-                                // and we've informed the nameserver of our new block.
-                                clientWriter.WriteResult(DataServerClientProtocolResult.Ok);
-                            }
-                            else
-                            {
-                                forwarder.ForwardConfirmations(clientWriter);
-                            }
-                        }
-                    } while( !packet.IsLastPacket );
+                    if( !ReceivePackets(header, ref blockSize, clientWriter, reader, forwarder, fileWriter) )
+                        return;
 
                     if( forwarder != null )
                     {
@@ -185,10 +151,10 @@ namespace DataServer
                         forwarder.WaitForConfirmations();
                         _log.Debug("Waiting for confirmations complete.");
                     }
-                    if( forwarder != null && forwarder.LastResult == DataServerClientProtocolResult.Error )
+                    if( forwarder != null )
                     {
-                        _log.ErrorFormat("The next data server {0} encountered an error writing a packet of block {1}.", header.DataServers[1], header.BlockID);
-                        return;
+                        if( !CheckForwarderError(header, forwarder) )
+                            return;
                     }                        
                 }
 
@@ -199,6 +165,64 @@ namespace DataServer
                 else
                     forwarder.ForwardConfirmations(clientWriter);
             }
+        }
+
+        private static bool ReceivePackets(DataServerClientProtocolWriteHeader header, ref int blockSize, BinaryWriter clientWriter, BinaryReader reader, BlockSender forwarder, BinaryWriter fileWriter)
+        {
+            Packet packet;
+            do
+            {
+                packet = new Packet();
+                try
+                {
+                    packet.Read(reader, false);
+                }
+                catch( InvalidPacketException ex )
+                {
+                    clientWriter.WriteResult(DataServerClientProtocolResult.Error); // TODO: better status code
+                    _log.Error(ex.Message);
+                    return false;
+                }
+
+                blockSize += packet.Size;
+
+                if( forwarder != null )
+                {
+                    if( !CheckForwarderError(header, forwarder) )
+                        return false;
+                    forwarder.AddPacket(packet);
+                }
+
+                packet.Write(fileWriter, true);
+
+                if( !packet.IsLastPacket )
+                {
+                    // For the last Ok, wait until all the data servers have acknowledged the packet
+                    // and we've informed the nameserver of our new block.
+                    if( forwarder == null )
+                    {
+                        clientWriter.WriteResult(DataServerClientProtocolResult.Ok);
+                    }
+                    else
+                    {
+                        forwarder.ForwardConfirmations(clientWriter);
+                    }
+                }
+            } while( !packet.IsLastPacket );
+            return true;
+        }
+
+        private static bool CheckForwarderError(DataServerClientProtocolWriteHeader header, BlockSender forwarder)
+        {
+            if( forwarder.LastResult == DataServerClientProtocolResult.Error )
+            {
+                if( forwarder.LastException != null )
+                    _log.Error(string.Format("An error occurred forwarding block to server {0}.", header.DataServers[1]), forwarder.LastException);
+                else
+                    _log.ErrorFormat("The next data server {0} encountered an error writing a packet of block {1}.", header.DataServers[1], header.BlockID);
+                return false;
+            }
+            return true;
         }
 
         private void SendBlock(NetworkStream stream, DataServerClientProtocolReadHeader header)

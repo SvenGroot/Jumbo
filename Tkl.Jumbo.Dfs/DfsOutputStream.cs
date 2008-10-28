@@ -192,6 +192,7 @@ namespace Tkl.Jumbo.Dfs
                         // merry way. That would require keeping track of them so we know in Dispose when we're really finished.
                         // It would also require the name server to allow appending of new blocks while old ones are still pending.
                         _sender.WaitForConfirmations();
+                        _sender.ThrowIfErrorOccurred();
                         _sender = new BlockSender(_nameServer.AppendBlock(_path));
                         _blockBytesWritten = 0;
                     }

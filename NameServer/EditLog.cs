@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.IO;
 
-namespace NameServer
+namespace NameServerApplication
 {
     /// <summary>
     /// Represents an edit log file for the file system.

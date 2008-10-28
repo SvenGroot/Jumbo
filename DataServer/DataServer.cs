@@ -7,15 +7,16 @@ using System.Threading;
 using System.Configuration;
 using System.IO;
 
-namespace DataServer
+namespace DataServerApplication
 {
     class DataServer
     {
         private const int _heartbeatInterval = 2000;
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(DataServer));
-        private static readonly string _blockStorageDirectory = ConfigurationManager.AppSettings["BlockStorage"];
-        private static readonly string _temporaryBlockStorageDirectory = Path.Combine(_blockStorageDirectory, "temp");
-        private static readonly int _port = Convert.ToInt32(ConfigurationManager.AppSettings["Port"]);
+        private readonly string _blockStorageDirectory;
+        private readonly string _temporaryBlockStorageDirectory;
+        private readonly int _port;
+        private readonly DfsConfiguration _config;
 
         private INameServerHeartbeatProtocol _nameServer;
         private INameServerClientProtocol _nameServerClient;
@@ -26,13 +27,22 @@ namespace DataServer
         private BlockServer _blockServer; // listens for TCP connections.
         private BlockServer _blockServerIPv4;
 
-        public DataServer(INameServerHeartbeatProtocol nameServer, INameServerClientProtocol nameServerClient)
+        public DataServer()
+            : this(DfsConfiguration.GetConfiguration())
         {
-            if( nameServer == null )
-                throw new ArgumentNullException("nameServer");
+        }
 
-            _nameServer = nameServer;
-            _nameServerClient = nameServerClient;
+        public DataServer(DfsConfiguration config)
+        {
+            if( config == null )
+                throw new ArgumentNullException("config");
+
+            _config = config;
+            _blockStorageDirectory = config.DataServer.BlockStoragePath;
+            _temporaryBlockStorageDirectory = Path.Combine(_blockStorageDirectory, "temp");
+            _port = config.DataServer.Port;
+            _nameServer = DfsClient.CreateNameServerHeartbeatClient(config);
+            _nameServerClient = DfsClient.CreateNameServerClient(config);
 
             LoadBlocks();
         }
@@ -51,7 +61,7 @@ namespace DataServer
             {
                 _blockServer = new BlockServer(this, System.Net.IPAddress.IPv6Any, _port);
                 _blockServer.RunAsync();
-                if( ConfigurationManager.AppSettings["ListenIPv4WhenIPv6Available"] == "true" )
+                if( _config.DataServer.ListenIPv4AndIPv6 )
                 {
                     _blockServerIPv4 = new BlockServer(this, System.Net.IPAddress.Any, _port);
                     _blockServerIPv4.RunAsync();

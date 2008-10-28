@@ -5,7 +5,7 @@ using System.Text;
 using Tkl.Jumbo.Dfs;
 using System.Runtime.Remoting.Messaging;
 
-namespace NameServer
+namespace NameServerApplication
 {
     /// <summary>
     /// Manages the file system namespace.

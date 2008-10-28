@@ -5,8 +5,12 @@ using System.Text;
 using Tkl.Jumbo.Dfs;
 using System.Runtime.Remoting.Messaging;
 using System.Configuration;
+using System.Collections;
+using System.Runtime.Remoting.Channels;
+using System.Runtime.Remoting.Channels.Tcp;
+using System.Runtime.Remoting;
 
-namespace NameServer
+namespace NameServerApplication
 {
     /// <summary>
     /// RPC server for the NameServer.
@@ -14,8 +18,9 @@ namespace NameServer
     class NameServer : MarshalByRefObject, INameServerClientProtocol, INameServerHeartbeatProtocol
     {
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(NameServer));
-        private static readonly int _replicationFactor = Convert.ToInt32(ConfigurationManager.AppSettings["ReplicationFactor"]);
-        private static readonly int _blockSize = Convert.ToInt32(ConfigurationManager.AppSettings["BlockSize"]);
+        private static DfsConfiguration _config;
+        private readonly int _replicationFactor;
+        private readonly int _blockSize;
         private Random _random = new Random();
 
         private readonly FileSystem _fileSystem;
@@ -30,7 +35,16 @@ namespace NameServer
         }
 
         public NameServer(bool replayLog)
+            : this(_config ?? DfsConfiguration.GetConfiguration(), true)
         {
+        }
+
+        public NameServer(DfsConfiguration config, bool replayLog)
+        {
+            if( config == null )
+                throw new ArgumentNullException("config");
+            _replicationFactor = config.NameServer.ReplicationFactor;
+            _blockSize = config.NameServer.BlockSize;
             _fileSystem = new FileSystem(this, replayLog);
             // After replaying the log files any pending blocks are considered to be underreplicated because data files
             // should already have them. 
@@ -42,6 +56,20 @@ namespace NameServer
                     _underReplicatedBlocks.Add(block.Key, block.Value);
             }
             _pendingBlocks.Clear();
+        }
+
+        public static void Run()
+        {
+            Run(DfsConfiguration.GetConfiguration());
+        }
+
+        public static void Run(DfsConfiguration config)
+        {
+            if( config == null )
+                throw new ArgumentNullException("config");
+
+            _config = config;
+            ConfigureRemoting(config);
         }
 
         public override object InitializeLifetimeService()
@@ -307,6 +335,34 @@ namespace NameServer
             }
 
             return new BlockAssignment() { BlockID = blockId, DataServers = dataServers };
+        }
+
+        private static void ConfigureRemoting(DfsConfiguration config)
+        {
+            if( System.Net.Sockets.Socket.OSSupportsIPv6 )
+            {
+                RegisterChannel(config, "[::]", "tcp6");
+                if( config.NameServer.ListenIPv4AndIPv6 )
+                    RegisterChannel(config, "0.0.0.0", "tcp4");
+            }
+            else
+                RegisterChannel(config, null, null);
+            RemotingConfiguration.RegisterWellKnownServiceType(typeof(NameServer), "NameServer", WellKnownObjectMode.Singleton);
+            _log.Info("RPC server started.");
+        }
+
+        private static void RegisterChannel(DfsConfiguration config, string bindTo, string name)
+        {
+            IDictionary properties = new Hashtable();
+            if( name != null )
+                properties["name"] = name;
+            properties["port"] = config.NameServer.Port;
+            if( bindTo != null )
+                properties["bindTo"] = bindTo;
+            BinaryServerFormatterSinkProvider formatter = new BinaryServerFormatterSinkProvider();
+            formatter.Next = new ServerChannelSinkProvider();
+            TcpChannel channel = new TcpChannel(properties, null, formatter);
+            ChannelServices.RegisterChannel(channel, false);
         }
     }
 }

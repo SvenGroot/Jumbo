@@ -8,7 +8,7 @@
     <ProjectGuid>{BFC1A761-6DB1-4C3D-8A0C-E5261B1202AC}</ProjectGuid>
     <OutputType>Exe</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>DataServer</RootNamespace>
+    <RootNamespace>DataServerApplication</RootNamespace>
     <AssemblyName>DataServer</AssemblyName>
     <TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
