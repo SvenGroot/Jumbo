@@ -252,7 +252,7 @@ namespace DataServerApplication
             int endOffset = 0;
             int endFileOffset = 0;
 
-            BlockSender sender = new BlockSender(header.BlockID, stream, offset);
+            BlockSender sender = new BlockSender(stream, offset);
             try
             {
                 using( FileStream blockFile = _dataServer.OpenBlock(header.BlockID) )

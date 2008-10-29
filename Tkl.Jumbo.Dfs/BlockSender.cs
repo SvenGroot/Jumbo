@@ -65,13 +65,12 @@ namespace Tkl.Jumbo.Dfs
             _sendPacketsThread.Start();
         }
 
-        public BlockSender(Guid blockID, NetworkStream stream, int offset)
+        public BlockSender(NetworkStream stream, int offset)
         {
             if( stream == null )
                 throw new ArgumentNullException("stream");
 
             _offset = offset;
-            _blockID = blockID;
             _sendPacketsThread = new Thread(SendPacketsThread) { Name = "SendPackets" };
             _sendPacketsThread.Start(stream);
         }
@@ -99,6 +98,14 @@ namespace Tkl.Jumbo.Dfs
         public Exception LastException
         {
             get { return _lastException; }
+        }
+
+        /// <summary>
+        /// Gets the number of confirmations that have been received and have not yet been forwarded.
+        /// </summary>
+        public int ReceivedConfirmations
+        {
+            get { return _receivedConfirmations; }
         }
 
         /// <summary>
@@ -269,7 +276,7 @@ namespace Tkl.Jumbo.Dfs
                 }
                 if( packet != null )
                 {
-                    int newValue = Interlocked.Increment(ref _requiredConfirmations);
+                    Interlocked.Increment(ref _requiredConfirmations);
 
                     if( packet.IsLastPacket )
                     {
