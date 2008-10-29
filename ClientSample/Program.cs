@@ -31,11 +31,11 @@ namespace ClientSample
 
             //WriteFile(args, nameServer);
 
-            Tkl.Jumbo.Dfs.File file = nameServer.GetFileInfo("/myfile");
-            ServerAddress[] servers = nameServer.GetDataServersForBlock(file.Blocks[0]);
-            ReadBlock(file, servers, nameServer.BlockSize);
+            //Tkl.Jumbo.Dfs.File file = nameServer.GetFileInfo("/myfile");
+            //ServerAddress[] servers = nameServer.GetDataServersForBlock(file.Blocks[0]);
+            //ReadBlock(file, servers, nameServer.BlockSize);
 
-            //ReadFile(nameServer);
+            ReadFile(nameServer);
 
             sw.Stop();
             Console.WriteLine(sw.Elapsed);
@@ -63,13 +63,23 @@ namespace ClientSample
 
         private static void ReadFile(INameServerClientProtocol nameServer)
         {
-            using( FileStream output = System.IO.File.Create("test.dat") )
+            using( FileStream output = System.IO.File.Create("test.txt") )
             using( DfsInputStream input = new DfsInputStream(nameServer, "/myfile") )
             {
                 byte[] buffer = new byte[100000];
                 input.Position = 100000;
                 input.Read(buffer, 0, buffer.Length);
                 output.Write(buffer, 0, buffer.Length);
+                input.Position = 500000;
+                input.Read(buffer, 0, buffer.Length);
+                output.Write(buffer, 0, buffer.Length);
+
+                //int readBytes;
+                //do
+                //{
+                //    readBytes = input.Read(buffer, 0, buffer.Length);
+                //    //output.Write(buffer, 0, readBytes);
+                //} while( readBytes > 0 );
             }
         }
 

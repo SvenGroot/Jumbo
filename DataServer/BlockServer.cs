@@ -8,6 +8,7 @@ using System.Net;
 using Tkl.Jumbo.Dfs;
 using System.Runtime.Serialization.Formatters.Binary;
 using System.IO;
+using System.Diagnostics;
 
 namespace DataServerApplication
 {
@@ -263,14 +264,12 @@ namespace DataServerApplication
                     }
                     else
                     {
-                        endPacketOffset = blockFile.Length / Packet.PacketSize;
+                        endPacketOffset = (int)(blockFile.Length / Packet.PacketSize);
                     }
-                    if( (header.Offset + header.Size) % Packet.PacketSize == 0 )
-                        --endPacketOffset;
                     endOffset = endPacketOffset * Packet.PacketSize;
                     endFileOffset = endPacketOffset * (Packet.PacketSize + sizeof(uint));
 
-                    if( fileOffset > blockFile.Length || endFileOffset >= blockFile.Length )
+                    if( fileOffset > blockFile.Length || endFileOffset > blockFile.Length )
                     {
                         _log.ErrorFormat("Requested offsets are out of range.");
                         sender.LastResult = DataServerClientProtocolResult.Error;
@@ -280,9 +279,10 @@ namespace DataServerApplication
 
                     blockFile.Seek(fileOffset, SeekOrigin.Begin);
                     int sizeRemaining = endOffset - offset;
-                    while( sizeRemaining >= 0 )
+                    Packet packet = null;
+                    do
                     {
-                        Packet packet = new Packet();
+                        packet = new Packet();
                         try
                         {
                             packet.Read(reader, true);
@@ -302,8 +302,21 @@ namespace DataServerApplication
                         // assertion to check if we don't jump over zero.
                         System.Diagnostics.Debug.Assert(sizeRemaining > 0 ? sizeRemaining - packet.Size >= 0 : true);
                         sizeRemaining -= packet.Size;
+                    } while( !packet.IsLastPacket );
+                }
+            }
+            catch( DfsException ex )
+            {
+                if( ex.InnerException is IOException && ex.InnerException.InnerException is SocketException )
+                {
+                    SocketException socketEx = (SocketException)ex.InnerException.InnerException;
+                    if( socketEx.ErrorCode == (int)SocketError.ConnectionAborted || socketEx.ErrorCode == (int)SocketError.ConnectionReset )
+                    {
+                        _log.Info("The connection was closed by the remote host.");
+                        return;
                     }
                 }
+                throw;
             }
             catch( Exception )
             {
@@ -317,7 +330,6 @@ namespace DataServerApplication
                 }
                 throw;
             }
-            _log.InfoFormat("Waiting for sending to finish for block {0}", header.BlockID);
             sender.WaitForConfirmations();
             _log.InfoFormat("Finished sending block {0}", header.BlockID);
         }

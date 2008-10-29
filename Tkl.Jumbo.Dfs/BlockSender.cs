@@ -20,6 +20,7 @@ namespace Tkl.Jumbo.Dfs
         private int _requiredConfirmations;
         private int _receivedConfirmations;
         private AutoResetEvent _packetsToSendEvent = new AutoResetEvent(false);
+        private AutoResetEvent _packetsToSendDequeueEvent = new AutoResetEvent(false);
         private AutoResetEvent _requiredConfirmationsEvent = new AutoResetEvent(false);
         private volatile DataServerClientProtocolResult _lastResult = DataServerClientProtocolResult.Ok;
         private volatile Exception _lastException;
@@ -30,6 +31,7 @@ namespace Tkl.Jumbo.Dfs
         private readonly Guid _blockID;
         private readonly ServerAddress[] _dataServers;
         private int _offset;
+        private const int _maxQueueSize = 10;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="BlockSender"/> class for the specified block assignment.
@@ -119,10 +121,23 @@ namespace Tkl.Jumbo.Dfs
             if( packet == null )
                 throw new ArgumentNullException("packet");
 
-            lock( _packetsToSend )
+            bool queueFull = false;
+            do
             {
-                _packetsToSend.Enqueue(packet);
-            }
+                ThrowIfErrorOccurred();
+                lock( _packetsToSend )
+                {
+                    if( _packetsToSend.Count >= _maxQueueSize )
+                        queueFull = true;
+                    else
+                    {
+                        _packetsToSend.Enqueue(packet);
+                        queueFull = false;
+                    }
+                }
+                if( queueFull )
+                    _packetsToSendDequeueEvent.WaitOne();
+            } while( queueFull );
             if( packet.IsLastPacket )
             {
                 _hasLastPacket = true;
@@ -142,7 +157,7 @@ namespace Tkl.Jumbo.Dfs
         /// set to <see langword="true"/> has not been queued yet.</exception>
         public void WaitForConfirmations()
         {
-            if( !_hasLastPacket )
+            if( _lastResult == DataServerClientProtocolResult.Ok && !_hasLastPacket )
                 throw new InvalidOperationException("You cannot call WaitForConfirmations until the last packet has been submitted.");
             _sendPacketsThread.Join();
         }
@@ -200,67 +215,14 @@ namespace Tkl.Jumbo.Dfs
                 using( BinaryWriter writer = new BinaryWriter(stream) )
                 using( BinaryReader reader = new BinaryReader(stream) )
                 {
-                    // If the data server is using this class to return data to the client, we don't need to send
-                    // a header or listen for results. We do need to send an initial OK and the offset.
-                    if( _dataServers == null )
-                    {
-                        writer.Write((int)DataServerClientProtocolResult.Ok);
-                        writer.Write(_offset);
-                    }
-                    else
-                    {
-                        // TODO: Configurable timeouts
-                        stream.ReadTimeout = 30000;
-                        stream.WriteTimeout = 30000;
+                    // TODO: Configurable timeouts
+                    stream.ReadTimeout = 30000;
+                    stream.WriteTimeout = 30000;
 
-                        _resultReaderThread = new Thread((obj) => ResultReaderThread((BinaryReader)obj));
-                        _resultReaderThread.Name = "ResultReader";
-                        _resultReaderThread.Start(reader);
+                    // This function also starts the result reader thread if necessary
+                    WriteHeader(stream, writer, reader);
 
-                        // Send the header
-                        DataServerClientProtocolWriteHeader header = new DataServerClientProtocolWriteHeader();
-                        header.BlockID = _blockID;
-                        header.DataServers = _dataServers;
-                        BinaryFormatter formatter = new BinaryFormatter();
-                        formatter.Serialize(stream, header);
-                    }
-
-                    // Increment required confirmations because the server will send one for the header.
-                    Interlocked.Increment(ref _requiredConfirmations);
-                    _requiredConfirmationsEvent.Set();
-
-                    // Start sending packets; stop when an error occurs or we've sent the last packet.
-                    Packet packet = null;
-                    while( (packet == null || !packet.IsLastPacket) && _lastResult == DataServerClientProtocolResult.Ok )
-                    {
-                        packet = null;
-                        lock( _packetsToSend )
-                        {
-                            if( _packetsToSend.Count > 0 )
-                            {
-                                packet = _packetsToSend.Dequeue();
-                            }
-                        }
-                        if( packet != null )
-                        {
-                            int newValue = Interlocked.Increment(ref _requiredConfirmations);
-
-                            if( packet.IsLastPacket )
-                            {
-                                // Set finished to let the result reader thread know the last packet has been sent,
-                                // so if _requiredConfirmations reaches zero it's done.
-                                _finished = true;
-                            }
-                            if( _dataServers == null )
-                            {
-                                writer.Write((int)DataServerClientProtocolResult.Ok);
-                            }
-                            packet.Write(writer, false);
-                            _requiredConfirmationsEvent.Set();
-                        }
-                        else
-                            _packetsToSendEvent.WaitOne();
-                    }
+                    SendPackets(writer);
 
                     if( _resultReaderThread != null )
                     {
@@ -276,6 +238,7 @@ namespace Tkl.Jumbo.Dfs
             {
                 _lastException = ex;
                 _lastResult = DataServerClientProtocolResult.Error;
+                _packetsToSendDequeueEvent.Set(); // Wake the main thread if necessary.
             }
             finally
             {
@@ -286,6 +249,71 @@ namespace Tkl.Jumbo.Dfs
                     if( client != null )
                         ((IDisposable)client).Dispose();
                 }
+            }
+        }
+
+        private void SendPackets(BinaryWriter writer)
+        {
+            // Start sending packets; stop when an error occurs or we've sent the last packet.
+            Packet packet = null;
+            while( (packet == null || !packet.IsLastPacket) && _lastResult == DataServerClientProtocolResult.Ok )
+            {
+                packet = null;
+                lock( _packetsToSend )
+                {
+                    if( _packetsToSend.Count > 0 )
+                    {
+                        packet = _packetsToSend.Dequeue();
+                        _packetsToSendDequeueEvent.Set();
+                    }
+                }
+                if( packet != null )
+                {
+                    int newValue = Interlocked.Increment(ref _requiredConfirmations);
+
+                    if( packet.IsLastPacket )
+                    {
+                        // Set finished to let the result reader thread know the last packet has been sent,
+                        // so if _requiredConfirmations reaches zero it's done.
+                        _finished = true;
+                    }
+                    if( _dataServers == null )
+                    {
+                        writer.Write((int)DataServerClientProtocolResult.Ok);
+                    }
+                    packet.Write(writer, false);
+                    _requiredConfirmationsEvent.Set();
+                }
+                else
+                    _packetsToSendEvent.WaitOne();
+            }
+        }
+
+        private void WriteHeader(NetworkStream stream, BinaryWriter writer, BinaryReader reader)
+        {
+            // If the data server is using this class to return data to the client, we don't need to send
+            // a header or listen for results. We do need to send an initial OK and the offset.
+            if( _dataServers == null )
+            {
+                writer.Write((int)DataServerClientProtocolResult.Ok);
+                writer.Write(_offset);
+            }
+            else
+            {
+                _resultReaderThread = new Thread((obj) => ResultReaderThread((BinaryReader)obj));
+                _resultReaderThread.Name = "ResultReader";
+                _resultReaderThread.Start(reader);
+
+                // Send the header
+                DataServerClientProtocolWriteHeader header = new DataServerClientProtocolWriteHeader();
+                header.BlockID = _blockID;
+                header.DataServers = _dataServers;
+                BinaryFormatter formatter = new BinaryFormatter();
+                formatter.Serialize(stream, header);
+
+                // Increment required confirmations because the server will send one for the header.
+                Interlocked.Increment(ref _requiredConfirmations);
+                _requiredConfirmationsEvent.Set();
             }
         }
 
