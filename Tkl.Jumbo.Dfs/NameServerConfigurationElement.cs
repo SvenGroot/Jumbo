@@ -56,7 +56,7 @@ namespace Tkl.Jumbo.Dfs
         }
 
         /// <summary>
-        /// Gets or sets value that indicates whether the server should listen on both IPv6 and IPv4.
+        /// Gets or sets a value that indicates whether the server should listen on both IPv6 and IPv4.
         /// </summary>
         /// <value>
         /// <see langword="true"/> if the server should listen on both IPv6 and IPv4; <see langword="false"/>
@@ -67,6 +67,16 @@ namespace Tkl.Jumbo.Dfs
         {
             get { return (bool)this["listenIPv4AndIPv6"]; }
             set { this["listenIPv4AndIPv6"] = value; }
+        }
+
+        /// <summary>
+        /// Gets or sets the directory in which the file system edit log is stored.
+        /// </summary>
+        [ConfigurationProperty("editLogDirectory", DefaultValue = "", IsRequired = false, IsKey = false)]
+        public string EditLogDirectory
+        {
+            get { return (string)this["editLogDirectory"]; }
+            set { this["editLogDirectory"] = value; }
         }
     }
 }

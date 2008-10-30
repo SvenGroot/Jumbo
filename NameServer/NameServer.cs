@@ -18,7 +18,7 @@ namespace NameServerApplication
     class NameServer : MarshalByRefObject, INameServerClientProtocol, INameServerHeartbeatProtocol
     {
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(NameServer));
-        private static DfsConfiguration _config;
+        private static DfsConfiguration _rpcConfig; // This is set by the Run method and used by the default constructor when Remoting creates the object
         private readonly int _replicationFactor;
         private readonly int _blockSize;
         private Random _random = new Random();
@@ -35,7 +35,7 @@ namespace NameServerApplication
         }
 
         public NameServer(bool replayLog)
-            : this(_config ?? DfsConfiguration.GetConfiguration(), true)
+            : this(_rpcConfig ?? DfsConfiguration.GetConfiguration(), true)
         {
         }
 
@@ -43,6 +43,7 @@ namespace NameServerApplication
         {
             if( config == null )
                 throw new ArgumentNullException("config");
+            Configuration = config;
             _replicationFactor = config.NameServer.ReplicationFactor;
             _blockSize = config.NameServer.BlockSize;
             _fileSystem = new FileSystem(this, replayLog);
@@ -58,6 +59,8 @@ namespace NameServerApplication
             _pendingBlocks.Clear();
         }
 
+        public DfsConfiguration Configuration { get; private set; }
+
         public static void Run()
         {
             Run(DfsConfiguration.GetConfiguration());
@@ -68,7 +71,7 @@ namespace NameServerApplication
             if( config == null )
                 throw new ArgumentNullException("config");
 
-            _config = config;
+            _rpcConfig = config;
             ConfigureRemoting(config);
         }
 

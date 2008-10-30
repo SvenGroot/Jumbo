@@ -19,10 +19,12 @@ namespace NameServerApplication
         /// Initializes a new instance of the <see cref="EditLog"/> class.
         /// </summary>
         /// <param name="appendLog"><see cref="true"/> to continue an existing log file; <see cref="false"/> to create a new one.</param>
-        public EditLog(bool appendLog)
+        public EditLog(bool appendLog, string logFileDirectory)
         {
+            if( logFileDirectory == null )
+                logFileDirectory = string.Empty;
             if( !appendLog )
-                System.IO.File.Delete("EditLog.log");
+                System.IO.File.Delete(Path.Combine(logFileDirectory, "EditLog.log"));
         }
 
         public void LogCreateDirectory(string path, DateTime date)

@@ -36,3 +36,4 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyFileVersion("1.0.0.0")]
 [assembly: log4net.Config.XmlConfigurator()]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("NameServerTests")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Tkl.Jumbo.Dfs.Test")]

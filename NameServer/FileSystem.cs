@@ -36,7 +36,7 @@ namespace NameServerApplication
                 throw new ArgumentNullException("nameServer");
             _nameServer = nameServer;
             _log.Info("++++ FileSystem created.");
-            _editLog = new EditLog(replayLog);
+            _editLog = new EditLog(replayLog, nameServer.Configuration.NameServer.EditLogDirectory);
             if( replayLog )
             {
                 _log.Info("Replaying log file.");
