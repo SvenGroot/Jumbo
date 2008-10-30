@@ -78,6 +78,18 @@ namespace Tkl.Jumbo.Dfs
         ServerAddress[] GetDataServersForBlock(Guid blockID);
 
         /// <summary>
+        /// Waits until safe mode is off or the time out expires.
+        /// </summary>
+        /// <param name="timeOut">The maximum time to wait for safe mode to be turned off in milliseconds, or <see cref="System.Threading.TimeOut.Infinite"/> to wait indefinitely.</param>
+        /// <returns><see langword="true"/> if safe mode was turned off; <see langword="false"/> if the time out expired.</returns>
+        bool WaitForSafeModeOff(int timeOut);
+
+        /// <summary>
+        /// Gets a value that indicates whether safe mode is on or off.
+        /// </summary>
+        bool SafeMode { get; }
+
+        /// <summary>
         /// Gets the maximum size of a single block in a file.
         /// </summary>
         int BlockSize { get; }

@@ -126,8 +126,10 @@ namespace Tkl.Jumbo.Dfs.Test
         {
             BlockSenderServer server = new BlockSenderServer();
             Guid blockID = Guid.NewGuid();
-            BlockSender target = new BlockSender(blockID, new ServerAddress[] { new ServerAddress("localhost", 15000) });
-            TestBlockSender(blockID, server, target);
+            using( BlockSender target = new BlockSender(blockID, new ServerAddress[] { new ServerAddress("localhost", 15000) }) )
+            {
+                TestBlockSender(blockID, server, target);
+            }
         }
 
         [Test]
@@ -138,8 +140,10 @@ namespace Tkl.Jumbo.Dfs.Test
             BlockAssignment assignment = new BlockAssignment();
             assignment.BlockID = blockID;
             assignment.DataServers = new ServerAddress[] { new ServerAddress("localhost", 15000) }.ToList();
-            BlockSender target = new BlockSender(assignment);
-            TestBlockSender(blockID, server, target);
+            using( BlockSender target = new BlockSender(assignment) )
+            {
+                TestBlockSender(blockID, server, target);
+            }
         }
 
         [Test]
@@ -150,17 +154,19 @@ namespace Tkl.Jumbo.Dfs.Test
             using( NetworkStream stream = client.GetStream() )
             {
                 Guid blockID = Guid.NewGuid();
-                BlockSender target = new BlockSender(stream, 1000);
-                List<Packet> packets = SendPackets(target);
-                target.WaitForConfirmations();
-                server.Join();
+                using( BlockSender target = new BlockSender(stream, 1000) )
+                {
+                    List<Packet> packets = SendPackets(target);
+                    target.WaitForConfirmations();
+                    server.Join();
 
-                Assert.AreEqual(DataServerClientProtocolResult.Ok, target.LastResult);
-                Assert.IsNull(target.LastException);
-                Assert.AreEqual(DataServerClientProtocolResult.Ok, server.LastResult);
-                Assert.IsNull(server.ReceivedDataServers);
-                Assert.AreEqual(0, target.ReceivedConfirmations);
-                CheckPackets(server, packets);
+                    Assert.AreEqual(DataServerClientProtocolResult.Ok, target.LastResult);
+                    Assert.IsNull(target.LastException);
+                    Assert.AreEqual(DataServerClientProtocolResult.Ok, server.LastResult);
+                    Assert.IsNull(server.ReceivedDataServers);
+                    Assert.AreEqual(0, target.ReceivedConfirmations);
+                    CheckPackets(server, packets);
+                }
             }
         }
 
@@ -180,29 +186,31 @@ namespace Tkl.Jumbo.Dfs.Test
         {
             BlockSenderServer server = new BlockSenderServer(mode);
             Guid blockID = Guid.NewGuid();
-            BlockSender target = new BlockSender(blockID, new ServerAddress[] { new ServerAddress("localhost", 15000) });
-            List<Packet> packets = SendPackets(target);
-
-            target.WaitForConfirmations();
-            server.Join();
-            using( MemoryStream stream = new MemoryStream() )
-            using( BinaryWriter writer = new BinaryWriter(stream) )
+            using( BlockSender target = new BlockSender(blockID, new ServerAddress[] { new ServerAddress("localhost", 15000) }) )
             {
-                target.ForwardConfirmations(writer);
-                stream.Position = 0;
-                using( BinaryReader reader = new BinaryReader(stream) )
+                List<Packet> packets = SendPackets(target);
+
+                target.WaitForConfirmations();
+                server.Join();
+                using( MemoryStream stream = new MemoryStream() )
+                using( BinaryWriter writer = new BinaryWriter(stream) )
                 {
-                    int count = 0;
-                    while( reader.BaseStream.Position != reader.BaseStream.Length )
+                    target.ForwardConfirmations(writer);
+                    stream.Position = 0;
+                    using( BinaryReader reader = new BinaryReader(stream) )
                     {
-                        DataServerClientProtocolResult result = (DataServerClientProtocolResult)reader.ReadInt32();
-                        Assert.AreEqual(expectedValue, result);
-                        ++count;
+                        int count = 0;
+                        while( reader.BaseStream.Position != reader.BaseStream.Length )
+                        {
+                            DataServerClientProtocolResult result = (DataServerClientProtocolResult)reader.ReadInt32();
+                            Assert.AreEqual(expectedValue, result);
+                            ++count;
+                        }
+                        Assert.AreEqual(expectedCount, count);
                     }
-                    Assert.AreEqual(expectedCount, count);
                 }
+                Assert.AreEqual(0, target.ReceivedConfirmations);
             }
-            Assert.AreEqual(0, target.ReceivedConfirmations);
         }
 
         [Test]
@@ -210,13 +218,15 @@ namespace Tkl.Jumbo.Dfs.Test
         {
             BlockSenderServer server = new BlockSenderServer(TestMode.Error);
             Guid blockID = Guid.NewGuid();
-            BlockSender target = new BlockSender(blockID, new ServerAddress[] { new ServerAddress("localhost", 15000) });
-            List<Packet> packets = SendPackets(target);
+            using( BlockSender target = new BlockSender(blockID, new ServerAddress[] { new ServerAddress("localhost", 15000) }) )
+            {
+                List<Packet> packets = SendPackets(target);
 
-            target.WaitForConfirmations();
-            server.Join();
-            Assert.AreEqual(DataServerClientProtocolResult.Error, target.LastResult);
-            Assert.IsNull(target.LastException);
+                target.WaitForConfirmations();
+                server.Join();
+                Assert.AreEqual(DataServerClientProtocolResult.Error, target.LastResult);
+                Assert.IsNull(target.LastException);
+            }
         }
 
         [Test]
@@ -224,13 +234,15 @@ namespace Tkl.Jumbo.Dfs.Test
         {
             BlockSenderServer server = new BlockSenderServer(TestMode.CloseConnection);
             Guid blockID = Guid.NewGuid();
-            BlockSender target = new BlockSender(blockID, new ServerAddress[] { new ServerAddress("localhost", 15000) });
-            List<Packet> packets = SendPackets(target);
+            using( BlockSender target = new BlockSender(blockID, new ServerAddress[] { new ServerAddress("localhost", 15000) }) )
+            {
+                List<Packet> packets = SendPackets(target);
 
-            target.WaitForConfirmations();
-            server.Join();
-            Assert.AreEqual(DataServerClientProtocolResult.Error, target.LastResult);
-            Assert.IsNotNull(target.LastException);
+                target.WaitForConfirmations();
+                server.Join();
+                Assert.AreEqual(DataServerClientProtocolResult.Error, target.LastResult);
+                Assert.IsNotNull(target.LastException);
+            }
         }
 
         private void TestBlockSender(Guid blockID, BlockSenderServer server, BlockSender sender)

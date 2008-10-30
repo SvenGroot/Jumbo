@@ -81,6 +81,7 @@
     <Compile Include="NewBlockHeartbeatData.cs" />
     <Compile Include="Packet.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="SafeModeException.cs" />
     <Compile Include="ServerAddress.cs" />
     <Compile Include="ServerChannelSink.cs" />
     <Compile Include="ServerChannelSinkProvider.cs" />

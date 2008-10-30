@@ -14,6 +14,7 @@ namespace NameServerApplication
         private object _logFileLock = new object();
         private static log4net.ILog _log = log4net.LogManager.GetLogger(typeof(EditLog));
         private bool _loggingEnabled = true;
+        private string _logFilePath;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="EditLog"/> class.
@@ -23,8 +24,9 @@ namespace NameServerApplication
         {
             if( logFileDirectory == null )
                 logFileDirectory = string.Empty;
+            _logFilePath = Path.Combine(logFileDirectory, "EditLog.log");
             if( !appendLog )
-                System.IO.File.Delete(Path.Combine(logFileDirectory, "EditLog.log"));
+                System.IO.File.Delete(_logFilePath);
         }
 
         public void LogCreateDirectory(string path, DateTime date)
@@ -83,9 +85,9 @@ namespace NameServerApplication
             try
             {
                 _loggingEnabled = false;
-                if( File.Exists("EditLog.log") )
+                if( File.Exists(_logFilePath) )
                 {
-                    using( TextReader reader = System.IO.File.OpenText("EditLog.log") )
+                    using( TextReader reader = System.IO.File.OpenText(_logFilePath) )
                     {
                         // TODO: Get the actual root creation time from somewhere.
                         string line;
@@ -138,7 +140,7 @@ namespace NameServerApplication
                 {
                     lock( _logFileLock )
                     {
-                        using( TextWriter writer = new StreamWriter("EditLog.log", true) )
+                        using( TextWriter writer = new StreamWriter(_logFilePath, true) )
                         {
                             writer.WriteLine(string.Format(System.Globalization.CultureInfo.InvariantCulture, format, parameters));
                         }

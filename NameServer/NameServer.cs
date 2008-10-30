@@ -9,6 +9,7 @@ using System.Collections;
 using System.Runtime.Remoting.Channels;
 using System.Runtime.Remoting.Channels.Tcp;
 using System.Runtime.Remoting;
+using System.Diagnostics;
 
 namespace NameServerApplication
 {
@@ -28,6 +29,8 @@ namespace NameServerApplication
         private readonly Dictionary<Guid, BlockInfo> _blocks = new Dictionary<Guid, BlockInfo>();
         private readonly Dictionary<Guid, BlockInfo> _pendingBlocks = new Dictionary<Guid, BlockInfo>();
         private readonly Dictionary<Guid, BlockInfo> _underReplicatedBlocks = new Dictionary<Guid, BlockInfo>();
+        private bool _safeMode = true;
+        private System.Threading.ManualResetEvent _safeModeEvent = new System.Threading.ManualResetEvent(false);
 
         public NameServer()
             : this(true)
@@ -107,8 +110,14 @@ namespace NameServerApplication
             get { return _blockSize; }
         }
 
+        public bool SafeMode
+        {
+            get { return _safeMode; }
+        }
+
         public void CreateDirectory(string path)
         {
+            CheckSafeMode();
             _fileSystem.CreateDirectory(path);
         }
 
@@ -120,12 +129,14 @@ namespace NameServerApplication
 
         public BlockAssignment CreateFile(string path)
         {
+            CheckSafeMode();
             Guid guid = _fileSystem.CreateFile(path);
             return AssignBlockToDataServers(guid);
         }
 
         public bool Delete(string path, bool recursive)
         {
+            CheckSafeMode();
             return _fileSystem.Delete(path, recursive);
         }
 
@@ -136,6 +147,7 @@ namespace NameServerApplication
 
         public BlockAssignment AppendBlock(string path)
         {
+            CheckSafeMode();
             if( _dataServers.Count < _replicationFactor )
                 throw new InvalidOperationException("Insufficient data servers.");
 
@@ -146,11 +158,13 @@ namespace NameServerApplication
 
         public void CloseFile(string path)
         {
+            CheckSafeMode();
             _fileSystem.CloseFile(path);
         }
 
         public ServerAddress[] GetDataServersForBlock(Guid blockID)
         {
+            // I allow calling this even if safemode is on, but it might return an empty list in that case.
             lock( _blocks )
             {
                 // TODO: Deal with under-replicated blocks.
@@ -161,6 +175,15 @@ namespace NameServerApplication
                 return (from server in block.DataServers
                         select server.Address).ToArray();
             }
+        }
+
+        public bool WaitForSafeModeOff(int timeOut)
+        {
+            if( _safeMode )
+                if( _safeModeEvent.WaitOne(timeOut, false) )
+                    Debug.Assert(!_safeMode);
+
+            return !_safeMode;
         }
 
         #endregion
@@ -183,6 +206,13 @@ namespace NameServerApplication
                         _log.Warn("The data server reported a different hostname than is indicated in the ServerContext.");
                     dataServer = new DataServerInfo(address); // TODO: Real port number
                     _dataServers.Add(address, dataServer);
+                    // TODO: This isn't the real safemode implementation.
+                    // Currently we're just exiting safemode as soon as we have enough data servers, we don't check blocks or anything.
+                    if( _safeMode && _dataServers.Count >= _replicationFactor )
+                    {
+                        _safeMode = false;
+                        _safeModeEvent.Set();
+                    }
                 }
 
                 if( data != null )
@@ -366,6 +396,12 @@ namespace NameServerApplication
             formatter.Next = new ServerChannelSinkProvider();
             TcpChannel channel = new TcpChannel(properties, null, formatter);
             ChannelServices.RegisterChannel(channel, false);
+        }
+
+        private void CheckSafeMode()
+        {
+            if( _safeMode )
+                throw new SafeModeException("The name server is in safe mode.");
         }
     }
 }

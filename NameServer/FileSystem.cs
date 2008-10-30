@@ -283,7 +283,7 @@ namespace NameServerApplication
         /// <param name="path">The path of the file to close.</param>
         public void CloseFile(string path)
         {
-            CloseFile(path, false);
+            CloseFile(path, true);
         }
 
         /// <summary>

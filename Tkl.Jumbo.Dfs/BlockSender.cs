@@ -14,7 +14,7 @@ namespace Tkl.Jumbo.Dfs
     /// <summary>
     /// Provides functionality for asynchronous transmission of a block to a data server.
     /// </summary>
-    public class BlockSender
+    public class BlockSender : IDisposable
     {
         private readonly Queue<Packet> _packetsToSend = new Queue<Packet>();
         private int _requiredConfirmations;
@@ -32,6 +32,7 @@ namespace Tkl.Jumbo.Dfs
         private readonly ServerAddress[] _dataServers;
         private int _offset;
         private const int _maxQueueSize = 10;
+        private bool _disposed;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="BlockSender"/> class for the specified block assignment.
@@ -48,6 +49,11 @@ namespace Tkl.Jumbo.Dfs
             _sendPacketsThread.Start();
         }
 
+        ~BlockSender()
+        {
+            Dispose(false);
+        }
+
         /// <summary>
         /// Initializes a new instance of the <see cref="BlockSender"/> class for the specified block and data servers.
         /// </summary>
@@ -61,7 +67,7 @@ namespace Tkl.Jumbo.Dfs
 
             _blockID = blockID;
             _dataServers = dataServers;
-            _sendPacketsThread = new Thread(SendPacketsThread) { Name = "SendPackets" };
+            _sendPacketsThread = new Thread(SendPacketsThread) { Name = "SendPackets", IsBackground = true };
             _sendPacketsThread.Start();
         }
 
@@ -71,7 +77,7 @@ namespace Tkl.Jumbo.Dfs
                 throw new ArgumentNullException("stream");
 
             _offset = offset;
-            _sendPacketsThread = new Thread(SendPacketsThread) { Name = "SendPackets" };
+            _sendPacketsThread = new Thread(SendPacketsThread) { Name = "SendPackets", IsBackground = true };
             _sendPacketsThread.Start(stream);
         }
 
@@ -125,6 +131,7 @@ namespace Tkl.Jumbo.Dfs
         /// <exception cref="ArgumentNullException"><paramref name="packet"/> is <see langword="null" />.</exception>
         public void AddPacket(Packet packet)
         {
+            CheckDisposed();
             if( packet == null )
                 throw new ArgumentNullException("packet");
 
@@ -164,8 +171,15 @@ namespace Tkl.Jumbo.Dfs
         /// set to <see langword="true"/> has not been queued yet.</exception>
         public void WaitForConfirmations()
         {
+            CheckDisposed();
             if( _lastResult == DataServerClientProtocolResult.Ok && !_hasLastPacket )
+            {
+                _lastResult = DataServerClientProtocolResult.Error;
+                _packetsToSendEvent.Set();
+                _requiredConfirmationsEvent.Set();
+                _sendPacketsThread.Join();
                 throw new InvalidOperationException("You cannot call WaitForConfirmations until the last packet has been submitted.");
+            }
             _sendPacketsThread.Join();
         }
 
@@ -175,6 +189,7 @@ namespace Tkl.Jumbo.Dfs
         /// <exception cref="DfsException">There was an error sending a packet to the server.</exception>
         public void ThrowIfErrorOccurred()
         {
+            CheckDisposed();
             if( _lastResult != DataServerClientProtocolResult.Ok )
                 throw new DfsException("There was an error sending a packet to the server.", _lastException);
         }
@@ -185,6 +200,7 @@ namespace Tkl.Jumbo.Dfs
         /// <param name="writer">The <see cref="BinaryWriter"/> to write the confirmations to.</param>
         public void ForwardConfirmations(BinaryWriter writer)
         {
+            CheckDisposed();
             if( _lastResult != DataServerClientProtocolResult.Ok )
             {
                 writer.Write((int)_lastResult);
@@ -319,6 +335,7 @@ namespace Tkl.Jumbo.Dfs
             {
                 _resultReaderThread = new Thread((obj) => ResultReaderThread((BinaryReader)obj));
                 _resultReaderThread.Name = "ResultReader";
+                _resultReaderThread.IsBackground = true;
                 _resultReaderThread.Start(reader);
 
                 // Send the header
@@ -369,6 +386,34 @@ namespace Tkl.Jumbo.Dfs
                 _packetsToSendEvent.Set();
                 _packetsToSendDequeueEvent.Set();
             }
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if( !_disposed )
+            {
+                _disposed = true;
+                if( _resultReaderThread != null && _resultReaderThread.IsAlive )
+                    _resultReaderThread.Abort();
+                if( _sendPacketsThread != null && _sendPacketsThread.IsAlive )
+                    _sendPacketsThread.Abort();
+            }
+        }
+
+        #region IDisposable Members
+
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        #endregion
+
+        private void CheckDisposed()
+        {
+            if( _disposed )
+                throw new ObjectDisposedException("BlockSender");
         }
     }
 }

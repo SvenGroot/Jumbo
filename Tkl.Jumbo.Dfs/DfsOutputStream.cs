@@ -219,15 +219,31 @@ namespace Tkl.Jumbo.Dfs
             base.Dispose(disposing);
             if( !_disposed )
             {
-                _disposed = true;
-                if( _bufferPos > 0 && _sender != null )
+                try
                 {
-                    WritePacket(_buffer, _bufferPos, true);
-                    _bufferPos = 0;
+                    _disposed = true;
+                    if( _bufferPos > 0 || _fileBytesWritten == 0 && _sender != null )
+                    {
+                        WritePacket(_buffer, _bufferPos, true);
+                        _bufferPos = 0;
+                    }
+                    try
+                    {
+                        _sender.WaitForConfirmations();
+                        _sender.ThrowIfErrorOccurred();
+                    }
+                    finally
+                    {
+                        if( disposing )
+                        {
+                            _sender.Dispose();
+                        }
+                    }
                 }
-                _sender.WaitForConfirmations();
-                _sender.ThrowIfErrorOccurred();
-                _nameServer.CloseFile(_path);
+                finally
+                {
+                    _nameServer.CloseFile(_path);
+                }
             }
         }
 
