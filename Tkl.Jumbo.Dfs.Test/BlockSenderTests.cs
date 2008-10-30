@@ -14,29 +14,36 @@ namespace Tkl.Jumbo.Dfs.Test
     [TestFixture]
     public class BlockSenderTests
     {
-        //TODO: Test forward confirmations and error conditions
+        private enum TestMode
+        {
+            Normal,
+            Client,
+            Error,
+            CloseConnection
+        }
 
         private class BlockSenderServer
         {
             private Thread _thread;
-            private bool _clientMode;
+            private TestMode _mode;
 
             public BlockSenderServer()
+                : this(TestMode.Normal)
             {
-                _thread = new Thread(ServerThread);
-                _thread.Start();
             }
 
-            public BlockSenderServer(bool clientMode)
-                : this()
+            public BlockSenderServer(TestMode mode)
             {
-                _clientMode = clientMode;
+                ReceivedPackets = new List<Packet>();
+                _mode = mode;
+                _thread = new Thread(ServerThread);
+                _thread.Start();
             }
 
             public Guid ReceivedBlockID { get; private set; }
             public DataServerCommand ReceivedCommand { get; private set; }
             public ServerAddress[] ReceivedDataServers { get; private set; }
-            public int ReceivedPackets { get; private set; }
+            public List<Packet> ReceivedPackets { get; private set; }
             public DataServerClientProtocolResult LastResult { get; private set; }
             public int ReceivedOffset { get; private set; }
 
@@ -47,7 +54,7 @@ namespace Tkl.Jumbo.Dfs.Test
 
             private void ServerThread()
             {
-                TcpListener listener = new TcpListener(IPAddress.Any, 15000);
+                TcpListener listener = new TcpListener(Socket.OSSupportsIPv6 ? IPAddress.IPv6Any : IPAddress.Any, 15000);
                 try
                 {
                     listener.Start();
@@ -56,7 +63,7 @@ namespace Tkl.Jumbo.Dfs.Test
                     using( BinaryReader reader = new BinaryReader(stream) )
                     using( BinaryWriter writer = new BinaryWriter(stream) )
                     {
-                        if( !_clientMode )
+                        if( _mode != TestMode.Client )
                         {
                             BinaryFormatter formatter = new BinaryFormatter();
                             DataServerClientProtocolWriteHeader header = (DataServerClientProtocolWriteHeader)formatter.Deserialize(stream);
@@ -76,10 +83,11 @@ namespace Tkl.Jumbo.Dfs.Test
                             ReceivedOffset = reader.ReadInt32();
                         }
 
-                        Packet packet = new Packet();
-                        while( !packet.IsLastPacket )
+                        Packet packet = null;
+                        while( packet == null || !packet.IsLastPacket )
                         {
-                            if( _clientMode )
+                            packet = new Packet();
+                            if( _mode == TestMode.Client )
                             {
                                 DataServerClientProtocolResult result = (DataServerClientProtocolResult)reader.ReadInt32();
                                 if( result != DataServerClientProtocolResult.Ok )
@@ -89,11 +97,20 @@ namespace Tkl.Jumbo.Dfs.Test
                                 }
                             }
                             packet.Read(reader, false);
-                            if( !_clientMode )
+                            if( _mode == TestMode.Error && ReceivedPackets.Count >= 5 )
+                            {
+                                writer.Write((int)DataServerClientProtocolResult.Error);
+                                return;
+                            }
+                            if( _mode == TestMode.CloseConnection && ReceivedPackets.Count >= 5 )
+                            {
+                                return; // Just close the connection, no error result.
+                            }
+                            if( _mode != TestMode.Client )
                             {
                                 writer.Write((int)DataServerClientProtocolResult.Ok);
                             }
-                            ++ReceivedPackets;
+                            ReceivedPackets.Add(packet);
                         }
                     }
                 }
@@ -128,13 +145,13 @@ namespace Tkl.Jumbo.Dfs.Test
         [Test]
         public void TestBlockSenderExistingStream()
         {
-            BlockSenderServer server = new BlockSenderServer(true);
+            BlockSenderServer server = new BlockSenderServer(TestMode.Client);
             using( TcpClient client = new TcpClient("localhost", 15000) )
             using( NetworkStream stream = client.GetStream() )
             {
                 Guid blockID = Guid.NewGuid();
                 BlockSender target = new BlockSender(stream, 1000);
-                SendBlocks(target);
+                List<Packet> packets = SendPackets(target);
                 target.WaitForConfirmations();
                 server.Join();
 
@@ -142,14 +159,83 @@ namespace Tkl.Jumbo.Dfs.Test
                 Assert.IsNull(target.LastException);
                 Assert.AreEqual(DataServerClientProtocolResult.Ok, server.LastResult);
                 Assert.IsNull(server.ReceivedDataServers);
-                Assert.AreEqual(30, server.ReceivedPackets);
                 Assert.AreEqual(0, target.ReceivedConfirmations);
+                CheckPackets(server, packets);
             }
+        }
+
+        [Test]
+        public void TestForwardConfirmations()
+        {
+            TestForwardConfirmations(TestMode.Normal, 31, DataServerClientProtocolResult.Ok);
+        }
+
+        [Test]
+        public void TestForwardConfirmationsError()
+        {
+            TestForwardConfirmations(TestMode.Error, 1, DataServerClientProtocolResult.Error);
+        }
+
+        private void TestForwardConfirmations(TestMode mode, int expectedCount, DataServerClientProtocolResult expectedValue)
+        {
+            BlockSenderServer server = new BlockSenderServer(mode);
+            Guid blockID = Guid.NewGuid();
+            BlockSender target = new BlockSender(blockID, new ServerAddress[] { new ServerAddress("localhost", 15000) });
+            List<Packet> packets = SendPackets(target);
+
+            target.WaitForConfirmations();
+            server.Join();
+            using( MemoryStream stream = new MemoryStream() )
+            using( BinaryWriter writer = new BinaryWriter(stream) )
+            {
+                target.ForwardConfirmations(writer);
+                stream.Position = 0;
+                using( BinaryReader reader = new BinaryReader(stream) )
+                {
+                    int count = 0;
+                    while( reader.BaseStream.Position != reader.BaseStream.Length )
+                    {
+                        DataServerClientProtocolResult result = (DataServerClientProtocolResult)reader.ReadInt32();
+                        Assert.AreEqual(expectedValue, result);
+                        ++count;
+                    }
+                    Assert.AreEqual(expectedCount, count);
+                }
+            }
+            Assert.AreEqual(0, target.ReceivedConfirmations);
+        }
+
+        [Test]
+        public void TestBlockSenderError()
+        {
+            BlockSenderServer server = new BlockSenderServer(TestMode.Error);
+            Guid blockID = Guid.NewGuid();
+            BlockSender target = new BlockSender(blockID, new ServerAddress[] { new ServerAddress("localhost", 15000) });
+            List<Packet> packets = SendPackets(target);
+
+            target.WaitForConfirmations();
+            server.Join();
+            Assert.AreEqual(DataServerClientProtocolResult.Error, target.LastResult);
+            Assert.IsNull(target.LastException);
+        }
+
+        [Test]
+        public void TestBlockSenderConnectionClosed()
+        {
+            BlockSenderServer server = new BlockSenderServer(TestMode.CloseConnection);
+            Guid blockID = Guid.NewGuid();
+            BlockSender target = new BlockSender(blockID, new ServerAddress[] { new ServerAddress("localhost", 15000) });
+            List<Packet> packets = SendPackets(target);
+
+            target.WaitForConfirmations();
+            server.Join();
+            Assert.AreEqual(DataServerClientProtocolResult.Error, target.LastResult);
+            Assert.IsNotNull(target.LastException);
         }
 
         private void TestBlockSender(Guid blockID, BlockSenderServer server, BlockSender sender)
         {
-            SendBlocks(sender);
+            List<Packet> packets = SendPackets(sender);
 
             sender.WaitForConfirmations();
             server.Join();
@@ -159,21 +245,40 @@ namespace Tkl.Jumbo.Dfs.Test
             Assert.AreEqual(DataServerCommand.WriteBlock, server.ReceivedCommand);
             Assert.AreEqual(1, server.ReceivedDataServers.Length);
             Assert.AreEqual(new ServerAddress("localhost", 15000), server.ReceivedDataServers[0]);
-            Assert.AreEqual(30, server.ReceivedPackets);
             Assert.AreEqual(31, sender.ReceivedConfirmations); // number of packets plus one for the header
-            // TODO: Test received packets equality.
+            CheckPackets(server, packets);
         }
 
-        private static void SendBlocks(BlockSender sender)
+        private static void CheckPackets(BlockSenderServer server, List<Packet> packets)
         {
+            Assert.AreEqual(packets.Count, server.ReceivedPackets.Count);
+            for( int x = 0; x < packets.Count; ++x )
+                Assert.AreEqual(packets[x], server.ReceivedPackets[x]);
+        }
+
+        private static List<Packet> SendPackets(BlockSender sender)
+        {
+            List<Packet> packets = new List<Packet>();
             Random rnd = new Random();
-            for( int x = 0; x < 30; ++x )
+            try
             {
-                byte[] data = new byte[Packet.PacketSize];
-                rnd.NextBytes(data);
-                Packet packet = new Packet(data, data.Length, x == 29);
-                sender.AddPacket(packet);
+                for( int x = 0; x < 30; ++x )
+                {
+                    byte[] data = new byte[Packet.PacketSize];
+                    rnd.NextBytes(data);
+                    Packet packet = new Packet(data, data.Length, x == 29);
+                    if( sender.LastResult != DataServerClientProtocolResult.Ok )
+                        break;
+                    sender.AddPacket(packet);
+                    packets.Add(packet);
+                }
             }
+            catch( DfsException ex )
+            {
+                if( ex.InnerException != null )
+                    throw;
+            }
+            return packets;
         }
     }
 }

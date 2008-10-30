@@ -188,6 +188,7 @@ namespace Tkl.Jumbo.Dfs
             if( _lastResult != DataServerClientProtocolResult.Ok )
             {
                 writer.Write((int)_lastResult);
+                _receivedConfirmations = 0;
             }
             else
             {
@@ -241,10 +242,19 @@ namespace Tkl.Jumbo.Dfs
                         writer.Write((int)_lastResult);
                 }
             }
+
             catch( Exception ex )
             {
-                _lastException = ex;
-                _lastResult = DataServerClientProtocolResult.Error;
+                // If we got an exception, we will first wait for the _resultReaderThread to finish; if that receives
+                // an Error result we know the server simply closed the connection and we don't set _lastException so the
+                // client knows it was the server that set the error status and not a local exception.
+                if( _resultReaderThread != null )
+                    _resultReaderThread.Join();
+                if( _lastResult == DataServerClientProtocolResult.Ok )
+                {
+                    _lastException = ex;
+                    _lastResult = DataServerClientProtocolResult.Error;
+                }
                 _packetsToSendDequeueEvent.Set(); // Wake the main thread if necessary.
             }
             finally
@@ -336,6 +346,9 @@ namespace Tkl.Jumbo.Dfs
                         if( result != DataServerClientProtocolResult.Ok )
                         {
                             _lastResult = result;
+                            // Wake up the other threads.
+                            _packetsToSendEvent.Set();
+                            _packetsToSendDequeueEvent.Set();
                             break;
                         }
                         Interlocked.Decrement(ref _requiredConfirmations);
@@ -352,6 +365,9 @@ namespace Tkl.Jumbo.Dfs
                 if( _lastException == null )
                     _lastException = ex;
                 _lastResult = DataServerClientProtocolResult.Error;
+                // Wake up the other threads.
+                _packetsToSendEvent.Set();
+                _packetsToSendDequeueEvent.Set();
             }
         }
     }

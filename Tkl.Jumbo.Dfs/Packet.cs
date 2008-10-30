@@ -175,6 +175,34 @@ namespace Tkl.Jumbo.Dfs
             stream.Write(_data, 0, Size);
         }
 
+        /// <summary>
+        /// Compares this <see cref="Packet"/> with another object.
+        /// </summary>
+        /// <param name="obj">The object to compare with.</param>
+        /// <returns><see langword="true"/> if the object equals this instance; otherwise, false.</returns>
+        public override bool Equals(object obj)
+        {
+            Packet other = obj as Packet;
+            if( other != null )
+            {
+                if( Size == other.Size && Checksum == other.Checksum )
+                {
+                    for( int x = 0; x < Size; ++x )
+                    {
+                        if( _data[x] != other._data[x] )
+                            return false;
+                    }
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        public override int GetHashCode()
+        {
+            return base.GetHashCode();
+        }
+
         private void RecomputeChecksum()
         {
             _checksum.Reset();
