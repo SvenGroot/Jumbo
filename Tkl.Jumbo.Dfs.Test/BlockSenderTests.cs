@@ -273,10 +273,8 @@ namespace Tkl.Jumbo.Dfs.Test
                     packets.Add(packet);
                 }
             }
-            catch( DfsException ex )
+            catch( DfsException )
             {
-                if( ex.InnerException != null )
-                    throw;
             }
             return packets;
         }
