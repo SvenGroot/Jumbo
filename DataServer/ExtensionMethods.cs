@@ -12,6 +12,7 @@ namespace DataServerApplication
         public static void WriteResult(this BinaryWriter writer, DataServerClientProtocolResult result)
         {
             writer.Write((int)result);
+            writer.Flush();
         }
     }
 }

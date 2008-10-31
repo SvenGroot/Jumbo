@@ -56,10 +56,16 @@ namespace ClientSample
                 {
                     byte[] buffer = new byte[4096];
                     int bytesRead;
-                    while( (bytesRead = input.Read(buffer, 0, buffer.Length)) > 0 )
+                    int time = 0;
+                    do
                     {
-                        stream.Write(buffer, 0, bytesRead);
-                    }
+                        int before = Environment.TickCount;
+                        bytesRead = input.Read(buffer, 0, buffer.Length);
+                        time += Environment.TickCount - before;
+                        if( bytesRead > 0 )
+                            stream.Write(buffer, 0, bytesRead);
+                    } while( bytesRead > 0 );
+                    Console.WriteLine("Read time ms: {0}", TimeSpan.FromMilliseconds(time));
                 }
             }
             catch( InvalidOperationException ex )

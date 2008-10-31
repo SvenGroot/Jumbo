@@ -31,8 +31,9 @@ namespace Tkl.Jumbo.Dfs
         private readonly Guid _blockID;
         private readonly ServerAddress[] _dataServers;
         private int _offset;
-        private const int _maxQueueSize = 10;
+        private const int _maxQueueSize = Int32.MaxValue;
         private bool _disposed;
+        //private int _time;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="BlockSender"/> class for the specified block assignment.
@@ -135,6 +136,13 @@ namespace Tkl.Jumbo.Dfs
             if( packet == null )
                 throw new ArgumentNullException("packet");
 
+            //if( _time != 0 )
+            //{
+            //    int t = Environment.TickCount - _time;
+            //    if( t > 100 )
+            //        Console.WriteLine("Long time between queue: {0}", t);
+            //}
+            int prevTime = Environment.TickCount;
             bool queueFull = false;
             do
             {
@@ -157,6 +165,10 @@ namespace Tkl.Jumbo.Dfs
                 _hasLastPacket = true;
             }
             _packetsToSendEvent.Set();
+            int total = Environment.TickCount - prevTime;
+            if( total > 100 )
+                Console.WriteLine("!!! Long queue time: {0}", total);
+            //_time = Environment.TickCount;
         }
 
         /// <summary>
@@ -314,11 +326,21 @@ namespace Tkl.Jumbo.Dfs
                     {
                         writer.Write((int)DataServerClientProtocolResult.Ok);
                     }
+                    //int prevTime = Environment.TickCount;
                     packet.Write(writer, false);
+                    //int total = Environment.TickCount - prevTime;
+                    //if( total > 100 )
+                    //    Console.WriteLine("!!! Long write time: {0}", total);
                     _requiredConfirmationsEvent.Set();
                 }
                 else
+                {
+                    //int prevTime = Environment.TickCount;
                     _packetsToSendEvent.WaitOne();
+                    //int total = Environment.TickCount - prevTime;
+                    //if( total > 100 )
+                    //    Console.WriteLine("!!! Long send wait time: {0}", total);
+                }
             }
         }
 
@@ -359,7 +381,11 @@ namespace Tkl.Jumbo.Dfs
                 {
                     if( _requiredConfirmations > 0 )
                     {
+                        //int prevTime = Environment.TickCount;
                         DataServerClientProtocolResult result = (DataServerClientProtocolResult)reader.ReadInt32();
+                        //int total = Environment.TickCount - prevTime;
+                        //if( total > 100 )
+                        //    Console.WriteLine("!!! Long read time: {0}", total);
                         if( result != DataServerClientProtocolResult.Ok )
                         {
                             _lastResult = result;
@@ -372,7 +398,13 @@ namespace Tkl.Jumbo.Dfs
                         Interlocked.Increment(ref _receivedConfirmations);
                     }
                     else
+                    {
+                        //int prevTime = Environment.TickCount;
                         _requiredConfirmationsEvent.WaitOne();
+                        //int total = Environment.TickCount - prevTime;
+                        //if( total > 100 )
+                        //    Console.WriteLine("!!! Long wait time: {0}", total);
+                    }
                 }
             }
             catch( Exception ex )
