@@ -4,6 +4,8 @@ using System.Linq;
 using System.Text;
 using NUnit.Framework;
 using System.Threading;
+using System.IO;
+using System.Diagnostics;
 
 namespace Tkl.Jumbo.Dfs.Test
 {
@@ -31,9 +33,7 @@ namespace Tkl.Jumbo.Dfs.Test
         [Test]
         public void DfsOutputStreamConstructorTest()
         {
-            DfsConfiguration config = TestDfsCluster.CreateClientConfig();
-            INameServerClientProtocol nameServer = DfsClient.CreateNameServerClient(config);
-            using( DfsOutputStream stream = new DfsOutputStream(nameServer, "/OutputStreamConstructorTest") )
+            using( DfsOutputStream stream = new DfsOutputStream(_nameServer, "/OutputStreamConstructorTest") )
             {
                 Assert.AreEqual(_nameServer.BlockSize, stream.BlockSize);
                 Assert.IsFalse(stream.CanRead);
@@ -44,5 +44,40 @@ namespace Tkl.Jumbo.Dfs.Test
             }
         }
 
+        [Test]
+        public void TestStreams()
+        {
+            const int size = 200000000;
+
+            // This test exercises both DfsOutputStream and DfsInputStream by writing a file to the DFS and reading it back
+            string file = "TestStreams.dat";
+            // Create a file. This size is chosen so it's not a whole number of packets.
+            Trace.WriteLine("Creating file");
+            string path = Utilities.GenerateFile(file, size);
+            using( FileStream stream = System.IO.File.OpenRead(path) )
+            {
+                Trace.WriteLine("Uploading file");
+                using( DfsOutputStream output = new DfsOutputStream(_nameServer, "/TestStreams.dat") )
+                {
+                    Utilities.CopyStream(stream, output);
+                    Assert.AreEqual(size, output.Length);
+                    Assert.AreEqual(size, output.Position);
+                }
+
+                Trace.WriteLine("Comparing file");
+                stream.Position = 0;
+                using( DfsInputStream input = new DfsInputStream(_nameServer, "/TestStreams.dat") )
+                {
+                    Assert.AreEqual(_nameServer.BlockSize, input.BlockSize);
+                    Assert.IsTrue(input.CanRead);
+                    Assert.IsTrue(input.CanSeek);
+                    Assert.IsFalse(input.CanWrite);
+                    Assert.AreEqual(size, input.Length);
+                    Assert.AreEqual(0, input.Position);
+                    Assert.IsTrue(Utilities.CompareStream(stream, input));
+                    Assert.AreEqual(size, input.Position);
+                }
+            }
+        }
     }
 }

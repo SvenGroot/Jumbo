@@ -8,12 +8,14 @@ using System.IO;
 using System.Runtime.Serialization.Formatters.Binary;
 using System.Threading;
 using System.Net;
+using System.Diagnostics;
 
 namespace Tkl.Jumbo.Dfs.Test
 {
     [TestFixture]
     public class BlockSenderTests
     {
+
         private enum TestMode
         {
             Normal,
@@ -54,15 +56,17 @@ namespace Tkl.Jumbo.Dfs.Test
 
             private void ServerThread()
             {
-                TcpListener listener = new TcpListener(Socket.OSSupportsIPv6 ? IPAddress.IPv6Any : IPAddress.Any, 15000);
+                TcpListener listener = new TcpListener(IPAddress.Any, 15000);
                 try
                 {
+                    Trace.WriteLine("Server starts listening.");
                     listener.Start();
                     using( TcpClient client = listener.AcceptTcpClient() )
                     using( NetworkStream stream = client.GetStream() )
                     using( BinaryReader reader = new BinaryReader(stream) )
                     using( BinaryWriter writer = new BinaryWriter(stream) )
                     {
+                        Trace.WriteLine("Connectiong accepted.");
                         if( _mode != TestMode.Client )
                         {
                             BinaryFormatter formatter = new BinaryFormatter();
@@ -71,6 +75,7 @@ namespace Tkl.Jumbo.Dfs.Test
                             ReceivedCommand = header.Command;
                             ReceivedDataServers = header.DataServers;
                             writer.Write((int)DataServerClientProtocolResult.Ok);
+                            Trace.WriteLine("Header sent.");
                         }
                         else
                         {
@@ -81,6 +86,7 @@ namespace Tkl.Jumbo.Dfs.Test
                                 return;
                             }
                             ReceivedOffset = reader.ReadInt32();
+                            Trace.WriteLine("Offset received.");
                         }
 
                         Packet packet = null;
@@ -97,6 +103,7 @@ namespace Tkl.Jumbo.Dfs.Test
                                 }
                             }
                             packet.Read(reader, false);
+                            Trace.WriteLine("Packet received.");
                             if( _mode == TestMode.Error && ReceivedPackets.Count >= 5 )
                             {
                                 writer.Write((int)DataServerClientProtocolResult.Error);
@@ -117,8 +124,14 @@ namespace Tkl.Jumbo.Dfs.Test
                 finally
                 {
                     listener.Stop();
+                    Trace.WriteLine("Server stopped.");
                 }
             }
+        }
+
+        [TestFixtureSetUp]
+        public void Setup()
+        {
         }
 
         [Test]
@@ -128,7 +141,7 @@ namespace Tkl.Jumbo.Dfs.Test
             Guid blockID = Guid.NewGuid();
             using( BlockSender target = new BlockSender(blockID, new ServerAddress[] { new ServerAddress("localhost", 15000) }) )
             {
-                TestBlockSender(blockID, server, target);
+                DoTestBlockSender(blockID, server, target);
             }
         }
 
@@ -136,13 +149,14 @@ namespace Tkl.Jumbo.Dfs.Test
         public void TestBlockSenderBlockAssignment()
         {
             BlockSenderServer server = new BlockSenderServer();
+            Trace.WriteLine("Block sender created.");
             Guid blockID = Guid.NewGuid();
             BlockAssignment assignment = new BlockAssignment();
             assignment.BlockID = blockID;
             assignment.DataServers = new ServerAddress[] { new ServerAddress("localhost", 15000) }.ToList();
             using( BlockSender target = new BlockSender(assignment) )
             {
-                TestBlockSender(blockID, server, target);
+                DoTestBlockSender(blockID, server, target);
             }
         }
 
@@ -173,16 +187,16 @@ namespace Tkl.Jumbo.Dfs.Test
         [Test]
         public void TestForwardConfirmations()
         {
-            TestForwardConfirmations(TestMode.Normal, 31, DataServerClientProtocolResult.Ok);
+            DoTestForwardConfirmations(TestMode.Normal, 31, DataServerClientProtocolResult.Ok);
         }
 
         [Test]
         public void TestForwardConfirmationsError()
         {
-            TestForwardConfirmations(TestMode.Error, 1, DataServerClientProtocolResult.Error);
+            DoTestForwardConfirmations(TestMode.Error, 1, DataServerClientProtocolResult.Error);
         }
 
-        private void TestForwardConfirmations(TestMode mode, int expectedCount, DataServerClientProtocolResult expectedValue)
+        private void DoTestForwardConfirmations(TestMode mode, int expectedCount, DataServerClientProtocolResult expectedValue)
         {
             BlockSenderServer server = new BlockSenderServer(mode);
             Guid blockID = Guid.NewGuid();
@@ -245,7 +259,7 @@ namespace Tkl.Jumbo.Dfs.Test
             }
         }
 
-        private void TestBlockSender(Guid blockID, BlockSenderServer server, BlockSender sender)
+        private void DoTestBlockSender(Guid blockID, BlockSenderServer server, BlockSender sender)
         {
             List<Packet> packets = SendPackets(sender);
 

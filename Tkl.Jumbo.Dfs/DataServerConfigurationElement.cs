@@ -24,7 +24,7 @@ namespace Tkl.Jumbo.Dfs
         /// <summary>
         /// Gets or sets the path to the directory where the data server stores block files.
         /// </summary>
-        [ConfigurationProperty("blockStoragePath", DefaultValue = null, IsRequired = true, IsKey = false)]
+        [ConfigurationProperty("blockStoragePath", DefaultValue = "", IsRequired = true, IsKey = false)]
         public string BlockStoragePath
         {
             get { return (string)this["blockStoragePath"]; }

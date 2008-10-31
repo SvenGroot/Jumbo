@@ -19,7 +19,7 @@ namespace Tkl.Jumbo.Dfs.Test
         {
             public void Run(string editLogPath, int replicationFactor)
             {
-                log4net.Config.BasicConfigurator.Configure(new log4net.Appender.FileAppender() { Layout = new log4net.Layout.PatternLayout("%date [%thread] %-5level %logger [%property{ClientHostName}] - %message%newline"), File = System.IO.Path.Combine(editLogPath, "logfile.txt"), Threshold = log4net.Core.Level.All });
+                //log4net.Config.BasicConfigurator.Configure(new log4net.Appender.FileAppender() { Layout = new log4net.Layout.PatternLayout("%date [%thread] %-5level %logger [%property{ClientHostName}] - %message%newline"), File = System.IO.Path.Combine(editLogPath, "logfile.txt"), Threshold = log4net.Core.Level.All });
                 DfsConfiguration config = new DfsConfiguration();
                 config.NameServer.HostName = "localhost";
                 config.NameServer.Port = NameServerPort; // Pick a different port so the tests can run even when a regular cluster is running
@@ -57,7 +57,7 @@ namespace Tkl.Jumbo.Dfs.Test
 
         public TestDfsCluster(int dataNodes, int replicationFactor)
         {
-            string path = System.IO.Path.Combine(Environment.CurrentDirectory, "TestOutput");
+            string path = Utilities.TestOutputPath;
             if( System.IO.Directory.Exists(path) )
                 System.IO.Directory.Delete(path, true);
             System.IO.Directory.CreateDirectory(path);

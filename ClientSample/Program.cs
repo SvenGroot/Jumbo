@@ -54,12 +54,12 @@ namespace ClientSample
                 using( FileStream input = System.IO.File.OpenRead(args[0]) )
                 using( DfsOutputStream stream = new DfsOutputStream(nameServer, "/myfile") )
                 {
-                    //byte[] buffer = new byte[4096];
-                    //int bytesRead;
-                    //while( (bytesRead = input.Read(buffer, 0, buffer.Length)) > 0 )
-                    //{
-                    //    stream.Write(buffer, 0, bytesRead);
-                    //}
+                    byte[] buffer = new byte[4096];
+                    int bytesRead;
+                    while( (bytesRead = input.Read(buffer, 0, buffer.Length)) > 0 )
+                    {
+                        stream.Write(buffer, 0, bytesRead);
+                    }
                 }
             }
             catch( InvalidOperationException ex )
@@ -73,20 +73,20 @@ namespace ClientSample
             using( FileStream output = System.IO.File.Create("test.txt") )
             using( DfsInputStream input = new DfsInputStream(nameServer, "/myfile") )
             {
-                byte[] buffer = new byte[100000];
-                input.Position = 100000;
-                input.Read(buffer, 0, buffer.Length);
-                output.Write(buffer, 0, buffer.Length);
-                input.Position = 500000;
-                input.Read(buffer, 0, buffer.Length);
-                output.Write(buffer, 0, buffer.Length);
+                byte[] buffer = new byte[4096];
+                //input.Position = 100000;
+                //input.Read(buffer, 0, buffer.Length);
+                //output.Write(buffer, 0, buffer.Length);
+                //input.Position = 500000;
+                //input.Read(buffer, 0, buffer.Length);
+                //output.Write(buffer, 0, buffer.Length);
 
-                //int readBytes;
-                //do
-                //{
-                //    readBytes = input.Read(buffer, 0, buffer.Length);
-                //    //output.Write(buffer, 0, readBytes);
-                //} while( readBytes > 0 );
+                int readBytes;
+                do
+                {
+                    readBytes = input.Read(buffer, 0, buffer.Length);
+                    //output.Write(buffer, 0, readBytes);
+                } while( readBytes > 0 );
             }
         }
 

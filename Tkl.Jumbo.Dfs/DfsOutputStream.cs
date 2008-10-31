@@ -23,7 +23,8 @@ namespace Tkl.Jumbo.Dfs
         private readonly byte[] _buffer = new byte[_packetSize];
         private int _bufferPos;
         private bool _disposed = false;
-        private int _fileBytesWritten;
+        private long _fileBytesWritten;
+        private long _length;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="DfsOutputStream"/> with the specified name server and file.
@@ -105,7 +106,7 @@ namespace Tkl.Jumbo.Dfs
         /// </value>
         public override long Length
         {
-            get { return _fileBytesWritten; }
+            get { return _length; }
         }
 
         /// <summary>
@@ -121,7 +122,7 @@ namespace Tkl.Jumbo.Dfs
         {
             get
             {
-                return _fileBytesWritten;
+                return _length;
             }
             set
             {
@@ -184,7 +185,7 @@ namespace Tkl.Jumbo.Dfs
                     bool finalPacket = _blockBytesWritten + _bufferPos == BlockSize;
                     WritePacket(_buffer, _bufferPos, finalPacket);
                     _blockBytesWritten += _bufferPos;
-                    _fileBytesWritten += _fileBytesWritten;
+                    _fileBytesWritten += _bufferPos;
                     _bufferPos = 0;
                     if( finalPacket )
                     {
@@ -202,6 +203,7 @@ namespace Tkl.Jumbo.Dfs
                 Array.Copy(buffer, bufferPos, _buffer, _bufferPos, writeSize);
                 _bufferPos += writeSize;
                 bufferPos += writeSize;
+                _length += writeSize;
                 System.Diagnostics.Debug.Assert(_bufferPos <= _buffer.Length);
             }
         }

@@ -65,6 +65,7 @@
     <Compile Include="DfsStreamTest.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="TestDfsCluster.cs" />
+    <Compile Include="Utilities.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\DataServer\DataServer.csproj">
