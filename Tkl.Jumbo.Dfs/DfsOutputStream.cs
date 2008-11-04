@@ -192,7 +192,7 @@ namespace Tkl.Jumbo.Dfs
                         // TODO: Do we really want to wait here? We could just let it run in the background and continue on our
                         // merry way. That would require keeping track of them so we know in Dispose when we're really finished.
                         // It would also require the name server to allow appending of new blocks while old ones are still pending.
-                        _sender.WaitForConfirmations();
+                        _sender.WaitUntilSendFinished();
                         _sender.ThrowIfErrorOccurred();
                         _sender = new BlockSender(_nameServer.AppendBlock(_path));
                         _blockBytesWritten = 0;
@@ -231,7 +231,7 @@ namespace Tkl.Jumbo.Dfs
                     }
                     try
                     {
-                        _sender.WaitForConfirmations();
+                        _sender.WaitUntilSendFinished();
                         _sender.ThrowIfErrorOccurred();
                     }
                     finally

@@ -151,13 +151,16 @@ namespace DataServerApplication
                         if( forwarder != null )
                         {
                             _log.Debug("Waiting for confirmations.");
-                            forwarder.WaitForConfirmations();
+                            forwarder.WaitUntilSendFinished();
                             _log.Debug("Waiting for confirmations complete.");
                         }
                         if( forwarder != null )
                         {
                             if( !CheckForwarderError(header, forwarder) )
+                            {
+                                SendErrorResultAndWaitForConnectionClosed(clientWriter, reader);
                                 return;
+                            }
                         }
                     }
 
@@ -165,14 +168,12 @@ namespace DataServerApplication
                     _dataServer.CompleteBlock(header.BlockID, blockSize);
                     if( forwarder == null )
                         clientWriter.WriteResult(DataServerClientProtocolResult.Ok);
-                    else
-                        forwarder.ForwardConfirmations(clientWriter);
                 }
                 catch( Exception )
                 {
                     try
                     {
-                        clientWriter.WriteResult(DataServerClientProtocolResult.Error);
+                        SendErrorResultAndWaitForConnectionClosed(clientWriter, reader);
                     }
                     catch( Exception )
                     {
@@ -184,6 +185,31 @@ namespace DataServerApplication
                     if( forwarder != null )
                         forwarder.Dispose();
                 }
+            }
+        }
+
+        private static void SendErrorResultAndWaitForConnectionClosed(BinaryWriter clientWriter, BinaryReader reader)
+        {
+            clientWriter.WriteResult(DataServerClientProtocolResult.Error);
+            try
+            {
+                Packet packet = new Packet();
+                while( !packet.IsLastPacket )
+                {
+                    packet.Read(reader, false);
+                }
+            }
+            catch( EndOfStreamException )
+            {
+                _log.Info("Connection closed by client.");
+            }
+            catch( IOException ex )
+            {
+                SocketException socketEx = ex.InnerException as SocketException;
+                if( socketEx != null && (socketEx.SocketErrorCode == SocketError.ConnectionAborted || socketEx.SocketErrorCode == SocketError.ConnectionReset) )
+                    _log.Info("Connection closed by client.");
+                else
+                    throw;
             }
         }
 
@@ -199,8 +225,8 @@ namespace DataServerApplication
                 }
                 catch( InvalidPacketException ex )
                 {
-                    clientWriter.WriteResult(DataServerClientProtocolResult.Error); // TODO: better status code
                     _log.Error(ex.Message);
+                    SendErrorResultAndWaitForConnectionClosed(clientWriter, reader);
                     return false;
                 }
 
@@ -214,20 +240,6 @@ namespace DataServerApplication
                 }
 
                 packet.Write(fileWriter, true);
-
-                if( !packet.IsLastPacket )
-                {
-                    // For the last Ok, wait until all the data servers have acknowledged the packet
-                    // and we've informed the nameserver of our new block.
-                    if( forwarder == null )
-                    {
-                        clientWriter.WriteResult(DataServerClientProtocolResult.Ok);
-                    }
-                    else
-                    {
-                        forwarder.ForwardConfirmations(clientWriter);
-                    }
-                }
             } while( !packet.IsLastPacket );
             return true;
         }
@@ -279,7 +291,7 @@ namespace DataServerApplication
                         {
                             _log.ErrorFormat("Requested offsets are out of range.");
                             sender.LastResult = DataServerClientProtocolResult.Error;
-                            sender.WaitForConfirmations();
+                            sender.WaitUntilSendFinished();
                             return;
                         }
 
@@ -296,7 +308,7 @@ namespace DataServerApplication
                             catch( InvalidPacketException )
                             {
                                 sender.LastResult = DataServerClientProtocolResult.Error;
-                                sender.WaitForConfirmations();
+                                sender.WaitUntilSendFinished();
                                 return;
                             }
 
@@ -329,14 +341,14 @@ namespace DataServerApplication
                     try
                     {
                         sender.LastResult = DataServerClientProtocolResult.Error;
-                        sender.WaitForConfirmations();
+                        sender.WaitUntilSendFinished();
                     }
                     catch( Exception )
                     {
                     }
                     throw;
                 }
-                sender.WaitForConfirmations();
+                sender.WaitUntilSendFinished();
                 _log.InfoFormat("Finished sending block {0}", header.BlockID);
             }
         }

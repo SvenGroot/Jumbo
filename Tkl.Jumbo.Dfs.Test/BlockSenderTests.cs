@@ -48,6 +48,7 @@ namespace Tkl.Jumbo.Dfs.Test
             public List<Packet> ReceivedPackets { get; private set; }
             public DataServerClientProtocolResult LastResult { get; private set; }
             public int ReceivedOffset { get; private set; }
+            public bool HasErrors { get; private set; }
 
             public void Join()
             {
@@ -56,7 +57,8 @@ namespace Tkl.Jumbo.Dfs.Test
 
             private void ServerThread()
             {
-                TcpListener listener = new TcpListener(IPAddress.Any, 15000);
+                TcpListener listener = new TcpListener(Socket.OSSupportsIPv6 ? IPAddress.IPv6Any : IPAddress.Any, 15000);
+                bool waitingForClosed = false;
                 try
                 {
                     Trace.WriteLine("Server starts listening.");
@@ -74,7 +76,7 @@ namespace Tkl.Jumbo.Dfs.Test
                             ReceivedBlockID = header.BlockID;
                             ReceivedCommand = header.Command;
                             ReceivedDataServers = header.DataServers;
-                            writer.Write((int)DataServerClientProtocolResult.Ok);
+                            //writer.Write((int)DataServerClientProtocolResult.Ok);
                             Trace.WriteLine("Header sent.");
                         }
                         else
@@ -107,7 +109,7 @@ namespace Tkl.Jumbo.Dfs.Test
                             if( _mode == TestMode.Error && ReceivedPackets.Count >= 5 )
                             {
                                 writer.Write((int)DataServerClientProtocolResult.Error);
-                                return;
+                                waitingForClosed = true;
                             }
                             if( _mode == TestMode.CloseConnection && ReceivedPackets.Count >= 5 )
                             {
@@ -115,11 +117,34 @@ namespace Tkl.Jumbo.Dfs.Test
                             }
                             if( _mode != TestMode.Client )
                             {
-                                writer.Write((int)DataServerClientProtocolResult.Ok);
+                                //writer.Write((int)DataServerClientProtocolResult.Ok);
                             }
                             ReceivedPackets.Add(packet);
                         }
+                        writer.Write((int)DataServerClientProtocolResult.Ok);
                     }
+                }
+                catch( IOException ex )
+                {
+                    if( ex.InnerException is SocketException )
+                        Trace.WriteLine(((SocketException)ex.InnerException).SocketErrorCode);
+                    if( ex is EndOfStreamException || (ex.InnerException is SocketException && (((SocketException)ex.InnerException).SocketErrorCode == SocketError.ConnectionReset || ((SocketException)ex.InnerException).SocketErrorCode == SocketError.ConnectionAborted)) )
+                    {
+                        Trace.WriteLine("Connection closed.");
+                        if( !waitingForClosed )
+                            HasErrors = true;
+                    }
+                    else
+                    {
+                        Trace.WriteLine(ex);
+                        HasErrors = true;
+                    }
+                }
+                catch( Exception ex )
+                {
+                    Trace.WriteLine(ex);
+                    HasErrors = true;
+                    //Assert.Fail("Server exception.");
                 }
                 finally
                 {
@@ -171,59 +196,17 @@ namespace Tkl.Jumbo.Dfs.Test
                 using( BlockSender target = new BlockSender(stream, 1000) )
                 {
                     List<Packet> packets = SendPackets(target);
-                    target.WaitForConfirmations();
+                    target.WaitUntilSendFinished();
                     server.Join();
 
                     Assert.AreEqual(DataServerClientProtocolResult.Ok, target.LastResult);
                     Assert.IsNull(target.LastException);
                     Assert.AreEqual(DataServerClientProtocolResult.Ok, server.LastResult);
                     Assert.IsNull(server.ReceivedDataServers);
-                    Assert.AreEqual(0, target.ReceivedConfirmations);
+                    Assert.IsFalse(server.HasErrors);
+                    //Assert.AreEqual(0, target.ReceivedConfirmations);
                     CheckPackets(server, packets);
                 }
-            }
-        }
-
-        [Test]
-        public void TestForwardConfirmations()
-        {
-            DoTestForwardConfirmations(TestMode.Normal, 31, DataServerClientProtocolResult.Ok);
-        }
-
-        [Test]
-        public void TestForwardConfirmationsError()
-        {
-            DoTestForwardConfirmations(TestMode.Error, 1, DataServerClientProtocolResult.Error);
-        }
-
-        private void DoTestForwardConfirmations(TestMode mode, int expectedCount, DataServerClientProtocolResult expectedValue)
-        {
-            BlockSenderServer server = new BlockSenderServer(mode);
-            Guid blockID = Guid.NewGuid();
-            using( BlockSender target = new BlockSender(blockID, new ServerAddress[] { new ServerAddress("localhost", 15000) }) )
-            {
-                List<Packet> packets = SendPackets(target);
-
-                target.WaitForConfirmations();
-                server.Join();
-                using( MemoryStream stream = new MemoryStream() )
-                using( BinaryWriter writer = new BinaryWriter(stream) )
-                {
-                    target.ForwardConfirmations(writer);
-                    stream.Position = 0;
-                    using( BinaryReader reader = new BinaryReader(stream) )
-                    {
-                        int count = 0;
-                        while( reader.BaseStream.Position != reader.BaseStream.Length )
-                        {
-                            DataServerClientProtocolResult result = (DataServerClientProtocolResult)reader.ReadInt32();
-                            Assert.AreEqual(expectedValue, result);
-                            ++count;
-                        }
-                        Assert.AreEqual(expectedCount, count);
-                    }
-                }
-                Assert.AreEqual(0, target.ReceivedConfirmations);
             }
         }
 
@@ -236,10 +219,11 @@ namespace Tkl.Jumbo.Dfs.Test
             {
                 List<Packet> packets = SendPackets(target);
 
-                target.WaitForConfirmations();
+                target.WaitUntilSendFinished();
                 server.Join();
                 Assert.AreEqual(DataServerClientProtocolResult.Error, target.LastResult);
                 Assert.IsNull(target.LastException);
+                Assert.IsFalse(server.HasErrors);
             }
         }
 
@@ -252,10 +236,11 @@ namespace Tkl.Jumbo.Dfs.Test
             {
                 List<Packet> packets = SendPackets(target);
 
-                target.WaitForConfirmations();
+                target.WaitUntilSendFinished();
                 server.Join();
                 Assert.AreEqual(DataServerClientProtocolResult.Error, target.LastResult);
                 Assert.IsNotNull(target.LastException);
+                Assert.IsFalse(server.HasErrors);
             }
         }
 
@@ -263,7 +248,7 @@ namespace Tkl.Jumbo.Dfs.Test
         {
             List<Packet> packets = SendPackets(sender);
 
-            sender.WaitForConfirmations();
+            sender.WaitUntilSendFinished();
             server.Join();
             Assert.AreEqual(DataServerClientProtocolResult.Ok, sender.LastResult);
             Assert.IsNull(sender.LastException);
@@ -271,7 +256,8 @@ namespace Tkl.Jumbo.Dfs.Test
             Assert.AreEqual(DataServerCommand.WriteBlock, server.ReceivedCommand);
             Assert.AreEqual(1, server.ReceivedDataServers.Length);
             Assert.AreEqual(new ServerAddress("localhost", 15000), server.ReceivedDataServers[0]);
-            Assert.AreEqual(31, sender.ReceivedConfirmations); // number of packets plus one for the header
+            Assert.IsFalse(server.HasErrors);
+            //Assert.AreEqual(31, sender.ReceivedConfirmations); // number of packets plus one for the header
             CheckPackets(server, packets);
         }
 

@@ -29,13 +29,13 @@ namespace ClientSample
             //WriteBlock(b);
             //nameServer.CloseFile("/test");
 
-            WriteFile(args, nameServer);
+            //WriteFile(args, nameServer);
 
             //Tkl.Jumbo.Dfs.File file = nameServer.GetFileInfo("/myfile");
             //ServerAddress[] servers = nameServer.GetDataServersForBlock(file.Blocks[0]);
             //ReadBlock(file, servers, nameServer.BlockSize);
 
-            //ReadFile(nameServer);
+            ReadFile(nameServer);
 
             sw.Stop();
             Console.WriteLine(sw.Elapsed);

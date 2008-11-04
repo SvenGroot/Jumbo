@@ -27,19 +27,25 @@ namespace Tkl.Jumbo.Dfs.Test
         {
             Random rnd = new Random();
             string path = System.IO.Path.Combine(TestOutputPath, name);
-            int sizeRemaining = size;
-            byte[] buffer = new byte[4096];
             using( FileStream stream = System.IO.File.Create(path) )
             {
-                while( sizeRemaining > 0 )
-                {
-                    int writeSize = Math.Min(buffer.Length, sizeRemaining);
-                    rnd.NextBytes(buffer);
-                    stream.Write(buffer, 0, writeSize);
-                    sizeRemaining -= writeSize;
-                }
+                GenerateData(stream, size);
             }
             return path;
+        }
+
+        public static void GenerateData(Stream stream, int size)
+        {
+            Random rnd = new Random();
+            int sizeRemaining = size;
+            byte[] buffer = new byte[4096];
+            while( sizeRemaining > 0 )
+            {
+                int writeSize = Math.Min(buffer.Length, sizeRemaining);
+                rnd.NextBytes(buffer);
+                stream.Write(buffer, 0, writeSize);
+                sizeRemaining -= writeSize;
+            }
         }
 
         public static void CopyStream(Stream src, Stream dest)

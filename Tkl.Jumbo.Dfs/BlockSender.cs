@@ -17,15 +17,11 @@ namespace Tkl.Jumbo.Dfs
     public class BlockSender : IDisposable
     {
         private readonly Queue<Packet> _packetsToSend = new Queue<Packet>();
-        private int _requiredConfirmations;
-        private int _receivedConfirmations;
         private AutoResetEvent _packetsToSendEvent = new AutoResetEvent(false);
         private AutoResetEvent _packetsToSendDequeueEvent = new AutoResetEvent(false);
-        private AutoResetEvent _requiredConfirmationsEvent = new AutoResetEvent(false);
         private volatile DataServerClientProtocolResult _lastResult = DataServerClientProtocolResult.Ok;
         private volatile Exception _lastException;
         private Thread _sendPacketsThread;
-        private Thread _resultReaderThread;
         private volatile bool _finished;
         private bool _hasLastPacket;
         private readonly Guid _blockID;
@@ -107,13 +103,13 @@ namespace Tkl.Jumbo.Dfs
             get { return _lastException; }
         }
 
-        /// <summary>
-        /// Gets the number of confirmations that have been received and have not yet been forwarded.
-        /// </summary>
-        public int ReceivedConfirmations
-        {
-            get { return _receivedConfirmations; }
-        }
+        ///// <summary>
+        ///// Gets the number of confirmations that have been received and have not yet been forwarded.
+        ///// </summary>
+        //public int ReceivedConfirmations
+        //{
+        //    get { return _receivedConfirmations; }
+        //}
 
         /// <summary>
         /// Adds a packet to the upload queue.
@@ -181,15 +177,13 @@ namespace Tkl.Jumbo.Dfs
         /// </remarks>
         /// <exception cref="InvalidOperationException">A packet with <see cref="Packet.IsLastPacket"/> 
         /// set to <see langword="true"/> has not been queued yet.</exception>
-        public void WaitForConfirmations()
+        public void WaitUntilSendFinished()
         {
             CheckDisposed();
             if( _lastResult == DataServerClientProtocolResult.Ok && !_hasLastPacket )
             {
                 _lastResult = DataServerClientProtocolResult.Error;
                 _packetsToSendEvent.Set();
-                _requiredConfirmationsEvent.Set();
-                _sendPacketsThread.Join();
                 throw new InvalidOperationException("You cannot call WaitForConfirmations until the last packet has been submitted.");
             }
             _sendPacketsThread.Join();
@@ -206,33 +200,33 @@ namespace Tkl.Jumbo.Dfs
                 throw new DfsException("There was an error sending a packet to the server.", _lastException);
         }
 
-        /// <summary>
-        /// Forward packet confirmations to the specified writer.
-        /// </summary>
-        /// <param name="writer">The <see cref="BinaryWriter"/> to write the confirmations to.</param>
-        public void ForwardConfirmations(BinaryWriter writer)
-        {
-            CheckDisposed();
-            if( _lastResult != DataServerClientProtocolResult.Ok )
-            {
-                writer.Write((int)_lastResult);
-                _receivedConfirmations = 0;
-            }
-            else
-            {
-                // This function is not meant to be called from more than one thread; if it were
-                // to be called from more than one thread a race condition in this loop could cause
-                // too many confirmations to be sent.
-                // This is not an issue because while this class uses threads internally, it's
-                // public interface is not meant to be thread-safe and indeed won't be used
-                // from multiple threads.
-                while( _receivedConfirmations > 0 )
-                {
-                    writer.Write((int)DataServerClientProtocolResult.Ok);
-                    Interlocked.Decrement(ref _receivedConfirmations);
-                }
-            }
-        }
+        ///// <summary>
+        ///// Forward packet confirmations to the specified writer.
+        ///// </summary>
+        ///// <param name="writer">The <see cref="BinaryWriter"/> to write the confirmations to.</param>
+        //public void ForwardConfirmations(BinaryWriter writer)
+        //{
+        //    CheckDisposed();
+        //    if( _lastResult != DataServerClientProtocolResult.Ok )
+        //    {
+        //        writer.Write((int)_lastResult);
+        //        _receivedConfirmations = 0;
+        //    }
+        //    else
+        //    {
+        //        // This function is not meant to be called from more than one thread; if it were
+        //        // to be called from more than one thread a race condition in this loop could cause
+        //        // too many confirmations to be sent.
+        //        // This is not an issue because while this class uses threads internally, it's
+        //        // public interface is not meant to be thread-safe and indeed won't be used
+        //        // from multiple threads.
+        //        while( _receivedConfirmations > 0 )
+        //        {
+        //            writer.Write((int)DataServerClientProtocolResult.Ok);
+        //            Interlocked.Decrement(ref _receivedConfirmations);
+        //        }
+        //    }
+        //}
 
         private void SendPacketsThread(object data)
         {
@@ -258,26 +252,34 @@ namespace Tkl.Jumbo.Dfs
                     // This function also starts the result reader thread if necessary
                     WriteHeader(stream, writer, reader);
 
-                    SendPackets(writer);
+                    SendPackets(writer, stream, reader);
 
-                    if( _resultReaderThread != null )
-                    {
-                        // We must wait for the result reader thread to finish; it's using the network connection
-                        // so we can't close that.
-                        _resultReaderThread.Join();
-                    }
+                    //if( _resultReaderThread != null )
+                    //{
+                    //    // We must wait for the result reader thread to finish; it's using the network connection
+                    //    // so we can't close that.
+                    //    _resultReaderThread.Join();
+                    //}
                     if( _dataServers == null && _lastResult != DataServerClientProtocolResult.Ok )
                         writer.Write((int)_lastResult);
+                    else
+                    {
+                        DataServerClientProtocolResult result = (DataServerClientProtocolResult)reader.ReadInt32();
+                        //int total = Environment.TickCount - prevTime;
+                        //if( total > 100 )
+                        //    Console.WriteLine("!!! Long read time: {0}", total);
+                        if( result != DataServerClientProtocolResult.Ok )
+                        {
+                            _lastResult = result;
+                            // Wake up the other threads.
+                            _packetsToSendEvent.Set();
+                            _packetsToSendDequeueEvent.Set();
+                        }
+                    }
                 }
             }
-
             catch( Exception ex )
             {
-                // If we got an exception, we will first wait for the _resultReaderThread to finish; if that receives
-                // an Error result we know the server simply closed the connection and we don't set _lastException so the
-                // client knows it was the server that set the error status and not a local exception.
-                if( _resultReaderThread != null )
-                    _resultReaderThread.Join();
                 if( _lastResult == DataServerClientProtocolResult.Ok )
                 {
                     _lastException = ex;
@@ -297,7 +299,7 @@ namespace Tkl.Jumbo.Dfs
             }
         }
 
-        private void SendPackets(BinaryWriter writer)
+        private void SendPackets(BinaryWriter writer, NetworkStream stream, BinaryReader reader)
         {
             // Start sending packets; stop when an error occurs or we've sent the last packet.
             Packet packet = null;
@@ -314,8 +316,6 @@ namespace Tkl.Jumbo.Dfs
                 }
                 if( packet != null )
                 {
-                    Interlocked.Increment(ref _requiredConfirmations);
-
                     if( packet.IsLastPacket )
                     {
                         // Set finished to let the result reader thread know the last packet has been sent,
@@ -327,11 +327,25 @@ namespace Tkl.Jumbo.Dfs
                         writer.Write((int)DataServerClientProtocolResult.Ok);
                     }
                     //int prevTime = Environment.TickCount;
+                    if( stream.DataAvailable )
+                    {
+                        DataServerClientProtocolResult result = (DataServerClientProtocolResult)reader.ReadInt32();
+                        //int total = Environment.TickCount - prevTime;
+                        //if( total > 100 )
+                        //    Console.WriteLine("!!! Long read time: {0}", total);
+                        if( result != DataServerClientProtocolResult.Ok )
+                        {
+                            _lastResult = result;
+                            // Wake up the other threads.
+                            _packetsToSendEvent.Set();
+                            _packetsToSendDequeueEvent.Set();
+                            break;
+                        }
+                    }
                     packet.Write(writer, false);
                     //int total = Environment.TickCount - prevTime;
                     //if( total > 100 )
                     //    Console.WriteLine("!!! Long write time: {0}", total);
-                    _requiredConfirmationsEvent.Set();
                 }
                 else
                 {
@@ -355,68 +369,12 @@ namespace Tkl.Jumbo.Dfs
             }
             else
             {
-                _resultReaderThread = new Thread((obj) => ResultReaderThread((BinaryReader)obj));
-                _resultReaderThread.Name = "ResultReader";
-                _resultReaderThread.IsBackground = true;
-                _resultReaderThread.Start(reader);
-
                 // Send the header
                 DataServerClientProtocolWriteHeader header = new DataServerClientProtocolWriteHeader();
                 header.BlockID = _blockID;
                 header.DataServers = _dataServers;
                 BinaryFormatter formatter = new BinaryFormatter();
                 formatter.Serialize(stream, header);
-
-                // Increment required confirmations because the server will send one for the header.
-                Interlocked.Increment(ref _requiredConfirmations);
-                _requiredConfirmationsEvent.Set();
-            }
-        }
-
-        private void ResultReaderThread(BinaryReader reader)
-        {
-            try
-            {
-                while( !(_finished && _requiredConfirmations == 0) && _lastResult == DataServerClientProtocolResult.Ok )
-                {
-                    if( _requiredConfirmations > 0 )
-                    {
-                        //int prevTime = Environment.TickCount;
-                        DataServerClientProtocolResult result = (DataServerClientProtocolResult)reader.ReadInt32();
-                        //int total = Environment.TickCount - prevTime;
-                        //if( total > 100 )
-                        //    Console.WriteLine("!!! Long read time: {0}", total);
-                        if( result != DataServerClientProtocolResult.Ok )
-                        {
-                            _lastResult = result;
-                            // Wake up the other threads.
-                            _packetsToSendEvent.Set();
-                            _packetsToSendDequeueEvent.Set();
-                            break;
-                        }
-                        Interlocked.Decrement(ref _requiredConfirmations);
-                        Interlocked.Increment(ref _receivedConfirmations);
-                    }
-                    else
-                    {
-                        //int prevTime = Environment.TickCount;
-                        _requiredConfirmationsEvent.WaitOne();
-                        //int total = Environment.TickCount - prevTime;
-                        //if( total > 100 )
-                        //    Console.WriteLine("!!! Long wait time: {0}", total);
-                    }
-                }
-            }
-            catch( Exception ex )
-            {
-                // There is a race condition here that could cause the read thread to overwrite an exception thrown from 
-                // the write thread but for the moment I don't care.
-                if( _lastException == null )
-                    _lastException = ex;
-                _lastResult = DataServerClientProtocolResult.Error;
-                // Wake up the other threads.
-                _packetsToSendEvent.Set();
-                _packetsToSendDequeueEvent.Set();
             }
         }
 
@@ -425,8 +383,6 @@ namespace Tkl.Jumbo.Dfs
             if( !_disposed )
             {
                 _disposed = true;
-                if( _resultReaderThread != null && _resultReaderThread.IsAlive )
-                    _resultReaderThread.Abort();
                 if( _sendPacketsThread != null && _sendPacketsThread.IsAlive )
                     _sendPacketsThread.Abort();
             }

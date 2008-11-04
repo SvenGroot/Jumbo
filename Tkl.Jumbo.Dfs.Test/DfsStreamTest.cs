@@ -47,15 +47,17 @@ namespace Tkl.Jumbo.Dfs.Test
         [Test]
         public void TestStreams()
         {
-            const int size = 200000000;
+            const int size = 100000000;
 
             // This test exercises both DfsOutputStream and DfsInputStream by writing a file to the DFS and reading it back
-            string file = "TestStreams.dat";
-            // Create a file. This size is chosen so it's not a whole number of packets.
-            Trace.WriteLine("Creating file");
-            string path = Utilities.GenerateFile(file, size);
-            using( FileStream stream = System.IO.File.OpenRead(path) )
+            //string file = "TestStreams.dat";
+            //string path = Utilities.GenerateFile(file, size);
+            using( MemoryStream stream = new MemoryStream() )
             {
+                // Create a file. This size is chosen so it's not a whole number of packets.
+                Trace.WriteLine("Creating file");
+                Utilities.GenerateData(stream, size);
+                stream.Position = 0;
                 Trace.WriteLine("Uploading file");
                 using( DfsOutputStream output = new DfsOutputStream(_nameServer, "/TestStreams.dat") )
                 {
