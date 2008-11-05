@@ -17,6 +17,14 @@ namespace Tkl.Jumbo.Dfs
         /// <summary>
         /// The name server wants the data server to send a full list of all its blocks.
         /// </summary>
-        ReportBlocks
+        ReportBlocks,
+        /// <summary>
+        /// The name server wants the data server to delete certain blocks.
+        /// </summary>
+        /// <remarks>
+        /// The most likely causes for this command would be if the data server reported blocks that the name server
+        /// does not recognise, or if the some blocks are over-replicated.
+        /// </remarks>
+        DeleteBlocks
     }
 }

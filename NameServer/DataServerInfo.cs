@@ -8,6 +8,8 @@ namespace NameServerApplication
 {
     class DataServerInfo
     {
+        private List<Guid> _blocksToDelete = new List<Guid>();
+
         public DataServerInfo(string hostName, int port)
         {
             Address = new ServerAddress(hostName, port);
@@ -23,5 +25,21 @@ namespace NameServerApplication
         public bool HasReportedBlocks { get; set; }
 
         public List<Guid> Blocks { get; set; }
+
+        public void AddBlockToDelete(Guid blockID)
+        {
+            lock( _blocksToDelete )
+                _blocksToDelete.Add(blockID);
+        }
+
+        public Guid[] GetAndClearBlocksToDelete()
+        {
+            lock( _blocksToDelete )
+            {
+                Guid[] result = _blocksToDelete.ToArray();
+                _blocksToDelete.Clear();
+                return result;
+            }
+        }
     }
 }

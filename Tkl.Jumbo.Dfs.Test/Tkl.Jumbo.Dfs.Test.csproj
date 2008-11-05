@@ -60,6 +60,7 @@
     <Compile Include="DataServerClientProtocolReadHeaderTests.cs" />
     <Compile Include="DataServerClientProtocolWriteHeaderTests.cs" />
     <Compile Include="DataServerConfigurationElementTests.cs" />
+    <Compile Include="DeleteBlocksHeartbeatResponseTests.cs" />
     <Compile Include="DfsClientTests.cs" />
     <Compile Include="DfsConfigurationTests.cs" />
     <Compile Include="DfsStreamTest.cs" />

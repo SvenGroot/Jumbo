@@ -63,6 +63,7 @@
     <Compile Include="DataServerCommand.cs" />
     <Compile Include="DataServerConfigurationElement.cs" />
     <Compile Include="DataServerHeartbeatCommand.cs" />
+    <Compile Include="DeleteBlocksHeartbeatResponse.cs" />
     <Compile Include="DfsClient.cs" />
     <Compile Include="DfsConfiguration.cs" />
     <Compile Include="DfsException.cs" />

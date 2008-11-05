@@ -274,6 +274,7 @@ namespace NameServerApplication
                     _log.DebugFormat("File {0} is no longer pending.", path);
                     _pendingFiles.Remove(path);                   
                 }
+                _nameServer.CommitBlock(blockID);
             }
         }
 
@@ -510,7 +511,21 @@ namespace NameServerApplication
             _log.InfoFormat("Deleting file system entry \"{0}\"", entry.FullPath);
             _editLog.LogDelete(entry.FullPath, recursive);
             parent.Children.Remove(entry);
-            // TODO: Some kind of worker thread is needed to periodically check for invalidated blocks.
+            File file = entry as File;
+            if( file != null )
+            {
+                Guid? pendingBlock = null;
+                if( file.IsOpenForWriting )
+                {
+                    lock( _pendingFiles )
+                    {
+                        PendingFile pendingFile = _pendingFiles[file.FullPath];
+                        pendingBlock = pendingFile.PendingBlock;
+                        _pendingFiles.Remove(file.FullPath);
+                    }
+                }
+                _nameServer.RemoveFileBlocks(file, pendingBlock);
+            }
         }
 
         private string AppendPath(string parent, string child)

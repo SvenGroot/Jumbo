@@ -21,6 +21,6 @@ namespace Tkl.Jumbo.Dfs
         /// host name and the port number they use to listen for clients, not their host name alone, so the
         /// name server cannot rely on <see cref="ServerContext.ClientHostName"/>.
         /// </remarks>
-        HeartbeatResponse Heartbeat(ServerAddress address, HeartbeatData[] data);
+        HeartbeatResponse[] Heartbeat(ServerAddress address, HeartbeatData[] data);
     }
 }

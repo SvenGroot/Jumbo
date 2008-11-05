@@ -146,8 +146,14 @@ namespace DataServerApplication
                     _pendingHeartbeatData.Clear();
                 }
             }
-            HeartbeatResponse response = _nameServer.Heartbeat(LocalAddress, data);
+            HeartbeatResponse[] response = _nameServer.Heartbeat(LocalAddress, data);
             if( response != null )
+                ProcessResponses(response);
+        }
+
+        private void ProcessResponses(HeartbeatResponse[] responses)
+        {
+            foreach( var response in responses )
                 ProcessResponse(response);
         }
 
@@ -163,6 +169,10 @@ namespace DataServerApplication
                     data = new BlockReportHeartbeatData() { Blocks = _blocks.ToArray() };
                 }
                 AddDataForNextHeartbeat(data);
+                break;
+            case DataServerHeartbeatCommand.DeleteBlocks:
+                _log.Info("Received DeleteBlocks command.");
+                DeleteBlocks(((DeleteBlocksHeartbeatResponse)response).Blocks);
                 break;
             }
         }
@@ -196,6 +206,29 @@ namespace DataServerApplication
                     {
                         _log.WarnFormat("The name of file '{0}' in the block storage directory is not a valid GUID.", fileName);
                     }
+                }
+            }
+        }
+
+        private void DeleteBlocks(IEnumerable<Guid> blocks)
+        {
+            lock( _blocks )
+            {
+                foreach( var block in blocks )
+                {
+                    _log.InfoFormat("Removing block {0}.", block);
+                    _blocks.Remove(block);
+                }
+            }
+            foreach( var block in blocks )
+            {
+                try
+                {
+                    System.IO.File.Delete(Path.Combine(_blockStorageDirectory, block.ToString()));
+                }
+                catch( IOException ex )
+                {
+                    _log.Error(string.Format("Failed to delete block {0}.", block), ex);
                 }
             }
         }
