@@ -269,20 +269,20 @@ namespace Tkl.Jumbo.Dfs
             base.Dispose(disposing);
             if( !_disposed )
             {
+                _disposed = true;
                 if( _fillBufferThread != null )
                 {
-                    _fillBufferThread.Abort();
+                    _bufferReadPosEvent.Set();
                     _fillBufferThread.Join();
                     _fillBufferThread = null;
                 }
-                _disposed = true;
             }
         }
 
         private void ReadBufferThread()
         {
             long position = _position;
-            while( position < _file.Size && _lastResult == DataServerClientProtocolResult.Ok )
+            while( !_disposed && position < _file.Size && _lastResult == DataServerClientProtocolResult.Ok )
             {
                 // TODO: Transparent fallback to different server.
                 int blockIndex = (int)(position / BlockSize);
@@ -313,7 +313,7 @@ namespace Tkl.Jumbo.Dfs
                             position -= difference; // Correct position
 
                             Packet packet = null;
-                            while( _lastResult == DataServerClientProtocolResult.Ok && (packet == null || !packet.IsLastPacket) )
+                            while( !_disposed && _lastResult == DataServerClientProtocolResult.Ok && (packet == null || !packet.IsLastPacket) )
                             {
                                 if( (_bufferWritePos + 1) % _bufferSize == _bufferReadPos )
                                     _bufferReadPosEvent.WaitOne();
