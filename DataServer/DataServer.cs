@@ -73,6 +73,8 @@ namespace DataServerApplication
                 _blockServer.RunAsync();
             }
 
+            AddDataForNextHeartbeat(new InitialHeartbeatData());
+
             while( true )
             {
                 SendHeartbeat();

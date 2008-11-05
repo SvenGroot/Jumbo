@@ -254,9 +254,21 @@ namespace NameServerApplication
             List<HeartbeatResponse> responseList = null;
             lock( _dataServers )
             {
-                if( !_dataServers.TryGetValue(address, out dataServer) )
+                bool initialContact = data != null && data.Length > 0 && data[0] is InitialHeartbeatData;
+                bool serverKnown = _dataServers.TryGetValue(address, out dataServer);
+                if( initialContact || !serverKnown )
                 {
-                    _log.InfoFormat("A new data server has reported in at {0}", address);
+                    if( serverKnown && initialContact )
+                    {
+                        _log.WarnFormat("Data server {0} sent initial contact data but was already known; deleting previous data.", address);
+                        // TODO: Once re-replication gets implemented I have to make sure it's done in such a way that it isn't
+                        // possible for a block to be re-replicated before the new block report is processed.
+                        RemoveDataServer(dataServer);
+                    }
+                    else if( !initialContact )
+                        _log.WarnFormat("A new data server has reported in at {0} but didn't send initial data.", address);
+                    else
+                        _log.InfoFormat("A new data server has reported in at {0}", address);
                     if( address.HostName != ServerContext.Current.ClientHostName )
                         _log.Warn("The data server reported a different hostname than is indicated in the ServerContext.");
                     dataServer = new DataServerInfo(address); // TODO: Real port number
@@ -315,7 +327,8 @@ namespace NameServerApplication
                 return ProcessNewBlock(dataServer, newBlock);
             }
 
-            _log.WarnFormat("Unknown HeartbeatData type {0}.", data.GetType().AssemblyQualifiedName);
+            if( !(data is InitialHeartbeatData) )
+                _log.WarnFormat("Unknown HeartbeatData type {0}.", data.GetType().AssemblyQualifiedName);
             return null;
         }
 
@@ -365,7 +378,7 @@ namespace NameServerApplication
                 List<Guid> invalidBlocks = null;
                 _log.Info("Received block report.");
                 dataServer.HasReportedBlocks = true;
-                dataServer.Blocks = new List<Guid>(blockReport.Blocks);
+                dataServer.Blocks = new List<Guid>();
                 foreach( Guid block in dataServer.Blocks )
                 {
                     BlockInfo info;
@@ -373,6 +386,9 @@ namespace NameServerApplication
                     {
                         lock( _underReplicatedBlocks )
                         {
+                            // TODO: It is possible for a data server that has already received and reported a block to go down
+                            // and re-report before the block leaves pending state. This makes it possible for a server to report
+                            // a pending block here, which needs to be dealt with.
                             if( _underReplicatedBlocks.TryGetValue(block, out info) )
                             {
                                 info.DataServers.Add(dataServer);
@@ -383,11 +399,13 @@ namespace NameServerApplication
                                     _underReplicatedBlocks.Remove(block);
                                     // Not needed, _blocks contains all non-pending blocks, even underreplicated ones: _blocks.Add(block, info); 
                                 }
+                                dataServer.Blocks.Add(block);
                             }
                             else if( _blocks.TryGetValue(block, out info) )
                             {
                                 info.DataServers.Add(dataServer);
                                 _log.DebugFormat("Dataserver {0} has block ID {1}", dataServer.Address, block);
+                                dataServer.Blocks.Add(block);
                             }
                             else 
                             {
@@ -509,6 +527,39 @@ namespace NameServerApplication
             foreach( var server in info.DataServers )
             {
                 server.AddBlockToDelete(block);
+            }
+        }
+
+        private void RemoveDataServer(DataServerInfo info)
+        {
+            lock( _blocks )
+            {
+                lock( _underReplicatedBlocks )
+                {
+                    lock( _pendingBlocks )
+                    {
+                        foreach( var blockID in info.Blocks )
+                        {
+                            bool pending = false;
+                            BlockInfo blockInfo;
+                            if( _pendingBlocks.TryGetValue(blockID, out blockInfo) )
+                                pending = true;
+                            else if( !_blocks.TryGetValue(blockID, out blockInfo) )
+                                Debug.Assert(false); // This shouldn't happen, it means the block handling code has bugs.
+                            bool removed = blockInfo.DataServers.Remove(info);
+                            Debug.Assert(removed);
+                            if( !pending && blockInfo.DataServers.Count < _replicationFactor && !_underReplicatedBlocks.ContainsKey(blockID) )
+                            {
+                                _log.InfoFormat("Block {0} is now under-replicated.", blockID);
+                                _underReplicatedBlocks.Add(blockID, blockInfo);
+                            }
+                        }
+                    }
+                }
+            }
+            lock( _dataServers )
+            {
+                _dataServers.Remove(info.Address);
             }
         }
     }

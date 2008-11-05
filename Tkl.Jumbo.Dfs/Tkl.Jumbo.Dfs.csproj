@@ -77,6 +77,7 @@
     <Compile Include="ClientChannelSink.cs" />
     <Compile Include="INameServerClientProtocol.cs" />
     <Compile Include="INameServerHeartbeatProtocol.cs" />
+    <Compile Include="InitialHeartbeatData.cs" />
     <Compile Include="InvalidPacketException.cs" />
     <Compile Include="NameServerConfigurationElement.cs" />
     <Compile Include="NewBlockHeartbeatData.cs" />
