@@ -59,7 +59,7 @@ namespace Tkl.Jumbo.Dfs.Test
 
             private void ServerThread()
             {
-                TcpListener listener = new TcpListener(IPAddress.Any, 15000);
+                TcpListener listener = new TcpListener((Environment.OSVersion.Platform == PlatformID.Win32NT && Socket.OSSupportsIPv6) ? IPAddress.IPv6Any : IPAddress.Any, 15000);
                 bool waitingForClosed = false;
                 try
                 {
@@ -71,7 +71,9 @@ namespace Tkl.Jumbo.Dfs.Test
                     using( BinaryReader reader = new BinaryReader(stream) )
                     using( BinaryWriter writer = new BinaryWriter(stream) )
                     {
-                        Trace.WriteLine("Connectiong accepted.");
+                        client.LingerState = new LingerOption(true, 10);
+                        client.NoDelay = true;
+                        Trace.WriteLine("Connection accepted.");
                         if( _mode != TestMode.Client )
                         {
                             BinaryFormatter formatter = new BinaryFormatter();
@@ -108,11 +110,13 @@ namespace Tkl.Jumbo.Dfs.Test
                                 }
                             }
                             packet.Read(reader, false);
-                            Trace.WriteLine("Packet received.");
                             if( _mode == TestMode.Error && ReceivedPackets.Count >= 5 )
                             {
                                 writer.Write((int)DataServerClientProtocolResult.Error);
-                                waitingForClosed = true;
+                                writer.Flush();
+                                Thread.Sleep(2000);
+                                return;
+                                //waitingForClosed = true;
                             }
                             if( _mode == TestMode.CloseConnection && ReceivedPackets.Count >= 5 )
                             {
@@ -219,7 +223,9 @@ namespace Tkl.Jumbo.Dfs.Test
                 List<Packet> packets = SendPackets(target);
 
                 target.WaitUntilSendFinished();
+                Utilities.TraceLineAndFlush("Sender finished.");
                 server.Join();
+                Utilities.TraceLineAndFlush("Server finished.");
                 Assert.AreEqual(DataServerClientProtocolResult.Error, target.LastResult);
                 Assert.IsNull(target.LastException);
                 Assert.IsFalse(server.HasErrors);

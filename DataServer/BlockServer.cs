@@ -86,6 +86,8 @@ namespace DataServerApplication
                     switch( header.Command )
                     {
                     case DataServerCommand.WriteBlock:
+                        client.LingerState = new LingerOption(true, 10);
+                        client.NoDelay = true;
                         DataServerClientProtocolWriteHeader writeHeader = header as DataServerClientProtocolWriteHeader;
                         if( writeHeader != null )
                         {
@@ -166,8 +168,7 @@ namespace DataServerApplication
 
                     _log.InfoFormat("Writing block {0} complete.", header.BlockID);
                     _dataServer.CompleteBlock(header.BlockID, blockSize);
-                    if( forwarder == null )
-                        clientWriter.WriteResult(DataServerClientProtocolResult.Ok);
+                    clientWriter.WriteResult(DataServerClientProtocolResult.Ok);
                 }
                 catch( Exception )
                 {
@@ -191,26 +192,8 @@ namespace DataServerApplication
         private static void SendErrorResultAndWaitForConnectionClosed(BinaryWriter clientWriter, BinaryReader reader)
         {
             clientWriter.WriteResult(DataServerClientProtocolResult.Error);
-            try
-            {
-                Packet packet = new Packet();
-                while( !packet.IsLastPacket )
-                {
-                    packet.Read(reader, false);
-                }
-            }
-            catch( EndOfStreamException )
-            {
-                _log.Info("Connection closed by client.");
-            }
-            catch( IOException ex )
-            {
-                SocketException socketEx = ex.InnerException as SocketException;
-                if( socketEx != null && (socketEx.SocketErrorCode == SocketError.ConnectionAborted || socketEx.SocketErrorCode == SocketError.ConnectionReset) )
-                    _log.Info("Connection closed by client.");
-                else
-                    throw;
-            }
+            Thread.Sleep(5000); // Wait some time so the client can catch the error before the socket is closed; this is only necessary
+                                // on Win32 it seems, but it doesn't harm anything.
         }
 
         private static bool ReceivePackets(DataServerClientProtocolWriteHeader header, ref int blockSize, BinaryWriter clientWriter, BinaryReader reader, BlockSender forwarder, BinaryWriter fileWriter)
@@ -235,7 +218,10 @@ namespace DataServerApplication
                 if( forwarder != null )
                 {
                     if( !CheckForwarderError(header, forwarder) )
+                    {
+                        SendErrorResultAndWaitForConnectionClosed(clientWriter, reader);
                         return false;
+                    }
                     forwarder.AddPacket(packet);
                 }
 

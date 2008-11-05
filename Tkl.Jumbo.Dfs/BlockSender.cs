@@ -261,7 +261,7 @@ namespace Tkl.Jumbo.Dfs
                     //}
                     if( _dataServers == null && _lastResult != DataServerClientProtocolResult.Ok )
                         writer.Write((int)_lastResult);
-                    else
+                    else if( _lastResult == DataServerClientProtocolResult.Ok )
                     {
                         DataServerClientProtocolResult result = (DataServerClientProtocolResult)reader.ReadInt32();
                         //int total = Environment.TickCount - prevTime;
@@ -335,7 +335,14 @@ namespace Tkl.Jumbo.Dfs
                             break;
                         }
                     }
-                    packet.Write(writer, false);
+                    try
+                    {
+                        packet.Write(writer, false);
+                    }
+                    catch( IOException )
+                    {
+                        throw;
+                    }
                     //int total = Environment.TickCount - prevTime;
                     //if( total > 100 )
                     //    Console.WriteLine("!!! Long write time: {0}", total);
