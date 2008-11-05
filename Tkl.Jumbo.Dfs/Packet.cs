@@ -185,7 +185,7 @@ namespace Tkl.Jumbo.Dfs
             Packet other = obj as Packet;
             if( other != null )
             {
-                if( Size == other.Size && Checksum == other.Checksum )
+                if( IsLastPacket == other.IsLastPacket && Size == other.Size && Checksum == other.Checksum )
                 {
                     for( int x = 0; x < Size; ++x )
                     {

@@ -5,20 +5,24 @@ using System.Text;
 using NameServerApplication;
 using System.Threading;
 using DataServerApplication;
+using System.Configuration;
+using System.Diagnostics;
 
 namespace Tkl.Jumbo.Dfs.Test
 {
     class TestDfsCluster
     {
         private AppDomain _clusterDomain;
+        private NameServerRunner _nameServerRunner;
 
         public const int NameServerPort = 10000;
         public const int FirstDataServerPort = 10001;
 
         private class NameServerRunner : MarshalByRefObject
         {
-            public void Run(string editLogPath, int replicationFactor)
+            public void Run(string editLogPath, int replicationFactor, int dataNodes)
             {
+                //log4net.Config.BasicConfigurator.Configure(new log4net.Appender.FileAppender(new log4net.Layout.PatternLayout("%date [%thread] %-5level %logger [%property{ClientHostName}] - %message%newline"), "/home2/sgroot/jumbo/test.log") { Threshold = log4net.Core.Level.All });
                 //log4net.Config.BasicConfigurator.Configure(new log4net.Appender.FileAppender() { Layout = new log4net.Layout.PatternLayout("%date [%thread] %-5level %logger [%property{ClientHostName}] - %message%newline"), File = System.IO.Path.Combine(editLogPath, "logfile.txt"), Threshold = log4net.Core.Level.All });
                 DfsConfiguration config = new DfsConfiguration();
                 config.NameServer.HostName = "localhost";
@@ -28,6 +32,22 @@ namespace Tkl.Jumbo.Dfs.Test
                 if( Environment.OSVersion.Platform == PlatformID.Unix )
                     config.NameServer.ListenIPv4AndIPv6 = false;
                 NameServer.Run(config);
+                if( dataNodes > 0 )
+                {
+                    DataServerRunner dataServerRunner = new DataServerRunner();
+                    int port = FirstDataServerPort;
+                    for( int x = 0; x < dataNodes; ++x, ++port )
+                    {
+                        string blocksPath = System.IO.Path.Combine(editLogPath, "blocks" + x.ToString(System.Globalization.CultureInfo.InvariantCulture));
+                        System.IO.Directory.CreateDirectory(blocksPath);
+                        dataServerRunner.Run(blocksPath, port);
+                    }
+                }
+            }
+
+            public void Shutdown()
+            {
+                NameServer.Shutdown();
             }
         }
 
@@ -44,6 +64,7 @@ namespace Tkl.Jumbo.Dfs.Test
                     config.DataServer.ListenIPv4AndIPv6 = false;
                 Thread t = new Thread(RunThread);
                 t.Name = "DataServer";
+                t.IsBackground = true;
                 t.Start(config);
             }
 
@@ -68,24 +89,18 @@ namespace Tkl.Jumbo.Dfs.Test
             
             _clusterDomain = AppDomain.CreateDomain("TestCluster", null, setup);
 
-            NameServerRunner runner = (NameServerRunner)_clusterDomain.CreateInstanceAndUnwrap(typeof(NameServerRunner).Assembly.FullName, typeof(NameServerRunner).FullName);
-            runner.Run(path, replicationFactor);
+            _nameServerRunner = (NameServerRunner)_clusterDomain.CreateInstanceAndUnwrap(typeof(NameServerRunner).Assembly.FullName, typeof(NameServerRunner).FullName);
+            _nameServerRunner.Run(path, replicationFactor, dataNodes);
 
-            if( dataNodes > 0 )
-            {
-                DataServerRunner dataServerRunner = (DataServerRunner)_clusterDomain.CreateInstanceAndUnwrap(typeof(DataServerRunner).Assembly.FullName, typeof(DataServerRunner).FullName);
-                int port = FirstDataServerPort;
-                for( int x = 0; x < dataNodes; ++x, ++port )
-                {
-                    string blocksPath = System.IO.Path.Combine(path, "blocks" + x.ToString(System.Globalization.CultureInfo.InvariantCulture));
-                    System.IO.Directory.CreateDirectory(blocksPath);
-                    dataServerRunner.Run(blocksPath, port);
-                }
-            }
         }
 
         public void Shutdown()
         {
+            Thread.Sleep(1000);
+            _nameServerRunner.Shutdown();
+            _nameServerRunner = null;
+            Trace.WriteLine("Shutting down now.");
+            Trace.Flush();
             AppDomain.Unload(_clusterDomain);
             _clusterDomain = null;
         }

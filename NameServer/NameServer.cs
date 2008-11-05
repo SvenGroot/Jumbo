@@ -20,6 +20,7 @@ namespace NameServerApplication
     {
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(NameServer));
         private static DfsConfiguration _rpcConfig; // This is set by the Run method and used by the default constructor when Remoting creates the object
+        private static List<IChannel> _channels = new List<IChannel>();
         private readonly int _replicationFactor;
         private readonly int _blockSize;
         private Random _random = new Random();
@@ -69,6 +70,7 @@ namespace NameServerApplication
             Run(DfsConfiguration.GetConfiguration());
         }
 
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.Synchronized)]
         public static void Run(DfsConfiguration config)
         {
             if( config == null )
@@ -76,6 +78,14 @@ namespace NameServerApplication
 
             _rpcConfig = config;
             ConfigureRemoting(config);
+        }
+
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.Synchronized)]
+        public static void Shutdown()
+        {
+            foreach( var channel in _channels )
+                ChannelServices.UnregisterChannel(channel);
+            _channels.Clear();
         }
 
         public override object InitializeLifetimeService()
@@ -396,6 +406,7 @@ namespace NameServerApplication
             formatter.Next = new ServerChannelSinkProvider();
             TcpChannel channel = new TcpChannel(properties, null, formatter);
             ChannelServices.RegisterChannel(channel, false);
+            _channels.Add(channel);
         }
 
         private void CheckSafeMode()

@@ -22,7 +22,6 @@ namespace Tkl.Jumbo.Dfs
         private volatile DataServerClientProtocolResult _lastResult = DataServerClientProtocolResult.Ok;
         private volatile Exception _lastException;
         private Thread _sendPacketsThread;
-        private volatile bool _finished;
         private bool _hasLastPacket;
         private readonly Guid _blockID;
         private readonly ServerAddress[] _dataServers;
@@ -316,12 +315,6 @@ namespace Tkl.Jumbo.Dfs
                 }
                 if( packet != null )
                 {
-                    if( packet.IsLastPacket )
-                    {
-                        // Set finished to let the result reader thread know the last packet has been sent,
-                        // so if _requiredConfirmations reaches zero it's done.
-                        _finished = true;
-                    }
                     if( _dataServers == null )
                     {
                         writer.Write((int)DataServerClientProtocolResult.Ok);

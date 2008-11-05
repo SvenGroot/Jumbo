@@ -74,18 +74,19 @@ namespace Tkl.Jumbo.Dfs.Test
                 bytesRead2 = stream2.Read(buffer2, 0, buffer2.Length);
                 if( bytesRead1 > 0 && bytesRead1 == bytesRead2 )
                 {
-                    if( !CompareArray(buffer1, buffer2, bytesRead1) )
+                    if( !CompareArray(buffer1, 0, buffer2, 0, bytesRead1) )
                         return false;
                 }
             } while( bytesRead1 > 0 && bytesRead1 == bytesRead2 );
             return bytesRead1 == bytesRead2;
         }
 
-        public static bool CompareArray<T>(T[] array1, T[] array2, int count)
+        public static bool CompareArray<T>(T[] array1, int offset1, T[] array2, int offset2, int count)
         {
-            for( int x = 0; x < count; ++x )
+            int end = offset1 + count;
+            for( int i1 = offset1, i2 = offset2; i1 < end; ++i1, ++i2 )
             {
-                if( !object.Equals(array1[x], array2[x] ) )
+                if( !object.Equals(array1[i1], array2[i2] ) )
                     return false;
             }
             return true;

@@ -28,6 +28,7 @@ namespace Tkl.Jumbo.Dfs.Test
         {
             private Thread _thread;
             private TestMode _mode;
+            private ManualResetEvent _listenEvent = new ManualResetEvent(false);
 
             public BlockSenderServer()
                 : this(TestMode.Normal)
@@ -40,6 +41,7 @@ namespace Tkl.Jumbo.Dfs.Test
                 _mode = mode;
                 _thread = new Thread(ServerThread);
                 _thread.Start();
+                _listenEvent.WaitOne();
             }
 
             public Guid ReceivedBlockID { get; private set; }
@@ -57,12 +59,13 @@ namespace Tkl.Jumbo.Dfs.Test
 
             private void ServerThread()
             {
-                TcpListener listener = new TcpListener(Socket.OSSupportsIPv6 ? IPAddress.IPv6Any : IPAddress.Any, 15000);
+                TcpListener listener = new TcpListener(IPAddress.Any, 15000);
                 bool waitingForClosed = false;
                 try
                 {
                     Trace.WriteLine("Server starts listening.");
                     listener.Start();
+                    _listenEvent.Set();
                     using( TcpClient client = listener.AcceptTcpClient() )
                     using( NetworkStream stream = client.GetStream() )
                     using( BinaryReader reader = new BinaryReader(stream) )
@@ -157,6 +160,9 @@ namespace Tkl.Jumbo.Dfs.Test
         [TestFixtureSetUp]
         public void Setup()
         {
+            Trace.Listeners.Clear();
+            Trace.Listeners.Add(new ConsoleTraceListener());
+            Trace.WriteLine("Listeners configured.");
         }
 
         [Test]

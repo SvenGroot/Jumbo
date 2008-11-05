@@ -27,6 +27,7 @@ namespace Tkl.Jumbo.Dfs
         private Packet[] _packetBuffer = new Packet[_bufferSize];
         private DataServerClientProtocolResult _lastResult = DataServerClientProtocolResult.Ok;
         private Thread _fillBufferThread;
+        private bool _disposed;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="DfsInputStream"/> with the specified name server and file.
@@ -154,6 +155,7 @@ namespace Tkl.Jumbo.Dfs
             {
                 // We don't start the thread in the constructor because that'd be a waste if you immediately seek after that.
                 _fillBufferThread = new Thread(ReadBufferThread);
+                _fillBufferThread.IsBackground = true;
                 _fillBufferThread.Name = "FillBuffer";
                 _fillBufferThread.Start();
             }
@@ -229,13 +231,15 @@ namespace Tkl.Jumbo.Dfs
                 {
                     _fillBufferThread.Abort();
                     _fillBufferThread.Join();
-                    _fillBufferThread = new Thread(ReadBufferThread);
-                    _fillBufferThread.Name = "FillBuffer";
-                    _bufferReadPos = 0;
-                    _bufferWritePos = 0;
-                    _fillBufferThread.Start();
                 }
+                _lastResult = DataServerClientProtocolResult.Ok;
                 _position = newPosition;
+                _fillBufferThread = new Thread(ReadBufferThread);
+                _fillBufferThread.IsBackground = true;
+                _fillBufferThread.Name = "FillBuffer";
+                _bufferReadPos = 0;
+                _bufferWritePos = 0;
+                _fillBufferThread.Start();
             }
             return _position;
         }
@@ -263,9 +267,15 @@ namespace Tkl.Jumbo.Dfs
         protected override void Dispose(bool disposing)
         {
             base.Dispose(disposing);
-            if( _fillBufferThread != null )
+            if( !_disposed )
             {
-                _fillBufferThread.Abort();
+                if( _fillBufferThread != null )
+                {
+                    _fillBufferThread.Abort();
+                    _fillBufferThread.Join();
+                    _fillBufferThread = null;
+                }
+                _disposed = true;
             }
         }
 

@@ -63,7 +63,14 @@
     <Compile Include="DfsClientTests.cs" />
     <Compile Include="DfsConfigurationTests.cs" />
     <Compile Include="DfsStreamTest.cs" />
+    <Compile Include="DirectoryTests.cs" />
+    <Compile Include="FileSystemEntryTests.cs" />
+    <Compile Include="FileTests.cs" />
+    <Compile Include="NameServerConfigurationElementTests.cs" />
+    <Compile Include="NewBlockHeartbeatDataTests.cs" />
+    <Compile Include="PacketTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="ServerAdressTests.cs" />
     <Compile Include="TestDfsCluster.cs" />
     <Compile Include="Utilities.cs" />
   </ItemGroup>

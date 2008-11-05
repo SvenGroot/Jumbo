@@ -26,7 +26,7 @@ namespace Tkl.Jumbo.Dfs
         /// <param name="dateCreated">The date the new entry was created.</param>
         /// <exception cref="ArgumentNullException"><paramref name="name"/> is <see langword="null" />.</exception>
         /// <exception cref="ArgumentException"><paramref name="name"/> contains the / character.</exception>
-        public FileSystemEntry(Directory parent, string name, DateTime dateCreated)
+        protected FileSystemEntry(Directory parent, string name, DateTime dateCreated)
         {
             if( name == null )
                 throw new ArgumentNullException("name");
