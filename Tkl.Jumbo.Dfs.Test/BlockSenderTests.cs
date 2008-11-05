@@ -157,13 +157,6 @@ namespace Tkl.Jumbo.Dfs.Test
             }
         }
 
-        [TestFixtureSetUp]
-        public void Setup()
-        {
-            Trace.Listeners.Clear();
-            Trace.Listeners.Add(new ConsoleTraceListener());
-            Trace.WriteLine("Listeners configured.");
-        }
 
         [Test]
         public void TestBlockSenderServerList()

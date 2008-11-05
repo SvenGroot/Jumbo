@@ -72,6 +72,7 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="ServerAdressTests.cs" />
     <Compile Include="TestDfsCluster.cs" />
+    <Compile Include="TestSetup.cs" />
     <Compile Include="Utilities.cs" />
   </ItemGroup>
   <ItemGroup>

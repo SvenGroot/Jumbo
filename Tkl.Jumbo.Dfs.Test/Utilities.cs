@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.IO;
+using System.Diagnostics;
 
 namespace Tkl.Jumbo.Dfs.Test
 {
@@ -90,6 +91,12 @@ namespace Tkl.Jumbo.Dfs.Test
                     return false;
             }
             return true;
+        }
+
+        public static void TraceLineAndFlush(string message)
+        {
+            Trace.WriteLine(message);
+            Trace.Flush();
         }
     }
 }

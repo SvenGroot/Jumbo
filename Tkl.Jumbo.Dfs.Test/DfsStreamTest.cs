@@ -19,9 +19,6 @@ namespace Tkl.Jumbo.Dfs.Test
         [TestFixtureSetUp]
         public void Setup()
         {
-            Trace.Listeners.Clear();
-            Trace.Listeners.Add(new ConsoleTraceListener());
-            Trace.WriteLine("Listeners configured.");
             _cluster = new TestDfsCluster(1, 1);
             Trace.WriteLine("Starting nameserver.");
             DfsConfiguration config = TestDfsCluster.CreateClientConfig();
