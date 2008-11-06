@@ -142,10 +142,9 @@ namespace DataServerApplication
                         else
                         {
                             _log.DebugFormat("This is the last server in the list for block {0}.", header.BlockID);
-                            // Send an OK for the header. We don't do this when forwarding since the BlockSender will do it
-                            // when it receives the ok from the forwarded server.
-                            clientWriter.WriteResult(DataServerClientProtocolResult.Ok);
                         }
+                        // TODO: If we are forwarding, we might want to wait until the other servers have accepted the header.
+                        clientWriter.WriteResult(DataServerClientProtocolResult.Ok);
 
                         if( !ReceivePackets(header, ref blockSize, clientWriter, reader, forwarder, fileWriter) )
                             return;

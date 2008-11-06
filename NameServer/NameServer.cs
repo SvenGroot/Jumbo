@@ -501,7 +501,7 @@ namespace NameServerApplication
                 properties["bindTo"] = bindTo;
             BinaryServerFormatterSinkProvider formatter = new BinaryServerFormatterSinkProvider();
             formatter.Next = new ServerChannelSinkProvider();
-            TcpChannel channel = new TcpChannel(properties, null, formatter);
+            TcpServerChannel channel = new TcpServerChannel(properties, formatter);
             ChannelServices.RegisterChannel(channel, false);
             _channels.Add(channel);
         }

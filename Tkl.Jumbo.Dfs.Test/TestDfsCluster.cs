@@ -20,15 +20,18 @@ namespace Tkl.Jumbo.Dfs.Test
 
         private class NameServerRunner : MarshalByRefObject
         {
-            public void Run(string editLogPath, int replicationFactor, int dataNodes)
+            public void Run(string editLogPath, int replicationFactor, int dataNodes, int? blockSize)
             {
                 //log4net.Config.BasicConfigurator.Configure(new log4net.Appender.FileAppender(new log4net.Layout.PatternLayout("%date [%thread] %-5level %logger [%property{ClientHostName}] - %message%newline"), "/home2/sgroot/jumbo/test.log") { Threshold = log4net.Core.Level.All });
                 //log4net.Config.BasicConfigurator.Configure(new log4net.Appender.FileAppender() { Layout = new log4net.Layout.PatternLayout("%date [%thread] %-5level %logger [%property{ClientHostName}] - %message%newline"), File = System.IO.Path.Combine(editLogPath, "logfile.txt"), Threshold = log4net.Core.Level.All });
+                //log4net.Config.BasicConfigurator.Configure(new log4net.Appender.DebugAppender(new log4net.Layout.PatternLayout("%date [%thread] %-5level %logger [%property{ClientHostName}] - %message%newline")) { Threshold = log4net.Core.Level.All });
                 DfsConfiguration config = new DfsConfiguration();
                 config.NameServer.HostName = "localhost";
                 config.NameServer.Port = NameServerPort; // Pick a different port so the tests can run even when a regular cluster is running
                 config.NameServer.ReplicationFactor = replicationFactor;
                 config.NameServer.EditLogDirectory = editLogPath;
+                if( blockSize != null )
+                    config.NameServer.BlockSize = blockSize.Value;
                 if( Environment.OSVersion.Platform == PlatformID.Unix )
                     config.NameServer.ListenIPv4AndIPv6 = false;
                 NameServer.Run(config);
@@ -77,6 +80,11 @@ namespace Tkl.Jumbo.Dfs.Test
         }
 
         public TestDfsCluster(int dataNodes, int replicationFactor)
+            : this(dataNodes, replicationFactor, null)
+        {
+        }
+
+        public TestDfsCluster(int dataNodes, int replicationFactor, int? blockSize)
         {
             string path = Utilities.TestOutputPath;
             if( System.IO.Directory.Exists(path) )
@@ -90,7 +98,7 @@ namespace Tkl.Jumbo.Dfs.Test
             _clusterDomain = AppDomain.CreateDomain("TestCluster", null, setup);
 
             _nameServerRunner = (NameServerRunner)_clusterDomain.CreateInstanceAndUnwrap(typeof(NameServerRunner).Assembly.FullName, typeof(NameServerRunner).FullName);
-            _nameServerRunner.Run(path, replicationFactor, dataNodes);
+            _nameServerRunner.Run(path, replicationFactor, dataNodes, blockSize);
 
         }
 

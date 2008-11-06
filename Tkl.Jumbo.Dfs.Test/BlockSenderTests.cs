@@ -60,6 +60,7 @@ namespace Tkl.Jumbo.Dfs.Test
             private void ServerThread()
             {
                 TcpListener listener = new TcpListener((Environment.OSVersion.Platform == PlatformID.Win32NT && Socket.OSSupportsIPv6) ? IPAddress.IPv6Any : IPAddress.Any, 15000);
+                //TcpListener listener = new TcpListener(IPAddress.Any, 15000);
                 bool waitingForClosed = false;
                 try
                 {
@@ -81,7 +82,7 @@ namespace Tkl.Jumbo.Dfs.Test
                             ReceivedBlockID = header.BlockID;
                             ReceivedCommand = header.Command;
                             ReceivedDataServers = header.DataServers;
-                            //writer.Write((int)DataServerClientProtocolResult.Ok);
+                            writer.Write((int)DataServerClientProtocolResult.Ok);
                             Trace.WriteLine("Header sent.");
                         }
                         else

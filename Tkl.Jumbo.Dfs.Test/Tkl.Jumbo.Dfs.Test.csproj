@@ -68,6 +68,7 @@
     <Compile Include="FileSystemEntryTests.cs" />
     <Compile Include="FileTests.cs" />
     <Compile Include="NameServerConfigurationElementTests.cs" />
+    <Compile Include="NameServerTests.cs" />
     <Compile Include="NewBlockHeartbeatDataTests.cs" />
     <Compile Include="PacketTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

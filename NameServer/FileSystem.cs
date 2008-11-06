@@ -366,7 +366,7 @@ namespace NameServerApplication
         private void AppendBlock(PendingFile file, Guid blockID, bool checkReplication)
         {
             if( file.PendingBlock != null )
-                throw new Exception("Cannot add a block to a file with a pending block."); // TODO: Handle properly.
+                throw new InvalidOperationException("Cannot add a block to a file with a pending block.");
 
             if( checkReplication )
                 NameServer.CheckBlockReplication(file.File.Blocks);

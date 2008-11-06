@@ -255,31 +255,23 @@ namespace Tkl.Jumbo.Dfs
                     stream.ReadTimeout = 30000;
                     stream.WriteTimeout = 30000;
 
-                    // This function also starts the result reader thread if necessary
-                    WriteHeader(stream, writer, reader);
-
-                    SendPackets(writer, stream, reader);
-
-                    //if( _resultReaderThread != null )
-                    //{
-                    //    // We must wait for the result reader thread to finish; it's using the network connection
-                    //    // so we can't close that.
-                    //    _resultReaderThread.Join();
-                    //}
-                    if( _dataServers == null && _lastResult != DataServerClientProtocolResult.Ok )
-                        writer.Write((int)_lastResult);
-                    else if( _lastResult == DataServerClientProtocolResult.Ok )
+                    if( WriteHeader(stream, writer, reader) )
                     {
-                        DataServerClientProtocolResult result = (DataServerClientProtocolResult)reader.ReadInt32();
-                        //int total = Environment.TickCount - prevTime;
-                        //if( total > 100 )
-                        //    Console.WriteLine("!!! Long read time: {0}", total);
-                        if( result != DataServerClientProtocolResult.Ok )
+
+                        SendPackets(writer, stream, reader);
+
+                        //if( _resultReaderThread != null )
+                        //{
+                        //    // We must wait for the result reader thread to finish; it's using the network connection
+                        //    // so we can't close that.
+                        //    _resultReaderThread.Join();
+                        //}
+                        if( _dataServers == null && _lastResult != DataServerClientProtocolResult.Ok )
+                            writer.Write((int)_lastResult);
+                        else if( _lastResult == DataServerClientProtocolResult.Ok )
                         {
-                            _lastResult = result;
-                            // Wake up the other threads.
-                            _packetsToSendEvent.Set();
-                            _packetsToSendDequeueEvent.Set();
+                            // If no error has been encountered thus far, we need to wait for the final ok
+                            ReadResult(reader);
                         }
                     }
                 }
@@ -329,18 +321,8 @@ namespace Tkl.Jumbo.Dfs
                     //int prevTime = Environment.TickCount;
                     if( stream.DataAvailable )
                     {
-                        DataServerClientProtocolResult result = (DataServerClientProtocolResult)reader.ReadInt32();
-                        //int total = Environment.TickCount - prevTime;
-                        //if( total > 100 )
-                        //    Console.WriteLine("!!! Long read time: {0}", total);
-                        if( result != DataServerClientProtocolResult.Ok )
-                        {
-                            _lastResult = result;
-                            // Wake up the other threads.
-                            _packetsToSendEvent.Set();
-                            _packetsToSendDequeueEvent.Set();
+                        if( !ReadResult(reader) )
                             break;
-                        }
                     }
                     try
                     {
@@ -365,7 +347,21 @@ namespace Tkl.Jumbo.Dfs
             }
         }
 
-        private void WriteHeader(NetworkStream stream, BinaryWriter writer, BinaryReader reader)
+        private bool ReadResult(BinaryReader reader)
+        {
+            DataServerClientProtocolResult result = (DataServerClientProtocolResult)reader.ReadInt32();
+            if( result != DataServerClientProtocolResult.Ok )
+            {
+                _lastResult = result;
+                // Wake up the other threads.
+                _packetsToSendDequeueEvent.Set();
+                _packetsToSendEvent.Set();
+                return false;
+            }
+            return true;
+        }
+
+        private bool WriteHeader(NetworkStream stream, BinaryWriter writer, BinaryReader reader)
         {
             // If the data server is using this class to return data to the client, we don't need to send
             // a header or listen for results. We do need to send an initial OK and the offset.
@@ -382,7 +378,10 @@ namespace Tkl.Jumbo.Dfs
                 header.DataServers = _dataServers;
                 BinaryFormatter formatter = new BinaryFormatter();
                 formatter.Serialize(stream, header);
+
+                return ReadResult(reader);
             }
+            return true;
         }
 
         /// <summary>
