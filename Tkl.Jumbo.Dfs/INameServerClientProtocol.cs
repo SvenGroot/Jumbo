@@ -33,7 +33,7 @@ namespace Tkl.Jumbo.Dfs
         /// <param name="path">The full path of the new file.</param>
         /// <exception cref="ArgumentNullException"><paramref name="directory"/> is <see langword="null" />, or <paramref name="name"/> is <see langword="null"/> or an empty string..</exception>
         /// <exception cref="ArgumentException"><paramref name="directory"/> is not an absolute path, contains an empty component, contains a file name, or <paramref name="name"/> refers to an existing file or directory.</exception>
-        /// <exception cref="DirectoryNotFoundException"><paramref name="directory"/> does not exist.</exception>
+        /// <exception cref="System.IO.DirectoryNotFoundException"><paramref name="directory"/> does not exist.</exception>
         BlockAssignment CreateFile(string path);
 
         /// <summary>
@@ -51,7 +51,7 @@ namespace Tkl.Jumbo.Dfs
         /// <returns>A <see cref="File"/> object referring to the file.</returns>
         /// <exception cref="ArgumentNullException"><paramref name="directory"/> is <see langword="null" />, or <paramref name="name"/> is <see langword="null"/> or an empty string..</exception>
         /// <exception cref="ArgumentException"><paramref name="directory"/> is not an absolute path, contains an empty component, contains a file name, or <paramref name="name"/> refers to an existing file or directory.</exception>
-        /// <exception cref="DirectoryNotFoundException"><paramref name="directory"/> does not exist.</exception>
+        /// <exception cref="System.IO.DirectoryNotFoundException"><paramref name="directory"/> does not exist.</exception>
         File GetFileInfo(string path);
 
         /// <summary>
@@ -61,7 +61,7 @@ namespace Tkl.Jumbo.Dfs
         /// <returns>Information about the new block.</returns>
         /// <exception cref="ArgumentNullException"><paramref name="directory"/> is <see langword="null" />, or <paramref name="name"/> is <see langword="null"/> or an empty string..</exception>
         /// <exception cref="ArgumentException"><paramref name="directory"/> is not an absolute path, contains an empty component, contains a file name, or <paramref name="name"/> refers to an existing file or directory.</exception>
-        /// <exception cref="DirectoryNotFoundException"><paramref name="directory"/> does not exist.</exception>
+        /// <exception cref="System.IO.DirectoryNotFoundException"><paramref name="directory"/> does not exist.</exception>
         BlockAssignment AppendBlock(string path);
 
         /// <summary>
@@ -80,9 +80,9 @@ namespace Tkl.Jumbo.Dfs
         /// <summary>
         /// Waits until safe mode is off or the time out expires.
         /// </summary>
-        /// <param name="timeOut">The maximum time to wait for safe mode to be turned off in milliseconds, or <see cref="System.Threading.TimeOut.Infinite"/> to wait indefinitely.</param>
+        /// <param name="timeout">The maximum time to wait for safe mode to be turned off in milliseconds, or <see cref="System.Threading.Timeout.Infinite"/> to wait indefinitely.</param>
         /// <returns><see langword="true"/> if safe mode was turned off; <see langword="false"/> if the time out expired.</returns>
-        bool WaitForSafeModeOff(int timeOut);
+        bool WaitForSafeModeOff(int timeout);
 
         /// <summary>
         /// Gets a value that indicates whether safe mode is on or off.

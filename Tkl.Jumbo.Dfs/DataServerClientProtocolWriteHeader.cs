@@ -11,6 +11,9 @@ namespace Tkl.Jumbo.Dfs
     [Serializable]
     public class DataServerClientProtocolWriteHeader : DataServerClientProtocolHeader 
     {
+        /// <summary>
+        /// Initializes a new instance of the <see cref="DataServerClientProtocolWriteHeader"/> class.
+        /// </summary>
         public DataServerClientProtocolWriteHeader()
             : base(DataServerCommand.WriteBlock)
         {

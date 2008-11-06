@@ -12,7 +12,7 @@ namespace Tkl.Jumbo.Dfs
     public class DeleteBlocksHeartbeatResponse : HeartbeatResponse
     {
         /// <summary>
-        /// Initializes a new instance of the <see cref="DeleteBlockHeartbeatResponse"/> class.
+        /// Initializes a new instance of the <see cref="DeleteBlocksHeartbeatResponse"/> class.
         /// </summary>
         /// <param name="blocks">A list of the identifiers of the blocks to delete.</param>
         public DeleteBlocksHeartbeatResponse(IEnumerable<Guid> blocks)

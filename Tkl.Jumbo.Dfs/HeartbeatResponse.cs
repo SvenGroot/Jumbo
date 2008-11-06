@@ -11,8 +11,15 @@ namespace Tkl.Jumbo.Dfs
     [Serializable]
     public class HeartbeatResponse
     {
+        /// <summary>
+        /// Initializes a new instance of the <see cref="HeartbeatResponse"/> class.
+        /// </summary>
         public HeartbeatResponse() : this(DataServerHeartbeatCommand.None) { }
 
+        /// <summary>
+        /// Initializes a new innstance of the <see cref="HeartbeatResponse"/> class with the specified command.
+        /// </summary>
+        /// <param name="command">The <see cref="DataServerHeartbeatCommand"/> to send to the server.</param>
         public HeartbeatResponse(DataServerHeartbeatCommand command)
         {
             Command = command;

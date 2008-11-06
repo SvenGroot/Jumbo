@@ -50,6 +50,9 @@ namespace Tkl.Jumbo.Dfs
             BlockSize = nameServer.BlockSize;
         }
 
+        /// <summary>
+        /// Ensures that resources are freed and other cleanup operations are performed when the garbage collector reclaims the <see cref="DfsInputStream"/>.
+        /// </summary>
         ~DfsInputStream()
         {
             Dispose(false);
@@ -264,6 +267,10 @@ namespace Tkl.Jumbo.Dfs
             throw new NotSupportedException();
         }
 
+        /// <summary>
+        /// Releases the unmanaged resources used by the <see cref="DfsInputStream"/> and optionally releases the managed resources.
+        /// </summary>
+        /// <param name="disposing"><see langword="true"/> to release both managed and unmanaged resources; <see langword="false"/> to release only unmanaged resources.</param>
         protected override void Dispose(bool disposing)
         {
             base.Dispose(disposing);

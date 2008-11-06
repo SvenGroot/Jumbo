@@ -45,6 +45,9 @@ namespace Tkl.Jumbo.Dfs
             _sendPacketsThread.Start();
         }
 
+        /// <summary>
+        /// Ensures that resources are freed and other cleanup operations are performed when the garbage collector reclaims the <see cref="BlockSender"/>.
+        /// </summary>
         ~BlockSender()
         {
             Dispose(false);
@@ -67,6 +70,18 @@ namespace Tkl.Jumbo.Dfs
             _sendPacketsThread.Start();
         }
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="BlockSender"/> class, using an existing stream to write
+        /// th data to.
+        /// </summary>
+        /// <param name="stream">The <see cref="NetworkStream"/> to write packet data to.</param>
+        /// <param name="offset">The offset value to write to the stream before sending packets.</param>
+        /// <remarks>
+        /// When using this constructor, the <see cref="BlockSender"/> will use server mode, which assumes that
+        /// the <see cref="BlockSender"/> is being used by a server to send data to the client rather than the
+        /// other way around. This means no header is sent, an offset is sent before sending the packets, and
+        /// a <see cref="DataServerClientProtocolResult"/> is inserted between each packet.
+        /// </remarks>
         public BlockSender(NetworkStream stream, int offset)
         {
             if( stream == null )
@@ -101,14 +116,6 @@ namespace Tkl.Jumbo.Dfs
         {
             get { return _lastException; }
         }
-
-        ///// <summary>
-        ///// Gets the number of confirmations that have been received and have not yet been forwarded.
-        ///// </summary>
-        //public int ReceivedConfirmations
-        //{
-        //    get { return _receivedConfirmations; }
-        //}
 
         /// <summary>
         /// Adds a packet to the upload queue.
@@ -378,6 +385,10 @@ namespace Tkl.Jumbo.Dfs
             }
         }
 
+        /// <summary>
+        /// Releases the unmanaged resources used by the <see cref="BlockSender"/> and optionally releases the managed resources.
+        /// </summary>
+        /// <param name="disposing"><see langword="true"/> to release both managed and unmanaged resources; <see langword="false"/> to release only unmanaged resources.</param>
         protected virtual void Dispose(bool disposing)
         {
             if( !_disposed )
@@ -390,6 +401,9 @@ namespace Tkl.Jumbo.Dfs
 
         #region IDisposable Members
 
+        /// <summary>
+        /// Releases all resources used by the <see cref="BlockSender"/>.
+        /// </summary>
         public void Dispose()
         {
             Dispose(true);
