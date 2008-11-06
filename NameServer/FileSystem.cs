@@ -514,18 +514,42 @@ namespace NameServerApplication
             File file = entry as File;
             if( file != null )
             {
-                Guid? pendingBlock = null;
-                if( file.IsOpenForWriting )
-                {
-                    lock( _pendingFiles )
-                    {
-                        PendingFile pendingFile = _pendingFiles[file.FullPath];
-                        pendingBlock = pendingFile.PendingBlock;
-                        _pendingFiles.Remove(file.FullPath);
-                    }
-                }
-                _nameServer.RemoveFileBlocks(file, pendingBlock);
+                DeleteFile(file);
             }
+            else if( recursive )
+            {
+                // We've already established the entry is not a File, so it has to be a Directory
+                DeleteFilesRecursive((Directory)entry);
+            }
+        }
+
+        private void DeleteFilesRecursive(Directory dir)
+        {
+            foreach( FileSystemEntry entry in dir.Children )
+            {
+                Directory childDir = entry as Directory;
+                if( childDir != null )
+                    DeleteFilesRecursive(childDir);
+                else
+                    DeleteFile((File)entry);
+            }
+        }
+
+        private void DeleteFile(File file)
+        {
+            _log.InfoFormat("Deleting blocks associated with file {0}.", file.FullPath);
+            Guid? pendingBlock = null;
+            if( file.IsOpenForWriting )
+            {
+                _log.WarnFormat("Deleted file {0} was open for writing.", file.FullPath);
+                lock( _pendingFiles )
+                {
+                    PendingFile pendingFile = _pendingFiles[file.FullPath];
+                    pendingBlock = pendingFile.PendingBlock;
+                    _pendingFiles.Remove(file.FullPath);
+                }
+            }
+            _nameServer.RemoveFileBlocks(file, pendingBlock);
         }
 
         private string AppendPath(string parent, string child)

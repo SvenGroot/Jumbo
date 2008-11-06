@@ -24,6 +24,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DataServer", "DataServer\Da
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Tkl.Jumbo.Dfs.Test", "Tkl.Jumbo.Dfs.Test\Tkl.Jumbo.Dfs.Test.csproj", "{6D59A812-DDDE-4682-98D7-FDDEF74AAF81}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DfsShell", "DfsShell\DfsShell.csproj", "{5D898EC9-524F-4055-B9C3-3FB6013AB9D3}"
+EndProject
 Global
 	GlobalSection(SubversionScc) = preSolution
 		Svn-Managed = True
@@ -54,6 +56,10 @@ Global
 		{6D59A812-DDDE-4682-98D7-FDDEF74AAF81}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{6D59A812-DDDE-4682-98D7-FDDEF74AAF81}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{6D59A812-DDDE-4682-98D7-FDDEF74AAF81}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5D898EC9-524F-4055-B9C3-3FB6013AB9D3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5D898EC9-524F-4055-B9C3-3FB6013AB9D3}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5D898EC9-524F-4055-B9C3-3FB6013AB9D3}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5D898EC9-524F-4055-B9C3-3FB6013AB9D3}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

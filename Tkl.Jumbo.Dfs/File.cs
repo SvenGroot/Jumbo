@@ -53,5 +53,14 @@ namespace Tkl.Jumbo.Dfs
         /// Each block of the file will be the full block size, except the last block which is <see cref="Size"/> - (<see cref="Blocks"/>.Length * block size).
         /// </remarks>
         public long Size { get; set; }
+
+        /// <summary>
+        /// Gets a string representation of this file.
+        /// </summary>
+        /// <returns>A string representation of this file.</returns>
+        public override string ToString()
+        {
+            return string.Format(System.Globalization.CultureInfo.InvariantCulture, ListingEntryFormat, DateCreated.ToLocalTime(), Size, Name);
+        }
     }
 }

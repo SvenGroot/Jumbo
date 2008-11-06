@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.IO;
 
 namespace Tkl.Jumbo.Dfs
 {
@@ -30,6 +31,33 @@ namespace Tkl.Jumbo.Dfs
         public IList<FileSystemEntry> Children
         {
             get { return _children; }
+        }
+
+        /// <summary>
+        /// Gets a string representation of this directory.
+        /// </summary>
+        /// <returns>A string representation of this directory.</returns>
+        public override string ToString()
+        {
+            return string.Format(System.Globalization.CultureInfo.InvariantCulture, ListingEntryFormat, DateCreated.ToLocalTime(), "<DIR>", Name);
+        }
+
+        /// <summary>
+        /// Prints a listing of the directory.
+        /// </summary>
+        /// <param name="writer">The <see cref="TextWriter"/> </param>
+        public void PrintListing(TextWriter writer)
+        {
+            writer.WriteLine("Directory listing for {0}", FullPath);
+            writer.WriteLine();
+
+            if( Children.Count == 0 )
+                writer.WriteLine("No entries.");
+            else
+            {
+                foreach( var entry in Children )
+                    writer.WriteLine(entry.ToString());
+            }
         }
 
         /// <summary>

@@ -351,8 +351,6 @@ namespace NameServerApplication
                         block.DataServers.Add(dataServer);
                         if( block.DataServers.Count >= _replicationFactor )
                         {
-                            // TODO: We need to record the total size of the file somewhere, and record that in the file system only when
-                            // the file is completed.
                             _log.InfoFormat("Pending block {0} is now fully replicated and is being committed.", newBlock.BlockID);
                             _fileSystem.CommitBlock(block.File.FullPath, newBlock.BlockID, newBlock.Size);
                         }
@@ -379,7 +377,7 @@ namespace NameServerApplication
                 _log.Info("Received block report.");
                 dataServer.HasReportedBlocks = true;
                 dataServer.Blocks = new List<Guid>();
-                foreach( Guid block in dataServer.Blocks )
+                foreach( Guid block in blockReport.Blocks )
                 {
                     BlockInfo info;
                     lock( _blocks )
