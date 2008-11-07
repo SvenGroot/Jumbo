@@ -8,7 +8,7 @@ namespace NameServerApplication
 {
     class DataServerInfo
     {
-        private List<Guid> _blocksToDelete = new List<Guid>();
+        private readonly List<Guid> _blocksToDelete = new List<Guid>();
 
         public DataServerInfo(string hostName, int port)
         {

@@ -17,6 +17,7 @@ namespace NameServerApplication
         private EditLog _editLog;
         private NameServer _nameServer;
         private Dictionary<string, PendingFile> _pendingFiles = new Dictionary<string, PendingFile>();
+        private long _totalSize;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="FileSystem"/> class.
@@ -51,6 +52,11 @@ namespace NameServerApplication
                     CloseFile(file, true); // discard uncommitted blocks.
                 }
             }
+        }
+
+        public long TotalSize
+        {
+            get { return _totalSize; }
         }
 
         public NameServer NameServer
@@ -268,14 +274,18 @@ namespace NameServerApplication
                 _editLog.LogCommitBlock(path, DateTime.UtcNow, blockID, size);
                 file.File.Blocks.Add(file.PendingBlock.Value);
                 file.File.Size += size;
+                _totalSize += size;
                 file.PendingBlock = null;
                 if( !file.File.IsOpenForWriting )
                 {
                     _log.DebugFormat("File {0} is no longer pending.", path);
-                    _pendingFiles.Remove(path);                   
+                    lock( _pendingFiles )
+                    {
+                        _pendingFiles.Remove(path);
+                    }
                 }
-                _nameServer.CommitBlock(blockID);
             }
+            _nameServer.CommitBlock(blockID);
         }
 
         /// <summary>
@@ -313,7 +323,10 @@ namespace NameServerApplication
                 _log.InfoFormat("Closing file {0}", path);
                 _editLog.LogCommitFile(path, discardPendingBlocks);
                 file.File.IsOpenForWriting = false;
-                _pendingFiles.Remove(path);
+                lock( _pendingFiles )
+                {
+                    _pendingFiles.Remove(path);
+                }
             }
         }
 

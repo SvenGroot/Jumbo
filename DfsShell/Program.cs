@@ -188,6 +188,48 @@ namespace DfsShell
             nameServer.Delete(path, recursive);
         }
 
+        private static void PrintFileInfo(INameServerClientProtocol nameServer, string[] args)
+        {
+            if( args.Length != 2 )
+                Console.WriteLine("Usage: DfsShell fileinfo <path>");
+            else
+            {
+                string path = args[1];
+                File file = nameServer.GetFileInfo(path);
+                if( file == null )
+                    Console.WriteLine("File not found.");
+                else
+                    file.PrintFileInfo(Console.Out);
+            }
+        }
+
+        private static void PrintBlockInfo(INameServerClientProtocol nameServer, string[] args)
+        {
+            if( args.Length != 2 )
+                Console.WriteLine("Usage: DfsShell blockinfo <block id>");
+            else
+            {
+                try
+                {
+                    Guid blockID = new Guid(args[1]);
+                    ServerAddress[] servers = nameServer.GetDataServersForBlock(blockID);
+                    Console.WriteLine("Data server list for block {{{0}}}:", blockID);
+                    foreach( ServerAddress server in servers )
+                        Console.WriteLine(server);
+                }
+                catch( FormatException )
+                {
+                    Console.WriteLine("Invalid guid.");
+                }
+            }
+        }
+
+        private static void PrintMetrics(INameServerClientProtocol nameServer, string[] args)
+        {
+            DfsMetrics metrics = nameServer.GetMetrics();
+            metrics.PrintMetrics(Console.Out);
+        }
+
         private static Dictionary<string, Action<INameServerClientProtocol, string[]>> CreateCommandList()
         {
             Dictionary<string, Action<INameServerClientProtocol, string[]>> result = new Dictionary<string, Action<INameServerClientProtocol, string[]>>();
@@ -198,6 +240,9 @@ namespace DfsShell
             result.Add("get", GetFile);
             result.Add("rm", Delete);
             result.Add("rmr", DeleteRecursive);
+            result.Add("fileinfo", PrintFileInfo);
+            result.Add("blockinfo", PrintBlockInfo);
+            result.Add("metrics", PrintMetrics);
 
             return result;
         }

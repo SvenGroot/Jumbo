@@ -240,6 +240,30 @@ namespace NameServerApplication
             return !_safeMode;
         }
 
+        public DfsMetrics GetMetrics()
+        {
+            DfsMetrics metrics = new DfsMetrics();
+            lock( _blocks )
+            {
+                metrics.TotalBlockCount = _blocks.Count;
+            }
+            lock( _pendingBlocks )
+            {
+                metrics.PendingBlockCount = _pendingBlocks.Count;
+            }
+            lock( _underReplicatedBlocks )
+            {
+                metrics.UnderReplicatedBlockCount = _underReplicatedBlocks.Count;
+            }
+            lock( _dataServers )
+            {
+                metrics.DataServers = (from server in _dataServers.Values
+                                       select server.Address).ToArray();
+            }
+            metrics.TotalSize = _fileSystem.TotalSize;
+            return metrics;
+        }
+
         #endregion
 
         #region INameServerHeartbeatProtocol Members
@@ -339,31 +363,35 @@ namespace NameServerApplication
 
             _log.InfoFormat("Data server {2} reports it has received block {0} of size {1}.", newBlock.BlockID, newBlock.Size, dataServer.Address);
 
-            BlockInfo block;
-            lock( _blocks )
+            BlockInfo block = null;
+            bool commitBlock = false;
+            lock( _pendingBlocks )
             {
-                lock( _pendingBlocks )
+                if( _pendingBlocks.TryGetValue(newBlock.BlockID, out block) )
                 {
-                    if( _pendingBlocks.TryGetValue(newBlock.BlockID, out block) )
+                    // TODO: Should there be some kind of check whether the data server reporting this was actually
+                    // one of the assigned servers?
+                    block.DataServers.Add(dataServer);
+                    dataServer.Blocks.Add(newBlock.BlockID);
+                    if( block.DataServers.Count >= _replicationFactor )
                     {
-                        // TODO: Should there be some kind of check whether the data server reporting this was actually
-                        // one of the assigned servers?
-                        block.DataServers.Add(dataServer);
-                        if( block.DataServers.Count >= _replicationFactor )
-                        {
-                            _log.InfoFormat("Pending block {0} is now fully replicated and is being committed.", newBlock.BlockID);
-                            _fileSystem.CommitBlock(block.File.FullPath, newBlock.BlockID, newBlock.Size);
-                        }
+                        commitBlock = true;
                     }
-                    else
-                    {
-                        // TODO: Inform the data server to delete the block. Also check if it's not an already existing block that's
-                        // being re-reported?
-                        _log.WarnFormat("Block {0} is not pending.", newBlock.BlockID);
-                    }
-                    // We don't need to check in _blocks; they're not moved there until all data servers have been checked in.
                 }
+                else
+                {
+                    // TODO: Inform the data server to delete the block. Also check if it's not an already existing block that's
+                    // being re-reported?
+                    _log.WarnFormat("Block {0} is not pending.", newBlock.BlockID);
+                }
+                // We don't need to check in _blocks; they're not moved there until all data servers have been checked in.
             }
+            if( commitBlock )
+            {
+                _log.InfoFormat("Pending block {0} is now fully replicated and is being committed.", newBlock.BlockID);
+                _fileSystem.CommitBlock(block.File.FullPath, newBlock.BlockID, newBlock.Size);
+            }
+
             return null;
         }
 
@@ -530,6 +558,10 @@ namespace NameServerApplication
 
         private void RemoveDataServer(DataServerInfo info)
         {
+            lock( _dataServers )
+            {
+                _dataServers.Remove(info.Address);
+            }
             lock( _blocks )
             {
                 lock( _underReplicatedBlocks )
@@ -554,10 +586,6 @@ namespace NameServerApplication
                         }
                     }
                 }
-            }
-            lock( _dataServers )
-            {
-                _dataServers.Remove(info.Address);
             }
         }
     }

@@ -85,6 +85,12 @@ namespace Tkl.Jumbo.Dfs
         bool WaitForSafeModeOff(int timeout);
 
         /// <summary>
+        /// Gets current metrics for the distributed file system.
+        /// </summary>
+        /// <returns>An object holding the metrics for the name server.</returns>
+        DfsMetrics GetMetrics();
+
+        /// <summary>
         /// Gets a value that indicates whether safe mode is on or off.
         /// </summary>
         bool SafeMode { get; }

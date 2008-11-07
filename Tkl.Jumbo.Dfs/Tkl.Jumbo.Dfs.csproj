@@ -70,6 +70,7 @@
     <Compile Include="DfsConfiguration.cs" />
     <Compile Include="DfsException.cs" />
     <Compile Include="DfsInputStream.cs" />
+    <Compile Include="DfsMetrics.cs" />
     <Compile Include="DfsOutputStream.cs" />
     <Compile Include="Directory.cs" />
     <Compile Include="File.cs" />

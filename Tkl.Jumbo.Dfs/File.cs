@@ -62,5 +62,19 @@ namespace Tkl.Jumbo.Dfs
         {
             return string.Format(System.Globalization.CultureInfo.InvariantCulture, ListingEntryFormat, DateCreated.ToLocalTime(), Size, Name);
         }
+
+        /// <summary>
+        /// Prints information about the file.
+        /// </summary>
+        /// <param name="writer">The <see cref="System.IO.TextWriter"/> to write the information to.</param>
+        public void PrintFileInfo(System.IO.TextWriter writer)
+        {
+            writer.WriteLine("Path:             {0}", FullPath);
+            writer.WriteLine("Size:             {0:0,0} bytes", Size);
+            writer.WriteLine("Open for writing: {0}", IsOpenForWriting);
+            writer.WriteLine("Blocks:           {0}", Blocks.Count);
+            foreach( Guid block in Blocks )
+                writer.WriteLine("{{{0}}}", block);
+        }
     }
 }

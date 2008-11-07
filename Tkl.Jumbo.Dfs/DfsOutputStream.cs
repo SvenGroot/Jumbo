@@ -231,14 +231,18 @@ namespace Tkl.Jumbo.Dfs
                     }
                     try
                     {
-                        _sender.WaitUntilSendFinished();
-                        _sender.ThrowIfErrorOccurred();
+                        if( _sender != null )
+                        {
+                            _sender.WaitUntilSendFinished();
+                            _sender.ThrowIfErrorOccurred();
+                        }
                     }
                     finally
                     {
                         if( disposing )
                         {
-                            _sender.Dispose();
+                            if( _sender != null )
+                                _sender.Dispose();
                         }
                     }
                 }
