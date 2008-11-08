@@ -1,0 +1,63 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<project name="Tkl.Jumbo.Dfs" default="build" xmlns="http://nant.sf.net/release/0.86-beta1/nant.xsd">
+  <property name="debug" value="false" overwrite="false"/>
+  <property name="rebuild" value="false" overwrite="false"/>
+  <property if="${debug}" name="define" value="DEBUG;TRACE"/>
+  <property if="${not debug}" name="define" value="TRACE"/>
+  <target name="clean">
+    <delete dir="nantbin" failonerror="false"/>
+  </target>
+  <target name="build">
+    <mkdir dir="nantbin"/>
+    <csc output="nantbin/Tkl.Jumbo.Dfs.dll" target="library" debug="${debug}" optimize="${not debug}"
+         define="${define}" doc="nantbin/Tkl.Jumbo.Dfs.xml" keyfile="jumbo.snk" rebuild="${rebuild}">
+      <references>
+        <include name="System.dll"/>
+        <include name="System.Configuration.dll"/>
+        <include name="System.Core.dll"/>
+        <include name="System.Runtime.Remoting"/>
+        <include name="../lib/log4net.dll"/>
+      </references>
+      <sources>
+        <include name="Properties/AssemblyInfo.cs"/>
+        <include name="BlockAssignment.cs"/>
+        <include name="BlockReportHeartbeatData.cs"/>
+        <include name="BlockSender.cs"/>
+        <include name="ClientChannelSink.cs"/>
+        <include name="ClientChannelSinkProvider.cs"/>
+        <include name="CRC32.cs"/>
+        <include name="DataServerClientProtocolHeader.cs"/>
+        <include name="DataServerClientProtocolReadHeader.cs"/>
+        <include name="DataServerClientProtocolResult.cs"/>
+        <include name="DataServerClientProtocolWriteHeader.cs"/>
+        <include name="DataServerCommand.cs"/>
+        <include name="DataServerConfigurationElement.cs"/>
+        <include name="DataServerHeartbeatCommand.cs"/>
+        <include name="DeleteBlocksHeartbeatResponse.cs"/>
+        <include name="DfsClient.cs"/>
+        <include name="DfsConfiguration.cs"/>
+        <include name="DfsException.cs"/>
+        <include name="DfsInputStream.cs"/>
+        <include name="DfsMetrics.cs"/>
+        <include name="DfsOutputStream.cs"/>
+        <include name="Directory.cs"/>
+        <include name="File.cs"/>
+        <include name="FileSystemEntry.cs"/>
+        <include name="HeartbeatData.cs"/>
+        <include name="HeartbeatResponse.cs"/>
+        <include name="INameServerClientProtocol.cs"/>
+        <include name="INameServerHeartbeatProtocol.cs"/>
+        <include name="InitialHeartbeatData.cs"/>
+        <include name="InvalidPacketException.cs"/>
+        <include name="NameServerConfigurationElement.cs"/>
+        <include name="NewBlockHeartbeatData.cs"/>
+        <include name="Packet.cs"/>
+        <include name="SafeModeException.cs"/>
+        <include name="ServerAddress.cs"/>
+        <include name="ServerChannelSink.cs"/>
+        <include name="ServerChannelSinkProvider.cs"/>
+        <include name="ServerContext.cs"/>
+      </sources>
+    </csc>
+  </target>
+</project>

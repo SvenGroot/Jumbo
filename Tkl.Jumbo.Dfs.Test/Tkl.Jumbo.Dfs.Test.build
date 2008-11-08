@@ -1,0 +1,32 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<project name="Tkl.Jumbo.Dfs.Test" default="build" xmlns="http://nant.sf.net/release/0.86-beta1/nant.xsd">
+  <property name="debug" value="false" overwrite="false"/>
+  <property name="rebuild" value="false" overwrite="false"/>
+  <property name="nunitpath" value="C:\Program Files (x86)\NUnit 2.4.8\"/>
+  <property if="${debug}" name="define" value="DEBUG;TRACE"/>
+  <property if="${not debug}" name="define" value="TRACE"/>
+  <target name="clean">
+    <delete dir="nantbin" failonerror="false"/>
+  </target>
+  <target name="build">
+    <mkdir dir="nantbin"/>
+    <csc output="nantbin/Tkl.Jumbo.Dfs.Test.dll" target="library" debug="${debug}" optimize="${not debug}"
+         define="${define}" keyfile="jumbo.snk" rebuild="${rebuild}">
+      <references>
+        <include name="System.dll"/>
+        <include name="System.Configuration.dll"/>
+        <include name="System.Core.dll"/>
+        <include name="System.Runtime.Remoting"/>
+        <include name="../lib/log4net.dll"/>
+        <include name="${nunitpath}bin/nunit.framework.dll"/>
+        <include name="../Tkl.Jumbo.Dfs/nantbin/Tkl.Jumbo.Dfs.dll"/>
+        <include name="../NameServer/nantbin/NameServer.exe"/>
+        <include name="../DataServer/nantbin/DataServer.exe"/>
+      </references>
+      <sources>
+        <include name="Properties/AssemblyInfo.cs"/>
+        <include name="*.cs"/>
+      </sources>
+    </csc>
+  </target>
+</project>

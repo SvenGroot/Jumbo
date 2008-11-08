@@ -1,0 +1,36 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<project name="NameServer" default="build" xmlns="http://nant.sf.net/release/0.86-beta1/nant.xsd">
+  <property name="debug" value="false" overwrite="false"/>
+  <property name="rebuild" value="false" overwrite="false"/>
+  <property if="${debug}" name="define" value="DEBUG;TRACE"/>
+  <property if="${not debug}" name="define" value="TRACE"/>
+  <target name="clean">
+    <delete dir="nantbin" failonerror="false"/>
+  </target>
+  <target name="build">
+    <mkdir dir="nantbin"/>
+    <csc output="nantbin/NameServer.exe" target="exe" debug="${debug}" optimize="${not debug}"
+         define="${define}" keyfile="jumbo.snk" rebuild="${rebuild}">
+      <references>
+        <include name="System.dll"/>
+        <include name="System.Configuration.dll"/>
+        <include name="System.Core.dll"/>
+        <include name="System.Runtime.Remoting"/>
+        <include name="../lib/log4net.dll"/>
+        <include name="../Tkl.Jumbo.Dfs/nantbin/Tkl.Jumbo.Dfs.dll"/>
+      </references>
+      <sources>
+        <include name="Properties/AssemblyInfo.cs"/>
+        <include name="BlockInfo.cs"/>
+        <include name="DataServerInfo.cs"/>
+        <include name="EditLog.cs"/>
+        <include name="FileSystem.cs"/>
+        <include name="FileSystemMutation.cs"/>
+        <include name="NameServer.cs"/>
+        <include name="PendingFile.cs"/>
+        <include name="Program.cs"/>
+      </sources>
+    </csc>
+    <copy file="App.config" tofile="nantbin/NameServer.exe.config"/>
+  </target>
+</project>

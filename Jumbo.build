@@ -1,0 +1,60 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<project name="Jumbo" default="all" xmlns="http://nant.sf.net/release/0.86-beta1/nant.xsd">
+  <target name="all" depends="NameServer,DataServer,DfsShell,Tkl.Jumbo.Dfs.Test">
+  </target>
+  <target name="clean">
+    <delete dir="nantbin" failonerror="false"/>
+  </target>
+  <target name="cleanall" depends="clean">
+    <nant buildfile="Tkl.Jumbo.Dfs/Tkl.Jumbo.Dfs.build" target="clean"/>
+    <nant buildfile="NameServer/NameServer.build" target="clean"/>
+    <nant buildfile="DataServer/DataServer.build" target="clean"/>
+    <nant buildfile="DfsShell/DfsShell.build" target="clean"/>
+    <nant buildfile="Tkl.Jumbo.Dfs.Test/Tkl.Jumbo.Dfs.Test.build" target="clean"/>
+  </target>
+  <target name="Tkl.Jumbo.Dfs">
+    <mkdir dir="nantbin"/>
+    <nant buildfile="Tkl.Jumbo.Dfs/Tkl.Jumbo.Dfs.build" />
+    <copy todir="nantbin">
+      <fileset basedir="Tkl.Jumbo.Dfs/nantbin">
+        <include name="*.*"/>
+      </fileset>
+    </copy>
+  </target>
+  <target name="NameServer" depends="Tkl.Jumbo.Dfs">
+    <mkdir dir="nantbin"/>
+    <nant buildfile="NameServer/NameServer.build" />
+    <copy todir="nantbin">
+      <fileset basedir="NameServer/nantbin">
+        <include name="*.*"/>
+      </fileset>
+    </copy>
+  </target>
+  <target name="DataServer" depends="Tkl.Jumbo.Dfs">
+    <mkdir dir="nantbin"/>
+    <nant buildfile="DataServer/DataServer.build" />
+    <copy todir="nantbin">
+      <fileset basedir="DataServer/nantbin">
+        <include name="*.*"/>
+      </fileset>
+    </copy>
+  </target>
+  <target name="DfsShell" depends="Tkl.Jumbo.Dfs">
+    <mkdir dir="nantbin"/>
+    <nant buildfile="DfsShell/DfsShell.build" />
+    <copy todir="nantbin">
+      <fileset basedir="DfsShell/nantbin">
+        <include name="*.*"/>
+      </fileset>
+    </copy>
+  </target>
+  <target name="Tkl.Jumbo.Dfs.Test" depends="Tkl.Jumbo.Dfs,NameServer,DataServer">
+    <mkdir dir="nantbin"/>
+    <nant buildfile="Tkl.Jumbo.Dfs.Test/Tkl.Jumbo.Dfs.Test.build" />
+    <copy todir="nantbin">
+      <fileset basedir="Tkl.Jumbo.Dfs.Test/nantbin">
+        <include name="*.*"/>
+      </fileset>
+    </copy>
+  </target>
+</project>
