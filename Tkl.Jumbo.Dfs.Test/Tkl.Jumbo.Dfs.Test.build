@@ -28,5 +28,21 @@
       </sources>
     </csc>
     <copy file="${nunitpath}bin/nunit.framework.dll" todir="nantbin"/>
+    <copy file="../lib/log4net.dll" todir="nantbin"/>
+    <copy todir="nantbin">
+      <fileset basedir="../Tkl.Jumbo.Dfs/nantbin">
+        <include name="*.*"/>
+      </fileset>
+    </copy>
+    <copy todir="nantbin">
+      <fileset basedir="../NameServer/nantbin">
+        <include name="*.*"/>
+      </fileset>
+    </copy>
+    <copy todir="nantbin">
+      <fileset basedir="../DataServer/nantbin">
+        <include name="*.*"/>
+      </fileset>
+    </copy>
   </target>
 </project>

@@ -32,5 +32,11 @@
       </sources>
     </csc>
     <copy file="App.config" tofile="nantbin/NameServer.exe.config"/>
+    <copy file="../lib/log4net.dll" todir="nantbin"/>
+    <copy todir="nantbin">
+      <fileset basedir="../Tkl.Jumbo.Dfs/nantbin">
+        <include name="*.*"/>
+      </fileset>
+    </copy>
   </target>
 </project>

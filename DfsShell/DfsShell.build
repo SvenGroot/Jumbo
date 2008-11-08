@@ -23,5 +23,10 @@
       </sources>
     </csc>
     <copy file="App.config" tofile="nantbin/DfsShell.exe.config"/>
+    <copy todir="nantbin">
+      <fileset basedir="../Tkl.Jumbo.Dfs/nantbin">
+        <include name="*.*"/>
+      </fileset>
+    </copy>
   </target>
 </project>

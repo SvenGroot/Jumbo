@@ -59,5 +59,6 @@
         <include name="ServerContext.cs"/>
       </sources>
     </csc>
+    <copy file="../lib/log4net.dll" todir="nantbin"/>
   </target>
 </project>
