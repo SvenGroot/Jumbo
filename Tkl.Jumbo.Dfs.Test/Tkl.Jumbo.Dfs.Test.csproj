@@ -43,6 +43,8 @@
     <Reference Include="System.Core">
       <RequiredTargetFramework>3.5</RequiredTargetFramework>
     </Reference>
+    <Reference Include="System.Data" />
+    <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="BlockAssignmentTests.cs" />
@@ -61,6 +63,8 @@
     <Compile Include="FileSystemEntryTests.cs" />
     <Compile Include="FileTests.cs" />
     <Compile Include="NameServerConfigurationElementTests.cs" />
+    <Compile Include="NameServerRestartTests.cs" />
+    <Compile Include="NameServerSafeModeTests.cs" />
     <Compile Include="NameServerTests.cs" />
     <Compile Include="NewBlockHeartbeatDataTests.cs" />
     <Compile Include="PacketTests.cs" />
