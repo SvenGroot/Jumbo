@@ -10,7 +10,7 @@ namespace NameServerApplication
     /// <summary>
     /// Manages the file system namespace.
     /// </summary>
-    class FileSystem
+    public class FileSystem
     {
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(FileSystem));
         private Directory _root = new Directory(null, string.Empty, DateTime.UtcNow);

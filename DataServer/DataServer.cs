@@ -9,7 +9,7 @@ using System.IO;
 
 namespace DataServerApplication
 {
-    class DataServer
+    public class DataServer
     {
         private const int _heartbeatInterval = 2000;
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(DataServer));

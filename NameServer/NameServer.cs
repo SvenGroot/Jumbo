@@ -16,7 +16,7 @@ namespace NameServerApplication
     /// <summary>
     /// RPC server for the NameServer.
     /// </summary>
-    class NameServer : MarshalByRefObject, INameServerClientProtocol, INameServerHeartbeatProtocol
+    public class NameServer : MarshalByRefObject, INameServerClientProtocol, INameServerHeartbeatProtocol
     {
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(NameServer));
         private static DfsConfiguration _rpcConfig; // This is set by the Run method and used by the default constructor when Remoting creates the object

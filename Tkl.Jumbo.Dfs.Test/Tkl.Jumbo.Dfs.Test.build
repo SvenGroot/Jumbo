@@ -2,7 +2,7 @@
 <project name="Tkl.Jumbo.Dfs.Test" default="build" xmlns="http://nant.sf.net/release/0.86-beta1/nant.xsd">
   <property name="debug" value="false" overwrite="false"/>
   <property name="rebuild" value="false" overwrite="false"/>
-  <property name="nunitpath" value="C:\Program Files (x86)\NUnit 2.4.8\"/>
+  <property name="nunitpath" value="C:\Program Files (x86)\NUnit 2.4.8\" overwrite="false"/>
   <property if="${debug}" name="define" value="DEBUG;TRACE"/>
   <property if="${not debug}" name="define" value="TRACE"/>
   <target name="clean">
@@ -27,5 +27,6 @@
         <include name="*.cs"/>
       </sources>
     </csc>
+    <copy file="${nunitpath}bin/nunit.framework.dll" todir="nantbin"/>
   </target>
 </project>
