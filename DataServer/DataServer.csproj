@@ -53,8 +53,8 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
-    <None Include="jumbo.snk" />
     <None Include="DataServer.build" />
+    <None Include="jumbo.snk" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Tkl.Jumbo.Dfs\Tkl.Jumbo.Dfs.csproj">

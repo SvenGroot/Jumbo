@@ -297,9 +297,6 @@ namespace NameServerApplication
                         _log.Warn("The data server reported a different hostname than is indicated in the ServerContext.");
                     dataServer = new DataServerInfo(address); // TODO: Real port number
                     _dataServers.Add(address, dataServer);
-                    // TODO: This isn't the real safemode implementation.
-                    // Currently we're just exiting safemode as soon as we have enough data servers, we don't check blocks or anything.
-                    DisableSafeMode();
                 }
 
                 if( data != null )
@@ -433,7 +430,7 @@ namespace NameServerApplication
                                 _log.DebugFormat("Dataserver {0} has block ID {1}", dataServer.Address, block);
                                 dataServer.Blocks.Add(block);
                             }
-                            else 
+                            else
                             {
                                 _log.WarnFormat("Dataserver {0} reported unknown block {1}.", dataServer.Address, block);
                                 if( invalidBlocks == null )
@@ -443,6 +440,7 @@ namespace NameServerApplication
                         }
                     }
                 }
+                CheckDisableSafeMode();
                 if( invalidBlocks != null )
                     return new DeleteBlocksHeartbeatResponse(invalidBlocks);
             }
@@ -526,6 +524,7 @@ namespace NameServerApplication
             if( bindTo != null )
                 properties["bindTo"] = bindTo;
             BinaryServerFormatterSinkProvider formatter = new BinaryServerFormatterSinkProvider();
+            formatter.TypeFilterLevel = System.Runtime.Serialization.Formatters.TypeFilterLevel.Full;
             formatter.Next = new ServerChannelSinkProvider();
             TcpServerChannel channel = new TcpServerChannel(properties, formatter);
             ChannelServices.RegisterChannel(channel, false);
@@ -538,9 +537,16 @@ namespace NameServerApplication
                 throw new SafeModeException("The name server is in safe mode.");
         }
 
-        private void DisableSafeMode()
+        private void CheckDisableSafeMode()
         {
-            if( _safeMode && _dataServers.Count >= _replicationFactor )
+            int dataServerCount;
+            lock( _dataServers )
+                dataServerCount = _dataServers.Count;
+            int blockCount;
+            lock( _underReplicatedBlocks )
+                blockCount = _underReplicatedBlocks.Count;
+            // TODO: After re-replication is implemented, we can disable safemode before having full replication.
+            if( _safeMode && dataServerCount >= _replicationFactor && blockCount == 0 )
             {
                 _safeMode = false;
                 _safeModeEvent.Set();
