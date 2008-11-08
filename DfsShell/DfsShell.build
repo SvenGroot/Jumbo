@@ -15,7 +15,6 @@
         <include name="System.dll"/>
         <include name="System.Configuration.dll"/>
         <include name="System.Core.dll"/>
-        <include name="System.Runtime.Remoting"/>
         <include name="../Tkl.Jumbo.Dfs/nantbin/Tkl.Jumbo.Dfs.dll"/>
       </references>
       <sources>
