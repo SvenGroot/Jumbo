@@ -143,6 +143,14 @@ namespace NameServerApplication
             }
         }
 
+        public void DiscardBlock(Guid blockID)
+        {
+            lock( _pendingBlocks )
+            {
+                _pendingBlocks.Remove(blockID);
+            }
+        }
+
         public void CommitBlock(Guid blockID)
         {
             lock( _blocks )

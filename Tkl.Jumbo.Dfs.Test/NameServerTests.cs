@@ -5,6 +5,7 @@ using System.Text;
 using NUnit.Framework;
 using System.Threading;
 using System.Net;
+using System.IO;
 
 namespace Tkl.Jumbo.Dfs.Test
 {
@@ -249,6 +250,7 @@ namespace Tkl.Jumbo.Dfs.Test
             try
             {
                 target.CreateFile("/existingfile");
+                target.CloseFile("/existingfile");
             }
             catch( ArgumentException )
             {
@@ -281,6 +283,7 @@ namespace Tkl.Jumbo.Dfs.Test
             try
             {
                 target.CreateFile("/test");
+                target.CloseFile("/test");
             }
             catch( ArgumentException )
             {
@@ -349,6 +352,7 @@ namespace Tkl.Jumbo.Dfs.Test
             try
             {
                 target.CreateFile("/getfileinfofile");
+                target.CloseFile("/getfileinfofile");
             }
             catch( ArgumentException )
             {
@@ -437,6 +441,52 @@ namespace Tkl.Jumbo.Dfs.Test
         {
             INameServerClientProtocol target = _nameServer;
             Assert.AreEqual(_blockSize, target.BlockSize);
+        }
+
+        [Test]
+        public void TestCloseFilePendingBlock()
+        {
+            INameServerClientProtocol target = _nameServer;
+            target.CreateFile("/closefilependingblock");
+            target.CloseFile("/closefilependingblock");
+            File file = target.GetFileInfo("/closefilependingblock");
+            Assert.AreEqual(0, file.Blocks.Count);
+            Assert.AreEqual(0, target.GetMetrics().PendingBlockCount);
+        }
+
+        [Test]
+        public void TestGetMetrics()
+        {
+            INameServerClientProtocol target = _nameServer;
+            DfsMetrics metrics = _nameServer.GetMetrics();
+            Assert.AreEqual(1, metrics.DataServers.Length);
+            Assert.AreEqual(new ServerAddress(Dns.GetHostName(), 10001), metrics.DataServers[0]);
+            Assert.AreEqual(0, metrics.PendingBlockCount);
+            Assert.AreEqual(0, metrics.UnderReplicatedBlockCount);
+            int initialBlockCount = metrics.TotalBlockCount;
+            long initialSize = metrics.TotalSize;
+
+            const int size = 10000000;
+            using( DfsOutputStream output = new DfsOutputStream(target, "/metricstest") )
+            {
+                Utilities.GenerateData(output, size);
+                metrics = _nameServer.GetMetrics();
+                Assert.AreEqual(initialSize, metrics.TotalSize); // Block not committed: size isn't counted yet
+                Assert.AreEqual(initialBlockCount, metrics.TotalBlockCount);
+                Assert.AreEqual(0, metrics.UnderReplicatedBlockCount);
+                Assert.AreEqual(1, metrics.PendingBlockCount);
+            }
+            metrics = _nameServer.GetMetrics();
+            Assert.AreEqual(initialSize + size, metrics.TotalSize); // Block not committed: size isn't counted yet
+            Assert.AreEqual(initialBlockCount + 1, metrics.TotalBlockCount);
+            Assert.AreEqual(0, metrics.UnderReplicatedBlockCount);
+            Assert.AreEqual(0, metrics.PendingBlockCount);
+            target.Delete("/metricstest", false);
+            metrics = _nameServer.GetMetrics();
+            Assert.AreEqual(initialSize, metrics.TotalSize);
+            Assert.AreEqual(initialBlockCount, metrics.TotalBlockCount);
+            Assert.AreEqual(0, metrics.UnderReplicatedBlockCount);
+            Assert.AreEqual(0, metrics.PendingBlockCount);
         }
     }
 }

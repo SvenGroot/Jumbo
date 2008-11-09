@@ -315,7 +315,10 @@ namespace NameServerApplication
                 if( file.PendingBlock != null )
                 {
                     if( discardPendingBlocks )
+                    {
+                        _nameServer.DiscardBlock(file.PendingBlock.Value);
                         file.PendingBlock = null;
+                    }
                     else
                         throw new InvalidOperationException(string.Format("The file '{0}' cannot be closed because it has pending block {1}.", path, file.PendingBlock.Value));
                 }
@@ -562,6 +565,7 @@ namespace NameServerApplication
                     _pendingFiles.Remove(file.FullPath);
                 }
             }
+            _totalSize -= file.Size; // inside _root lock so safe.
             _nameServer.RemoveFileBlocks(file, pendingBlock);
         }
 
