@@ -8,73 +8,67 @@ namespace NameServerApplication
 {
     class RpcServer : MarshalByRefObject, INameServerClientProtocol, INameServerHeartbeatProtocol
     {
-        private NameServer _nameServer;
-
-        public RpcServer()
-        {
-            _nameServer = NameServer.Instance;
-        }
 
         #region INameServerClientProtocol Members
 
         public void CreateDirectory(string path)
         {
-            _nameServer.CreateDirectory(path);
+            NameServer.Instance.CreateDirectory(path);
         }
 
         public Directory GetDirectoryInfo(string path)
         {
-            return _nameServer.GetDirectoryInfo(path);
+            return NameServer.Instance.GetDirectoryInfo(path);
         }
 
         public BlockAssignment CreateFile(string path)
         {
-            return _nameServer.CreateFile(path);
+            return NameServer.Instance.CreateFile(path);
         }
 
         public bool Delete(string path, bool recursive)
         {
-            return _nameServer.Delete(path, recursive);
+            return NameServer.Instance.Delete(path, recursive);
         }
 
         public File GetFileInfo(string path)
         {
-            return _nameServer.GetFileInfo(path);
+            return NameServer.Instance.GetFileInfo(path);
         }
 
         public BlockAssignment AppendBlock(string path)
         {
-            return _nameServer.AppendBlock(path);
+            return NameServer.Instance.AppendBlock(path);
         }
 
         public void CloseFile(string path)
         {
-            _nameServer.CloseFile(path);
+            NameServer.Instance.CloseFile(path);
         }
 
         public ServerAddress[] GetDataServersForBlock(Guid blockID)
         {
-            return _nameServer.GetDataServersForBlock(blockID);
+            return NameServer.Instance.GetDataServersForBlock(blockID);
         }
 
         public bool WaitForSafeModeOff(int timeout)
         {
-            return _nameServer.WaitForSafeModeOff(timeout);
+            return NameServer.Instance.WaitForSafeModeOff(timeout);
         }
 
         public DfsMetrics GetMetrics()
         {
-            return _nameServer.GetMetrics();
+            return NameServer.Instance.GetMetrics();
         }
 
         public bool SafeMode
         {
-            get { return _nameServer.SafeMode; }
+            get { return NameServer.Instance.SafeMode; }
         }
 
         public int BlockSize
         {
-            get { return _nameServer.BlockSize; }
+            get { return NameServer.Instance.BlockSize; }
         }
 
         #endregion
@@ -83,7 +77,7 @@ namespace NameServerApplication
 
         public HeartbeatResponse[] Heartbeat(ServerAddress address, HeartbeatData[] data)
         {
-            return _nameServer.Heartbeat(address, data);
+            return NameServer.Instance.Heartbeat(address, data);
         }
 
         #endregion
