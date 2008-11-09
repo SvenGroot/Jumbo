@@ -26,7 +26,6 @@ namespace Tkl.Jumbo.Dfs.Test
 
         public static string GenerateFile(string name, int size)
         {
-            Random rnd = new Random();
             string path = System.IO.Path.Combine(TestOutputPath, name);
             using( FileStream stream = System.IO.File.Create(path) )
             {

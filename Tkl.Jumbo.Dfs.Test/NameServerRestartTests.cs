@@ -9,6 +9,7 @@ using System.IO;
 namespace Tkl.Jumbo.Dfs.Test
 {
     [TestFixture]
+    [Category("ClusterTest")]
     public class NameServerRestartTests
     {
         [Test]
@@ -35,6 +36,7 @@ namespace Tkl.Jumbo.Dfs.Test
                 nameServer = null;
                 cluster.Shutdown();
                 cluster = null;
+		Thread.Sleep(1000);
                 cluster = new TestDfsCluster(1, 1, null, false);
                 nameServer = DfsClient.CreateNameServerClient(TestDfsCluster.CreateClientConfig());
                 nameServer.WaitForSafeModeOff(Timeout.Infinite);

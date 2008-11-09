@@ -466,7 +466,7 @@ namespace NameServerApplication
             // Check if any data servers are running on the client's own system.
             var clientHostName = ServerContext.Current.ClientHostName;
             var localServers = (from server in unassignedDataServers
-                                where server.Address.HostName == ServerContext.Current.ClientHostName
+                                where server.Address.HostName == clientHostName
                                 select server).ToArray();
 
             if( localServers.Length > 0 )

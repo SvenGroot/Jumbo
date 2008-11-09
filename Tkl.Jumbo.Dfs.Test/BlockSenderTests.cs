@@ -196,7 +196,6 @@ namespace Tkl.Jumbo.Dfs.Test
             using( TcpClient client = new TcpClient("localhost", 15000) )
             using( NetworkStream stream = client.GetStream() )
             {
-                Guid blockID = Guid.NewGuid();
                 using( BlockSender target = new BlockSender(stream, 1000) )
                 {
                     List<Packet> packets = SendPackets(target);
@@ -221,7 +220,7 @@ namespace Tkl.Jumbo.Dfs.Test
             Guid blockID = Guid.NewGuid();
             using( BlockSender target = new BlockSender(blockID, new ServerAddress[] { new ServerAddress("localhost", 15000) }) )
             {
-                List<Packet> packets = SendPackets(target);
+                SendPackets(target);
 
                 target.WaitUntilSendFinished();
                 Utilities.TraceLineAndFlush("Sender finished.");
@@ -240,7 +239,7 @@ namespace Tkl.Jumbo.Dfs.Test
             Guid blockID = Guid.NewGuid();
             using( BlockSender target = new BlockSender(blockID, new ServerAddress[] { new ServerAddress("localhost", 15000) }) )
             {
-                List<Packet> packets = SendPackets(target);
+                SendPackets(target);
 
                 target.WaitUntilSendFinished();
                 server.Join();

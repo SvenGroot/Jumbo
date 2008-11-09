@@ -204,7 +204,7 @@ namespace Tkl.Jumbo.Dfs
         /// <returns>A hash code for this packet.</returns>
         /// <remarks>
         /// No factual implementation of this method is prevented, the method is only overridden to prevent the
-        /// compiler warning against overriding <see cref="Equals"/> but not <see cref="GetHashCode"/>.
+        /// compiler warning against overriding <see cref="Equals(Object)"/> but not <see cref="GetHashCode"/>.
         /// </remarks>
         public override int GetHashCode()
         {

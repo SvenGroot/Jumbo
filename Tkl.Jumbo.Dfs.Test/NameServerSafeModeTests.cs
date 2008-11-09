@@ -8,6 +8,7 @@ using System.Threading;
 namespace Tkl.Jumbo.Dfs.Test
 {
     [TestFixture]
+    [Category("ClusterTest")]
     public class NameServerSafeModeTests
     {
         [Test]

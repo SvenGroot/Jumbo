@@ -75,8 +75,8 @@ namespace Tkl.Jumbo.Dfs.Test
             Directory child1 = new Directory(root, "child1", DateTime.UtcNow);
             Directory child2 = new Directory(child1, "child2", DateTime.UtcNow);
             Directory child3 = new Directory(child1, "child3", DateTime.UtcNow);
-            File child4 = new File(child2, "child4", DateTime.UtcNow);
-            Directory child5 = new Directory(child3, "child5", DateTime.UtcNow);
+            new File(child2, "child4", DateTime.UtcNow);
+            new Directory(child3, "child5", DateTime.UtcNow);
             return root;
         }
     }
