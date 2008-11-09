@@ -5,6 +5,7 @@ using System.Text;
 using Tkl.Jumbo.Dfs;
 using System.Net.Sockets;
 using IO = System.IO;
+using System.Threading;
 
 namespace DfsShell
 {
@@ -48,8 +49,6 @@ namespace DfsShell
                 else
                     PrintUsage();
             }
-
-            Console.ReadKey();
         }
 
         private static void CreateDirectory(INameServerClientProtocol nameServer, string[] args)
@@ -230,6 +229,33 @@ namespace DfsShell
             metrics.PrintMetrics(Console.Out);
         }
 
+        private static void PrintSafeMode(INameServerClientProtocol nameServer, string[] args)
+        {
+            if( nameServer.SafeMode )
+                Console.WriteLine("Safe mode is ON.");
+            else
+                Console.WriteLine("Safe mode is OFF.");
+        }
+
+        private static void WaitSafeMode(INameServerClientProtocol nameServer, string[] args)
+        {
+            if( args.Length > 2 )
+                Console.WriteLine("Usage: DfsShell waitsafemode [timeout]");
+            else
+            {
+                int timeout = Timeout.Infinite;
+                if( args.Length == 2 && !Int32.TryParse(args[1], out timeout) )
+                    Console.WriteLine("Invalid timeout.");
+                else
+                {
+                    if( nameServer.WaitForSafeModeOff(timeout) )
+                        Console.WriteLine("Safe mode is OFF.");
+                    else
+                        Console.WriteLine("Safe mode is ON.");
+                }
+            }
+        }
+
         private static Dictionary<string, Action<INameServerClientProtocol, string[]>> CreateCommandList()
         {
             Dictionary<string, Action<INameServerClientProtocol, string[]>> result = new Dictionary<string, Action<INameServerClientProtocol, string[]>>();
@@ -243,6 +269,8 @@ namespace DfsShell
             result.Add("fileinfo", PrintFileInfo);
             result.Add("blockinfo", PrintBlockInfo);
             result.Add("metrics", PrintMetrics);
+            result.Add("safemode", PrintSafeMode);
+            result.Add("waitsafemode", WaitSafeMode);
 
             return result;
         }
