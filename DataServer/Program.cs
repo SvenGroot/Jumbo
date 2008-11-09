@@ -12,20 +12,26 @@ namespace DataServerApplication
     {
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(Program));
         private static DataServer _server;
+        private static Thread _serverThread;
 
         private static void Main(string[] args)
         {
             AppDomain.CurrentDomain.UnhandledException += new UnhandledExceptionEventHandler(CurrentDomain_UnhandledException);
             System.Threading.Thread.CurrentThread.Name = "entry";
             //RemotingConfiguration.Configure("DataServer.exe.config", false);
-            Thread thread = new Thread(MainThread);
-            thread.IsBackground = true;
-            thread.Name = "main";
-            thread.Start();
-            Console.ReadKey();
-            _server.Abort();
-            thread.Join();
+            _serverThread = new Thread(MainThread);
+            _serverThread.IsBackground = true;
+            _serverThread.Name = "main";
+            _serverThread.Start();
+            Console.CancelKeyPress += new ConsoleCancelEventHandler(Console_CancelKeyPress);
+            Thread.Sleep(Timeout.Infinite);
+        }
+
+        static void Console_CancelKeyPress(object sender, ConsoleCancelEventArgs e)
+        {
             _log.Info("---- Data Server shutting down ----");
+            _server.Abort();
+            _serverThread.Join();
         }
 
         private static void MainThread()

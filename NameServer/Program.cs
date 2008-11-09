@@ -7,6 +7,7 @@ using Tkl.Jumbo.Dfs;
 using System.Runtime.Remoting.Channels;
 using System.Runtime.Remoting.Channels.Tcp;
 using System.Collections;
+using System.Threading;
 
 namespace NameServerApplication
 {
@@ -25,7 +26,12 @@ namespace NameServerApplication
 
             _log.Info("---- NameServer is starting ----");
 
-            Console.ReadKey();
+            Console.CancelKeyPress += new ConsoleCancelEventHandler(Console_CancelKeyPress);
+            Thread.Sleep(Timeout.Infinite);
+        }
+
+        static void Console_CancelKeyPress(object sender, ConsoleCancelEventArgs e)
+        {
             NameServer.Shutdown();
             _log.Info("---- NameServer is shutting down ----");
         }
