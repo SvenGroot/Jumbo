@@ -12,16 +12,23 @@ namespace Tkl.Jumbo.Dfs.Test
 {
     class TestDfsCluster
     {
-        private AppDomain _clusterDomain;
+        //private AppDomain _clusterDomain;
         private ClusterRunner _clusterRunner;
 
         public const int NameServerPort = 10000;
         public const int FirstDataServerPort = 10001;
 
+        private class DataServerInfo
+        {
+            public Thread Thread { get; set; }
+            public DataServer Server { get; set; }
+        }
+
         private class ClusterRunner : MarshalByRefObject
         {
             private int _nextDataServerPort = FirstDataServerPort;
             private string _path;
+            List<DataServerInfo> _dataServers = new List<DataServerInfo>();
 
             public void Run(string editLogPath, int replicationFactor, int dataServers, int? blockSize)
             {
@@ -57,6 +64,15 @@ namespace Tkl.Jumbo.Dfs.Test
 
             public void Shutdown()
             {
+                lock( _dataServers )
+                {
+                    foreach( var info in _dataServers )
+                    {
+                        info.Server.Abort();
+                        info.Thread.Join();
+                    }
+                    _dataServers.Clear();
+                }
                 NameServer.Shutdown();
             }
 
@@ -79,6 +95,10 @@ namespace Tkl.Jumbo.Dfs.Test
             {
                 DfsConfiguration config = (DfsConfiguration)parameter;
                 DataServer server = new DataServer(config);
+                lock( _dataServers )
+                {
+                    _dataServers.Add(new DataServerInfo() { Thread = Thread.CurrentThread, Server = server });
+                }
                 server.Run();
             }
         }
@@ -104,9 +124,10 @@ namespace Tkl.Jumbo.Dfs.Test
             setup.ApplicationBase = Environment.CurrentDirectory;
             //setup.PrivateBinPath = Environment.CurrentDirectory;
             
-            _clusterDomain = AppDomain.CreateDomain("TestCluster", null, setup);
+            //_clusterDomain = AppDomain.CreateDomain("TestCluster", null, setup);
 
-            _clusterRunner = (ClusterRunner)_clusterDomain.CreateInstanceAndUnwrap(typeof(ClusterRunner).Assembly.FullName, typeof(ClusterRunner).FullName);
+            //_clusterRunner = (ClusterRunner)_clusterDomain.CreateInstanceAndUnwrap(typeof(ClusterRunner).Assembly.FullName, typeof(ClusterRunner).FullName);
+            _clusterRunner = new ClusterRunner();
             _clusterRunner.Run(path, replicationFactor, dataServers, blockSize);
 
         }
@@ -118,8 +139,8 @@ namespace Tkl.Jumbo.Dfs.Test
             _clusterRunner = null;
             Trace.WriteLine("Shutting down now.");
             Trace.Flush();
-            AppDomain.Unload(_clusterDomain);
-            _clusterDomain = null;
+            //AppDomain.Unload(_clusterDomain);
+            //_clusterDomain = null;
         }
 
         public void StartDataServers(int dataServers)

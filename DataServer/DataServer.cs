@@ -26,6 +26,7 @@ namespace DataServerApplication
         private List<Guid> _pendingBlocks = new List<Guid>();
         private BlockServer _blockServer; // listens for TCP connections.
         private BlockServer _blockServerIPv4;
+        private volatile bool _running;
 
         public DataServer()
             : this(DfsConfiguration.GetConfiguration())
@@ -53,6 +54,7 @@ namespace DataServerApplication
 
         public void Run()
         {
+            _running = true;
             LocalAddress = new ServerAddress(System.Net.Dns.GetHostName(), _port);
 
             _log.Info("Data server main loop starting.");
@@ -75,11 +77,26 @@ namespace DataServerApplication
 
             AddDataForNextHeartbeat(new InitialHeartbeatData());
 
-            while( true )
+            while( _running )
             {
                 SendHeartbeat();
                 Thread.Sleep(_heartbeatInterval);
             }
+        }
+
+        public void Abort()
+        {
+            if( _blockServer != null )
+            {
+                _blockServer.Abort();
+                _blockServer = null;
+            }
+            if( _blockServerIPv4 != null )
+            {
+                _blockServerIPv4.Abort();
+                _blockServerIPv4 = null;
+            }
+            _running = false;
         }
 
         public FileStream AddNewBlock(Guid blockID)

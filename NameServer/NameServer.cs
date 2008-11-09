@@ -19,8 +19,8 @@ namespace NameServerApplication
     public class NameServer : MarshalByRefObject, INameServerClientProtocol, INameServerHeartbeatProtocol
     {
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(NameServer));
-        private static DfsConfiguration _rpcConfig; // This is set by the Run method and used by the default constructor when Remoting creates the object
         private static List<IChannel> _channels = new List<IChannel>();
+
         private readonly int _replicationFactor;
         private readonly int _blockSize;
         private Random _random = new Random();
@@ -33,17 +33,17 @@ namespace NameServerApplication
         private bool _safeMode = true;
         private System.Threading.ManualResetEvent _safeModeEvent = new System.Threading.ManualResetEvent(false);
 
-        public NameServer()
+        private NameServer()
             : this(true)
         {
         }
 
-        public NameServer(bool replayLog)
-            : this(_rpcConfig ?? DfsConfiguration.GetConfiguration(), true)
+        private NameServer(bool replayLog)
+            : this(DfsConfiguration.GetConfiguration(), true)
         {
         }
 
-        public NameServer(DfsConfiguration config, bool replayLog)
+        private NameServer(DfsConfiguration config, bool replayLog)
         {
             if( config == null )
                 throw new ArgumentNullException("config");
@@ -56,6 +56,8 @@ namespace NameServerApplication
             // pending here differently.
             _pendingBlocks.Clear();
         }
+
+        public static NameServer Instance { get; private set; }
 
         public DfsConfiguration Configuration { get; private set; }
 
@@ -70,7 +72,8 @@ namespace NameServerApplication
             if( config == null )
                 throw new ArgumentNullException("config");
 
-            _rpcConfig = config;
+            //_rpcConfig = config;
+            Instance = new NameServer(config, true);
             ConfigureRemoting(config);
         }
 
@@ -80,6 +83,7 @@ namespace NameServerApplication
             foreach( var channel in _channels )
                 ChannelServices.UnregisterChannel(channel);
             _channels.Clear();
+            Instance = null;
         }
 
         public override object InitializeLifetimeService()
@@ -511,7 +515,7 @@ namespace NameServerApplication
             }
             else
                 RegisterChannel(config, null, null);
-            RemotingConfiguration.RegisterWellKnownServiceType(typeof(NameServer), "NameServer", WellKnownObjectMode.Singleton);
+            RemotingConfiguration.RegisterWellKnownServiceType(typeof(RpcServer), "NameServer", WellKnownObjectMode.Singleton);
             _log.Info("RPC server started.");
         }
 

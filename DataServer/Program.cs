@@ -11,6 +11,7 @@ namespace DataServerApplication
     static class Program
     {
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(Program));
+        private static DataServer _server;
 
         private static void Main(string[] args)
         {
@@ -22,14 +23,16 @@ namespace DataServerApplication
             thread.Name = "main";
             thread.Start();
             Console.ReadKey();
+            _server.Abort();
+            thread.Join();
             _log.Info("---- Data Server shutting down ----");
         }
 
         private static void MainThread()
         {
             _log.Info("---- Data Server is starting ----");
-            DataServer server = new DataServer();
-            server.Run();
+            _server = new DataServer();
+            _server.Run();
         }
 
         private static void CurrentDomain_UnhandledException(object sender, UnhandledExceptionEventArgs e)

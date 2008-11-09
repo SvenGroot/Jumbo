@@ -26,6 +26,7 @@ namespace NameServerApplication
             _log.Info("---- NameServer is starting ----");
 
             Console.ReadKey();
+            NameServer.Shutdown();
             _log.Info("---- NameServer is shutting down ----");
         }
 

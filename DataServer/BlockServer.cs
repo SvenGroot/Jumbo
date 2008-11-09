@@ -23,6 +23,7 @@ namespace DataServerApplication
         private TcpListener _listener;
         private Thread _listenerThread;
         private DataServer _dataServer;
+        private volatile bool _running;
 
         public BlockServer(DataServer dataServer, IPAddress bindAddress, int port)
         {
@@ -36,10 +37,11 @@ namespace DataServerApplication
 
         public void Run()
         {
+            _running = true;
             _listener.Start();
             _log.InfoFormat("TCP server started on address {0}.", _listener.LocalEndpoint);
 
-            while( true )
+            while( _running )
             {
                 WaitForConnections();
             }
@@ -56,6 +58,17 @@ namespace DataServerApplication
             }
         }
 
+        public void Abort()
+        {
+            if( _listenerThread != null )
+            {
+                _running = false;
+                _listener.Stop();
+                _listenerThread.Join();
+                _listenerThread = null;
+            }
+        }
+
         private void WaitForConnections()
         {
             _listener.BeginAcceptTcpClient(new AsyncCallback(AcceptTcpClientCallback), null);
@@ -65,11 +78,22 @@ namespace DataServerApplication
 
         private void AcceptTcpClientCallback(IAsyncResult ar)
         {
-            _log.Info("Connection accepted.");
             _connectionEvent.Set();
-            using( TcpClient client = _listener.EndAcceptTcpClient(ar) )
+            try
             {
-                HandleConnection(client);
+                using( TcpClient client = _listener.EndAcceptTcpClient(ar) )
+                {
+                    _log.Info("Connection accepted.");
+                    HandleConnection(client);
+                }
+            }
+            catch( SocketException ex )
+            {
+                _log.Error("An error occurred accepting a client connection.", ex);
+            }
+            catch( ObjectDisposedException )
+            {
+                // Aborting; ignore.
             }
         }
 
