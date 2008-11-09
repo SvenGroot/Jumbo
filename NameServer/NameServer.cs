@@ -236,13 +236,17 @@ namespace NameServerApplication
             // I allow calling this even if safemode is on, but it might return an empty list in that case.
             lock( _blocks )
             {
-                // TODO: Deal with under-replicated blocks.
                 BlockInfo block;
                 if( !_blocks.TryGetValue(blockID, out block) )
                     throw new ArgumentException("Invalid block ID.");
 
-                return (from server in block.DataServers
-                        select server.Address).ToArray();
+                var localServers = from server in block.DataServers
+                                   where server.Address.HostName == ServerContext.Current.ClientHostName 
+                                   select server.Address;
+                var remoteServers = from server in block.DataServers
+                                    where server.Address.HostName != ServerContext.Current.ClientHostName 
+                                    select server.Address;
+                return localServers.Concat(remoteServers).ToArray();
             }
         }
 
