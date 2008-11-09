@@ -74,6 +74,7 @@ namespace Tkl.Jumbo.Dfs.Test
                     _dataServers.Clear();
                 }
                 NameServer.Shutdown();
+                Thread.Sleep(500);
             }
 
             private void RunDataServer(string path, int port)

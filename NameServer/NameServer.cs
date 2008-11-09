@@ -81,7 +81,10 @@ namespace NameServerApplication
         public static void Shutdown()
         {
             foreach( var channel in _channels )
+            {
+                ((TcpServerChannel)channel).StopListening(null);
                 ChannelServices.UnregisterChannel(channel);
+            }
             _channels.Clear();
             Instance = null;
         }
