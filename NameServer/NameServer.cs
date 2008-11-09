@@ -518,7 +518,8 @@ namespace NameServerApplication
             }
             else
                 RegisterChannel(config, null, null);
-            RemotingConfiguration.RegisterWellKnownServiceType(typeof(RpcServer), "NameServer", WellKnownObjectMode.Singleton);
+            if( RemotingConfiguration.IsRemotelyActivatedClientType(typeof(RpcServer)) == null )
+                RemotingConfiguration.RegisterWellKnownServiceType(typeof(RpcServer), "NameServer", WellKnownObjectMode.Singleton);
             _log.Info("RPC server started.");
         }
 
