@@ -24,6 +24,8 @@ namespace NameServerApplication
         {
             if( logFileDirectory == null )
                 logFileDirectory = string.Empty;
+            if( logFileDirectory.Length > 0 )
+                System.IO.Directory.CreateDirectory(logFileDirectory);
             _logFilePath = Path.Combine(logFileDirectory, "EditLog.log");
             if( !appendLog )
                 System.IO.File.Delete(_logFilePath);

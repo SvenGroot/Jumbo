@@ -41,6 +41,7 @@ namespace DataServerApplication
             _config = config;
             _blockStorageDirectory = config.DataServer.BlockStoragePath;
             _temporaryBlockStorageDirectory = Path.Combine(_blockStorageDirectory, "temp");
+            System.IO.Directory.CreateDirectory(_temporaryBlockStorageDirectory);
             _port = config.DataServer.Port;
             _nameServer = DfsClient.CreateNameServerHeartbeatClient(config);
             _nameServerClient = DfsClient.CreateNameServerClient(config);
