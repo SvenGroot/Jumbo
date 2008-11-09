@@ -24,7 +24,7 @@ namespace Tkl.Jumbo.Dfs
         /// The parameters should be, in order: creation date, size (or a string saying &lt;DIR&gt; for
         /// directories), name.
         /// </remarks>
-        protected const string ListingEntryFormat = "{0:yyyy-MM-dd HH:mm}  {1,15:0,0}  {2}";
+        protected const string ListingEntryFormat = "{0:yyyy-MM-dd HH:mm}  {1,15:#,0}  {2}";
 
         /// <summary>
         /// Initializes a new instance of the <see cref="FileSystemEntry"/> class.

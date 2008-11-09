@@ -47,7 +47,7 @@ namespace Tkl.Jumbo.Dfs
         /// <param name="writer">The <see cref="TextWriter"/> to print the metrics to.</param>
         public void PrintMetrics(TextWriter writer)
         {
-            writer.WriteLine("Total size:       {0:0,0} bytes", TotalSize);
+            writer.WriteLine("Total size:       {0:#,0} bytes", TotalSize);
             writer.WriteLine("Blocks:           {0} (excl. pending blocks)", TotalBlockCount);
             writer.WriteLine("Under-replicated: {0}", UnderReplicatedBlockCount);
             writer.WriteLine("Pending blocks:   {0}", PendingBlockCount);

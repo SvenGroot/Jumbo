@@ -1,6 +1,13 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <project name="Jumbo" default="all" xmlns="http://nant.sf.net/release/0.86-beta1/nant.xsd">
   <target name="all" depends="NameServer,DataServer,DfsShell,Tkl.Jumbo.Dfs.Test">
+    <copy todir="nantbin">
+      <fileset>
+        <include name="jumbo-config.sh"/>
+        <include name="run-server.sh"/>
+        <include name="run-servers.sh"/>
+      </fileset>
+    </copy>
   </target>
   <target name="clean">
     <delete dir="nantbin" failonerror="false"/>

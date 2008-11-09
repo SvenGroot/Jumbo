@@ -70,7 +70,7 @@ namespace Tkl.Jumbo.Dfs
         public void PrintFileInfo(System.IO.TextWriter writer)
         {
             writer.WriteLine("Path:             {0}", FullPath);
-            writer.WriteLine("Size:             {0:0,0} bytes", Size);
+            writer.WriteLine("Size:             {0:#,0} bytes", Size);
             writer.WriteLine("Open for writing: {0}", IsOpenForWriting);
             writer.WriteLine("Blocks:           {0}", Blocks.Count);
             foreach( Guid block in Blocks )
