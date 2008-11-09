@@ -29,6 +29,7 @@
         <include name="NameServer.cs"/>
         <include name="PendingFile.cs"/>
         <include name="Program.cs"/>
+        <include name="RpcServer.cs"/>
       </sources>
     </csc>
     <copy file="App.config" tofile="nantbin/NameServer.exe.config"/>
