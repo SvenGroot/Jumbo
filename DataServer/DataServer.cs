@@ -153,19 +153,33 @@ namespace DataServerApplication
             SendHeartbeat();
         }
 
+        public void RemoveBlockIfPending(Guid blockID)
+        {
+            lock( _pendingBlocks )
+            {
+                if( _pendingBlocks.Contains(blockID) )
+                {
+                    _pendingBlocks.Remove(blockID);
+                    string blockFile = Path.Combine(_temporaryBlockStorageDirectory, blockID.ToString());
+                    if( System.IO.File.Exists(blockFile) )
+                        System.IO.File.Delete(blockFile);
+                }
+            }
+        }
+
         private void SendHeartbeat()
         {
             //_log.Debug("Sending heartbeat to name server.");
             HeartbeatData[] data = null;
             lock( _pendingHeartbeatData )
             {
-                // TODO: Maybe we should not clear the list until we know sending the heartbeatdata has succeeded?
                 if( _pendingHeartbeatData.Count > 0 )
                 {
                     data = _pendingHeartbeatData.ToArray();
                     _pendingHeartbeatData.Clear();
                 }
             }
+            // TODO: Retry this if it fails.
             HeartbeatResponse[] response = _nameServer.Heartbeat(LocalAddress, data);
             if( response != null )
                 ProcessResponses(response);

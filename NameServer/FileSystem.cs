@@ -43,6 +43,8 @@ namespace NameServerApplication
                 _log.Info("Replaying log file.");
                 _editLog.ReplayLog(this);
                 _log.Info("Replaying log file finished.");
+                // TODO: Once leases are in place, we might not want to close pending files, the lease owner could still
+                // be around.
                 var pendingFiles = _pendingFiles.Keys.ToArray(); // make a copy
                 foreach( var file in pendingFiles )
                 {
@@ -173,14 +175,23 @@ namespace NameServerApplication
                     throw new ArgumentException("The specified directory already has a file or directory with the specified name.", "name");
                 
                 PendingFile file = CreateFile(parent, name, dateCreated);
-                if( appendBlock )
+                try
                 {
-                    Guid blockID = NewBlockID();
-                    AppendBlock(file, blockID, true);
-                    return blockID;
+                    if( appendBlock )
+                    {
+                        Guid blockID = NewBlockID();
+                        AppendBlock(file, blockID, true);
+                        return blockID;
+                    }
+                    else
+                        return null;
                 }
-                else
-                    return null;
+                catch( Exception )
+                {
+                    CloseFile(path);
+                    Delete(path, false);
+                    throw;
+                }
             }
         }
 
@@ -236,7 +247,6 @@ namespace NameServerApplication
         /// <param name="checkReplication"><see langword="true"/> to check all existing blocks for replication before appending the new block; <see langword="false"/> to skip the replication check.</param>
         public void AppendBlock(string path, Guid blockID, bool checkReplication)
         {
-            // TODO: Only allow new blocks if the file so far is a whole number of blocks.
             // checkReplication is provided so we can skip that while replaying the log file.
 
             lock( _root )
@@ -246,10 +256,6 @@ namespace NameServerApplication
                     throw new InvalidOperationException(string.Format("The file '{0}' does not exist or is not open for writing.", path));
 
                 AppendBlock(file, blockID, checkReplication);
-                //File file = GetFileInfoInternal(path);
-                //if( file == null )
-                //    throw new System.IO.FileNotFoundException(string.Format("The file '{0}' does not exist.", path));
-                //AppendBlock(file, blockID, checkReplication);
             }
         }
 
@@ -346,8 +352,7 @@ namespace NameServerApplication
             Directory parent;
             FileSystemEntry entry;
             // The entire operation must be locked, otherwise it opens up the possibility of someone else deleting
-            // the file. TODO: I don't think the entire file system needs to be locked; we can perhaps create a separate
-            // lock just for deleting and lock the file system only when doing the delete?
+            // the file.
             lock( _root )
             {
                 try
@@ -383,6 +388,9 @@ namespace NameServerApplication
         {
             if( file.PendingBlock != null )
                 throw new InvalidOperationException("Cannot add a block to a file with a pending block.");
+
+            if( file.File.Size % NameServer.BlockSize != 0 )
+                throw new InvalidOperationException("The final block of the file is smaller than the maximum block size, therefore the file can no longer be extended.");
 
             if( checkReplication )
                 NameServer.CheckBlockReplication(file.File.Blocks);

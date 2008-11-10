@@ -189,7 +189,7 @@ namespace Tkl.Jumbo.Dfs
                     _bufferPos = 0;
                     if( finalPacket )
                     {
-                        // TODO: Do we really want to wait here? We could just let it run in the background and continue on our
+                        // Do we really want to wait here? We could just let it run in the background and continue on our
                         // merry way. That would require keeping track of them so we know in Dispose when we're really finished.
                         // It would also require the name server to allow appending of new blocks while old ones are still pending.
                         _sender.WaitUntilSendFinished();

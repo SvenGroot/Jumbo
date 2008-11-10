@@ -26,6 +26,7 @@ namespace Tkl.Jumbo.Dfs
         private AutoResetEvent _bufferWritePosEvent = new AutoResetEvent(false);
         private Packet[] _packetBuffer = new Packet[_bufferSize];
         private DataServerClientProtocolResult _lastResult = DataServerClientProtocolResult.Ok;
+        private Exception _lastException;
         private Thread _fillBufferThread;
         private bool _disposed;
 
@@ -197,8 +198,10 @@ namespace Tkl.Jumbo.Dfs
                         }
                     }
                 }
+                if( _lastException != null )
+                    throw new DfsException("Couldn't read data from the server.", _lastException);
                 if( _lastResult != DataServerClientProtocolResult.Ok )
-                    throw new DfsException("Couldn't read data from the server."); // TODO: innerexception if applicable
+                    throw new DfsException("Couldn't read data from the server.");
 
                 Debug.Assert(sizeRemaining == 0);
             }
@@ -288,71 +291,78 @@ namespace Tkl.Jumbo.Dfs
 
         private void ReadBufferThread()
         {
-            long position = _position;
-            while( !_disposed && position < _file.Size && _lastResult == DataServerClientProtocolResult.Ok )
+            try
             {
-                // TODO: Transparent fallback to different server.
-                int blockIndex = (int)(position / BlockSize);
-                int blockOffset = (int)(position % BlockSize);
-                Guid block = _file.Blocks[blockIndex];
-                ServerAddress[] servers = _nameServer.GetDataServersForBlock(block);
-
-                ServerAddress server = servers[0];
-                using( TcpClient client = new TcpClient(server.HostName, server.Port) )
+                long position = _position;
+                while( !_disposed && position < _file.Size && _lastResult == DataServerClientProtocolResult.Ok )
                 {
-                    DataServerClientProtocolReadHeader header = new DataServerClientProtocolReadHeader();
-                    header.BlockID = block;
-                    header.Offset = blockOffset;
-                    header.Size = -1;
+                    // TODO: Transparent fallback to different server.
+                    int blockIndex = (int)(position / BlockSize);
+                    int blockOffset = (int)(position % BlockSize);
+                    Guid block = _file.Blocks[blockIndex];
+                    ServerAddress[] servers = _nameServer.GetDataServersForBlock(block);
 
-                    using( NetworkStream stream = client.GetStream() )
+                    ServerAddress server = servers[0];
+                    using( TcpClient client = new TcpClient(server.HostName, server.Port) )
                     {
-                        BinaryFormatter formatter = new BinaryFormatter();
-                        formatter.Serialize(stream, header);
+                        DataServerClientProtocolReadHeader header = new DataServerClientProtocolReadHeader();
+                        header.BlockID = block;
+                        header.Offset = blockOffset;
+                        header.Size = -1;
 
-                        using( BinaryReader reader = new BinaryReader(stream) )
+                        using( NetworkStream stream = client.GetStream() )
                         {
-                            DataServerClientProtocolResult status = (DataServerClientProtocolResult)reader.ReadInt32();
-                            if( status != DataServerClientProtocolResult.Ok )
-                                throw new DfsException("The server encountered an error while sending data.");
-                            int offset = reader.ReadInt32();
-                            int difference = blockOffset - offset;
-                            position -= difference; // Correct position
+                            BinaryFormatter formatter = new BinaryFormatter();
+                            formatter.Serialize(stream, header);
 
-                            Packet packet = null;
-                            while( !_disposed && _lastResult == DataServerClientProtocolResult.Ok && (packet == null || !packet.IsLastPacket) )
+                            using( BinaryReader reader = new BinaryReader(stream) )
                             {
-                                if( (_bufferWritePos + 1) % _bufferSize == _bufferReadPos )
-                                    _bufferReadPosEvent.WaitOne();
-                                else
+                                DataServerClientProtocolResult status = (DataServerClientProtocolResult)reader.ReadInt32();
+                                if( status != DataServerClientProtocolResult.Ok )
+                                    throw new DfsException("The server encountered an error while sending data.");
+                                int offset = reader.ReadInt32();
+                                int difference = blockOffset - offset;
+                                position -= difference; // Correct position
+
+                                Packet packet = null;
+                                while( !_disposed && _lastResult == DataServerClientProtocolResult.Ok && (packet == null || !packet.IsLastPacket) )
                                 {
-                                    //Debug.WriteLine(string.Format("Write: {0}", _bufferWritePos));
-                                    if( _packetBuffer[_bufferWritePos] == null )
-                                        _packetBuffer[_bufferWritePos] = new Packet();
-                                    packet = _packetBuffer[_bufferWritePos];
-                                    status = (DataServerClientProtocolResult)reader.ReadInt32();
-                                    if( status != DataServerClientProtocolResult.Ok )
-                                    {
-                                        _lastResult = DataServerClientProtocolResult.Error;
-                                        _bufferWritePosEvent.Set();
-                                    }
+                                    if( (_bufferWritePos + 1) % _bufferSize == _bufferReadPos )
+                                        _bufferReadPosEvent.WaitOne();
                                     else
                                     {
-                                        packet.Read(reader, false);
+                                        //Debug.WriteLine(string.Format("Write: {0}", _bufferWritePos));
+                                        if( _packetBuffer[_bufferWritePos] == null )
+                                            _packetBuffer[_bufferWritePos] = new Packet();
+                                        packet = _packetBuffer[_bufferWritePos];
+                                        status = (DataServerClientProtocolResult)reader.ReadInt32();
+                                        if( status != DataServerClientProtocolResult.Ok )
+                                        {
+                                            _lastResult = DataServerClientProtocolResult.Error;
+                                            _bufferWritePosEvent.Set();
+                                        }
+                                        else
+                                        {
+                                            packet.Read(reader, false);
 
-                                        position += packet.Size;
-                                        // There is no need to lock this write because no other threads will update this value.
-                                        _bufferWritePos = (_bufferWritePos + 1) % _bufferSize;
-                                        _bufferWritePosEvent.Set();
+                                            position += packet.Size;
+                                            // There is no need to lock this write because no other threads will update this value.
+                                            _bufferWritePos = (_bufferWritePos + 1) % _bufferSize;
+                                            _bufferWritePosEvent.Set();
+                                        }
                                     }
                                 }
-                            }
 
+                            }
                         }
                     }
                 }
             }
-        }
-
+            catch( Exception ex )
+            {
+                _lastException = ex;
+                _lastResult = DataServerClientProtocolResult.Error;
+            }
+        } 
     }
 }

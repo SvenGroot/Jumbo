@@ -140,7 +140,6 @@ namespace DataServerApplication
             int blockSize = 0;
             //DataServerClientProtocolResult forwardResult;
 
-            // TODO: If something goes wrong, the block must be deleted.
             using( BinaryWriter clientWriter = new BinaryWriter(stream) )
             using( BinaryReader reader = new BinaryReader(stream) )
             {
@@ -167,7 +166,6 @@ namespace DataServerApplication
                         {
                             _log.DebugFormat("This is the last server in the list for block {0}.", header.BlockID);
                         }
-                        // TODO: If we are forwarding, we might want to wait until the other servers have accepted the header.
                         clientWriter.WriteResult(DataServerClientProtocolResult.Ok);
 
                         if( !ReceivePackets(header, ref blockSize, clientWriter, reader, forwarder, fileWriter) )
@@ -208,6 +206,8 @@ namespace DataServerApplication
                 {
                     if( forwarder != null )
                         forwarder.Dispose();
+
+                    _dataServer.RemoveBlockIfPending(header.BlockID);
                 }
             }
         }

@@ -51,9 +51,7 @@ namespace NameServerApplication
             _replicationFactor = config.NameServer.ReplicationFactor;
             _blockSize = config.NameServer.BlockSize;
             _fileSystem = new FileSystem(this, replayLog);
-            // TODO: Once leases are in place, we might not want to close the file when replaying (instead leave it open
-            // to see if the original lease owner is still around); then we must also handle blocks that are still actually
-            // pending here differently.
+            // TODO: Once leases are in place, we probably shouldn't clear the _pendingBlocks collection.
             _pendingBlocks.Clear();
         }
 
@@ -97,7 +95,16 @@ namespace NameServerApplication
 
         public void CheckBlockReplication(IEnumerable<Guid> blocks)
         {
-            // TODO: Implement
+            // I believe this is what Hadoop does, but is it the right thing to do?
+            lock( _underReplicatedBlocks )
+            {
+                foreach( Guid blockID in blocks )
+                {
+                    BlockInfo info;
+                    if( _underReplicatedBlocks.TryGetValue(blockID, out info) )
+                        throw new DfsException("Cannot add a block to a file with under-replicated blocks.");
+                }
+            }
         }
 
         public FileSystem FileSystem
@@ -200,7 +207,16 @@ namespace NameServerApplication
         {
             CheckSafeMode();
             Guid guid = _fileSystem.CreateFile(path);
-            return AssignBlockToDataServers(guid);
+            try
+            {
+                return AssignBlockToDataServers(guid);
+            }
+            catch( Exception )
+            {
+                CloseFile(path);
+                Delete(path, false);
+                throw;
+            }
         }
 
         public bool Delete(string path, bool recursive)
@@ -314,7 +330,7 @@ namespace NameServerApplication
                         _log.InfoFormat("A new data server has reported in at {0}", address);
                     if( address.HostName != ServerContext.Current.ClientHostName )
                         _log.Warn("The data server reported a different hostname than is indicated in the ServerContext.");
-                    dataServer = new DataServerInfo(address); // TODO: Real port number
+                    dataServer = new DataServerInfo(address);
                     _dataServers.Add(address, dataServer);
                 }
 
@@ -374,13 +390,17 @@ namespace NameServerApplication
 
         private HeartbeatResponse ProcessNewBlock(DataServerInfo dataServer, NewBlockHeartbeatData newBlock)
         {
-            if( !dataServer.HasReportedBlocks )
-                throw new Exception("A new block added to an uninitialized data server."); // TODO: Handle properly.
-
             _log.InfoFormat("Data server {2} reports it has received block {0} of size {1}.", newBlock.BlockID, newBlock.Size, dataServer.Address);
+
+            if( dataServer.Blocks.Contains(newBlock.BlockID) )
+            {
+                _log.WarnFormat("Data server {0} already had block {1}.", dataServer.Address, newBlock.BlockID);
+                return null;
+            }
 
             BlockInfo block = null;
             bool commitBlock = false;
+            HeartbeatResponse response = null;
             lock( _pendingBlocks )
             {
                 if( _pendingBlocks.TryGetValue(newBlock.BlockID, out block) )
@@ -396,9 +416,8 @@ namespace NameServerApplication
                 }
                 else
                 {
-                    // TODO: Inform the data server to delete the block. Also check if it's not an already existing block that's
-                    // being re-reported?
                     _log.WarnFormat("Block {0} is not pending.", newBlock.BlockID);
+                    response = new DeleteBlocksHeartbeatResponse(new Guid[] { newBlock.BlockID });
                 }
                 // We don't need to check in _blocks; they're not moved there until all data servers have been checked in.
             }
@@ -408,77 +427,76 @@ namespace NameServerApplication
                 _fileSystem.CommitBlock(block.File.FullPath, newBlock.BlockID, newBlock.Size);
             }
 
-            return null;
+            return response;
         }
 
         private HeartbeatResponse ProcessBlockReport(DataServerInfo dataServer, BlockReportHeartbeatData blockReport)
         {
             if( dataServer.HasReportedBlocks )
-                _log.Warn("Duplicate block report, ignoring.");
-            else
+                _log.Warn("Duplicate block report.");
+
+            List<Guid> invalidBlocks = null;
+            _log.Info("Received block report.");
+            dataServer.HasReportedBlocks = true;
+            dataServer.Blocks.Clear();
+            foreach( Guid block in blockReport.Blocks )
             {
-                List<Guid> invalidBlocks = null;
-                _log.Info("Received block report.");
-                dataServer.HasReportedBlocks = true;
-                dataServer.Blocks = new List<Guid>();
-                foreach( Guid block in blockReport.Blocks )
+                BlockInfo info;
+                lock( _blocks )
                 {
-                    BlockInfo info;
-                    lock( _blocks )
+                    lock( _underReplicatedBlocks )
                     {
-                        lock( _underReplicatedBlocks )
+                        // TODO: It is possible for a data server that has already received and reported a block to go down
+                        // and re-report before the block leaves pending state. This makes it possible for a server to report
+                        // a pending block here, which needs to be dealt with.
+                        if( _underReplicatedBlocks.TryGetValue(block, out info) )
                         {
-                            // TODO: It is possible for a data server that has already received and reported a block to go down
-                            // and re-report before the block leaves pending state. This makes it possible for a server to report
-                            // a pending block here, which needs to be dealt with.
-                            if( _underReplicatedBlocks.TryGetValue(block, out info) )
+                            info.DataServers.Add(dataServer);
+                            _log.DebugFormat("Dataserver {0} has block ID {1}", dataServer.Address, block);
+                            if( info.DataServers.Count >= _replicationFactor )
                             {
-                                info.DataServers.Add(dataServer);
-                                _log.DebugFormat("Dataserver {0} has block ID {1}", dataServer.Address, block);
-                                if( info.DataServers.Count >= _replicationFactor )
-                                {
-                                    _log.InfoFormat("Block {0} has reached sufficient replication level.", block);
-                                    _underReplicatedBlocks.Remove(block);
-                                    // Not needed, _blocks contains all non-pending blocks, even underreplicated ones: _blocks.Add(block, info); 
-                                }
-                                dataServer.Blocks.Add(block);
+                                _log.InfoFormat("Block {0} has reached sufficient replication level.", block);
+                                _underReplicatedBlocks.Remove(block);
+                                // Not needed, _blocks contains all non-pending blocks, even underreplicated ones: _blocks.Add(block, info); 
                             }
-                            else if( _blocks.TryGetValue(block, out info) )
-                            {
-                                info.DataServers.Add(dataServer);
-                                _log.DebugFormat("Dataserver {0} has block ID {1}", dataServer.Address, block);
-                                dataServer.Blocks.Add(block);
-                            }
-                            else
-                            {
-                                _log.WarnFormat("Dataserver {0} reported unknown block {1}.", dataServer.Address, block);
-                                if( invalidBlocks == null )
-                                    invalidBlocks = new List<Guid>();
-                                invalidBlocks.Add(block);
-                            }
+                            dataServer.Blocks.Add(block);
+                        }
+                        else if( _blocks.TryGetValue(block, out info) )
+                        {
+                            info.DataServers.Add(dataServer);
+                            _log.DebugFormat("Dataserver {0} has block ID {1}", dataServer.Address, block);
+                            dataServer.Blocks.Add(block);
+                        }
+                        else
+                        {
+                            _log.WarnFormat("Dataserver {0} reported unknown block {1}.", dataServer.Address, block);
+                            if( invalidBlocks == null )
+                                invalidBlocks = new List<Guid>();
+                            invalidBlocks.Add(block);
                         }
                     }
                 }
-                CheckDisableSafeMode();
-                if( invalidBlocks != null )
-                    return new DeleteBlocksHeartbeatResponse(invalidBlocks);
             }
+            CheckDisableSafeMode();
+            if( invalidBlocks != null )
+                return new DeleteBlocksHeartbeatResponse(invalidBlocks);
             return null;
         }
 
         private BlockAssignment AssignBlockToDataServers(Guid blockId)
         {
-            // TODO: This really ought to be checked before the CreateFile is logged.
-            if( _dataServers.Count < _replicationFactor )
-                throw new DfsException("Insufficient data servers to replicate new block.");
-
             // TODO: Better selection policy.
             List<DataServerInfo> unassignedDataServers;
             lock( _dataServers )
             {
-                unassignedDataServers = new List<DataServerInfo>(_dataServers.Values);
+                unassignedDataServers = (from server in _dataServers.Values
+                                         where server.HasReportedBlocks
+                                         select server).ToList();
             }
 
+            if( unassignedDataServers.Count < _replicationFactor )
+                throw new DfsException("Insufficient data servers to replicate new block.");
+            
             int serversNeeded = _replicationFactor;
             List<ServerAddress> dataServers = new List<ServerAddress>(_replicationFactor);
 

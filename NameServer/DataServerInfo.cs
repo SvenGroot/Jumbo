@@ -9,6 +9,7 @@ namespace NameServerApplication
     class DataServerInfo
     {
         private readonly List<Guid> _blocksToDelete = new List<Guid>();
+        private readonly List<Guid> _blocks = new List<Guid>();
 
         public DataServerInfo(string hostName, int port)
         {
@@ -24,7 +25,7 @@ namespace NameServerApplication
 
         public bool HasReportedBlocks { get; set; }
 
-        public List<Guid> Blocks { get; set; }
+        public List<Guid> Blocks { get { return _blocks; } }
 
         public void AddBlockToDelete(Guid blockID)
         {
