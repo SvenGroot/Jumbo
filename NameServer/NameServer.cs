@@ -28,7 +28,7 @@ namespace NameServerApplication
         private readonly FileSystem _fileSystem;
         private readonly Dictionary<ServerAddress, DataServerInfo> _dataServers = new Dictionary<ServerAddress, DataServerInfo>();
         private readonly Dictionary<Guid, BlockInfo> _blocks = new Dictionary<Guid, BlockInfo>();
-        private readonly Dictionary<Guid, BlockInfo> _pendingBlocks = new Dictionary<Guid, BlockInfo>();
+        private readonly Dictionary<Guid, PendingBlock> _pendingBlocks = new Dictionary<Guid, PendingBlock>();
         private readonly Dictionary<Guid, BlockInfo> _underReplicatedBlocks = new Dictionary<Guid, BlockInfo>();
         private bool _safeMode = true;
         private System.Threading.ManualResetEvent _safeModeEvent = new System.Threading.ManualResetEvent(false);
@@ -114,10 +114,10 @@ namespace NameServerApplication
 
         public void NotifyNewBlock(File file, Guid blockId)
         {
-            // Called by FileSystem when a block is added to a file.
+            // Called by FileSystem when a pending block is added to a file (AppendBlock)
             lock( _pendingBlocks )
             {
-                _pendingBlocks.Add(blockId, new BlockInfo(file));
+                _pendingBlocks.Add(blockId, new PendingBlock(new BlockInfo(file)));
             }
         }
 
@@ -127,9 +127,9 @@ namespace NameServerApplication
             {
                 lock( _pendingBlocks )
                 {
-                    BlockInfo info = _pendingBlocks[pendingBlock.Value];
+                    PendingBlock info = _pendingBlocks[pendingBlock.Value];
                     _pendingBlocks.Remove(pendingBlock.Value);
-                    MarkForDataServerDeletion(pendingBlock.Value, info);
+                    MarkForDataServerDeletion(pendingBlock.Value, info.Block);
                 }
             }
             if( file.Blocks.Count > 0 )
@@ -164,15 +164,16 @@ namespace NameServerApplication
             {
                 lock( _pendingBlocks )
                 {
-                    BlockInfo info;
-                    if( _pendingBlocks.TryGetValue(blockID, out info) )
+                    PendingBlock pendingBlock;
+                    if( _pendingBlocks.TryGetValue(blockID, out pendingBlock) )
                     {
                         _pendingBlocks.Remove(blockID);
-                        _blocks.Add(blockID, info);
-                        if( info.DataServers.Count < _replicationFactor )
+                        _blocks.Add(blockID, pendingBlock.Block);
+                        // This can happen during log file replay or if a server crashed between commits.
+                        if( pendingBlock.Block.DataServers.Count < _replicationFactor )
                         {
                             lock( _underReplicatedBlocks )
-                                _underReplicatedBlocks.Add(blockID, info);
+                                _underReplicatedBlocks.Add(blockID, pendingBlock.Block);
                         }
                     }
                 }
@@ -398,18 +399,18 @@ namespace NameServerApplication
                 return null;
             }
 
-            BlockInfo block = null;
             bool commitBlock = false;
             HeartbeatResponse response = null;
+            PendingBlock pendingBlock;
             lock( _pendingBlocks )
             {
-                if( _pendingBlocks.TryGetValue(newBlock.BlockID, out block) )
+                if( _pendingBlocks.TryGetValue(newBlock.BlockID, out pendingBlock) )
                 {
                     // TODO: Should there be some kind of check whether the data server reporting this was actually
                     // one of the assigned servers?
-                    block.DataServers.Add(dataServer);
+                    pendingBlock.Block.DataServers.Add(dataServer);
                     dataServer.Blocks.Add(newBlock.BlockID);
-                    if( block.DataServers.Count >= _replicationFactor )
+                    if( pendingBlock.IncrementCommit() >= _replicationFactor )
                     {
                         commitBlock = true;
                     }
@@ -423,8 +424,9 @@ namespace NameServerApplication
             }
             if( commitBlock )
             {
+                // CommitBlock will also call back into NameServer to commit the block on this side.
                 _log.InfoFormat("Pending block {0} is now fully replicated and is being committed.", newBlock.BlockID);
-                _fileSystem.CommitBlock(block.File.FullPath, newBlock.BlockID, newBlock.Size);
+                _fileSystem.CommitBlock(pendingBlock.Block.File.FullPath, newBlock.BlockID, newBlock.Size);
             }
 
             return response;
@@ -432,6 +434,23 @@ namespace NameServerApplication
 
         private HeartbeatResponse ProcessBlockReport(DataServerInfo dataServer, BlockReportHeartbeatData blockReport)
         {
+            /* The normal order of events is:
+             * - Server checks in
+             * - Server sends block report
+             * - Server sends newblock heartbeat after it gets blocks
+             * What can also happen (assume server already checked in)
+             * - Server sends newblock
+             * - Server restarts and sends block report before the block was committed.
+             *   Because the commit count is different from the data server list, the block can get committed in the mean time.
+             *   No action is necessary.
+             * Also
+             * - Server is receiving block
+             * - Name server crashes and restarts
+             * - Server sends newblock as the first heartbeat after the name server comes back up
+             * - Server sends block report
+             *   - Block could still be pending: this server is already registered: do nothing
+             *   - Block no longer pending: do nothing.
+             */
             if( dataServer.HasReportedBlocks )
                 _log.Warn("Duplicate block report, ignoring.");
             else
@@ -439,42 +458,52 @@ namespace NameServerApplication
                 List<Guid> invalidBlocks = null;
                 _log.Info("Received block report.");
                 dataServer.HasReportedBlocks = true;
-                dataServer.Blocks.Clear();
                 foreach( Guid block in blockReport.Blocks )
                 {
                     BlockInfo info;
                     lock( _blocks )
                     {
-                        lock( _underReplicatedBlocks )
+                        if( _blocks.TryGetValue(block, out info) )
                         {
-                            // TODO: It is possible for a data server that has already received and reported a block to go down
-                            // and re-report before the block leaves pending state. This makes it possible for a server to report
-                            // a pending block here, which needs to be dealt with.
-                            if( _underReplicatedBlocks.TryGetValue(block, out info) )
+                            // See the explanation above for situations in which the DataServer is already present.
+                            if( !info.DataServers.Contains(dataServer) )
                             {
-                                info.DataServers.Add(dataServer);
                                 _log.DebugFormat("Dataserver {0} has block ID {1}", dataServer.Address, block);
+                                info.DataServers.Add(dataServer);
+                                dataServer.Blocks.Add(block);
                                 if( info.DataServers.Count >= _replicationFactor )
                                 {
-                                    _log.InfoFormat("Block {0} has reached sufficient replication level.", block);
-                                    _underReplicatedBlocks.Remove(block);
-                                    // Not needed, _blocks contains all non-pending blocks, even underreplicated ones: _blocks.Add(block, info); 
+                                    lock( _underReplicatedBlocks )
+                                    {
+                                        if( _underReplicatedBlocks.ContainsKey(block) )
+                                        {
+                                            _log.InfoFormat("Block {0} has reached sufficient replication level.", block);
+                                            _underReplicatedBlocks.Remove(block);
+                                        }
+                                    }
                                 }
-                                dataServer.Blocks.Add(block);
-                            }
-                            else if( _blocks.TryGetValue(block, out info) )
-                            {
-                                info.DataServers.Add(dataServer);
-                                _log.DebugFormat("Dataserver {0} has block ID {1}", dataServer.Address, block);
-                                dataServer.Blocks.Add(block);
                             }
                             else
+                                _log.WarnFormat("Dataserver {0} re-reported block ID {1}", dataServer.Address, block);
+                        }
+                    }
+                    if( info == null )
+                    {
+                        PendingBlock pendingBlock;
+                        lock( _pendingBlocks )
+                        {
+                            if( _pendingBlocks.TryGetValue(block, out pendingBlock) )
                             {
-                                _log.WarnFormat("Dataserver {0} reported unknown block {1}.", dataServer.Address, block);
-                                if( invalidBlocks == null )
-                                    invalidBlocks = new List<Guid>();
-                                invalidBlocks.Add(block);
+                                Debug.Assert(pendingBlock.Block.DataServers.Contains(dataServer));
+                                _log.WarnFormat("Dataserver {0} re-reported block ID {1}", dataServer.Address, block);
                             }
+                        }
+                        if( info == null )
+                        {
+                            _log.WarnFormat("Dataserver {0} reported unknown block {1}.", dataServer.Address, block);
+                            if( invalidBlocks == null )
+                                invalidBlocks = new List<Guid>();
+                            invalidBlocks.Add(block);
                         }
                     }
                 }
@@ -618,8 +647,12 @@ namespace NameServerApplication
                         {
                             bool pending = false;
                             BlockInfo blockInfo;
-                            if( _pendingBlocks.TryGetValue(blockID, out blockInfo) )
+                            PendingBlock pendingBlock;
+                            if( _pendingBlocks.TryGetValue(blockID, out pendingBlock) )
+                            {
+                                blockInfo = pendingBlock.Block;
                                 pending = true;
+                            }
                             else if( !_blocks.TryGetValue(blockID, out blockInfo) )
                                 Debug.Assert(false); // This shouldn't happen, it means the block handling code has bugs.
                             bool removed = blockInfo.DataServers.Remove(info);
