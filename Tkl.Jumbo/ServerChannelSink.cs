@@ -5,7 +5,7 @@ using System.Text;
 using System.Runtime.Remoting.Channels;
 using System.Runtime.Remoting.Messaging;
 
-namespace Tkl.Jumbo.Dfs
+namespace Tkl.Jumbo
 {
     class ServerChannelSink : BaseChannelObjectWithProperties, IServerChannelSink
     {

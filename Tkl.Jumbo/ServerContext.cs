@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-namespace Tkl.Jumbo.Dfs
+namespace Tkl.Jumbo
 {
     /// <summary>
     /// Provides context for a server RPC call.

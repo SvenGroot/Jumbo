@@ -5,7 +5,7 @@ using System.Text;
 using System.Runtime.Remoting.Channels;
 using System.Runtime.Remoting.Messaging;
 
-namespace Tkl.Jumbo.Dfs
+namespace Tkl.Jumbo
 {
     /// <summary>
     /// .Net Remoting channel sink responsible for adding the host name to the calling context

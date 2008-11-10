@@ -5,7 +5,7 @@ using System.Text;
 using System.Runtime.Remoting.Channels;
 using System.Collections;
 
-namespace Tkl.Jumbo.Dfs
+namespace Tkl.Jumbo
 {
     /// <summary>
     /// .Net remoting channel sink provider responsible for creating the <see cref="ClientChannelSink"/>.

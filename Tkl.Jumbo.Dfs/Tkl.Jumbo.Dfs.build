@@ -17,14 +17,13 @@
         <include name="System.Core.dll"/>
         <include name="System.Runtime.Remoting.dll"/>
         <include name="../lib/log4net.dll"/>
+        <include name="../Tkl.Jumbo/nantbin/Tkl.Jumbo.dll"/>
       </references>
       <sources>
         <include name="Properties/AssemblyInfo.cs"/>
         <include name="BlockAssignment.cs"/>
         <include name="BlockReportHeartbeatData.cs"/>
         <include name="BlockSender.cs"/>
-        <include name="ClientChannelSink.cs"/>
-        <include name="ClientChannelSinkProvider.cs"/>
         <include name="CRC32.cs"/>
         <include name="DataServerClientProtocolHeader.cs"/>
         <include name="DataServerClientProtocolReadHeader.cs"/>
@@ -54,11 +53,13 @@
         <include name="Packet.cs"/>
         <include name="SafeModeException.cs"/>
         <include name="ServerAddress.cs"/>
-        <include name="ServerChannelSink.cs"/>
-        <include name="ServerChannelSinkProvider.cs"/>
-        <include name="ServerContext.cs"/>
       </sources>
     </csc>
-    <copy file="../lib/log4net.dll" todir="nantbin"/>
+    <copy todir="nantbin">
+      <fileset>
+        <include name="../lib/log4net.dll"/>
+        <include name="../Tkl.Jumbo/nantbin/*.*"/>
+      </fileset>
+    </copy>
   </target>
 </project>

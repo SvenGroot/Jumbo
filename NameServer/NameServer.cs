@@ -10,6 +10,7 @@ using System.Runtime.Remoting.Channels;
 using System.Runtime.Remoting.Channels.Tcp;
 using System.Runtime.Remoting;
 using System.Diagnostics;
+using Tkl.Jumbo;
 
 namespace NameServerApplication
 {

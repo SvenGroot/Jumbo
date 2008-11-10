@@ -5,7 +5,7 @@ using System.Text;
 using System.Runtime.Remoting.Channels;
 using System.Collections;
 
-namespace Tkl.Jumbo.Dfs
+namespace Tkl.Jumbo
 {
     /// <summary>
     /// Server channel sink provider used to created the channel sink for the Jumbo RPC system.

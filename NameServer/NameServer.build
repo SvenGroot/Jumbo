@@ -17,6 +17,7 @@
         <include name="System.Core.dll"/>
         <include name="System.Runtime.Remoting.dll"/>
         <include name="../lib/log4net.dll"/>
+        <include name="../Tkl.Jumbo/nantbin/Tkl.Jumbo.dll"/>
         <include name="../Tkl.Jumbo.Dfs/nantbin/Tkl.Jumbo.Dfs.dll"/>
       </references>
       <sources>
@@ -27,6 +28,7 @@
         <include name="FileSystem.cs"/>
         <include name="FileSystemMutation.cs"/>
         <include name="NameServer.cs"/>
+        <include name="PendingBlock.cs"/>
         <include name="PendingFile.cs"/>
         <include name="Program.cs"/>
         <include name="RpcServer.cs"/>
@@ -35,8 +37,9 @@
     <copy file="App.config" tofile="nantbin/NameServer.exe.config"/>
     <copy file="../lib/log4net.dll" todir="nantbin"/>
     <copy todir="nantbin">
-      <fileset basedir="../Tkl.Jumbo.Dfs/nantbin">
-        <include name="*.*"/>
+      <fileset>
+        <include name="../Tkl.Jumbo/nantbin/*.*"/>
+        <include name="../Tkl.Jumbo.Dfs/nantbin/*.*"/>
       </fileset>
     </copy>
   </target>
