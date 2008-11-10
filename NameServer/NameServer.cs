@@ -20,7 +20,6 @@ namespace NameServerApplication
     public class NameServer : MarshalByRefObject, INameServerClientProtocol, INameServerHeartbeatProtocol
     {
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(NameServer));
-        private static List<IChannel> _channels = new List<IChannel>();
 
         private readonly int _replicationFactor;
         private readonly int _blockSize;
@@ -79,12 +78,7 @@ namespace NameServerApplication
         [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.Synchronized)]
         public static void Shutdown()
         {
-            foreach( var channel in _channels )
-            {
-                ((TcpServerChannel)channel).StopListening(null);
-                ChannelServices.UnregisterChannel(channel);
-            }
-            _channels.Clear();
+            RpcHelper.UnregisterServerChannels();
             Instance = null;
         }
 
@@ -572,33 +566,9 @@ namespace NameServerApplication
 
         private static void ConfigureRemoting(DfsConfiguration config)
         {
-            if( System.Net.Sockets.Socket.OSSupportsIPv6 )
-            {
-                RegisterChannel(config, "[::]", "tcp6");
-                if( config.NameServer.ListenIPv4AndIPv6 )
-                    RegisterChannel(config, "0.0.0.0", "tcp4");
-            }
-            else
-                RegisterChannel(config, null, null);
-            if( (from t in RemotingConfiguration.GetRegisteredWellKnownServiceTypes() where t.ObjectUri == "NameServer" select t).Count() == 0 )
-                RemotingConfiguration.RegisterWellKnownServiceType(typeof(RpcServer), "NameServer", WellKnownObjectMode.Singleton);
+            RpcHelper.RegisterServerChannels(config.NameServer.Port, config.NameServer.ListenIPv4AndIPv6);
+            RpcHelper.RegisterService(typeof(RpcServer), "NameServer");
             _log.Info("RPC server started.");
-        }
-
-        private static void RegisterChannel(DfsConfiguration config, string bindTo, string name)
-        {
-            IDictionary properties = new Hashtable();
-            if( name != null )
-                properties["name"] = name;
-            properties["port"] = config.NameServer.Port;
-            if( bindTo != null )
-                properties["bindTo"] = bindTo;
-            BinaryServerFormatterSinkProvider formatter = new BinaryServerFormatterSinkProvider();
-            formatter.TypeFilterLevel = System.Runtime.Serialization.Formatters.TypeFilterLevel.Full;
-            formatter.Next = new ServerChannelSinkProvider();
-            TcpServerChannel channel = new TcpServerChannel(properties, formatter);
-            ChannelServices.RegisterChannel(channel, false);
-            _channels.Add(channel);
         }
 
         private void CheckSafeMode()

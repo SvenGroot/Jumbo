@@ -16,9 +16,7 @@ namespace Tkl.Jumbo.Dfs
 
         static DfsClient()
         {
-            ClientChannelSinkProvider provider = new ClientChannelSinkProvider();
-            provider.Next = new BinaryClientFormatterSinkProvider();
-            ChannelServices.RegisterChannel(new TcpClientChannel((string)null, provider), false);
+            RpcHelper.RegisterClientChannel();
         }
 
         /// <summary>
