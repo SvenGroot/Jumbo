@@ -47,6 +47,10 @@
       <Project>{67D71A3A-4FDA-4136-8423-07A7C1592E65}</Project>
       <Name>Tkl.Jumbo.Dfs</Name>
     </ProjectReference>
+    <ProjectReference Include="..\Tkl.Jumbo\Tkl.Jumbo.csproj">
+      <Project>{17C7CE1A-4F9F-4173-8BA8-9C26A4F644C6}</Project>
+      <Name>Tkl.Jumbo</Name>
+    </ProjectReference>
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />

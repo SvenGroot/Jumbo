@@ -17,6 +17,7 @@
         <include name="System.Core.dll"/>
         <include name="System.Runtime.Remoting.dll"/>
         <include name="../lib/log4net.dll"/>
+        <include name="../Tkl.Jumbo/nantbin/Tkl.Jumbo.dll"/>
         <include name="../Tkl.Jumbo.Dfs/nantbin/Tkl.Jumbo.Dfs.dll"/>
       </references>
       <sources>
@@ -30,8 +31,9 @@
     <copy file="App.config" tofile="nantbin/DataServer.exe.config"/>
     <copy file="../lib/log4net.dll" todir="nantbin"/>
     <copy todir="nantbin">
-      <fileset basedir="../Tkl.Jumbo.Dfs/nantbin">
-        <include name="*.*"/>
+      <fileset>
+        <include name="../Tkl.Jumbo/nantbin/*.*"/>
+        <include name="../Tkl.Jumbo.Dfs/nantbin/*.*"/>
       </fileset>
     </copy>
   </target>

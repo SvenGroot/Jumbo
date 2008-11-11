@@ -6,6 +6,7 @@ using Tkl.Jumbo.Dfs;
 using System.Threading;
 using System.Configuration;
 using System.IO;
+using Tkl.Jumbo;
 
 namespace DataServerApplication
 {

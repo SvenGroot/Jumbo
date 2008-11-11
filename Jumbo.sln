@@ -32,6 +32,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DfsShell", "DfsShell\DfsShe
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Tkl.Jumbo", "Tkl.Jumbo\Tkl.Jumbo.csproj", "{17C7CE1A-4F9F-4173-8BA8-9C26A4F644C6}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Tkl.Jumbo.Jet", "Tkl.Jumbo.Jet\Tkl.Jumbo.Jet.csproj", "{E739829A-3507-42EA-A8B4-D8D41060DF95}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "JobServer", "JobServer\JobServer.csproj", "{F1489C9B-CF7F-4D98-9FBE-F827E521DE6F}"
+EndProject
 Global
 	GlobalSection(SubversionScc) = preSolution
 		Svn-Managed = True
@@ -70,6 +74,14 @@ Global
 		{17C7CE1A-4F9F-4173-8BA8-9C26A4F644C6}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{17C7CE1A-4F9F-4173-8BA8-9C26A4F644C6}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{17C7CE1A-4F9F-4173-8BA8-9C26A4F644C6}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E739829A-3507-42EA-A8B4-D8D41060DF95}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E739829A-3507-42EA-A8B4-D8D41060DF95}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E739829A-3507-42EA-A8B4-D8D41060DF95}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E739829A-3507-42EA-A8B4-D8D41060DF95}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F1489C9B-CF7F-4D98-9FBE-F827E521DE6F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F1489C9B-CF7F-4D98-9FBE-F827E521DE6F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F1489C9B-CF7F-4D98-9FBE-F827E521DE6F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F1489C9B-CF7F-4D98-9FBE-F827E521DE6F}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

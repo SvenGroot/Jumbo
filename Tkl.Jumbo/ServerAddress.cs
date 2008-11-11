@@ -3,10 +3,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-namespace Tkl.Jumbo.Dfs
+namespace Tkl.Jumbo
 {
     /// <summary>
-    /// Represents the host name and port number of a data server.
+    /// Represents the host name and port number of a data server or task server.
     /// </summary>
     [Serializable]
     public class ServerAddress

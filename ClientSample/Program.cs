@@ -96,47 +96,47 @@ namespace ClientSample
             }
         }
 
-        private static void ReadBlock(Tkl.Jumbo.Dfs.File file, ServerAddress[] servers, int blockSize)
-        {
-            using( TcpClient client = new TcpClient(servers[0].HostName, servers[0].Port) )
-            {
-                DataServerClientProtocolReadHeader header = new DataServerClientProtocolReadHeader();
-                header.BlockID = file.Blocks[0];
-                header.Offset = 0;
-                header.Size = blockSize;
+        //private static void ReadBlock(Tkl.Jumbo.Dfs.File file, ServerAddress[] servers, int blockSize)
+        //{
+        //    using( TcpClient client = new TcpClient(servers[0].HostName, servers[0].Port) )
+        //    {
+        //        DataServerClientProtocolReadHeader header = new DataServerClientProtocolReadHeader();
+        //        header.BlockID = file.Blocks[0];
+        //        header.Offset = 0;
+        //        header.Size = blockSize;
 
-                int receivedSize = 0;
-                using( NetworkStream stream = client.GetStream() )
-                {
-                    BinaryFormatter formatter = new BinaryFormatter();
-                    formatter.Serialize(stream, header);
+        //        int receivedSize = 0;
+        //        using( NetworkStream stream = client.GetStream() )
+        //        {
+        //            BinaryFormatter formatter = new BinaryFormatter();
+        //            formatter.Serialize(stream, header);
 
-                    using( BinaryReader reader = new BinaryReader(stream) )
-                    using( FileStream result = System.IO.File.Create("test.txt") )
-                    {
-                        DataServerClientProtocolResult status = (DataServerClientProtocolResult)reader.ReadInt32();
-                        if( status != DataServerClientProtocolResult.Ok )
-                            throw new Exception("AARGH!");
-                        int offset = reader.ReadInt32();
+        //            using( BinaryReader reader = new BinaryReader(stream) )
+        //            using( FileStream result = System.IO.File.Create("test.txt") )
+        //            {
+        //                DataServerClientProtocolResult status = (DataServerClientProtocolResult)reader.ReadInt32();
+        //                if( status != DataServerClientProtocolResult.Ok )
+        //                    throw new Exception("AARGH!");
+        //                int offset = reader.ReadInt32();
 
-                        Packet packet = new Packet();
-                        while( !packet.IsLastPacket )
-                        {
-                            status = (DataServerClientProtocolResult)reader.ReadInt32();
-                            if( status != DataServerClientProtocolResult.Ok )
-                                throw new Exception("AARGH!");
-                            packet.Read(reader, false);
+        //                Packet packet = new Packet();
+        //                while( !packet.IsLastPacket )
+        //                {
+        //                    status = (DataServerClientProtocolResult)reader.ReadInt32();
+        //                    if( status != DataServerClientProtocolResult.Ok )
+        //                        throw new Exception("AARGH!");
+        //                    packet.Read(reader, false);
 
-                            receivedSize += packet.Size;
+        //                    receivedSize += packet.Size;
 
-                            packet.WriteDataOnly(result);
-                        }
+        //                    packet.WriteDataOnly(result);
+        //                }
 
-                    }
-                }
-                Console.WriteLine(receivedSize);
-            }
-        }
+        //            }
+        //        }
+        //        Console.WriteLine(receivedSize);
+        //    }
+        //}
 
         private static void WriteBlock(BlockAssignment b)
         {

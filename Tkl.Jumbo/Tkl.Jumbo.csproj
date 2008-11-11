@@ -50,6 +50,7 @@
     <Compile Include="ClientChannelSinkProvider.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="RpcHelper.cs" />
+    <Compile Include="ServerAddress.cs" />
     <Compile Include="ServerChannelSink.cs" />
     <Compile Include="ServerChannelSinkProvider.cs" />
     <Compile Include="ServerContext.cs" />

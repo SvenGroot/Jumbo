@@ -23,6 +23,7 @@
         <include name="ClientChannelSink.cs"/>
         <include name="ClientChannelSinkProvider.cs"/>
         <include name="RpcHelper.cs"/>
+        <include name="ServerAddress.cs"/>
         <include name="ServerChannelSink.cs"/>
         <include name="ServerChannelSinkProvider.cs"/>
         <include name="ServerContext.cs"/>

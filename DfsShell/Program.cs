@@ -6,6 +6,7 @@ using Tkl.Jumbo.Dfs;
 using System.Net.Sockets;
 using IO = System.IO;
 using System.Threading;
+using Tkl.Jumbo;
 
 namespace DfsShell
 {

@@ -61,6 +61,10 @@
       <Project>{67D71A3A-4FDA-4136-8423-07A7C1592E65}</Project>
       <Name>Tkl.Jumbo.Dfs</Name>
     </ProjectReference>
+    <ProjectReference Include="..\Tkl.Jumbo\Tkl.Jumbo.csproj">
+      <Project>{17C7CE1A-4F9F-4173-8BA8-9C26A4F644C6}</Project>
+      <Name>Tkl.Jumbo</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
@@ -71,7 +75,6 @@
   </Target>
   -->
   <PropertyGroup>
-    <PostBuildEvent>REM IF "$(ConfigurationName)"=="Release" "$(FrameworkSDKDir)Bin\SignTool" sign /t http://timestamp.comodoca.com/authenticode "$(TargetPath)"
-"$(FrameworkSDKDir)Bin\SignTool" sign /t http://timestamp.comodoca.com/authenticode "$(TargetPath)"</PostBuildEvent>
+    <PostBuildEvent>IF "$(ConfigurationName)"=="Release" "$(FrameworkSDKDir)Bin\SignTool" sign /t http://timestamp.comodoca.com/authenticode "$(TargetPath)"</PostBuildEvent>
   </PropertyGroup>
 </Project>

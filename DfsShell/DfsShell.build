@@ -16,6 +16,7 @@
         <include name="System.Configuration.dll"/>
         <include name="System.Core.dll"/>
         <include name="../Tkl.Jumbo.Dfs/nantbin/Tkl.Jumbo.Dfs.dll"/>
+        <include name="../Tkl.Jumbo/nantbin/Tkl.Jumbo.dll"/>
       </references>
       <sources>
         <include name="Properties/AssemblyInfo.cs"/>
@@ -24,8 +25,9 @@
     </csc>
     <copy file="App.config" tofile="nantbin/DfsShell.exe.config"/>
     <copy todir="nantbin">
-      <fileset basedir="../Tkl.Jumbo.Dfs/nantbin">
-        <include name="*.*"/>
+      <fileset>
+        <include name="../Tkl.Jumbo.Dfs/nantbin/*.*"/>
+        <include name="../Tkl.Jumbo/nantbin/*.*"/>
       </fileset>
     </copy>
   </target>

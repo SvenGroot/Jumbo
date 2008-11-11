@@ -52,7 +52,6 @@
         <include name="NewBlockHeartbeatData.cs"/>
         <include name="Packet.cs"/>
         <include name="SafeModeException.cs"/>
-        <include name="ServerAddress.cs"/>
       </sources>
     </csc>
     <copy todir="nantbin">
