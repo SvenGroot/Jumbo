@@ -10,9 +10,9 @@ namespace JobServerApplication
     {
         #region IJobServerHeartbeatProtocol Members
 
-        public JetHeartbeatResponse[] Heartbeat(Tkl.Jumbo.ServerAddress server, JetHeartbeatData[] data)
+        public JetHeartbeatResponse[] Heartbeat(Tkl.Jumbo.ServerAddress address, JetHeartbeatData[] data)
         {
-            return JobServer.Instance.Heartbeat(server, data);
+            return JobServer.Instance.Heartbeat(address, data);
         }
 
         #endregion

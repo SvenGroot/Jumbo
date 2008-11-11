@@ -16,6 +16,6 @@ namespace Tkl.Jumbo.Jet
         /// <param name="address">The <see cref="ServerAddress"/> of the server sending the heartbeat.</param>
         /// <param name="data">The data for the heartbeat.</param>
         /// <returns>An array of <see cref="JetHeartbeatResponse"/> for the heartbeat.</returns>
-        JetHeartbeatResponse[] Heartbeat(ServerAddress server, JetHeartbeatData[] data);
+        JetHeartbeatResponse[] Heartbeat(ServerAddress address, JetHeartbeatData[] data);
     }
 }
