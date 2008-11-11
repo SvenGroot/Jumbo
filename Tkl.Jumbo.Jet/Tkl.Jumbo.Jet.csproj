@@ -49,6 +49,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="IJobServerHeartbeatProtocol.cs" />
+    <Compile Include="JetClient.cs" />
     <Compile Include="JetConfiguration.cs" />
     <Compile Include="JetHeartbeatData.cs" />
     <Compile Include="JetHeartbeatResponse.cs" />

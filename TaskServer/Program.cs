@@ -2,13 +2,39 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading;
 
 namespace TaskServerApplication
 {
-    class Program
+    static class Program
     {
+        private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(Program));
+
+        private static Thread _mainThread;
+        private static TaskServer _server;
+
         static void Main(string[] args)
         {
+            AppDomain.CurrentDomain.UnhandledException += new UnhandledExceptionEventHandler(CurrentDomain_UnhandledException);
+            Console.CancelKeyPress += new ConsoleCancelEventHandler(Console_CancelKeyPress);
+            _mainThread = Thread.CurrentThread;
+            Thread.CurrentThread.Name = "main";
+            _server = new TaskServer();
+            _server.Run();
+        }
+
+        static void Console_CancelKeyPress(object sender, ConsoleCancelEventArgs e)
+        {
+            if( _server != null )
+            {
+                _server.Shutdown();
+                _mainThread.Join();
+            }
+        }
+
+        static void CurrentDomain_UnhandledException(object sender, UnhandledExceptionEventArgs e)
+        {
+            _log.Fatal("Unhandled exception.", (Exception)e.ExceptionObject);
         }
     }
 }
