@@ -44,7 +44,9 @@
     <Reference Include="System.Core">
       <RequiredTargetFramework>3.5</RequiredTargetFramework>
     </Reference>
+    <Reference Include="System.Data" />
     <Reference Include="System.Runtime.Remoting" />
+    <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="BlockAssignment.cs" />
@@ -65,6 +67,7 @@
     <Compile Include="DfsInputStream.cs" />
     <Compile Include="DfsMetrics.cs" />
     <Compile Include="DfsOutputStream.cs" />
+    <Compile Include="DfsPath.cs" />
     <Compile Include="Directory.cs" />
     <Compile Include="File.cs" />
     <Compile Include="FileSystemEntry.cs" />

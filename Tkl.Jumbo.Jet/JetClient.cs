@@ -18,28 +18,52 @@ namespace Tkl.Jumbo.Jet
         }
 
         /// <summary>
-        /// Creates a client object that can be used to communicate with a name server via the heartbeat protocol.
+        /// Creates a client object that can be used to communicate with a job server via the heartbeat protocol.
         /// </summary>
         /// <returns>An object implementing <see cref="IJobServerHeartbeatProtocol"/> that is a proxy class for
-        /// communicating with the name server via RPC.</returns>
+        /// communicating with the job server via RPC.</returns>
         public static IJobServerHeartbeatProtocol CreateJobServerHeartbeatClient()
         {
             return CreateJobServerHeartbeatClient(JetConfiguration.GetConfiguration());
         }
 
         /// <summary>
-        /// Creates a client object that can be used to communicate with a name server via the heartbeat protocol
+        /// Creates a client object that can be used to communicate with a job server via the heartbeat protocol
         /// using the specified configuration.
         /// </summary>
-        /// <param name="config">A <see cref="DfsConfiguration"/> that provides the name server configuration to use.</param>
+        /// <param name="config">A <see cref="JetConfiguration"/> that provides the job server configuration to use.</param>
         /// <returns>An object implementing <see cref="IJobServerHeartbeatProtocol"/> that is a proxy class for
-        /// communicating with the name server via RPC.</returns>
+        /// communicating with the job server via RPC.</returns>
         public static IJobServerHeartbeatProtocol CreateJobServerHeartbeatClient(JetConfiguration config)
         {
             if( config == null )
                 throw new ArgumentNullException("config");
 
             return CreateJobServerClientInternal<IJobServerHeartbeatProtocol>(config);
+        }
+
+        /// <summary>
+        /// Creates a client object that can be used to communicate with a job server.
+        /// </summary>
+        /// <returns>An object implementing <see cref="IJobServerClientProtocol"/> that is a proxy class for
+        /// communicating with the job server via RPC.</returns>
+        public static IJobServerClientProtocol CreateJobServerClient()
+        {
+            return CreateJobServerClient(JetConfiguration.GetConfiguration());
+        }
+
+        /// <summary>
+        /// Creates a client object that can be used to communicate with a job server.
+        /// </summary>
+        /// <param name="config">A <see cref="JetConfiguration"/> that provides the job server configuration to use.</param>
+        /// <returns>An object implementing <see cref="IJobServerClientProtocol"/> that is a proxy class for
+        /// communicating with the job server via RPC.</returns>
+        public static IJobServerClientProtocol CreateJobServerClient(JetConfiguration config)
+        {
+            if( config == null )
+                throw new ArgumentNullException("config");
+
+            return CreateJobServerClientInternal<IJobServerClientProtocol>(config);
         }
 
         private static T CreateJobServerClientInternal<T>(JetConfiguration config)

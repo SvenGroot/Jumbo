@@ -48,5 +48,15 @@ namespace Tkl.Jumbo.Jet
             get { return (bool)this["listenIPv4AndIPv6"]; }
             set { this["listenIPv4AndIPv6"] = value; }
         }
+
+        /// <summary>
+        /// Gets or sets the DFS directory in which job configuration should be stored.
+        /// </summary>
+        [ConfigurationProperty("jetDfsPath", DefaultValue = "/JumboJet", IsRequired = false, IsKey = false)]
+        public string JetDfsPath
+        {
+            get { return (string)this["jetDfsPath"]; }
+            set { this["jetDfsPath"] = value; }
+        }    
     }
 }

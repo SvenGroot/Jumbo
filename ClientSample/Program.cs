@@ -9,6 +9,8 @@ using System.Net;
 using System.Runtime.Serialization.Formatters.Binary;
 using System.IO;
 using System.Diagnostics;
+using Tkl.Jumbo.Jet;
+using System.Xml.Serialization;
 
 namespace ClientSample
 {
@@ -16,7 +18,8 @@ namespace ClientSample
     {
         static void Main(string[] args)
         {
-            INameServerClientProtocol nameServer = DfsClient.CreateNameServerClient();
+            DfsClient dfsClient = new DfsClient();
+            IJobServerClientProtocol jobServer = JetClient.CreateJobServerClient();
             //nameServer.CreateDirectory("/test/foo");
             //nameServer.CreateFile("/test/bar");
             //File f = nameServer.GetFileInfo("/test/bar");
@@ -29,7 +32,19 @@ namespace ClientSample
             //WriteBlock(b);
             //nameServer.CloseFile("/test");
 
-            WriteFile(args, nameServer);
+            JobConfiguration config = new JobConfiguration();
+            config.AssemblyFileName = "Foo.dll";
+            config.Tasks = new List<TaskConfiguration>() { new TaskConfiguration() { TaskID = "Task1", TypeName = "Foo.Bar" }, new TaskConfiguration() { TaskID = "Task2", TypeName = "Foo.Bar" } };
+
+            Job job = jobServer.CreateJob();
+            using( DfsOutputStream stream = dfsClient.CreateFile(job.JobConfigurationFilePath) )
+            {
+                config.SaveXml(stream);
+            }
+
+            jobServer.RunJob(job.JobID);
+
+            //WriteFile(args, nameServer);
 
             //Tkl.Jumbo.Dfs.File file = nameServer.GetFileInfo("/myfile");
             //ServerAddress[] servers = nameServer.GetDataServersForBlock(file.Blocks[0]);
@@ -42,7 +57,7 @@ namespace ClientSample
 
             Console.WriteLine("Done, press any key to exit");
 
-            Console.ReadKey();
+            //Console.ReadKey();
         }
 
         private static void WriteFile(string[] args, INameServerClientProtocol nameServer)

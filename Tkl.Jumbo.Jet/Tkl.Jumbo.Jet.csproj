@@ -48,20 +48,28 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="IJobServerClientProtocol.cs" />
     <Compile Include="IJobServerHeartbeatProtocol.cs" />
     <Compile Include="JetClient.cs" />
     <Compile Include="JetConfiguration.cs" />
     <Compile Include="JetHeartbeatData.cs" />
     <Compile Include="JetHeartbeatResponse.cs" />
+    <Compile Include="Job.cs" />
+    <Compile Include="JobConfiguration.cs" />
     <Compile Include="JobServerConfigurationElement.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="StatusJetHeartbeatData.cs" />
+    <Compile Include="TaskConfiguration.cs" />
     <Compile Include="TaskServerHeartbeatCommand.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="jumbo.snk" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\Tkl.Jumbo.Dfs\Tkl.Jumbo.Dfs.csproj">
+      <Project>{67D71A3A-4FDA-4136-8423-07A7C1592E65}</Project>
+      <Name>Tkl.Jumbo.Dfs</Name>
+    </ProjectReference>
     <ProjectReference Include="..\Tkl.Jumbo\Tkl.Jumbo.csproj">
       <Project>{17C7CE1A-4F9F-4173-8BA8-9C26A4F644C6}</Project>
       <Name>Tkl.Jumbo</Name>

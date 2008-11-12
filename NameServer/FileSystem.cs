@@ -457,7 +457,7 @@ namespace NameServerApplication
 
         private static void ExtractDirectoryAndFileName(string path, out string directory, out string name)
         {
-            int index = path.LastIndexOf(FileSystemEntry.DirectorySeparator);
+            int index = path.LastIndexOf(DfsPath.DirectorySeparator);
             if( index == -1 )
                 throw new ArgumentException("Path is not rooted.", "path");
             directory = path.Substring(0, index);
@@ -473,7 +473,7 @@ namespace NameServerApplication
             if( !path.StartsWith("/") )
                 throw new ArgumentException("Path is not an absolute path.", "path");
 
-            string[] components = path.Split(FileSystemEntry.DirectorySeparator);
+            string[] components = path.Split(DfsPath.DirectorySeparator);
 
             lock( _root )
             {
@@ -580,8 +580,8 @@ namespace NameServerApplication
         private string AppendPath(string parent, string child)
         {
             string result = parent;
-            if( !parent.EndsWith(FileSystemEntry.DirectorySeparator.ToString()) )
-                result += FileSystemEntry.DirectorySeparator;
+            if( !parent.EndsWith(DfsPath.DirectorySeparator.ToString()) )
+                result += DfsPath.DirectorySeparator;
             return result + child;
         }
     }

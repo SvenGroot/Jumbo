@@ -5,21 +5,25 @@ using System.Text;
 using Tkl.Jumbo.Jet;
 using System.Runtime.CompilerServices;
 using Tkl.Jumbo;
+using Tkl.Jumbo.Dfs;
 
 namespace JobServerApplication
 {
-    class JobServer : IJobServerHeartbeatProtocol
+    class JobServer : IJobServerHeartbeatProtocol, IJobServerClientProtocol
     {
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(JobServer));
 
         private readonly Dictionary<ServerAddress, TaskServerInfo> _taskServers = new Dictionary<ServerAddress,TaskServerInfo>();
+        private readonly Dictionary<Guid, JobInfo> _jobs = new Dictionary<Guid, JobInfo>();
+        private readonly DfsClient _dfsClient;
 
-        private JobServer(JetConfiguration configuration)
+        private JobServer(JetConfiguration configuration, DfsConfiguration dfsConfiguration)
         {
             if( configuration == null )
                 throw new ArgumentNullException("configuration");
 
             Configuration = configuration;
+            _dfsClient = new DfsClient(dfsConfiguration);
         }
 
         public static JobServer Instance { get; private set; }
@@ -28,18 +32,18 @@ namespace JobServerApplication
 
         public static void Run()
         {
-            Run(JetConfiguration.GetConfiguration());
+            Run(JetConfiguration.GetConfiguration(), DfsConfiguration.GetConfiguration());
         }
 
         [MethodImpl(MethodImplOptions.Synchronized)]
-        public static void Run(JetConfiguration configuration)
+        public static void Run(JetConfiguration configuration, DfsConfiguration dfsConfiguration)
         {
             if( configuration == null )
                 throw new ArgumentNullException("configuration");
 
             _log.Info("-----Job server is starting-----");
 
-            Instance = new JobServer(configuration);
+            Instance = new JobServer(configuration, dfsConfiguration);
             RpcHelper.RegisterServerChannels(configuration.JobServer.Port, configuration.JobServer.ListenIPv4AndIPv6);
             RpcHelper.RegisterService(typeof(RpcServer), "JobServer");
 
@@ -53,6 +57,66 @@ namespace JobServerApplication
             RpcHelper.UnregisterServerChannels();
             Instance = null;
         }
+
+        #region IJobServerClientProtocol Members
+
+        public Job CreateJob()
+        {
+            _log.Debug("CreateJob");
+            Guid jobID = Guid.NewGuid();
+            string path = DfsPath.Combine(Configuration.JobServer.JetDfsPath, string.Format("job_{{{0}}}", jobID));
+            _dfsClient.NameServer.CreateDirectory(path);
+            Job job = new Job(jobID, path);
+            JobInfo info = new JobInfo(job);
+            lock( _jobs )
+            {
+                _jobs.Add(jobID, info);
+            }
+            _log.InfoFormat("Created new job {0}, data path = {1}", jobID, path);
+            return job;
+        }
+
+        public void RunJob(Guid jobID)
+        {
+            _log.DebugFormat("RunJob, jobID = {{{0}}}", jobID);
+            JobInfo jobInfo;
+            lock( _jobs )
+            {
+                if( !_jobs.TryGetValue(jobID, out jobInfo) )
+                    throw new ArgumentException("Invalid job ID.");
+                if( jobInfo.Running )
+                {
+                    _log.WarnFormat("Job {0} is already running.", jobID);
+                    throw new InvalidOperationException(string.Format("Job {0} is already running.", jobID));
+                }
+                string configFile = jobInfo.Job.JobConfigurationFilePath;
+
+                _log.InfoFormat("Starting job {0}.", jobID);
+                JobConfiguration config;
+                try
+                {
+                    using( DfsInputStream stream = _dfsClient.OpenFile(configFile) )
+                    {
+                        config = JobConfiguration.LoadXml(stream);
+                    }
+                }
+                catch( Exception ex )
+                {
+                    _log.Error(string.Format("Could not load job config file {0}.", configFile), ex);
+                    throw;
+                }
+
+                foreach( TaskConfiguration task in config.Tasks )
+                {
+                    TaskInfo taskInfo = new TaskInfo(task);
+                    jobInfo.Tasks.Add(task.TaskID, taskInfo);
+                }
+                jobInfo.Running = true;
+                _log.InfoFormat("Job {0} has entered the running state. Number of tasks: {1}.", jobID, jobInfo.Tasks.Count);
+            }
+        }
+
+        #endregion
 
         #region IJobServerHeartbeatProtocol Members
 
@@ -116,6 +180,11 @@ namespace JobServerApplication
         {
             server.MaxTasks = data.MaxTasks;
             server.RunningTasks = data.RunningTasks;
+        }
+
+        private void ScheduleTasks(JobInfo job)
+        {
+
         }
     }
 }

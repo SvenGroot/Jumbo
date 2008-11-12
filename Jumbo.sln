@@ -13,6 +13,7 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{7F2D342B-860E-4940-BBAB-9B7325C3F47D}"
 	ProjectSection(SolutionItems) = preProject
 		ChangeLog.txt = ChangeLog.txt
+		dfs.config = dfs.config
 		jumbo-config.sh = jumbo-config.sh
 		Jumbo.build = Jumbo.build
 		Notes.txt = Notes.txt

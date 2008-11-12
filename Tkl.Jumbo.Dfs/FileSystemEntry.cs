@@ -14,10 +14,6 @@ namespace Tkl.Jumbo.Dfs
         private string _fullPath; // Used by cloned objects because they don't have parent set.
 
         /// <summary>
-        /// The character that separates directory names in a path.
-        /// </summary>
-        public const char DirectorySeparator = '/';
-        /// <summary>
         /// The format string for printing entries in a directory listing.
         /// </summary>
         /// <remarks>
@@ -38,7 +34,7 @@ namespace Tkl.Jumbo.Dfs
         {
             if( name == null )
                 throw new ArgumentNullException("name");
-            if( name.Contains(DirectorySeparator) )
+            if( name.Contains(DfsPath.DirectorySeparator) )
                 throw new ArgumentException("Empty file or directory names are not allowed.", "name");
 
             Name = name;
@@ -76,7 +72,7 @@ namespace Tkl.Jumbo.Dfs
                 if( _fullPath != null )
                     return _fullPath; // An object created by the Clone method will not have the parent set, but it will have this field set.
                 else if( Parent == null )
-                    return DirectorySeparator.ToString();
+                    return DfsPath.DirectorySeparator.ToString();
                 else
                 {
                     StringBuilder path = new StringBuilder();
@@ -113,7 +109,7 @@ namespace Tkl.Jumbo.Dfs
             if( Parent != null )
             {
                 Parent.BuildPath(path);
-                path.Append(DirectorySeparator);
+                path.Append(DfsPath.DirectorySeparator);
                 path.Append(Name);
             }
         }
