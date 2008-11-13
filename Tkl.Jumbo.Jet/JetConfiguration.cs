@@ -21,6 +21,15 @@ namespace Tkl.Jumbo.Jet
         }
 
         /// <summary>
+        /// Gets configuration for the task server.
+        /// </summary>
+        [ConfigurationProperty("taskServer", IsRequired = true, IsKey = false)]
+        public TaskServerConfigurationElement TaskServer
+        {
+            get { return (TaskServerConfigurationElement)this["taskServer"]; }
+        }
+
+        /// <summary>
         /// Loads the Jet configuration from the application configuration file.
         /// </summary>
         /// <returns>A <see cref="DfsConfiguration"/> object representing the settings in the application configuration file, or

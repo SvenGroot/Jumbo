@@ -14,6 +14,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 	ProjectSection(SolutionItems) = preProject
 		ChangeLog.txt = ChangeLog.txt
 		dfs.config = dfs.config
+		jet.config = jet.config
 		jumbo-config.sh = jumbo-config.sh
 		Jumbo.build = Jumbo.build
 		Notes.txt = Notes.txt
@@ -38,6 +39,8 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "JobServer", "JobServer\JobServer.csproj", "{F1489C9B-CF7F-4D98-9FBE-F827E521DE6F}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TaskServer", "TaskServer\TaskServer.csproj", "{3C1C7194-F90F-4A3E-8887-947D1CD921D0}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TaskHost", "TaskHost\TaskHost.csproj", "{975E0C3D-04C5-4CC5-8598-EDD715497FF0}"
 EndProject
 Global
 	GlobalSection(SubversionScc) = preSolution
@@ -89,6 +92,10 @@ Global
 		{3C1C7194-F90F-4A3E-8887-947D1CD921D0}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{3C1C7194-F90F-4A3E-8887-947D1CD921D0}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{3C1C7194-F90F-4A3E-8887-947D1CD921D0}.Release|Any CPU.Build.0 = Release|Any CPU
+		{975E0C3D-04C5-4CC5-8598-EDD715497FF0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{975E0C3D-04C5-4CC5-8598-EDD715497FF0}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{975E0C3D-04C5-4CC5-8598-EDD715497FF0}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{975E0C3D-04C5-4CC5-8598-EDD715497FF0}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

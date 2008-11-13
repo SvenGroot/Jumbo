@@ -17,6 +17,10 @@ namespace Tkl.Jumbo.Jet
         /// <summary>
         /// The task server should send a <see cref="StatusJetHeartbeatData"/> in the next heartbeat.
         /// </summary>
-        ReportStatus
+        ReportStatus,
+        /// <summary>
+        /// The task server should execute the specified task.
+        /// </summary>
+        RunTask
     }
 }

@@ -6,6 +6,7 @@ using Tkl.Jumbo.Jet;
 using Tkl.Jumbo;
 using System.Net;
 using System.Threading;
+using Tkl.Jumbo.Dfs;
 
 namespace TaskServerApplication
 {
@@ -18,21 +19,30 @@ namespace TaskServerApplication
         private IJobServerHeartbeatProtocol _jobServer;
         private volatile bool _running;
         private readonly List<JetHeartbeatData> _pendingHeartbeatData = new List<JetHeartbeatData>();
+        private readonly TaskRunner _taskRunner;
 
         public TaskServer()
-            : this(JetConfiguration.GetConfiguration())
+            : this(JetConfiguration.GetConfiguration(), DfsConfiguration.GetConfiguration())
         {
         }
 
-        public TaskServer(JetConfiguration config)
+        public TaskServer(JetConfiguration config, DfsConfiguration dfsConfiguration)
         {
             if( config == null )
                 throw new ArgumentNullException("config");
 
+            Configuration = config;
+            DfsConfiguration = dfsConfiguration;
+
+            if( !System.IO.Directory.Exists(config.TaskServer.TaskDirectory) )
+                System.IO.Directory.CreateDirectory(config.TaskServer.TaskDirectory);
+
             _jobServer = JetClient.CreateJobServerHeartbeatClient(config);
+            _taskRunner = new TaskRunner(this);
         }
 
         public JetConfiguration Configuration { get; private set; }
+        public DfsConfiguration DfsConfiguration { get; private set; }
 
         public ServerAddress LocalAddress { get; private set; }
 
@@ -54,6 +64,7 @@ namespace TaskServerApplication
 
         public void Shutdown()
         {
+            _taskRunner.Stop();
             _running = false;
             _log.InfoFormat("-----Task server is shutting down-----");
         }
@@ -85,6 +96,11 @@ namespace TaskServerApplication
                 {
                 case TaskServerHeartbeatCommand.ReportStatus:
                     AddDataForNextHeartbeat(new StatusJetHeartbeatData() { MaxTasks = 4 }); // TODO: Real task numbers
+                    break;
+                case TaskServerHeartbeatCommand.RunTask:
+                    RunTaskJetHeartbeatResponse runResponse = (RunTaskJetHeartbeatResponse)response;
+                    _log.InfoFormat("Received run task command for task {{{0}}}_{1}.", runResponse.Job.JobID, runResponse.TaskID);
+                    _taskRunner.AddTask(runResponse);
                     break;
                 }
             }

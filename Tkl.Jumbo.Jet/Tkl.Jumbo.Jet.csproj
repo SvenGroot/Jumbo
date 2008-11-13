@@ -50,6 +50,7 @@
   <ItemGroup>
     <Compile Include="IJobServerClientProtocol.cs" />
     <Compile Include="IJobServerHeartbeatProtocol.cs" />
+    <Compile Include="ITask.cs" />
     <Compile Include="JetClient.cs" />
     <Compile Include="JetConfiguration.cs" />
     <Compile Include="JetHeartbeatData.cs" />
@@ -58,8 +59,10 @@
     <Compile Include="JobConfiguration.cs" />
     <Compile Include="JobServerConfigurationElement.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="RunTaskJetHeartbeatResponse.cs" />
     <Compile Include="StatusJetHeartbeatData.cs" />
     <Compile Include="TaskConfiguration.cs" />
+    <Compile Include="TaskServerConfigurationElement.cs" />
     <Compile Include="TaskServerHeartbeatCommand.cs" />
   </ItemGroup>
   <ItemGroup>

@@ -160,6 +160,23 @@ namespace JobServerApplication
                         }
                     }
                 }
+
+                if( server.AssignedTasks.Count > 0 )
+                {
+                    // I'm not locking _jobs here because the only thing we're changing is task.State, and
+                    // the only other place so far where that is changed is also inside a _taskServer lock.
+                    foreach( TaskInfo task in server.AssignedTasks )
+                    {
+                        if( task.State == TaskState.Scheduled )
+                        {
+                            if( responses == null )
+                                responses = new List<JetHeartbeatResponse>();
+                            responses.Add(new RunTaskJetHeartbeatResponse(task.Job.Job, task.Task.TaskID));
+                            task.State = TaskState.Running;
+                        }
+                    }
+                }
+
                 return responses == null ? null : responses.ToArray();
             }
         }

@@ -181,6 +181,36 @@ namespace Tkl.Jumbo.Dfs
         }
 
         /// <summary>
+        /// Downloads the files in the specified directory on the distributed file system.
+        /// </summary>
+        /// <param name="dfsPath">The directory on the distributed file system to download.</param>
+        /// <param name="localPath">The local directory to store the files.</param>
+        /// <remarks>
+        /// This function is not recursive; it will only download the files that are direct children of the
+        /// specified directory.
+        /// </remarks>
+        public void DownloadDirectory(string dfsPath, string localPath)
+        {
+            if( dfsPath == null )
+                throw new ArgumentNullException("dfsPath");
+            if( localPath == null )
+                throw new ArgumentNullException("localPath");
+
+            Directory dir = NameServer.GetDirectoryInfo(dfsPath);
+            if( dir == null )
+                throw new DfsException("The specified directory does not exist.");
+            foreach( FileSystemEntry entry in dir.Children )
+            {
+                File file = entry as File;
+                if( file != null )
+                {
+                    string localFile = IO.Path.Combine(localPath, file.Name);
+                    DownloadFile(file.FullPath, localFile);
+                }
+            }
+        }
+
+        /// <summary>
         /// Opens the specified file on the distributed file system for reading.
         /// </summary>
         /// <param name="path">The path of the file.</param>
