@@ -44,15 +44,14 @@ namespace Tkl.Jumbo
         }
 
         /// <summary>
-        /// Launches a process using the runtime environment.
+        /// Modifies a <see cref="ProcessStartInfo"/> to use the runtime environment.
         /// </summary>
-        /// <param name="startInfo">The <see cref="ProcessStartInfo"/> for the process to be launched.</param>
-        /// <returns>A <see cref="Process"/> representing the launched process.</returns>
+        /// <param name="startInfo">The <see cref="ProcessStartInfo"/>.</param>
         /// <remarks>
         /// When running under Mono, this function will modify the specified <see cref="ProcessStartInfo"/> to use
         /// Mono to launch the application.
         /// </remarks>
-        public static Process StartProcess(ProcessStartInfo startInfo)
+        public static void ModifyProcessStartInfo(ProcessStartInfo startInfo)
         {
             if( startInfo == null )
                 throw new ArgumentNullException("startInfo");
@@ -61,7 +60,6 @@ namespace Tkl.Jumbo
                 startInfo.Arguments = startInfo.FileName + " " + startInfo.Arguments;
                 startInfo.FileName = "mono";
             }
-            return Process.Start(startInfo);
         }
     }
 

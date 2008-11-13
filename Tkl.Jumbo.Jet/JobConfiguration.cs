@@ -26,6 +26,18 @@ namespace Tkl.Jumbo.Jet
         public List<TaskConfiguration> Tasks { get; set; } // TODO: This should be the task graph.
 
         /// <summary>
+        /// Gets the task with the specified ID.
+        /// </summary>
+        /// <param name="taskID">The ID of the task.</param>
+        /// <returns>The <see cref="TaskConfiguration"/> for the task, or <see langword="null"/> if no task with that ID exists.</returns>
+        public TaskConfiguration GetTask(string taskID)
+        {
+            return (from task in Tasks
+                    where task.TaskID == taskID
+                    select task).SingleOrDefault();
+        }
+
+        /// <summary>
         /// Saves the current instance as XML to the specified stream.
         /// </summary>
         /// <param name="stream">The stream to save to.</param>
@@ -46,6 +58,21 @@ namespace Tkl.Jumbo.Jet
             if( stream == null )
                 throw new ArgumentNullException("stream");
             return (JobConfiguration)_serializer.Deserialize(stream);
+        }
+
+        /// <summary>
+        /// Loads job configuration from an XML source.
+        /// </summary>
+        /// <param name="stream">The path of the file containing the XML.</param>
+        /// <returns>An instance of the <see cref="JobConfiguration"/> class created from the XML.</returns>
+        public static JobConfiguration LoadXml(string file)
+        {
+            if( file == null )
+                throw new ArgumentNullException("file");
+            using( System.IO.FileStream stream = System.IO.File.OpenRead(file) )
+            {
+                return LoadXml(stream);
+            }
         }
     }
 }

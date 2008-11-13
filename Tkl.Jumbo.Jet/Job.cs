@@ -12,7 +12,10 @@ namespace Tkl.Jumbo.Jet
     [Serializable]
     public class Job
     {
-        private const string _jobConfigFileName = "job.xml";
+        /// <summary>
+        /// The name of the job configuration XML file.
+        /// </summary>
+        public const string JobConfigFileName = "job.xml";
 
         /// <summary>
         /// Initializes a new instance of the <see cref="Job"/> class.
@@ -52,7 +55,7 @@ namespace Tkl.Jumbo.Jet
         /// </summary>
         public string JobConfigurationFilePath
         {
-            get { return DfsPath.Combine(Path, _jobConfigFileName); }
+            get { return DfsPath.Combine(Path, JobConfigFileName); }
         }
     }
 }
