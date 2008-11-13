@@ -22,9 +22,9 @@ namespace NameServerApplication
         {
             AppDomain.CurrentDomain.UnhandledException += new UnhandledExceptionEventHandler(CurrentDomain_UnhandledException);
             System.Threading.Thread.CurrentThread.Name = "main";
-            NameServer.Run();
 
             _log.Info("---- NameServer is starting ----");
+            NameServer.Run();
 
             Console.CancelKeyPress += new ConsoleCancelEventHandler(Console_CancelKeyPress);
             Thread.Sleep(Timeout.Infinite);

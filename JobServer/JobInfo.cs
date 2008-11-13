@@ -8,7 +8,7 @@ namespace JobServerApplication
 {
     class JobInfo
     {
-        private readonly Dictionary<string, TaskInfo> _tasks = new Dictionary<string,TaskInfo>();
+        private readonly List<TaskInfo> _tasks = new List<TaskInfo>();
 
         public JobInfo(Job job)
         {
@@ -18,7 +18,7 @@ namespace JobServerApplication
         }
         public Job Job { get; private set; }
         public bool Running { get; set; }
-        public Dictionary<string, TaskInfo> Tasks
+        public List<TaskInfo> Tasks
         {
             get { return _tasks; }
         }

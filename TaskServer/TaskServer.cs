@@ -43,7 +43,7 @@ namespace TaskServerApplication
             _running = true;
             LocalAddress = new ServerAddress(Dns.GetHostName(), 9501); // TODO: Real umbilical port number
 
-            AddDataForNextHeartbeat(new StatusJetHeartbeatData() { MaxTasks = 4, RunningTasks = 0 }); // TODO: Real max tasks
+            AddDataForNextHeartbeat(new StatusJetHeartbeatData() { MaxTasks = 4 }); // TODO: Real max tasks
 
             while( _running )
             {
@@ -84,7 +84,7 @@ namespace TaskServerApplication
                 switch( response.Command )
                 {
                 case TaskServerHeartbeatCommand.ReportStatus:
-                    AddDataForNextHeartbeat(new StatusJetHeartbeatData() { MaxTasks = 4, RunningTasks = 0 }); // TODO: Real task numbers
+                    AddDataForNextHeartbeat(new StatusJetHeartbeatData() { MaxTasks = 4 }); // TODO: Real task numbers
                     break;
                 }
             }

@@ -93,8 +93,8 @@ namespace DfsShell
                     if( dir != null )
                     {
                         string fileName = IO.Path.GetFileName(args[1]);
-                        if( !dfsPath.EndsWith(FileSystemEntry.DirectorySeparator.ToString()) )
-                            dfsPath += FileSystemEntry.DirectorySeparator;
+                        if( !dfsPath.EndsWith(DfsPath.DirectorySeparator.ToString()) )
+                            dfsPath += DfsPath.DirectorySeparator;
                         dfsPath += fileName;
                     }
                     try
@@ -132,7 +132,7 @@ namespace DfsShell
                     localPath = args[2];
                 else
                 {
-                    int index = dfsPath.LastIndexOf(FileSystemEntry.DirectorySeparator);
+                    int index = dfsPath.LastIndexOf(DfsPath.DirectorySeparator);
                     if( index < 0 || index + 1 >= dfsPath.Length )
                     {
                         Console.WriteLine("Invalid dfs path.");

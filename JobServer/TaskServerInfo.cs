@@ -8,6 +8,8 @@ namespace JobServerApplication
 {
     class TaskServerInfo
     {
+        private readonly List<TaskInfo> _assignedTasks = new List<TaskInfo>();
+
         public TaskServerInfo(ServerAddress address)
         {
             if( address == null )
@@ -17,10 +19,17 @@ namespace JobServerApplication
 
         public ServerAddress Address { get; private set; }
         public int MaxTasks { get; set; }
-        public int RunningTasks { get; set; }
+        /// <summary>
+        /// Not safe to call without lock.
+        /// </summary>
         public int AvailableTasks
         {
-            get { return MaxTasks - RunningTasks; }
+            get { return MaxTasks - _assignedTasks.Count; }
+        }
+
+        public List<TaskInfo> AssignedTasks
+        {
+            get { return _assignedTasks; }
         }
     }
 }

@@ -108,9 +108,12 @@ namespace JobServerApplication
 
                 foreach( TaskConfiguration task in config.Tasks )
                 {
-                    TaskInfo taskInfo = new TaskInfo(task);
-                    jobInfo.Tasks.Add(task.TaskID, taskInfo);
+                    TaskInfo taskInfo = new TaskInfo(jobInfo, task);
+                    jobInfo.Tasks.Add(taskInfo);
                 }
+
+                ScheduleTasks(jobInfo);
+
                 jobInfo.Running = true;
                 _log.InfoFormat("Job {0} has entered the running state. Number of tasks: {1}.", jobID, jobInfo.Tasks.Count);
             }
@@ -179,12 +182,37 @@ namespace JobServerApplication
         private void ProcessStatusHeartbeat(TaskServerInfo server, StatusJetHeartbeatData data)
         {
             server.MaxTasks = data.MaxTasks;
-            server.RunningTasks = data.RunningTasks;
+            //server.RunningTasks = data.RunningTasks;
         }
 
         private void ScheduleTasks(JobInfo job)
         {
-
+            // TODO: This is not at all how scheduling should work.
+            int taskIndex = 0;
+            lock( _taskServers )
+            {
+                bool outOfSlots = false;
+                while( !outOfSlots && taskIndex < job.Tasks.Count )
+                {
+                    outOfSlots = true;
+                    foreach( var item in _taskServers )
+                    {
+                        TaskServerInfo taskServer = item.Value;
+                        if( taskServer.AvailableTasks > 0 )
+                        {
+                            TaskInfo task = job.Tasks[taskIndex];
+                            taskServer.AssignedTasks.Add(task);
+                            task.Server = taskServer;
+                            task.State = TaskState.Scheduled;
+                            outOfSlots = false;
+                            ++taskIndex;
+                            _log.InfoFormat("Task {0} has been assigned to server {1}.", task.GlobalID, taskServer.Address);
+                        }
+                    }
+                }
+                if( outOfSlots )
+                    throw new NotImplementedException();
+            }
         }
     }
 }
