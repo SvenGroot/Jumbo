@@ -128,6 +128,8 @@ namespace Tkl.Jumbo.Jet
             _reader = new LineReader(stream, _bufferSize);
             _position = offset;
             _end = offset + size;
+            if( offset != 0 )
+                ReadRecord();
         }
 
         /// <summary>
