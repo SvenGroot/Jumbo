@@ -32,7 +32,7 @@ namespace Tkl.Jumbo.Jet
         /// <summary>
         /// Loads the Jet configuration from the application configuration file.
         /// </summary>
-        /// <returns>A <see cref="DfsConfiguration"/> object representing the settings in the application configuration file, or
+        /// <returns>A <see cref="JetConfiguration"/> object representing the settings in the application configuration file, or
         /// a default instance if the section was not present in the configuration file.</returns>
         public static JetConfiguration GetConfiguration()
         {

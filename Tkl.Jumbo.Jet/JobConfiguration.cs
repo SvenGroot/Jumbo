@@ -12,8 +12,11 @@ namespace Tkl.Jumbo.Jet
     [XmlRoot("Job", Namespace=JobConfiguration.XmlNamespace)]
     public class JobConfiguration
     {
+        /// <summary>
+        /// The XML namespace for the job configuration XML.
+        /// </summary>
         public const string XmlNamespace = "http://www.tkl.iis.u-tokyo.ac.jp/schema/Jumbo/JobConfiguration";
-        public static readonly XmlSerializer _serializer = new XmlSerializer(typeof(JobConfiguration));
+        private static readonly XmlSerializer _serializer = new XmlSerializer(typeof(JobConfiguration));
 
         /// <summary>
         /// Gets or sets the file name of the assembly holding the task classes.
@@ -63,7 +66,7 @@ namespace Tkl.Jumbo.Jet
         /// <summary>
         /// Loads job configuration from an XML source.
         /// </summary>
-        /// <param name="stream">The path of the file containing the XML.</param>
+        /// <param name="file">The path of the file containing the XML.</param>
         /// <returns>An instance of the <see cref="JobConfiguration"/> class created from the XML.</returns>
         public static JobConfiguration LoadXml(string file)
         {
