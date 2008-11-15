@@ -22,5 +22,10 @@ namespace Tkl.Jumbo.Jet
         /// </summary>
         [XmlAttribute("type")]
         public string TypeName { get; set; }
+
+        /// <summary>
+        /// Gets or sets the input from the distributed file system for this task.
+        /// </summary>
+        public TaskDfsInput DfsInput { get; set; }
     }
 }

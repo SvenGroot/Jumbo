@@ -107,7 +107,7 @@ namespace Tkl.Jumbo.Jet
         /// </summary>
         /// <param name="stream">The stream to read from.</param>
         public LineRecordReader(Stream stream)
-            : this(stream, 0, stream.Length-1)
+            : this(stream, 0, stream.Length)
         {
         }
 
@@ -128,6 +128,8 @@ namespace Tkl.Jumbo.Jet
             _reader = new LineReader(stream, _bufferSize);
             _position = offset;
             _end = offset + size;
+            if( _end == stream.Length )
+                --_end;
             if( offset != 0 )
                 ReadRecord();
         }

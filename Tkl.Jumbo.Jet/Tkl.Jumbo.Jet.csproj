@@ -66,6 +66,7 @@
     <Compile Include="RunTaskJetHeartbeatResponse.cs" />
     <Compile Include="StatusJetHeartbeatData.cs" />
     <Compile Include="TaskConfiguration.cs" />
+    <Compile Include="TaskDfsInput.cs" />
     <Compile Include="TaskServerConfigurationElement.cs" />
     <Compile Include="TaskServerHeartbeatCommand.cs" />
   </ItemGroup>

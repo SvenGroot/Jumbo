@@ -5,6 +5,7 @@ using System.Text;
 using Tkl.Jumbo.Jet;
 using System.IO;
 using System.Reflection;
+using Tkl.Jumbo.Dfs;
 
 namespace TaskHost
 {
@@ -46,8 +47,44 @@ namespace TaskHost
         {
             Assembly taskAssembly = Assembly.LoadFrom(Path.Combine(jobDirectory, jobConfig.AssemblyFileName));
 
-            ITask task = (ITask)taskAssembly.CreateInstance(taskConfig.TypeName);
-            task.Run();
+            Type taskType = taskAssembly.GetType(taskConfig.TypeName);
+            Type taskInterfaceType = taskType.GetInterface(typeof(ITask<object>).GetGenericTypeDefinition().FullName);
+            Type inputType = taskInterfaceType.GetGenericArguments()[0];
+
+            MethodInfo doRunTaskMethod = typeof(Program).GetMethod("DoRunTask", BindingFlags.NonPublic | BindingFlags.Static).MakeGenericMethod(inputType);
+            doRunTaskMethod.Invoke(null, new object[] { taskType, taskConfig });
+            //ITask task = (ITask)taskAssembly.CreateInstance(taskConfig.TypeName);
+            //task.Run();
+        }
+
+        private static void DoRunTask<T>(Type taskType, TaskConfiguration taskConfig)
+        {
+            using( DfsInputStream inputStream = OpenInputFile(taskConfig) )
+            using( RecordReader<T> input = CreateRecordReader<T>(inputStream, taskConfig) )
+            {
+                ITask<T> task = (ITask<T>)Activator.CreateInstance(taskType);
+                task.Run(input);
+            }
+        }
+
+        private static DfsInputStream OpenInputFile(TaskConfiguration taskConfig)
+        {
+            if( taskConfig.DfsInput != null )
+            {
+                DfsClient client = new DfsClient();
+                return client.OpenFile(taskConfig.DfsInput.Path);
+            }
+            return null;
+        }
+
+        private static RecordReader<T> CreateRecordReader<T>(Stream inputStream, TaskConfiguration taskConfig)
+        {
+            if( taskConfig.DfsInput != null )
+            {
+                Type recordReaderType = Type.GetType(taskConfig.DfsInput.RecordReaderType);
+                return (RecordReader<T>)Activator.CreateInstance(recordReaderType, inputStream, taskConfig.DfsInput.Offset, taskConfig.DfsInput.Size);
+            }
+            return null;
         }
 
         private static void CurrentDomain_UnhandledException(object sender, UnhandledExceptionEventArgs e)

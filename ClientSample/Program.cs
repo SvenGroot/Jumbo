@@ -15,14 +15,21 @@ using System.Threading;
 
 namespace ClientSample
 {
-    public class MyTask : ITask
+    public class MyTask : ITask<string>
     {
         #region ITask Members
 
-        public void Run()
+        public void Run(RecordReader<string> input)
         {
             Console.WriteLine("Running");
-            Thread.Sleep(5000);
+            Console.WriteLine(input.GetType().FullName);
+            int lines = 0;
+            string line;
+            while( (line = input.ReadRecord()) != null )
+            {
+                ++lines;
+            }
+            Console.WriteLine(lines);
             Console.WriteLine("Done");
         }
 
@@ -39,7 +46,7 @@ namespace ClientSample
             //nameServer.CreateFile("/test/bar");
             //File f = nameServer.GetFileInfo("/test/bar");
             Console.WriteLine("Press any key to start");
-            //Console.ReadKey();
+            Console.ReadKey();
             Stopwatch sw = new Stopwatch();
             sw.Start();
 
@@ -81,16 +88,34 @@ namespace ClientSample
             //    }
             //}
 
-            //StartJob(dfsClient, jobServer);
+            StartJob(dfsClient, jobServer);
 
-            string line = null;
-            using( Stream stream = dfsClient.OpenFile("/test.txt") )
-            using( LineRecordReader reader = new LineRecordReader(stream) )
-            {
-                while( (line = reader.ReadRecord()) != null )
-                {
-                }
-            }
+            //using( StreamWriter writer = new StreamWriter(@"E:\test2.txt") )
+            //{
+            //    int lines = 0;
+            //    string line = null;
+            //    //string prevLine = null;
+            //    using( Stream stream = dfsClient.OpenFile("/test.txt") )
+            //    using( LineRecordReader reader = new LineRecordReader(stream, 0, dfsClient.NameServer.BlockSize) )
+            //    {
+            //        while( (line = reader.ReadRecord()) != null )
+            //        {
+            //            ++lines;
+            //            writer.WriteLine(line);
+            //        }
+            //    }
+
+            //    using( Stream stream = dfsClient.OpenFile("/test.txt") )
+            //    using( LineRecordReader reader = new LineRecordReader(stream, dfsClient.NameServer.BlockSize, stream.Length - dfsClient.NameServer.BlockSize) )
+            //    {
+            //        while( (line = reader.ReadRecord()) != null )
+            //        {
+            //            ++lines;
+            //            writer.WriteLine(line);
+            //        }
+            //    }
+            //    Console.WriteLine(lines);
+            //}
             //Console.WriteLine(line);
             //string line = null;
             //using( StreamReader reader = new StreamReader("E:\\test.txt") )
@@ -99,21 +124,51 @@ namespace ClientSample
             //    {
             //    }
             //}
-            //Console.WriteLine(line);
+            //Console.WriteLine(prevLine);
 
             sw.Stop();
             Console.WriteLine(sw.Elapsed);
 
             Console.WriteLine("Done, press any key to exit");
 
-            //Console.ReadKey();
+            Console.ReadKey();
         }
 
         private static void StartJob(DfsClient dfsClient, IJobServerClientProtocol jobServer)
         {
+            Tkl.Jumbo.Dfs.File file = dfsClient.NameServer.GetFileInfo("/test.txt");
+            int blockSize = dfsClient.NameServer.BlockSize;
+
             JobConfiguration config = new JobConfiguration();
             config.AssemblyFileName = "ClientSample.exe";
-            config.Tasks = new List<TaskConfiguration>() { new TaskConfiguration() { TaskID = "Task1", TypeName = "ClientSample.MyTask" }, new TaskConfiguration() { TaskID = "Task2", TypeName = "ClientSample.MyTask" } };
+            config.Tasks = new List<TaskConfiguration>() { 
+                new TaskConfiguration() { 
+                    TaskID = "Task1", 
+                    TypeName = "ClientSample.MyTask" ,
+                    DfsInput = new TaskDfsInput() {
+                        Path = "/test.txt",
+                        Offset = 0,
+                        Size = blockSize,
+                        RecordReaderType = typeof(LineRecordReader).AssemblyQualifiedName
+                    }
+                }, 
+                new TaskConfiguration() { 
+                    TaskID = "Task2", 
+                    TypeName = "ClientSample.MyTask",
+                    DfsInput = new TaskDfsInput() {
+                        Path = "/test.txt",
+                        Offset = blockSize,
+                        Size = file.Size - blockSize,
+                        RecordReaderType = typeof(LineRecordReader).AssemblyQualifiedName
+                    }
+                } 
+            };
+
+            using( FileStream stream = System.IO.File.Create("job.xml") )
+            {
+                config.SaveXml(stream);
+            }
+
 
             Job job = jobServer.CreateJob();
             using( DfsOutputStream stream = dfsClient.CreateFile(job.JobConfigurationFilePath) )

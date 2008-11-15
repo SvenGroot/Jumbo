@@ -8,11 +8,11 @@ namespace Tkl.Jumbo.Jet
     /// <summary>
     /// Interface for task classes.
     /// </summary>
-    public interface ITask
+    public interface ITask<TInput>
     {
         /// <summary>
         /// Runs the task.
         /// </summary>
-        void Run();
+        void Run(RecordReader<TInput> input);
     }
 }
