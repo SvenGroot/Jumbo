@@ -17,7 +17,7 @@
     <nant buildfile="NameServer/NameServer.build" target="clean"/>
     <nant buildfile="DataServer/DataServer.build" target="clean"/>
     <nant buildfile="DfsShell/DfsShell.build" target="clean"/>
-    <nant buildfile="Tkl.Jumbo.Dfs.Test/Tkl.Jumbo.Dfs.Test.build" target="clean"/>
+    <nant buildfile="Tkl.Jumbo.Test/Tkl.Jumbo.Test.build" target="clean"/>
     <nant buildfile="Tkl.Jumbo/Tkl.Jumbo.build" target="clean"/>
   </target>
   <target name="Tkl.Jumbo">
@@ -65,9 +65,9 @@
       </fileset>
     </copy>
   </target>
-  <target name="Tkl.Jumbo.Dfs.Test" depends="Tkl.Jumbo,Tkl.Jumbo.Dfs,NameServer,DataServer">
+  <target name="Tkl.Jumbo.Test" depends="Tkl.Jumbo,Tkl.Jumbo.Dfs,NameServer,DataServer">
     <mkdir dir="nantbin"/>
-    <nant buildfile="Tkl.Jumbo.Dfs.Test/Tkl.Jumbo.Dfs.Test.build" />
+    <nant buildfile="Tkl.Jumbo.Test/Tkl.Jumbo.Test.build" />
     <copy todir="nantbin">
       <fileset basedir="Tkl.Jumbo.Dfs.Test/nantbin">
         <include name="*.*"/>

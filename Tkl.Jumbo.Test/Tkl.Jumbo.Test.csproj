@@ -95,8 +95,8 @@
   <ItemGroup>
     <None Include="app.config" />
     <None Include="jumbo.snk" />
-    <None Include="Tkl.Jumbo.Dfs.Test.build" />
-    <None Include="Tkl.Jumbo.Dfs.Test.nunit" />
+    <None Include="Tkl.Jumbo.Test.build" />
+    <None Include="Tkl.Jumbo.Test.nunit" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
