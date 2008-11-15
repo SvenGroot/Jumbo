@@ -9,8 +9,9 @@ using System.Runtime.Serialization.Formatters.Binary;
 using System.Threading;
 using System.Net;
 using System.Diagnostics;
+using Tkl.Jumbo.Dfs;
 
-namespace Tkl.Jumbo.Dfs.Test
+namespace Tkl.Jumbo.Test.Dfs
 {
     [TestFixture]
     public class BlockSenderTests

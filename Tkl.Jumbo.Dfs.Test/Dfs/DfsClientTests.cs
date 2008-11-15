@@ -5,8 +5,9 @@ using System.Text;
 using NUnit.Framework;
 using System.Threading;
 using IO = System.IO;
+using Tkl.Jumbo.Dfs;
 
-namespace Tkl.Jumbo.Dfs.Test
+namespace Tkl.Jumbo.Test.Dfs
 {
     [TestFixture]
     [Category("ClusterTest")]

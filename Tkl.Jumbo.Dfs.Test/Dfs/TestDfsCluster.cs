@@ -7,8 +7,9 @@ using System.Threading;
 using DataServerApplication;
 using System.Configuration;
 using System.Diagnostics;
+using Tkl.Jumbo.Dfs;
 
-namespace Tkl.Jumbo.Dfs.Test
+namespace Tkl.Jumbo.Test.Dfs
 {
     class TestDfsCluster
     {

@@ -8,8 +8,8 @@
     <ProjectGuid>{6D59A812-DDDE-4682-98D7-FDDEF74AAF81}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>Tkl.Jumbo.Dfs.Test</RootNamespace>
-    <AssemblyName>Tkl.Jumbo.Dfs.Test</AssemblyName>
+    <RootNamespace>Tkl.Jumbo.Test</RootNamespace>
+    <AssemblyName>Tkl.Jumbo.Test</AssemblyName>
     <TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <SignAssembly>true</SignAssembly>
@@ -47,31 +47,31 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="BlockAssignmentTests.cs" />
-    <Compile Include="BlockReportHeartbeatDataTests.cs" />
-    <Compile Include="BlockSenderTests.cs" />
-    <Compile Include="DataBaseClientProtocolHeaderTests.cs" />
-    <Compile Include="DataServerClientProtocolReadHeaderTests.cs" />
-    <Compile Include="DataServerClientProtocolWriteHeaderTests.cs" />
-    <Compile Include="DataServerConfigurationElementTests.cs" />
-    <Compile Include="DataServerTests.cs" />
-    <Compile Include="DeleteBlocksHeartbeatResponseTests.cs" />
-    <Compile Include="DfsClientTests.cs" />
-    <Compile Include="DfsConfigurationTests.cs" />
-    <Compile Include="DfsStreamTest.cs" />
-    <Compile Include="DirectoryTests.cs" />
-    <Compile Include="FileSystemEntryTests.cs" />
-    <Compile Include="FileTests.cs" />
-    <Compile Include="NameServerConfigurationElementTests.cs" />
-    <Compile Include="NameServerRestartTests.cs" />
-    <Compile Include="NameServerSafeModeTests.cs" />
-    <Compile Include="NameServerTests.cs" />
-    <Compile Include="NewBlockHeartbeatDataTests.cs" />
-    <Compile Include="PacketTests.cs" />
+    <Compile Include="Dfs\BlockAssignmentTests.cs" />
+    <Compile Include="Dfs\BlockReportHeartbeatDataTests.cs" />
+    <Compile Include="Dfs\BlockSenderTests.cs" />
+    <Compile Include="Dfs\DataBaseClientProtocolHeaderTests.cs" />
+    <Compile Include="Dfs\DataServerClientProtocolReadHeaderTests.cs" />
+    <Compile Include="Dfs\DataServerClientProtocolWriteHeaderTests.cs" />
+    <Compile Include="Dfs\DataServerConfigurationElementTests.cs" />
+    <Compile Include="Dfs\DataServerTests.cs" />
+    <Compile Include="Dfs\DeleteBlocksHeartbeatResponseTests.cs" />
+    <Compile Include="Dfs\DfsClientTests.cs" />
+    <Compile Include="Dfs\DfsConfigurationTests.cs" />
+    <Compile Include="Dfs\DfsStreamTest.cs" />
+    <Compile Include="Dfs\DirectoryTests.cs" />
+    <Compile Include="Dfs\FileSystemEntryTests.cs" />
+    <Compile Include="Dfs\FileTests.cs" />
+    <Compile Include="Dfs\NameServerConfigurationElementTests.cs" />
+    <Compile Include="Dfs\NameServerRestartTests.cs" />
+    <Compile Include="Dfs\NameServerSafeModeTests.cs" />
+    <Compile Include="Dfs\NameServerTests.cs" />
+    <Compile Include="Dfs\NewBlockHeartbeatDataTests.cs" />
+    <Compile Include="Dfs\PacketTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="ServerAdressTests.cs" />
-    <Compile Include="TestDfsCluster.cs" />
-    <Compile Include="TestSetup.cs" />
+    <Compile Include="Dfs\ServerAdressTests.cs" />
+    <Compile Include="Dfs\TestDfsCluster.cs" />
+    <Compile Include="Dfs\TestSetup.cs" />
     <Compile Include="Utilities.cs" />
   </ItemGroup>
   <ItemGroup>

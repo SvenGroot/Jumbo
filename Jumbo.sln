@@ -28,7 +28,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ClientSample", "ClientSampl
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DataServer", "DataServer\DataServer.csproj", "{BFC1A761-6DB1-4C3D-8A0C-E5261B1202AC}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Tkl.Jumbo.Dfs.Test", "Tkl.Jumbo.Dfs.Test\Tkl.Jumbo.Dfs.Test.csproj", "{6D59A812-DDDE-4682-98D7-FDDEF74AAF81}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Tkl.Jumbo.Test", "Tkl.Jumbo.Dfs.Test\Tkl.Jumbo.Test.csproj", "{6D59A812-DDDE-4682-98D7-FDDEF74AAF81}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DfsShell", "DfsShell\DfsShell.csproj", "{5D898EC9-524F-4055-B9C3-3FB6013AB9D3}"
 EndProject

@@ -3,8 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using NUnit.Framework;
+using Tkl.Jumbo.Dfs;
 
-namespace Tkl.Jumbo.Dfs.Test
+namespace Tkl.Jumbo.Test.Dfs
 {
     [TestFixture]
     public class DataServerClientProtocolReadHeaderTests

@@ -3,36 +3,37 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using NUnit.Framework;
+using Tkl.Jumbo.Dfs;
 
-namespace Tkl.Jumbo.Dfs.Test
+namespace Tkl.Jumbo.Test.Dfs
 {
     [TestFixture]
-    public class NewBlockHeartbeatDataTests
+    public class BlockAssignmentTests
     {
         [Test]
         public void TestConstructor()
         {
-            NewBlockHeartbeatData target = new NewBlockHeartbeatData();
+            BlockAssignment target = new BlockAssignment();
             Assert.AreEqual(Guid.Empty, target.BlockID);
-            Assert.AreEqual(0, target.Size);
+            Assert.IsNull(target.DataServers);
         }
 
         [Test]
         public void TestBlockID()
         {
-            NewBlockHeartbeatData target = new NewBlockHeartbeatData();
+            BlockAssignment target = new BlockAssignment();
             Guid expected = Guid.NewGuid();
             target.BlockID = expected;
             Assert.AreEqual(expected, target.BlockID);
         }
 
         [Test]
-        public void TestSize()
+        public void TestDataServers()
         {
-            NewBlockHeartbeatData target = new NewBlockHeartbeatData();
-            int expected = 100;
-            target.Size = expected;
-            Assert.AreEqual(expected, target.Size);
+            BlockAssignment target = new BlockAssignment();
+            List<ServerAddress> expected = new List<ServerAddress>();
+            target.DataServers = expected;
+            Assert.AreEqual(expected, target.DataServers);
         }
     }
 }

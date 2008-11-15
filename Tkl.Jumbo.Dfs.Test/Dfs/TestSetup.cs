@@ -4,8 +4,9 @@ using System.Linq;
 using System.Text;
 using NUnit.Framework;
 using System.Diagnostics;
+using Tkl.Jumbo.Dfs;
 
-namespace Tkl.Jumbo.Dfs.Test
+namespace Tkl.Jumbo.Test.Dfs
 {
     [SetUpFixture]
     public class TestSetup

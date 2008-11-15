@@ -8,8 +8,9 @@ using System.IO;
 using System.Diagnostics;
 using System.Net.Sockets;
 using System.Runtime.Serialization.Formatters.Binary;
+using Tkl.Jumbo.Dfs;
 
-namespace Tkl.Jumbo.Dfs.Test
+namespace Tkl.Jumbo.Test.Dfs
 {
     [TestFixture]
     [Category("ClusterTest")]
@@ -59,7 +60,7 @@ namespace Tkl.Jumbo.Dfs.Test
                     Assert.AreEqual(size, output.Position);
                 }
 
-                File file = _nameServer.GetFileInfo("/TestStreams.dat");
+                Tkl.Jumbo.Dfs.File file = _nameServer.GetFileInfo("/TestStreams.dat");
                 Assert.AreEqual(1, file.Blocks.Count);
                 Assert.AreEqual(size, file.Size);
                 ServerAddress[] servers = _nameServer.GetDataServersForBlock(file.Blocks[0]);

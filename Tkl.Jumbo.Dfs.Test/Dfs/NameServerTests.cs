@@ -6,8 +6,9 @@ using NUnit.Framework;
 using System.Threading;
 using System.Net;
 using System.IO;
+using Tkl.Jumbo.Dfs;
 
-namespace Tkl.Jumbo.Dfs.Test
+namespace Tkl.Jumbo.Test.Dfs
 {
     [TestFixture]
     [Category("ClusterTest")]
@@ -45,7 +46,7 @@ namespace Tkl.Jumbo.Dfs.Test
             INameServerClientProtocol target = _nameServer;
             string path = "/createdirectory/foo/bar";
             target.CreateDirectory(path);
-            Directory result = target.GetDirectoryInfo(path);
+            Tkl.Jumbo.Dfs.Directory result = target.GetDirectoryInfo(path);
             Assert.AreEqual(path, result.FullPath);
             Assert.AreEqual("bar", result.Name);
             Assert.AreEqual(0, result.Children.Count);
@@ -168,7 +169,7 @@ namespace Tkl.Jumbo.Dfs.Test
             Assert.AreEqual(1, block.DataServers.Count);
             Assert.AreEqual(Dns.GetHostName(), block.DataServers[0].HostName);
             Assert.AreEqual(10001, block.DataServers[0].Port);
-            File result = target.GetFileInfo(path);
+            Tkl.Jumbo.Dfs.File result = target.GetFileInfo(path);
             Assert.IsTrue((result.DateCreated - DateTime.UtcNow).TotalSeconds < 1);
             Assert.AreEqual("file", result.Name);
             Assert.AreEqual(path, result.FullPath);
@@ -377,7 +378,7 @@ namespace Tkl.Jumbo.Dfs.Test
             Assert.IsFalse(result);
             result = target.Delete("/test1", true);
             Assert.IsTrue(result);
-            Directory dir = target.GetDirectoryInfo("/test1");
+            Tkl.Jumbo.Dfs.Directory dir = target.GetDirectoryInfo("/test1");
             Assert.IsNull(dir);
         }
 
@@ -425,7 +426,7 @@ namespace Tkl.Jumbo.Dfs.Test
             }
 
             target.CloseFile(path);
-            File file = target.GetFileInfo(path);
+            Tkl.Jumbo.Dfs.File file = target.GetFileInfo(path);
             Assert.AreEqual(2, file.Blocks.Count);
             Assert.AreEqual(block.BlockID, file.Blocks[0]);
             Assert.AreEqual(block2.BlockID, file.Blocks[1]);
@@ -449,7 +450,7 @@ namespace Tkl.Jumbo.Dfs.Test
             INameServerClientProtocol target = _nameServer;
             target.CreateFile("/closefilependingblock");
             target.CloseFile("/closefilependingblock");
-            File file = target.GetFileInfo("/closefilependingblock");
+            Tkl.Jumbo.Dfs.File file = target.GetFileInfo("/closefilependingblock");
             Assert.AreEqual(0, file.Blocks.Count);
             Assert.AreEqual(0, target.GetMetrics().PendingBlockCount);
         }

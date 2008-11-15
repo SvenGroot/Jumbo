@@ -5,8 +5,9 @@ using System.Text;
 using NUnit.Framework;
 using System.Threading;
 using System.IO;
+using Tkl.Jumbo.Dfs;
 
-namespace Tkl.Jumbo.Dfs.Test
+namespace Tkl.Jumbo.Test.Dfs
 {
     [TestFixture]
     [Category("ClusterTest")]
@@ -36,15 +37,15 @@ namespace Tkl.Jumbo.Dfs.Test
                 nameServer = null;
                 cluster.Shutdown();
                 cluster = null;
-		Thread.Sleep(1000);
+                Thread.Sleep(1000);
                 cluster = new TestDfsCluster(1, 1, null, false);
                 nameServer = DfsClient.CreateNameServerClient(TestDfsCluster.CreateClientConfig());
                 nameServer.WaitForSafeModeOff(Timeout.Infinite);
                 Assert.IsNull(nameServer.GetDirectoryInfo("/test1"));
-                Directory dir = nameServer.GetDirectoryInfo("/test2");
+                Tkl.Jumbo.Dfs.Directory dir = nameServer.GetDirectoryInfo("/test2");
                 Assert.IsNotNull(dir);
                 Assert.AreEqual(1, dir.Children.Count);
-                File file = nameServer.GetFileInfo("/test2/foo.dat");
+                Tkl.Jumbo.Dfs.File file = nameServer.GetFileInfo("/test2/foo.dat");
                 Assert.IsNotNull(file);
                 Assert.AreEqual(size, file.Size);
                 Assert.AreEqual(1, file.Blocks.Count);

@@ -4,8 +4,9 @@ using System.Linq;
 using System.Text;
 using NUnit.Framework;
 using System.IO;
+using Tkl.Jumbo.Dfs;
 
-namespace Tkl.Jumbo.Dfs.Test
+namespace Tkl.Jumbo.Test.Dfs
 {
     [TestFixture]
     public class PacketTests
