@@ -135,17 +135,6 @@ namespace Tkl.Jumbo.Jet
         }
 
         /// <summary>
-        /// Gets a value that indicates if the current stream position is beyond the end of the split.
-        /// </summary>
-        public override bool EndOfSplit
-        {
-            get
-            {
-                return _position == Stream.Length || _position > Offset + Size;
-            }
-        }
-
-        /// <summary>
         /// Reads a record from the stream.
         /// </summary>
         /// <returns>The record.</returns>
@@ -157,15 +146,6 @@ namespace Tkl.Jumbo.Jet
             string result = _reader.ReadLine(out bytesProcessed);
             _position += bytesProcessed;
             return result;
-        }
-
-        /// <summary>
-        /// Seeks to the first record after the current position.
-        /// </summary>
-        protected override void SeekFirstRecord()
-        {
-            if( Offset != 0 )
-                ReadRecord();
         }
     }
 }

@@ -62,17 +62,6 @@ namespace Tkl.Jumbo.Jet
         protected long Size { get; private set; }
 
         /// <summary>
-        /// Gets a value that indicates if the current stream position is beyond the end of the split.
-        /// </summary>
-        public virtual bool EndOfSplit
-        {
-            get
-            {
-                return Stream.Position >= Offset + Size;
-            }
-        }
-
-        /// <summary>
         /// Gets the underlying stream from which this record reader is reading.
         /// </summary>
         protected Stream Stream { get; private set; }
@@ -84,9 +73,17 @@ namespace Tkl.Jumbo.Jet
         public abstract T ReadRecord();
 
         /// <summary>
-        /// Seek until the start of the first record.
+        /// Enumerates all records.
         /// </summary>
-        protected abstract void SeekFirstRecord();
+        /// <returns>An <see cref="IEnumerable{T}"/> that can be used to enumerate the records.</returns>
+        public IEnumerable<T> EnumerateRecords()
+        {
+            T record;
+            while( !object.Equals(record = ReadRecord(), default(T)) )
+            {
+                yield return record;
+            }
+        }
 
         /// <summary>
         /// Cleans up all resources associated with this <see cref="RecordReader{T}"/>.
