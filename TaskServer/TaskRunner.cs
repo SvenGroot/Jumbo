@@ -13,9 +13,10 @@ namespace TaskServerApplication
 {
     class TaskRunner
     {
-        private class RunningTask
+        private sealed class RunningTask
         {
             private Process _process;
+            private Thread _appDomainThread; // only used when running the task in an appdomain rather than a different process.
 
             public event EventHandler ProcessExited;
 
@@ -23,15 +24,21 @@ namespace TaskServerApplication
             {
                 JobID = jobID;
                 TaskID = taskID;
-                ProcessStartInfo startInfo = new ProcessStartInfo("TaskHost.exe", string.Format("\"{0}\" \"{1}\" \"{2}\"", jobDirectory, taskID, IO.Path.Combine(jobDirectory, taskID + ".log")));
-                startInfo.UseShellExecute = false;
-                startInfo.CreateNoWindow = true;
-                RuntimeEnvironment.ModifyProcessStartInfo(startInfo);
-                _process = new Process();
-                _process.StartInfo = startInfo;
-                _process.EnableRaisingEvents = true;
-                _process.Exited += new EventHandler(_process_Exited);
-                _process.Start();
+                JobDirectory = jobDirectory;
+                if( Debugger.IsAttached )
+                    RunTaskAppDomain();
+                else
+                {
+                    ProcessStartInfo startInfo = new ProcessStartInfo("TaskHost.exe", string.Format("\"{0}\" \"{1}\"", jobDirectory, taskID));
+                    startInfo.UseShellExecute = false;
+                    startInfo.CreateNoWindow = true;
+                    RuntimeEnvironment.ModifyProcessStartInfo(startInfo);
+                    _process = new Process();
+                    _process.StartInfo = startInfo;
+                    _process.EnableRaisingEvents = true;
+                    _process.Exited += new EventHandler(_process_Exited);
+                    _process.Start();
+                }
                 _log.DebugFormat("Host process for task {{{0}}}_{1} has started.", jobID, taskID);
             }
 
@@ -39,20 +46,37 @@ namespace TaskServerApplication
 
             public string TaskID { get; private set; }
 
+            public string JobDirectory { get; private set; }
+
             public void Kill()
             {
                 _process.Kill();
             }
 
-            protected virtual void OnProcessExited(EventArgs e)
+            private void OnProcessExited(EventArgs e)
             {
                 EventHandler handler = ProcessExited;
                 if( handler != null )
                     handler(this, e);
             }
 
-            void _process_Exited(object sender, EventArgs e)
+            private void _process_Exited(object sender, EventArgs e)
             {
+                OnProcessExited(EventArgs.Empty);
+            }
+
+            private void RunTaskAppDomain()
+            {
+                _appDomainThread = new Thread(RunTaskAppDomainThread);
+                _appDomainThread.Name = string.Format("{{{0}}}_{1}", JobID, TaskID);
+                _appDomainThread.Start();
+            }
+
+            private void RunTaskAppDomainThread()
+            {
+                AppDomain taskDomain = AppDomain.CreateDomain(string.Format("{{{0}}}_{1}", JobID, TaskID));
+                taskDomain.ExecuteAssembly("TaskHost.exe", null, new[] { JobDirectory, TaskID });
+                AppDomain.Unload(taskDomain);
                 OnProcessExited(EventArgs.Empty);
             }
         }

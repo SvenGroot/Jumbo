@@ -24,7 +24,6 @@ namespace ClientSample
         public void Run(RecordReader<string> input)
         {
             _log.Info("Running");
-            Console.WriteLine(input.GetType().FullName);
             int lines = 0;
             string line;
             while( (line = input.ReadRecord()) != null )

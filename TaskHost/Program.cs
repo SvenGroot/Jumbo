@@ -17,7 +17,7 @@ namespace TaskHost
         {
             AppDomain.CurrentDomain.UnhandledException += new UnhandledExceptionEventHandler(CurrentDomain_UnhandledException);
 
-            if( args.Length != 3 )
+            if( args.Length != 2 )
             {
                 _log.Error("Invalid invocation.");
                 return 1;
@@ -25,7 +25,7 @@ namespace TaskHost
 
             string jobDirectory = args[0];
             string taskID = args[1];
-            string logFile = args[2];
+            string logFile = Path.Combine(jobDirectory, taskID + ".log");
             ConfigureLog(logFile);
 
             _log.InfoFormat("Running task; job directory = \"{0}\", task ID = \"{1}\"", jobDirectory, taskID);
