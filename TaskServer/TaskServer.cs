@@ -50,6 +50,7 @@ namespace TaskServerApplication
         public void Run()
         {
             _log.Info("-----Task server is starting-----");
+            _log.LogEnvironmentInformation();
             _running = true;
             LocalAddress = new ServerAddress(Dns.GetHostName(), 9501); // TODO: Real umbilical port number
 

@@ -32,14 +32,16 @@ namespace Tkl.Jumbo
         {
             get
             {
-                string description = "CLR v" + Environment.Version.ToString();
+                string additionalInfo = string.Empty;
                 if( RuntimeType == RuntimeEnvironmentType.Mono )
                 {
                     MethodInfo method = _monoRuntime.GetMethod("GetDisplayName", BindingFlags.InvokeMethod | BindingFlags.NonPublic | BindingFlags.Static | BindingFlags.DeclaredOnly | BindingFlags.ExactBinding);
                     if( method != null )
-                        description += " (" + (string)method.Invoke(null, null) + ")";
+                        additionalInfo = (string)method.Invoke(null, null);
                 }
-                return description;
+                else
+                    additionalInfo = "Microsoft .Net";
+                return string.Format(System.Globalization.CultureInfo.CurrentCulture, "{0} ({1})", Environment.Version, additionalInfo);
             }
         }
 
@@ -59,6 +61,22 @@ namespace Tkl.Jumbo
             {
                 startInfo.Arguments = startInfo.FileName + " " + startInfo.Arguments;
                 startInfo.FileName = "mono";
+            }
+        }
+
+        /// <summary>
+        /// Writes environemnt information to the specified log.
+        /// </summary>
+        /// <param name="log">The log to write the information to.</param>
+        public static void LogEnvironmentInformation(this log4net.ILog log)
+        {
+            if( log == null )
+                throw new ArgumentNullException("log");
+
+            if( log.IsInfoEnabled )
+            {
+                log.InfoFormat("   OS Version: {0}", Environment.OSVersion);
+                log.InfoFormat("  CLR Version: {0} ({1} bit runtime)", Description, IntPtr.Size * 8);
             }
         }
     }

@@ -42,6 +42,7 @@ namespace JobServerApplication
                 throw new ArgumentNullException("configuration");
 
             _log.Info("-----Job server is starting-----");
+            _log.LogEnvironmentInformation();
 
             Instance = new JobServer(configuration, dfsConfiguration);
             RpcHelper.RegisterServerChannels(configuration.JobServer.Port, configuration.JobServer.ListenIPv4AndIPv6);

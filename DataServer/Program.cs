@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Runtime.Remoting;
 using Tkl.Jumbo.Dfs;
+using Tkl.Jumbo;
 using System.Threading;
 
 namespace DataServerApplication
@@ -37,6 +38,7 @@ namespace DataServerApplication
         private static void MainThread()
         {
             _log.Info("---- Data Server is starting ----");
+            _log.LogEnvironmentInformation();
             _server = new DataServer();
             _server.Run();
         }

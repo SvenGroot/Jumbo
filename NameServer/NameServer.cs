@@ -70,7 +70,9 @@ namespace NameServerApplication
             if( config == null )
                 throw new ArgumentNullException("config");
 
-            //_rpcConfig = config;
+            _log.Info("---- NameServer is starting ----");
+            _log.LogEnvironmentInformation();
+            
             Instance = new NameServer(config, true);
             ConfigureRemoting(config);
         }
@@ -80,6 +82,7 @@ namespace NameServerApplication
         {
             RpcHelper.UnregisterServerChannels();
             Instance = null;
+            _log.Info("---- NameServer has shut down ----");
         }
 
         public override object InitializeLifetimeService()
