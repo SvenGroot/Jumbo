@@ -17,7 +17,7 @@ namespace TaskHost
         {
             AppDomain.CurrentDomain.UnhandledException += new UnhandledExceptionEventHandler(CurrentDomain_UnhandledException);
 
-            if( args.Length != 2 )
+            if( args.Length != 3 )
             {
                 _log.Error("Invalid invocation.");
                 return 1;
@@ -25,6 +25,9 @@ namespace TaskHost
 
             string jobDirectory = args[0];
             string taskID = args[1];
+            string logFile = args[2];
+            ConfigureLog(logFile);
+
             _log.InfoFormat("Running task; job directory = \"{0}\", task ID = \"{1}\"", jobDirectory, taskID);
 
             JobConfiguration config = JobConfiguration.LoadXml(Path.Combine(jobDirectory, Job.JobConfigFileName));
@@ -41,6 +44,19 @@ namespace TaskHost
             _log.Info("Task execution finished.");
 
             return 0;
+        }
+
+        private static void ConfigureLog(string logFile)
+        {
+            log4net.Appender.FileAppender appender = new log4net.Appender.FileAppender()
+            {
+                File = logFile,
+                Layout = new log4net.Layout.PatternLayout("%date [%thread] %-5level %logger - %message%newline"),
+                Threshold = log4net.Core.Level.All
+            };
+            appender.ActivateOptions();
+            log4net.Config.BasicConfigurator.Configure(appender);
+            
         }
 
         private static void RunTask(string jobDirectory, JobConfiguration jobConfig, TaskConfiguration taskConfig)

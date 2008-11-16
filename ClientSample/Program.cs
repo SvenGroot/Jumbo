@@ -17,11 +17,13 @@ namespace ClientSample
 {
     public class MyTask : ITask<string>
     {
+        private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(MyTask));
+
         #region ITask Members
 
         public void Run(RecordReader<string> input)
         {
-            Console.WriteLine("Running");
+            _log.Info("Running");
             Console.WriteLine(input.GetType().FullName);
             int lines = 0;
             string line;
@@ -29,8 +31,8 @@ namespace ClientSample
             {
                 ++lines;
             }
-            Console.WriteLine(lines);
-            Console.WriteLine("Done");
+            _log.Info(lines);
+            _log.Info("Done");
         }
 
         #endregion
@@ -171,6 +173,7 @@ namespace ClientSample
 
 
             Job job = jobServer.CreateJob();
+            Console.WriteLine(job.JobID);
             using( DfsOutputStream stream = dfsClient.CreateFile(job.JobConfigurationFilePath) )
             {
                 config.SaveXml(stream);

@@ -16,8 +16,6 @@ namespace TaskServerApplication
         private class RunningTask
         {
             private Process _process;
-            private string _logFile;
-            private object _logFileLock = new object();
 
             public event EventHandler ProcessExited;
 
@@ -25,22 +23,15 @@ namespace TaskServerApplication
             {
                 JobID = jobID;
                 TaskID = taskID;
-                ProcessStartInfo startInfo = new ProcessStartInfo("TaskHost.exe", string.Format("\"{0}\" \"{1}\"", jobDirectory, taskID));
-                startInfo.RedirectStandardError = true;
-                startInfo.RedirectStandardOutput = true;
+                ProcessStartInfo startInfo = new ProcessStartInfo("TaskHost.exe", string.Format("\"{0}\" \"{1}\" \"{2}\"", jobDirectory, taskID, IO.Path.Combine(jobDirectory, taskID + ".log")));
                 startInfo.UseShellExecute = false;
                 startInfo.CreateNoWindow = true;
-                _logFile = IO.Path.Combine(jobDirectory, taskID + ".log");
                 RuntimeEnvironment.ModifyProcessStartInfo(startInfo);
                 _process = new Process();
                 _process.StartInfo = startInfo;
                 _process.EnableRaisingEvents = true;
                 _process.Exited += new EventHandler(_process_Exited);
-                _process.OutputDataReceived += new DataReceivedEventHandler(_process_OutputDataReceived);
-                _process.ErrorDataReceived += new DataReceivedEventHandler(_process_OutputDataReceived);
                 _process.Start();
-                _process.BeginErrorReadLine();
-                _process.BeginOutputReadLine();
                 _log.DebugFormat("Host process for task {{{0}}}_{1} has started.", jobID, taskID);
             }
 
@@ -63,17 +54,6 @@ namespace TaskServerApplication
             void _process_Exited(object sender, EventArgs e)
             {
                 OnProcessExited(EventArgs.Empty);
-            }
-
-            void _process_OutputDataReceived(object sender, DataReceivedEventArgs e)
-            {
-                lock( _logFileLock )
-                {
-                    using( IO.StreamWriter writer = new System.IO.StreamWriter(_logFile, true) )
-                    {
-                        writer.WriteLine(e.Data);
-                    }
-                }
             }
         }
 
