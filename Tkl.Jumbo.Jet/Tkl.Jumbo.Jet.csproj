@@ -52,6 +52,10 @@
   <ItemGroup>
     <Compile Include="BinaryRecordReader.cs" />
     <Compile Include="BinaryRecordWriter.cs" />
+    <Compile Include="Channels\ChannelConfiguration.cs" />
+    <Compile Include="Channels\ChannelType.cs" />
+    <Compile Include="Channels\FileOutputChannel.cs" />
+    <Compile Include="Channels\IOutputChannel.cs" />
     <Compile Include="IJobServerClientProtocol.cs" />
     <Compile Include="IJobServerHeartbeatProtocol.cs" />
     <Compile Include="ITask.cs" />

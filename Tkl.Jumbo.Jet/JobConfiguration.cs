@@ -26,7 +26,12 @@ namespace Tkl.Jumbo.Jet
         /// <summary>
         /// Gets or sets a list of tasks that make up this job.
         /// </summary>
-        public List<TaskConfiguration> Tasks { get; set; } // TODO: This should be the task graph.
+        public List<TaskConfiguration> Tasks { get; set; }
+
+        /// <summary>
+        /// Gets or sets a list of communication channels between the tasks.
+        /// </summary>
+        public List<Channels.ChannelConfiguration> Channels { get; set; }
 
         /// <summary>
         /// Gets the task with the specified ID.
@@ -49,6 +54,18 @@ namespace Tkl.Jumbo.Jet
             if( stream == null )
                 throw new ArgumentNullException("stream");
             _serializer.Serialize(stream, this);
+        }
+
+        /// <summary>
+        /// Gets the output channel configuration for a specific task.
+        /// </summary>
+        /// <param name="taskID"></param>
+        /// <returns></returns>
+        public Channels.ChannelConfiguration GetOutputChannelForTask(string taskID)
+        {
+            return (from channel in Channels
+                    where channel.InputTaskID == taskID
+                    select channel).SingleOrDefault();
         }
 
         /// <summary>

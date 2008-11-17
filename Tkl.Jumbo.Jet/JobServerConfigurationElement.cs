@@ -15,15 +15,15 @@ namespace Tkl.Jumbo.Jet
     /// </remarks>
     public class JobServerConfigurationElement : ConfigurationElement
     {
-        /// <summary>
-        /// Gets or sets the host name of the JobServer.
-        /// </summary>
-        [ConfigurationProperty("hostName", DefaultValue = "localhost", IsRequired = true, IsKey = false)]
-        public string HostName
-        {
-            get { return (string)this["hostName"]; }
-            set { this["hostName"] = value; }
-        }
+            /// <summary>
+            /// Gets or sets the host name of the JobServer.
+            /// </summary>
+            [ConfigurationProperty("hostName", DefaultValue = "localhost", IsRequired = true, IsKey = false)]
+            public string HostName
+            {
+                get { return (string)this["hostName"]; }
+                set { this["hostName"] = value; }
+            }
 
         /// <summary>
         /// Gets or sets the port number on which the JobServer's RPC server listens.

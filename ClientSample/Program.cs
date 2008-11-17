@@ -13,16 +13,17 @@ using Tkl.Jumbo.Jet;
 using System.Xml.Serialization;
 using System.Threading;
 using Tkl.Jumbo.IO;
+using Tkl.Jumbo.Jet.Channels;
 
 namespace ClientSample
 {
-    public class MyTask : ITask<string>
+    public class MyTask : ITask<string, Int32Writable>
     {
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(MyTask));
 
         #region ITask Members
 
-        public void Run(RecordReader<string> input)
+        public void Run(RecordReader<string> input, RecordWriter<Int32Writable> writer)
         {
             _log.Info("Running");
             int lines = 0;
@@ -32,7 +33,23 @@ namespace ClientSample
                 ++lines;
             }
             _log.Info(lines);
+            if( writer != null )
+                writer.WriteRecord(lines);
             _log.Info("Done");
+        }
+
+        #endregion
+    }
+
+    public class MyTask2 : ITask<Int32Writable, Int32Writable>
+    {
+        private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(MyTask));
+
+        #region ITask<Int32Writable,Int32Writable> Members
+
+        public void Run(RecordReader<Int32Writable> input, RecordWriter<Int32Writable> output)
+        {
+            _log.InfoFormat("Running, input = {0}, output = {1}", input, output);
         }
 
         #endregion
@@ -52,26 +69,7 @@ namespace ClientSample
             Stopwatch sw = new Stopwatch();
             sw.Start();
 
-            //StartJob(dfsClient, jobServer);
-
-            using( MemoryStream stream = new MemoryStream() )
-            using( BinaryRecordWriter<KeyValuePairWritable<StringWritable, Int32Writable>> writer = new BinaryRecordWriter<KeyValuePairWritable<StringWritable,Int32Writable>>(stream) )
-            {
-                KeyValuePairWritable<StringWritable, Int32Writable> pair = new KeyValuePairWritable<StringWritable, Int32Writable>();
-                pair.Value = new KeyValuePair<StringWritable, Int32Writable>("hello", 5);
-                writer.WriteRecord(pair);
-                pair.Value = new KeyValuePair<StringWritable, Int32Writable>("bye", 42);
-                writer.WriteRecord(pair);
-
-                stream.Position = 0;
-                using( BinaryRecordReader<KeyValuePairWritable<StringWritable, Int32Writable>> reader = new BinaryRecordReader<KeyValuePairWritable<StringWritable, Int32Writable>>(stream) )
-                {
-                    while( reader.ReadRecord(out pair) )
-                    {
-                        Console.WriteLine(pair);
-                    }
-                }
-            }
+            StartJob(dfsClient, jobServer);
 
 
             sw.Stop();
@@ -87,29 +85,41 @@ namespace ClientSample
             Tkl.Jumbo.Dfs.File file = dfsClient.NameServer.GetFileInfo("/test.txt");
             int blockSize = dfsClient.NameServer.BlockSize;
 
-            JobConfiguration config = new JobConfiguration();
-            config.AssemblyFileName = "ClientSample.exe";
-            config.Tasks = new List<TaskConfiguration>() { 
-                new TaskConfiguration() { 
-                    TaskID = "Task1", 
-                    TypeName = "ClientSample.MyTask" ,
-                    DfsInput = new TaskDfsInput() {
-                        Path = "/test.txt",
-                        Offset = 0,
-                        Size = blockSize,
-                        RecordReaderType = typeof(LineRecordReader).AssemblyQualifiedName
+            JobConfiguration config = new JobConfiguration() {
+                AssemblyFileName = "ClientSample.exe",
+                Tasks = new List<TaskConfiguration>() { 
+                    new TaskConfiguration() { 
+                        TaskID = "Task1", 
+                        TypeName = typeof(MyTask).FullName,
+                        DfsInput = new TaskDfsInput() {
+                            Path = "/test.txt",
+                            Offset = 0,
+                            Size = blockSize,
+                            RecordReaderType = typeof(LineRecordReader).AssemblyQualifiedName
+                        }
+                    }, 
+                    new TaskConfiguration() { 
+                        TaskID = "Task2", 
+                        TypeName = typeof(MyTask).FullName,
+                        DfsInput = new TaskDfsInput() {
+                            Path = "/test.txt",
+                            Offset = blockSize,
+                            Size = file.Size - blockSize,
+                            RecordReaderType = typeof(LineRecordReader).AssemblyQualifiedName
+                        }
+                    } ,
+                    new TaskConfiguration() {
+                        TaskID = "Task3",
+                        TypeName = typeof(MyTask2).FullName
                     }
-                }, 
-                new TaskConfiguration() { 
-                    TaskID = "Task2", 
-                    TypeName = "ClientSample.MyTask",
-                    DfsInput = new TaskDfsInput() {
-                        Path = "/test.txt",
-                        Offset = blockSize,
-                        Size = file.Size - blockSize,
-                        RecordReaderType = typeof(LineRecordReader).AssemblyQualifiedName
+                },
+                Channels = new List<ChannelConfiguration>() {
+                    new ChannelConfiguration() {
+                        ChannelType = ChannelType.File,
+                        InputTaskID = "Task1",
+                        OutputTaskID = "Task3"
                     }
-                } 
+                }
             };
 
             using( FileStream stream = System.IO.File.Create("job.xml") )

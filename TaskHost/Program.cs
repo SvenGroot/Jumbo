@@ -6,6 +6,8 @@ using Tkl.Jumbo.Jet;
 using System.IO;
 using System.Reflection;
 using Tkl.Jumbo.Dfs;
+using Tkl.Jumbo.Jet.Channels;
+using Tkl.Jumbo.IO;
 
 namespace TaskHost
 {
@@ -64,22 +66,29 @@ namespace TaskHost
             Assembly taskAssembly = Assembly.LoadFrom(Path.Combine(jobDirectory, jobConfig.AssemblyFileName));
 
             Type taskType = taskAssembly.GetType(taskConfig.TypeName);
-            Type taskInterfaceType = taskType.GetInterface(typeof(ITask<object>).GetGenericTypeDefinition().FullName);
+            Type taskInterfaceType = taskType.GetInterface(typeof(ITask<object, object>).GetGenericTypeDefinition().FullName);
             Type inputType = taskInterfaceType.GetGenericArguments()[0];
+            Type outputType = taskInterfaceType.GetGenericArguments()[1];
 
-            MethodInfo doRunTaskMethod = typeof(Program).GetMethod("DoRunTask", BindingFlags.NonPublic | BindingFlags.Static).MakeGenericMethod(inputType);
-            doRunTaskMethod.Invoke(null, new object[] { taskType, taskConfig });
-            //ITask task = (ITask)taskAssembly.CreateInstance(taskConfig.TypeName);
-            //task.Run();
+            ChannelConfiguration channelConfig = jobConfig.GetOutputChannelForTask(taskConfig.TaskID);
+            IOutputChannel outputChannel = null;
+            if( channelConfig != null )
+                outputChannel = channelConfig.CreateOutputChannel(jobDirectory);
+
+            MethodInfo doRunTaskMethod = typeof(Program)
+                                            .GetMethod("DoRunTask", BindingFlags.NonPublic | BindingFlags.Static)
+                                            .MakeGenericMethod(inputType, outputType);
+            doRunTaskMethod.Invoke(null, new object[] { taskType, taskConfig, outputChannel });
         }
 
-        private static void DoRunTask<T>(Type taskType, TaskConfiguration taskConfig)
+        private static void DoRunTask<TInput, TOutput>(Type taskType, TaskConfiguration taskConfig, IOutputChannel outputChannel) where TOutput : IWritable, new()
         {
             using( DfsInputStream inputStream = OpenInputFile(taskConfig) )
-            using( RecordReader<T> input = CreateRecordReader<T>(inputStream, taskConfig) )
+            using( RecordReader<TInput> input = CreateRecordReader<TInput>(inputStream, taskConfig) )
+            using( RecordWriter<TOutput> output = outputChannel == null ? null : outputChannel.CreateRecordWriter<TOutput>() )
             {
-                ITask<T> task = (ITask<T>)Activator.CreateInstance(taskType);
-                task.Run(input);
+                ITask<TInput, TOutput> task = (ITask<TInput, TOutput>)Activator.CreateInstance(taskType);
+                task.Run(input, output);
             }
         }
 
