@@ -48,5 +48,23 @@ namespace Tkl.Jumbo.Jet.Channels
                 throw new InvalidOperationException("Invalid channel type.");
             }
         }
+
+        /// <summary>
+        /// Creates an input channel for use by the output task.
+        /// </summary>
+        /// <param name="jobID">The job ID.</param>
+        /// <param name="jobDirectory">The directory where files related to the job are stored.</param>
+        /// <param name="jetConfig">The Jet configuration to use for connecting to the job server.</param>
+        /// <returns>An implementation of <see cref="IInputChannel"/> for the specified channel type.</returns>
+        public IInputChannel CreateInputChannel(Guid jobID, string jobDirectory, JetConfiguration jetConfig)
+        {
+            switch( ChannelType )
+            {
+            case ChannelType.File:
+                return new FileInputChannel(jobID, jobDirectory, this, jetConfig);
+            default:
+                throw new InvalidOperationException("Invalid channel type.");
+            }
+        }
     }
 }

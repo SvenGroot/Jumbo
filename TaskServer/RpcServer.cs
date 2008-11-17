@@ -24,6 +24,11 @@ namespace TaskServerApplication
             return TaskServer.Instance.GetTaskStatus(fullTaskID);
         }
 
+        public string GetOutputFileDirectory(string fullTaskID)
+        {
+            return TaskServer.Instance.GetOutputFileDirectory(fullTaskID);
+        }
+
         #endregion
     }
 }

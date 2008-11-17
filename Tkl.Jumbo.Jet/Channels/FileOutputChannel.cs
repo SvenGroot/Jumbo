@@ -24,13 +24,18 @@ namespace Tkl.Jumbo.Jet.Channels
             if( channelConfig == null )
                 throw new ArgumentNullException("channelConfig");
 
-            FileName = Path.Combine(jobDirectory, string.Format("{0}_{1}.output", channelConfig.InputTaskID, channelConfig.OutputTaskID));
+            FileName = Path.Combine(jobDirectory, CreateChannelFileName(channelConfig));
         }
 
         /// <summary>
         /// Gets the path of the file where the channel's output is stored.
         /// </summary>
         public string FileName { get; private set; }
+
+        internal static string CreateChannelFileName(ChannelConfiguration channelConfig)
+        {
+            return string.Format("{0}_{1}.output", channelConfig.InputTaskID, channelConfig.OutputTaskID);
+        }
 
         #region IOutputChannel members
 

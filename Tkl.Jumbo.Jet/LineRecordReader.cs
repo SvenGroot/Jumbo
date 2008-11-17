@@ -3,13 +3,14 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.IO;
+using Tkl.Jumbo.IO;
 
 namespace Tkl.Jumbo.Jet
 {
     /// <summary>
     /// Reads records from a stream using line breaks as the record boundary.
     /// </summary>
-    public class LineRecordReader : RecordReader<string>
+    public class LineRecordReader : RecordReader<StringWritable>
     {
         // Unfortunately we cannot use StreamReader because with the buffering it does we cannot
         // accurately tell if we've passed beyond the end of the split.
@@ -132,7 +133,7 @@ namespace Tkl.Jumbo.Jet
                 --_end;
             if( offset != 0 )
             {
-                string record;
+                StringWritable record;
                 ReadRecord(out record);
             }
         }
@@ -142,7 +143,7 @@ namespace Tkl.Jumbo.Jet
         /// </summary>
         /// <param name="record">Receives the value of the record, or <see langword="null"/> if it is beyond the end of the stream</param>
         /// <returns><see langword="true"/> if an object was successfully read from the stream; <see langword="false"/> if the end of the stream or stream fragment was reached.</returns>
-        public override bool ReadRecord(out string record)
+        public override bool ReadRecord(out StringWritable record)
         {
             record = null;
             if( _position > _end )

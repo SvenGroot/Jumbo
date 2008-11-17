@@ -89,6 +89,12 @@ namespace TaskServerApplication
             return _taskRunner.GetTaskStatus(fullTaskID);
         }
 
+        public string GetOutputFileDirectory(string fullTaskID)
+        {
+            _log.DebugFormat("GetOutputFileDirectory, fullTaskID = \"{0}\"", fullTaskID);
+            return _taskRunner.GetJobDirectory(fullTaskID);
+        }
+
         #endregion
         
         private void RunInternal()

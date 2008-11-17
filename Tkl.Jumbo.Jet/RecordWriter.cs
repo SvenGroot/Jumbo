@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.IO;
+using Tkl.Jumbo.IO;
 
 namespace Tkl.Jumbo.Jet
 {
@@ -11,6 +12,7 @@ namespace Tkl.Jumbo.Jet
     /// </summary>
     /// <typeparam name="T">The type of the record.</typeparam>
     public abstract class RecordWriter<T> : IDisposable
+        where T : IWritable
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="RecordWriter{T}"/> class.

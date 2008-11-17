@@ -17,17 +17,17 @@ using Tkl.Jumbo.Jet.Channels;
 
 namespace ClientSample
 {
-    public class MyTask : ITask<string, Int32Writable>
+    public class MyTask : ITask<StringWritable, Int32Writable>
     {
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(MyTask));
 
         #region ITask Members
 
-        public void Run(RecordReader<string> input, RecordWriter<Int32Writable> writer)
+        public void Run(RecordReader<StringWritable> input, RecordWriter<Int32Writable> writer)
         {
             _log.Info("Running");
             int lines = 0;
-            string line;
+            StringWritable line;
             while( input.ReadRecord(out line) )
             {
                 ++lines;
@@ -50,6 +50,8 @@ namespace ClientSample
         public void Run(RecordReader<Int32Writable> input, RecordWriter<Int32Writable> output)
         {
             _log.InfoFormat("Running, input = {0}, output = {1}", input, output);
+            foreach( Int32Writable value in input.EnumerateRecords() )
+                _log.Info(value);
         }
 
         #endregion

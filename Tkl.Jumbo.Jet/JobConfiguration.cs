@@ -59,12 +59,25 @@ namespace Tkl.Jumbo.Jet
         /// <summary>
         /// Gets the output channel configuration for a specific task.
         /// </summary>
-        /// <param name="taskID"></param>
-        /// <returns></returns>
+        /// <param name="taskID">The task ID.</param>
+        /// <returns>The channel configuration.</returns>
         public Channels.ChannelConfiguration GetOutputChannelForTask(string taskID)
         {
             return (from channel in Channels
                     where channel.InputTaskID == taskID
+                    select channel).SingleOrDefault();
+        }
+
+
+        /// <summary>
+        /// Gets the input channel configuration for a specific task.
+        /// </summary>
+        /// <param name="taskID">The task ID.</param>
+        /// <returns>The channel configuration.</returns>
+        public Channels.ChannelConfiguration GetInputChannelForTask(string taskID)
+        {
+            return (from channel in Channels
+                    where channel.OutputTaskID == taskID
                     select channel).SingleOrDefault();
         }
 

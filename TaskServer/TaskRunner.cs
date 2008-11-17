@@ -121,7 +121,10 @@ namespace TaskServerApplication
             lock( _runningTasks )
             {
                 foreach( RunningTask task in _runningTasks.Values )
-                    task.Kill();
+                {
+                    if( task.State == TaskStatus.Running )
+                        task.Kill();
+                }
             }
         }
 
@@ -166,6 +169,18 @@ namespace TaskServerApplication
                 }
                 else
                     return TaskStatus.NotStarted;
+            }
+        }
+
+        public string GetJobDirectory(string fullTaskID)
+        {
+            if( fullTaskID == null )
+                throw new ArgumentNullException("fullTaskID");
+
+            lock( _runningTasks )
+            {
+                RunningTask task = _runningTasks[fullTaskID];
+                return task.JobDirectory;
             }
         }
 

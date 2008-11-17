@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.IO;
+using Tkl.Jumbo.IO;
 
 namespace Tkl.Jumbo.Jet
 {
@@ -11,6 +12,7 @@ namespace Tkl.Jumbo.Jet
     /// </summary>
     /// <typeparam name="T">The type of the records to read.</typeparam>
     public abstract class RecordReader<T> : IDisposable
+        where T : IWritable, new()
     {
         private bool _disposed;
 
