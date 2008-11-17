@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using Tkl.Jumbo.Jet;
+using Tkl.Jumbo;
 
 namespace JobServerApplication
 {
@@ -27,6 +28,11 @@ namespace JobServerApplication
         public void RunJob(Guid jobID)
         {
             JobServer.Instance.RunJob(jobID);
+        }
+
+        public ServerAddress GetTaskServerForTask(Guid jobID, string taskID)
+        {
+            return JobServer.Instance.GetTaskServerForTask(jobID, taskID);
         }
 
         #endregion

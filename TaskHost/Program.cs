@@ -19,16 +19,19 @@ namespace TaskHost
         {
             AppDomain.CurrentDomain.UnhandledException += new UnhandledExceptionEventHandler(CurrentDomain_UnhandledException);
 
-            if( args.Length != 2 )
+            if( args.Length != 3 )
             {
                 _log.Error("Invalid invocation.");
                 return 1;
             }
 
-            string jobDirectory = args[0];
-            string taskID = args[1];
+            Guid jobID = new Guid(args[0]);
+            string jobDirectory = args[1];
+            string taskID = args[2];
             string logFile = Path.Combine(jobDirectory, taskID + ".log");
             ConfigureLog(logFile);
+
+            ITaskServerUmbilicalProtocol umbilical = JetClient.CreateTaskServerUmbilicalClient();
 
             _log.InfoFormat("Running task; job directory = \"{0}\", task ID = \"{1}\"", jobDirectory, taskID);
 
@@ -43,6 +46,7 @@ namespace TaskHost
 
             RunTask(jobDirectory, config, taskConfig);
 
+            umbilical.ReportCompletion(string.Format("{{{0}}}_{1}", jobID, taskID));
             _log.Info("Task execution finished.");
 
             return 0;

@@ -8,7 +8,7 @@ namespace JobServerApplication
 {
     class JobInfo
     {
-        private readonly List<TaskInfo> _tasks = new List<TaskInfo>();
+        private readonly SortedList<string, TaskInfo> _tasks = new SortedList<string, TaskInfo>();
 
         public JobInfo(Job job)
         {
@@ -18,7 +18,7 @@ namespace JobServerApplication
         }
         public Job Job { get; private set; }
         public bool Running { get; set; }
-        public List<TaskInfo> Tasks
+        public SortedList<string, TaskInfo> Tasks
         {
             get { return _tasks; }
         }

@@ -110,13 +110,26 @@ namespace JobServerApplication
                 foreach( TaskConfiguration task in config.Tasks )
                 {
                     TaskInfo taskInfo = new TaskInfo(jobInfo, task);
-                    jobInfo.Tasks.Add(taskInfo);
+                    jobInfo.Tasks.Add(task.TaskID, taskInfo);
                 }
 
                 ScheduleTasks(jobInfo);
 
                 jobInfo.Running = true;
                 _log.InfoFormat("Job {0} has entered the running state. Number of tasks: {1}.", jobID, jobInfo.Tasks.Count);
+            }
+        }
+
+        public ServerAddress GetTaskServerForTask(Guid jobID, string taskID)
+        {
+            _log.DebugFormat("GetTaskServerForTask, jobID = {{{0}}}, taskID = \"{1}\"", jobID, taskID);
+            if( taskID == null )
+                throw new ArgumentNullException("taskID");
+            lock( _jobs )
+            {
+                JobInfo job = _jobs[jobID];
+                TaskInfo task = job.Tasks[taskID];
+                return task.Server.Address;
             }
         }
 
@@ -218,7 +231,7 @@ namespace JobServerApplication
                         TaskServerInfo taskServer = item.Value;
                         if( taskServer.AvailableTasks > 0 )
                         {
-                            TaskInfo task = job.Tasks[taskIndex];
+                            TaskInfo task = job.Tasks.Values[taskIndex];
                             taskServer.AssignedTasks.Add(task);
                             task.Server = taskServer;
                             task.State = TaskState.Scheduled;

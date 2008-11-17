@@ -11,7 +11,6 @@ namespace TaskServerApplication
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(Program));
 
         private static Thread _mainThread;
-        private static TaskServer _server;
 
         static void Main(string[] args)
         {
@@ -19,17 +18,13 @@ namespace TaskServerApplication
             Console.CancelKeyPress += new ConsoleCancelEventHandler(Console_CancelKeyPress);
             _mainThread = Thread.CurrentThread;
             Thread.CurrentThread.Name = "main";
-            _server = new TaskServer();
-            _server.Run();
+            TaskServer.Run();
         }
 
         static void Console_CancelKeyPress(object sender, ConsoleCancelEventArgs e)
         {
-            if( _server != null )
-            {
-                _server.Shutdown();
-                _mainThread.Join();
-            }
+            TaskServer.Shutdown();
+            _mainThread.Join();
         }
 
         static void CurrentDomain_UnhandledException(object sender, UnhandledExceptionEventArgs e)

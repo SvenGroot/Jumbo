@@ -24,6 +24,7 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <DocumentationFile>bin\Debug\Tkl.Jumbo.Jet.XML</DocumentationFile>
+    <GenerateSerializationAssemblies>Auto</GenerateSerializationAssemblies>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -54,11 +55,15 @@
     <Compile Include="BinaryRecordWriter.cs" />
     <Compile Include="Channels\ChannelConfiguration.cs" />
     <Compile Include="Channels\ChannelType.cs" />
+    <Compile Include="Channels\FileInputChannel.cs" />
     <Compile Include="Channels\FileOutputChannel.cs" />
+    <Compile Include="Channels\IInputChannel.cs" />
     <Compile Include="Channels\IOutputChannel.cs" />
+    <Compile Include="ITaskServerClientProtocol.cs" />
     <Compile Include="IJobServerClientProtocol.cs" />
     <Compile Include="IJobServerHeartbeatProtocol.cs" />
     <Compile Include="ITask.cs" />
+    <Compile Include="ITaskServerUmbilicalProtocol.cs" />
     <Compile Include="JetClient.cs" />
     <Compile Include="JetConfiguration.cs" />
     <Compile Include="JetHeartbeatData.cs" />
@@ -76,6 +81,7 @@
     <Compile Include="TaskDfsInput.cs" />
     <Compile Include="TaskServerConfigurationElement.cs" />
     <Compile Include="TaskServerHeartbeatCommand.cs" />
+    <Compile Include="TaskStatus.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="jumbo.snk" />

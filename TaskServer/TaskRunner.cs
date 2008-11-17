@@ -13,6 +13,8 @@ namespace TaskServerApplication
 {
     class TaskRunner
     {
+        #region Nested types
+
         private sealed class RunningTask
         {
             private Process _process;
@@ -24,12 +26,13 @@ namespace TaskServerApplication
             {
                 JobID = jobID;
                 TaskID = taskID;
+                FullTaskID = string.Format("{{{0}}}_{1}", jobID, taskID);
                 JobDirectory = jobDirectory;
                 if( Debugger.IsAttached )
                     RunTaskAppDomain();
                 else
                 {
-                    ProcessStartInfo startInfo = new ProcessStartInfo("TaskHost.exe", string.Format("\"{0}\" \"{1}\"", jobDirectory, taskID));
+                    ProcessStartInfo startInfo = new ProcessStartInfo("TaskHost.exe", string.Format("\"{0}\" \"{1}\" \"{2}\"", jobID, jobDirectory, taskID));
                     startInfo.UseShellExecute = false;
                     startInfo.CreateNoWindow = true;
                     RuntimeEnvironment.ModifyProcessStartInfo(startInfo);
@@ -39,14 +42,19 @@ namespace TaskServerApplication
                     _process.Exited += new EventHandler(_process_Exited);
                     _process.Start();
                 }
-                _log.DebugFormat("Host process for task {{{0}}}_{1} has started.", jobID, taskID);
+                State = TaskStatus.Running;
+                _log.DebugFormat("Host process for task {0} has started.", FullTaskID);
             }
+
+            public TaskStatus State { get; set; }
 
             public Guid JobID { get; private set; }
 
             public string TaskID { get; private set; }
 
             public string JobDirectory { get; private set; }
+
+            public string FullTaskID { get; private set; }
 
             public void Kill()
             {
@@ -68,18 +76,20 @@ namespace TaskServerApplication
             private void RunTaskAppDomain()
             {
                 _appDomainThread = new Thread(RunTaskAppDomainThread);
-                _appDomainThread.Name = string.Format("{{{0}}}_{1}", JobID, TaskID);
+                _appDomainThread.Name = FullTaskID;
                 _appDomainThread.Start();
             }
 
             private void RunTaskAppDomainThread()
             {
-                AppDomain taskDomain = AppDomain.CreateDomain(string.Format("{{{0}}}_{1}", JobID, TaskID));
-                taskDomain.ExecuteAssembly("TaskHost.exe", null, new[] { JobDirectory, TaskID });
+                AppDomain taskDomain = AppDomain.CreateDomain(FullTaskID);
+                taskDomain.ExecuteAssembly("TaskHost.exe", null, new[] { JobID.ToString(), JobDirectory, TaskID });
                 AppDomain.Unload(taskDomain);
                 OnProcessExited(EventArgs.Empty);
             }
         }
+
+        #endregion
 
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(TaskRunner));
 
@@ -89,7 +99,7 @@ namespace TaskServerApplication
         private Queue<RunTaskJetHeartbeatResponse> _tasks = new Queue<RunTaskJetHeartbeatResponse>();
         private bool _running = true;
         private readonly DfsClient _dfsClient;
-        private readonly List<RunningTask> _runningTasks = new List<RunningTask>();
+        private readonly Dictionary<string, RunningTask> _runningTasks = new Dictionary<string,RunningTask>();
 
         public TaskRunner(TaskServer taskServer)
         {
@@ -110,7 +120,7 @@ namespace TaskServerApplication
             _taskStarterThread.Join();
             lock( _runningTasks )
             {
-                foreach( RunningTask task in _runningTasks )
+                foreach( RunningTask task in _runningTasks.Values )
                     task.Kill();
             }
         }
@@ -122,6 +132,41 @@ namespace TaskServerApplication
                 _tasks.Enqueue(task);
             }
             _taskAddedEvent.Set();
+        }
+
+        public void ReportCompletion(string fullTaskID)
+        {
+            if( fullTaskID == null )
+                throw new ArgumentNullException("fullTaskID");
+
+            lock( _runningTasks )
+            {
+                RunningTask task;
+                if( _runningTasks.TryGetValue(fullTaskID, out task) && task.State == TaskStatus.Running )
+                {
+                    _log.InfoFormat("Task {0} has completed successfully.", task.FullTaskID);
+                    task.State = TaskStatus.Completed;
+                }
+                else
+                    _log.WarnFormat("Task {0} was reported as completed but was not running.", task.FullTaskID);
+            }
+        }
+
+        public TaskStatus GetTaskStatus(string fullTaskID)
+        {
+            if( fullTaskID == null )
+                throw new ArgumentNullException("fullTaskID");
+
+            lock( _runningTasks )
+            {
+                RunningTask task;
+                if( _runningTasks.TryGetValue(fullTaskID, out task) )
+                {
+                    return task.State;
+                }
+                else
+                    return TaskStatus.NotStarted;
+            }
         }
 
         private void TaskRunnerThread()
@@ -158,7 +203,7 @@ namespace TaskServerApplication
             {
                 RunningTask runningTask = new RunningTask(task.Job.JobID, jobDirectory, task.TaskID);
                 runningTask.ProcessExited += new EventHandler(RunningTask_ProcessExited);
-                _runningTasks.Add(runningTask);
+                _runningTasks.Add(runningTask.FullTaskID, runningTask);
             }
         }
 
@@ -169,9 +214,13 @@ namespace TaskServerApplication
                 RunningTask task = (RunningTask)sender;
                 lock( _runningTasks )
                 {
-                    _runningTasks.Remove(task);
+                    if( task.State != TaskStatus.Completed )
+                    {
+                        _log.ErrorFormat("Task {0} did not complete sucessfully.", task.FullTaskID);
+                        task.State = TaskStatus.Error;
+                    }
+                    _log.InfoFormat("Task {0} has finished, state = {1}.", task.FullTaskID, task.State);
                 }
-                _log.InfoFormat("Task {{{0}}}_{1} has finished.", task.JobID, task.TaskID);
             }
         }
     }

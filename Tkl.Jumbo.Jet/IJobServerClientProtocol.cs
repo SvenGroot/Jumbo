@@ -22,5 +22,13 @@ namespace Tkl.Jumbo.Jet
         /// </summary>
         /// <param name="jobID">The ID of the job to run.</param>
         void RunJob(Guid jobID);
+
+        /// <summary>
+        /// Gets the address of the task server that is running the specified task.
+        /// </summary>
+        /// <param name="jobID">The ID of the job containing the task.</param>
+        /// <param name="taskID">The ID of the task.</param>
+        /// <returns>The <see cref="ServerAddress"/> for the task server that is running the task.</returns>
+        ServerAddress GetTaskServerForTask(Guid jobID, string taskID);
     }
 }

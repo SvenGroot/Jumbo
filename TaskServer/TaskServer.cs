@@ -10,7 +10,7 @@ using Tkl.Jumbo.Dfs;
 
 namespace TaskServerApplication
 {
-    class TaskServer
+    class TaskServer : ITaskServerUmbilicalProtocol, ITaskServerClientProtocol
     {
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(TaskServer));
 
@@ -21,12 +21,12 @@ namespace TaskServerApplication
         private readonly List<JetHeartbeatData> _pendingHeartbeatData = new List<JetHeartbeatData>();
         private readonly TaskRunner _taskRunner;
 
-        public TaskServer()
+        private TaskServer()
             : this(JetConfiguration.GetConfiguration(), DfsConfiguration.GetConfiguration())
         {
         }
 
-        public TaskServer(JetConfiguration config, DfsConfiguration dfsConfiguration)
+        private TaskServer(JetConfiguration config, DfsConfiguration dfsConfiguration)
         {
             if( config == null )
                 throw new ArgumentNullException("config");
@@ -41,18 +41,62 @@ namespace TaskServerApplication
             _taskRunner = new TaskRunner(this);
         }
 
+        public static TaskServer Instance { get; private set; }
+
         public JetConfiguration Configuration { get; private set; }
         public DfsConfiguration DfsConfiguration { get; private set; }
-
         public ServerAddress LocalAddress { get; private set; }
 
+        public static void Run()
+        {
+            Run(JetConfiguration.GetConfiguration(), DfsConfiguration.GetConfiguration());
+        }
 
-        public void Run()
+        public static void Run(JetConfiguration jetConfig, DfsConfiguration dfsConfig)
+        {
+            Instance = new TaskServer(jetConfig, dfsConfig);
+
+            RpcHelper.RegisterServerChannels(jetConfig.TaskServer.Port, jetConfig.TaskServer.ListenIPv4AndIPv6);
+            RpcHelper.RegisterService(typeof(RpcServer), "TaskServer");
+
+            Instance.RunInternal();
+        }
+
+        public static void Shutdown()
+        {
+            Instance.ShutdownInternal();
+
+            RpcHelper.UnregisterServerChannels();
+
+            Instance = null;
+        }
+
+        #region ITaskServerUmbilicalProtocol Members
+
+        public void ReportCompletion(string fullTaskID)
+        {
+            _log.DebugFormat("ReportCompletion, fullTaskID = \"{0}\"", fullTaskID);
+            _taskRunner.ReportCompletion(fullTaskID);
+        }
+
+        #endregion
+
+        #region ITaskServerClientProtocol Members
+
+        public TaskStatus GetTaskStatus(string fullTaskID)
+        {
+            _log.DebugFormat("GetTaskStatus, fullTaskID = \"{0}\"", fullTaskID);
+            return _taskRunner.GetTaskStatus(fullTaskID);
+        }
+
+        #endregion
+        
+        private void RunInternal()
         {
             _log.Info("-----Task server is starting-----");
             _log.LogEnvironmentInformation();
             _running = true;
-            LocalAddress = new ServerAddress(Dns.GetHostName(), 9501); // TODO: Real umbilical port number
+            LocalAddress = new ServerAddress(Dns.GetHostName(), Configuration.TaskServer.Port);
 
             AddDataForNextHeartbeat(new StatusJetHeartbeatData() { MaxTasks = 4 }); // TODO: Real max tasks
 
@@ -63,7 +107,7 @@ namespace TaskServerApplication
             }
         }
 
-        public void Shutdown()
+        private void ShutdownInternal()
         {
             _taskRunner.Stop();
             _running = false;
