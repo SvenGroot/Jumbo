@@ -4,7 +4,6 @@ using System.Linq;
 using System.Text;
 using NUnit.Framework;
 using System.Threading;
-using IO = System.IO;
 using Tkl.Jumbo.Dfs;
 
 namespace Tkl.Jumbo.Test.Dfs
@@ -55,7 +54,7 @@ namespace Tkl.Jumbo.Test.Dfs
         {
             const int size = 1000000;
             DfsClient target = new DfsClient(TestDfsCluster.CreateClientConfig());
-            using( IO.MemoryStream stream = new IO.MemoryStream() )
+            using( System.IO.MemoryStream stream = new System.IO.MemoryStream() )
             {
                 Utilities.GenerateData(stream, size);
                 stream.Position = 0;
@@ -70,7 +69,7 @@ namespace Tkl.Jumbo.Test.Dfs
         [Test]
         public void UploadFile()
         {
-            string tempFile = IO.Path.GetTempFileName();
+            string tempFile = System.IO.Path.GetTempFileName();
             try
             {
                 const int size = 1000000;
@@ -84,15 +83,15 @@ namespace Tkl.Jumbo.Test.Dfs
             }
             finally
             {
-                if( IO.File.Exists(tempFile) )
-                    IO.File.Delete(tempFile);
+                if( System.IO.File.Exists(tempFile) )
+                    System.IO.File.Delete(tempFile);
             }
         }
 
         [Test]
         public void UploadFileToDirectory()
         {
-            string tempFile = IO.Path.GetTempFileName();
+            string tempFile = System.IO.Path.GetTempFileName();
             try
             {
                 const int size = 1000000;
@@ -100,7 +99,7 @@ namespace Tkl.Jumbo.Test.Dfs
                 DfsClient target = new DfsClient(TestDfsCluster.CreateClientConfig());
                 target.NameServer.CreateDirectory("/uploadfiledir");
                 target.UploadFile(tempFile, "/uploadfiledir");
-                string fileName = IO.Path.GetFileName(tempFile);
+                string fileName = System.IO.Path.GetFileName(tempFile);
                 File file = target.NameServer.GetFileInfo("/uploadfiledir/" + fileName);
                 Assert.IsNotNull(file);
                 Assert.AreEqual(size, file.Size);
@@ -108,8 +107,8 @@ namespace Tkl.Jumbo.Test.Dfs
             }
             finally
             {
-                if( IO.File.Exists(tempFile) )
-                    IO.File.Delete(tempFile);
+                if( System.IO.File.Exists(tempFile) )
+                    System.IO.File.Delete(tempFile);
             }
         }
 
@@ -118,12 +117,12 @@ namespace Tkl.Jumbo.Test.Dfs
         {
             const int size = 1000000;
             DfsClient target = new DfsClient(TestDfsCluster.CreateClientConfig());
-            using( IO.MemoryStream stream = new IO.MemoryStream() )
+            using( System.IO.MemoryStream stream = new System.IO.MemoryStream() )
             {
                 Utilities.GenerateData(stream, size);
                 stream.Position = 0;
                 target.UploadStream(stream, "/downloadstream");
-                using( IO.MemoryStream stream2 = new System.IO.MemoryStream() )
+                using( System.IO.MemoryStream stream2 = new System.IO.MemoryStream() )
                 {
                     target.DownloadStream("/downloadstream", stream2);
                     stream2.Position = 0;

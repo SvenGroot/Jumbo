@@ -12,6 +12,7 @@ using System.Diagnostics;
 using Tkl.Jumbo.Jet;
 using System.Xml.Serialization;
 using System.Threading;
+using Tkl.Jumbo.IO;
 
 namespace ClientSample
 {
@@ -26,7 +27,7 @@ namespace ClientSample
             _log.Info("Running");
             int lines = 0;
             string line;
-            while( (line = input.ReadRecord()) != null )
+            while( input.ReadRecord(out line) )
             {
                 ++lines;
             }
@@ -51,81 +52,27 @@ namespace ClientSample
             Stopwatch sw = new Stopwatch();
             sw.Start();
 
-            //byte[] buffer = new byte[4096];
-            //using( Stream stream = System.IO.File.OpenRead("E:\\test.txt") ) //dfsClient.OpenFile("/test.txt") )
-            //{
-            //    while( stream.Read(buffer, 0, buffer.Length) > 0 )
-            //    {
-            //    }
-            //}
+            //StartJob(dfsClient, jobServer);
 
-            //using( Stream stream = System.IO.File.OpenRead(@"D:\jumbo\blocks\a79c8b34-5692-4f68-87ad-893b88318f3e") )
-            //using( BinaryReader reader = new BinaryReader(stream) )
-            //{
-            //    Packet packet = new Packet();
-            //    while( !packet.IsLastPacket )
-            //        packet.Read(reader, true);
-            //}
+            using( MemoryStream stream = new MemoryStream() )
+            using( BinaryRecordWriter<KeyValuePairWritable<StringWritable, Int32Writable>> writer = new BinaryRecordWriter<KeyValuePairWritable<StringWritable,Int32Writable>>(stream) )
+            {
+                KeyValuePairWritable<StringWritable, Int32Writable> pair = new KeyValuePairWritable<StringWritable, Int32Writable>();
+                pair.Value = new KeyValuePair<StringWritable, Int32Writable>("hello", 5);
+                writer.WriteRecord(pair);
+                pair.Value = new KeyValuePair<StringWritable, Int32Writable>("bye", 42);
+                writer.WriteRecord(pair);
 
-            //using( TcpClient client = new TcpClient("localhost", 9001) )
-            //using( NetworkStream stream = client.GetStream() )
-            //{
-            //    DataServerClientProtocolReadHeader header = new DataServerClientProtocolReadHeader();
-            //    header.BlockID = new Guid("a79c8b34-5692-4f68-87ad-893b88318f3e");
-            //    header.Offset = 0;
-            //    header.Size = -1;
-            //    BinaryFormatter formatter = new BinaryFormatter();
-            //    formatter.Serialize(stream, header);
-            //    using( BinaryReader reader = new BinaryReader(stream) )
-            //    {
-            //        DataServerClientProtocolResult result = (DataServerClientProtocolResult)reader.ReadInt32();
-            //        int offset = reader.ReadInt32();
-            //        Packet packet = new Packet();
-            //        while( !packet.IsLastPacket )
-            //        {
-            //            result = (DataServerClientProtocolResult)reader.ReadInt32();
-            //            packet.Read(reader, false);
-            //        }
-            //    }
-            //}
+                stream.Position = 0;
+                using( BinaryRecordReader<KeyValuePairWritable<StringWritable, Int32Writable>> reader = new BinaryRecordReader<KeyValuePairWritable<StringWritable, Int32Writable>>(stream) )
+                {
+                    while( reader.ReadRecord(out pair) )
+                    {
+                        Console.WriteLine(pair);
+                    }
+                }
+            }
 
-            StartJob(dfsClient, jobServer);
-
-            //using( StreamWriter writer = new StreamWriter(@"E:\test2.txt") )
-            //{
-            //    int lines = 0;
-            //    string line = null;
-            //    //string prevLine = null;
-            //    using( Stream stream = dfsClient.OpenFile("/test.txt") )
-            //    using( LineRecordReader reader = new LineRecordReader(stream, 0, dfsClient.NameServer.BlockSize) )
-            //    {
-            //        while( (line = reader.ReadRecord()) != null )
-            //        {
-            //            ++lines;
-            //            writer.WriteLine(line);
-            //        }
-            //    }
-
-            //    using( Stream stream = dfsClient.OpenFile("/test.txt") )
-            //    using( LineRecordReader reader = new LineRecordReader(stream, dfsClient.NameServer.BlockSize, stream.Length - dfsClient.NameServer.BlockSize) )
-            //    {
-            //        while( (line = reader.ReadRecord()) != null )
-            //        {
-            //            ++lines;
-            //            writer.WriteLine(line);
-            //        }
-            //    }
-            //    Console.WriteLine(lines);
-            //}
-            //Console.WriteLine(line);
-            //string line = null;
-            //using( StreamReader reader = new StreamReader("E:\\test.txt") )
-            //{
-            //    while( (line = reader.ReadLine()) != null )
-            //    {
-            //    }
-            //}
-            //Console.WriteLine(prevLine);
 
             sw.Stop();
             Console.WriteLine(sw.Elapsed);

@@ -131,21 +131,26 @@ namespace Tkl.Jumbo.Jet
             if( _end == stream.Length )
                 --_end;
             if( offset != 0 )
-                ReadRecord();
+            {
+                string record;
+                ReadRecord(out record);
+            }
         }
 
         /// <summary>
-        /// Reads a record from the stream.
+        /// Reads a record.
         /// </summary>
-        /// <returns>The record.</returns>
-        public override string ReadRecord()
+        /// <param name="record">Receives the value of the record, or <see langword="null"/> if it is beyond the end of the stream</param>
+        /// <returns><see langword="true"/> if an object was successfully read from the stream; <see langword="false"/> if the end of the stream or stream fragment was reached.</returns>
+        public override bool ReadRecord(out string record)
         {
+            record = null;
             if( _position > _end )
-                return null;
+                return false;
             int bytesProcessed;
-            string result = _reader.ReadLine(out bytesProcessed);
+            record = _reader.ReadLine(out bytesProcessed);
             _position += bytesProcessed;
-            return result;
+            return true;
         }
     }
 }

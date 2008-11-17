@@ -69,8 +69,9 @@ namespace Tkl.Jumbo.Jet
         /// <summary>
         /// Reads a record.
         /// </summary>
-        /// <returns>The record, or the default value of <typeparamref name="T"/> if it is beyond the end of the stream.</returns>
-        public abstract T ReadRecord();
+        /// <param name="record">Receives the value of the record, or the default value of <typeparamref name="T"/> if it is beyond the end of the stream</param>
+        /// <returns><see langword="true"/> if an object was successfully read from the stream; <see langword="false"/> if the end of the stream or stream fragment was reached.</returns>
+        public abstract bool ReadRecord(out T record);
 
         /// <summary>
         /// Enumerates all records.
@@ -79,7 +80,7 @@ namespace Tkl.Jumbo.Jet
         public IEnumerable<T> EnumerateRecords()
         {
             T record;
-            while( !object.Equals(record = ReadRecord(), default(T)) )
+            while( ReadRecord(out record) )
             {
                 yield return record;
             }

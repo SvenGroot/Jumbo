@@ -4,7 +4,6 @@ using System.Linq;
 using System.Text;
 using System.Runtime.Remoting.Channels;
 using System.Runtime.Remoting.Channels.Tcp;
-using IO = System.IO;
 
 namespace Tkl.Jumbo.Dfs
 {
@@ -96,7 +95,7 @@ namespace Tkl.Jumbo.Dfs
         /// </summary>
         /// <param name="stream">The stream with the data to upload.</param>
         /// <param name="dfsPath">The path of the file on the DFS to write the data to.</param>
-        public void UploadStream(IO.Stream stream, string dfsPath)
+        public void UploadStream(System.IO.Stream stream, string dfsPath)
         {
             if( dfsPath == null )
                 throw new ArgumentNullException("dfsPath");
@@ -124,12 +123,12 @@ namespace Tkl.Jumbo.Dfs
             Directory dir = NameServer.GetDirectoryInfo(dfsPath);
             if( dir != null )
             {
-                string fileName = IO.Path.GetFileName(localPath);
+                string fileName = System.IO.Path.GetFileName(localPath);
                 if( !dfsPath.EndsWith(DfsPath.DirectorySeparator.ToString()) )
                     dfsPath += DfsPath.DirectorySeparator;
                 dfsPath += fileName;
             }
-            using( IO.FileStream inputStream = IO.File.OpenRead(localPath) )
+            using( System.IO.FileStream inputStream = System.IO.File.OpenRead(localPath) )
             {
                 UploadStream(inputStream, dfsPath);
             }
@@ -140,7 +139,7 @@ namespace Tkl.Jumbo.Dfs
         /// </summary>
         /// <param name="dfsPath">The path of the file on the DFS to download.</param>
         /// <param name="stream">The stream to save the file to.</param>
-        public void DownloadStream(string dfsPath, IO.Stream stream)
+        public void DownloadStream(string dfsPath, System.IO.Stream stream)
         {
             if( dfsPath == null )
                 throw new ArgumentNullException("dfsPath");
@@ -165,16 +164,16 @@ namespace Tkl.Jumbo.Dfs
             if( localPath == null )
                 throw new ArgumentNullException("localPath");
 
-            if( IO.Directory.Exists(localPath) )
+            if( System.IO.Directory.Exists(localPath) )
             {
                 int index = dfsPath.LastIndexOf(DfsPath.DirectorySeparator);
                 if( index < 0 || index + 1 >= dfsPath.Length )
                 {
                     throw new ArgumentException("Invalid DFS path.");
                 }
-                localPath = IO.Path.Combine(localPath, dfsPath.Substring(index + 1));
+                localPath = System.IO.Path.Combine(localPath, dfsPath.Substring(index + 1));
             }
-            using( IO.FileStream stream = IO.File.Create(localPath) )
+            using( System.IO.FileStream stream = System.IO.File.Create(localPath) )
             {
                 DownloadStream(dfsPath, stream);
             }
@@ -204,7 +203,7 @@ namespace Tkl.Jumbo.Dfs
                 File file = entry as File;
                 if( file != null )
                 {
-                    string localFile = IO.Path.Combine(localPath, file.Name);
+                    string localFile = System.IO.Path.Combine(localPath, file.Name);
                     DownloadFile(file.FullPath, localFile);
                 }
             }
@@ -236,7 +235,7 @@ namespace Tkl.Jumbo.Dfs
             return (T)Activator.GetObject(typeof(T), url);
         }
 
-        private static void CopyStream(IO.Stream inputStream, IO.Stream outputStream)
+        private static void CopyStream(System.IO.Stream inputStream, System.IO.Stream outputStream)
         {
             byte[] buffer = new byte[_bufferSize];
             int bytesRead;

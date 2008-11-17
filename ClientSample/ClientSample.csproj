@@ -61,6 +61,10 @@
       <Project>{E739829A-3507-42EA-A8B4-D8D41060DF95}</Project>
       <Name>Tkl.Jumbo.Jet</Name>
     </ProjectReference>
+    <ProjectReference Include="..\Tkl.Jumbo\Tkl.Jumbo.csproj">
+      <Project>{17C7CE1A-4F9F-4173-8BA8-9C26A4F644C6}</Project>
+      <Name>Tkl.Jumbo</Name>
+    </ProjectReference>
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
