@@ -10,7 +10,7 @@ namespace Tkl.Jumbo.Jet
     /// <summary>
     /// Reads records from a stream using line breaks as the record boundary.
     /// </summary>
-    public class LineRecordReader : RecordReader<StringWritable>
+    public class LineRecordReader : StreamRecordReader<StringWritable>
     {
         // Unfortunately we cannot use StreamReader because with the buffering it does we cannot
         // accurately tell if we've passed beyond the end of the split.
@@ -104,7 +104,7 @@ namespace Tkl.Jumbo.Jet
         private long _end;
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="RecordReader{T}"/> class with the specified stream.
+        /// Initializes a new instance of the <see cref="StreamRecordReader{T}"/> class with the specified stream.
         /// </summary>
         /// <param name="stream">The stream to read from.</param>
         public LineRecordReader(Stream stream)
@@ -113,7 +113,7 @@ namespace Tkl.Jumbo.Jet
         }
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="RecordReader{T}"/> class with the specified stream.
+        /// Initializes a new instance of the <see cref="StreamRecordReader{T}"/> class with the specified stream.
         /// </summary>
         /// <param name="stream">The stream to read from.</param>
         /// <param name="offset">The position in the stream to start reading.</param>

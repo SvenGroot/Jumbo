@@ -25,10 +25,10 @@ namespace Tkl.Jumbo.Jet.Channels
         bool WaitUntilReady(int timeout);
 
         /// <summary>
-        /// Creates a <see cref="RecordReader{T}"/> from which the channel can write its output.
+        /// Creates a <see cref="StreamRecordReader{T}"/> from which the channel can write its output.
         /// </summary>
         /// <typeparam name="T">The type of the records.</typeparam>
-        /// <returns>A <see cref="RecordReader{T}"/> for the channel.</returns>
+        /// <returns>A <see cref="StreamRecordReader{T}"/> for the channel.</returns>
         RecordReader<T> CreateRecordReader<T>() where T : IWritable, new();
     }
 }

@@ -86,7 +86,7 @@ namespace TaskHost
             ChannelConfiguration outputChannelConfig = jobConfig.GetOutputChannelForTask(taskConfig.TaskID);
             IOutputChannel outputChannel = null;
             if( outputChannelConfig != null )
-                outputChannel = outputChannelConfig.CreateOutputChannel(jobDirectory);
+                outputChannel = outputChannelConfig.CreateOutputChannel(jobDirectory, taskConfig.TaskID);
 
             MethodInfo doRunTaskMethod = typeof(Program)
                                             .GetMethod("DoRunTask", BindingFlags.NonPublic | BindingFlags.Static)

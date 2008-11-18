@@ -64,7 +64,7 @@ namespace Tkl.Jumbo.Jet
         public Channels.ChannelConfiguration GetOutputChannelForTask(string taskID)
         {
             return (from channel in Channels
-                    where channel.InputTaskID == taskID
+                    where channel.InputTasks != null && channel.InputTasks.Contains(taskID)
                     select channel).SingleOrDefault();
         }
 

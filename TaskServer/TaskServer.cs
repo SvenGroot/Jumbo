@@ -86,7 +86,9 @@ namespace TaskServerApplication
         public TaskStatus GetTaskStatus(string fullTaskID)
         {
             _log.DebugFormat("GetTaskStatus, fullTaskID = \"{0}\"", fullTaskID);
-            return _taskRunner.GetTaskStatus(fullTaskID);
+            TaskStatus status = _taskRunner.GetTaskStatus(fullTaskID);
+            _log.DebugFormat("Task {0} status is {1}.", fullTaskID, status);
+            return status;
         }
 
         public string GetOutputFileDirectory(string fullTaskID)

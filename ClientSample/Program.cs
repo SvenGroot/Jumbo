@@ -50,8 +50,13 @@ namespace ClientSample
         public void Run(RecordReader<Int32Writable> input, RecordWriter<Int32Writable> output)
         {
             _log.InfoFormat("Running, input = {0}, output = {1}", input, output);
+            int totalLines = 0;
             foreach( Int32Writable value in input.EnumerateRecords() )
+            {
+                totalLines += value.Value;
                 _log.Info(value);
+            }
+            _log.InfoFormat("Total: {0}", totalLines);
         }
 
         #endregion
@@ -87,7 +92,8 @@ namespace ClientSample
             Tkl.Jumbo.Dfs.File file = dfsClient.NameServer.GetFileInfo("/test.txt");
             int blockSize = dfsClient.NameServer.BlockSize;
 
-            JobConfiguration config = new JobConfiguration() {
+            JobConfiguration config = new JobConfiguration()
+            {
                 AssemblyFileName = "ClientSample.exe",
                 Tasks = new List<TaskConfiguration>() { 
                     new TaskConfiguration() { 
@@ -118,7 +124,7 @@ namespace ClientSample
                 Channels = new List<ChannelConfiguration>() {
                     new ChannelConfiguration() {
                         ChannelType = ChannelType.File,
-                        InputTaskID = "Task1",
+                        InputTasks = new[] { "Task1", "Task2" },
                         OutputTaskID = "Task3"
                     }
                 }

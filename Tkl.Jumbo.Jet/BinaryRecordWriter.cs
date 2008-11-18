@@ -40,7 +40,7 @@ namespace Tkl.Jumbo.Jet
         }
 
         /// <summary>
-        /// Cleans up all resources associated with this <see cref="RecordReader{T}"/>.
+        /// Cleans up all resources associated with this <see cref="BinaryRecordWriter{T}"/>.
         /// </summary>
         /// <param name="disposing"><see langword="true"/> to clean up both managed and unmanaged resources; <see langword="false"/>
         /// to clean up unmanaged resources only.</param>

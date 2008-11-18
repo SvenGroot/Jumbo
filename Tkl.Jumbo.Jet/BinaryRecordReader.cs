@@ -21,7 +21,7 @@ namespace Tkl.Jumbo.Jet
     ///   to sync the file when starting at a random offset.
     /// </para>
     /// </remarks>
-    public class BinaryRecordReader<T> : RecordReader<T>
+    public class BinaryRecordReader<T> : StreamRecordReader<T>
         where T : IWritable, new()
     {
         private BinaryReader _reader;
@@ -51,7 +51,7 @@ namespace Tkl.Jumbo.Jet
         }
 
         /// <summary>
-        /// Cleans up all resources associated with this <see cref="RecordReader{T}"/>.
+        /// Cleans up all resources associated with this <see cref="StreamRecordReader{T}"/>.
         /// </summary>
         /// <param name="disposing"><see langword="true"/> to clean up both managed and unmanaged resources; <see langword="false"/>
         /// to clean up unmanaged resources only.</param>

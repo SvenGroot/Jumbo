@@ -21,8 +21,8 @@ namespace Tkl.Jumbo.Jet.Channels
         /// <summary>
         /// Gets or sets the ID of the task that writes to the channel.
         /// </summary>
-        [XmlAttribute("inputTask")]
-        public string InputTaskID { get; set; }
+        [XmlArrayItem("Task")]
+        public string[] InputTasks { get; set; }
 
         /// <summary>
         /// Gets or sets the ID of the task that reads from the channel.
@@ -34,8 +34,10 @@ namespace Tkl.Jumbo.Jet.Channels
         /// Creates an output channel for use by the input task.
         /// </summary>
         /// <param name="jobDirectory">The directory where files related to the job are stored.</param>
+        /// <param name="inputTaskID">The name of the input task for which the channel is created. This should be one of
+        /// the IDs listed in <see cref="InputTasks"/>.</param>
         /// <returns>An implementation of <see cref="IOutputChannel"/> for the specified channel type.</returns>
-        public IOutputChannel CreateOutputChannel(string jobDirectory)
+        public IOutputChannel CreateOutputChannel(string jobDirectory, string inputTaskID)
         {
             if( jobDirectory == null )
                 throw new ArgumentNullException("jobDirectory");
@@ -43,7 +45,7 @@ namespace Tkl.Jumbo.Jet.Channels
             switch( ChannelType )
             {
             case ChannelType.File:
-                return new FileOutputChannel(jobDirectory, this);
+                return new FileOutputChannel(jobDirectory, this, inputTaskID);
             default:
                 throw new InvalidOperationException("Invalid channel type.");
             }

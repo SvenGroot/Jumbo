@@ -15,6 +15,19 @@ namespace Tkl.Jumbo.Jet.Channels
     /// </summary>
     public class FileInputChannel : IInputChannel
     {
+        #region Nested types
+
+        private class InputTask
+        {
+            public string TaskID { get; set; }
+            public string FullTaskID { get; set; }
+            public TaskStatus Status { get; set; }
+            public ServerAddress TaskServerAddress { get; set; }
+            public ITaskServerClientProtocol TaskServer { get; set; }
+        }
+
+        #endregion
+
         private const int _pollingInterval = 5000;
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(FileInputChannel));
 
@@ -24,7 +37,7 @@ namespace Tkl.Jumbo.Jet.Channels
         private ChannelConfiguration _channelConfig;
         private JetConfiguration _jetConfig;
         private Guid _jobID;
-        private string _fileName;
+        private List<string> _fileNames = new List<string>();
         private Thread _inputPollThread;
 
         /// <summary>
@@ -78,16 +91,23 @@ namespace Tkl.Jumbo.Jet.Channels
         }
 
         /// <summary>
-        /// Creates a <see cref="RecordReader{T}"/> from which the channel can write its output.
+        /// Creates a <see cref="StreamRecordReader{T}"/> from which the channel can write its output.
         /// </summary>
         /// <typeparam name="T">The type of the records.</typeparam>
-        /// <returns>A <see cref="RecordReader{T}"/> for the channel.</returns>
+        /// <returns>A <see cref="StreamRecordReader{T}"/> for the channel.</returns>
         public RecordReader<T> CreateRecordReader<T>() where T : IWritable, new()
         {
             if( !_isReady )
                 throw new InvalidOperationException("The channel isn't ready yet.");
 
-            return new BinaryRecordReader<T>(File.OpenRead(_fileName));
+            Debug.Assert(_fileNames.Count > 0);
+            if( _fileNames.Count == 1 )
+                return new BinaryRecordReader<T>(File.OpenRead(_fileNames[0]));
+            else
+            {
+                return new MultiRecordReader<T>(from fileName in _fileNames
+                                                select (RecordReader<T>)new BinaryRecordReader<T>(File.OpenRead(fileName)));
+            }
         }
 
         #endregion
@@ -95,38 +115,64 @@ namespace Tkl.Jumbo.Jet.Channels
         private void InputPollThread()
         {
             IJobServerClientProtocol jobServer = JetClient.CreateJobServerClient(_jetConfig);
-            ServerAddress taskServerAddress = jobServer.GetTaskServerForTask(_jobID, _channelConfig.InputTaskID);
-            ITaskServerClientProtocol taskServer = JetClient.CreateTaskServerClient(taskServerAddress);
+            // TODO: Adjust this for the situation when not all tasks are scheduled yet.
+            List<InputTask> filesLeft = (from taskID in _channelConfig.InputTasks
+                                         let taskServerAddress = jobServer.GetTaskServerForTask(_jobID, taskID)
+                                         select new InputTask()
+                                         {
+                                             TaskID = taskID,
+                                             FullTaskID = string.Format("{{{0}}}_{1}", _jobID, taskID),
+                                             TaskServerAddress = taskServerAddress,
+                                             TaskServer = JetClient.CreateTaskServerClient(taskServerAddress)
+                                         }).ToList();
 
-            string fullTaskID = string.Format("{{{0}}}_{1}", _jobID, _channelConfig.InputTaskID);
+            _log.InfoFormat("Start polling for output file completion of {0} tasks, interval {1}ms", filesLeft.Count, _pollingInterval);
 
-            TaskStatus status;
-            _log.InfoFormat("Start polling for task {0} output file completion, interval {1}ms", _channelConfig.InputTaskID, _pollingInterval);
-            while( (status = taskServer.GetTaskStatus(fullTaskID)) <= TaskStatus.Running )
+            List<InputTask> completedTasks = new List<InputTask>();
+            while( filesLeft.Count > 0 )
             {
-                Thread.Sleep(_pollingInterval);
-            }
-            if( status == TaskStatus.Completed )
-            {
-                _log.InfoFormat("Task {0} output file is now available.", _channelConfig.InputTaskID);
-                if( taskServerAddress.HostName == Dns.GetHostName() )
+                completedTasks.Clear();
+                foreach( InputTask task in filesLeft )
                 {
-                    string taskOutputDirectory = taskServer.GetOutputFileDirectory(fullTaskID);
-                    _fileName = Path.Combine(taskOutputDirectory, FileOutputChannel.CreateChannelFileName(_channelConfig));
-                    _isReady = true;
-                    _log.Info("Input channel is now ready.");
-                    _readyEvent.Set();
+                    task.Status = task.TaskServer.GetTaskStatus(task.FullTaskID);
+                    if( task.Status > TaskStatus.Running )
+                    {
+                        if( task.Status == TaskStatus.Completed )
+                        {
+                            completedTasks.Add(task);
+                        }
+                        else
+                        {
+                            _log.ErrorFormat("Task {0} failed, status = {1}.", task.TaskID, task.Status);
+                            throw new Exception(); // TODO: Recover from this by waiting for a reschedule and trying again.
+                        }
+                    }
                 }
-                else
+
+                foreach( InputTask task in completedTasks )
                 {
-                    _log.ErrorFormat("Remote task download not supported yet.");
-                    throw new NotImplementedException("Remote task download not supported yet.");
+                    _log.InfoFormat("Task {0} output file is now available.", task.TaskID);
+                    if( task.TaskServerAddress.HostName == Dns.GetHostName() )
+                    {
+                        string taskOutputDirectory = task.TaskServer.GetOutputFileDirectory(task.FullTaskID);
+                        _fileNames.Add(Path.Combine(taskOutputDirectory, FileOutputChannel.CreateChannelFileName(task.TaskID, _channelConfig.OutputTaskID)));
+                        bool removed = filesLeft.Remove(task);
+                        Debug.Assert(removed);
+                        if( filesLeft.Count == 0 )
+                        {
+                            _isReady = true;
+                            _log.Info("Input channel is now ready.");
+                            _readyEvent.Set();
+                        }
+                    }
+                    else
+                    {
+                        _log.ErrorFormat("Remote task download not supported yet.");
+                        throw new NotImplementedException("Remote task download not supported yet.");
+                    }
                 }
-            }
-            else
-            {
-                _log.ErrorFormat("Task {0} failed.", _channelConfig.InputTaskID);
-                throw new Exception(); // TODO: Recover from this by waiting for a reschedule and trying again.
+                if( filesLeft.Count > 0 )
+                    Thread.Sleep(_pollingInterval);
             }
         }
     }

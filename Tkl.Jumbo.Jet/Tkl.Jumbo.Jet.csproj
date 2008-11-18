@@ -76,16 +76,20 @@
     <Compile Include="JobConfiguration.cs" />
     <Compile Include="JobServerConfigurationElement.cs" />
     <Compile Include="LineRecordReader.cs" />
+    <Compile Include="MultiRecordReader.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="RecordReader.cs" />
+    <Compile Include="StreamRecordReader.cs" />
     <Compile Include="RecordWriter.cs" />
     <Compile Include="RunTaskJetHeartbeatResponse.cs" />
     <Compile Include="StatusJetHeartbeatData.cs" />
     <Compile Include="TaskConfiguration.cs" />
     <Compile Include="TaskDfsInput.cs" />
+    <Compile Include="TaskDfsOutput.cs" />
     <Compile Include="TaskServerConfigurationElement.cs" />
     <Compile Include="TaskServerHeartbeatCommand.cs" />
     <Compile Include="TaskStatus.cs" />
+    <Compile Include="TextRecordWriter.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="jumbo.snk" />

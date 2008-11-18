@@ -17,14 +17,17 @@ namespace Tkl.Jumbo.Jet.Channels
         /// </summary>
         /// <param name="jobDirectory">The directory on the local file system where files related to this job are stored.</param>
         /// <param name="channelConfig">The <see cref="ChannelConfiguration"/> this channel.</param>
-        public FileOutputChannel(string jobDirectory, ChannelConfiguration channelConfig)
+        /// <param name="inputTaskID">The name of the task for which this channel is created. This should be one of the
+        /// task IDs listed in the <see cref="ChannelConfiguration.InputTasks"/> property of the <paramref name="channelConfig"/>
+        /// parameter.</param>
+        public FileOutputChannel(string jobDirectory, ChannelConfiguration channelConfig, string inputTaskID)
         {
             if( jobDirectory == null )
                 throw new ArgumentNullException("jobDirectory");
             if( channelConfig == null )
                 throw new ArgumentNullException("channelConfig");
 
-            FileName = Path.Combine(jobDirectory, CreateChannelFileName(channelConfig));
+            FileName = Path.Combine(jobDirectory, CreateChannelFileName(inputTaskID, channelConfig.OutputTaskID));
         }
 
         /// <summary>
@@ -32,9 +35,9 @@ namespace Tkl.Jumbo.Jet.Channels
         /// </summary>
         public string FileName { get; private set; }
 
-        internal static string CreateChannelFileName(ChannelConfiguration channelConfig)
+        internal static string CreateChannelFileName(string inputTaskID, string outputTaskID)
         {
-            return string.Format("{0}_{1}.output", channelConfig.InputTaskID, channelConfig.OutputTaskID);
+            return string.Format("{0}_{1}.output", inputTaskID, outputTaskID);
         }
 
         #region IOutputChannel members

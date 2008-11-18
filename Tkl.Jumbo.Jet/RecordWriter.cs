@@ -37,7 +37,7 @@ namespace Tkl.Jumbo.Jet
         public abstract void WriteRecord(T record);
 
         /// <summary>
-        /// Cleans up all resources associated with this <see cref="RecordReader{T}"/>.
+        /// Cleans up all resources associated with this <see cref="StreamRecordReader{T}"/>.
         /// </summary>
         /// <param name="disposing"><see langword="true"/> to clean up both managed and unmanaged resources; <see langword="false"/>
         /// to clean up unmanaged resources only.</param>
@@ -56,7 +56,7 @@ namespace Tkl.Jumbo.Jet
         #region IDisposable Members
 
         /// <summary>
-        /// Cleans up all resources held by this <see langword="RecordReader{T}"/>.
+        /// Cleans up all resources held by this <see langword="StreamRecordReader{T}"/>.
         /// </summary>
         public void Dispose()
         {
