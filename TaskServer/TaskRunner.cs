@@ -22,17 +22,18 @@ namespace TaskServerApplication
 
             public event EventHandler ProcessExited;
 
-            public RunningTask(Guid jobID, string jobDirectory, string taskID)
+            public RunningTask(Guid jobID, string jobDirectory, string taskID, string dfsJobDirectory)
             {
                 JobID = jobID;
                 TaskID = taskID;
                 FullTaskID = string.Format("{{{0}}}_{1}", jobID, taskID);
                 JobDirectory = jobDirectory;
+                DfsJobDirectory = dfsJobDirectory;
                 if( Debugger.IsAttached )
                     RunTaskAppDomain();
                 else
                 {
-                    ProcessStartInfo startInfo = new ProcessStartInfo("TaskHost.exe", string.Format("\"{0}\" \"{1}\" \"{2}\"", jobID, jobDirectory, taskID));
+                    ProcessStartInfo startInfo = new ProcessStartInfo("TaskHost.exe", string.Format("\"{0}\" \"{1}\" \"{2}\" \"{3}\"", jobID, jobDirectory, taskID, dfsJobDirectory));
                     startInfo.UseShellExecute = false;
                     startInfo.CreateNoWindow = true;
                     RuntimeEnvironment.ModifyProcessStartInfo(startInfo);
@@ -55,6 +56,8 @@ namespace TaskServerApplication
             public string JobDirectory { get; private set; }
 
             public string FullTaskID { get; private set; }
+
+            public string DfsJobDirectory { get; private set; }
 
             public void Kill()
             {
@@ -83,7 +86,7 @@ namespace TaskServerApplication
             private void RunTaskAppDomainThread()
             {
                 AppDomain taskDomain = AppDomain.CreateDomain(FullTaskID);
-                taskDomain.ExecuteAssembly("TaskHost.exe", null, new[] { JobID.ToString(), JobDirectory, TaskID });
+                taskDomain.ExecuteAssembly("TaskHost.exe", null, new[] { JobID.ToString(), JobDirectory, TaskID, DfsJobDirectory });
                 AppDomain.Unload(taskDomain);
                 OnProcessExited(EventArgs.Empty);
             }
@@ -216,7 +219,7 @@ namespace TaskServerApplication
             }
             lock( _runningTasks )
             {
-                RunningTask runningTask = new RunningTask(task.Job.JobID, jobDirectory, task.TaskID);
+                RunningTask runningTask = new RunningTask(task.Job.JobID, jobDirectory, task.TaskID, task.Job.Path);
                 runningTask.ProcessExited += new EventHandler(RunningTask_ProcessExited);
                 _runningTasks.Add(runningTask.FullTaskID, runningTask);
             }

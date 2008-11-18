@@ -32,6 +32,11 @@ namespace NameServerApplication
             return NameServer.Instance.Delete(path, recursive);
         }
 
+        public void Move(string from, string to)
+        {
+            NameServer.Instance.Move(from, to);
+        }
+
         public File GetFileInfo(string path)
         {
             return NameServer.Instance.GetFileInfo(path);

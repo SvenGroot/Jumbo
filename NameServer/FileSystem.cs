@@ -379,6 +379,39 @@ namespace NameServerApplication
             }
         }
 
+        public void Move(string from, string to)
+        {
+            if( from == null )
+                throw new ArgumentNullException("from");
+            if( to == null )
+                throw new ArgumentNullException("to");
+            _log.DebugFormat("Move: from = \"{0}\", to = \"{1}\"", from, to);
+            lock( _root )
+            {
+                string fromName;
+                FileSystemEntry fromEntry;
+                Directory fromParent;
+                FindEntry(from, out fromName, out fromParent, out fromEntry);
+
+                if( fromEntry == null )
+                    throw new ArgumentException("The file or directory \"{0}\" does not exist.", from);
+
+                string toName;
+                FileSystemEntry toEntry;
+                Directory toParent;
+                FindEntry(to, out toName, out toParent, out toEntry);
+                if( toEntry is Directory )
+                {
+                    toName = null;
+                    toParent = (Directory)toEntry;
+                }
+                else if( toEntry != null )
+                    throw new ArgumentException(string.Format("The path \"{0}\" is an existing file."));
+
+                Move(fromEntry, toParent, toName);
+            }
+        }
+
         private Guid NewBlockID()
         {
             return Guid.NewGuid();
@@ -547,6 +580,15 @@ namespace NameServerApplication
             }
         }
 
+        private void Move(FileSystemEntry entry, Directory newParent, string newName)
+        {
+            string to = DfsPath.Combine(newParent.FullPath, newName ?? entry.Name);
+            _log.InfoFormat("Moving file system entry \"{0}\" to \"{1}\".", entry.FullPath, to);
+            _editLog.LogMove(entry.FullPath, to);
+            entry.MoveTo(newParent, newName);
+        }
+
+
         private void DeleteFilesRecursive(Directory dir)
         {
             foreach( FileSystemEntry entry in dir.Children )
@@ -579,10 +621,7 @@ namespace NameServerApplication
 
         private string AppendPath(string parent, string child)
         {
-            string result = parent;
-            if( !parent.EndsWith(DfsPath.DirectorySeparator.ToString()) )
-                result += DfsPath.DirectorySeparator;
-            return result + child;
+            return DfsPath.Combine(parent, child);
         }
     }
 }

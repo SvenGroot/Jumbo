@@ -57,6 +57,7 @@ namespace ClientSample
                 _log.Info(value);
             }
             _log.InfoFormat("Total: {0}", totalLines);
+            output.WriteRecord(totalLines);
         }
 
         #endregion
@@ -77,7 +78,7 @@ namespace ClientSample
             sw.Start();
 
             StartJob(dfsClient, jobServer);
-
+            //dfsClient.NameServer.Move("/JumboJet/job_{57f5850e-7637-4d08-87eb-03b9cfef9a90}/Task3", "/foo.txt");
 
             sw.Stop();
             Console.WriteLine(sw.Elapsed);
@@ -118,7 +119,11 @@ namespace ClientSample
                     } ,
                     new TaskConfiguration() {
                         TaskID = "Task3",
-                        TypeName = typeof(MyTask2).FullName
+                        TypeName = typeof(MyTask2).FullName,
+                        DfsOutput = new TaskDfsOutput() {
+                            Path = "/output/Task3.txt",
+                            RecordWriterType = typeof(TextRecordWriter<Int32Writable>).AssemblyQualifiedName
+                        }
                     }
                 },
                 Channels = new List<ChannelConfiguration>() {
@@ -135,7 +140,8 @@ namespace ClientSample
                 config.SaveXml(stream);
             }
 
-
+            dfsClient.NameServer.Delete("/output", true);
+            dfsClient.NameServer.CreateDirectory("/output");
             Job job = jobServer.CreateJob();
             Console.WriteLine(job.JobID);
             using( DfsOutputStream stream = dfsClient.CreateFile(job.JobConfigurationFilePath) )

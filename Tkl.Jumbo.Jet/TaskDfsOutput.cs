@@ -19,6 +19,16 @@ namespace Tkl.Jumbo.Jet
         public string Path { get; set; }
 
         /// <summary>
+        /// Gets or sets the temporary location of the file. This property is not
+        /// part of the configuration and does not need to be set by the client.
+        /// </summary>
+        /// <remarks>
+        /// This property is used by the TaskHost to track the temporary file location.
+        /// </remarks>
+        [XmlIgnore]
+        public string TempPath { get; set; }
+
+        /// <summary>
         /// Gets or sets the type of <see cref="RecordWriter{T}"/> to use to read the file.
         /// </summary>
         [XmlAttribute("recordWriteType")]

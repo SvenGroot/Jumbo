@@ -9,18 +9,20 @@ using Tkl.Jumbo.Dfs;
 using Tkl.Jumbo.Jet.Channels;
 using Tkl.Jumbo.IO;
 using System.Threading;
+using Tkl.Jumbo;
 
 namespace TaskHost
 {
     class Program
     {
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(Program));
+        private static DfsClient _client = new DfsClient();
 
         public static int Main(string[] args)
         {
             AppDomain.CurrentDomain.UnhandledException += new UnhandledExceptionEventHandler(CurrentDomain_UnhandledException);
 
-            if( args.Length != 3 )
+            if( args.Length != 4 )
             {
                 _log.Error("Invalid invocation.");
                 return 1;
@@ -29,12 +31,14 @@ namespace TaskHost
             Guid jobID = new Guid(args[0]);
             string jobDirectory = args[1];
             string taskID = args[2];
+            string dfsJobDirectory = args[3];
             string logFile = Path.Combine(jobDirectory, taskID + ".log");
             ConfigureLog(logFile);
 
             ITaskServerUmbilicalProtocol umbilical = JetClient.CreateTaskServerUmbilicalClient();
 
-            _log.InfoFormat("Running task; job directory = \"{0}\", task ID = \"{1}\"", jobDirectory, taskID);
+            _log.InfoFormat("Running task; job ID = \"{0}\", job directory = \"{1}\", task ID = \"{2}\", DFS job directory = \"{3}\"", jobID, jobDirectory, taskID, dfsJobDirectory);
+            _log.LogEnvironmentInformation();
 
             JobConfiguration config = JobConfiguration.LoadXml(Path.Combine(jobDirectory, Job.JobConfigFileName));
 
@@ -45,7 +49,7 @@ namespace TaskHost
                 return 1;
             }
 
-            RunTask(jobID, jobDirectory, config, taskConfig);
+            RunTask(jobID, jobDirectory, config, taskConfig, dfsJobDirectory);
 
             umbilical.ReportCompletion(string.Format("{{{0}}}_{1}", jobID, taskID));
             _log.Info("Task execution finished.");
@@ -66,7 +70,7 @@ namespace TaskHost
             
         }
 
-        private static void RunTask(Guid jobID, string jobDirectory, JobConfiguration jobConfig, TaskConfiguration taskConfig)
+        private static void RunTask(Guid jobID, string jobDirectory, JobConfiguration jobConfig, TaskConfiguration taskConfig, string dfsJobDirectory)
         {
             Assembly taskAssembly = Assembly.LoadFrom(Path.Combine(jobDirectory, jobConfig.AssemblyFileName));
 
@@ -91,19 +95,26 @@ namespace TaskHost
             MethodInfo doRunTaskMethod = typeof(Program)
                                             .GetMethod("DoRunTask", BindingFlags.NonPublic | BindingFlags.Static)
                                             .MakeGenericMethod(inputType, outputType);
-            doRunTaskMethod.Invoke(null, new object[] { taskType, taskConfig, inputChannel, outputChannel });
+            doRunTaskMethod.Invoke(null, new object[] { taskType, taskConfig, inputChannel, outputChannel, dfsJobDirectory });
         }
 
-        private static void DoRunTask<TInput, TOutput>(Type taskType, TaskConfiguration taskConfig, IInputChannel inputChannel, IOutputChannel outputChannel) 
+        private static void DoRunTask<TInput, TOutput>(Type taskType, TaskConfiguration taskConfig, IInputChannel inputChannel, IOutputChannel outputChannel, string dfsJobDirectory) 
             where TInput : IWritable, new()
             where TOutput : IWritable, new()
         {
             using( DfsInputStream inputStream = OpenInputFile(taskConfig) )
             using( RecordReader<TInput> input = CreateRecordReader<TInput>(inputStream, taskConfig, inputChannel) )
-            using( RecordWriter<TOutput> output = outputChannel == null ? null : outputChannel.CreateRecordWriter<TOutput>() )
+            using( DfsOutputStream outputStream = OpenOutputFile(taskConfig, dfsJobDirectory) )
+            using( RecordWriter<TOutput> output = CreateRecordWriter<TOutput>(outputStream, taskConfig, outputChannel) )
             {
                 ITask<TInput, TOutput> task = (ITask<TInput, TOutput>)Activator.CreateInstance(taskType);
                 task.Run(input, output);
+            }
+
+            if( taskConfig.DfsOutput != null )
+            {
+                _log.InfoFormat("Moving task output file from \"{0}\" to \"{1}\".", taskConfig.DfsOutput.TempPath, taskConfig.DfsOutput.Path);
+                _client.NameServer.Move(taskConfig.DfsOutput.TempPath, taskConfig.DfsOutput.Path);
             }
         }
 
@@ -111,8 +122,7 @@ namespace TaskHost
         {
             if( taskConfig.DfsInput != null )
             {
-                DfsClient client = new DfsClient();
-                return client.OpenFile(taskConfig.DfsInput.Path);
+                return _client.OpenFile(taskConfig.DfsInput.Path);
             }
             return null;
         }
@@ -128,6 +138,32 @@ namespace TaskHost
             else if( inputChannel != null )
             {
                 return inputChannel.CreateRecordReader<T>();
+            }
+            return null;
+        }
+
+        private static DfsOutputStream OpenOutputFile(TaskConfiguration taskConfig, string dfsJobDirectory)
+        {
+            if( taskConfig.DfsOutput != null )
+            {
+                string file = DfsPath.Combine(dfsJobDirectory, taskConfig.TaskID);
+                taskConfig.DfsOutput.TempPath = file;
+                return _client.CreateFile(file);
+            }
+            return null;
+        }
+
+        private static RecordWriter<T> CreateRecordWriter<T>(Stream outputStream, TaskConfiguration taskConfig, IOutputChannel outputChannel)
+            where T : IWritable, new()
+        {
+            if( taskConfig.DfsOutput != null )
+            {
+                Type recordWriterType = Type.GetType(taskConfig.DfsOutput.RecordWriterType);
+                return (RecordWriter<T>)Activator.CreateInstance(recordWriterType, outputStream);
+            }
+            else if( outputChannel != null )
+            {
+                return outputChannel.CreateRecordWriter<T>();
             }
             return null;
         }

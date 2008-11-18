@@ -224,6 +224,12 @@ namespace NameServerApplication
             return _fileSystem.Delete(path, recursive);
         }
 
+        public void Move(string from, string to)
+        {
+            CheckSafeMode();
+            _fileSystem.Move(from, to);
+        }
+
         public File GetFileInfo(string path)
         {
             return _fileSystem.GetFileInfo(path);

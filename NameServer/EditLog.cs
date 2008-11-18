@@ -79,6 +79,16 @@ namespace NameServerApplication
             LogMutation("{0}:{1:yyyyMMddHHmmss.fffffff}:{2}:{3}", FileSystemMutation.Delete, DateTime.UtcNow, path, recursive);
         }
 
+        public void LogMove(string from, string to)
+        {
+            if( from == null )
+                throw new ArgumentNullException("from");
+            if( to == null )
+                throw new ArgumentNullException("to");
+
+            LogMutation("{0}:{1:yyyyMMddHHmmss.fffffff}:{2}:{3}", FileSystemMutation.Move, DateTime.UtcNow, from, to);
+        }
+
         /// <summary>
         /// Replays the log file.
         /// </summary>
@@ -117,6 +127,9 @@ namespace NameServerApplication
                                 break;
                             case FileSystemMutation.Delete:
                                 fileSystem.Delete(parts[2], Convert.ToBoolean(parts[3]));
+                                break;
+                            case FileSystemMutation.Move:
+                                fileSystem.Move(parts[2], parts[3]);
                                 break;
                             }
                         }

@@ -230,6 +230,22 @@ namespace DfsShell
             metrics.PrintMetrics(Console.Out);
         }
 
+        private static void PrintFile(INameServerClientProtocol nameServer, string[] args)
+        {
+            if( args.Length != 2 )
+                Console.WriteLine("Usage: DfsShell cat <path>");
+            else
+            {
+                using( DfsInputStream stream = new DfsInputStream(nameServer, args[1]) )
+                using( IO.StreamReader reader = new System.IO.StreamReader(stream) )
+                {
+                    string line;
+                    while( (line = reader.ReadLine()) != null )
+                        Console.WriteLine(line);
+                }
+            }
+        }
+
         private static void PrintSafeMode(INameServerClientProtocol nameServer, string[] args)
         {
             if( nameServer.SafeMode )
@@ -272,6 +288,7 @@ namespace DfsShell
             result.Add("metrics", PrintMetrics);
             result.Add("safemode", PrintSafeMode);
             result.Add("waitsafemode", WaitSafeMode);
+            result.Add("cat", PrintFile);
 
             return result;
         }

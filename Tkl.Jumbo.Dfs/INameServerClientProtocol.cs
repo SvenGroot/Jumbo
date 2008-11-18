@@ -45,6 +45,13 @@ namespace Tkl.Jumbo.Dfs
         bool Delete(string path, bool recursive);
 
         /// <summary>
+        /// Moves the specified file or directory.
+        /// </summary>
+        /// <param name="from">The path of the file or directory to move.</param>
+        /// <param name="to">The path to move the entry to.</param>
+        void Move(string from, string to);
+
+        /// <summary>
         /// Gets information about a file.
         /// </summary>
         /// <param name="path">The full path of the file.</param>

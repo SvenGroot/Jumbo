@@ -12,6 +12,7 @@ namespace NameServerApplication
         AppendBlock,
         CommitBlock,
         CommitFile,
-        Delete
+        Delete,
+        Move
     }
 }

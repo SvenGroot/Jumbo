@@ -27,5 +27,10 @@ namespace Tkl.Jumbo.Jet
         /// Gets or sets the input from the distributed file system for this task.
         /// </summary>
         public TaskDfsInput DfsInput { get; set; }
+
+        /// <summary>
+        /// Gets or sets the output to the distributed file system for this task.
+        /// </summary>
+        public TaskDfsOutput DfsOutput { get; set; }
     }
 }

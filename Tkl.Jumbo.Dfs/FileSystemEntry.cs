@@ -83,6 +83,37 @@ namespace Tkl.Jumbo.Dfs
         }
 
         /// <summary>
+        /// Moves the entry to a new parent.
+        /// </summary>
+        /// <param name="newParent">The new parent of the entry.</param>
+        /// <param name="newName">The new name of the entry. Can be <see langword="null"/>.</param>
+        public void MoveTo(Directory newParent, string newName)
+        {
+            if( newParent == null )
+                throw new ArgumentNullException("newParent");
+
+            if( Parent == null )
+                throw new InvalidOperationException("You cannot move an entry without an existing parent.");
+
+            if( newParent != Parent || newName != null )
+            {
+                string name = newName ?? Name;
+                if( (from child in newParent.Children where child.Name == name select child).Count() > 0 )
+                    throw new ArgumentException(string.Format("The specified new parent already contains an entry with the name \"{0}\".", newName));
+            }
+
+            if( newName != null )
+                Name = newName;
+
+            if( newParent != Parent )
+            {
+                Parent.Children.Remove(this);
+                newParent.Children.Add(this);
+                Parent = newParent;
+            }
+        }
+
+        /// <summary>
         /// Creates a clone that contains the direct children of this entry (if it's a directory), but not their children.
         /// </summary>
         /// <returns>A clone of this object.</returns>
