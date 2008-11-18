@@ -63,6 +63,7 @@
     <Compile Include="Channels\FileOutputChannel.cs" />
     <Compile Include="Channels\IInputChannel.cs" />
     <Compile Include="Channels\IOutputChannel.cs" />
+    <Compile Include="CleanupJobJetHeartbeatResponse.cs" />
     <Compile Include="ITaskServerClientProtocol.cs" />
     <Compile Include="IJobServerClientProtocol.cs" />
     <Compile Include="IJobServerHeartbeatProtocol.cs" />
@@ -89,6 +90,7 @@
     <Compile Include="TaskServerConfigurationElement.cs" />
     <Compile Include="TaskServerHeartbeatCommand.cs" />
     <Compile Include="TaskStatus.cs" />
+    <Compile Include="TaskStatusChangedJetHeartbeatData.cs" />
     <Compile Include="TextRecordWriter.cs" />
   </ItemGroup>
   <ItemGroup>

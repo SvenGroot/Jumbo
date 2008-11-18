@@ -11,7 +11,7 @@ using Tkl.Jumbo;
 
 namespace TaskServerApplication
 {
-    class TaskRunner
+    sealed class TaskRunner
     {
         #region Nested types
 
@@ -26,7 +26,7 @@ namespace TaskServerApplication
             {
                 JobID = jobID;
                 TaskID = taskID;
-                FullTaskID = string.Format("{{{0}}}_{1}", jobID, taskID);
+                FullTaskID = Job.CreateFullTaskID(jobID, taskID);
                 JobDirectory = jobDirectory;
                 DfsJobDirectory = dfsJobDirectory;
                 if( Debugger.IsAttached )
@@ -152,9 +152,26 @@ namespace TaskServerApplication
                 {
                     _log.InfoFormat("Task {0} has completed successfully.", task.FullTaskID);
                     task.State = TaskStatus.Completed;
+                    _taskServer.NotifyTaskStatusChanged(task.JobID, task.TaskID, task.State);
                 }
                 else
                     _log.WarnFormat("Task {0} was reported as completed but was not running.", task.FullTaskID);
+            }
+        }
+
+        public void CleanupJobTasks(Guid jobID)
+        {
+            lock( _runningTasks )
+            {
+                string[] tasksToRemove = (from item in _runningTasks
+                                          where item.Value.JobID == jobID
+                                          select item.Key).ToArray();
+                foreach( string task in tasksToRemove )
+                {
+                    Debug.Assert(_runningTasks[task].State > TaskStatus.Running);
+                    _log.InfoFormat("Removing data pertaining to task {0}.", task);
+                    _runningTasks.Remove(task);
+                }
             }
         }
 
@@ -236,6 +253,7 @@ namespace TaskServerApplication
                     {
                         _log.ErrorFormat("Task {0} did not complete sucessfully.", task.FullTaskID);
                         task.State = TaskStatus.Error;
+                        _taskServer.NotifyTaskStatusChanged(task.JobID, task.TaskID, task.State);
                     }
                     _log.InfoFormat("Task {0} has finished, state = {1}.", task.FullTaskID, task.State);
                 }

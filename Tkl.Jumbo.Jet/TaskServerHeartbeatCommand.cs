@@ -21,6 +21,10 @@ namespace Tkl.Jumbo.Jet
         /// <summary>
         /// The task server should execute the specified task.
         /// </summary>
-        RunTask
+        RunTask,
+        /// <summary>
+        /// Cleans up all data related to the tasks of the specified job.
+        /// </summary>
+        CleanupJob
     }
 }

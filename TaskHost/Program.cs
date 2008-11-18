@@ -51,7 +51,7 @@ namespace TaskHost
 
             RunTask(jobID, jobDirectory, config, taskConfig, dfsJobDirectory);
 
-            umbilical.ReportCompletion(string.Format("{{{0}}}_{1}", jobID, taskID));
+            umbilical.ReportCompletion(jobID, taskID);
             _log.Info("Task execution finished.");
 
             return 0;

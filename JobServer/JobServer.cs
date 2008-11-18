@@ -15,6 +15,7 @@ namespace JobServerApplication
 
         private readonly Dictionary<ServerAddress, TaskServerInfo> _taskServers = new Dictionary<ServerAddress,TaskServerInfo>();
         private readonly Dictionary<Guid, JobInfo> _jobs = new Dictionary<Guid, JobInfo>();
+        private readonly List<JobInfo> _jobsNeedingCleanup = new List<JobInfo>();
         private readonly DfsClient _dfsClient;
 
         private JobServer(JetConfiguration configuration, DfsConfiguration dfsConfiguration)
@@ -177,8 +178,10 @@ namespace JobServerApplication
 
                 if( server.AssignedTasks.Count > 0 )
                 {
-                    // I'm not locking _jobs here because the only thing we're changing is task.State, and
-                    // the only other place so far where that is changed is also inside a _taskServer lock.
+                    // It is not necessary to lock _jobs because I don't think there's a potential for deadlock here,
+                    // none of the other places where task.State is modified can possibly execute at the same time
+                    // as this code (ScheduleTasks is done inside taskserver lock, and NotifyFinishedTasks can only happen
+                    // after this has happened).
                     foreach( TaskInfo task in server.AssignedTasks )
                     {
                         if( task.State == TaskState.Scheduled )
@@ -187,6 +190,28 @@ namespace JobServerApplication
                                 responses = new List<JetHeartbeatResponse>();
                             responses.Add(new RunTaskJetHeartbeatResponse(task.Job.Job, task.Task.TaskID));
                             task.State = TaskState.Running;
+                        }
+                    }
+                }
+
+                lock( _jobsNeedingCleanup )
+                {
+                    for( int x = 0; x < _jobsNeedingCleanup.Count; ++x )
+                    {
+                        JobInfo job = _jobsNeedingCleanup[x];
+                        if( job.TaskServers.Contains(server.Address) )
+                        {
+                            _log.InfoFormat("Sending cleanup command for job {{{0}}} to server {1}.", job.Job.JobID, server.Address);
+                            if( responses == null )
+                                responses = new List<JetHeartbeatResponse>();
+                            responses.Add(new CleanupJobJetHeartbeatResponse(job.Job.JobID));
+                            job.TaskServers.Remove(server.Address);
+                        }
+                        if( job.TaskServers.Count == 0 )
+                        {
+                            _log.InfoFormat("Job {{{0}}} cleanup complete.", job.Job.JobID);
+                            _jobsNeedingCleanup.RemoveAt(x);
+                            --x;
                         }
                     }
                 }
@@ -206,6 +231,13 @@ namespace JobServerApplication
                 return null;
             }
 
+            TaskStatusChangedJetHeartbeatData taskStatusChangedData = data as TaskStatusChangedJetHeartbeatData;
+            if( taskStatusChangedData != null )
+            {
+                ProcessTaskStatusChangedHeartbeat(server, taskStatusChangedData);
+                return null;
+            }
+
             _log.WarnFormat("Task server {0} sent unknown heartbeat type {1}.", server.Address, data.GetType());
             throw new ArgumentException(string.Format("Unknown heartbeat type {0}.", data.GetType()));
         }
@@ -213,9 +245,56 @@ namespace JobServerApplication
         private void ProcessStatusHeartbeat(TaskServerInfo server, StatusJetHeartbeatData data)
         {
             server.MaxTasks = data.MaxTasks;
-            //server.RunningTasks = data.RunningTasks;
         }
 
+        private void ProcessTaskStatusChangedHeartbeat(TaskServerInfo server, TaskStatusChangedJetHeartbeatData data)
+        {
+            if( data.Status > TaskStatus.Running )
+            {
+                JobInfo job = null;
+                bool jobFinished = false;
+                lock( _jobs )
+                {
+                    job = _jobs[data.JobID];
+                    TaskInfo task = job.Tasks[data.TaskID];
+                    server.AssignedTasks.Remove(task);
+                    task.Server = null;
+                    switch( data.Status )
+                    {
+                    case TaskStatus.Completed:
+                        task.State = TaskState.Finished;
+                        _log.InfoFormat("Task {0} completed successfully.", Job.CreateFullTaskID(data.JobID, data.TaskID));
+                        ++job.FinishedTasks;
+                        break;
+                    case TaskStatus.Error:
+                        task.State = TaskState.Error;
+                        _log.InfoFormat("Task {0} encountered an error.", Job.CreateFullTaskID(data.JobID, data.TaskID));
+                        // TODO: We need to reschedule or something, and not increment finishedtasks.
+                        ++job.FinishedTasks;
+                        break;
+                    }
+
+                    if( job.FinishedTasks == job.Tasks.Count )
+                    {
+                        _log.InfoFormat("Job {0}: all tasks in the job have finished.", data.JobID);
+                        _jobs.Remove(data.JobID);
+                        jobFinished = true;
+                    }
+                }
+                if( jobFinished )
+                {
+                    lock( _jobsNeedingCleanup )
+                    {
+                        _jobsNeedingCleanup.Add(job);
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// NOTE: Must be called inside the _jobs lock
+        /// </summary>
+        /// <param name="job"></param>
         private void ScheduleTasks(JobInfo job)
         {
             // TODO: This is not at all how scheduling should work.
@@ -237,6 +316,7 @@ namespace JobServerApplication
                             task.State = TaskState.Scheduled;
                             outOfSlots = false;
                             ++taskIndex;
+                            job.TaskServers.Add(taskServer.Address); // Record all servers involved with the task to give them cleanup instructions later.
                             _log.InfoFormat("Task {0} has been assigned to server {1}.", task.GlobalID, taskServer.Address);
                         }
                     }

@@ -57,5 +57,16 @@ namespace Tkl.Jumbo.Jet
         {
             get { return DfsPath.Combine(Path, JobConfigFileName); }
         }
+
+        /// <summary>
+        /// Creates the full task id for the specified task.
+        /// </summary>
+        /// <param name="jobID">The job ID.</param>
+        /// <param name="taskID">The task ID.</param>
+        /// <returns>The full task ID of the form "{jobID}_taskID".</returns>
+        public static string CreateFullTaskID(Guid jobID, string taskID)
+        {
+            return string.Format(System.Globalization.CultureInfo.InvariantCulture, "{{{0}}}_{1}", jobID, taskID);
+        }
     }
 }

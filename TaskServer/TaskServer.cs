@@ -71,10 +71,16 @@ namespace TaskServerApplication
             Instance = null;
         }
 
+        public void NotifyTaskStatusChanged(Guid jobID, string taskID, TaskStatus newStatus)
+        {
+            AddDataForNextHeartbeat(new TaskStatusChangedJetHeartbeatData(jobID, taskID, newStatus));
+        }
+
         #region ITaskServerUmbilicalProtocol Members
 
-        public void ReportCompletion(string fullTaskID)
+        public void ReportCompletion(Guid jobID, string taskID)
         {
+            string fullTaskID = Job.CreateFullTaskID(jobID, taskID);
             _log.DebugFormat("ReportCompletion, fullTaskID = \"{0}\"", fullTaskID);
             _taskRunner.ReportCompletion(fullTaskID);
         }
@@ -154,6 +160,11 @@ namespace TaskServerApplication
                     RunTaskJetHeartbeatResponse runResponse = (RunTaskJetHeartbeatResponse)response;
                     _log.InfoFormat("Received run task command for task {{{0}}}_{1}.", runResponse.Job.JobID, runResponse.TaskID);
                     _taskRunner.AddTask(runResponse);
+                    break;
+                case TaskServerHeartbeatCommand.CleanupJob:
+                    CleanupJobJetHeartbeatResponse cleanupResponse = (CleanupJobJetHeartbeatResponse)response;
+                    _log.InfoFormat("Received cleanup job command for job {{{0}}}.", cleanupResponse.JobID);
+                    _taskRunner.CleanupJobTasks(cleanupResponse.JobID);
                     break;
                 }
             }

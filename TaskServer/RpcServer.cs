@@ -10,9 +10,9 @@ namespace TaskServerApplication
     {
         #region ITaskServerUmbilicalProtocol Members
 
-        public void ReportCompletion(string fullTaskID)
+        public void ReportCompletion(Guid jobID, string taskID)
         {
-            TaskServer.Instance.ReportCompletion(fullTaskID);
+            TaskServer.Instance.ReportCompletion(jobID, taskID);
         }
 
         #endregion
