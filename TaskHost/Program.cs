@@ -133,7 +133,12 @@ namespace TaskHost
             if( taskConfig.DfsInput != null )
             {
                 Type recordReaderType = Type.GetType(taskConfig.DfsInput.RecordReaderType);
-                return (RecordReader<T>)Activator.CreateInstance(recordReaderType, inputStream, taskConfig.DfsInput.Offset, taskConfig.DfsInput.Size);
+                long offset;
+                long size;
+                int blockSize = _client.NameServer.BlockSize;
+                offset = blockSize * taskConfig.DfsInput.Block;
+                size = Math.Min(blockSize, _client.NameServer.GetFileInfo(taskConfig.DfsInput.Path).Size - offset);
+                return (RecordReader<T>)Activator.CreateInstance(recordReaderType, inputStream, offset, size);
             }
             else if( inputChannel != null )
             {

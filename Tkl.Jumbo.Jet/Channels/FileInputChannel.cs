@@ -117,13 +117,10 @@ namespace Tkl.Jumbo.Jet.Channels
             IJobServerClientProtocol jobServer = JetClient.CreateJobServerClient(_jetConfig);
             // TODO: Adjust this for the situation when not all tasks are scheduled yet.
             List<InputTask> filesLeft = (from taskID in _channelConfig.InputTasks
-                                         let taskServerAddress = jobServer.GetTaskServerForTask(_jobID, taskID)
                                          select new InputTask()
                                          {
                                              TaskID = taskID,
-                                             FullTaskID = string.Format("{{{0}}}_{1}", _jobID, taskID),
-                                             TaskServerAddress = taskServerAddress,
-                                             TaskServer = JetClient.CreateTaskServerClient(taskServerAddress)
+                                             FullTaskID = string.Format("{{{0}}}_{1}", _jobID, taskID)
                                          }).ToList();
 
             _log.InfoFormat("Start polling for output file completion of {0} tasks, interval {1}ms", filesLeft.Count, _pollingInterval);
@@ -134,17 +131,26 @@ namespace Tkl.Jumbo.Jet.Channels
                 completedTasks.Clear();
                 foreach( InputTask task in filesLeft )
                 {
-                    task.Status = task.TaskServer.GetTaskStatus(task.FullTaskID);
-                    if( task.Status > TaskStatus.Running )
+                    if( task.TaskServerAddress == null )
                     {
-                        if( task.Status == TaskStatus.Completed )
+                        task.TaskServerAddress = jobServer.GetTaskServerForTask(_jobID, task.TaskID);
+                        if( task.TaskServerAddress != null )
+                            task.TaskServer = JetClient.CreateTaskServerClient(task.TaskServerAddress);
+                    }
+                    if( task.TaskServer != null )
+                    {
+                        task.Status = task.TaskServer.GetTaskStatus(task.FullTaskID);
+                        if( task.Status > TaskStatus.Running )
                         {
-                            completedTasks.Add(task);
-                        }
-                        else
-                        {
-                            _log.ErrorFormat("Task {0} failed, status = {1}.", task.TaskID, task.Status);
-                            throw new Exception(); // TODO: Recover from this by waiting for a reschedule and trying again.
+                            if( task.Status == TaskStatus.Completed )
+                            {
+                                completedTasks.Add(task);
+                            }
+                            else
+                            {
+                                _log.ErrorFormat("Task {0} failed, status = {1}.", task.TaskID, task.Status);
+                                throw new Exception(); // TODO: Recover from this by waiting for a reschedule and trying again.
+                            }
                         }
                     }
                 }

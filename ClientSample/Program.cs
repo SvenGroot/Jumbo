@@ -90,50 +90,51 @@ namespace ClientSample
 
         private static void StartJob(DfsClient dfsClient, IJobServerClientProtocol jobServer)
         {
-            Tkl.Jumbo.Dfs.File file = dfsClient.NameServer.GetFileInfo("/test.txt");
+            const string fileName = "/large.txt";
+            Tkl.Jumbo.Dfs.File file = dfsClient.NameServer.GetFileInfo(fileName);
             int blockSize = dfsClient.NameServer.BlockSize;
 
             JobConfiguration config = new JobConfiguration()
             {
                 AssemblyFileName = "ClientSample.exe",
-                Tasks = new List<TaskConfiguration>() { 
-                    new TaskConfiguration() { 
-                        TaskID = "Task1", 
-                        TypeName = typeof(MyTask).FullName,
-                        DfsInput = new TaskDfsInput() {
-                            Path = "/test.txt",
-                            Offset = 0,
-                            Size = blockSize,
-                            RecordReaderType = typeof(LineRecordReader).AssemblyQualifiedName
-                        }
-                    }, 
-                    new TaskConfiguration() { 
-                        TaskID = "Task2", 
-                        TypeName = typeof(MyTask).FullName,
-                        DfsInput = new TaskDfsInput() {
-                            Path = "/test.txt",
-                            Offset = blockSize,
-                            Size = file.Size - blockSize,
-                            RecordReaderType = typeof(LineRecordReader).AssemblyQualifiedName
-                        }
-                    } ,
-                    new TaskConfiguration() {
-                        TaskID = "Task3",
-                        TypeName = typeof(MyTask2).FullName,
-                        DfsOutput = new TaskDfsOutput() {
-                            Path = "/output/Task3.txt",
-                            RecordWriterType = typeof(TextRecordWriter<Int32Writable>).AssemblyQualifiedName
-                        }
-                    }
-                },
-                Channels = new List<ChannelConfiguration>() {
-                    new ChannelConfiguration() {
-                        ChannelType = ChannelType.File,
-                        InputTasks = new[] { "Task1", "Task2" },
-                        OutputTaskID = "Task3"
-                    }
-                }
+                Tasks = new List<TaskConfiguration>(),
+                Channels = new List<ChannelConfiguration>()
             };
+
+            string[] tasks = new string[file.Blocks.Count];
+            for( int x = 0; x < file.Blocks.Count; ++x )
+            {
+                config.Tasks.Add(new TaskConfiguration()
+                {
+                    TaskID = "Task" + (x + 1).ToString(),
+                    TypeName = typeof(MyTask).FullName,
+                    DfsInput = new TaskDfsInput()
+                    {
+                        Path = fileName,
+                        Block = x,
+                        RecordReaderType = typeof(LineRecordReader).AssemblyQualifiedName
+                    }
+                });
+                tasks[x] = "Task" + (x + 1).ToString();
+            }
+
+            config.Tasks.Add(new TaskConfiguration()
+            {
+                TaskID = "OutputTask",
+                TypeName = typeof(MyTask2).FullName,
+                DfsOutput = new TaskDfsOutput()
+                {
+                    Path = "/output/count.txt",
+                    RecordWriterType = typeof(TextRecordWriter<Int32Writable>).AssemblyQualifiedName
+                }
+            });
+
+            config.Channels.Add(new ChannelConfiguration()
+            {
+                ChannelType = ChannelType.File,
+                InputTasks = tasks,
+                OutputTaskID = "OutputTask"
+            });
 
             using( FileStream stream = System.IO.File.Create("job.xml") )
             {

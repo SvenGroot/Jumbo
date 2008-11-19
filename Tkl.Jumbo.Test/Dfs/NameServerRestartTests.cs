@@ -26,6 +26,8 @@ namespace Tkl.Jumbo.Test.Dfs
                 nameServer.CreateDirectory("/test2");
                 nameServer.CreateDirectory("/test1/test2");
                 nameServer.Delete("/test1", true);
+                nameServer.CreateDirectory("/test2/test1");
+                nameServer.Move("/test2/test1", "/test3");
                 const int size = 20000000;
                 using( DfsOutputStream output = new DfsOutputStream(nameServer, "/test2/foo.dat") )
                 using( MemoryStream input = new MemoryStream() )
@@ -49,6 +51,8 @@ namespace Tkl.Jumbo.Test.Dfs
                 Assert.IsNotNull(file);
                 Assert.AreEqual(size, file.Size);
                 Assert.AreEqual(1, file.Blocks.Count);
+                Assert.IsNull(nameServer.GetDirectoryInfo("/test2/test1"));
+                Assert.IsNotNull(nameServer.GetDirectoryInfo("/test3"));
                 DfsMetrics metrics = nameServer.GetMetrics();
                 Assert.AreEqual(size, metrics.TotalSize);
                 Assert.AreEqual(1, metrics.TotalBlockCount);

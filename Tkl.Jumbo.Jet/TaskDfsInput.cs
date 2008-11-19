@@ -19,16 +19,10 @@ namespace Tkl.Jumbo.Jet
         public string Path { get; set; }
 
         /// <summary>
-        /// Gets or sets the offset in the file where the task will start reading.
+        /// Gets or sets the zero-based index of the block the file wants to read.
         /// </summary>
-        [XmlAttribute("offset")]
-        public long Offset { get; set; }
-
-        /// <summary>
-        /// Gets or sets the size in bytes of the data that the task will read.
-        /// </summary>
-        [XmlAttribute("size")]
-        public long Size { get; set; }
+        [XmlAttribute("block")]
+        public int Block { get; set; }
 
         /// <summary>
         /// Gets or sets the type of <see cref="RecordReader{T}"/> to use to read the file.

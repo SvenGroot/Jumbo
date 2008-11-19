@@ -20,6 +20,7 @@ namespace JobServerApplication
         }
         public Job Job { get; private set; }
         public bool Running { get; set; }
+        public int UnscheduledTasks { get; set; }
         public int FinishedTasks { get; set; }
         public SortedList<string, TaskInfo> Tasks
         {

@@ -489,5 +489,48 @@ namespace Tkl.Jumbo.Test.Dfs
             Assert.AreEqual(0, metrics.UnderReplicatedBlockCount);
             Assert.AreEqual(0, metrics.PendingBlockCount);
         }
+
+        [Test]
+        public void TestMove()
+        {
+            INameServerClientProtocol target = _nameServer;
+            _nameServer.CreateDirectory("/move/dir1");
+            _nameServer.CreateDirectory("/move/dir2");
+            _nameServer.CreateFile("/move/dir1/file1");
+            _nameServer.CloseFile("/move/dir1/file1");
+            // Test move to different file name in same directory
+            _nameServer.Move("/move/dir1/file1", "/move/dir1/file2");
+            Assert.IsNull(_nameServer.GetFileInfo("/move/dir1/file1"));
+            Tkl.Jumbo.Dfs.File file = _nameServer.GetFileInfo("/move/dir1/file2");
+            Assert.IsNotNull(file);
+            Assert.AreEqual("file2", file.Name);
+            Assert.AreEqual("/move/dir1/file2", file.FullPath);
+            // Test move to different directory without specifying file name.
+            _nameServer.Move("/move/dir1/file2", "/move/dir2");
+            Assert.IsNull(_nameServer.GetFileInfo("/move/dir1/file2"));
+            file = _nameServer.GetFileInfo("/move/dir2/file2");
+            Assert.IsNotNull(file);
+            Assert.AreEqual("file2", file.Name);
+            Assert.AreEqual("/move/dir2/file2", file.FullPath);
+            // Test move to different directory while specifying file name.
+            _nameServer.Move("/move/dir2/file2", "/move/dir1/file3");
+            Assert.IsNull(_nameServer.GetFileInfo("/move/dir2/file2"));
+            file = _nameServer.GetFileInfo("/move/dir1/file3");
+            Assert.IsNotNull(file);
+            Assert.AreEqual("file3", file.Name);
+            Assert.AreEqual("/move/dir1/file3", file.FullPath);
+            // Test move entire directory
+            _nameServer.Move("/move/dir1", "/move/dir2");
+            Assert.IsNull(_nameServer.GetDirectoryInfo("/move/dir1"));
+            Tkl.Jumbo.Dfs.Directory dir = _nameServer.GetDirectoryInfo("/move/dir2/dir1");
+            Assert.IsNotNull(dir);
+            Assert.AreEqual("dir1", dir.Name);
+            Assert.AreEqual("/move/dir2/dir1", dir.FullPath);
+            Assert.AreEqual(1, dir.Children.Count);
+            file = _nameServer.GetFileInfo("/move/dir2/dir1/file3");
+            Assert.IsNotNull(file);
+            Assert.AreEqual("file3", file.Name);
+            Assert.AreEqual("/move/dir2/dir1/file3", file.FullPath);
+        }
     }
 }

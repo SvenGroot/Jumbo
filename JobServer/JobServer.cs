@@ -113,6 +113,7 @@ namespace JobServerApplication
                     TaskInfo taskInfo = new TaskInfo(jobInfo, task);
                     jobInfo.Tasks.Add(task.TaskID, taskInfo);
                 }
+                jobInfo.UnscheduledTasks = jobInfo.Tasks.Count;
 
                 ScheduleTasks(jobInfo);
 
@@ -130,7 +131,7 @@ namespace JobServerApplication
             {
                 JobInfo job = _jobs[jobID];
                 TaskInfo task = job.Tasks[taskID];
-                return task.Server.Address;
+                return task.Server == null ? null : task.Server.Address;
             }
         }
 
@@ -258,7 +259,7 @@ namespace JobServerApplication
                     job = _jobs[data.JobID];
                     TaskInfo task = job.Tasks[data.TaskID];
                     server.AssignedTasks.Remove(task);
-                    task.Server = null;
+                    // We don't set task.Server to null because output tasks can still query that information!
                     switch( data.Status )
                     {
                     case TaskStatus.Completed:
@@ -280,6 +281,8 @@ namespace JobServerApplication
                         _jobs.Remove(data.JobID);
                         jobFinished = true;
                     }
+                    else if( job.UnscheduledTasks > 0 )
+                        ScheduleTasks(job); // TODO: Once multiple jobs at once are supported, this shouldn't just consider that job
                 }
                 if( jobFinished )
                 {
@@ -307,6 +310,10 @@ namespace JobServerApplication
                     outOfSlots = true;
                     foreach( var item in _taskServers )
                     {
+                        while( taskIndex < job.Tasks.Count && job.Tasks.Values[taskIndex].State != TaskState.Created )
+                            ++taskIndex;
+                        if( taskIndex == job.Tasks.Count )
+                            break;
                         TaskServerInfo taskServer = item.Value;
                         if( taskServer.AvailableTasks > 0 )
                         {
@@ -316,13 +323,14 @@ namespace JobServerApplication
                             task.State = TaskState.Scheduled;
                             outOfSlots = false;
                             ++taskIndex;
+                            --job.UnscheduledTasks;
                             job.TaskServers.Add(taskServer.Address); // Record all servers involved with the task to give them cleanup instructions later.
                             _log.InfoFormat("Task {0} has been assigned to server {1}.", task.GlobalID, taskServer.Address);
                         }
                     }
                 }
                 if( outOfSlots )
-                    throw new NotImplementedException();
+                    _log.InfoFormat("Job {{{0}}}: not all task could be immediately scheduled, there are {1} tasks left.", job.Job.JobID, job.UnscheduledTasks);
             }
         }
     }
