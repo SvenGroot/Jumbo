@@ -35,10 +35,10 @@ namespace Tkl.Jumbo.Jet.Channels
         private ManualResetEvent _readyEvent = new ManualResetEvent(false);
         private string _jobDirectory;
         private ChannelConfiguration _channelConfig;
-        private JetConfiguration _jetConfig;
         private Guid _jobID;
         private List<string> _fileNames = new List<string>();
         private Thread _inputPollThread;
+        private IJobServerClientProtocol _jobServer;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="FileInputChannel"/>.
@@ -46,20 +46,20 @@ namespace Tkl.Jumbo.Jet.Channels
         /// <param name="jobID">The job ID.</param>
         /// <param name="jobDirectory">The local directory where files related to the job are stored.</param>
         /// <param name="channelConfig">The channel configuration for this file channel.</param>
-        /// <param name="jetConfig">The configuration containing the information on the job server.</param>
-        public FileInputChannel(Guid jobID, string jobDirectory, ChannelConfiguration channelConfig, JetConfiguration jetConfig)
+        /// <param name="jobServer">The object to use to communicate with the job server.</param>
+        public FileInputChannel(Guid jobID, string jobDirectory, ChannelConfiguration channelConfig, IJobServerClientProtocol jobServer)
         {
             if( jobDirectory == null )
                 throw new ArgumentNullException("jobDirectory");
             if( channelConfig == null )
                 throw new ArgumentNullException("channelConfig");
-            if( jetConfig == null )
-                throw new ArgumentNullException("jetConfig");
+            if( jobServer == null )
+                throw new ArgumentNullException("jobServer");
 
             _jobDirectory = jobDirectory;
             _channelConfig = channelConfig;
-            _jetConfig = jetConfig;
             _jobID = jobID;
+            _jobServer = jobServer;
             _inputPollThread = new Thread(InputPollThread);
             _inputPollThread.Name = "FileInputChannelPolling";
             _inputPollThread.Start();
@@ -114,7 +114,6 @@ namespace Tkl.Jumbo.Jet.Channels
 
         private void InputPollThread()
         {
-            IJobServerClientProtocol jobServer = JetClient.CreateJobServerClient(_jetConfig);
             // TODO: Adjust this for the situation when not all tasks are scheduled yet.
             List<InputTask> filesLeft = (from taskID in _channelConfig.InputTasks
                                          select new InputTask()
@@ -133,7 +132,7 @@ namespace Tkl.Jumbo.Jet.Channels
                 {
                     if( task.TaskServerAddress == null )
                     {
-                        task.TaskServerAddress = jobServer.GetTaskServerForTask(_jobID, task.TaskID);
+                        task.TaskServerAddress = _jobServer.GetTaskServerForTask(_jobID, task.TaskID);
                         if( task.TaskServerAddress != null )
                             task.TaskServer = JetClient.CreateTaskServerClient(task.TaskServerAddress);
                     }

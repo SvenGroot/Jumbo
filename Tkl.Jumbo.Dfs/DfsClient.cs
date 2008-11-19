@@ -37,6 +37,16 @@ namespace Tkl.Jumbo.Dfs
         }
 
         /// <summary>
+        /// Initializes a new instance of the <see cref="DfsClient"/> class using the specified host name and port.
+        /// </summary>
+        /// <param name="hostName">The host name of the name server.</param>
+        /// <param name="port">The port at which the name server is listening.</param>
+        public DfsClient(string hostName, int port)
+        {
+            NameServer = CreateNameServerClient(hostName, port);
+        }
+
+        /// <summary>
         /// Gets or sets the <see cref="INameServerClientProtocol"/> used by this instance to communicate with the name server.
         /// </summary>
         public INameServerClientProtocol NameServer { get; private set; }
@@ -62,7 +72,22 @@ namespace Tkl.Jumbo.Dfs
             if( config == null )
                 throw new ArgumentNullException("config");
 
-            return CreateNameServerClientInternal<INameServerClientProtocol>(config);
+            return CreateNameServerClientInternal<INameServerClientProtocol>(config.NameServer.HostName, config.NameServer.Port);
+        }
+
+        /// <summary>
+        /// Creates a client object that can be used to communicate with a name server.
+        /// </summary>
+        /// <param name="hostName">The host name of the name server.</param>
+        /// <param name="port">The port at which the name server is listening.</param>
+        /// <returns>An object implementing <see cref="INameServerClientProtocol"/> that is a proxy class for
+        /// communicating with the name server via RPC.</returns>
+        public static INameServerClientProtocol CreateNameServerClient(string hostName, int port)
+        {
+            if( hostName == null )
+                throw new ArgumentNullException("hostName");
+
+            return CreateNameServerClientInternal<INameServerClientProtocol>(hostName, port);
         }
 
         /// <summary>
@@ -87,7 +112,7 @@ namespace Tkl.Jumbo.Dfs
             if( config == null )
                 throw new ArgumentNullException("config");
 
-            return CreateNameServerClientInternal<INameServerHeartbeatProtocol>(config);
+            return CreateNameServerClientInternal<INameServerHeartbeatProtocol>(config.NameServer.HostName, config.NameServer.Port);
         }
 
         /// <summary>
@@ -229,9 +254,9 @@ namespace Tkl.Jumbo.Dfs
             return new DfsOutputStream(NameServer, path);
         }
 
-        private static T CreateNameServerClientInternal<T>(DfsConfiguration config)
+        private static T CreateNameServerClientInternal<T>(string hostName, int port)
         {
-            string url = string.Format(System.Globalization.CultureInfo.InvariantCulture, _nameServerUrlFormat, config.NameServer.HostName, config.NameServer.Port);
+            string url = string.Format(System.Globalization.CultureInfo.InvariantCulture, _nameServerUrlFormat, hostName, port);
             return (T)Activator.GetObject(typeof(T), url);
         }
 

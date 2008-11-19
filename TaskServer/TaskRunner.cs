@@ -19,21 +19,23 @@ namespace TaskServerApplication
         {
             private Process _process;
             private Thread _appDomainThread; // only used when running the task in an appdomain rather than a different process.
+            private TaskServer _taskServer;
 
             public event EventHandler ProcessExited;
 
-            public RunningTask(Guid jobID, string jobDirectory, string taskID, string dfsJobDirectory)
+            public RunningTask(Guid jobID, string jobDirectory, string taskID, string dfsJobDirectory, TaskServer taskServer)
             {
                 JobID = jobID;
                 TaskID = taskID;
                 FullTaskID = Job.CreateFullTaskID(jobID, taskID);
                 JobDirectory = jobDirectory;
                 DfsJobDirectory = dfsJobDirectory;
+                _taskServer = taskServer;
                 if( Debugger.IsAttached )
                     RunTaskAppDomain();
                 else
                 {
-                    ProcessStartInfo startInfo = new ProcessStartInfo("TaskHost.exe", string.Format("\"{0}\" \"{1}\" \"{2}\" \"{3}\"", jobID, jobDirectory, taskID, dfsJobDirectory));
+                    ProcessStartInfo startInfo = new ProcessStartInfo("TaskHost.exe", string.Format("\"{0}\" \"{1}\" \"{2}\" \"{3}\" {4} {5} {6} {7} {8}", jobID, jobDirectory, taskID, dfsJobDirectory, taskServer.Configuration.TaskServer.Port, taskServer.Configuration.JobServer.HostName, taskServer.Configuration.JobServer.Port, taskServer.DfsConfiguration.NameServer.HostName, taskServer.DfsConfiguration.NameServer.Port));
                     startInfo.UseShellExecute = false;
                     startInfo.CreateNoWindow = true;
                     RuntimeEnvironment.ModifyProcessStartInfo(startInfo);
@@ -86,7 +88,7 @@ namespace TaskServerApplication
             private void RunTaskAppDomainThread()
             {
                 AppDomain taskDomain = AppDomain.CreateDomain(FullTaskID);
-                taskDomain.ExecuteAssembly("TaskHost.exe", null, new[] { JobID.ToString(), JobDirectory, TaskID, DfsJobDirectory });
+                taskDomain.ExecuteAssembly("TaskHost.exe", null, new string[] { JobID.ToString(), JobDirectory, TaskID, DfsJobDirectory, _taskServer.Configuration.TaskServer.Port.ToString(), _taskServer.Configuration.JobServer.HostName, _taskServer.Configuration.JobServer.Port.ToString(), _taskServer.DfsConfiguration.NameServer.HostName, _taskServer.DfsConfiguration.NameServer.Port.ToString() });
                 AppDomain.Unload(taskDomain);
                 OnProcessExited(EventArgs.Empty);
             }
@@ -236,7 +238,7 @@ namespace TaskServerApplication
             }
             lock( _runningTasks )
             {
-                RunningTask runningTask = new RunningTask(task.Job.JobID, jobDirectory, task.TaskID, task.Job.Path);
+                RunningTask runningTask = new RunningTask(task.Job.JobID, jobDirectory, task.TaskID, task.Job.Path, _taskServer);
                 runningTask.ProcessExited += new EventHandler(RunningTask_ProcessExited);
                 _runningTasks.Add(runningTask.FullTaskID, runningTask);
             }

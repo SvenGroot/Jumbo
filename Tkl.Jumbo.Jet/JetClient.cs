@@ -40,7 +40,7 @@ namespace Tkl.Jumbo.Jet
             if( config == null )
                 throw new ArgumentNullException("config");
 
-            return CreateJobServerClientInternal<IJobServerHeartbeatProtocol>(config);
+            return CreateJobServerClientInternal<IJobServerHeartbeatProtocol>(config.JobServer.HostName, config.JobServer.Port);
         }
 
         /// <summary>
@@ -64,7 +64,22 @@ namespace Tkl.Jumbo.Jet
             if( config == null )
                 throw new ArgumentNullException("config");
 
-            return CreateJobServerClientInternal<IJobServerClientProtocol>(config);
+            return CreateJobServerClientInternal<IJobServerClientProtocol>(config.JobServer.HostName, config.JobServer.Port);
+        }
+
+        /// <summary>
+        /// Creates a client object that can be used to communicate with a job server.
+        /// </summary>
+        /// <param name="hostName">The host name of the job server.</param>
+        /// <param name="port">The port at which the job server is listening.</param>
+        /// <returns>An object implementing <see cref="IJobServerClientProtocol"/> that is a proxy class for
+        /// communicating with the job server via RPC.</returns>
+        public static IJobServerClientProtocol CreateJobServerClient(string hostName, int port)
+        {
+            if( hostName == null )
+                throw new ArgumentNullException("hostName");
+
+            return CreateJobServerClientInternal<IJobServerClientProtocol>(hostName, port);
         }
 
         /// <summary>
@@ -92,6 +107,17 @@ namespace Tkl.Jumbo.Jet
         }
 
         /// <summary>
+        /// Creates a client object that can be used by a task host to communicate with its task server.
+        /// </summary>
+        /// <param name="port">The port at which the task server is listening.</param>
+        /// <returns>An object implementing <see cref="ITaskServerUmbilicalProtocol"/> that is a proxy class for
+        /// communicating with the task server via RPC.</returns>
+        public static ITaskServerUmbilicalProtocol CreateTaskServerUmbilicalClient(int port)
+        {
+            return CreateTaskServerClientInternal<ITaskServerUmbilicalProtocol>("localhost", port);
+        }
+
+        /// <summary>
         /// Creates a client object that can be used to communicate with its task server server.
         /// </summary>
         /// <param name="address">The address of the task server.</param>
@@ -105,9 +131,9 @@ namespace Tkl.Jumbo.Jet
             return CreateTaskServerClientInternal<ITaskServerClientProtocol>(address.HostName, address.Port);
         }
         
-        private static T CreateJobServerClientInternal<T>(JetConfiguration config)
+        private static T CreateJobServerClientInternal<T>(string hostName, int port)
         {
-            string url = string.Format(System.Globalization.CultureInfo.InvariantCulture, _jobServerUrlFormat, config.JobServer.HostName, config.JobServer.Port);
+            string url = string.Format(System.Globalization.CultureInfo.InvariantCulture, _jobServerUrlFormat, hostName, port);
             return (T)Activator.GetObject(typeof(T), url);
         }
 

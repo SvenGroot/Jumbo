@@ -16,13 +16,14 @@ namespace TaskHost
     class Program
     {
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(Program));
-        private static DfsClient _client = new DfsClient();
+        private static DfsClient _client;
+        private static IJobServerClientProtocol _jobServer;
 
         public static int Main(string[] args)
         {
             AppDomain.CurrentDomain.UnhandledException += new UnhandledExceptionEventHandler(CurrentDomain_UnhandledException);
 
-            if( args.Length != 4 )
+            if( args.Length != 9 )
             {
                 _log.Error("Invalid invocation.");
                 return 1;
@@ -32,10 +33,17 @@ namespace TaskHost
             string jobDirectory = args[1];
             string taskID = args[2];
             string dfsJobDirectory = args[3];
+            int umbilicalPort = Convert.ToInt32(args[4]);
+            string jobServerHost = args[5];
+            int jobServerPort = Convert.ToInt32(args[6]);
+            string nameServerHost = args[7];
+            int nameServerPort = Convert.ToInt32(args[8]);
             string logFile = Path.Combine(jobDirectory, taskID + ".log");
             ConfigureLog(logFile);
 
-            ITaskServerUmbilicalProtocol umbilical = JetClient.CreateTaskServerUmbilicalClient();
+            ITaskServerUmbilicalProtocol umbilical = JetClient.CreateTaskServerUmbilicalClient(umbilicalPort);
+            _client = new DfsClient(nameServerHost, nameServerPort);
+            _jobServer = JetClient.CreateJobServerClient(jobServerHost, jobServerPort);
 
             _log.InfoFormat("Running task; job ID = \"{0}\", job directory = \"{1}\", task ID = \"{2}\", DFS job directory = \"{3}\"", jobID, jobDirectory, taskID, dfsJobDirectory);
             _log.LogEnvironmentInformation();
@@ -83,7 +91,7 @@ namespace TaskHost
             IInputChannel inputChannel = null;
             if( inputChannelConfig != null )
             {
-                inputChannel = inputChannelConfig.CreateInputChannel(jobID, jobDirectory, JetConfiguration.GetConfiguration());
+                inputChannel = inputChannelConfig.CreateInputChannel(jobID, jobDirectory, _jobServer);
                 inputChannel.WaitUntilReady(Timeout.Infinite);
             }
 
