@@ -87,7 +87,9 @@ namespace TaskServerApplication
 
             private void RunTaskAppDomainThread()
             {
-                AppDomain taskDomain = AppDomain.CreateDomain(FullTaskID);
+                AppDomainSetup setup = new AppDomainSetup();
+                setup.ApplicationBase = Environment.CurrentDirectory;
+                AppDomain taskDomain = AppDomain.CreateDomain(FullTaskID, null, setup);
                 taskDomain.ExecuteAssembly("TaskHost.exe", null, new string[] { JobID.ToString(), JobDirectory, TaskID, DfsJobDirectory, _taskServer.Configuration.TaskServer.Port.ToString(), _taskServer.Configuration.JobServer.HostName, _taskServer.Configuration.JobServer.Port.ToString(), _taskServer.DfsConfiguration.NameServer.HostName, _taskServer.DfsConfiguration.NameServer.Port.ToString() });
                 AppDomain.Unload(taskDomain);
                 OnProcessExited(EventArgs.Empty);

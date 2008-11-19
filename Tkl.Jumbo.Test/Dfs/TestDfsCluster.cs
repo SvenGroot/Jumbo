@@ -33,9 +33,6 @@ namespace Tkl.Jumbo.Test.Dfs
 
             public void Run(string editLogPath, int replicationFactor, int dataServers, int? blockSize)
             {
-                //log4net.Config.BasicConfigurator.Configure(new log4net.Appender.FileAppender(new log4net.Layout.PatternLayout("%date [%thread] %-5level %logger [%property{ClientHostName}] - %message%newline"), "/home2/sgroot/jumbo/test.log") { Threshold = log4net.Core.Level.All });
-                //log4net.Config.BasicConfigurator.Configure(new log4net.Appender.FileAppender() { Layout = new log4net.Layout.PatternLayout("%date [%thread] %-5level %logger [%property{ClientHostName}] - %message%newline"), File = System.IO.Path.Combine(editLogPath, "logfile.txt"), Threshold = log4net.Core.Level.All });
-                //log4net.Config.BasicConfigurator.Configure(new log4net.Appender.DebugAppender(new log4net.Layout.PatternLayout("%date [%thread] %-5level %logger [%property{ClientHostName}] - %message%newline")) { Threshold = log4net.Core.Level.All });
                 DfsConfiguration config = new DfsConfiguration();
                 config.NameServer.HostName = "localhost";
                 config.NameServer.Port = NameServerPort; // Pick a different port so the tests can run even when a regular cluster is running
@@ -121,13 +118,6 @@ namespace Tkl.Jumbo.Test.Dfs
                 System.IO.Directory.Delete(path, true);
             System.IO.Directory.CreateDirectory(path);
 
-            AppDomainSetup setup = new AppDomainSetup();
-            setup.ApplicationBase = Environment.CurrentDirectory;
-            //setup.PrivateBinPath = Environment.CurrentDirectory;
-            
-            //_clusterDomain = AppDomain.CreateDomain("TestCluster", null, setup);
-
-            //_clusterRunner = (ClusterRunner)_clusterDomain.CreateInstanceAndUnwrap(typeof(ClusterRunner).Assembly.FullName, typeof(ClusterRunner).FullName);
             _clusterRunner = new ClusterRunner();
             _clusterRunner.Run(path, replicationFactor, dataServers, blockSize);
 

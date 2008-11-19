@@ -85,30 +85,6 @@ namespace Tkl.Jumbo.Jet
         /// <summary>
         /// Creates a client object that can be used by a task host to communicate with its task server.
         /// </summary>
-        /// <returns>An object implementing <see cref="ITaskServerUmbilicalProtocol"/> that is a proxy class for
-        /// communicating with the task server via RPC.</returns>
-        public static ITaskServerUmbilicalProtocol CreateTaskServerUmbilicalClient()
-        {
-            return CreateTaskServerUmbilicalClient(JetConfiguration.GetConfiguration());
-        }
-
-        /// <summary>
-        /// Creates a client object that can be used by a task host to communicate with its task server.
-        /// </summary>
-        /// <param name="config">A <see cref="JetConfiguration"/> that provides the task server configuration to use.</param>
-        /// <returns>An object implementing <see cref="ITaskServerUmbilicalProtocol"/> that is a proxy class for
-        /// communicating with the task server via RPC.</returns>
-        public static ITaskServerUmbilicalProtocol CreateTaskServerUmbilicalClient(JetConfiguration config)
-        {
-            if( config == null )
-                throw new ArgumentNullException("config");
-
-            return CreateTaskServerClientInternal<ITaskServerUmbilicalProtocol>("localhost", config.TaskServer.Port);
-        }
-
-        /// <summary>
-        /// Creates a client object that can be used by a task host to communicate with its task server.
-        /// </summary>
         /// <param name="port">The port at which the task server is listening.</param>
         /// <returns>An object implementing <see cref="ITaskServerUmbilicalProtocol"/> that is a proxy class for
         /// communicating with the task server via RPC.</returns>

@@ -32,7 +32,7 @@ namespace Tkl.Jumbo.Jet
         }
 
         /// <summary>
-        /// Gets or sets value that indicates whether the server should listen on both IPv6 and IPv4.
+        /// Gets or sets a value that indicates whether the server should listen on both IPv6 and IPv4.
         /// </summary>
         /// <value>
         /// <see langword="true"/> if the server should listen on both IPv6 and IPv4; <see langword="false"/>
@@ -43,6 +43,16 @@ namespace Tkl.Jumbo.Jet
         {
             get { return (bool)this["listenIPv4AndIPv6"]; }
             set { this["listenIPv4AndIPv6"] = value; }
+        }
+
+        /// <summary>
+        /// Gets or sets the maximum number of tasks to schedule on this server.
+        /// </summary>
+        [ConfigurationProperty("maxTasks", DefaultValue = 4, IsRequired = false, IsKey = false)]
+        public int MaxTasks
+        {
+            get { return (int)this["maxTasks"]; }
+            set { this["maxTasks"] = value; }
         }
     }
 }

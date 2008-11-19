@@ -24,6 +24,14 @@ namespace Tkl.Jumbo.Jet
         void RunJob(Guid jobID);
 
         /// <summary>
+        /// Waits until the specified job completes.
+        /// </summary>
+        /// <param name="jobID">The ID of the job to wait for.</param>
+        /// <param name="timeout">The maximum amount of time to wait.</param>
+        /// <returns><see langword="true"/> if the job completed; <see langword="false"/> if the timeout expired.</returns>
+        bool WaitForJobCompletion(Guid jobID, int timeout);
+
+        /// <summary>
         /// Gets the address of the task server that is running the specified task.
         /// </summary>
         /// <param name="jobID">The ID of the job containing the task.</param>

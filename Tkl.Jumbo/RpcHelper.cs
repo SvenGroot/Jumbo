@@ -16,7 +16,7 @@ namespace Tkl.Jumbo
     public static class RpcHelper
     {
         private static bool _clientChannelsRegistered;
-        private static List<IChannel> _serverChannels;
+        private static Dictionary<int, List<IChannel>> _serverChannels;
 
         /// <summary>
         /// Registers the client channel
@@ -43,16 +43,20 @@ namespace Tkl.Jumbo
         public static void RegisterServerChannels(int port, bool listenIPv4AndIPv6)
         {
             if( _serverChannels == null )
+                _serverChannels = new Dictionary<int, List<IChannel>>();
+            
+            if( !_serverChannels.ContainsKey(port) )
             {
-                _serverChannels = new List<IChannel>();
+                List<IChannel> serverChannels = new List<IChannel>();
                 if( System.Net.Sockets.Socket.OSSupportsIPv6 )
                 {
-                    RegisterChannel("[::]", port, "tcp6");
+                    RegisterChannel("[::]", port, "tcp6_" + port, serverChannels);
                     if( listenIPv4AndIPv6 )
-                        RegisterChannel("0.0.0.0", port, "tcp4");
+                        RegisterChannel("0.0.0.0", port, "tcp4_" + port, serverChannels);
                 }
                 else
-                    RegisterChannel(null, port, null);
+                    RegisterChannel(null, port, "tcp_" + port, serverChannels);
+                _serverChannels.Add(port, serverChannels);
             }
         }
 
@@ -60,16 +64,20 @@ namespace Tkl.Jumbo
         /// Unregisters the server channels.
         /// </summary>
         [MethodImpl(MethodImplOptions.Synchronized)]
-        public static void UnregisterServerChannels()
+        public static void UnregisterServerChannels(int port)
         {
             if( _serverChannels != null )
             {
-                foreach( var channel in _serverChannels )
+                List<IChannel> channels;
+                if( _serverChannels.TryGetValue(port, out channels) )
                 {
-                    ((TcpServerChannel)channel).StopListening(null);
-                    ChannelServices.UnregisterChannel(channel);
+                    foreach( var channel in channels )
+                    {
+                        ((TcpServerChannel)channel).StopListening(null);
+                        ChannelServices.UnregisterChannel(channel);
+                    }
+                    _serverChannels.Remove(port);
                 }
-                _serverChannels = null;
             }
         }
 
@@ -89,7 +97,7 @@ namespace Tkl.Jumbo
                 RemotingConfiguration.RegisterWellKnownServiceType(type, objectUri, WellKnownObjectMode.Singleton);
         }
 
-        private static void RegisterChannel(string bindTo, int port, string name)
+        private static void RegisterChannel(string bindTo, int port, string name, List<IChannel> channels)
         {
             IDictionary properties = new Hashtable();
             if( name != null )
@@ -102,7 +110,7 @@ namespace Tkl.Jumbo
             formatter.Next = new ServerChannelSinkProvider();
             TcpServerChannel channel = new TcpServerChannel(properties, formatter);
             ChannelServices.RegisterChannel(channel, false);
-            _serverChannels.Add(channel);
+            channels.Add(channel);
         }
     }
 }

@@ -68,6 +68,9 @@
     <Compile Include="Dfs\NameServerTests.cs" />
     <Compile Include="Dfs\NewBlockHeartbeatDataTests.cs" />
     <Compile Include="Dfs\PacketTests.cs" />
+    <Compile Include="Jet\JetClientTests.cs" />
+    <Compile Include="Jet\JobServerTests.cs" />
+    <Compile Include="Jet\TestJetCluster.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Dfs\ServerAdressTests.cs" />
     <Compile Include="Dfs\TestDfsCluster.cs" />
@@ -79,13 +82,33 @@
       <Project>{BFC1A761-6DB1-4C3D-8A0C-E5261B1202AC}</Project>
       <Name>DataServer</Name>
     </ProjectReference>
+    <ProjectReference Include="..\JobServer\JobServer.csproj">
+      <Project>{F1489C9B-CF7F-4D98-9FBE-F827E521DE6F}</Project>
+      <Name>JobServer</Name>
+    </ProjectReference>
     <ProjectReference Include="..\NameServer\NameServer.csproj">
       <Project>{EDAB2A7C-1894-428F-9B1C-3B33AC0E0F3B}</Project>
       <Name>NameServer</Name>
     </ProjectReference>
+    <ProjectReference Include="..\TaskHost\TaskHost.csproj">
+      <Project>{975E0C3D-04C5-4CC5-8598-EDD715497FF0}</Project>
+      <Name>TaskHost</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\TaskServer\TaskServer.csproj">
+      <Project>{3C1C7194-F90F-4A3E-8887-947D1CD921D0}</Project>
+      <Name>TaskServer</Name>
+    </ProjectReference>
     <ProjectReference Include="..\Tkl.Jumbo.Dfs\Tkl.Jumbo.Dfs.csproj">
       <Project>{67D71A3A-4FDA-4136-8423-07A7C1592E65}</Project>
       <Name>Tkl.Jumbo.Dfs</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Tkl.Jumbo.Jet\Tkl.Jumbo.Jet.csproj">
+      <Project>{E739829A-3507-42EA-A8B4-D8D41060DF95}</Project>
+      <Name>Tkl.Jumbo.Jet</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Tkl.Jumbo.Test.Tasks\Tkl.Jumbo.Test.Tasks.csproj">
+      <Project>{717C205E-0936-4061-9F50-E1EAB770E6D6}</Project>
+      <Name>Tkl.Jumbo.Test.Tasks</Name>
     </ProjectReference>
     <ProjectReference Include="..\Tkl.Jumbo\Tkl.Jumbo.csproj">
       <Project>{17C7CE1A-4F9F-4173-8BA8-9C26A4F644C6}</Project>

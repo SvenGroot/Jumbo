@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using Tkl.Jumbo.Jet;
 using Tkl.Jumbo;
+using System.Threading;
 
 namespace JobServerApplication
 {
@@ -11,6 +12,7 @@ namespace JobServerApplication
     {
         private readonly SortedList<string, TaskInfo> _tasks = new SortedList<string, TaskInfo>();
         private readonly HashSet<ServerAddress> _taskServers = new HashSet<ServerAddress>();
+        private readonly ManualResetEvent _jobCompletedEvent = new ManualResetEvent(false);
 
         public JobInfo(Job job)
         {
@@ -29,6 +31,11 @@ namespace JobServerApplication
         public HashSet<ServerAddress> TaskServers
         {
             get { return _taskServers; }
+        }
+
+        public ManualResetEvent JobCompletedEvent
+        {
+            get { return _jobCompletedEvent; }
         }
     }
 }

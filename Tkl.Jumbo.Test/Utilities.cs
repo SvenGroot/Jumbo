@@ -49,6 +49,24 @@ namespace Tkl.Jumbo.Test
             }
         }
 
+        public static int GenerateDataLines(Stream stream, int size)
+        {
+            Random rnd = new Random();
+            int sizeRemaining = size;
+            int lines = 0;
+            while( sizeRemaining > 0 )
+            {
+                stream.WriteByte((byte)rnd.Next('a', 'z'));
+                if( sizeRemaining % 80 == 0 )
+                {
+                    stream.WriteByte((byte)'\n');
+                    ++lines;
+                }
+                --sizeRemaining;
+            }
+            return lines + 1;
+        }
+
         public static Packet GeneratePacket(int size, bool isLastPacket)
         {
             Random rnd = new Random();

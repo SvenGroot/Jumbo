@@ -80,7 +80,7 @@ namespace NameServerApplication
         [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.Synchronized)]
         public static void Shutdown()
         {
-            RpcHelper.UnregisterServerChannels();
+            RpcHelper.UnregisterServerChannels(Instance.Configuration.NameServer.Port);
             Instance = null;
             _log.Info("---- NameServer has shut down ----");
         }

@@ -7,10 +7,11 @@ using Tkl.Jumbo;
 using System.Net;
 using System.Threading;
 using Tkl.Jumbo.Dfs;
+using System.Diagnostics;
 
 namespace TaskServerApplication
 {
-    class TaskServer : ITaskServerUmbilicalProtocol, ITaskServerClientProtocol
+    public class TaskServer : ITaskServerUmbilicalProtocol, ITaskServerClientProtocol
     {
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(TaskServer));
 
@@ -20,6 +21,7 @@ namespace TaskServerApplication
         private volatile bool _running;
         private readonly List<JetHeartbeatData> _pendingHeartbeatData = new List<JetHeartbeatData>();
         private readonly TaskRunner _taskRunner;
+        private static object _startupLock = new object();
 
         private TaskServer()
             : this(JetConfiguration.GetConfiguration(), DfsConfiguration.GetConfiguration())
@@ -54,21 +56,27 @@ namespace TaskServerApplication
 
         public static void Run(JetConfiguration jetConfig, DfsConfiguration dfsConfig)
         {
-            Instance = new TaskServer(jetConfig, dfsConfig);
+            lock( _startupLock )
+            {
+                Instance = new TaskServer(jetConfig, dfsConfig);
 
-            RpcHelper.RegisterServerChannels(jetConfig.TaskServer.Port, jetConfig.TaskServer.ListenIPv4AndIPv6);
-            RpcHelper.RegisterService(typeof(RpcServer), "TaskServer");
+                RpcHelper.RegisterServerChannels(jetConfig.TaskServer.Port, jetConfig.TaskServer.ListenIPv4AndIPv6);
+                RpcHelper.RegisterService(typeof(RpcServer), "TaskServer");
+            }
 
             Instance.RunInternal();
         }
 
         public static void Shutdown()
         {
-            Instance.ShutdownInternal();
+            lock( _startupLock )
+            {
+                Instance.ShutdownInternal();
 
-            RpcHelper.UnregisterServerChannels();
+                RpcHelper.UnregisterServerChannels(Instance.Configuration.TaskServer.Port);
 
-            Instance = null;
+                Instance = null;
+            }
         }
 
         public void NotifyTaskStatusChanged(Guid jobID, string taskID, TaskStatus newStatus)
@@ -80,6 +88,8 @@ namespace TaskServerApplication
 
         public void ReportCompletion(Guid jobID, string taskID)
         {
+            if( taskID == null )
+                throw new ArgumentNullException("taskID");
             string fullTaskID = Job.CreateFullTaskID(jobID, taskID);
             _log.DebugFormat("ReportCompletion, fullTaskID = \"{0}\"", fullTaskID);
             _taskRunner.ReportCompletion(fullTaskID);
@@ -112,7 +122,7 @@ namespace TaskServerApplication
             _running = true;
             LocalAddress = new ServerAddress(Dns.GetHostName(), Configuration.TaskServer.Port);
 
-            AddDataForNextHeartbeat(new StatusJetHeartbeatData() { MaxTasks = 4 }); // TODO: Real max tasks
+            AddDataForNextHeartbeat(new StatusJetHeartbeatData() { MaxTasks = Configuration.TaskServer.MaxTasks });
 
             while( _running )
             {
@@ -154,7 +164,7 @@ namespace TaskServerApplication
                 switch( response.Command )
                 {
                 case TaskServerHeartbeatCommand.ReportStatus:
-                    AddDataForNextHeartbeat(new StatusJetHeartbeatData() { MaxTasks = 4 }); // TODO: Real task numbers
+                    AddDataForNextHeartbeat(new StatusJetHeartbeatData() { MaxTasks = Configuration.TaskServer.MaxTasks });
                     break;
                 case TaskServerHeartbeatCommand.RunTask:
                     RunTaskJetHeartbeatResponse runResponse = (RunTaskJetHeartbeatResponse)response;

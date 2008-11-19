@@ -9,7 +9,7 @@ using Tkl.Jumbo.Dfs;
 
 namespace JobServerApplication
 {
-    class JobServer : IJobServerHeartbeatProtocol, IJobServerClientProtocol
+    public class JobServer : IJobServerHeartbeatProtocol, IJobServerClientProtocol
     {
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(JobServer));
 
@@ -56,7 +56,7 @@ namespace JobServerApplication
         public static void Shutdown()
         {
             _log.Info("-----Job server is shutting down-----");
-            RpcHelper.UnregisterServerChannels();
+            RpcHelper.UnregisterServerChannels(Instance.Configuration.JobServer.Port);
             Instance = null;
         }
 
@@ -120,6 +120,16 @@ namespace JobServerApplication
                 jobInfo.Running = true;
                 _log.InfoFormat("Job {0} has entered the running state. Number of tasks: {1}.", jobID, jobInfo.Tasks.Count);
             }
+        }
+
+        public bool WaitForJobCompletion(Guid jobID, int timeout)
+        {
+            JobInfo job;
+            lock( _jobs )
+            {
+                job = _jobs[jobID];
+            }
+            return job.JobCompletedEvent.WaitOne(timeout, false);
         }
 
         public ServerAddress GetTaskServerForTask(Guid jobID, string taskID)
@@ -280,6 +290,7 @@ namespace JobServerApplication
                         _log.InfoFormat("Job {0}: all tasks in the job have finished.", data.JobID);
                         _jobs.Remove(data.JobID);
                         jobFinished = true;
+                        job.JobCompletedEvent.Set();
                     }
                     else if( job.UnscheduledTasks > 0 )
                         ScheduleTasks(job); // TODO: Once multiple jobs at once are supported, this shouldn't just consider that job
