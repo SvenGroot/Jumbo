@@ -83,7 +83,7 @@ namespace TaskHost
             Assembly taskAssembly = Assembly.LoadFrom(Path.Combine(jobDirectory, jobConfig.AssemblyFileName));
 
             Type taskType = taskAssembly.GetType(taskConfig.TypeName);
-            Type taskInterfaceType = FindGenericInterfaceType(taskType, (typeof(ITask<StringWritable, StringWritable>).GetGenericTypeDefinition()));
+            Type taskInterfaceType = FindGenericInterfaceType(taskType, typeof(ITask<,>));
             Type inputType = taskInterfaceType.GetGenericArguments()[0];
             Type outputType = taskInterfaceType.GetGenericArguments()[1];
 

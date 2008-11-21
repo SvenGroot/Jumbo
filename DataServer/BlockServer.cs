@@ -16,89 +16,23 @@ namespace DataServerApplication
     /// <summary>
     /// Provides a TCP server that clients can use to read and write blocks to the data server.
     /// </summary>
-    class BlockServer
+    class BlockServer : TcpServer
     {
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(BlockServer));
 
-        private AutoResetEvent _connectionEvent = new AutoResetEvent(false);
-        private TcpListener _listener;
-        private Thread _listenerThread;
         private DataServer _dataServer;
-        private volatile bool _running;
 
         public BlockServer(DataServer dataServer, IPAddress bindAddress, int port)
+            : base(bindAddress, port)
         {
-            _log.InfoFormat("Starting block server on {0}", bindAddress);
             if( dataServer == null )
                 throw new ArgumentNullException("dataServer");
+            _log.InfoFormat("Starting block server on {0}", bindAddress);
 
-            _listener = new TcpListener(bindAddress, port);
             _dataServer = dataServer;
         }
 
-        public void Run()
-        {
-            _running = true;
-            _listener.Start();
-            _log.InfoFormat("TCP server started on address {0}.", _listener.LocalEndpoint);
-
-            while( _running )
-            {
-                WaitForConnections();
-            }
-        }
-
-        public void RunAsync()
-        {
-            if( _listenerThread == null )
-            {
-                _listenerThread = new Thread(new ThreadStart(Run));
-                _listenerThread.Name = "listener";
-                _listenerThread.IsBackground = true;
-                _listenerThread.Start();
-            }
-        }
-
-        public void Abort()
-        {
-            if( _listenerThread != null )
-            {
-                _running = false;
-                _listener.Stop();
-                _listenerThread.Join();
-                _listenerThread = null;
-            }
-        }
-
-        private void WaitForConnections()
-        {
-            _listener.BeginAcceptTcpClient(new AsyncCallback(AcceptTcpClientCallback), null);
-
-            _connectionEvent.WaitOne();
-        }
-
-        private void AcceptTcpClientCallback(IAsyncResult ar)
-        {
-            _connectionEvent.Set();
-            try
-            {
-                using( TcpClient client = _listener.EndAcceptTcpClient(ar) )
-                {
-                    _log.Info("Connection accepted.");
-                    HandleConnection(client);
-                }
-            }
-            catch( SocketException ex )
-            {
-                _log.Error("An error occurred accepting a client connection.", ex);
-            }
-            catch( ObjectDisposedException )
-            {
-                // Aborting; ignore.
-            }
-        }
-
-        private void HandleConnection(TcpClient client)
+        protected override void HandleConnection(TcpClient client)
         {
             try
             {

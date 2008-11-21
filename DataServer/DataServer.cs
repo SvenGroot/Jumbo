@@ -64,17 +64,17 @@ namespace DataServerApplication
             if( System.Net.Sockets.Socket.OSSupportsIPv6 )
             {
                 _blockServer = new BlockServer(this, System.Net.IPAddress.IPv6Any, _port);
-                _blockServer.RunAsync();
+                _blockServer.Start();
                 if( _config.DataServer.ListenIPv4AndIPv6 )
                 {
                     _blockServerIPv4 = new BlockServer(this, System.Net.IPAddress.Any, _port);
-                    _blockServerIPv4.RunAsync();
+                    _blockServerIPv4.Start();
                 }
             }
             else
             {
                 _blockServer = new BlockServer(this, System.Net.IPAddress.Any, _port);
-                _blockServer.RunAsync();
+                _blockServer.Start();
             }
 
             AddDataForNextHeartbeat(new InitialHeartbeatData());
@@ -90,12 +90,12 @@ namespace DataServerApplication
         {
             if( _blockServer != null )
             {
-                _blockServer.Abort();
+                _blockServer.Stop();
                 _blockServer = null;
             }
             if( _blockServerIPv4 != null )
             {
-                _blockServerIPv4.Abort();
+                _blockServerIPv4.Stop();
                 _blockServerIPv4 = null;
             }
             _running = false;
