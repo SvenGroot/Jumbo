@@ -35,6 +35,7 @@ namespace TaskServerApplication
                     RunTaskAppDomain();
                 else
                 {
+                    _log.DebugFormat("Launching new process for task {0}.", FullTaskID);
                     ProcessStartInfo startInfo = new ProcessStartInfo("TaskHost.exe", string.Format("\"{0}\" \"{1}\" \"{2}\" \"{3}\" {4} {5} {6} {7} {8}", jobID, jobDirectory, taskID, dfsJobDirectory, taskServer.Configuration.TaskServer.Port, taskServer.Configuration.JobServer.HostName, taskServer.Configuration.JobServer.Port, taskServer.DfsConfiguration.NameServer.HostName, taskServer.DfsConfiguration.NameServer.Port));
                     startInfo.UseShellExecute = false;
                     startInfo.CreateNoWindow = true;
@@ -80,6 +81,7 @@ namespace TaskServerApplication
 
             private void RunTaskAppDomain()
             {
+                _log.DebugFormat("Running task {0} in an AppDomain.", FullTaskID);
                 _appDomainThread = new Thread(RunTaskAppDomainThread);
                 _appDomainThread.Name = FullTaskID;
                 _appDomainThread.Start();
