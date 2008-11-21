@@ -60,6 +60,7 @@ namespace Tkl.Jumbo.Test
                 if( sizeRemaining % 80 == 0 )
                 {
                     stream.WriteByte((byte)'\n');
+                    --sizeRemaining;
                     ++lines;
                 }
                 --sizeRemaining;
