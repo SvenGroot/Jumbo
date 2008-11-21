@@ -83,7 +83,7 @@ namespace TaskHost
             Assembly taskAssembly = Assembly.LoadFrom(Path.Combine(jobDirectory, jobConfig.AssemblyFileName));
 
             Type taskType = taskAssembly.GetType(taskConfig.TypeName);
-            Type taskInterfaceType = taskType.GetInterface(typeof(ITask<StringWritable, StringWritable>).GetGenericTypeDefinition().FullName);
+            Type taskInterfaceType = FindGenericInterfaceType(taskType, (typeof(ITask<StringWritable, StringWritable>).GetGenericTypeDefinition()));
             Type inputType = taskInterfaceType.GetGenericArguments()[0];
             Type outputType = taskInterfaceType.GetGenericArguments()[1];
 
@@ -184,6 +184,19 @@ namespace TaskHost
         private static void CurrentDomain_UnhandledException(object sender, UnhandledExceptionEventArgs e)
         {
             _log.Fatal("An unhandled exception occurred.", (Exception)e.ExceptionObject);
+        }
+
+        private static Type FindGenericInterfaceType(Type type, Type interfaceType)
+        {
+            // This is necessary because while in .Net you can use type.GetInterface with a generic interface type,
+            // in Mono that only works if you specify the type arguments which is precisely what we don't want.
+            Type[] interfaces = type.GetInterfaces();
+            foreach( Type i in interfaces )
+            {
+                if( i.IsGenericType && i.GetGenericTypeDefinition() == interfaceType )
+                    return i;
+            }
+            throw new ArgumentException(string.Format("Type {0} does not implement interface {1}.", type, interfaceType));
         }
     }
 }
