@@ -22,24 +22,16 @@
       </references>
       <sources>
         <include name="Properties/AssemblyInfo.cs"/>
-        <include name="BlockInfo.cs"/>
-        <include name="DataServerInfo.cs"/>
-        <include name="EditLog.cs"/>
-        <include name="FileSystem.cs"/>
-        <include name="FileSystemMutation.cs"/>
-        <include name="NameServer.cs"/>
-        <include name="PendingBlock.cs"/>
-        <include name="PendingFile.cs"/>
-        <include name="Program.cs"/>
-        <include name="RpcServer.cs"/>
+        <include name="*.cs"/>
       </sources>
     </csc>
     <copy file="App.config" tofile="nantbin/NameServer.exe.config"/>
-    <copy file="../lib/log4net.dll" todir="nantbin"/>
     <copy todir="nantbin">
       <fileset>
+        <include name="../lib/log4net.dll"/>
         <include name="../Tkl.Jumbo/nantbin/*.*"/>
         <include name="../Tkl.Jumbo.Dfs/nantbin/*.*"/>
+        <include name="../dfs.config"/>
       </fileset>
     </copy>
   </target>

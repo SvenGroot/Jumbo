@@ -20,15 +20,8 @@
       </references>
       <sources>
         <include name="Properties/AssemblyInfo.cs"/>
-        <include name="ClientChannelSink.cs"/>
-        <include name="ClientChannelSinkProvider.cs"/>
-        <include name="RpcHelper.cs"/>
-        <include name="RuntimeEnvironment.cs"/>
-        <include name="RuntimeEnvironmentType.cs"/>
-        <include name="ServerAddress.cs"/>
-        <include name="ServerChannelSink.cs"/>
-        <include name="ServerChannelSinkProvider.cs"/>
-        <include name="ServerContext.cs"/>
+        <include name="*.cs"/>
+        <include name="IO/*.cs"/>
       </sources>
     </csc>
     <copy file="../lib/log4net.dll" todir="nantbin"/>

@@ -20,30 +20,33 @@
         <include name="${nunitpath}bin/nunit.framework.dll"/>
         <include name="../Tkl.Jumbo/nantbin/Tkl.Jumbo.dll"/>
         <include name="../Tkl.Jumbo.Dfs/nantbin/Tkl.Jumbo.Dfs.dll"/>
+        <include name="../Tkl.Jumbo.Jet/nantbin/Tkl.Jumbo.Jet.dll"/>
         <include name="../NameServer/nantbin/NameServer.exe"/>
         <include name="../DataServer/nantbin/DataServer.exe"/>
+        <include name="../JobServer/nantbin/JobServer.exe"/>
+        <include name="../TaskServer/nantbin/TaskServer.exe"/>
+        <include name="../Tkl.Jumbo.Test.Tasks/nantbin/Tkl.Jumbo.Test.Tasks.dll"/>
       </references>
       <sources>
         <include name="Properties/AssemblyInfo.cs"/>
         <include name="*.cs"/>
+        <include name="Jet/*.cs"/>
+        <include name="Dfs/*.cs"/>
       </sources>
     </csc>
-    <copy file="${nunitpath}bin/nunit.framework.dll" todir="nantbin"/>
-    <copy file="../lib/log4net.dll" todir="nantbin"/>
     <copy todir="nantbin">
       <fileset>
+        <include name="../lib/log4net.dll"/>
+        <include name="${nunitpath}bin/nunit.framework.dll"/>
         <include name="../Tkl.Jumbo/nantbin/*.*"/>
         <include name="../Tkl.Jumbo.Dfs/nantbin/*.*"/>
-      </fileset>
-    </copy>
-    <copy todir="nantbin">
-      <fileset basedir="../NameServer/nantbin">
-        <include name="*.*"/>
-      </fileset>
-    </copy>
-    <copy todir="nantbin">
-      <fileset basedir="../DataServer/nantbin">
-        <include name="*.*"/>
+        <include name="../Tkl.Jumbo.Jet/nantbin/*.*"/>
+        <include name="../NameServer/nantbin/*.*"/>
+        <include name="../DataServer/nantbin/*.*"/>
+        <include name="../JobServer/nantbin/*.*"/>
+        <include name="../TaskServer/nantbin/*.*"/>
+        <include name="../Tkl.Jumbo.Jet.Tasks/nantbin/*.*"/>
+        <include name="../TaskHost/nantbin/*.*"/>
       </fileset>
     </copy>
   </target>

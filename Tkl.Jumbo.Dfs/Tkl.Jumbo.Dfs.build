@@ -21,37 +21,7 @@
       </references>
       <sources>
         <include name="Properties/AssemblyInfo.cs"/>
-        <include name="BlockAssignment.cs"/>
-        <include name="BlockReportHeartbeatData.cs"/>
-        <include name="BlockSender.cs"/>
-        <include name="CRC32.cs"/>
-        <include name="DataServerClientProtocolHeader.cs"/>
-        <include name="DataServerClientProtocolReadHeader.cs"/>
-        <include name="DataServerClientProtocolResult.cs"/>
-        <include name="DataServerClientProtocolWriteHeader.cs"/>
-        <include name="DataServerCommand.cs"/>
-        <include name="DataServerConfigurationElement.cs"/>
-        <include name="DataServerHeartbeatCommand.cs"/>
-        <include name="DeleteBlocksHeartbeatResponse.cs"/>
-        <include name="DfsClient.cs"/>
-        <include name="DfsConfiguration.cs"/>
-        <include name="DfsException.cs"/>
-        <include name="DfsInputStream.cs"/>
-        <include name="DfsMetrics.cs"/>
-        <include name="DfsOutputStream.cs"/>
-        <include name="Directory.cs"/>
-        <include name="File.cs"/>
-        <include name="FileSystemEntry.cs"/>
-        <include name="HeartbeatData.cs"/>
-        <include name="HeartbeatResponse.cs"/>
-        <include name="INameServerClientProtocol.cs"/>
-        <include name="INameServerHeartbeatProtocol.cs"/>
-        <include name="InitialHeartbeatData.cs"/>
-        <include name="InvalidPacketException.cs"/>
-        <include name="NameServerConfigurationElement.cs"/>
-        <include name="NewBlockHeartbeatData.cs"/>
-        <include name="Packet.cs"/>
-        <include name="SafeModeException.cs"/>
+        <include name="*.cs"/>
       </sources>
     </csc>
     <copy todir="nantbin">

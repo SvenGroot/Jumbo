@@ -22,10 +22,7 @@
       </references>
       <sources>
         <include name="Properties/AssemblyInfo.cs"/>
-        <include name="BlockServer.cs"/>
-        <include name="DataServer.cs"/>
-        <include name="ExtensionMethods.cs"/>
-        <include name="Program.cs"/>
+        <include name="*.cs"/>
       </sources>
     </csc>
     <copy file="App.config" tofile="nantbin/DataServer.exe.config"/>
@@ -34,6 +31,7 @@
       <fileset>
         <include name="../Tkl.Jumbo/nantbin/*.*"/>
         <include name="../Tkl.Jumbo.Dfs/nantbin/*.*"/>
+        <include name="../dfs.config"/>
       </fileset>
     </copy>
   </target>

@@ -1,6 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <project name="Jumbo" default="all" xmlns="http://nant.sf.net/release/0.86-beta1/nant.xsd">
-  <target name="all" depends="NameServer,DataServer,DfsShell,Tkl.Jumbo.Dfs.Test">
+  <target name="all" depends="NameServer,DataServer,DfsShell,ClientSample,JobServer,TaskServer,TaskHost,Tkl.Jumbo.Test">
     <copy todir="nantbin">
       <fileset>
         <include name="jumbo-config.sh"/>
@@ -18,7 +18,13 @@
     <nant buildfile="DataServer/DataServer.build" target="clean"/>
     <nant buildfile="DfsShell/DfsShell.build" target="clean"/>
     <nant buildfile="Tkl.Jumbo.Test/Tkl.Jumbo.Test.build" target="clean"/>
+    <nant buildfile="Tkl.Jumbo.Test.Tasks/Tkl.Jumbo.Test.Tasks.build" target="clean"/>
     <nant buildfile="Tkl.Jumbo/Tkl.Jumbo.build" target="clean"/>
+    <nant buildfile="Tkl.Jumbo.Jet/Tkl.Jumbo.Jet.build" target="clean"/>
+    <nant buildfile="ClientSample/ClientSample.build" target="clean"/>
+    <nant buildfile="JobServer/JobServer.build" target="clean"/>
+    <nant buildfile="TaskServer/TaskServer.build" target="clean"/>
+    <nant buildfile="TaskHost/TaskHost.build" target="clean"/>
   </target>
   <target name="Tkl.Jumbo">
     <mkdir dir="nantbin"/>
@@ -38,6 +44,15 @@
       </fileset>
     </copy>
   </target>
+  <target name="Tkl.Jumbo.Jet" depends="Tkl.Jumbo,Tkl.Jumbo.Dfs">
+    <mkdir dir="nantbin"/>
+    <nant buildfile="Tkl.Jumbo.Jet/Tkl.Jumbo.Jet.build" />
+    <copy todir="nantbin">
+      <fileset basedir="Tkl.Jumbo.Jet/nantbin">
+        <include name="*.*"/>
+      </fileset>
+    </copy>
+  </target>
   <target name="NameServer" depends="Tkl.Jumbo.Dfs,Tkl.Jumbo">
     <mkdir dir="nantbin"/>
     <nant buildfile="NameServer/NameServer.build" />
@@ -47,7 +62,7 @@
       </fileset>
     </copy>
   </target>
-  <target name="DataServer" depends="Tkl.Jumbo.Dfs">
+  <target name="DataServer" depends="Tkl.Jumbo.Dfs,Tkl.Jumbo">
     <mkdir dir="nantbin"/>
     <nant buildfile="DataServer/DataServer.build" />
     <copy todir="nantbin">
@@ -56,7 +71,7 @@
       </fileset>
     </copy>
   </target>
-  <target name="DfsShell" depends="Tkl.Jumbo.Dfs">
+  <target name="DfsShell" depends="Tkl.Jumbo.Dfs,Tkl.Jumbo">
     <mkdir dir="nantbin"/>
     <nant buildfile="DfsShell/DfsShell.build" />
     <copy todir="nantbin">
@@ -65,11 +80,56 @@
       </fileset>
     </copy>
   </target>
-  <target name="Tkl.Jumbo.Test" depends="Tkl.Jumbo,Tkl.Jumbo.Dfs,NameServer,DataServer">
+  <target name="ClientSample" depends="Tkl.Jumbo.Dfs,Tkl.Jumbo.Jet,Tkl.Jumbo">
+    <mkdir dir="nantbin"/>
+    <nant buildfile="ClientSample/ClientSample.build" />
+    <copy todir="nantbin">
+      <fileset basedir="ClientSample/nantbin">
+        <include name="*.*"/>
+      </fileset>
+    </copy>
+  </target>
+  <target name="JobServer" depends="Tkl.Jumbo.Dfs,Tkl.Jumbo.Jet,Tkl.Jumbo">
+    <mkdir dir="nantbin"/>
+    <nant buildfile="JobServer/JobServer.build" />
+    <copy todir="nantbin">
+      <fileset basedir="JobServer/nantbin">
+        <include name="*.*"/>
+      </fileset>
+    </copy>
+  </target>
+  <target name="TaskServer" depends="Tkl.Jumbo.Dfs,Tkl.Jumbo.Jet,Tkl.Jumbo,TaskHost">
+    <mkdir dir="nantbin"/>
+    <nant buildfile="TaskServer/TaskServer.build" />
+    <copy todir="nantbin">
+      <fileset basedir="TaskServer/nantbin">
+        <include name="*.*"/>
+      </fileset>
+    </copy>
+  </target>
+  <target name="TaskHost" depends="Tkl.Jumbo.Dfs,Tkl.Jumbo.Jet,Tkl.Jumbo">
+    <mkdir dir="nantbin"/>
+    <nant buildfile="TaskHost/TaskHost.build" />
+    <copy todir="nantbin">
+      <fileset basedir="TaskHost/nantbin">
+        <include name="*.*"/>
+      </fileset>
+    </copy>
+  </target>
+  <target name="Tkl.Jumbo.Test.Tasks" depends="Tkl.Jumbo.Jet,Tkl.Jumbo">
+    <mkdir dir="nantbin"/>
+    <nant buildfile="Tkl.Jumbo.Test.Tasks/Tkl.Jumbo.Test.Tasks.build" />
+    <copy todir="nantbin">
+      <fileset basedir="Tkl.Jumbo.Test.Tasks/nantbin">
+        <include name="*.*"/>
+      </fileset>
+    </copy>
+  </target>
+  <target name="Tkl.Jumbo.Test" depends="Tkl.Jumbo,Tkl.Jumbo.Dfs,Tkl.Jumbo.Jet,NameServer,DataServer,JobServer,TaskServer,TaskHost,Tkl.Jumbo.Test.Tasks">
     <mkdir dir="nantbin"/>
     <nant buildfile="Tkl.Jumbo.Test/Tkl.Jumbo.Test.build" />
     <copy todir="nantbin">
-      <fileset basedir="Tkl.Jumbo.Dfs.Test/nantbin">
+      <fileset basedir="Tkl.Jumbo.Test/nantbin">
         <include name="*.*"/>
       </fileset>
     </copy>
