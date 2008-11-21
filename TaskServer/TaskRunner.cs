@@ -15,7 +15,7 @@ namespace TaskServerApplication
     {
         #region Nested types
 
-        private sealed class RunningTask
+        private sealed class RunningTask : IDisposable
         {
             private Process _process;
             private Thread _appDomainThread; // only used when running the task in an appdomain rather than a different process.
@@ -96,6 +96,20 @@ namespace TaskServerApplication
                 AppDomain.Unload(taskDomain);
                 OnProcessExited(EventArgs.Empty);
             }
+
+            #region IDisposable Members
+
+            public void Dispose()
+            {
+                if( _process != null )
+                {
+                    _process.Dispose();
+                    _process = null;
+                }
+                GC.SuppressFinalize(this);
+            }
+
+            #endregion
         }
 
         #endregion
@@ -176,6 +190,7 @@ namespace TaskServerApplication
                 {
                     Debug.Assert(_runningTasks[task].State > TaskStatus.Running);
                     _log.InfoFormat("Removing data pertaining to task {0}.", task);
+                    _runningTasks[task].Dispose();
                     _runningTasks.Remove(task);
                 }
             }
