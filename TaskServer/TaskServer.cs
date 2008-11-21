@@ -22,6 +22,8 @@ namespace TaskServerApplication
         private readonly List<JetHeartbeatData> _pendingHeartbeatData = new List<JetHeartbeatData>();
         private readonly TaskRunner _taskRunner;
         private static object _startupLock = new object();
+        private FileChannelServer _fileServer;
+        private FileChannelServer _fileServerIPv4;
 
         private TaskServer()
             : this(JetConfiguration.GetConfiguration(), DfsConfiguration.GetConfiguration())
@@ -84,6 +86,11 @@ namespace TaskServerApplication
             AddDataForNextHeartbeat(new TaskStatusChangedJetHeartbeatData(jobID, taskID, newStatus));
         }
 
+        public string GetJobDirectory(Guid jobID)
+        {
+            return System.IO.Path.Combine(Configuration.TaskServer.TaskDirectory, "job_" + jobID.ToString());
+        }
+
         #region ITaskServerUmbilicalProtocol Members
 
         public void ReportCompletion(Guid jobID, string taskID)
@@ -98,6 +105,11 @@ namespace TaskServerApplication
         #endregion
 
         #region ITaskServerClientProtocol Members
+
+        public int FileServerPort
+        {
+            get { return Configuration.TaskServer.FileServerPort; }
+        }
 
         public TaskStatus GetTaskStatus(string fullTaskID)
         {
@@ -124,6 +136,22 @@ namespace TaskServerApplication
 
             AddDataForNextHeartbeat(new StatusJetHeartbeatData() { MaxTasks = Configuration.TaskServer.MaxTasks });
 
+            if( System.Net.Sockets.Socket.OSSupportsIPv6 )
+            {
+                _fileServer = new FileChannelServer(this, System.Net.IPAddress.IPv6Any, Configuration.TaskServer.FileServerPort);
+                _fileServer.Start();
+                if( Configuration.TaskServer.ListenIPv4AndIPv6 )
+                {
+                    _fileServerIPv4 = new FileChannelServer(this, System.Net.IPAddress.Any, Configuration.TaskServer.FileServerPort);
+                    _fileServerIPv4.Start();
+                }
+            }
+            else
+            {
+                _fileServer = new FileChannelServer(this, System.Net.IPAddress.Any, Configuration.TaskServer.FileServerPort);
+                _fileServer.Start();
+            }
+
             while( _running )
             {
                 SendHeartbeat();
@@ -133,6 +161,10 @@ namespace TaskServerApplication
 
         private void ShutdownInternal()
         {
+            if( _fileServer != null )
+                _fileServer.Stop();
+            if( _fileServerIPv4 != null )
+                _fileServerIPv4.Stop();
             _taskRunner.Stop();
             _running = false;
             _log.InfoFormat("-----Task server is shutting down-----");

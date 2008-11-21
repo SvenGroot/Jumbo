@@ -55,6 +55,7 @@
   <ItemGroup>
     <None Include="..\dfs.config">
       <Link>dfs.config</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Include="App.config" />
     <None Include="DfsShell.build" />

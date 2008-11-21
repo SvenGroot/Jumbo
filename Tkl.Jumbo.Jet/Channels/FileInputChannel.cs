@@ -7,6 +7,7 @@ using System.Threading;
 using System.Net;
 using System.IO;
 using System.Diagnostics;
+using System.Net.Sockets;
 
 namespace Tkl.Jumbo.Jet.Channels
 {
@@ -114,8 +115,10 @@ namespace Tkl.Jumbo.Jet.Channels
 
         private void InputPollThread()
         {
-            // TODO: Adjust this for the situation when not all tasks are scheduled yet.
+            // The list is randomized so not all tasks hit the same TaskServer at once.
+            Random rnd = new Random();
             List<InputTask> filesLeft = (from taskID in _channelConfig.InputTasks
+                                         orderby rnd.Next()
                                          select new InputTask()
                                          {
                                              TaskID = taskID,
@@ -127,57 +130,98 @@ namespace Tkl.Jumbo.Jet.Channels
             List<InputTask> completedTasks = new List<InputTask>();
             while( filesLeft.Count > 0 )
             {
-                completedTasks.Clear();
-                foreach( InputTask task in filesLeft )
-                {
-                    if( task.TaskServerAddress == null )
-                    {
-                        task.TaskServerAddress = _jobServer.GetTaskServerForTask(_jobID, task.TaskID);
-                        if( task.TaskServerAddress != null )
-                            task.TaskServer = JetClient.CreateTaskServerClient(task.TaskServerAddress);
-                    }
-                    if( task.TaskServer != null )
-                    {
-                        task.Status = task.TaskServer.GetTaskStatus(task.FullTaskID);
-                        if( task.Status > TaskStatus.Running )
-                        {
-                            if( task.Status == TaskStatus.Completed )
-                            {
-                                completedTasks.Add(task);
-                            }
-                            else
-                            {
-                                _log.ErrorFormat("Task {0} failed, status = {1}.", task.TaskID, task.Status);
-                                throw new Exception(); // TODO: Recover from this by waiting for a reschedule and trying again.
-                            }
-                        }
-                    }
-                }
+                CheckForCompletedTasks(filesLeft, completedTasks);
 
-                foreach( InputTask task in completedTasks )
-                {
-                    _log.InfoFormat("Task {0} output file is now available.", task.TaskID);
-                    if( task.TaskServerAddress.HostName == Dns.GetHostName() )
-                    {
-                        string taskOutputDirectory = task.TaskServer.GetOutputFileDirectory(task.FullTaskID);
-                        _fileNames.Add(Path.Combine(taskOutputDirectory, FileOutputChannel.CreateChannelFileName(task.TaskID, _channelConfig.OutputTaskID)));
-                        bool removed = filesLeft.Remove(task);
-                        Debug.Assert(removed);
-                        if( filesLeft.Count == 0 )
-                        {
-                            _isReady = true;
-                            _log.Info("Input channel is now ready.");
-                            _readyEvent.Set();
-                        }
-                    }
-                    else
-                    {
-                        _log.ErrorFormat("Remote task download not supported yet.");
-                        throw new NotImplementedException("Remote task download not supported yet.");
-                    }
-                }
+                DownloadCompletedFiles(filesLeft, completedTasks);
                 if( filesLeft.Count > 0 )
                     Thread.Sleep(_pollingInterval);
+            }
+        }
+
+        private void DownloadCompletedFiles(List<InputTask> filesLeft, List<InputTask> completedTasks)
+        {
+            foreach( InputTask task in completedTasks )
+            {
+                _log.InfoFormat("Task {0} output file is now available.", task.TaskID);
+                string fileName = null;
+                if( !_channelConfig.ForceFileDownload && task.TaskServerAddress.HostName == Dns.GetHostName() )
+                {
+                    string taskOutputDirectory = task.TaskServer.GetOutputFileDirectory(task.FullTaskID);
+                    fileName = Path.Combine(taskOutputDirectory, FileOutputChannel.CreateChannelFileName(task.TaskID, _channelConfig.OutputTaskID));
+                }
+                else
+                {
+                    fileName = DownloadFile(task, _channelConfig.OutputTaskID);
+                }
+                _fileNames.Add(fileName);
+                bool removed = filesLeft.Remove(task);
+                Debug.Assert(removed);
+                if( filesLeft.Count == 0 )
+                {
+                    _isReady = true;
+                    _log.Info("Input channel is now ready.");
+                    _readyEvent.Set();
+                }
+            }
+        }
+
+        private void CheckForCompletedTasks(List<InputTask> filesLeft, List<InputTask> completedTasks)
+        {
+            completedTasks.Clear();
+            foreach( InputTask task in filesLeft )
+            {
+                if( task.TaskServerAddress == null )
+                {
+                    task.TaskServerAddress = _jobServer.GetTaskServerForTask(_jobID, task.TaskID);
+                    if( task.TaskServerAddress != null )
+                        task.TaskServer = JetClient.CreateTaskServerClient(task.TaskServerAddress);
+                }
+                if( task.TaskServer != null )
+                {
+                    task.Status = task.TaskServer.GetTaskStatus(task.FullTaskID);
+                    if( task.Status > TaskStatus.Running )
+                    {
+                        if( task.Status == TaskStatus.Completed )
+                        {
+                            completedTasks.Add(task);
+                        }
+                        else
+                        {
+                            _log.ErrorFormat("Task {0} failed, status = {1}.", task.TaskID, task.Status);
+                            throw new Exception(); // TODO: Recover from this by waiting for a reschedule and trying again.
+                        }
+                    }
+                }
+            }
+        }
+
+        private string DownloadFile(InputTask task, string outputTaskId)
+        {
+            string fileToDownload = FileOutputChannel.CreateChannelFileName(task.TaskID, outputTaskId);
+            string targetFile = Path.Combine(_jobDirectory, string.Format("{0}_{1}.input", task.TaskID, outputTaskId));
+
+            int port = task.TaskServer.FileServerPort;
+            _log.InfoFormat("Downloading file {0} from server {1}:{2}.", fileToDownload, task.TaskServerAddress.HostName, port);
+            using( TcpClient client = new TcpClient(task.TaskServerAddress.HostName, port) )
+            using( NetworkStream stream = client.GetStream() )
+            using( BinaryWriter writer = new BinaryWriter(stream) )
+            using( BinaryReader reader = new BinaryReader(stream) )
+            {
+                writer.Write(_jobID.ToByteArray());
+                writer.Write(fileToDownload);
+
+                long size = reader.ReadInt64();
+                if( size >= 0 )
+                {
+                    using( FileStream fileStream = File.Create(targetFile) )
+                    {
+                        stream.CopySize(fileStream, size);
+                    }
+                    _log.InfoFormat("Download complete, file stored in {0}.", targetFile);
+                    return targetFile;
+                }
+                else
+                    throw new Exception(); // TODO: Recover from this.
             }
         }
     }

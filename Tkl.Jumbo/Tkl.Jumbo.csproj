@@ -50,6 +50,7 @@
   <ItemGroup>
     <Compile Include="ClientChannelSink.cs" />
     <Compile Include="ClientChannelSinkProvider.cs" />
+    <Compile Include="Extensions.cs" />
     <Compile Include="IO\Int32Writable.cs" />
     <Compile Include="IO\IWritable.cs" />
     <Compile Include="IO\KeyValuePairWritable.cs" />

@@ -19,6 +19,11 @@ namespace TaskServerApplication
 
         #region ITaskServerClientProtocol Members
 
+        public int FileServerPort
+        {
+            get { return TaskServer.Instance.FileServerPort; }
+        }
+
         public TaskStatus GetTaskStatus(string fullTaskID)
         {
             return TaskServer.Instance.GetTaskStatus(fullTaskID);

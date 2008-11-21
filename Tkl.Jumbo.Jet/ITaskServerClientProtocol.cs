@@ -12,6 +12,11 @@ namespace Tkl.Jumbo.Jet
     public interface ITaskServerClientProtocol
     {
         /// <summary>
+        /// Gets the port on which the TCP server for the file channel listens.
+        /// </summary>
+        int FileServerPort { get; }
+
+        /// <summary>
         /// Gets the current status of a task.
         /// </summary>
         /// <param name="fullTaskID">The full ID of the task.</param>

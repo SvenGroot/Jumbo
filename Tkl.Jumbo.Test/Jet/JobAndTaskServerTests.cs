@@ -15,14 +15,23 @@ namespace Tkl.Jumbo.Test.Jet
 {
     [TestFixture]
     [Category("JetClusterTest")]
-    public class JobServerTests
+    public class JobAndTaskServerTests
     {
         private TestJetCluster _cluster;
+        private const string _fileName = "/jobinput.txt";
+        private int _lines;
 
         [TestFixtureSetUp]
         public void Setup()
         {
-            _cluster = new TestJetCluster(null, true, 2);
+            _cluster = new TestJetCluster(16777216, true, 2);
+            DfsClient dfsClient = new DfsClient(Dfs.TestDfsCluster.CreateClientConfig());
+            const int size = 50000000;
+            using( DfsOutputStream stream = dfsClient.CreateFile(_fileName) )
+            {
+                _lines = Utilities.GenerateDataLines(stream, size);
+            }
+            Utilities.TraceLineAndFlush("File generation complete.");
         }
 
         [TestFixtureTearDown]
@@ -34,17 +43,20 @@ namespace Tkl.Jumbo.Test.Jet
         [Test]
         public void TestJobExecution()
         {
-            DfsClient dfsClient = new DfsClient(Dfs.TestDfsCluster.CreateClientConfig());
-            const int size = 150000000;
-            const string fileName = "/jobinput.txt";
-            const string outputFileName = "/joboutput.txt";
-            int lines;
-            using( DfsOutputStream stream = dfsClient.CreateFile("/jobinput.txt") )
-            {
-                lines = Utilities.GenerateDataLines(stream, size);
-            }
+            RunJob(false, "/joboutput.txt");
+        }
 
-            JobConfiguration config = CreateConfiguration(dfsClient, fileName, outputFileName);
+        [Test]
+        public void TestJobExecutionTcpFileDownload()
+        {
+            RunJob(true, "/joboutput2.txt");
+        }
+
+        private void RunJob(bool forceFileDownload, string outputFileName)
+        {
+            DfsClient dfsClient = new DfsClient(Dfs.TestDfsCluster.CreateClientConfig());
+
+            JobConfiguration config = CreateConfiguration(dfsClient, _fileName, outputFileName, forceFileDownload);
 
             IJobServerClientProtocol target = JetClient.CreateJobServerClient(TestJetCluster.CreateClientConfig());
             Job job = target.CreateJob();
@@ -62,13 +74,13 @@ namespace Tkl.Jumbo.Test.Jet
             using( DfsInputStream stream = dfsClient.OpenFile(outputFileName) )
             using( StreamReader reader = new StreamReader(stream) )
             {
-                Assert.AreEqual(lines, Convert.ToInt32(reader.ReadLine()));
+                Assert.AreEqual(_lines, Convert.ToInt32(reader.ReadLine()));
             }
 
             Console.WriteLine(config);
         }
 
-        private static JobConfiguration CreateConfiguration(DfsClient dfsClient, string fileName, string outputFileName)
+        private static JobConfiguration CreateConfiguration(DfsClient dfsClient, string fileName, string outputFileName, bool forceFileDownload)
         {
             Tkl.Jumbo.Dfs.File file = dfsClient.NameServer.GetFileInfo(fileName);
             int blockSize = dfsClient.NameServer.BlockSize;
@@ -112,7 +124,8 @@ namespace Tkl.Jumbo.Test.Jet
             {
                 ChannelType = ChannelType.File,
                 InputTasks = tasks,
-                OutputTaskID = "OutputTask"
+                OutputTaskID = "OutputTask",
+                ForceFileDownload = forceFileDownload
             });
             return config;
         }

@@ -54,5 +54,15 @@ namespace Tkl.Jumbo.Jet
             get { return (int)this["maxTasks"]; }
             set { this["maxTasks"] = value; }
         }
+
+        /// <summary>
+        /// The port number that the TCP server for file channels listens on.
+        /// </summary>
+        [ConfigurationProperty("fileServerPort", DefaultValue = 9502, IsRequired = true, IsKey = false)]
+        public int FileServerPort
+        {
+            get { return (int)this["fileServerPort"]; }
+            set { this["fileServerPort"] = value; }
+        }
     }
 }

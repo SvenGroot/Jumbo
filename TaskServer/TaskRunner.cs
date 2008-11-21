@@ -249,7 +249,7 @@ namespace TaskServerApplication
         private void RunTask(RunTaskJetHeartbeatResponse task)
         {
             _log.InfoFormat("Running task {{{0}}}_{1}.", task.Job.JobID, task.TaskID);
-            string jobDirectory = IO.Path.Combine(_taskServer.Configuration.TaskServer.TaskDirectory, "job_" + task.Job.JobID.ToString());
+            string jobDirectory = _taskServer.GetJobDirectory(task.Job.JobID);
             if( !IO.Directory.Exists(jobDirectory) )
             {
                 IO.Directory.CreateDirectory(jobDirectory);

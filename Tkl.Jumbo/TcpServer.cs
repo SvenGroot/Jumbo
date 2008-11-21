@@ -34,6 +34,14 @@ namespace Tkl.Jumbo
         }
 
         /// <summary>
+        /// Gets the underlying <see cref="EndPoint"/> for the current <see cref="TcpServer"/>.
+        /// </summary>
+        public EndPoint LocalEndPoint
+        {
+            get { return _listener.LocalEndpoint; }
+        }
+
+        /// <summary>
         /// Starts listening for incoming connections.
         /// </summary>
         /// <remarks>

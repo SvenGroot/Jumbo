@@ -31,6 +31,21 @@ namespace Tkl.Jumbo.Jet.Channels
         public string OutputTaskID { get; set; }
 
         /// <summary>
+        /// Gets or sets a value that indicates whether the file channel should always use TCP downloads.
+        /// </summary>
+        /// <value>
+        /// For a <see cref="ChannelType"/> value of <see cref="Tkl.Jumbo.Jet.Channels.ChannelType.File"/>, <see langword="true"/>
+        /// to indicate that it should always use TCP to download the files even if the input task is on the same physical
+        /// host as the output task; <see langword="false"/> to indicate it should access the output file directly if the
+        /// input task is local. This property has no effect for other types of channels.
+        /// </value>
+        /// <remarks>
+        /// This property is primarily used for testing of the TCP server.
+        /// </remarks>
+        [XmlAttribute("forceFileDownload")]
+        public bool ForceFileDownload { get; set; }
+
+        /// <summary>
         /// Creates an output channel for use by the input task.
         /// </summary>
         /// <param name="jobDirectory">The directory where files related to the job are stored.</param>
