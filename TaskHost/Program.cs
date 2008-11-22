@@ -41,12 +41,12 @@ namespace TaskHost
             string logFile = Path.Combine(jobDirectory, taskID + ".log");
             ConfigureLog(logFile);
 
+            _log.InfoFormat("Running task; job ID = \"{0}\", job directory = \"{1}\", task ID = \"{2}\", DFS job directory = \"{3}\"", jobID, jobDirectory, taskID, dfsJobDirectory);
+            _log.LogEnvironmentInformation();
+
             ITaskServerUmbilicalProtocol umbilical = JetClient.CreateTaskServerUmbilicalClient(umbilicalPort);
             _client = new DfsClient(nameServerHost, nameServerPort);
             _jobServer = JetClient.CreateJobServerClient(jobServerHost, jobServerPort);
-
-            _log.InfoFormat("Running task; job ID = \"{0}\", job directory = \"{1}\", task ID = \"{2}\", DFS job directory = \"{3}\"", jobID, jobDirectory, taskID, dfsJobDirectory);
-            _log.LogEnvironmentInformation();
 
             JobConfiguration config = JobConfiguration.LoadXml(Path.Combine(jobDirectory, Job.JobConfigFileName));
 
@@ -143,8 +143,8 @@ namespace TaskHost
                 Type recordReaderType = Type.GetType(taskConfig.DfsInput.RecordReaderType);
                 long offset;
                 long size;
-                int blockSize = _client.NameServer.BlockSize;
-                offset = blockSize * taskConfig.DfsInput.Block;
+                long blockSize = _client.NameServer.BlockSize;
+                offset = blockSize * (long)taskConfig.DfsInput.Block;
                 size = Math.Min(blockSize, _client.NameServer.GetFileInfo(taskConfig.DfsInput.Path).Size - offset);
                 return (RecordReader<T>)Activator.CreateInstance(recordReaderType, inputStream, offset, size);
             }
