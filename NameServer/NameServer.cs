@@ -304,6 +304,26 @@ namespace NameServerApplication
             return metrics;
         }
 
+        public int GetDataServerBlockCount(ServerAddress dataServer, Guid[] blocks)
+        {
+            _log.DebugFormat("GetDataServerBlockCount, dataServer = {{{0}}}", dataServer);
+            if( dataServer == null )
+                throw new ArgumentNullException("dataServer");
+            if( blocks == null )
+                throw new ArgumentNullException("blocks");
+            lock( _dataServers )
+            {
+                DataServerInfo server;
+                if( !_dataServers.TryGetValue(dataServer, out server) )
+                {
+                    server = (from s in _dataServers.Values
+                              where s.Address.HostName == dataServer.HostName
+                              select s).First();
+                }
+                return server.Blocks.Intersect(blocks).Count();
+            }
+        }
+
         #endregion
 
         #region INameServerHeartbeatProtocol Members

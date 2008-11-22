@@ -77,6 +77,11 @@ namespace NameServerApplication
             get { return NameServer.Instance.BlockSize; }
         }
 
+        public int GetDataServerBlockCount(ServerAddress dataServer, Guid[] blocks)
+        {
+            return NameServer.Instance.GetDataServerBlockCount(dataServer, blocks);
+        }
+
         #endregion
 
         #region INameServerHeartbeatProtocol Members

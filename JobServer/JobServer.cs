@@ -17,6 +17,7 @@ namespace JobServerApplication
         private readonly Dictionary<Guid, JobInfo> _jobs = new Dictionary<Guid, JobInfo>();
         private readonly List<JobInfo> _jobsNeedingCleanup = new List<JobInfo>();
         private readonly DfsClient _dfsClient;
+        private readonly Scheduling.IScheduler _scheduler;
 
         private JobServer(JetConfiguration configuration, DfsConfiguration dfsConfiguration)
         {
@@ -25,6 +26,8 @@ namespace JobServerApplication
 
             Configuration = configuration;
             _dfsClient = new DfsClient(dfsConfiguration);
+
+            _scheduler = (Scheduling.IScheduler)Activator.CreateInstance(Type.GetType("JobServerApplication.Scheduling." + configuration.JobServer.Scheduler));
         }
 
         public static JobServer Instance { get; private set; }
@@ -312,36 +315,9 @@ namespace JobServerApplication
         private void ScheduleTasks(JobInfo job)
         {
             // TODO: This is not at all how scheduling should work.
-            int taskIndex = 0;
             lock( _taskServers )
             {
-                bool outOfSlots = false;
-                while( !outOfSlots && taskIndex < job.Tasks.Count )
-                {
-                    outOfSlots = true;
-                    foreach( var item in _taskServers )
-                    {
-                        while( taskIndex < job.Tasks.Count && job.Tasks.Values[taskIndex].State != TaskState.Created )
-                            ++taskIndex;
-                        if( taskIndex == job.Tasks.Count )
-                            break;
-                        TaskServerInfo taskServer = item.Value;
-                        if( taskServer.AvailableTasks > 0 )
-                        {
-                            TaskInfo task = job.Tasks.Values[taskIndex];
-                            taskServer.AssignedTasks.Add(task);
-                            task.Server = taskServer;
-                            task.State = TaskState.Scheduled;
-                            outOfSlots = false;
-                            ++taskIndex;
-                            --job.UnscheduledTasks;
-                            job.TaskServers.Add(taskServer.Address); // Record all servers involved with the task to give them cleanup instructions later.
-                            _log.InfoFormat("Task {0} has been assigned to server {1}.", task.GlobalID, taskServer.Address);
-                        }
-                    }
-                }
-                if( outOfSlots )
-                    _log.InfoFormat("Job {{{0}}}: not all task could be immediately scheduled, there are {1} tasks left.", job.Job.JobID, job.UnscheduledTasks);
+                _scheduler.ScheduleTasks(_taskServers, job, _dfsClient);
             }
         }
     }

@@ -98,6 +98,18 @@ namespace Tkl.Jumbo.Dfs
         DfsMetrics GetMetrics();
 
         /// <summary>
+        /// Gets the number of blocks from the specified block list that the data server has.
+        /// </summary>
+        /// <param name="dataServer">The data server whose blocks to check.</param>
+        /// <param name="blocks">The blocks to check for.</param>
+        /// <returns>The number of blocks.</returns>
+        /// <remarks>
+        /// This function returns the number of items in the intersection of <paramref name="blocks"/>
+        /// and the block list for the specified server.
+        /// </remarks>
+        int GetDataServerBlockCount(ServerAddress dataServer, Guid[] blocks);
+
+        /// <summary>
         /// Gets a value that indicates whether safe mode is on or off.
         /// </summary>
         bool SafeMode { get; }

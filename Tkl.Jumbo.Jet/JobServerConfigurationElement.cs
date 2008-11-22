@@ -15,15 +15,15 @@ namespace Tkl.Jumbo.Jet
     /// </remarks>
     public class JobServerConfigurationElement : ConfigurationElement
     {
-            /// <summary>
-            /// Gets or sets the host name of the JobServer.
-            /// </summary>
-            [ConfigurationProperty("hostName", DefaultValue = "localhost", IsRequired = true, IsKey = false)]
-            public string HostName
-            {
-                get { return (string)this["hostName"]; }
-                set { this["hostName"] = value; }
-            }
+        /// <summary>
+        /// Gets or sets the host name of the JobServer.
+        /// </summary>
+        [ConfigurationProperty("hostName", DefaultValue = "localhost", IsRequired = true, IsKey = false)]
+        public string HostName
+        {
+            get { return (string)this["hostName"]; }
+            set { this["hostName"] = value; }
+        }
 
         /// <summary>
         /// Gets or sets the port number on which the JobServer's RPC server listens.
@@ -57,6 +57,16 @@ namespace Tkl.Jumbo.Jet
         {
             get { return (string)this["jetDfsPath"]; }
             set { this["jetDfsPath"] = value; }
-        }    
+        }
+
+        /// <summary>
+        /// Gets or sets the scheduler to use for scheduling task.
+        /// </summary>
+        [ConfigurationProperty("scheduler", DefaultValue = "DataLocalScheduler", IsRequired = false, IsKey = false)]
+        public string Scheduler
+        {
+            get { return (string)this["scheduler"]; }
+            set { this["scheduler"] = value; }
+        }
     }
 }
