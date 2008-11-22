@@ -16,5 +16,12 @@ namespace Tkl.Jumbo.Jet
         /// <param name="jobID">The job ID of the job containing the task.</param>
         /// <param name="taskID">The task ID.</param>
         void ReportCompletion(Guid jobID, string taskID);
+
+        /// <summary>
+        /// Reports the TaskHost process has started and connected to the server.
+        /// </summary>
+        /// <param name="jobID">The job ID.</param>
+        /// <param name="taskID">The task ID.</param>
+        void ReportStart(Guid jobID, string taskID);
     }
 }

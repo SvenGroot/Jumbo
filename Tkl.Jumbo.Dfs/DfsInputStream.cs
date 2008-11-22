@@ -7,6 +7,7 @@ using System.Net.Sockets;
 using System.Runtime.Serialization.Formatters.Binary;
 using System.Diagnostics;
 using System.Threading;
+using System.Net;
 
 namespace Tkl.Jumbo.Dfs
 {
@@ -16,6 +17,8 @@ namespace Tkl.Jumbo.Dfs
     /// <threadsafety static="true" instance="false" />
     public class DfsInputStream : Stream
     {
+        private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(DfsInputStream));
+
         private readonly INameServerClientProtocol _nameServer;
         private readonly File _file;
         private long _position;
@@ -291,6 +294,7 @@ namespace Tkl.Jumbo.Dfs
 
         private void ReadBufferThread()
         {
+            Random rnd = new Random();
             try
             {
                 long position = _position;
@@ -302,7 +306,12 @@ namespace Tkl.Jumbo.Dfs
                     Guid block = _file.Blocks[blockIndex];
                     ServerAddress[] servers = _nameServer.GetDataServersForBlock(block);
 
-                    ServerAddress server = servers[0];
+                    ServerAddress server;
+                    if( servers[0].HostName == Dns.GetHostName() )
+                        server = servers[0];
+                    else
+                        server = servers[rnd.Next(0, servers.Length)];
+                    _log.DebugFormat("Connecting to server {0} to read block {1}.", server, block);
                     using( TcpClient client = new TcpClient(server.HostName, server.Port) )
                     {
                         DataServerClientProtocolReadHeader header = new DataServerClientProtocolReadHeader();

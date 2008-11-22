@@ -102,6 +102,11 @@ namespace TaskServerApplication
             _taskRunner.ReportCompletion(fullTaskID);
         }
 
+        public void ReportStart(Guid jobID, string taskID)
+        {
+            _log.InfoFormat("TaskHost for {0} has initialized.", Job.CreateFullTaskID(jobID, taskID));
+        }
+
         #endregion
 
         #region ITaskServerClientProtocol Members

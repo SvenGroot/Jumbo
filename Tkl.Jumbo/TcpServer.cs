@@ -107,7 +107,7 @@ namespace Tkl.Jumbo
             {
                 using( TcpClient client = _listener.EndAcceptTcpClient(ar) )
                 {
-                    _log.Info("Connection accepted.");
+                    _log.InfoFormat("Connection accepted from {0}.", client.Client.RemoteEndPoint);
                     HandleConnection(client);
                 }
             }

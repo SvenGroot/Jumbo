@@ -15,6 +15,11 @@ namespace TaskServerApplication
             TaskServer.Instance.ReportCompletion(jobID, taskID);
         }
 
+        public void ReportStart(Guid jobID, string taskID)
+        {
+            TaskServer.Instance.ReportStart(jobID, taskID);
+        }
+
         #endregion
 
         #region ITaskServerClientProtocol Members
