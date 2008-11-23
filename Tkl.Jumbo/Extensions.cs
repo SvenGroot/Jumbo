@@ -79,7 +79,7 @@ namespace Tkl.Jumbo
                     throw new EndOfStreamException("Reached end of stream before specified number of bytes was copied.");
                 }
                 dest.Write(buffer, 0, bytesRead);
-                bytesLeft -= size;
+                bytesLeft -= bytesRead;
             } while( bytesLeft > 0 );
         }
     }
