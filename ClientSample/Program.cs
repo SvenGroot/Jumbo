@@ -77,7 +77,7 @@ namespace ClientSample
             Stopwatch sw = new Stopwatch();
             sw.Start();
 
-            StartJob(dfsClient, jobServer);
+            StartJob(dfsClient, jobServer, typeof(WordCountTask), typeof(WordCountAggregateTask), "/large.txt");
             //dfsClient.NameServer.Move("/JumboJet/job_{57f5850e-7637-4d08-87eb-03b9cfef9a90}/Task3", "/foo.txt");
 
             sw.Stop();
@@ -88,15 +88,14 @@ namespace ClientSample
             Console.ReadKey();
         }
 
-        private static void StartJob(DfsClient dfsClient, IJobServerClientProtocol jobServer)
+        private static void StartJob(DfsClient dfsClient, IJobServerClientProtocol jobServer, Type inputTaskType, Type aggregateTaskType, string fileName)
         {
-            const string fileName = "/large.txt";
             Tkl.Jumbo.Dfs.File file = dfsClient.NameServer.GetFileInfo(fileName);
             int blockSize = dfsClient.NameServer.BlockSize;
 
             JobConfiguration config = new JobConfiguration()
             {
-                AssemblyFileName = "ClientSample.exe",
+                AssemblyFileName = Path.GetFileName(inputTaskType.Assembly.Location),
                 Tasks = new List<TaskConfiguration>(),
                 Channels = new List<ChannelConfiguration>()
             };
@@ -106,8 +105,8 @@ namespace ClientSample
             {
                 config.Tasks.Add(new TaskConfiguration()
                 {
-                    TaskID = "Task" + (x + 1).ToString(),
-                    TypeName = typeof(MyTask).FullName,
+                    TaskID = inputTaskType.Name + (x + 1).ToString(),
+                    TypeName = inputTaskType.FullName,
                     DfsInput = new TaskDfsInput()
                     {
                         Path = fileName,
@@ -115,17 +114,17 @@ namespace ClientSample
                         RecordReaderType = typeof(LineRecordReader).AssemblyQualifiedName
                     }
                 });
-                tasks[x] = "Task" + (x + 1).ToString();
+                tasks[x] = inputTaskType.Name + (x + 1).ToString();
             }
 
             config.Tasks.Add(new TaskConfiguration()
             {
-                TaskID = "OutputTask",
-                TypeName = typeof(MyTask2).FullName,
+                TaskID = aggregateTaskType.Name,
+                TypeName = aggregateTaskType.FullName,
                 DfsOutput = new TaskDfsOutput()
                 {
                     Path = "/output/count.txt",
-                    RecordWriterType = typeof(TextRecordWriter<Int32Writable>).AssemblyQualifiedName
+                    RecordWriterType = typeof(TextRecordWriter<KeyValuePairWritable<StringWritable, Int32Writable>>).AssemblyQualifiedName
                 }
             });
 
@@ -133,7 +132,7 @@ namespace ClientSample
             {
                 ChannelType = ChannelType.File,
                 InputTasks = tasks,
-                OutputTaskID = "OutputTask"
+                OutputTaskID = aggregateTaskType.Name
             });
 
             using( FileStream stream = System.IO.File.Create("job.xml") )
@@ -149,7 +148,7 @@ namespace ClientSample
             {
                 config.SaveXml(stream);
             }
-            dfsClient.UploadFile(typeof(MyTask).Assembly.Location, DfsPath.Combine(job.Path, "ClientSample.exe"));
+            dfsClient.UploadFile(inputTaskType.Assembly.Location, DfsPath.Combine(job.Path, config.AssemblyFileName));
 
             jobServer.RunJob(job.JobID);
         }
