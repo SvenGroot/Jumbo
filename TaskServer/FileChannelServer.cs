@@ -52,7 +52,13 @@ namespace TaskServerApplication
                     }
                     catch( Exception )
                     {
-                        writer.Write(-1L);
+                        try
+                        {
+                            writer.Write(-1L);
+                        }
+                        catch( Exception )
+                        {
+                        }
                         throw;
                     }
                 }
