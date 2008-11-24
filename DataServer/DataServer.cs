@@ -116,13 +116,7 @@ namespace DataServerApplication
 
         public FileStream OpenBlock(Guid blockID)
         {
-            lock( _blocks )
-            {
-                if( !_blocks.Contains(blockID) )
-                    throw new ArgumentException("Invalid block.");
-
-                return System.IO.File.OpenRead(Path.Combine(_blockStorageDirectory, blockID.ToString()));
-            }
+            return System.IO.File.OpenRead(Path.Combine(_blockStorageDirectory, blockID.ToString()));
         }
 
         public int GetBlockSize(Guid blockID)
@@ -131,9 +125,9 @@ namespace DataServerApplication
             {
                 if( !_blocks.Contains(blockID) )
                     throw new ArgumentException("Invalid block.");
-
-                return (int)new FileInfo(Path.Combine(_blockStorageDirectory, blockID.ToString())).Length;
             }
+
+            return (int)new FileInfo(Path.Combine(_blockStorageDirectory, blockID.ToString())).Length;
         }
 
         public void CompleteBlock(Guid blockID, int size)

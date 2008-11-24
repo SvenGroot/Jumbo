@@ -215,6 +215,7 @@ namespace DataServerApplication
 
             try
             {
+                _log.Debug("Open block file.");
                 using( FileStream blockFile = _dataServer.OpenBlock(header.BlockID) )
                 using( BinaryReader reader = new BinaryReader(blockFile) )
                 using( BinaryWriter writer = new BinaryWriter(stream) )
