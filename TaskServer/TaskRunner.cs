@@ -31,23 +31,6 @@ namespace TaskServerApplication
                 JobDirectory = jobDirectory;
                 DfsJobDirectory = dfsJobDirectory;
                 _taskServer = taskServer;
-                if( Debugger.IsAttached )
-                    RunTaskAppDomain();
-                else
-                {
-                    _log.DebugFormat("Launching new process for task {0}.", FullTaskID);
-                    ProcessStartInfo startInfo = new ProcessStartInfo("TaskHost.exe", string.Format("\"{0}\" \"{1}\" \"{2}\" \"{3}\" {4} {5} {6} {7} {8}", jobID, jobDirectory, taskID, dfsJobDirectory, taskServer.Configuration.TaskServer.Port, taskServer.Configuration.JobServer.HostName, taskServer.Configuration.JobServer.Port, taskServer.DfsConfiguration.NameServer.HostName, taskServer.DfsConfiguration.NameServer.Port));
-                    startInfo.UseShellExecute = false;
-                    startInfo.CreateNoWindow = true;
-                    RuntimeEnvironment.ModifyProcessStartInfo(startInfo);
-                    _process = new Process();
-                    _process.StartInfo = startInfo;
-                    _process.EnableRaisingEvents = true;
-                    _process.Exited += new EventHandler(_process_Exited);
-                    _process.Start();
-                }
-                State = TaskStatus.Running;
-                _log.DebugFormat("Host process for task {0} has started.", FullTaskID);
             }
 
             public TaskStatus State { get; set; }
@@ -61,6 +44,27 @@ namespace TaskServerApplication
             public string FullTaskID { get; private set; }
 
             public string DfsJobDirectory { get; private set; }
+
+            public void Run()
+            {
+                if( Debugger.IsAttached )
+                    RunTaskAppDomain();
+                else
+                {
+                    _log.DebugFormat("Launching new process for task {0}.", FullTaskID);
+                    ProcessStartInfo startInfo = new ProcessStartInfo("TaskHost.exe", string.Format("\"{0}\" \"{1}\" \"{2}\" \"{3}\" {4} {5} {6} {7} {8}", JobID, JobDirectory, TaskID, DfsJobDirectory, _taskServer.Configuration.TaskServer.Port, _taskServer.Configuration.JobServer.HostName, _taskServer.Configuration.JobServer.Port, _taskServer.DfsConfiguration.NameServer.HostName, _taskServer.DfsConfiguration.NameServer.Port));
+                    startInfo.UseShellExecute = false;
+                    startInfo.CreateNoWindow = true;
+                    RuntimeEnvironment.ModifyProcessStartInfo(startInfo);
+                    _process = new Process();
+                    _process.StartInfo = startInfo;
+                    _process.EnableRaisingEvents = true;
+                    _process.Exited += new EventHandler(_process_Exited);
+                    _process.Start();
+                    _log.DebugFormat("Host process for task {0} has started, pid = {1}.", FullTaskID, _process.Id);
+                }
+                State = TaskStatus.Running;
+            }
 
             public void Kill()
             {
@@ -255,12 +259,14 @@ namespace TaskServerApplication
                 IO.Directory.CreateDirectory(jobDirectory);
                 _dfsClient.DownloadDirectory(task.Job.Path, jobDirectory);
             }
+            RunningTask runningTask;
             lock( _runningTasks )
             {
-                RunningTask runningTask = new RunningTask(task.Job.JobID, jobDirectory, task.TaskID, task.Job.Path, _taskServer);
+                runningTask = new RunningTask(task.Job.JobID, jobDirectory, task.TaskID, task.Job.Path, _taskServer);
                 runningTask.ProcessExited += new EventHandler(RunningTask_ProcessExited);
                 _runningTasks.Add(runningTask.FullTaskID, runningTask);
             }
+            runningTask.Run();
         }
 
         private void RunningTask_ProcessExited(object sender, EventArgs e)
