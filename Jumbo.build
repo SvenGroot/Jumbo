@@ -5,7 +5,9 @@
       <fileset>
         <include name="jumbo-config.sh"/>
         <include name="run-server.sh"/>
-        <include name="run-servers.sh"/>
+        <include name="run-dfs.sh"/>
+        <include name="run-jet.sh"/>
+        <include name="nunit.sh"/>
       </fileset>
     </copy>
   </target>
