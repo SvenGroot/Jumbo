@@ -188,6 +188,18 @@ namespace DfsShell
             nameServer.Delete(path, recursive);
         }
 
+        private static void Move(INameServerClientProtocol nameServer, string[] args)
+        {
+            if( args.Length != 3 )
+                Console.WriteLine("Usage: DfsShell mv <from> <to>");
+            else
+            {
+                string from = args[1];
+                string to = args[2];
+                nameServer.Move(from, to);
+            }
+        }
+
         private static void PrintFileInfo(INameServerClientProtocol nameServer, string[] args)
         {
             if( args.Length != 2 )
@@ -289,6 +301,7 @@ namespace DfsShell
             result.Add("safemode", PrintSafeMode);
             result.Add("waitsafemode", WaitSafeMode);
             result.Add("cat", PrintFile);
+            result.Add("mv", Move);
 
             return result;
         }

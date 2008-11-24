@@ -17,68 +17,59 @@ using Tkl.Jumbo.Jet.Channels;
 
 namespace ClientSample
 {
-    public class MyTask : ITask<StringWritable, Int32Writable>
-    {
-        private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(MyTask));
-
-        #region ITask Members
-
-        public void Run(RecordReader<StringWritable> input, RecordWriter<Int32Writable> writer)
-        {
-            _log.Info("Running");
-            int lines = 0;
-            StringWritable line;
-            while( input.ReadRecord(out line) )
-            {
-                ++lines;
-            }
-            _log.Info(lines);
-            if( writer != null )
-                writer.WriteRecord(lines);
-            _log.Info("Done");
-        }
-
-        #endregion
-    }
-
-    public class MyTask2 : ITask<Int32Writable, Int32Writable>
-    {
-        private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(MyTask));
-
-        #region ITask<Int32Writable,Int32Writable> Members
-
-        public void Run(RecordReader<Int32Writable> input, RecordWriter<Int32Writable> output)
-        {
-            _log.InfoFormat("Running, input = {0}, output = {1}", input, output);
-            int totalLines = 0;
-            foreach( Int32Writable value in input.EnumerateRecords() )
-            {
-                totalLines += value.Value;
-                _log.Info(value);
-            }
-            _log.InfoFormat("Total: {0}", totalLines);
-            output.WriteRecord(totalLines);
-        }
-
-        #endregion
-    }
-
     class Program
     {
         static void Main(string[] args)
         {
+            if( args.Length < 2 || args.Length > 3 )
+            {
+                Console.WriteLine("Usage: ClientSample.exe <task> <inputfile> [outputpath]");
+                return;
+            }
+
+            string task = args[0];
+            string input = args[1];
+            string output = args.Length == 3 ? args[2] : "/output";
+
+            Type inputTaskType;
+            Type aggregateTaskType;
+            switch( task )
+            {
+            case "linecount":
+                inputTaskType = typeof(LineCounterTask);
+                aggregateTaskType = typeof(LineCounterAggregateTask);
+                break;
+            case "wordcount":
+                inputTaskType = typeof(WordCountTask);
+                aggregateTaskType = typeof(WordCountAggregateTask);
+                break;
+            default:
+                Console.WriteLine("Unknown task.");
+                return;
+            }
+            
+            Console.WriteLine("Running task {0}, input file {1}, output path {2}.", task, input, output);
             DfsClient dfsClient = new DfsClient();
             IJobServerClientProtocol jobServer = JetClient.CreateJobServerClient();
-            //nameServer.CreateDirectory("/test/foo");
-            //nameServer.CreateFile("/test/bar");
-            //File f = nameServer.GetFileInfo("/test/bar");
             Console.WriteLine("Press any key to start");
             Console.ReadKey();
-            Stopwatch sw = new Stopwatch();
-            sw.Start();
+            //Stopwatch sw = new Stopwatch();
+            //sw.Start();
 
+            RunJob(dfsClient, jobServer, inputTaskType, aggregateTaskType, input, "/output");
+
+            //sw.Stop();
+            //Console.WriteLine(sw.Elapsed);
+
+            Console.WriteLine("Done, press any key to exit");
+
+            Console.ReadKey();
+        }
+
+        private static void RunJob(DfsClient dfsClient, IJobServerClientProtocol jobServer, Type inputTaskType, Type aggregateTaskType, string fileName, string outputPath)
+        {
             const int interval = 5000;
-            Guid jobId = StartJob(dfsClient, jobServer, typeof(WordCountTask), typeof(WordCountAggregateTask), "/large.txt");
+            Guid jobId = StartJob(dfsClient, jobServer, inputTaskType, aggregateTaskType, fileName, outputPath);
             JobStatus status;
             while( !jobServer.WaitForJobCompletion(jobId, interval) )
             {
@@ -88,20 +79,13 @@ namespace ClientSample
             Console.WriteLine();
             Console.WriteLine("Job completed.");
             status = jobServer.GetJobStatus(jobId);
-            Console.WriteLine("Start time: {0}", status.StartTime);
-            Console.WriteLine("End time:   {0}", status.EndTime);
+            Console.WriteLine("Start time: {0:yyyy'-'MM'-'dd' 'HH':'mm':'ss'.'fff}", status.StartTime.ToLocalTime());
+            Console.WriteLine("End time:   {0:yyyy'-'MM'-'dd' 'HH':'mm':'ss'.'fff}", status.EndTime.ToLocalTime());
             TimeSpan duration = status.EndTime - status.StartTime;
             Console.WriteLine("Duration:   {0} ({1}s)", duration, duration.TotalSeconds);
-
-            sw.Stop();
-            Console.WriteLine(sw.Elapsed);
-
-            Console.WriteLine("Done, press any key to exit");
-
-            Console.ReadKey();
         }
 
-        private static Guid StartJob(DfsClient dfsClient, IJobServerClientProtocol jobServer, Type inputTaskType, Type aggregateTaskType, string fileName)
+        private static Guid StartJob(DfsClient dfsClient, IJobServerClientProtocol jobServer, Type inputTaskType, Type aggregateTaskType, string fileName, string outputPath)
         {
             Tkl.Jumbo.Dfs.File file = dfsClient.NameServer.GetFileInfo(fileName);
             int blockSize = dfsClient.NameServer.BlockSize;
@@ -130,14 +114,17 @@ namespace ClientSample
                 tasks[x] = inputTaskType.Name + (x + 1).ToString();
             }
 
+            Type interfaceType = FindGenericInterfaceType(aggregateTaskType, typeof(ITask<,>));
+            Type outputType = interfaceType.GetGenericArguments()[1];
+            Type recordWriterType = typeof(TextRecordWriter<>).MakeGenericType(outputType);
             config.Tasks.Add(new TaskConfiguration()
             {
                 TaskID = aggregateTaskType.Name,
                 TypeName = aggregateTaskType.FullName,
                 DfsOutput = new TaskDfsOutput()
                 {
-                    Path = "/output/count.txt",
-                    RecordWriterType = typeof(TextRecordWriter<KeyValuePairWritable<StringWritable, Int32Writable>>).AssemblyQualifiedName
+                    Path = DfsPath.Combine(outputPath, "result.txt"),
+                    RecordWriterType = recordWriterType.AssemblyQualifiedName
                 }
             });
 
@@ -148,13 +135,8 @@ namespace ClientSample
                 OutputTaskID = aggregateTaskType.Name
             });
 
-            using( FileStream stream = System.IO.File.Create("job.xml") )
-            {
-                config.SaveXml(stream);
-            }
-
-            dfsClient.NameServer.Delete("/output", true);
-            dfsClient.NameServer.CreateDirectory("/output");
+            dfsClient.NameServer.Delete(outputPath, true);
+            dfsClient.NameServer.CreateDirectory(outputPath);
             Job job = jobServer.CreateJob();
             Console.WriteLine(job.JobID);
             using( DfsOutputStream stream = dfsClient.CreateFile(job.JobConfigurationFilePath) )
@@ -166,6 +148,19 @@ namespace ClientSample
             jobServer.RunJob(job.JobID);
 
             return job.JobID;
+        }
+
+        private static Type FindGenericInterfaceType(Type type, Type interfaceType)
+        {
+            // This is necessary because while in .Net you can use type.GetInterface with a generic interface type,
+            // in Mono that only works if you specify the type arguments which is precisely what we don't want.
+            Type[] interfaces = type.GetInterfaces();
+            foreach( Type i in interfaces )
+            {
+                if( i.IsGenericType && i.GetGenericTypeDefinition() == interfaceType )
+                    return i;
+            }
+            throw new ArgumentException(string.Format("Type {0} does not implement interface {1}.", type, interfaceType));
         }
     }
 }
