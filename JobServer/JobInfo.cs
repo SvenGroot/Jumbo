@@ -27,6 +27,9 @@ namespace JobServerApplication
         public bool Running { get; set; }
         public int UnscheduledTasks { get; set; }
         public int FinishedTasks { get; set; }
+        public int Errors { get; set; }
+        public DateTime StartTime { get; set; }
+        public DateTime EndTime { get; set; }
         public SortedList<string, TaskInfo> Tasks
         {
             get { return _tasks; }

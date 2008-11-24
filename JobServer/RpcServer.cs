@@ -40,6 +40,11 @@ namespace JobServerApplication
             return JobServer.Instance.GetTaskServerForTask(jobID, taskID);
         }
 
+        public JobStatus GetJobStatus(Guid jobId)
+        {
+            return JobServer.Instance.GetJobStatus(jobId);
+        }
+
         #endregion
     }
 }

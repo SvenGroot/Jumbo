@@ -76,6 +76,7 @@
     <Compile Include="Job.cs" />
     <Compile Include="JobConfiguration.cs" />
     <Compile Include="JobServerConfigurationElement.cs" />
+    <Compile Include="JobStatus.cs" />
     <Compile Include="LineRecordReader.cs" />
     <Compile Include="MultiRecordReader.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

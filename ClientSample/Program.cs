@@ -77,8 +77,21 @@ namespace ClientSample
             Stopwatch sw = new Stopwatch();
             sw.Start();
 
-            StartJob(dfsClient, jobServer, typeof(WordCountTask), typeof(WordCountAggregateTask), "/large.txt");
-            //dfsClient.NameServer.Move("/JumboJet/job_{57f5850e-7637-4d08-87eb-03b9cfef9a90}/Task3", "/foo.txt");
+            const int interval = 5000;
+            Guid jobId = StartJob(dfsClient, jobServer, typeof(WordCountTask), typeof(WordCountAggregateTask), "/large.txt");
+            JobStatus status;
+            while( !jobServer.WaitForJobCompletion(jobId, interval) )
+            {
+                status = jobServer.GetJobStatus(jobId);
+                Console.WriteLine(status);
+            }
+            Console.WriteLine();
+            Console.WriteLine("Job completed.");
+            status = jobServer.GetJobStatus(jobId);
+            Console.WriteLine("Start time: {0}", status.StartTime);
+            Console.WriteLine("End time:   {0}", status.EndTime);
+            TimeSpan duration = status.EndTime - status.StartTime;
+            Console.WriteLine("Duration:   {0} ({1}s)", duration, duration.TotalSeconds);
 
             sw.Stop();
             Console.WriteLine(sw.Elapsed);
@@ -88,7 +101,7 @@ namespace ClientSample
             Console.ReadKey();
         }
 
-        private static void StartJob(DfsClient dfsClient, IJobServerClientProtocol jobServer, Type inputTaskType, Type aggregateTaskType, string fileName)
+        private static Guid StartJob(DfsClient dfsClient, IJobServerClientProtocol jobServer, Type inputTaskType, Type aggregateTaskType, string fileName)
         {
             Tkl.Jumbo.Dfs.File file = dfsClient.NameServer.GetFileInfo(fileName);
             int blockSize = dfsClient.NameServer.BlockSize;
@@ -151,6 +164,8 @@ namespace ClientSample
             dfsClient.UploadFile(inputTaskType.Assembly.Location, DfsPath.Combine(job.Path, config.AssemblyFileName));
 
             jobServer.RunJob(job.JobID);
+
+            return job.JobID;
         }
     }
 }

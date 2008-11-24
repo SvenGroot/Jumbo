@@ -38,5 +38,12 @@ namespace Tkl.Jumbo.Jet
         /// <param name="taskID">The ID of the task.</param>
         /// <returns>The <see cref="ServerAddress"/> for the task server that is running the task.</returns>
         ServerAddress GetTaskServerForTask(Guid jobID, string taskID);
+
+        /// <summary>
+        /// Gets the current status for the specified job.
+        /// </summary>
+        /// <param name="jobId">The job ID.</param>
+        /// <returns>The status of the job, or <see langword="null"/> if the job doesn't exist.</returns>
+        JobStatus GetJobStatus(Guid jobId);
     }
 }

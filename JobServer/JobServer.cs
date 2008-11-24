@@ -15,6 +15,7 @@ namespace JobServerApplication
 
         private readonly Dictionary<ServerAddress, TaskServerInfo> _taskServers = new Dictionary<ServerAddress,TaskServerInfo>();
         private readonly Dictionary<Guid, JobInfo> _jobs = new Dictionary<Guid, JobInfo>();
+        private readonly Dictionary<Guid, JobInfo> _finishedJobs = new Dictionary<Guid, JobInfo>();
         private readonly List<JobInfo> _jobsNeedingCleanup = new List<JobInfo>();
         private readonly DfsClient _dfsClient;
         private readonly Scheduling.IScheduler _scheduler;
@@ -121,18 +122,28 @@ namespace JobServerApplication
                 ScheduleTasks(jobInfo);
 
                 jobInfo.Running = true;
+                jobInfo.StartTime = DateTime.UtcNow;
                 _log.InfoFormat("Job {0} has entered the running state. Number of tasks: {1}.", jobID, jobInfo.Tasks.Count);
             }
         }
 
         public bool WaitForJobCompletion(Guid jobID, int timeout)
         {
-            JobInfo job;
+            JobInfo job = null;
+            bool found;
             lock( _jobs )
             {
-                job = _jobs[jobID];
+                found = _jobs.TryGetValue(jobID, out job);
             }
-            return job.JobCompletedEvent.WaitOne(timeout, false);
+            if( !found )
+            {
+                lock( _finishedJobs )
+                    found = _finishedJobs.TryGetValue(jobID, out job);
+            }
+            if( found )
+                return job.JobCompletedEvent.WaitOne(timeout, false);
+            else
+                throw new ArgumentException("Job not found.");
         }
 
         public ServerAddress GetTaskServerForTask(Guid jobID, string taskID)
@@ -146,6 +157,14 @@ namespace JobServerApplication
                 TaskInfo task = job.Tasks[taskID];
                 return task.Server == null ? null : task.Server.Address;
             }
+        }
+
+        public JobStatus GetJobStatus(Guid jobId)
+        {
+            JobStatus status = TryGetJobStatus(_jobs, jobId);
+            if( status == null )
+                status = TryGetJobStatus(_finishedJobs, jobId);
+            return status;
         }
 
         #endregion
@@ -285,6 +304,7 @@ namespace JobServerApplication
                         _log.InfoFormat("Task {0} encountered an error.", Job.CreateFullTaskID(data.JobID, data.TaskID));
                         // TODO: We need to reschedule or something, and not increment finishedtasks.
                         ++job.FinishedTasks;
+                        ++job.Errors;
                         break;
                     }
 
@@ -292,7 +312,10 @@ namespace JobServerApplication
                     {
                         _log.InfoFormat("Job {0}: all tasks in the job have finished.", data.JobID);
                         _jobs.Remove(data.JobID);
+                        lock( _finishedJobs )
+                            _finishedJobs.Add(job.Job.JobID, job);
                         jobFinished = true;
+                        job.EndTime = DateTime.UtcNow;
                         job.JobCompletedEvent.Set();
                     }
                     else if( job.UnscheduledTasks > 0 )
@@ -314,11 +337,35 @@ namespace JobServerApplication
         /// <param name="job"></param>
         private void ScheduleTasks(JobInfo job)
         {
-            // TODO: This is not at all how scheduling should work.
             lock( _taskServers )
             {
                 _scheduler.ScheduleTasks(_taskServers, job, _dfsClient);
             }
         }
+
+        private JobStatus TryGetJobStatus(Dictionary<Guid, JobInfo> jobs, Guid jobId)
+        {
+            lock( jobs )
+            {
+                JobInfo job;
+                if( !jobs.TryGetValue(jobId, out job) )
+                    return null;
+
+                return new JobStatus()
+                {
+                    JobId = jobId,
+                    TaskCount = job.Tasks.Count,
+                    RunningTaskCount = (from task in job.Tasks.Values
+                                        where task.State == TaskState.Running
+                                        select task).Count(),
+                    UnscheduledTaskCount = job.UnscheduledTasks,
+                    FinishedTaskCount = job.FinishedTasks,
+                    ErrorTaskCount = job.Errors,
+                    StartTime = job.StartTime,
+                    EndTime = job.EndTime
+                };
+            }
+        }
+    
     }
 }

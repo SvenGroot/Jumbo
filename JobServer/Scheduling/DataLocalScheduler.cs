@@ -73,10 +73,6 @@ namespace JobServerApplication.Scheduling
                         if( capacity == 0 )
                             break;
                     }
-                    else
-                    {
-                        _log.InfoFormat("Could not schedule task {0} data local.", task.GlobalID);
-                    }
                 }
             }
             return capacity;
