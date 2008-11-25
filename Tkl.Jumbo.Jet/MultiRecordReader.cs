@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using Tkl.Jumbo.IO;
+using System.Threading;
 
 namespace Tkl.Jumbo.Jet
 {
@@ -13,21 +14,32 @@ namespace Tkl.Jumbo.Jet
     public class MultiRecordReader<T> : RecordReader<T>
         where T : IWritable, new()
     {
-        private RecordReader<T>[] _readers;
-        private int _currentReaderIndex;
+        private readonly Queue<RecordReader<T>> _readers = new Queue<RecordReader<T>>();
+        private RecordReader<T> _currentReader;
+        private readonly AutoResetEvent _readerAdded = new AutoResetEvent(false);
         private bool _disposed;
+        private bool _hasFinalReader;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="MultiRecordReader{T}"/> class with the specified
         /// record readers.
         /// </summary>
         /// <param name="readers">The readers to read from.</param>
-        public MultiRecordReader(IEnumerable<RecordReader<T>> readers)
+        /// <param name="allowMoreReaders"><see langword="true"/> if you can use the <see cref="AddReader"/> method to
+        /// add additional readers; otherwise, <see langword="false"/>.</param>
+        public MultiRecordReader(IEnumerable<RecordReader<T>> readers, bool allowMoreReaders)
         {
-            if( readers == null )
+            if( !allowMoreReaders && readers == null )
                 throw new ArgumentNullException("readers");
 
-            _readers = readers.ToArray();
+            _hasFinalReader = !allowMoreReaders;
+            if( readers != null )
+            {
+                foreach( var item in readers )
+                    _readers.Enqueue(item);
+                if( _readers.Count > 0 )
+                    _currentReader = _readers.Dequeue();
+            }
         }
 
         /// <summary>
@@ -37,14 +49,66 @@ namespace Tkl.Jumbo.Jet
         /// <returns><see langword="true"/> if an object was successfully read from the stream; <see langword="false"/> if the end of the stream or stream fragment was reached.</returns>
         public override bool ReadRecord(out T record)
         {
+            record = default(T);
             CheckDisposed();
-            while( !_readers[_currentReaderIndex].ReadRecord(out record) )
+            if( !WaitForReaders() )
+                return false;
+
+            while( !_currentReader.ReadRecord(out record) )
             {
-                ++_currentReaderIndex;
-                if( _currentReaderIndex == _readers.Length )
+                _currentReader.Dispose();
+                _currentReader = null;
+                if( !WaitForReaders() )
                     return false;
             }
             return true;
+        }
+
+        private bool WaitForReaders()
+        {
+            if( _currentReader == null )
+            {
+                int count;
+                lock( _readers )
+                {
+                    count = _readers.Count;
+                }
+                if( count == 0 )
+                {
+                    if( _hasFinalReader )
+                    {
+                        return false;
+                    }
+                    _readerAdded.WaitOne();
+                    CheckDisposed();
+                }
+                lock( _readers )
+                {
+                    _currentReader = _readers.Dequeue();
+                }
+            }
+            return true;
+        }
+
+        /// <summary>
+        /// Adds a record reader to the list of readers that this <see cref="MultiRecordReader{T}"/> will read from.
+        /// </summary>
+        /// <param name="reader">The reader to add.</param>
+        /// <param name="isFinalReader"><see langword="true"/> to indicate that this is the final reader; otherwise, <see langword="false"/>.</param>
+        public void AddReader(RecordReader<T> reader, bool isFinalReader)
+        {
+            CheckDisposed();
+            if( _hasFinalReader )
+                throw new InvalidOperationException("Cannot add more readers after the final reader has been added.");
+            if( reader == null )
+                throw new ArgumentNullException("reader");
+
+            lock( _readers )
+            {
+                _readers.Enqueue(reader);
+                _hasFinalReader = isFinalReader;
+            }
+            _readerAdded.Set();
         }
 
         /// <summary>
@@ -64,7 +128,13 @@ namespace Tkl.Jumbo.Jet
                     {
                         reader.Dispose();
                     }
-                    _readers = null;
+                    if( _currentReader != null )
+                    {
+                        _currentReader.Dispose();
+                        _currentReader = null;
+                    }
+                    _readers.Clear();
+                    _readerAdded.Set();
                 }
             }
         }

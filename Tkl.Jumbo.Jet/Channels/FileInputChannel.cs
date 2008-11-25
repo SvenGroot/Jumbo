@@ -32,12 +32,9 @@ namespace Tkl.Jumbo.Jet.Channels
         private const int _pollingInterval = 5000;
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(FileInputChannel));
 
-        private bool _isReady;
-        private ManualResetEvent _readyEvent = new ManualResetEvent(false);
         private string _jobDirectory;
         private ChannelConfiguration _channelConfig;
         private Guid _jobID;
-        private List<string> _fileNames = new List<string>();
         private Thread _inputPollThread;
         private IJobServerClientProtocol _jobServer;
 
@@ -61,10 +58,6 @@ namespace Tkl.Jumbo.Jet.Channels
             _channelConfig = channelConfig;
             _jobID = jobID;
             _jobServer = jobServer;
-            _inputPollThread = new Thread(InputPollThread);
-            _inputPollThread.Name = "FileInputChannelPolling";
-            _inputPollThread.Start();
-
         }
 
         #region IInputChannel Members
@@ -74,7 +67,7 @@ namespace Tkl.Jumbo.Jet.Channels
         /// </summary>
         public bool IsReady
         {
-            get { return _isReady; }
+            get { return true; }
         }
 
         /// <summary>
@@ -85,10 +78,7 @@ namespace Tkl.Jumbo.Jet.Channels
         /// <returns><see langword="true"/> if the channel has become ready; otherwise, <see langword="false"/>.</returns>
         public bool WaitUntilReady(int timeout)
         {
-            if( _readyEvent.WaitOne(timeout, false) )
-                Debug.Assert(_isReady);
-
-            return _isReady;
+            return true;
         }
 
         /// <summary>
@@ -98,47 +88,54 @@ namespace Tkl.Jumbo.Jet.Channels
         /// <returns>A <see cref="StreamRecordReader{T}"/> for the channel.</returns>
         public RecordReader<T> CreateRecordReader<T>() where T : IWritable, new()
         {
-            if( !_isReady )
-                throw new InvalidOperationException("The channel isn't ready yet.");
+            MultiRecordReader<T> reader = new MultiRecordReader<T>(null, true);
+            _inputPollThread = new Thread(() => InputPollThread<T>(reader));
+            _inputPollThread.Name = "FileInputChannelPolling";
+            _inputPollThread.Start();
 
-            Debug.Assert(_fileNames.Count > 0);
-            if( _fileNames.Count == 1 )
-                return new BinaryRecordReader<T>(File.OpenRead(_fileNames[0]));
-            else
-            {
-                return new MultiRecordReader<T>(from fileName in _fileNames
-                                                select (RecordReader<T>)new BinaryRecordReader<T>(File.OpenRead(fileName)));
-            }
+            return reader;
         }
 
         #endregion
 
-        private void InputPollThread()
+        private void InputPollThread<T>(MultiRecordReader<T> reader)
+            where T : IWritable, new()
         {
-            // The list is randomized so not all tasks hit the same TaskServer at once.
-            Random rnd = new Random();
-            List<InputTask> filesLeft = (from taskID in _channelConfig.InputTasks
-                                         orderby rnd.Next()
-                                         select new InputTask()
-                                         {
-                                             TaskID = taskID,
-                                             FullTaskID = string.Format("{{{0}}}_{1}", _jobID, taskID)
-                                         }).ToList();
-
-            _log.InfoFormat("Start polling for output file completion of {0} tasks, interval {1}ms", filesLeft.Count, _pollingInterval);
-
-            List<InputTask> completedTasks = new List<InputTask>();
-            while( filesLeft.Count > 0 )
+            try
             {
-                CheckForCompletedTasks(filesLeft, completedTasks);
+                // The list is randomized so not all tasks hit the same TaskServer at once.
+                Random rnd = new Random();
+                List<InputTask> filesLeft = (from taskID in _channelConfig.InputTasks
+                                             orderby rnd.Next()
+                                             select new InputTask()
+                                             {
+                                                 TaskID = taskID,
+                                                 FullTaskID = string.Format("{{{0}}}_{1}", _jobID, taskID)
+                                             }).ToList();
 
-                DownloadCompletedFiles(filesLeft, completedTasks);
-                if( filesLeft.Count > 0 )
-                    Thread.Sleep(_pollingInterval);
+                _log.InfoFormat("Start polling for output file completion of {0} tasks, interval {1}ms", filesLeft.Count, _pollingInterval);
+
+                List<InputTask> completedTasks = new List<InputTask>();
+                while( filesLeft.Count > 0 )
+                {
+                    CheckForCompletedTasks(filesLeft, completedTasks);
+
+                    DownloadCompletedFiles(reader, filesLeft, completedTasks);
+                    if( filesLeft.Count > 0 )
+                        Thread.Sleep(_pollingInterval);
+                }
+            }
+            catch( ObjectDisposedException ex )
+            {
+                // This happens if the thread using the input reader doesn't process all records and disposes the object before
+                // we're done here. We ignore it.
+                Debug.Assert(ex.ObjectName == "MultiRecordReader");
+                _log.WarnFormat("MultiRecordReader was disposed prematurely; object name = \"{0}\"", ex.ObjectName);
             }
         }
 
-        private void DownloadCompletedFiles(List<InputTask> filesLeft, List<InputTask> completedTasks)
+        private void DownloadCompletedFiles<T>(MultiRecordReader<T> reader, List<InputTask> filesLeft, List<InputTask> completedTasks)
+            where T : IWritable, new()
         {
             foreach( InputTask task in completedTasks )
             {
@@ -148,19 +145,18 @@ namespace Tkl.Jumbo.Jet.Channels
                 {
                     string taskOutputDirectory = task.TaskServer.GetOutputFileDirectory(task.FullTaskID);
                     fileName = Path.Combine(taskOutputDirectory, FileOutputChannel.CreateChannelFileName(task.TaskID, _channelConfig.OutputTaskID));
+                    _log.InfoFormat("Using local file {0} as input.", fileName);
                 }
                 else
                 {
                     fileName = DownloadFile(task, _channelConfig.OutputTaskID);
                 }
-                _fileNames.Add(fileName);
                 bool removed = filesLeft.Remove(task);
                 Debug.Assert(removed);
+                reader.AddReader(new BinaryRecordReader<T>(File.OpenRead(fileName)), filesLeft.Count == 0);
                 if( filesLeft.Count == 0 )
                 {
-                    _isReady = true;
-                    _log.Info("Input channel is now ready.");
-                    _readyEvent.Set();
+                    _log.Info("All files downloaded.");
                 }
             }
         }
