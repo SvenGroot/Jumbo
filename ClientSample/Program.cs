@@ -76,9 +76,10 @@ namespace ClientSample
                 status = jobServer.GetJobStatus(jobId);
                 Console.WriteLine(status);
             }
+            status = jobServer.GetJobStatus(jobId);
+            Console.WriteLine(status);
             Console.WriteLine();
             Console.WriteLine("Job completed.");
-            status = jobServer.GetJobStatus(jobId);
             Console.WriteLine("Start time: {0:yyyy'-'MM'-'dd' 'HH':'mm':'ss'.'fff}", status.StartTime.ToLocalTime());
             Console.WriteLine("End time:   {0:yyyy'-'MM'-'dd' 'HH':'mm':'ss'.'fff}", status.EndTime.ToLocalTime());
             TimeSpan duration = status.EndTime - status.StartTime;
