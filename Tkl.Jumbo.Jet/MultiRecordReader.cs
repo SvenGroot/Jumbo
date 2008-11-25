@@ -66,26 +66,25 @@ namespace Tkl.Jumbo.Jet
 
         private bool WaitForReaders()
         {
-            if( _currentReader == null )
+            while( _currentReader == null )
             {
                 int count;
+
                 lock( _readers )
                 {
                     count = _readers.Count;
-                }
-                if( count == 0 )
-                {
-                    if( _hasFinalReader )
+                    if( count == 0 )
                     {
-                        return false;
+                        if( _hasFinalReader )
+                        {
+                            return false;
+                        }
                     }
+                    else
+                        _currentReader = _readers.Dequeue();
+                }
+                if( _currentReader == null )
                     _readerAdded.WaitOne();
-                    CheckDisposed();
-                }
-                lock( _readers )
-                {
-                    _currentReader = _readers.Dequeue();
-                }
             }
             return true;
         }
