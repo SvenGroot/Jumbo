@@ -64,5 +64,15 @@ namespace Tkl.Jumbo.Jet
             get { return (int)this["fileServerPort"]; }
             set { this["fileServerPort"] = value; }
         }
+
+        /// <summary>
+        /// Gets or sets the number of milliseconds to wait between creating TaskHost processes.
+        /// </summary>
+        [ConfigurationProperty("processCreationDelay", DefaultValue = 0, IsRequired = false, IsKey = false)]
+        public int ProcessCreationDelay
+        {
+            get { return (int)this["processCreationDelay"]; }
+            set { this["processCreationDelay"] = value; }
+        }
     }
 }

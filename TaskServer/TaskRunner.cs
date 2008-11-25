@@ -45,7 +45,7 @@ namespace TaskServerApplication
 
             public string DfsJobDirectory { get; private set; }
 
-            public void Run()
+            public void Run(int createProcessDelay)
             {
                 if( Debugger.IsAttached )
                     RunTaskAppDomain();
@@ -62,6 +62,11 @@ namespace TaskServerApplication
                     _process.Exited += new EventHandler(_process_Exited);
                     _process.Start();
                     _log.DebugFormat("Host process for task {0} has started, pid = {1}.", FullTaskID, _process.Id);
+                    if( createProcessDelay > 0 )
+                    {
+                        _log.DebugFormat("Sleeping for {0}ms", createProcessDelay);
+                        Thread.Sleep(createProcessDelay);
+                    }
                 }
                 State = TaskStatus.Running;
             }
@@ -125,6 +130,7 @@ namespace TaskServerApplication
         private AutoResetEvent _taskAddedEvent = new AutoResetEvent(false);
         private Queue<RunTaskJetHeartbeatResponse> _tasks = new Queue<RunTaskJetHeartbeatResponse>();
         private bool _running = true;
+        private int _createProcessDelay;
         private readonly DfsClient _dfsClient;
         private readonly Dictionary<string, RunningTask> _runningTasks = new Dictionary<string,RunningTask>();
 
@@ -133,6 +139,7 @@ namespace TaskServerApplication
             if( taskServer == null )
                 throw new ArgumentNullException("taskServer");
             _taskServer = taskServer;
+            _createProcessDelay = _taskServer.Configuration.TaskServer.ProcessCreationDelay;
             _dfsClient = new DfsClient(taskServer.DfsConfiguration);
             _taskStarterThread = new Thread(TaskRunnerThread);
             _taskStarterThread.IsBackground = true;
@@ -266,7 +273,7 @@ namespace TaskServerApplication
                 runningTask.ProcessExited += new EventHandler(RunningTask_ProcessExited);
                 _runningTasks.Add(runningTask.FullTaskID, runningTask);
             }
-            runningTask.Run();
+            runningTask.Run(_createProcessDelay);
         }
 
         private void RunningTask_ProcessExited(object sender, EventArgs e)
