@@ -37,6 +37,7 @@ namespace Tkl.Jumbo.Jet.Channels
         private Guid _jobID;
         private Thread _inputPollThread;
         private IJobServerClientProtocol _jobServer;
+        private string _outputTaskId;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="FileInputChannel"/>.
@@ -45,7 +46,9 @@ namespace Tkl.Jumbo.Jet.Channels
         /// <param name="jobDirectory">The local directory where files related to the job are stored.</param>
         /// <param name="channelConfig">The channel configuration for this file channel.</param>
         /// <param name="jobServer">The object to use to communicate with the job server.</param>
-        public FileInputChannel(Guid jobID, string jobDirectory, ChannelConfiguration channelConfig, IJobServerClientProtocol jobServer)
+        /// <param name="outputTaskId">The ID of the output task for which this channel is created. This should be one of the IDs listed
+        /// in <see cref="ChannelConfiguration.OutputTasks"/>.</param>
+        public FileInputChannel(Guid jobID, string jobDirectory, ChannelConfiguration channelConfig, IJobServerClientProtocol jobServer, string outputTaskId)
         {
             if( jobDirectory == null )
                 throw new ArgumentNullException("jobDirectory");
@@ -53,11 +56,14 @@ namespace Tkl.Jumbo.Jet.Channels
                 throw new ArgumentNullException("channelConfig");
             if( jobServer == null )
                 throw new ArgumentNullException("jobServer");
+            if( outputTaskId == null )
+                throw new ArgumentNullException("outputTaskId");
 
             _jobDirectory = jobDirectory;
             _channelConfig = channelConfig;
             _jobID = jobID;
             _jobServer = jobServer;
+            _outputTaskId = outputTaskId;
         }
 
         #region IInputChannel Members
@@ -144,12 +150,12 @@ namespace Tkl.Jumbo.Jet.Channels
                 if( !_channelConfig.ForceFileDownload && task.TaskServerAddress.HostName == Dns.GetHostName() )
                 {
                     string taskOutputDirectory = task.TaskServer.GetOutputFileDirectory(task.FullTaskID);
-                    fileName = Path.Combine(taskOutputDirectory, FileOutputChannel.CreateChannelFileName(task.TaskID, _channelConfig.OutputTaskID));
+                    fileName = Path.Combine(taskOutputDirectory, FileOutputChannel.CreateChannelFileName(task.TaskID, _outputTaskId));
                     _log.InfoFormat("Using local file {0} as input.", fileName);
                 }
                 else
                 {
-                    fileName = DownloadFile(task, _channelConfig.OutputTaskID);
+                    fileName = DownloadFile(task, _outputTaskId);
                 }
                 bool removed = filesLeft.Remove(task);
                 Debug.Assert(removed);

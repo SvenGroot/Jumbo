@@ -11,7 +11,7 @@ namespace Tkl.Jumbo.IO
     /// A record writer that writes to a file using a binary format based on <see cref="IWritable"/> serialization.
     /// </summary>
     /// <typeparam name="T">The type of the record to write. Must implement <see cref="IWritable"/>.</typeparam>
-    public class BinaryRecordWriter<T> : RecordWriter<T>
+    public class BinaryRecordWriter<T> : StreamRecordWriter<T>
         where T : IWritable
     {
         private BinaryWriter _writer;

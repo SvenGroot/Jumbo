@@ -91,7 +91,7 @@ namespace TaskHost
             IInputChannel inputChannel = null;
             if( inputChannelConfig != null )
             {
-                inputChannel = inputChannelConfig.CreateInputChannel(jobID, jobDirectory, _jobServer);
+                inputChannel = inputChannelConfig.CreateInputChannel(jobID, jobDirectory, _jobServer, taskConfig.TaskID);
                 inputChannel.WaitUntilReady(Timeout.Infinite);
             }
 
@@ -172,7 +172,7 @@ namespace TaskHost
             if( taskConfig.DfsOutput != null )
             {
                 Type recordWriterType = Type.GetType(taskConfig.DfsOutput.RecordWriterType);
-                return (RecordWriter<T>)Activator.CreateInstance(recordWriterType, outputStream);
+                return (StreamRecordWriter<T>)Activator.CreateInstance(recordWriterType, outputStream);
             }
             else if( outputChannel != null )
             {

@@ -12,28 +12,29 @@ namespace Tkl.Jumbo.Jet.Channels
     /// </summary>
     public class FileOutputChannel : IOutputChannel
     {
+        private readonly string[] _fileNames;
+        private string _partitionerType;
+
         /// <summary>
         /// Initializes a new instance of the <see cref="FileOutputChannel"/> class.
         /// </summary>
         /// <param name="jobDirectory">The directory on the local file system where files related to this job are stored.</param>
         /// <param name="channelConfig">The <see cref="ChannelConfiguration"/> this channel.</param>
-        /// <param name="inputTaskID">The name of the task for which this channel is created. This should be one of the
+        /// <param name="inputTaskId">The name of the task for which this channel is created. This should be one of the
         /// task IDs listed in the <see cref="ChannelConfiguration.InputTasks"/> property of the <paramref name="channelConfig"/>
         /// parameter.</param>
-        public FileOutputChannel(string jobDirectory, ChannelConfiguration channelConfig, string inputTaskID)
+        public FileOutputChannel(string jobDirectory, ChannelConfiguration channelConfig, string inputTaskId)
         {
             if( jobDirectory == null )
                 throw new ArgumentNullException("jobDirectory");
             if( channelConfig == null )
                 throw new ArgumentNullException("channelConfig");
 
-            FileName = Path.Combine(jobDirectory, CreateChannelFileName(inputTaskID, channelConfig.OutputTaskID));
+            _fileNames = (from outputTaskId in channelConfig.OutputTasks
+                          select Path.Combine(jobDirectory, CreateChannelFileName(inputTaskId, outputTaskId))).ToArray();
+            _partitionerType = channelConfig.PartitionerType;
         }
 
-        /// <summary>
-        /// Gets the path of the file where the channel's output is stored.
-        /// </summary>
-        public string FileName { get; private set; }
 
         internal static string CreateChannelFileName(string inputTaskID, string outputTaskID)
         {
@@ -49,8 +50,15 @@ namespace Tkl.Jumbo.Jet.Channels
         /// <returns>A <see cref="RecordWriter{T}"/> for the channel.</returns>
         public RecordWriter<T> CreateRecordWriter<T>() where T : IWritable, new()
         {
-            // The RecordWriter will dispose the stream, so we don't need to worry about it.
-            return new BinaryRecordWriter<T>(File.Create(FileName));
+            if( _fileNames.Length == 1 )
+                return new BinaryRecordWriter<T>(File.Create(_fileNames[0]));
+            else
+            {
+                IPartitioner<T> partitioner = (IPartitioner<T>)Activator.CreateInstance(Type.GetType(_partitionerType));
+                var writers = from file in _fileNames
+                              select (RecordWriter<T>)new BinaryRecordWriter<T>(File.Create(file));
+                return new MultiRecordWriter<T>(writers, partitioner);
+            }
         }
 
         #endregion

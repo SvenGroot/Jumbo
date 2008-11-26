@@ -35,7 +35,7 @@ namespace Tkl.Jumbo.IO
         /// <returns>A hash code for the current <see cref="WritableComparable{T}"/>.</returns>
         public override int GetHashCode()
         {
-            return Value == null ? 0 :Value.GetHashCode();
+            return Value == null ? 0 : Value.GetHashCode();
         }
 
         /// <summary>

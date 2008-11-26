@@ -19,16 +19,16 @@ namespace Tkl.Jumbo.Jet.Channels
         public ChannelType ChannelType { get; set; }
 
         /// <summary>
-        /// Gets or sets the ID of the task that writes to the channel.
+        /// Gets or sets the IDs of the tasks that write to the channel.
         /// </summary>
         [XmlArrayItem("Task")]
         public string[] InputTasks { get; set; }
 
         /// <summary>
-        /// Gets or sets the ID of the task that reads from the channel.
+        /// Gets or sets the IDs of the tasks that read from the channel.
         /// </summary>
-        [XmlAttribute("outputTask")]
-        public string OutputTaskID { get; set; }
+        [XmlArrayItem("Task")]
+        public string[] OutputTasks { get; set; }
 
         /// <summary>
         /// Gets or sets a value that indicates whether the file channel should always use TCP downloads.
@@ -44,6 +44,16 @@ namespace Tkl.Jumbo.Jet.Channels
         /// </remarks>
         [XmlAttribute("forceFileDownload")]
         public bool ForceFileDownload { get; set; }
+
+        /// <summary>
+        /// Gets or sets the type name of a class implementing <see cref="Tkl.Jumbo.IO.IPartitioner{T}"/> to use as the
+        /// partitioner.
+        /// </summary>
+        /// <remarks>
+        /// You do not need to set this property if their is only one output task.
+        /// </remarks>
+        [XmlAttribute("partitionerType")]
+        public string PartitionerType { get; set; }
 
         /// <summary>
         /// Creates an output channel for use by the input task.
@@ -72,13 +82,15 @@ namespace Tkl.Jumbo.Jet.Channels
         /// <param name="jobID">The job ID.</param>
         /// <param name="jobDirectory">The directory where files related to the job are stored.</param>
         /// <param name="jobServer">The object to use for communicating with the job server.</param>
+        /// <param name="outputTaskId">The ID of the output task for which this channel is created. This should be one of the IDs listed
+        /// in <see cref="ChannelConfiguration.OutputTasks"/>.</param>
         /// <returns>An implementation of <see cref="IInputChannel"/> for the specified channel type.</returns>
-        public IInputChannel CreateInputChannel(Guid jobID, string jobDirectory, IJobServerClientProtocol jobServer)
+        public IInputChannel CreateInputChannel(Guid jobID, string jobDirectory, IJobServerClientProtocol jobServer, string outputTaskId)
         {
             switch( ChannelType )
             {
             case ChannelType.File:
-                return new FileInputChannel(jobID, jobDirectory, this, jobServer);
+                return new FileInputChannel(jobID, jobDirectory, this, jobServer, outputTaskId);
             default:
                 throw new InvalidOperationException("Invalid channel type.");
             }

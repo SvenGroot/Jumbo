@@ -124,7 +124,7 @@ namespace Tkl.Jumbo.Test.Jet
             {
                 ChannelType = ChannelType.File,
                 InputTasks = tasks,
-                OutputTaskID = "OutputTask",
+                OutputTasks = new[] { "OutputTask" },
                 ForceFileDownload = forceFileDownload
             });
             return config;
