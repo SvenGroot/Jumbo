@@ -5,7 +5,7 @@ using System.Text;
 using Tkl.Jumbo.IO;
 using System.Threading;
 
-namespace Tkl.Jumbo.Jet
+namespace Tkl.Jumbo.IO
 {
     /// <summary>
     /// Record reader that reads from multiple other record readers sequentially.

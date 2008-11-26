@@ -5,7 +5,7 @@ using System.Text;
 using Tkl.Jumbo.IO;
 using System.IO;
 
-namespace Tkl.Jumbo.Jet
+namespace Tkl.Jumbo.IO
 {
     /// <summary>
     /// A record writer that writes to a file using a binary format based on <see cref="IWritable"/> serialization.

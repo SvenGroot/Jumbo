@@ -5,7 +5,7 @@ using System.Text;
 using System.IO;
 using Tkl.Jumbo.IO;
 
-namespace Tkl.Jumbo.Jet
+namespace Tkl.Jumbo.IO
 {
     /// <summary>
     /// Abstract base class for classes that write record to a stream.

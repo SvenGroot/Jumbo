@@ -5,7 +5,7 @@ using System.Text;
 using Tkl.Jumbo.IO;
 using System.IO;
 
-namespace Tkl.Jumbo.Jet
+namespace Tkl.Jumbo.IO
 {
     /// <summary>
     /// A record reader that reads from a stream created with a <see cref="BinaryRecordWriter{T}"/>.

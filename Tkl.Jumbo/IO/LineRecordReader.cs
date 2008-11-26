@@ -5,7 +5,7 @@ using System.Text;
 using System.IO;
 using Tkl.Jumbo.IO;
 
-namespace Tkl.Jumbo.Jet
+namespace Tkl.Jumbo.IO
 {
     /// <summary>
     /// Reads records from a stream using line breaks as the record boundary.

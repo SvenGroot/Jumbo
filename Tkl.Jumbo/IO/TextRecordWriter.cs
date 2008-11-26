@@ -5,7 +5,7 @@ using System.Text;
 using Tkl.Jumbo.IO;
 using System.IO;
 
-namespace Tkl.Jumbo.Jet
+namespace Tkl.Jumbo.IO
 {
     /// <summary>
     /// Writes records to a stream as plain text.

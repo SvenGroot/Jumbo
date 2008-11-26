@@ -29,7 +29,7 @@ namespace Tkl.Jumbo.Jet
         public string TempPath { get; set; }
 
         /// <summary>
-        /// Gets or sets the type of <see cref="RecordWriter{T}"/> to use to read the file.
+        /// Gets or sets the type of <see cref="Tkl.Jumbo.IO.RecordWriter{T}"/> to use to read the file.
         /// </summary>
         [XmlAttribute("recordWriteType")]
         public string RecordWriterType { get; set; }

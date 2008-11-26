@@ -25,7 +25,7 @@ namespace Tkl.Jumbo.Jet
         public int Block { get; set; }
 
         /// <summary>
-        /// Gets or sets the type of <see cref="RecordReader{T}"/> to use to read the file.
+        /// Gets or sets the type of <see cref="Tkl.Jumbo.IO.RecordReader{T}"/> to use to read the file.
         /// </summary>
         [XmlAttribute("recordReaderType")]
         public string RecordReaderType { get; set; }
