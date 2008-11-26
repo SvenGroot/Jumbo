@@ -23,6 +23,10 @@
         <include name="Properties/AssemblyInfo.cs"/>
         <include name="*.cs"/>
       </sources>
+      <nowarn>
+        <warning number="1584"
+        if="${nant.settings.currentframework=='mono-2.0'}" />
+      </nowarn>
     </csc>
     <copy todir="nantbin">
       <fileset>
