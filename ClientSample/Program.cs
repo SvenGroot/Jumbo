@@ -49,7 +49,7 @@ namespace ClientSample
                 return;
             }
             
-            Console.WriteLine("Running task {0}, input file {1}, {2} aggregate tasks, output path {2}.", task, input, aggregateTaskCount, output);
+            Console.WriteLine("Running task {0}, input file {1}, {2} aggregate tasks, output path {3}.", task, input, aggregateTaskCount, output);
             DfsClient dfsClient = new DfsClient();
             IJobServerClientProtocol jobServer = JetClient.CreateJobServerClient();
             Console.WriteLine("Press any key to start");
