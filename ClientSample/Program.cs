@@ -71,25 +71,33 @@ namespace ClientSample
         {
             const int interval = 5000;
             Guid jobId = StartJob(dfsClient, jobServer, inputTaskType, aggregateTaskType, fileName, outputPath, aggregateTaskCount);
-            JobStatus status;
-            while( !jobServer.WaitForJobCompletion(jobId, interval) )
+            if( jobId != Guid.Empty )
             {
+                JobStatus status;
+                while( !jobServer.WaitForJobCompletion(jobId, interval) )
+                {
+                    status = jobServer.GetJobStatus(jobId);
+                    Console.WriteLine(status);
+                }
                 status = jobServer.GetJobStatus(jobId);
                 Console.WriteLine(status);
+                Console.WriteLine();
+                Console.WriteLine("Job completed.");
+                Console.WriteLine("Start time: {0:yyyy'-'MM'-'dd' 'HH':'mm':'ss'.'fff}", status.StartTime.ToLocalTime());
+                Console.WriteLine("End time:   {0:yyyy'-'MM'-'dd' 'HH':'mm':'ss'.'fff}", status.EndTime.ToLocalTime());
+                TimeSpan duration = status.EndTime - status.StartTime;
+                Console.WriteLine("Duration:   {0} ({1}s)", duration, duration.TotalSeconds);
             }
-            status = jobServer.GetJobStatus(jobId);
-            Console.WriteLine(status);
-            Console.WriteLine();
-            Console.WriteLine("Job completed.");
-            Console.WriteLine("Start time: {0:yyyy'-'MM'-'dd' 'HH':'mm':'ss'.'fff}", status.StartTime.ToLocalTime());
-            Console.WriteLine("End time:   {0:yyyy'-'MM'-'dd' 'HH':'mm':'ss'.'fff}", status.EndTime.ToLocalTime());
-            TimeSpan duration = status.EndTime - status.StartTime;
-            Console.WriteLine("Duration:   {0} ({1}s)", duration, duration.TotalSeconds);
         }
 
         private static Guid StartJob(DfsClient dfsClient, IJobServerClientProtocol jobServer, Type inputTaskType, Type aggregateTaskType, string fileName, string outputPath, int aggregateTaskCount)
         {
             Tkl.Jumbo.Dfs.File file = dfsClient.NameServer.GetFileInfo(fileName);
+            if( file == null )
+            {
+                Console.WriteLine("Input file not found.");
+                return Guid.Empty;
+            }
             int blockSize = dfsClient.NameServer.BlockSize;
 
             JobConfiguration config = new JobConfiguration()
