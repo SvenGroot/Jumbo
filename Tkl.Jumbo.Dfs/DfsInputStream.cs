@@ -23,11 +23,7 @@ namespace Tkl.Jumbo.Dfs
         private readonly File _file;
         private long _position;
         private const int _bufferSize = 10;
-        private volatile int _bufferReadPos;
-        private volatile int _bufferWritePos;
-        private AutoResetEvent _bufferReadPosEvent = new AutoResetEvent(false);
-        private AutoResetEvent _bufferWritePosEvent = new AutoResetEvent(false);
-        private Packet[] _packetBuffer = new Packet[_bufferSize];
+        private PacketBuffer _packetBuffer = new PacketBuffer(_bufferSize);
         private DataServerClientProtocolResult _lastResult = DataServerClientProtocolResult.Ok;
         private Exception _lastException;
         private Thread _fillBufferThread;
@@ -148,6 +144,8 @@ namespace Tkl.Jumbo.Dfs
         /// <returns>The total number of bytes read into the buffer. This can be less than the number of bytes requested if that many bytes are not currently available, or zero (0) if the end of the stream has been reached.</returns>
         public override int Read(byte[] buffer, int offset, int count)
         {
+            if( _disposed )
+                throw new ObjectDisposedException(typeof(DfsInputStream).FullName);
             // These exceptions match the contract given in the Stream class documentation.
             if( buffer == null )
                 throw new ArgumentNullException("buffer");
@@ -176,29 +174,22 @@ namespace Tkl.Jumbo.Dfs
 
                 while( _lastResult == DataServerClientProtocolResult.Ok && sizeRemaining > 0 )
                 {
-                    if( _bufferReadPos == _bufferWritePos )
-                        _bufferWritePosEvent.WaitOne();
-                    else
+                    //Debug.WriteLine(string.Format("Read: {0}", _bufferReadPos));
+                    Packet packet = _packetBuffer.ReadItem;
+
+                    // Where in the current packet do we need to read?
+                    int packetOffset = (int)(_position % Packet.PacketSize);
+                    int packetCount = Math.Min(packet.Size - packetOffset, sizeRemaining);
+
+                    int copied = packet.CopyTo(packetOffset, buffer, offset, packetCount);
+                    Debug.Assert(copied == packetCount);
+                    offset += copied;
+                    sizeRemaining -= copied;
+                    _position += copied;
+
+                    if( _position % Packet.PacketSize == 0 )
                     {
-                        //Debug.WriteLine(string.Format("Read: {0}", _bufferReadPos));
-                        Packet packet = _packetBuffer[_bufferReadPos];
-
-                        // Where in the current packet do we need to read?
-                        int packetOffset = (int)(_position % Packet.PacketSize);
-                        int packetCount = Math.Min(packet.Size - packetOffset, sizeRemaining);
-
-                        int copied = packet.CopyTo(packetOffset, buffer, offset, packetCount);
-                        Debug.Assert(copied == packetCount);
-                        offset += copied;
-                        sizeRemaining -= copied;
-                        _position += copied;
-
-                        if( _position % Packet.PacketSize == 0 )
-                        {
-                            // No need to lock; only one thread can write to this
-                            _bufferReadPos = (_bufferReadPos + 1) % _bufferSize;
-                            _bufferReadPosEvent.Set();
-                        }
+                        _packetBuffer.NotifyRead();
                     }
                 }
                 if( _lastException != null )
@@ -246,8 +237,7 @@ namespace Tkl.Jumbo.Dfs
                 _fillBufferThread = new Thread(ReadBufferThread);
                 _fillBufferThread.IsBackground = true;
                 _fillBufferThread.Name = "FillBuffer";
-                _bufferReadPos = 0;
-                _bufferWritePos = 0;
+                _packetBuffer.Reset();
                 _fillBufferThread.Start();
             }
             return _position;
@@ -285,7 +275,7 @@ namespace Tkl.Jumbo.Dfs
                 _disposed = true;
                 if( _fillBufferThread != null )
                 {
-                    _bufferReadPosEvent.Set();
+                    _packetBuffer.Cancel();
                     _fillBufferThread.Join();
                     _fillBufferThread = null;
                 }
@@ -336,29 +326,23 @@ namespace Tkl.Jumbo.Dfs
                                 Packet packet = null;
                                 while( !_disposed && _lastResult == DataServerClientProtocolResult.Ok && (packet == null || !packet.IsLastPacket) )
                                 {
-                                    if( (_bufferWritePos + 1) % _bufferSize == _bufferReadPos )
-                                        _bufferReadPosEvent.WaitOne();
+                                    //Debug.WriteLine(string.Format("Write: {0}", _bufferWritePos));
+                                    packet = _packetBuffer.WriteItem;
+                                    if( packet == null )
+                                        return; // cancelled
+                                    status = (DataServerClientProtocolResult)reader.ReadInt32();
+                                    if( status != DataServerClientProtocolResult.Ok )
+                                    {
+                                        _lastResult = DataServerClientProtocolResult.Error;
+                                        _packetBuffer.NotifyWrite();
+                                    }
                                     else
                                     {
-                                        //Debug.WriteLine(string.Format("Write: {0}", _bufferWritePos));
-                                        if( _packetBuffer[_bufferWritePos] == null )
-                                            _packetBuffer[_bufferWritePos] = new Packet();
-                                        packet = _packetBuffer[_bufferWritePos];
-                                        status = (DataServerClientProtocolResult)reader.ReadInt32();
-                                        if( status != DataServerClientProtocolResult.Ok )
-                                        {
-                                            _lastResult = DataServerClientProtocolResult.Error;
-                                            _bufferWritePosEvent.Set();
-                                        }
-                                        else
-                                        {
-                                            packet.Read(reader, false);
+                                        packet.Read(reader, false);
 
-                                            position += packet.Size;
-                                            // There is no need to lock this write because no other threads will update this value.
-                                            _bufferWritePos = (_bufferWritePos + 1) % _bufferSize;
-                                            _bufferWritePosEvent.Set();
-                                        }
+                                        position += packet.Size;
+                                        // There is no need to lock this write because no other threads will update this value.
+                                        _packetBuffer.NotifyWrite();
                                     }
                                 }
 
