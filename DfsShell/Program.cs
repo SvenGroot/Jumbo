@@ -316,14 +316,17 @@ namespace DfsShell
         {
             byte[] buffer = new byte[4096];
             int bytesRead;
-            int prevPercentage = -1;
+            float prevPercentage = -1;
+            float length = inputStream.Length;
+            int position = 0;
             while( (bytesRead = inputStream.Read(buffer, 0, buffer.Length)) != 0 )
             {
-                int percentage = (int)((inputStream.Position / (float)inputStream.Length) * 100);
+                position += bytesRead;
+                float percentage = (position / length) * 100.0f;
                 if( percentage > prevPercentage )
                 {
                     prevPercentage = percentage;
-                    Console.Write("\r{0}%", percentage);
+                    Console.Write("\r{0}%", (int)percentage);
                 }
                 outputStream.Write(buffer, 0, bytesRead);
             }
