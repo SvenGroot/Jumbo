@@ -287,7 +287,7 @@ namespace Tkl.Jumbo.Test.Dfs
                     Packet packet = new Packet(data, data.Length, x == 29);
                     if( sender.LastResult != DataServerClientProtocolResult.Ok )
                         break;
-                    sender.AddPacket(packet);
+                    sender.AddPacket(data, data.Length, x == 29);
                     packets.Add(packet);
                 }
             }

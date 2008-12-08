@@ -261,8 +261,7 @@ namespace Tkl.Jumbo.Dfs
         
         private void WritePacket(byte[] buffer, int length, bool finalPacket)
         {
-            Packet packet = new Packet(buffer, length, finalPacket);
-            _sender.AddPacket(packet);
+            _sender.AddPacket(buffer, length, finalPacket);
         }
     }
 }

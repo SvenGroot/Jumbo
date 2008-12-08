@@ -23,6 +23,7 @@ namespace Tkl.Jumbo.Dfs
 
         private readonly byte[] _data = new byte[PacketSize];
         private readonly Crc32 _checksum = new Crc32();
+        private long _checksumValue;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="Packet"/> class with no data.
@@ -39,17 +40,7 @@ namespace Tkl.Jumbo.Dfs
         /// <param name="isLastPacket"><see langword="true"/> if this is the last packet being sent; otherwise <see langword="false"/>.</param>
         public Packet(byte[] data, int size, bool isLastPacket)
         {
-            if( data == null )
-                throw new ArgumentNullException("data");
-            if( size < 0 || size > data.Length || size > PacketSize )
-                throw new ArgumentOutOfRangeException("size");
-            if( !isLastPacket && size != PacketSize )
-                throw new ArgumentException("The packet has an invalid size.");
-
-            Array.Copy(data, _data, size);
-            Size = size;
-            IsLastPacket = isLastPacket;
-            RecomputeChecksum();
+            CopyFrom(data, size, isLastPacket);
         }
 
         /// <summary>
@@ -74,8 +65,44 @@ namespace Tkl.Jumbo.Dfs
         {
             get
             {
-                return _checksum.Value;
+                return _checksumValue;
             }
+        }
+
+        /// <summary>
+        /// Resets the data in the packet using the specified data.
+        /// </summary>
+        /// <param name="data">The data to store in the packet.</param>
+        /// <param name="size">The size of the data to store in the packet.</param>
+        /// <param name="isLastPacket"><see langword="true"/> if this is the last packet being sent; otherwise <see langword="false"/>.</param>
+        public void CopyFrom(byte[] data, int size, bool isLastPacket)
+        {
+            if( data == null )
+                throw new ArgumentNullException("data");
+            if( size < 0 || size > data.Length || size > PacketSize )
+                throw new ArgumentOutOfRangeException("size");
+            if( !isLastPacket && size != PacketSize )
+                throw new ArgumentException("The packet has an invalid size.");
+
+            Array.Copy(data, _data, size);
+            Size = size;
+            IsLastPacket = isLastPacket;
+            RecomputeChecksum();
+        }
+
+        /// <summary>
+        /// Resets the data in the packet using the data from the specified packet.
+        /// </summary>
+        /// <param name="packet">The packet whose data to copy.</param>
+        public void CopyFrom(Packet packet)
+        {
+            if( packet == null )
+                throw new ArgumentNullException("packet");
+
+            Array.Copy(packet._data, _data, packet.Size);
+            Size = packet.Size;
+            IsLastPacket = packet.IsLastPacket;
+            _checksumValue = packet.Checksum;
         }
 
         /// <summary>
@@ -215,6 +242,7 @@ namespace Tkl.Jumbo.Dfs
         {
             _checksum.Reset();
             _checksum.Update(_data, 0, Size);
+            _checksumValue = _checksum.Value;
         }
     }
 }

@@ -68,6 +68,14 @@ namespace Tkl.Jumbo.Test
             return lines + 1;
         }
 
+        public static byte[] GenerateData(int size)
+        {
+            Random rnd = new Random();
+            byte[] data = new byte[size];
+            rnd.NextBytes(data);
+            return data;
+        }
+
         public static Packet GeneratePacket(int size, bool isLastPacket)
         {
             Random rnd = new Random();

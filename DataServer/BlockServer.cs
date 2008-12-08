@@ -156,10 +156,9 @@ namespace DataServerApplication
 
         private static bool ReceivePackets(DataServerClientProtocolWriteHeader header, ref int blockSize, BinaryWriter clientWriter, BinaryReader reader, BlockSender forwarder, BinaryWriter fileWriter)
         {
-            Packet packet;
+            Packet packet = new Packet();
             do
             {
-                packet = new Packet();
                 try
                 {
                     packet.Read(reader, false);

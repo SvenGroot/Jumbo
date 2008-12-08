@@ -16,9 +16,8 @@ namespace Tkl.Jumbo.Dfs
     /// </summary>
     public class BlockSender : IDisposable
     {
-        private readonly Queue<Packet> _packetsToSend = new Queue<Packet>();
-        private AutoResetEvent _packetsToSendEvent = new AutoResetEvent(false);
-        private AutoResetEvent _packetsToSendDequeueEvent = new AutoResetEvent(false);
+        private const int _bufferSize = 10;
+        private readonly PacketBuffer _buffer = new PacketBuffer(_bufferSize);
         private volatile DataServerClientProtocolResult _lastResult = DataServerClientProtocolResult.Ok;
         private volatile Exception _lastException;
         private Thread _sendPacketsThread;
@@ -28,7 +27,6 @@ namespace Tkl.Jumbo.Dfs
         private int _offset;
         private const int _maxQueueSize = Int32.MaxValue;
         private bool _disposed;
-        //private int _time;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="BlockSender"/> class for the specified block assignment.
@@ -102,11 +100,6 @@ namespace Tkl.Jumbo.Dfs
         public DataServerClientProtocolResult LastResult
         {
             get { return _lastResult; }
-            set 
-            {
-                _lastResult = value;
-                _packetsToSendEvent.Set();
-            }
         }
 
         /// <summary>
@@ -120,7 +113,45 @@ namespace Tkl.Jumbo.Dfs
         /// <summary>
         /// Adds a packet to the upload queue.
         /// </summary>
-        /// <param name="packet">The packet to upload.</param>
+        /// <param name="packet">The packet to add.</param>
+        /// <remarks>
+        /// <para>
+        ///   The packet will not be sent immediately, but rather it will be added to a queue and sent asynchronously.
+        ///   The packet will be copied so it is safe to overwrite the specified instance after calling this method.
+        /// </para>
+        /// <para>
+        ///   <see cref="BlockSender"/> does not know anything about the block size; it is up to the caller to
+        ///   make sure not more blocks than are allowed are submitted, and that the <see cref="Packet.IsLastPacket"/>
+        ///   property is set to <see langword="true"/> on the last packet.
+        /// </para>
+        /// </remarks>
+        public void AddPacket(Packet packet)
+        {
+            if( packet == null )
+                throw new ArgumentNullException("packet");
+
+            CheckDisposed();
+
+            Packet bufferPacket = _buffer.WriteItem;
+            ThrowIfErrorOccurred();
+            if( packet == null )
+                throw new InvalidOperationException("The operation has been aborted.");
+
+            bufferPacket.CopyFrom(packet);
+
+            if( bufferPacket.IsLastPacket )
+            {
+                _hasLastPacket = true;
+            }
+            _buffer.NotifyWrite();
+        }
+
+        /// <summary>
+        /// Adds a packet to the upload queue.
+        /// </summary>
+        /// <param name="data">The data to in the packet.</param>
+        /// <param name="size">The size of the data in the packet.</param>
+        /// <param name="isLastPacket"><see langword="true"/> if this is the last packet being sent; otherwise <see langword="false"/>.</param>
         /// <remarks>
         /// <para>
         ///   The packet will not be sent immediately, but rather it will be added to a queue and sent asynchronously.
@@ -132,45 +163,22 @@ namespace Tkl.Jumbo.Dfs
         /// </para>
         /// </remarks>
         /// <exception cref="ArgumentNullException"><paramref name="packet"/> is <see langword="null" />.</exception>
-        public void AddPacket(Packet packet)
+        public void AddPacket(byte[] data, int size, bool isLastPacket)
         {
             CheckDisposed();
-            if( packet == null )
-                throw new ArgumentNullException("packet");
 
-            //if( _time != 0 )
-            //{
-            //    int t = Environment.TickCount - _time;
-            //    if( t > 100 )
-            //        Console.WriteLine("Long time between queue: {0}", t);
-            //}
-            int prevTime = Environment.TickCount;
-            bool queueFull = false;
-            do
-            {
-                ThrowIfErrorOccurred();
-                lock( _packetsToSend )
-                {
-                    if( _packetsToSend.Count >= _maxQueueSize )
-                        queueFull = true;
-                    else
-                    {
-                        _packetsToSend.Enqueue(packet);
-                        queueFull = false;
-                    }
-                }
-                if( queueFull )
-                    _packetsToSendDequeueEvent.WaitOne();
-            } while( queueFull );
-            if( packet.IsLastPacket )
+            Packet packet = _buffer.WriteItem;
+            ThrowIfErrorOccurred();
+            if( packet == null )
+                throw new InvalidOperationException("The operation has been aborted.");
+
+            packet.CopyFrom(data, size, isLastPacket);
+
+            if( isLastPacket )
             {
                 _hasLastPacket = true;
             }
-            _packetsToSendEvent.Set();
-            int total = Environment.TickCount - prevTime;
-            if( total > 100 )
-                Console.WriteLine("!!! Long queue time: {0}", total);
-            //_time = Environment.TickCount;
+            _buffer.NotifyWrite();
         }
 
         /// <summary>
@@ -178,7 +186,7 @@ namespace Tkl.Jumbo.Dfs
         /// </summary>
         /// <remarks>
         /// You should only call this function after you have submitted the last packet of the block with the
-        /// <see cref="AddPacket"/> function. This function will not return until all packets have been acknowledged
+        /// <see cref="AddPacket(Packet)"/> function. This function will not return until all packets have been acknowledged
         /// or the data server reported an error.
         /// </remarks>
         /// <exception cref="InvalidOperationException">A packet with <see cref="Packet.IsLastPacket"/> 
@@ -189,7 +197,7 @@ namespace Tkl.Jumbo.Dfs
             if( _lastResult == DataServerClientProtocolResult.Ok && !_hasLastPacket )
             {
                 _lastResult = DataServerClientProtocolResult.Error;
-                _packetsToSendEvent.Set();
+                _buffer.Cancel();
                 throw new InvalidOperationException("You cannot call WaitForConfirmations until the last packet has been submitted.");
             }
             _sendPacketsThread.Join();
@@ -205,34 +213,6 @@ namespace Tkl.Jumbo.Dfs
             if( _lastResult != DataServerClientProtocolResult.Ok )
                 throw new DfsException("There was an error sending a packet to the server.", _lastException);
         }
-
-        ///// <summary>
-        ///// Forward packet confirmations to the specified writer.
-        ///// </summary>
-        ///// <param name="writer">The <see cref="BinaryWriter"/> to write the confirmations to.</param>
-        //public void ForwardConfirmations(BinaryWriter writer)
-        //{
-        //    CheckDisposed();
-        //    if( _lastResult != DataServerClientProtocolResult.Ok )
-        //    {
-        //        writer.Write((int)_lastResult);
-        //        _receivedConfirmations = 0;
-        //    }
-        //    else
-        //    {
-        //        // This function is not meant to be called from more than one thread; if it were
-        //        // to be called from more than one thread a race condition in this loop could cause
-        //        // too many confirmations to be sent.
-        //        // This is not an issue because while this class uses threads internally, it's
-        //        // public interface is not meant to be thread-safe and indeed won't be used
-        //        // from multiple threads.
-        //        while( _receivedConfirmations > 0 )
-        //        {
-        //            writer.Write((int)DataServerClientProtocolResult.Ok);
-        //            Interlocked.Decrement(ref _receivedConfirmations);
-        //        }
-        //    }
-        //}
 
         private void SendPacketsThread(object data)
         {
@@ -283,7 +263,7 @@ namespace Tkl.Jumbo.Dfs
                     _lastException = ex;
                     _lastResult = DataServerClientProtocolResult.Error;
                 }
-                _packetsToSendDequeueEvent.Set(); // Wake the main thread if necessary.
+                _buffer.Cancel();
             }
             finally
             {
@@ -303,46 +283,26 @@ namespace Tkl.Jumbo.Dfs
             Packet packet = null;
             while( (packet == null || !packet.IsLastPacket) && _lastResult == DataServerClientProtocolResult.Ok )
             {
-                packet = null;
-                lock( _packetsToSend )
+                packet = _buffer.ReadItem;
+                if( packet == null )
+                    break; // cancelled;
+                if( _dataServers == null )
                 {
-                    if( _packetsToSend.Count > 0 )
-                    {
-                        packet = _packetsToSend.Dequeue();
-                        _packetsToSendDequeueEvent.Set();
-                    }
+                    writer.Write((int)DataServerClientProtocolResult.Ok);
                 }
-                if( packet != null )
+                if( stream.DataAvailable )
                 {
-                    if( _dataServers == null )
-                    {
-                        writer.Write((int)DataServerClientProtocolResult.Ok);
-                    }
-                    //int prevTime = Environment.TickCount;
-                    if( stream.DataAvailable )
-                    {
-                        if( !ReadResult(reader) )
-                            break;
-                    }
-                    try
-                    {
-                        packet.Write(writer, false);
-                    }
-                    catch( IOException )
-                    {
-                        throw;
-                    }
-                    //int total = Environment.TickCount - prevTime;
-                    //if( total > 100 )
-                    //    Console.WriteLine("!!! Long write time: {0}", total);
+                    if( !ReadResult(reader) )
+                        break;
                 }
-                else
+                try
                 {
-                    //int prevTime = Environment.TickCount;
-                    _packetsToSendEvent.WaitOne();
-                    //int total = Environment.TickCount - prevTime;
-                    //if( total > 100 )
-                    //    Console.WriteLine("!!! Long send wait time: {0}", total);
+                    packet.Write(writer, false);
+                    _buffer.NotifyRead();
+                }
+                catch( IOException )
+                {
+                    throw;
                 }
             }
         }
@@ -353,9 +313,7 @@ namespace Tkl.Jumbo.Dfs
             if( result != DataServerClientProtocolResult.Ok )
             {
                 _lastResult = result;
-                // Wake up the other threads.
-                _packetsToSendDequeueEvent.Set();
-                _packetsToSendEvent.Set();
+                _buffer.Cancel();
                 return false;
             }
             return true;

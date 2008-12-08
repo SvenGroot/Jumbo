@@ -179,7 +179,7 @@ namespace Tkl.Jumbo.Test.Dfs
 
             using( BlockSender sender = new BlockSender(block) )
             {
-                sender.AddPacket(Utilities.GeneratePacket(10000, true));
+                sender.AddPacket(Utilities.GenerateData(10000), 10000, true);
                 sender.WaitUntilSendFinished();
                 sender.ThrowIfErrorOccurred();
             }
@@ -406,7 +406,7 @@ namespace Tkl.Jumbo.Test.Dfs
             {
                 for( int sizeRemaining = target.BlockSize; sizeRemaining > 0; sizeRemaining -= Packet.PacketSize )
                 {
-                    sender.AddPacket(Utilities.GeneratePacket(Packet.PacketSize, sizeRemaining - Packet.PacketSize == 0));
+                    sender.AddPacket(Utilities.GenerateData(Packet.PacketSize), Packet.PacketSize, sizeRemaining - Packet.PacketSize == 0);
                 }
                 sender.WaitUntilSendFinished();
                 sender.ThrowIfErrorOccurred();
@@ -420,7 +420,7 @@ namespace Tkl.Jumbo.Test.Dfs
 
             using( BlockSender sender = new BlockSender(block2) )
             {
-                sender.AddPacket(Utilities.GeneratePacket(10000, true));
+                sender.AddPacket(Utilities.GenerateData(10000), 10000, true);
                 sender.WaitUntilSendFinished();
                 sender.ThrowIfErrorOccurred();
             }
