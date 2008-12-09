@@ -52,6 +52,7 @@
     <Compile Include="BlockAssignment.cs" />
     <Compile Include="BlockReportHeartbeatData.cs" />
     <Compile Include="BlockSender.cs" />
+    <Compile Include="ChecksumConfigurationElement.cs" />
     <Compile Include="CRC32.cs" />
     <Compile Include="DataServerClientProtocolHeader.cs" />
     <Compile Include="DataServerClientProtocolReadHeader.cs" />

@@ -21,6 +21,7 @@ namespace Tkl.Jumbo.Dfs
         /// </summary>
         public const int PacketSize = 0x10000; // TODO: This should probably be a parameter of the file system.
 
+        private static readonly bool _computeChecksums = DfsConfiguration.GetConfiguration().Checksum.IsEnabled;
         private readonly byte[] _data = new byte[PacketSize];
         private readonly Crc32 _checksum = new Crc32();
         private long _checksumValue;
@@ -163,10 +164,13 @@ namespace Tkl.Jumbo.Dfs
                 bytesRead += reader.Read(_data, bytesRead, Size - bytesRead);
             }
 
-            RecomputeChecksum();
-            if( Checksum != expectedChecksum )
+            if( _computeChecksums )
             {
-                throw new InvalidPacketException("Computed packet checksum doesn't match expected checksum.");
+                RecomputeChecksum();
+                if( Checksum != expectedChecksum )
+                {
+                    throw new InvalidPacketException("Computed packet checksum doesn't match expected checksum.");
+                }
             }
         }
 
@@ -240,9 +244,12 @@ namespace Tkl.Jumbo.Dfs
 
         private void RecomputeChecksum()
         {
-            _checksum.Reset();
-            _checksum.Update(_data, 0, Size);
-            _checksumValue = _checksum.Value;
+            if( _computeChecksums )
+            {
+                _checksum.Reset();
+                _checksum.Update(_data, 0, Size);
+                _checksumValue = _checksum.Value;
+            }
         }
     }
 }

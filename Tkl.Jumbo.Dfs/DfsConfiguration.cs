@@ -30,6 +30,15 @@ namespace Tkl.Jumbo.Dfs
         }
 
         /// <summary>
+        /// Gets configuration for the checksums used by both the data servers and the clients.
+        /// </summary>
+        [ConfigurationProperty("checksum", IsRequired = false, IsKey = false)]
+        public ChecksumConfigurationElement Checksum
+        {
+            get { return (ChecksumConfigurationElement)this["checksum"]; }
+        }
+
+        /// <summary>
         /// Loads the DFS configuration from the application configuration file.
         /// </summary>
         /// <returns>A <see cref="DfsConfiguration"/> object representing the settings in the application configuration file, or
