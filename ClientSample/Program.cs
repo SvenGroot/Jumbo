@@ -44,6 +44,9 @@ namespace ClientSample
                 inputTaskType = typeof(WordCountTask);
                 aggregateTaskType = typeof(WordCountAggregateTask);
                 break;
+            case "readtest":
+                ReadTest(input);
+                return;
             default:
                 Console.WriteLine("Unknown task.");
                 return;
@@ -177,6 +180,24 @@ namespace ClientSample
                     return i;
             }
             throw new ArgumentException(string.Format("Type {0} does not implement interface {1}.", type, interfaceType));
+        }
+
+        private static void ReadTest(string path)
+        {
+            Console.WriteLine("Reading file {0}.", path);
+            DfsClient client = new DfsClient();
+            Stopwatch sw = new Stopwatch();
+            sw.Start();
+            using( DfsInputStream stream = client.OpenFile(path) )
+            {
+                const int size = 0x10000;
+                byte[] buffer = new byte[size];
+                while( stream.Read(buffer, 0, size) > 0 )
+                {
+                }
+            }
+            sw.Stop();
+            Console.WriteLine("Reading file complete: {0}.", sw.ElapsedMilliseconds / 1000.0f);
         }
     }
 }
