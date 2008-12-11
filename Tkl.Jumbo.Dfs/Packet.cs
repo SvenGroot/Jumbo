@@ -138,7 +138,9 @@ namespace Tkl.Jumbo.Dfs
         /// <param name="reader">The <see cref="BinaryReader"/> to read the packe data from.</param>
         /// <param name="checkSumOnly"><see langword="true"/> if the data source contains only the checksum before the
         /// packet data; <see langword="false"/> if it contains the checksum, packet size and last packet flag.</param>
-        public void Read(BinaryReader reader, bool checkSumOnly)
+        /// <param name="verifyChecksum"><see langword="true"/> to verify the checksum read from the data source against
+        /// the actual checksum of the data; <see langword="false"/> to skip verifying the checksum.</param>
+        public void Read(BinaryReader reader, bool checkSumOnly, bool verifyChecksum)
         {
             if( reader == null )
                 throw new ArgumentNullException("reader");
@@ -164,7 +166,7 @@ namespace Tkl.Jumbo.Dfs
                 bytesRead += reader.Read(_data, bytesRead, Size - bytesRead);
             }
 
-            if( _computeChecksums )
+            if( _computeChecksums && verifyChecksum )
             {
                 RecomputeChecksum();
                 if( Checksum != expectedChecksum )
@@ -172,6 +174,8 @@ namespace Tkl.Jumbo.Dfs
                     throw new InvalidPacketException("Computed packet checksum doesn't match expected checksum.");
                 }
             }
+            else
+                _checksumValue = expectedChecksum;
         }
 
         /// <summary>

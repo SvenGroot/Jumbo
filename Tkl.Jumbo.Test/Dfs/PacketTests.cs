@@ -49,7 +49,7 @@ namespace Tkl.Jumbo.Test.Dfs
                 writer.Write(data, 0, 5000);
 
                 stream.Position = 0;
-                packet.Read(reader, false);
+                packet.Read(reader, false, true);
             }
             Assert.AreEqual(checksum, packet.Checksum);
             Assert.AreEqual(5000, packet.Size);
@@ -75,11 +75,11 @@ namespace Tkl.Jumbo.Test.Dfs
                 writer.Write(data, 0, 5000);
 
                 stream.Position = 0;
-                packet.Read(reader, true);
+                packet.Read(reader, true, true);
                 Assert.AreEqual(checksum, packet.Checksum);
                 Assert.AreEqual(Packet.PacketSize, packet.Size);
                 Assert.IsFalse(packet.IsLastPacket);
-                packet.Read(reader, true);
+                packet.Read(reader, true, true);
                 Assert.AreEqual(checksum2, packet.Checksum);
                 Assert.AreEqual(5000, packet.Size);
                 Assert.IsTrue(packet.IsLastPacket);

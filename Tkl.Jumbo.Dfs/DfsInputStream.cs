@@ -338,7 +338,7 @@ namespace Tkl.Jumbo.Dfs
                                     }
                                     else
                                     {
-                                        packet.Read(reader, false);
+                                        packet.Read(reader, false, true);
 
                                         position += packet.Size;
                                         // There is no need to lock this write because no other threads will update this value.

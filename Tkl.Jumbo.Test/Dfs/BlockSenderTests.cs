@@ -111,7 +111,7 @@ namespace Tkl.Jumbo.Test.Dfs
                                     return;
                                 }
                             }
-                            packet.Read(reader, false);
+                            packet.Read(reader, false, true);
                             if( _mode == TestMode.Error && ReceivedPackets.Count >= 5 )
                             {
                                 writer.Write((int)DataServerClientProtocolResult.Error);
