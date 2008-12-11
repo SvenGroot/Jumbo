@@ -24,8 +24,7 @@ namespace Tkl.Jumbo.Dfs
         private static readonly bool _computeChecksums = DfsConfiguration.GetConfiguration().Checksum.IsEnabled;
         private readonly byte[] _data = new byte[PacketSize];
         private readonly Crc32 _checksum = new Crc32();
-        private long? _checksumValue;
-        private uint? _expectedChecksum;
+        private long _checksumValue;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="Packet"/> class with no data.
@@ -49,7 +48,7 @@ namespace Tkl.Jumbo.Dfs
         /// Gets or sets a value that indicates whether this packet is the last packet being sent.
         /// </summary>
         public bool IsLastPacket { get; set; }
-        
+
         /// <summary>
         /// Gets or sets the size of the packet.
         /// </summary>
@@ -67,11 +66,7 @@ namespace Tkl.Jumbo.Dfs
         {
             get
             {
-                if( _checksumValue == null )
-                {
-                    RecomputeChecksum();
-                }
-                return _checksumValue.Value;
+                return _checksumValue;
             }
         }
 
@@ -93,7 +88,6 @@ namespace Tkl.Jumbo.Dfs
             Array.Copy(data, _data, size);
             Size = size;
             IsLastPacket = isLastPacket;
-            _expectedChecksum = null;
             RecomputeChecksum();
         }
 
@@ -110,7 +104,6 @@ namespace Tkl.Jumbo.Dfs
             Size = packet.Size;
             IsLastPacket = packet.IsLastPacket;
             _checksumValue = packet.Checksum;
-            _expectedChecksum = null;
         }
 
         /// <summary>
@@ -133,9 +126,6 @@ namespace Tkl.Jumbo.Dfs
                 throw new ArgumentOutOfRangeException("count");
             if( destOffset + count > buffer.Length )
                 throw new ArgumentException("The combined value of destOffset and count is larger than the buffer size.");
-
-            if( _checksumValue == null )
-                RecomputeChecksum();
 
             count = Math.Min(count, Size - sourceOffset);
             Array.Copy(_data, sourceOffset, buffer, destOffset, count);
@@ -174,16 +164,14 @@ namespace Tkl.Jumbo.Dfs
                 bytesRead += reader.Read(_data, bytesRead, Size - bytesRead);
             }
 
-            _checksumValue = null;
-            _expectedChecksum = expectedChecksum;
-            //if( _computeChecksums )
-            //{
-            //    RecomputeChecksum();
-            //    if( Checksum != expectedChecksum )
-            //    {
-            //        throw new InvalidPacketException("Computed packet checksum doesn't match expected checksum.");
-            //    }
-            //}
+            if( _computeChecksums )
+            {
+                RecomputeChecksum();
+                if( Checksum != expectedChecksum )
+                {
+                    throw new InvalidPacketException("Computed packet checksum doesn't match expected checksum.");
+                }
+            }
         }
 
         /// <summary>
@@ -214,9 +202,6 @@ namespace Tkl.Jumbo.Dfs
         {
             if( stream == null )
                 throw new ArgumentNullException("stream");
-
-            if( _checksumValue == null )
-                RecomputeChecksum();
 
             stream.Write(_data, 0, Size);
         }
@@ -264,8 +249,6 @@ namespace Tkl.Jumbo.Dfs
                 _checksum.Reset();
                 _checksum.Update(_data, 0, Size);
                 _checksumValue = _checksum.Value;
-                if( _expectedChecksum != null && _expectedChecksum.Value != _checksumValue.Value )
-                    throw new InvalidPacketException("Invalid packet CRC.");
             }
         }
     }
