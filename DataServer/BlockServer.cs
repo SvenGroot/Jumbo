@@ -212,79 +212,88 @@ namespace DataServerApplication
             int endOffset = 0;
             int endFileOffset = 0;
 
-            try
+            using( BlockSender sender = new BlockSender(stream, offset) )
             {
-                _log.Debug("Open block file.");
-                using( FileStream blockFile = _dataServer.OpenBlock(header.BlockID) )
-                using( BinaryReader reader = new BinaryReader(blockFile) )
-                using( BinaryWriter writer = new BinaryWriter(stream) )
+                try
                 {
-                    _log.DebugFormat("Block file opened, beginning send.");
-                    if( header.Size >= 0 )
+                    using( FileStream blockFile = _dataServer.OpenBlock(header.BlockID) )
+                    using( BinaryReader reader = new BinaryReader(blockFile) )
                     {
-                        endPacketOffset = (header.Offset + header.Size) / Packet.PacketSize;
-                    }
-                    else
-                    {
-                        endPacketOffset = (int)(blockFile.Length / Packet.PacketSize);
-                    }
-                    endOffset = endPacketOffset * Packet.PacketSize;
-                    endFileOffset = endPacketOffset * (Packet.PacketSize + sizeof(uint));
-
-                    if( fileOffset > blockFile.Length || endFileOffset > blockFile.Length )
-                    {
-                        _log.ErrorFormat("Requested offsets are out of range.");
-                        writer.WriteResult(DataServerClientProtocolResult.Error);
-                        return;
-                    }
-
-                    blockFile.Seek(fileOffset, SeekOrigin.Begin);
-                    int sizeRemaining = endOffset - offset;
-                    Packet packet = null;
-                    writer.WriteResult(DataServerClientProtocolResult.Ok);
-                    writer.Write(offset);
-                    do
-                    {
-                        packet = new Packet();
-                        try
+                        if( header.Size >= 0 )
                         {
-                            packet.Read(reader, true);
+                            endPacketOffset = (header.Offset + header.Size) / Packet.PacketSize;
                         }
-                        catch( InvalidPacketException )
+                        else
                         {
-                            writer.WriteResult(DataServerClientProtocolResult.Error);
+                            endPacketOffset = (int)(blockFile.Length / Packet.PacketSize);
+                        }
+                        endOffset = endPacketOffset * Packet.PacketSize;
+                        endFileOffset = endPacketOffset * (Packet.PacketSize + sizeof(uint));
+
+                        if( fileOffset > blockFile.Length || endFileOffset > blockFile.Length )
+                        {
+                            _log.ErrorFormat("Requested offsets are out of range.");
+                            sender.LastResult = DataServerClientProtocolResult.Error;
+                            sender.WaitUntilSendFinished();
                             return;
                         }
 
-                        if( sizeRemaining == 0 )
-                            packet.IsLastPacket = true;
+                        blockFile.Seek(fileOffset, SeekOrigin.Begin);
+                        int sizeRemaining = endOffset - offset;
+                        Packet packet = null;
+                        do
+                        {
+                            packet = new Packet();
+                            try
+                            {
+                                packet.Read(reader, true);
+                            }
+                            catch( InvalidPacketException )
+                            {
+                                sender.LastResult = DataServerClientProtocolResult.Error;
+                                sender.WaitUntilSendFinished();
+                                return;
+                            }
 
-                        writer.WriteResult(DataServerClientProtocolResult.Ok);
-                        packet.Write(writer, false);
+                            if( sizeRemaining == 0 )
+                                packet.IsLastPacket = true;
 
-                        // assertion to check if we don't jump over zero.
-                        System.Diagnostics.Debug.Assert(sizeRemaining > 0 ? sizeRemaining - packet.Size >= 0 : true);
-                        sizeRemaining -= packet.Size;
-                    } while( !packet.IsLastPacket );
+                            sender.AddPacket(packet);
 
-                }
-            }
-            catch( IOException ex )
-            {
-                if( ex.InnerException is SocketException )
-                {
-                    SocketException socketEx = (SocketException)ex.InnerException;
-                    if( socketEx.ErrorCode == (int)SocketError.ConnectionAborted || socketEx.ErrorCode == (int)SocketError.ConnectionReset )
-                    {
-                        _log.Info("The connection was closed by the remote host.");
-                        return;
+                            // assertion to check if we don't jump over zero.
+                            System.Diagnostics.Debug.Assert(sizeRemaining > 0 ? sizeRemaining - packet.Size >= 0 : true);
+                            sizeRemaining -= packet.Size;
+                        } while( !packet.IsLastPacket );
                     }
                 }
-                throw;
-
+                catch( DfsException ex )
+                {
+                    if( ex.InnerException is IOException && ex.InnerException.InnerException is SocketException )
+                    {
+                        SocketException socketEx = (SocketException)ex.InnerException.InnerException;
+                        if( socketEx.ErrorCode == (int)SocketError.ConnectionAborted || socketEx.ErrorCode == (int)SocketError.ConnectionReset )
+                        {
+                            _log.Info("The connection was closed by the remote host.");
+                            return;
+                        }
+                    }
+                    throw;
+                }
+                catch( Exception )
+                {
+                    try
+                    {
+                        sender.LastResult = DataServerClientProtocolResult.Error;
+                        sender.WaitUntilSendFinished();
+                    }
+                    catch( Exception )
+                    {
+                    }
+                    throw;
+                }
+                sender.WaitUntilSendFinished();
+                _log.InfoFormat("Finished sending block {0}", header.BlockID);
             }
-
-            _log.InfoFormat("Finished sending block {0}", header.BlockID);
         }
     }
 }
