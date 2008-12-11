@@ -100,6 +100,12 @@ namespace Tkl.Jumbo.Dfs
         public DataServerClientProtocolResult LastResult
         {
             get { return _lastResult; }
+            set
+            {
+                _lastResult = value;
+                if( _lastResult != DataServerClientProtocolResult.Ok )
+                    _buffer.Cancel();
+            }
         }
 
         /// <summary>
@@ -131,6 +137,9 @@ namespace Tkl.Jumbo.Dfs
                 throw new ArgumentNullException("packet");
 
             CheckDisposed();
+
+            if( _hasLastPacket )
+                throw new InvalidOperationException("You cannot add additional packets after adding the last packet.");
 
             Packet bufferPacket = _buffer.WriteItem;
             ThrowIfErrorOccurred();
@@ -166,6 +175,9 @@ namespace Tkl.Jumbo.Dfs
         public void AddPacket(byte[] data, int size, bool isLastPacket)
         {
             CheckDisposed();
+
+            if( _hasLastPacket )
+                throw new InvalidOperationException("You cannot add additional packets after adding the last packet.");
 
             Packet packet = _buffer.WriteItem;
             ThrowIfErrorOccurred();
@@ -280,12 +292,12 @@ namespace Tkl.Jumbo.Dfs
         private void SendPackets(BinaryWriter writer, NetworkStream stream, BinaryReader reader)
         {
             // Start sending packets; stop when an error occurs or we've sent the last packet.
-            Packet packet = null;
-            while( (packet == null || !packet.IsLastPacket) && _lastResult == DataServerClientProtocolResult.Ok )
+            bool lastPacket = false;
+            while( !lastPacket && _lastResult == DataServerClientProtocolResult.Ok )
             {
-                packet = _buffer.ReadItem;
+                Packet packet = _buffer.ReadItem;
                 if( packet == null )
-                    break; // cancelled;
+                    break;
                 if( _dataServers == null )
                 {
                     writer.Write((int)DataServerClientProtocolResult.Ok);
@@ -295,15 +307,9 @@ namespace Tkl.Jumbo.Dfs
                     if( !ReadResult(reader) )
                         break;
                 }
-                try
-                {
-                    packet.Write(writer, false);
-                    _buffer.NotifyRead();
-                }
-                catch( IOException )
-                {
-                    throw;
-                }
+                packet.Write(writer, false);
+                lastPacket = packet.IsLastPacket;
+                _buffer.NotifyRead();
             }
         }
 

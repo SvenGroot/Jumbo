@@ -33,6 +33,8 @@ namespace Tkl.Jumbo.Test.Dfs
 
             public void Run(string editLogPath, int replicationFactor, int dataServers, int? blockSize)
             {
+                log4net.LogManager.ResetConfiguration();
+                log4net.Config.BasicConfigurator.Configure();
                 DfsConfiguration config = new DfsConfiguration();
                 config.NameServer.HostName = "localhost";
                 config.NameServer.Port = NameServerPort; // Pick a different port so the tests can run even when a regular cluster is running

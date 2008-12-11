@@ -122,9 +122,9 @@ namespace DataServerApplication
                         }
                     }
 
-                    _log.InfoFormat("Writing block {0} complete.", header.BlockID);
                     _dataServer.CompleteBlock(header.BlockID, blockSize);
                     clientWriter.WriteResult(DataServerClientProtocolResult.Ok);
+                    _log.InfoFormat("Writing block {0} complete.", header.BlockID);
                 }
                 catch( Exception )
                 {
