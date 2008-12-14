@@ -31,7 +31,7 @@
   <target name="Version.cs">
     <exec program="gen-version.sh"/>
   </target>
-  <target name="Tkl.Jumbo,Version.cs">
+  <target name="Tkl.Jumbo" depends="Version.cs">
     <exec program="gen-version.sh"/>
     <mkdir dir="nantbin"/>
     <nant buildfile="Tkl.Jumbo/Tkl.Jumbo.build" />
