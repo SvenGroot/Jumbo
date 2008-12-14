@@ -22,6 +22,7 @@
         <include name="Properties/AssemblyInfo.cs"/>
         <include name="*.cs"/>
         <include name="IO/*.cs"/>
+	<include name="../Version.cs"/>
       </sources>
       <nowarn>
 	<warning number="1584"
