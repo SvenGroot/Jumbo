@@ -75,6 +75,9 @@ namespace Tkl.Jumbo
 
             if( log.IsInfoEnabled )
             {
+                log.InfoFormat("Jumbo Version: {0}", Assembly.GetExecutingAssembly().GetName().Version);
+                AssemblyName entry = Assembly.GetEntryAssembly().GetName();
+                log.InfoFormat("{0} Version: {1}", entry.Name, entry.Version);
                 log.InfoFormat("   OS Version: {0}", Environment.OSVersion);
                 log.InfoFormat("  CLR Version: {0} ({1} bit runtime)", Description, IntPtr.Size * 8);
             }
