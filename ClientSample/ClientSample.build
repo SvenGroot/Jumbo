@@ -24,6 +24,7 @@
       <sources>
         <include name="Properties/AssemblyInfo.cs"/>
         <include name="*.cs"/>
+        <include name="../Version.cs"/>
       </sources>
     </csc>
     <copy file="App.config" tofile="nantbin/ClientSample.exe.config"/>

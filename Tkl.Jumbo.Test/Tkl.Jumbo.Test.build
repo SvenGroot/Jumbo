@@ -32,6 +32,7 @@
         <include name="*.cs"/>
         <include name="Jet/*.cs"/>
         <include name="Dfs/*.cs"/>
+        <include name="../Version.cs"/>
       </sources>
     </csc>
     <copy todir="nantbin">

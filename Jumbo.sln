@@ -13,12 +13,14 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{7F2D342B-860E-4940-BBAB-9B7325C3F47D}"
 	ProjectSection(SolutionItems) = preProject
 		dfs.config = dfs.config
+		gen-version.sh = gen-version.sh
 		jet.config = jet.config
 		jumbo-config.sh = jumbo-config.sh
 		Jumbo.build = Jumbo.build
 		run-dfs.sh = run-dfs.sh
 		run-jet.sh = run-jet.sh
 		run-server.sh = run-server.sh
+		VersionTemplate.cs = VersionTemplate.cs
 	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Tkl.Jumbo.Dfs", "Tkl.Jumbo.Dfs\Tkl.Jumbo.Dfs.csproj", "{67D71A3A-4FDA-4136-8423-07A7C1592E65}"

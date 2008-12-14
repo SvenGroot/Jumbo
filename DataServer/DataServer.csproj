@@ -45,6 +45,9 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="..\Version.cs">
+      <Link>Properties\Version.cs</Link>
+    </Compile>
     <Compile Include="BlockServer.cs" />
     <Compile Include="DataServer.cs" />
     <Compile Include="ExtensionMethods.cs" />
