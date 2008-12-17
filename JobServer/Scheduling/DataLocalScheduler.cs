@@ -55,7 +55,7 @@ namespace JobServerApplication.Scheduling
                     {
                         eligibleServers = servers.Values;
                     }
-                    // TODO: We need to cache the block intersection at least for this scheduling run, this does way too many calls to the data server
+                    // TODO: We need to cache the block intersection at least for this scheduling run, this does way too many calls to the name server
                     TaskServerInfo[] availableServers = (from server in eligibleServers
                                                          where server.AvailableTasks > 0
                                                          orderby dfsClient.NameServer.GetDataServerBlockCount(server.Address, inputBlocks)
@@ -63,11 +63,7 @@ namespace JobServerApplication.Scheduling
                     if( availableServers.Length > 0 )
                     {
                         TaskServerInfo server = availableServers[0];
-                        server.AssignedTasks.Add(task);
-                        task.Server = server;
-                        task.State = TaskState.Scheduled;
-                        --job.UnscheduledTasks;
-                        job.TaskServers.Add(server.Address); // Record all servers involved with the task to give them cleanup instructions later.
+                        server.AssignTask(job, task);
                         _log.InfoFormat("Task {0} has been assigned to server {1}{2}.", task.GlobalID, server.Address, task.Task.DfsInput == null ? "" : (localServers ? " (data local)" : " (NOT data local)"));
                         --capacity;
                         if( capacity == 0 )

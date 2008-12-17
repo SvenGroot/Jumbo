@@ -31,5 +31,14 @@ namespace JobServerApplication
         {
             get { return _assignedTasks; }
         }
+
+        public void AssignTask(JobInfo job, TaskInfo task)
+        {
+            AssignedTasks.Add(task);
+            task.Server = this;
+            task.State = TaskState.Scheduled;
+            --job.UnscheduledTasks;
+            job.TaskServers.Add(Address); // Record all servers involved with the task to give them cleanup instructions later.
+        }
     }
 }

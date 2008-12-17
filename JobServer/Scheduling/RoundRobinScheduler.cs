@@ -30,14 +30,10 @@ namespace JobServerApplication.Scheduling
                     if( taskServer.AvailableTasks > 0 )
                     {
                         TaskInfo task = job.Tasks.Values[taskIndex];
-                        taskServer.AssignedTasks.Add(task);
-                        task.Server = taskServer;
-                        task.State = TaskState.Scheduled;
+                        taskServer.AssignTask(job, task);
+                        _log.InfoFormat("Task {0} has been assigned to server {1}.", task.GlobalID, taskServer.Address);
                         outOfSlots = false;
                         ++taskIndex;
-                        --job.UnscheduledTasks;
-                        job.TaskServers.Add(taskServer.Address); // Record all servers involved with the task to give them cleanup instructions later.
-                        _log.InfoFormat("Task {0} has been assigned to server {1}.", task.GlobalID, taskServer.Address);
                     }
                 }
             }
