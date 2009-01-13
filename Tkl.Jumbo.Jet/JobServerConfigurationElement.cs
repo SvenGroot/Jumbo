@@ -62,7 +62,7 @@ namespace Tkl.Jumbo.Jet
         /// <summary>
         /// Gets or sets the scheduler to use for scheduling task.
         /// </summary>
-        [ConfigurationProperty("scheduler", DefaultValue = "DataLocalScheduler", IsRequired = false, IsKey = false)]
+        [ConfigurationProperty("scheduler", DefaultValue = "StagedScheduler", IsRequired = false, IsKey = false)]
         public string Scheduler
         {
             get { return (string)this["scheduler"]; }

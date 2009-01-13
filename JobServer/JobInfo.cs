@@ -64,6 +64,13 @@ namespace JobServerApplication
                    select task;
         }
 
+        public IEnumerable<TaskInfo> GetNonInputTasks()
+        {
+            return from task in Tasks.Values
+                   where task.Task.DfsInput == null
+                   select task;
+        }
+
         public File GetFileInfo(DfsClient dfsClient, string path)
         {
             // This method will only be called with _jobs locked, so no need to do any further locking
