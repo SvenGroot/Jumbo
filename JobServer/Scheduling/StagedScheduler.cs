@@ -97,7 +97,7 @@ namespace JobServerApplication.Scheduling
                     if( taskServer.AvailableNonInputTasks > 0 )
                     {
                         TaskInfo task = tasks[taskIndex];
-                        taskServer.AssignTask(job, task);
+                        taskServer.AssignTask(job, task, false);
                         _log.InfoFormat("Task {0} has been assigned to server {1}.", task.GlobalID, taskServer.Address);
                         outOfSlots = false;
                         ++taskIndex;
