@@ -209,13 +209,14 @@ namespace JobServerApplication
                     }
                 }
 
-                if( server.AssignedTasks.Count > 0 )
+                if( server.AssignedTasks.Count > 0 || server.AssignedNonInputTasks.Count > 0 )
                 {
                     // It is not necessary to lock _jobs because I don't think there's a potential for deadlock here,
                     // none of the other places where task.State is modified can possibly execute at the same time
                     // as this code (ScheduleTasks is done inside taskserver lock, and NotifyFinishedTasks can only happen
                     // after this has happened).
-                    foreach( TaskInfo task in server.AssignedTasks )
+                    var tasks = server.AssignedTasks.Concat(server.AssignedNonInputTasks);
+                    foreach( TaskInfo task in tasks )
                     {
                         if( task.State == TaskState.Scheduled )
                         {
@@ -278,6 +279,7 @@ namespace JobServerApplication
         private void ProcessStatusHeartbeat(TaskServerInfo server, StatusJetHeartbeatData data)
         {
             server.MaxTasks = data.MaxTasks;
+            server.MaxNonInputTasks = data.MaxTasks;
         }
 
         private void ProcessTaskStatusChangedHeartbeat(TaskServerInfo server, TaskStatusChangedJetHeartbeatData data)
