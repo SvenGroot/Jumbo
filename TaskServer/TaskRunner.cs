@@ -23,10 +23,11 @@ namespace TaskServerApplication
 
             public event EventHandler ProcessExited;
 
-            public RunningTask(Guid jobID, string jobDirectory, string taskID, string dfsJobDirectory, TaskServer taskServer)
+            public RunningTask(Guid jobID, string jobDirectory, string taskID, int attempt, string dfsJobDirectory, TaskServer taskServer)
             {
                 JobID = jobID;
                 TaskID = taskID;
+                Attempt = attempt;
                 FullTaskID = Job.CreateFullTaskID(jobID, taskID);
                 JobDirectory = jobDirectory;
                 DfsJobDirectory = dfsJobDirectory;
@@ -45,6 +46,8 @@ namespace TaskServerApplication
 
             public string DfsJobDirectory { get; private set; }
 
+            public int Attempt { get; private set; }
+
             public void Run(int createProcessDelay)
             {
                 if( Debugger.IsAttached )
@@ -52,7 +55,7 @@ namespace TaskServerApplication
                 else
                 {
                     _log.DebugFormat("Launching new process for task {0}.", FullTaskID);
-                    ProcessStartInfo startInfo = new ProcessStartInfo("TaskHost.exe", string.Format("\"{0}\" \"{1}\" \"{2}\" \"{3}\" {4} {5} {6} {7} {8}", JobID, JobDirectory, TaskID, DfsJobDirectory, _taskServer.Configuration.TaskServer.Port, _taskServer.Configuration.JobServer.HostName, _taskServer.Configuration.JobServer.Port, _taskServer.DfsConfiguration.NameServer.HostName, _taskServer.DfsConfiguration.NameServer.Port));
+                    ProcessStartInfo startInfo = new ProcessStartInfo("TaskHost.exe", string.Format("\"{0}\" \"{1}\" \"{2}\" \"{3}\" {4} {5} {6} {7} {8} {9}", JobID, JobDirectory, TaskID, DfsJobDirectory, _taskServer.Configuration.TaskServer.Port, _taskServer.Configuration.JobServer.HostName, _taskServer.Configuration.JobServer.Port, _taskServer.DfsConfiguration.NameServer.HostName, _taskServer.DfsConfiguration.NameServer.Port, Attempt));
                     startInfo.UseShellExecute = false;
                     startInfo.CreateNoWindow = true;
                     RuntimeEnvironment.ModifyProcessStartInfo(startInfo);
@@ -73,7 +76,10 @@ namespace TaskServerApplication
 
             public void Kill()
             {
-                _process.Kill();
+                if( Debugger.IsAttached )
+                    _appDomainThread.Abort();
+                else
+                    _process.Kill();
             }
 
             private void OnProcessExited(EventArgs e)
@@ -101,8 +107,18 @@ namespace TaskServerApplication
                 AppDomainSetup setup = new AppDomainSetup();
                 setup.ApplicationBase = Environment.CurrentDirectory;
                 AppDomain taskDomain = AppDomain.CreateDomain(FullTaskID, null, setup);
-                taskDomain.ExecuteAssembly("TaskHost.exe", null, new string[] { JobID.ToString(), JobDirectory, TaskID, DfsJobDirectory, _taskServer.Configuration.TaskServer.Port.ToString(), _taskServer.Configuration.JobServer.HostName, _taskServer.Configuration.JobServer.Port.ToString(), _taskServer.DfsConfiguration.NameServer.HostName, _taskServer.DfsConfiguration.NameServer.Port.ToString() });
-                AppDomain.Unload(taskDomain);
+                try
+                {
+                    taskDomain.ExecuteAssembly("TaskHost.exe", null, new string[] { JobID.ToString(), JobDirectory, TaskID, DfsJobDirectory, _taskServer.Configuration.TaskServer.Port.ToString(), _taskServer.Configuration.JobServer.HostName, _taskServer.Configuration.JobServer.Port.ToString(), _taskServer.DfsConfiguration.NameServer.HostName, _taskServer.DfsConfiguration.NameServer.Port.ToString(), Attempt.ToString() });
+                }
+                catch( Exception ex )
+                {
+                    _log.Error(string.Format("Error running task {0} in task domain", FullTaskID), ex);
+                }
+                finally
+                {
+                    AppDomain.Unload(taskDomain);
+                }
                 OnProcessExited(EventArgs.Empty);
             }
 
@@ -199,7 +215,11 @@ namespace TaskServerApplication
                                           select item.Key).ToArray();
                 foreach( string task in tasksToRemove )
                 {
-                    Debug.Assert(_runningTasks[task].State > TaskStatus.Running);
+                    if( _runningTasks[task].State == TaskStatus.Running )
+                    {
+                        _log.WarnFormat("Received cleanup command for still running task {0} (this usually means the job failed).", task);
+                        _runningTasks[task].Kill();
+                    }
                     _log.InfoFormat("Removing data pertaining to task {0}.", task);
                     _runningTasks[task].Dispose();
                     _runningTasks.Remove(task);
@@ -269,7 +289,7 @@ namespace TaskServerApplication
             RunningTask runningTask;
             lock( _runningTasks )
             {
-                runningTask = new RunningTask(task.Job.JobID, jobDirectory, task.TaskID, task.Job.Path, _taskServer);
+                runningTask = new RunningTask(task.Job.JobID, jobDirectory, task.TaskID, task.Attempt, task.Job.Path, _taskServer);
                 runningTask.ProcessExited += new EventHandler(RunningTask_ProcessExited);
                 _runningTasks.Add(runningTask.FullTaskID, runningTask);
             }
@@ -287,7 +307,9 @@ namespace TaskServerApplication
                     {
                         _log.ErrorFormat("Task {0} did not complete sucessfully.", task.FullTaskID);
                         task.State = TaskStatus.Error;
+                        _runningTasks.Remove(task.FullTaskID);
                         _taskServer.NotifyTaskStatusChanged(task.JobID, task.TaskID, task.State);
+                        task.Dispose();
                     }
                     _log.InfoFormat("Task {0} has finished, state = {1}.", task.FullTaskID, task.State);
                 }

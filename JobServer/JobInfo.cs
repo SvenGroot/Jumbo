@@ -9,6 +9,14 @@ using Tkl.Jumbo.Dfs;
 
 namespace JobServerApplication
 {
+    enum JobState
+    {
+        Created,
+        Running,
+        Finished,
+        Failed
+    }
+
     class JobInfo
     {
         private readonly SortedList<string, TaskInfo> _tasks = new SortedList<string, TaskInfo>();
@@ -24,7 +32,7 @@ namespace JobServerApplication
             Job = job;
         }
         public Job Job { get; private set; }
-        public bool Running { get; set; }
+        public JobState State { get; set; }
         public int UnscheduledTasks { get; set; }
         public int FinishedTasks { get; set; }
         public int Errors { get; set; }

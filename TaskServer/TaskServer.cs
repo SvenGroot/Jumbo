@@ -205,7 +205,7 @@ namespace TaskServerApplication
                     break;
                 case TaskServerHeartbeatCommand.RunTask:
                     RunTaskJetHeartbeatResponse runResponse = (RunTaskJetHeartbeatResponse)response;
-                    _log.InfoFormat("Received run task command for task {{{0}}}_{1}.", runResponse.Job.JobID, runResponse.TaskID);
+                    _log.InfoFormat("Received run task command for task {{{0}}}_{1}, attempt {2}.", runResponse.Job.JobID, runResponse.TaskID, runResponse.Attempt);
                     _taskRunner.AddTask(runResponse);
                     break;
                 case TaskServerHeartbeatCommand.CleanupJob:

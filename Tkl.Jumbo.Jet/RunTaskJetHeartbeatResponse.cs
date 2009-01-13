@@ -16,7 +16,8 @@ namespace Tkl.Jumbo.Jet
         /// </summary>
         /// <param name="job">The job containing the task to run.</param>
         /// <param name="taskID">The ID of the task to run.</param>
-        public RunTaskJetHeartbeatResponse(Job job, string taskID)
+        /// <param name="attempt">The number of this execution attempt.</param>
+        public RunTaskJetHeartbeatResponse(Job job, string taskID, int attempt)
             : base(TaskServerHeartbeatCommand.RunTask)
         {
             if( job == null )
@@ -26,6 +27,7 @@ namespace Tkl.Jumbo.Jet
 
             Job = job;
             TaskID = taskID;
+            Attempt = attempt;
         }
 
         /// <summary>
@@ -36,5 +38,9 @@ namespace Tkl.Jumbo.Jet
         /// Gets the ID of the task the server should run.
         /// </summary>
         public string TaskID { get; private set; }
+        /// <summary>
+        /// Gets the attempt number of this task attempt.
+        /// </summary>
+        public int Attempt { get; private set; }
     }
 }

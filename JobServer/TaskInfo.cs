@@ -14,7 +14,8 @@ namespace JobServerApplication
         Scheduled,
         Running,
         Finished,
-        Error
+        Error,
+        Aborted
     }
 
     class TaskInfo
@@ -33,6 +34,7 @@ namespace JobServerApplication
         public JobInfo Job { get; private set; }
         public TaskState State { get; set; }
         public TaskServerInfo Server { get; set; }
+        public int Attempts { get; set; }
         public string GlobalID
         {
             get

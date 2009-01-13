@@ -56,7 +56,7 @@ namespace ClientSample
             DfsClient dfsClient = new DfsClient();
             IJobServerClientProtocol jobServer = JetClient.CreateJobServerClient();
             Console.WriteLine("Press any key to start");
-            //Console.ReadKey();
+            Console.ReadKey();
             //Stopwatch sw = new Stopwatch();
             //sw.Start();
 
@@ -67,7 +67,7 @@ namespace ClientSample
 
             Console.WriteLine("Done, press any key to exit");
 
-            //Console.ReadKey();
+            Console.ReadKey();
         }
 
         private static void RunJob(DfsClient dfsClient, IJobServerClientProtocol jobServer, Type inputTaskType, Type aggregateTaskType, string fileName, string outputPath, int aggregateTaskCount)

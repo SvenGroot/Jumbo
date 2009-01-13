@@ -65,5 +65,15 @@ namespace JobServerApplication
             --job.UnscheduledTasks;
             job.TaskServers.Add(Address); // Record all servers involved with the task to give them cleanup instructions later.
         }
+
+        public void UnassignTask(JobInfo job, TaskInfo task)
+        {
+            // This is used if a task has failed and needs to be rescheduled.
+            AssignedTasks.Remove(task);
+            AssignedNonInputTasks.Remove(task);
+            task.Server = null;
+            task.State = TaskState.Created;
+            ++job.UnscheduledTasks;
+        }
     }
 }

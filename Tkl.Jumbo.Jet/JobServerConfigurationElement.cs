@@ -68,5 +68,15 @@ namespace Tkl.Jumbo.Jet
             get { return (string)this["scheduler"]; }
             set { this["scheduler"] = value; }
         }
+
+        /// <summary>
+        /// Gets or sets the maximum number of times a task should be attempted if it encounters errors.
+        /// </summary>
+        [ConfigurationProperty("maxTaskAttempts", DefaultValue = 5, IsRequired = false, IsKey = false)]
+        public int MaxTaskAttempts
+        {
+            get { return (int)this["maxTaskAttempts"]; }
+            set { this["maxTaskAttempts"] = value; }
+        }
     }
 }

@@ -18,12 +18,13 @@ namespace TaskHost
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(Program));
         private static DfsClient _client;
         private static IJobServerClientProtocol _jobServer;
+        private static int _attempt;
 
         public static int Main(string[] args)
         {
             AppDomain.CurrentDomain.UnhandledException += new UnhandledExceptionEventHandler(CurrentDomain_UnhandledException);
 
-            if( args.Length != 9 )
+            if( args.Length != 10 )
             {
                 _log.Error("Invalid invocation.");
                 return 1;
@@ -38,10 +39,11 @@ namespace TaskHost
             int jobServerPort = Convert.ToInt32(args[6]);
             string nameServerHost = args[7];
             int nameServerPort = Convert.ToInt32(args[8]);
-            string logFile = Path.Combine(jobDirectory, taskID + ".log");
+            _attempt = Convert.ToInt32(args[9]);
+            string logFile = Path.Combine(jobDirectory, taskID + "_" + _attempt.ToString() + ".log");
             ConfigureLog(logFile);
 
-            _log.InfoFormat("Running task; job ID = \"{0}\", job directory = \"{1}\", task ID = \"{2}\", DFS job directory = \"{3}\"", jobID, jobDirectory, taskID, dfsJobDirectory);
+            _log.InfoFormat("Running task; job ID = \"{0}\", job directory = \"{1}\", task ID = \"{2}\", attempt, = {3}, DFS job directory = \"{4}\"", jobID, jobDirectory, taskID, _attempt, dfsJobDirectory);
             _log.LogEnvironmentInformation();
 
             ITaskServerUmbilicalProtocol umbilical = JetClient.CreateTaskServerUmbilicalClient(umbilicalPort);
@@ -159,7 +161,7 @@ namespace TaskHost
         {
             if( taskConfig.DfsOutput != null )
             {
-                string file = DfsPath.Combine(dfsJobDirectory, taskConfig.TaskID);
+                string file = DfsPath.Combine(dfsJobDirectory, taskConfig.TaskID + "_" + _attempt.ToString());
                 taskConfig.DfsOutput.TempPath = file;
                 return _client.CreateFile(file);
             }

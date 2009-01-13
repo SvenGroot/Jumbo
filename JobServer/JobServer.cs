@@ -90,7 +90,7 @@ namespace JobServerApplication
             {
                 if( !_jobs.TryGetValue(jobID, out jobInfo) )
                     throw new ArgumentException("Invalid job ID.");
-                if( jobInfo.Running )
+                if( jobInfo.State >= JobState.Running )
                 {
                     _log.WarnFormat("Job {0} is already running.", jobID);
                     throw new InvalidOperationException(string.Format("Job {0} is already running.", jobID));
@@ -121,7 +121,7 @@ namespace JobServerApplication
 
                 ScheduleTasks(jobInfo);
 
-                jobInfo.Running = true;
+                jobInfo.State = JobState.Running;
                 jobInfo.StartTime = DateTime.UtcNow;
                 _log.InfoFormat("Job {0} has entered the running state. Number of tasks: {1}.", jobID, jobInfo.Tasks.Count);
             }
@@ -222,39 +222,55 @@ namespace JobServerApplication
                         {
                             if( responses == null )
                                 responses = new List<JetHeartbeatResponse>();
-                            responses.Add(new RunTaskJetHeartbeatResponse(task.Job.Job, task.Task.TaskID));
+                            ++task.Attempts;
+                            responses.Add(new RunTaskJetHeartbeatResponse(task.Job.Job, task.Task.TaskID, task.Attempts));
                             task.State = TaskState.Running;
                         }
                     }
                 }
 
-                lock( _jobsNeedingCleanup )
-                {
-                    for( int x = 0; x < _jobsNeedingCleanup.Count; ++x )
-                    {
-                        JobInfo job = _jobsNeedingCleanup[x];
-                        if( job.TaskServers.Contains(server.Address) )
-                        {
-                            _log.InfoFormat("Sending cleanup command for job {{{0}}} to server {1}.", job.Job.JobID, server.Address);
-                            if( responses == null )
-                                responses = new List<JetHeartbeatResponse>();
-                            responses.Add(new CleanupJobJetHeartbeatResponse(job.Job.JobID));
-                            job.TaskServers.Remove(server.Address);
-                        }
-                        if( job.TaskServers.Count == 0 )
-                        {
-                            _log.InfoFormat("Job {{{0}}} cleanup complete.", job.Job.JobID);
-                            _jobsNeedingCleanup.RemoveAt(x);
-                            --x;
-                        }
-                    }
-                }
+                PerformCleanup(server, ref responses);
 
                 return responses == null ? null : responses.ToArray();
-            }
+            } // lock( _taskServers )
         }
 
         #endregion
+
+        /// <summary>
+        /// NOTE: Call inside _taskServers lock.
+        /// </summary>
+        /// <param name="server"></param>
+        /// <param name="responses"></param>
+        private void PerformCleanup(TaskServerInfo server, ref List<JetHeartbeatResponse> responses)
+        {
+            lock( _jobsNeedingCleanup )
+            {
+                for( int x = 0; x < _jobsNeedingCleanup.Count; ++x )
+                {
+                    JobInfo job = _jobsNeedingCleanup[x];
+                    if( job.TaskServers.Contains(server.Address) )
+                    {
+                        foreach( TaskInfo task in job.Tasks.Values )
+                        {
+                            server.AssignedTasks.Remove(task);
+                            server.AssignedNonInputTasks.Remove(task);
+                        }
+                        _log.InfoFormat("Sending cleanup command for job {{{0}}} to server {1}.", job.Job.JobID, server.Address);
+                        if( responses == null )
+                            responses = new List<JetHeartbeatResponse>();
+                        responses.Add(new CleanupJobJetHeartbeatResponse(job.Job.JobID));
+                        job.TaskServers.Remove(server.Address);
+                    }
+                    if( job.TaskServers.Count == 0 )
+                    {
+                        _log.InfoFormat("Job {{{0}}} cleanup complete.", job.Job.JobID);
+                        _jobsNeedingCleanup.RemoveAt(x);
+                        --x;
+                    }
+                }
+            }
+        }
 
         private JetHeartbeatResponse ProcessHeartbeat(TaskServerInfo server, JetHeartbeatData data)
         {
@@ -290,7 +306,11 @@ namespace JobServerApplication
                 bool jobFinished = false;
                 lock( _jobs )
                 {
-                    job = _jobs[data.JobID];
+                    if( !_jobs.TryGetValue(data.JobID, out job) )
+                    {
+                        _log.WarnFormat("Data server {0} reported status for unknown job {1} (this may be the aftermath of a failed job).", server.Address, data.JobID);
+                        return;
+                    }
                     TaskInfo task = job.Tasks[data.TaskID];
                     server.AssignedTasks.Remove(task);
                     // We don't set task.Server to null because output tasks can still query that information!
@@ -303,16 +323,38 @@ namespace JobServerApplication
                         break;
                     case TaskStatus.Error:
                         task.State = TaskState.Error;
-                        _log.InfoFormat("Task {0} encountered an error.", Job.CreateFullTaskID(data.JobID, data.TaskID));
-                        // TODO: We need to reschedule or something, and not increment finishedtasks.
-                        ++job.FinishedTasks;
+                        _log.WarnFormat("Task {0} encountered an error.", Job.CreateFullTaskID(data.JobID, data.TaskID));
+                        if( task.Attempts < Configuration.JobServer.MaxTaskAttempts )
+                        {
+                            // Reschedule
+                            task.Server.UnassignTask(job, task);
+                        }
+                        else
+                        {
+                            _log.ErrorFormat("Task {0} failed more than {1} times; aborting the job.", Job.CreateFullTaskID(data.JobID, data.TaskID), Configuration.JobServer.MaxTaskAttempts);
+                            job.State = JobState.Failed;
+                        }
                         ++job.Errors;
                         break;
                     }
 
-                    if( job.FinishedTasks == job.Tasks.Count )
+                    if( job.FinishedTasks == job.Tasks.Count || job.State == JobState.Failed )
                     {
-                        _log.InfoFormat("Job {0}: all tasks in the job have finished.", data.JobID);
+                        if( job.State != JobState.Failed )
+                        {
+                            _log.InfoFormat("Job {0}: all tasks in the job have finished.", data.JobID);
+                            job.State = JobState.Finished;
+                        }
+                        else
+                        {
+                            _log.ErrorFormat("Job {0} failed.", data.JobID);
+                            foreach( TaskInfo jobTask in job.Tasks.Values )
+                            {
+                                if( jobTask.State <= TaskState.Running )
+                                    jobTask.State = TaskState.Aborted;
+                            }
+                        }
+
                         _jobs.Remove(data.JobID);
                         lock( _finishedJobs )
                             _finishedJobs.Add(job.Job.JobID, job);
