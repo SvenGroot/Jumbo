@@ -28,6 +28,7 @@ namespace JobServerApplication
         public int UnscheduledTasks { get; set; }
         public int FinishedTasks { get; set; }
         public int Errors { get; set; }
+        public int NonDataLocal { get; set; }
         public DateTime StartTime { get; set; }
         public DateTime EndTime { get; set; }
         public SortedList<string, TaskInfo> Tasks

@@ -45,6 +45,14 @@ namespace Tkl.Jumbo.Jet
         public int ErrorTaskCount { get; set; }
 
         /// <summary>
+        /// Gets or sets the number of tasks that were not scheduled data local.
+        /// </summary>
+        /// <remarks>
+        /// This only includes DFS input tasks; tasks that do not read from the DFS are never data local, and are not counted here.
+        /// </remarks>
+        public int NonDataLocalTaskCount { get; set; }
+
+        /// <summary>
         /// Gets or sets the UTC start time of the job.
         /// </summary>
         public DateTime StartTime { get; set; }
@@ -71,7 +79,7 @@ namespace Tkl.Jumbo.Jet
         /// <returns>A string representation of this <see cref="JobStatus"/>.</returns>
         public override string ToString()
         {
-            return string.Format(System.Globalization.CultureInfo.CurrentCulture, "Tasks: {0}, running: {1}, pending {2}, finished: {3}, errors: {4}", TaskCount, RunningTaskCount, UnscheduledTaskCount, FinishedTaskCount, ErrorTaskCount);
+            return string.Format(System.Globalization.CultureInfo.CurrentCulture, "Tasks: {0}, running: {1}, pending {2}, finished: {3}, errors: {4}, not local: {5}", TaskCount, RunningTaskCount, UnscheduledTaskCount, FinishedTaskCount, ErrorTaskCount, NonDataLocalTaskCount);
         }
     }
 }

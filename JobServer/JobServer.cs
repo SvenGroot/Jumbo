@@ -363,6 +363,7 @@ namespace JobServerApplication
                     UnscheduledTaskCount = job.UnscheduledTasks,
                     FinishedTaskCount = job.FinishedTasks,
                     ErrorTaskCount = job.Errors,
+                    NonDataLocalTaskCount = job.NonDataLocal,
                     StartTime = job.StartTime,
                     EndTime = job.EndTime
                 };

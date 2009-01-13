@@ -62,6 +62,8 @@ namespace JobServerApplication.Scheduling
                     {
                         TaskServerInfo server = availableServers[0];
                         server.AssignTask(job, task);
+                        if( !localServers )
+                            ++job.NonDataLocal;
                         _log.InfoFormat("Task {0} has been assigned to server {1}{2}.", task.GlobalID, server.Address, task.Task.DfsInput == null ? "" : (localServers ? " (data local)" : " (NOT data local)"));
                         --capacity;
                         if( capacity == 0 )
