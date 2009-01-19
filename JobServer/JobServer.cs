@@ -167,6 +167,31 @@ namespace JobServerApplication
             return status;
         }
 
+        public JetMetrics GetMetrics()
+        {
+            JetMetrics result = new JetMetrics();
+            lock( _jobs )
+            {
+                result.RunningJobs = _jobs.Keys.ToArray();
+            }
+            lock( _finishedJobs )
+            {
+                result.FinishedJobs = (from job in _finishedJobs
+                                       where job.Value.State == JobState.Finished
+                                       select job.Key).ToArray();
+                result.FailedJobs = (from job in _finishedJobs
+                                     where job.Value.State == JobState.Failed
+                                     select job.Key).ToArray();
+            }
+            lock( _taskServers )
+            {
+                result.TaskServers = _taskServers.Keys.ToArray();
+                result.Capacity = (from server in _taskServers.Values
+                                   select server.MaxTasks).Sum();
+            }
+            return result;
+        }
+
         #endregion
 
         #region IJobServerHeartbeatProtocol Members

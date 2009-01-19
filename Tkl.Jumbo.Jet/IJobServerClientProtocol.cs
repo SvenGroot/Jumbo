@@ -45,5 +45,11 @@ namespace Tkl.Jumbo.Jet
         /// <param name="jobId">The job ID.</param>
         /// <returns>The status of the job, or <see langword="null"/> if the job doesn't exist.</returns>
         JobStatus GetJobStatus(Guid jobId);
+
+        /// <summary>
+        /// Gets current metrics for the distributed execution engine.
+        /// </summary>
+        /// <returns>An object holding the metrics for the job server.</returns>
+        JetMetrics GetMetrics();
     }
 }

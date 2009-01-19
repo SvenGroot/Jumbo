@@ -5,11 +5,11 @@
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
     <ProductVersion>9.0.30729</ProductVersion>
     <SchemaVersion>2.0</SchemaVersion>
-    <ProjectGuid>{E739829A-3507-42EA-A8B4-D8D41060DF95}</ProjectGuid>
-    <OutputType>Library</OutputType>
+    <ProjectGuid>{0F6B643E-3122-41A3-9B28-0D17CE824EDF}</ProjectGuid>
+    <OutputType>Exe</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>Tkl.Jumbo.Jet</RootNamespace>
-    <AssemblyName>Tkl.Jumbo.Jet</AssemblyName>
+    <RootNamespace>JetShell</RootNamespace>
+    <AssemblyName>JetShell</AssemblyName>
     <TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <SignAssembly>true</SignAssembly>
@@ -23,8 +23,6 @@
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
-    <DocumentationFile>bin\Debug\Tkl.Jumbo.Jet.XML</DocumentationFile>
-    <GenerateSerializationAssemblies>Auto</GenerateSerializationAssemblies>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -33,15 +31,9 @@
     <DefineConstants>TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
-    <DocumentationFile>bin\Release\Tkl.Jumbo.Jet.XML</DocumentationFile>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="log4net, Version=1.2.10.0, Culture=neutral, PublicKeyToken=1b44e1d426115821, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\lib\log4net.dll</HintPath>
-    </Reference>
     <Reference Include="System" />
-    <Reference Include="System.configuration" />
     <Reference Include="System.Core">
       <RequiredTargetFramework>3.5</RequiredTargetFramework>
     </Reference>
@@ -58,46 +50,22 @@
     <Compile Include="..\Version.cs">
       <Link>Properties\Version.cs</Link>
     </Compile>
-    <Compile Include="Channels\ChannelConfiguration.cs" />
-    <Compile Include="Channels\ChannelType.cs" />
-    <Compile Include="Channels\FileInputChannel.cs" />
-    <Compile Include="Channels\FileOutputChannel.cs" />
-    <Compile Include="Channels\IInputChannel.cs" />
-    <Compile Include="Channels\IOutputChannel.cs" />
-    <Compile Include="CleanupJobJetHeartbeatResponse.cs" />
-    <Compile Include="ITaskServerClientProtocol.cs" />
-    <Compile Include="IJobServerClientProtocol.cs" />
-    <Compile Include="IJobServerHeartbeatProtocol.cs" />
-    <Compile Include="ITask.cs" />
-    <Compile Include="ITaskServerUmbilicalProtocol.cs" />
-    <Compile Include="JetClient.cs" />
-    <Compile Include="JetConfiguration.cs" />
-    <Compile Include="JetHeartbeatData.cs" />
-    <Compile Include="JetHeartbeatResponse.cs" />
-    <Compile Include="JetMetrics.cs" />
-    <Compile Include="Job.cs" />
-    <Compile Include="JobConfiguration.cs" />
-    <Compile Include="JobServerConfigurationElement.cs" />
-    <Compile Include="JobStatus.cs" />
+    <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="RunTaskJetHeartbeatResponse.cs" />
-    <Compile Include="StatusJetHeartbeatData.cs" />
-    <Compile Include="TaskConfiguration.cs" />
-    <Compile Include="TaskDfsInput.cs" />
-    <Compile Include="TaskDfsOutput.cs" />
-    <Compile Include="TaskServerConfigurationElement.cs" />
-    <Compile Include="TaskServerHeartbeatCommand.cs" />
-    <Compile Include="TaskStatus.cs" />
-    <Compile Include="TaskStatusChangedJetHeartbeatData.cs" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="..\jet.config">
+      <Link>jet.config</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="App.config" />
+    <None Include="JetShell.build" />
     <None Include="jumbo.snk" />
-    <None Include="Tkl.Jumbo.Jet.build" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Tkl.Jumbo.Dfs\Tkl.Jumbo.Dfs.csproj">
-      <Project>{67D71A3A-4FDA-4136-8423-07A7C1592E65}</Project>
-      <Name>Tkl.Jumbo.Dfs</Name>
+    <ProjectReference Include="..\Tkl.Jumbo.Jet\Tkl.Jumbo.Jet.csproj">
+      <Project>{E739829A-3507-42EA-A8B4-D8D41060DF95}</Project>
+      <Name>Tkl.Jumbo.Jet</Name>
     </ProjectReference>
     <ProjectReference Include="..\Tkl.Jumbo\Tkl.Jumbo.csproj">
       <Project>{17C7CE1A-4F9F-4173-8BA8-9C26A4F644C6}</Project>

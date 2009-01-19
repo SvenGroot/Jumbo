@@ -45,6 +45,11 @@ namespace JobServerApplication
             return JobServer.Instance.GetJobStatus(jobId);
         }
 
+        public JetMetrics GetMetrics()
+        {
+            return JobServer.Instance.GetMetrics();
+        }
+
         #endregion
     }
 }
