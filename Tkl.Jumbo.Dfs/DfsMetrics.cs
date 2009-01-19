@@ -39,7 +39,7 @@ namespace Tkl.Jumbo.Dfs
         /// <summary>
         /// Gets or sets a list of all data servers registered with the system.
         /// </summary>
-        public ServerAddress[] DataServers { get; set; }
+        public ServerMetrics[] DataServers { get; set; }
 
         /// <summary>
         /// Prints the metrics.
@@ -52,7 +52,7 @@ namespace Tkl.Jumbo.Dfs
             writer.WriteLine("Under-replicated: {0}", UnderReplicatedBlockCount);
             writer.WriteLine("Pending blocks:   {0}", PendingBlockCount);
             writer.WriteLine("Data servers:     {0}", DataServers.Length);
-            foreach( ServerAddress server in DataServers )
+            foreach( ServerMetrics server in DataServers )
                 writer.WriteLine("  {0}", server);
         }
     }

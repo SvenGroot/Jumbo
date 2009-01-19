@@ -80,6 +80,7 @@
     <Compile Include="ServerChannelSink.cs" />
     <Compile Include="ServerChannelSinkProvider.cs" />
     <Compile Include="ServerContext.cs" />
+    <Compile Include="ServerMetrics.cs" />
     <Compile Include="TcpServer.cs" />
   </ItemGroup>
   <ItemGroup>

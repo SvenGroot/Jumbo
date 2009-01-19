@@ -30,7 +30,7 @@ namespace Tkl.Jumbo.Jet
         /// <summary>
         /// Gets or sets a list of task servers registered with the system.
         /// </summary>
-        public ServerAddress[] TaskServers { get; set; }
+        public ServerMetrics[] TaskServers { get; set; }
 
         /// <summary>
         /// Gets or sets the total task capacity.

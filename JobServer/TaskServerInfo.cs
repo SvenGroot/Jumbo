@@ -21,6 +21,7 @@ namespace JobServerApplication
         public ServerAddress Address { get; private set; }
         public int MaxTasks { get; set; }
         public int MaxNonInputTasks { get; set; }
+        public DateTime LastContactUtc { get; set; }
 
         /// <summary>
         /// Not safe to call without lock.

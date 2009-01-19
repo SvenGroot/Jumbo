@@ -298,7 +298,11 @@ namespace NameServerApplication
             lock( _dataServers )
             {
                 metrics.DataServers = (from server in _dataServers.Values
-                                       select server.Address).ToArray();
+                                       select new ServerMetrics()
+                                       {
+                                           Address = server.Address,
+                                           LastContactUtc = server.LastContactUtc
+                                       }).ToArray();
             }
             metrics.TotalSize = _fileSystem.TotalSize;
             return metrics;
@@ -358,6 +362,8 @@ namespace NameServerApplication
                     dataServer = new DataServerInfo(address);
                     _dataServers.Add(address, dataServer);
                 }
+
+                dataServer.LastContactUtc = DateTime.UtcNow;
 
                 if( data != null )
                 {

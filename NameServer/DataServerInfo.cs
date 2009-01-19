@@ -28,6 +28,8 @@ namespace NameServerApplication
 
         public List<Guid> Blocks { get { return _blocks; } }
 
+        public DateTime LastContactUtc { get; set; }
+
         public void AddBlockToDelete(Guid blockID)
         {
             lock( _blocksToDelete )

@@ -185,7 +185,12 @@ namespace JobServerApplication
             }
             lock( _taskServers )
             {
-                result.TaskServers = _taskServers.Keys.ToArray();
+                result.TaskServers = (from server in _taskServers.Values
+                                      select new ServerMetrics()
+                                      {
+                                          Address = server.Address,
+                                          LastContactUtc = server.LastContactUtc
+                                      }).ToArray();
                 result.Capacity = (from server in _taskServers.Values
                                    select server.MaxTasks).Sum();
             }
@@ -219,6 +224,8 @@ namespace JobServerApplication
                         _taskServers.Add(address, server);
                     }
                 }
+
+                server.LastContactUtc = DateTime.UtcNow;
 
                 if( data != null )
                 {
