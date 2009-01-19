@@ -53,6 +53,7 @@
     </Compile>
     <Compile Include="ClientChannelSink.cs" />
     <Compile Include="ClientChannelSinkProvider.cs" />
+    <Compile Include="DriveSpaceInfo.cs" />
     <Compile Include="Extensions.cs" />
     <Compile Include="IO\BinaryRecordReader.cs" />
     <Compile Include="IO\BinaryRecordWriter.cs" />
