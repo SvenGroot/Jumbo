@@ -18,8 +18,14 @@ case $startStop in
 
     echo starting $command
     cd $scriptDir
-    nohup mono $command.exe > /dev/null 2>&1 < /dev/null &
-    echo $! > $pid
+    if [ $command = "DfsWeb" ]; then
+        cd DfsWeb
+	nohup xsp2 --port $dfsWebPort --nonstop --pidfile $pid > /dev/null 2>&1 < /dev/null &
+	cd ..
+    else
+	nohup mono $command.exe > /dev/null 2>&1 < /dev/null &
+	echo $! > $pid
+    fi
     sleep 1;
     ;;
     (stop)
