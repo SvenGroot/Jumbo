@@ -150,4 +150,13 @@
       </fileset>
     </copy>
   </target>
+  <target name="DfsWeb" depends="Tkl.Jumbo.Dfs,Tkl.Jumbo,Version.cs">
+    <mkdir dir="nantbin/DfsWeb"/>
+    <nant buildfile="DfsWeb/DfsWeb.build" />
+    <copy todir="nantbin/DfsWeb">
+      <fileset basedir="DfsSWeb">
+        <include name="**"/>
+      </fileset>
+    </copy>
+  </target>
 </project>
