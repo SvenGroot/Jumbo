@@ -10,7 +10,7 @@ namespace Tkl.Jumbo.Dfs
     /// it has received a new block.
     /// </summary>
     [Serializable]
-    public class NewBlockHeartbeatData : HeartbeatData
+    public class NewBlockHeartbeatData : StatusHeartbeatData
     {
         /// <summary>
         /// Gets or sets the <see cref="Guid"/> identifying the block.

@@ -9,7 +9,7 @@ namespace Tkl.Jumbo.Dfs
     /// Represents the data sent during a heartbeat when the data server is sending a block report.
     /// </summary>
     [Serializable]
-    public class BlockReportHeartbeatData : HeartbeatData
+    public class BlockReportHeartbeatData : StatusHeartbeatData
     {
         /// <summary>
         /// Gets or sets the the block IDs of the blocks that this data server has.

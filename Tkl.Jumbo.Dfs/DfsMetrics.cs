@@ -39,7 +39,7 @@ namespace Tkl.Jumbo.Dfs
         /// <summary>
         /// Gets or sets a list of all data servers registered with the system.
         /// </summary>
-        public ServerMetrics[] DataServers { get; set; }
+        public DataServerMetrics[] DataServers { get; set; }
 
         /// <summary>
         /// Prints the metrics.

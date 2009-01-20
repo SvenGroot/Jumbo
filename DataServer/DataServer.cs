@@ -142,7 +142,9 @@ namespace DataServerApplication
                 System.IO.File.Move(Path.Combine(_temporaryBlockStorageDirectory, blockID.ToString()), Path.Combine(_blockStorageDirectory, blockID.ToString()));
                 _blocks.Add(blockID);
             }
-            AddDataForNextHeartbeat(new NewBlockHeartbeatData() { BlockID = blockID, Size = size });
+            NewBlockHeartbeatData data = new NewBlockHeartbeatData() { BlockID = blockID, Size = size };
+            GetDiskUsage(data);
+            AddDataForNextHeartbeat(data);
             // We send the heartbeat immediately so the client knows that when the server comes back to him, the name server
             // knows about the block being committed.
             SendHeartbeat();
@@ -192,16 +194,20 @@ namespace DataServerApplication
             {
             case DataServerHeartbeatCommand.ReportBlocks:
                 _log.Info("Received ReportBlocks command.");
-                HeartbeatData data;
+                BlockReportHeartbeatData data;
                 lock( _blocks )
                 {
                     data = new BlockReportHeartbeatData() { Blocks = _blocks.ToArray() };
+                    GetDiskUsage(data);
                 }
                 AddDataForNextHeartbeat(data);
                 break;
             case DataServerHeartbeatCommand.DeleteBlocks:
                 _log.Info("Received DeleteBlocks command.");
                 DeleteBlocks(((DeleteBlocksHeartbeatResponse)response).Blocks);
+                StatusHeartbeatData statusData = new StatusHeartbeatData();
+                GetDiskUsage(statusData);
+                AddDataForNextHeartbeat(statusData);
                 break;
             }
         }
@@ -258,6 +264,20 @@ namespace DataServerApplication
                 catch( IOException ex )
                 {
                     _log.Error(string.Format("Failed to delete block {0}.", block), ex);
+                }
+            }
+        }
+
+        private void GetDiskUsage(StatusHeartbeatData data)
+        {
+            DriveSpaceInfo info = new DriveSpaceInfo(_blockStorageDirectory);
+            data.DiskSpaceFree = info.AvailableFreeSpace;
+            lock( _blocks )
+            {
+                foreach( var blockID in _blocks )
+                {
+                    string blockFile = Path.Combine(_blockStorageDirectory, blockID.ToString());
+                    data.DiskSpaceUsed += new FileInfo(blockFile).Length;
                 }
             }
         }

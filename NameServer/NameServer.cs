@@ -298,10 +298,13 @@ namespace NameServerApplication
             lock( _dataServers )
             {
                 metrics.DataServers = (from server in _dataServers.Values
-                                       select new ServerMetrics()
+                                       select new DataServerMetrics()
                                        {
                                            Address = server.Address,
-                                           LastContactUtc = server.LastContactUtc
+                                           LastContactUtc = server.LastContactUtc,
+                                           BlockCount = server.Blocks.Count,
+                                           DiskSpaceFree = server.DiskSpaceFree,
+                                           DiskSpaceUsed = server.DiskSpaceUsed
                                        }).ToArray();
             }
             metrics.TotalSize = _fileSystem.TotalSize;
@@ -402,6 +405,15 @@ namespace NameServerApplication
 
         private HeartbeatResponse ProcessHeartbeat(HeartbeatData data, DataServerInfo dataServer)
         {
+            StatusHeartbeatData status = data as StatusHeartbeatData;
+            if( status != null )
+            {
+                _log.InfoFormat("Data server {0} status: {1}B used, {2}B free.", dataServer.Address, status.DiskSpaceUsed, status.DiskSpaceFree);
+                dataServer.DiskSpaceFree = status.DiskSpaceFree;
+                dataServer.DiskSpaceUsed = status.DiskSpaceUsed;
+                // Don't return; some of the other heartbeat types inherit from StatusHeartbeatData
+            }
+
             BlockReportHeartbeatData blockReport = data as BlockReportHeartbeatData;
             if( blockReport != null )
             {

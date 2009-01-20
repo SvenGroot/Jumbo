@@ -64,6 +64,7 @@
     <Compile Include="DataServerCommand.cs" />
     <Compile Include="DataServerConfigurationElement.cs" />
     <Compile Include="DataServerHeartbeatCommand.cs" />
+    <Compile Include="DataServerMetrics.cs" />
     <Compile Include="DeleteBlocksHeartbeatResponse.cs" />
     <Compile Include="DfsClient.cs" />
     <Compile Include="DfsConfiguration.cs" />
@@ -87,6 +88,7 @@
     <Compile Include="PacketBuffer.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="SafeModeException.cs" />
+    <Compile Include="StatusHeartbeatData.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="jumbo.snk" />

@@ -44,6 +44,19 @@
                 <td id="SafeModeColumn" runat="server"></td>
             </tr>
         </table>
+        <h2>Data servers</h2>
+        <table id="DataServerTable" runat="server">
+            <thead>
+                <tr>
+                    <th scope="col">Name</th>
+                    <th scope="col">Port</th>
+                    <th scope="col">Last contact</th>
+                    <th scope="col">Blocks</th>
+                    <th scope="col">Disk space</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
     </div>
 </body>
 </html>

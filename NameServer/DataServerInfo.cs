@@ -30,6 +30,10 @@ namespace NameServerApplication
 
         public DateTime LastContactUtc { get; set; }
 
+        public long DiskSpaceUsed { get; set; }
+
+        public long DiskSpaceFree { get; set; }
+
         public void AddBlockToDelete(Guid blockID)
         {
             lock( _blocksToDelete )
