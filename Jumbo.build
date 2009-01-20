@@ -154,7 +154,7 @@
     <mkdir dir="nantbin/DfsWeb"/>
     <nant buildfile="DfsWeb/DfsWeb.build" />
     <copy todir="nantbin/DfsWeb">
-      <fileset basedir="DfsSWeb">
+      <fileset basedir="DfsWeb">
         <include name="**"/>
       </fileset>
     </copy>
