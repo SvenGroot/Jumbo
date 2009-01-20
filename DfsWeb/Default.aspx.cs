@@ -34,7 +34,7 @@ public partial class _Default : System.Web.UI.Page
             row.Cells.Add(new HtmlTableCell() { InnerText = server.Address.Port.ToString() });
             row.Cells.Add(new HtmlTableCell() { InnerText = string.Format("{0:0.0}s ago", (DateTime.UtcNow - server.LastContactUtc).TotalSeconds) });
             row.Cells.Add(new HtmlTableCell() { InnerText = server.BlockCount.ToString() });
-            row.Cells.Add(new HtmlTableCell() { InnerHtml = string.Format("Used: {0} bytes / Free: {1} bytes", FormatSize(server.DiskSpaceUsed), FormatSize(server.DiskSpaceFree)) });
+            row.Cells.Add(new HtmlTableCell() { InnerHtml = string.Format("Used: {0} / Free: {1}", FormatSize(server.DiskSpaceUsed), FormatSize(server.DiskSpaceFree)) });
             DataServerTable.Rows.Add(row);
         }
     }
