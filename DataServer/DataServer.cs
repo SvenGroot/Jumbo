@@ -116,7 +116,7 @@ namespace DataServerApplication
 
         public FileStream OpenBlock(Guid blockID)
         {
-            return System.IO.File.OpenRead(Path.Combine(_blockStorageDirectory, blockID.ToString()));
+            return System.IO.File.OpenRead(GetBlockFileName(blockID));
         }
 
         public int GetBlockSize(Guid blockID)
@@ -127,7 +127,7 @@ namespace DataServerApplication
                     throw new ArgumentException("Invalid block.");
             }
 
-            return (int)new FileInfo(Path.Combine(_blockStorageDirectory, blockID.ToString())).Length;
+            return (int)new FileInfo(GetBlockFileName(blockID)).Length;
         }
 
         public void CompleteBlock(Guid blockID, int size)
@@ -139,7 +139,7 @@ namespace DataServerApplication
                     throw new ArgumentException("Invalid block ID.");
 
                 _pendingBlocks.Remove(blockID);
-                System.IO.File.Move(Path.Combine(_temporaryBlockStorageDirectory, blockID.ToString()), Path.Combine(_blockStorageDirectory, blockID.ToString()));
+                System.IO.File.Move(Path.Combine(_temporaryBlockStorageDirectory, blockID.ToString()), GetBlockFileName(blockID));
                 _blocks.Add(blockID);
             }
             NewBlockHeartbeatData data = new NewBlockHeartbeatData() { BlockID = blockID, Size = size };
@@ -259,7 +259,7 @@ namespace DataServerApplication
             {
                 try
                 {
-                    System.IO.File.Delete(Path.Combine(_blockStorageDirectory, block.ToString()));
+                    System.IO.File.Delete(GetBlockFileName(block));
                 }
                 catch( IOException ex )
                 {
@@ -276,10 +276,15 @@ namespace DataServerApplication
             {
                 foreach( var blockID in _blocks )
                 {
-                    string blockFile = Path.Combine(_blockStorageDirectory, blockID.ToString());
+                    string blockFile = GetBlockFileName(blockID);
                     data.DiskSpaceUsed += new FileInfo(blockFile).Length;
                 }
             }
+        }
+
+        private string GetBlockFileName(Guid blockID)
+        {
+            return Path.Combine(_blockStorageDirectory, blockID.ToString());
         }
     }
 }
