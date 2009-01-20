@@ -1,6 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <project name="Jumbo" default="all" xmlns="http://nant.sf.net/release/0.86-beta1/nant.xsd">
-  <target name="all" depends="NameServer,DataServer,DfsShell,ClientSample,JobServer,TaskServer,TaskHost,Tkl.Jumbo.Test,JetShell">
+  <target name="all" depends="NameServer,DataServer,DfsShell,ClientSample,JobServer,TaskServer,TaskHost,Tkl.Jumbo.Test,JetShell,DfsWeb">
     <copy todir="nantbin">
       <fileset>
         <include name="jumbo-config.sh"/>
