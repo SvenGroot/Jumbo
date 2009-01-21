@@ -107,7 +107,7 @@ namespace NameServerApplication
                         {
                             string[] parts = line.Split(':');
                             FileSystemMutation mutation = (FileSystemMutation)Enum.Parse(typeof(FileSystemMutation), parts[0]);
-                            DateTime date = DateTime.ParseExact(parts[1], "yyyyMMddHHmmss.fffffff", System.Globalization.CultureInfo.InvariantCulture);
+                            DateTime date = DateTime.ParseExact(parts[1], "yyyyMMddHHmmss.fffffff", System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.AssumeUniversal | System.Globalization.DateTimeStyles.AdjustToUniversal);
                             switch( mutation )
                             {
                             case FileSystemMutation.CreateDirectory:

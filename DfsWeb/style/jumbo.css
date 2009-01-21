@@ -105,3 +105,22 @@ pre.debug
 {
 	margin-bottom: 2em;
 }
+ul#FileSystem, ul#FileSystem ul
+{
+    list-style: none;
+    margin: 0;
+    padding: 0em 1.5em;
+}
+ul#FileSystem li
+{
+    padding: 0.1em 0em;
+}
+ul#FileSystem img.directory
+{
+    cursor: pointer;
+}
+ul#FileSystem img, ul#FileSystem span
+{
+    vertical-align: middle;
+    margin-right: 0.5em;
+}

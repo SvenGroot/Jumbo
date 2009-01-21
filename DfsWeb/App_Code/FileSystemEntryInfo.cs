@@ -30,6 +30,7 @@ public class FileSystemEntryInfo
             if( includeChildren )
             {
                 Children = (from child in dir.Children
+                            orderby child.GetType() != typeof(Directory), child.Name
                             select new FileSystemEntryInfo(child, false)).ToArray();
             }
         }

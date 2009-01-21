@@ -12,5 +12,6 @@ public partial class filesystem : System.Web.UI.Page
         Master.AddScript("script/simplexpath.js");
         Master.AddScript("script/ajax.js");
         Master.AddScript("script/filesystem.js");
+        Master.AddScript("script/number-functions.js");
     }
 }

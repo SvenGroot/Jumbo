@@ -1,4 +1,4 @@
-﻿// AJAX support script v1.1. Copyright (c) 2006, Sven Groot
+﻿// AJAX support script v1.2. Copyright (c) 2009, Sven Groot
 // 2006-12-31
 
 function tryCreateActiveXObject(progids)
@@ -327,11 +327,17 @@ Date.parseXSD = function(string)
             return null;
         seconds = secondParts[0];
         milliseconds = secondParts[1];
+        if( milliseconds.charAt(milliseconds.length - 1) == 'Z' )
+        {
+            milliseconds = milliseconds.substr(0, milliseconds.length - 1);
+        }
+        if( milliseconds.length > 3 )
+            milliseconds = milliseconds.substr(0, 3);
     }
     else
     {
         seconds = timeParts[2];
     }
-    
-    return new Date(dateParts[0], dateParts[1] - 1, dateParts[2], timeParts[0], timeParts[1], seconds, milliseconds);
+ 
+    return new Date(new Number(dateParts[0]), new Number(dateParts[1]) - 1, new Number(dateParts[2]), new Number(timeParts[0]), new Number(timeParts[1]), new Number(seconds), new Number(milliseconds));
 }
