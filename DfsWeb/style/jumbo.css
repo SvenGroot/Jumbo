@@ -18,6 +18,11 @@ label, .label
 	min-width: 10em;
 	margin-right: 1em;
 }
+pre
+{
+    font-size: 100%;
+    font-family: Consolas, monospace;
+}
 .vertical .label, .vertical label
 {
 	float: none;

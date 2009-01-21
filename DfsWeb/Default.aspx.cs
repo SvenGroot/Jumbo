@@ -13,11 +13,6 @@ public partial class _Default : System.Web.UI.Page
 {
     protected void Page_Load(object sender, EventArgs e)
     {
-        JumboVersionLabel.Text = typeof(DfsClient).Assembly.GetName().Version.ToString();
-        OsVersionLabel.Text = Environment.OSVersion.ToString();
-        ClrVersionLabel.Text = RuntimeEnvironment.Description;
-        ArchitectureLabel.Text = (IntPtr.Size * 8).ToString();
-
         DfsClient client = new DfsClient();
         DfsMetrics metrics = client.NameServer.GetMetrics();
         TotalSizeColumn.InnerHtml = FormatSize(metrics.TotalSize);
@@ -35,6 +30,7 @@ public partial class _Default : System.Web.UI.Page
             row.Cells.Add(new HtmlTableCell() { InnerText = string.Format("{0:0.0}s ago", (DateTime.UtcNow - server.LastContactUtc).TotalSeconds) });
             row.Cells.Add(new HtmlTableCell() { InnerText = server.BlockCount.ToString() });
             row.Cells.Add(new HtmlTableCell() { InnerHtml = string.Format("Used: {0} / Free: {1}", FormatSize(server.DiskSpaceUsed), FormatSize(server.DiskSpaceFree)) });
+            row.Cells.Add(new HtmlTableCell() { InnerHtml = string.Format("<a href=\"logfile.aspx?dataServer={0}&amp;port={1}\">View</a>", Server.HtmlEncode(server.Address.HostName), server.Address.Port) });
             DataServerTable.Rows.Add(row);
         }
     }

@@ -110,6 +110,12 @@ namespace Tkl.Jumbo.Dfs
         int GetDataServerBlockCount(ServerAddress dataServer, Guid[] blocks);
 
         /// <summary>
+        /// Gets the contents of the diagnostic log file.
+        /// </summary>
+        /// <returns>The contents of the diagnostic log file.</returns>
+        string GetLogFileContents();
+
+        /// <summary>
         /// Gets a value that indicates whether safe mode is on or off.
         /// </summary>
         bool SafeMode { get; }

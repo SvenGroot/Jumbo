@@ -4,6 +4,9 @@ using System.Linq;
 using System.Text;
 using System.Runtime.Remoting.Channels;
 using System.Runtime.Remoting.Channels.Tcp;
+using System.Net.Sockets;
+using System.Runtime.Serialization.Formatters.Binary;
+using System.IO;
 
 namespace Tkl.Jumbo.Dfs
 {
@@ -113,6 +116,43 @@ namespace Tkl.Jumbo.Dfs
                 throw new ArgumentNullException("config");
 
             return CreateNameServerClientInternal<INameServerHeartbeatProtocol>(config.NameServer.HostName, config.NameServer.Port);
+        }
+
+        /// <summary>
+        /// Gets the contents of the diagnostic log file of a data server.
+        /// </summary>
+        /// <param name="address">The <see cref="ServerAddress"/> of the data server.</param>
+        /// <returns>The contents of the log file.</returns>
+        public static string GetDataServerLogFileContents(ServerAddress address)
+        {
+            if( address == null )
+                throw new ArgumentNullException("address");
+
+            return GetDataServerLogFileContents(address.HostName, address.Port);
+        }
+
+        /// <summary>
+        /// Gets the contents of the diagnostic log file of a data server.
+        /// </summary>
+        /// <param name="hostName">The host name of the data server.</param>
+        /// <param name="port">The port on which the data server is listening.</param>
+        /// <returns>The contents of the log file.</returns>
+        public static string GetDataServerLogFileContents(string hostName, int port)
+        {
+            if( hostName == null )
+                throw new ArgumentNullException("hostName");
+
+            using( TcpClient client = new TcpClient(hostName, port) )
+            using( NetworkStream stream = client.GetStream() )
+            {
+                DataServerClientProtocolHeader header = new DataServerClientProtocolHeader(DataServerCommand.GetLogFileContents);
+                BinaryFormatter formatter = new BinaryFormatter();
+                formatter.Serialize(stream, header);
+                using( StreamReader reader = new StreamReader(stream) )
+                {
+                    return reader.ReadToEnd();
+                }
+            }
         }
 
         /// <summary>

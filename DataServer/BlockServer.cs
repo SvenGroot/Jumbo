@@ -60,6 +60,9 @@ namespace DataServerApplication
                             SendBlock(stream, readHeader);
                         }
                         break;
+                    case DataServerCommand.GetLogFileContents:
+                        SendLogFile(stream);
+                        break;
                     }
                 }
             }
@@ -285,6 +288,33 @@ namespace DataServerApplication
             }
 
             _log.InfoFormat("Finished sending block {0}", header.BlockID);
+        }
+
+        private void SendLogFile(NetworkStream stream)
+        {
+            _log.InfoFormat("GetLogFileContents command received.");
+            foreach( log4net.Appender.IAppender appender in log4net.LogManager.GetRepository().GetAppenders() )
+            {
+                log4net.Appender.FileAppender fileAppender = appender as log4net.Appender.FileAppender;
+                if( fileAppender != null )
+                {
+                    using( System.IO.FileStream logStream = System.IO.File.Open(fileAppender.File, System.IO.FileMode.Open, System.IO.FileAccess.Read, System.IO.FileShare.ReadWrite) )
+                    {
+                        CopyStream(logStream, stream);
+                    }
+                }
+            }
+
+        }
+
+        private static void CopyStream(Stream inputStream, Stream outputStream)
+        {
+            byte[] buffer = new byte[4096];
+            int bytesRead;
+            while( (bytesRead = inputStream.Read(buffer, 0, buffer.Length)) != 0 )
+            {
+                outputStream.Write(buffer, 0, bytesRead);
+            }
         }
     }
 }

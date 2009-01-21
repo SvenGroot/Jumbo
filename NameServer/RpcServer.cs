@@ -82,6 +82,11 @@ namespace NameServerApplication
             return NameServer.Instance.GetDataServerBlockCount(dataServer, blocks);
         }
 
+        public string GetLogFileContents()
+        {
+            return NameServer.Instance.GetLogFileContents();
+        }
+
         #endregion
 
         #region INameServerHeartbeatProtocol Members

@@ -17,6 +17,10 @@ namespace Tkl.Jumbo.Dfs
         /// <summary>
         /// The client wants to write a block to the data server.
         /// </summary>
-        WriteBlock
+        WriteBlock,
+        /// <summary>
+        /// The clients wants to read the contents of the data servers diagnostic log file.
+        /// </summary>
+        GetLogFileContents
     }
 }

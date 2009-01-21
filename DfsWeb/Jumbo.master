@@ -1,0 +1,24 @@
+﻿<%@ Master Language="C#" AutoEventWireup="true" CodeFile="Jumbo.master.cs" Inherits="Jumbo" %>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+<head id="Head1" runat="server">
+    <title>Jumbo DFS</title>
+    <link rel="stylesheet" type="text/css" href="style/jumbo.css" />
+</head>
+<body>
+    <div id="PageHeader">
+        <p id="VersionInfo">
+            Jumbo version: <asp:Label ID="JumboVersionLabel" runat="server" /><br />
+            OS Version: <asp:Label ID="OsVersionLabel" runat="server" /><br />
+            CLR Version: <asp:Label ID="ClrVersionLabel" runat="server" /> (<asp:Label ID="ArchitectureLabel" runat="server" /> bit runtime)
+        </p>
+        <h1>
+            <em>Jumbo</em> DFS
+        </h1>
+    </div>
+    <div id="MainContent">
+        <asp:ContentPlaceHolder ID="MainContentPlaceHolder" runat="server" />
+    </div>
+</body>
+</html>
+
