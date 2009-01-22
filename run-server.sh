@@ -22,7 +22,7 @@ case $startStop in
         cd DfsWeb
 		nohup xsp2 --port $dfsWebPort --nonstop --pidfile $pid > /dev/null 2>&1 < /dev/null &
 		cd ..
-    else if [ $command = "JetWeb" ]
+    elif [ $command = "JetWeb" ]; then
 		cd JetWeb
 		nohup xsp2 --port $jetWebPort --nonstop --pidfile $pid > /dev/null 2>&1 < /dev/null &
 		cd ..

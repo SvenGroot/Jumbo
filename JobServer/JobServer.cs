@@ -458,7 +458,7 @@ namespace JobServerApplication
                              {
                                  TaskID = task.Task.TaskID,
                                  State = task.State,
-                                 TaskServer = task.Server.Address,
+                                 TaskServer = task.Server == null ? null : task.Server.Address,
                                  Attempts = task.Attempts
                              }).ToArray(),
                     RunningTaskCount = (from task in job.Tasks.Values

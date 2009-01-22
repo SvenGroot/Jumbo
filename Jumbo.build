@@ -161,7 +161,7 @@
   </target>
   <target name="JetWeb" depends="Tkl.Jumbo.Jet,Tkl.Jumbo,Version.cs">
     <mkdir dir="nantbin/JetWeb"/>
-    <nant buildfile="JetWeb/DfsWeb.build" />
+    <nant buildfile="JetWeb/JetWeb.build" />
     <copy todir="nantbin/JetWeb">
       <fileset basedir="JetWeb">
         <include name="**"/>
