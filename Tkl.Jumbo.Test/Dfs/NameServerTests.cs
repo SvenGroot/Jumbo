@@ -461,7 +461,7 @@ namespace Tkl.Jumbo.Test.Dfs
             INameServerClientProtocol target = _nameServer;
             DfsMetrics metrics = _nameServer.GetMetrics();
             Assert.AreEqual(1, metrics.DataServers.Length);
-            Assert.AreEqual(new ServerAddress(Dns.GetHostName(), 10001), metrics.DataServers[0]);
+            Assert.AreEqual(new ServerAddress(Dns.GetHostName(), 10001), metrics.DataServers[0].Address);
             Assert.AreEqual(0, metrics.PendingBlockCount);
             Assert.AreEqual(0, metrics.UnderReplicatedBlockCount);
             int initialBlockCount = metrics.TotalBlockCount;

@@ -17,7 +17,6 @@ namespace Tkl.Jumbo
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(TcpServer));
 
         private TcpListener _listener;
-        private AutoResetEvent _connectionEvent = new AutoResetEvent(false);
         private volatile bool _running;
         private Thread _listenerThread;
 
@@ -95,18 +94,32 @@ namespace Tkl.Jumbo
         
         private void WaitForConnections()
         {
-            _listener.BeginAcceptTcpClient(new AsyncCallback(AcceptTcpClientCallback), null);
-
-            _connectionEvent.WaitOne();
-        }
-
-        private void AcceptTcpClientCallback(IAsyncResult ar)
-        {
-            Thread.CurrentThread.Name = "TcpServerConnectionHandler";
-            _connectionEvent.Set();
             try
             {
-                using( TcpClient client = _listener.EndAcceptTcpClient(ar) )
+                // I discovered that using BeginAcceptTcpClient would call the callback immediately on the current thread
+                // if there was already a connection in the queue, thus blocking the server until that connection was
+                // handled. So I switch to manually creating threads.
+                TcpClient client = _listener.AcceptTcpClient();
+                Thread handlerThread = new Thread(ConnectionHandlerThread);
+                handlerThread.Name = "TcpServerConnectionHandlerThread";
+                handlerThread.IsBackground = true;
+                handlerThread.Start(client);
+            }
+            catch( SocketException ex )
+            {
+                _log.Error("An error occurred accepting a client connection.", ex);
+            }
+            catch( ObjectDisposedException )
+            {
+                // Aborting; ignore.
+            }
+        }
+
+        private void ConnectionHandlerThread(object parameter)
+        {
+            try
+            {
+                using( TcpClient client = (TcpClient)parameter )
                 {
                     _log.InfoFormat("Connection accepted from {0}.", client.Client.RemoteEndPoint);
                     HandleConnection(client);
