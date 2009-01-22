@@ -22,7 +22,7 @@ namespace Tkl.Jumbo.Jet.Channels
         {
             public string TaskID { get; set; }
             public string FullTaskID { get; set; }
-            public TaskStatus Status { get; set; }
+            public TaskAttemptStatus Status { get; set; }
             public ServerAddress TaskServerAddress { get; set; }
             public ITaskServerClientProtocol TaskServer { get; set; }
         }
@@ -181,9 +181,9 @@ namespace Tkl.Jumbo.Jet.Channels
                 if( task.TaskServer != null )
                 {
                     task.Status = task.TaskServer.GetTaskStatus(task.FullTaskID);
-                    if( task.Status > TaskStatus.Running )
+                    if( task.Status > TaskAttemptStatus.Running )
                     {
-                        if( task.Status == TaskStatus.Completed )
+                        if( task.Status == TaskAttemptStatus.Completed )
                         {
                             completedTasks.Add(task);
                         }

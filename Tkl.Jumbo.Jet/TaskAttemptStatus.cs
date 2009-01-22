@@ -6,9 +6,9 @@ using System.Text;
 namespace Tkl.Jumbo.Jet
 {
     /// <summary>
-    /// The current status of a task.
+    /// The current status of a task attempt.
     /// </summary>
-    public enum TaskStatus
+    public enum TaskAttemptStatus
     {
         /// <summary>
         /// The task has not yet been started.

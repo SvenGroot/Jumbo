@@ -45,5 +45,40 @@
             <th scope="col">Log file</th>
         </tr>
     </table>
+    <h2>Running jobs</h2>
+    <table id="RunningJobsTable" runat="server">
+        <tr>
+            <th scope="col">Job ID</th>
+            <th scope="col">Start time</th>
+            <th scope="col">Tasks</th>
+            <th scope="col">Running tasks</th>
+            <th scope="col">Pending tasks</th>
+            <th scope="col">Finished tasks</th>
+            <th scope="col">Errors</th>
+            <th scope="col">Non data local tasks</th>
+        </tr>
+    </table>
+    <h2>Finished jobs</h2>
+    <table id="FinishedJobsTable" runat="server">
+        <tr>
+            <th scope="col">Job ID</th>
+            <th scope="col">Start time</th>
+            <th scope="col">End time</th>
+            <th scope="col">Tasks</th>
+            <th scope="col">Errors</th>
+            <th scope="col">Non data local tasks</th>
+        </tr>
+    </table>
+    <h2>Failed jobs</h2>
+    <table id="FailedJobsTable" runat="server">
+        <tr>
+            <th scope="col">Job ID</th>
+            <th scope="col">Start time</th>
+            <th scope="col">End time</th>
+            <th scope="col">Tasks</th>
+            <th scope="col">Errors</th>
+            <th scope="col">Non data local tasks</th>
+        </tr>
+    </table>
 </asp:Content>
 

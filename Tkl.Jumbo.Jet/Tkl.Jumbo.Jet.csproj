@@ -88,6 +88,8 @@
     <Compile Include="TaskServerConfigurationElement.cs" />
     <Compile Include="TaskServerHeartbeatCommand.cs" />
     <Compile Include="TaskServerMetrics.cs" />
+    <Compile Include="TaskState.cs" />
+    <Compile Include="TaskAttemptStatus.cs" />
     <Compile Include="TaskStatus.cs" />
     <Compile Include="TaskStatusChangedJetHeartbeatData.cs" />
   </ItemGroup>

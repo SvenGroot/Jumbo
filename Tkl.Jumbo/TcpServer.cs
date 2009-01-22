@@ -102,6 +102,7 @@ namespace Tkl.Jumbo
 
         private void AcceptTcpClientCallback(IAsyncResult ar)
         {
+            Thread.CurrentThread.Name = "TcpServerConnectionHandler";
             _connectionEvent.Set();
             try
             {

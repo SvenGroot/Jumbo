@@ -81,7 +81,7 @@ namespace TaskServerApplication
             }
         }
 
-        public void NotifyTaskStatusChanged(Guid jobID, string taskID, TaskStatus newStatus)
+        public void NotifyTaskStatusChanged(Guid jobID, string taskID, TaskAttemptStatus newStatus)
         {
             AddDataForNextHeartbeat(new TaskStatusChangedJetHeartbeatData(jobID, taskID, newStatus));
         }
@@ -116,10 +116,10 @@ namespace TaskServerApplication
             get { return Configuration.TaskServer.FileServerPort; }
         }
 
-        public TaskStatus GetTaskStatus(string fullTaskID)
+        public TaskAttemptStatus GetTaskStatus(string fullTaskID)
         {
             _log.DebugFormat("GetTaskStatus, fullTaskID = \"{0}\"", fullTaskID);
-            TaskStatus status = _taskRunner.GetTaskStatus(fullTaskID);
+            TaskAttemptStatus status = _taskRunner.GetTaskStatus(fullTaskID);
             _log.DebugFormat("Task {0} status is {1}.", fullTaskID, status);
             return status;
         }

@@ -29,7 +29,7 @@ namespace TaskServerApplication
             get { return TaskServer.Instance.FileServerPort; }
         }
 
-        public TaskStatus GetTaskStatus(string fullTaskID)
+        public TaskAttemptStatus GetTaskStatus(string fullTaskID)
         {
             return TaskServer.Instance.GetTaskStatus(fullTaskID);
         }

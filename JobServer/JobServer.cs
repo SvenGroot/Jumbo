@@ -355,7 +355,7 @@ namespace JobServerApplication
 
         private void ProcessTaskStatusChangedHeartbeat(TaskServerInfo server, TaskStatusChangedJetHeartbeatData data)
         {
-            if( data.Status > TaskStatus.Running )
+            if( data.Status > TaskAttemptStatus.Running )
             {
                 JobInfo job = null;
                 bool jobFinished = false;
@@ -371,12 +371,12 @@ namespace JobServerApplication
                     // We don't set task.Server to null because output tasks can still query that information!
                     switch( data.Status )
                     {
-                    case TaskStatus.Completed:
+                    case TaskAttemptStatus.Completed:
                         task.State = TaskState.Finished;
                         _log.InfoFormat("Task {0} completed successfully.", Job.CreateFullTaskID(data.JobID, data.TaskID));
                         ++job.FinishedTasks;
                         break;
-                    case TaskStatus.Error:
+                    case TaskAttemptStatus.Error:
                         task.State = TaskState.Error;
                         _log.WarnFormat("Task {0} encountered an error.", Job.CreateFullTaskID(data.JobID, data.TaskID));
                         if( task.Attempts < Configuration.JobServer.MaxTaskAttempts )
@@ -453,7 +453,14 @@ namespace JobServerApplication
                 return new JobStatus()
                 {
                     JobId = jobId,
-                    TaskCount = job.Tasks.Count,
+                    Tasks = (from task in job.Tasks.Values
+                             select new TaskStatus()
+                             {
+                                 TaskID = task.Task.TaskID,
+                                 State = task.State,
+                                 TaskServer = task.Server.Address,
+                                 Attempts = task.Attempts
+                             }).ToArray(),
                     RunningTaskCount = (from task in job.Tasks.Values
                                         where task.State == TaskState.Running
                                         select task).Count(),

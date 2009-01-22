@@ -34,5 +34,46 @@ public partial class _Default : System.Web.UI.Page
             row.Cells.Add(new HtmlTableCell() { InnerHtml = string.Format("<a href=\"logfile.aspx?taskServer={0}&amp;port={1}\">View</a>", Server.HtmlEncode(server.Address.HostName), server.Address.Port) });
             DataServerTable.Rows.Add(row);
         }
+
+        foreach( Guid jobId in metrics.RunningJobs )
+        {
+            JobStatus job = client.JobServer.GetJobStatus(jobId);
+            HtmlTableRow row = new HtmlTableRow();
+            row.Cells.Add(new HtmlTableCell() { InnerText = job.JobId.ToString() });
+            row.Cells.Add(new HtmlTableCell() { InnerText = job.StartTime.ToString(System.Globalization.DateTimeFormatInfo.InvariantInfo.UniversalSortableDateTimePattern) });
+            row.Cells.Add(new HtmlTableCell() { InnerText = job.TaskCount.ToString() });
+            row.Cells.Add(new HtmlTableCell() { InnerText = job.RunningTaskCount.ToString() });
+            row.Cells.Add(new HtmlTableCell() { InnerText = job.UnscheduledTaskCount.ToString() });
+            row.Cells.Add(new HtmlTableCell() { InnerText = job.FinishedTaskCount.ToString() });
+            row.Cells.Add(new HtmlTableCell() { InnerText = job.ErrorTaskCount.ToString() });
+            row.Cells.Add(new HtmlTableCell() { InnerText = job.NonDataLocalTaskCount.ToString() });
+            RunningJobsTable.Rows.Add(row);
+        }
+
+        foreach( Guid jobId in metrics.FinishedJobs )
+        {
+            JobStatus job = client.JobServer.GetJobStatus(jobId);
+            HtmlTableRow row = new HtmlTableRow();
+            row.Cells.Add(new HtmlTableCell() { InnerText = job.JobId.ToString() });
+            row.Cells.Add(new HtmlTableCell() { InnerText = job.StartTime.ToString(System.Globalization.DateTimeFormatInfo.InvariantInfo.UniversalSortableDateTimePattern) });
+            row.Cells.Add(new HtmlTableCell() { InnerText = job.EndTime.ToString(System.Globalization.DateTimeFormatInfo.InvariantInfo.UniversalSortableDateTimePattern) });
+            row.Cells.Add(new HtmlTableCell() { InnerText = job.TaskCount.ToString() });
+            row.Cells.Add(new HtmlTableCell() { InnerText = job.ErrorTaskCount.ToString() });
+            row.Cells.Add(new HtmlTableCell() { InnerText = job.NonDataLocalTaskCount.ToString() });
+            FinishedJobsTable.Rows.Add(row);
+        }
+
+        foreach( Guid jobId in metrics.FailedJobs )
+        {
+            JobStatus job = client.JobServer.GetJobStatus(jobId);
+            HtmlTableRow row = new HtmlTableRow();
+            row.Cells.Add(new HtmlTableCell() { InnerText = job.JobId.ToString() });
+            row.Cells.Add(new HtmlTableCell() { InnerText = job.StartTime.ToString(System.Globalization.DateTimeFormatInfo.InvariantInfo.UniversalSortableDateTimePattern) });
+            row.Cells.Add(new HtmlTableCell() { InnerText = job.EndTime.ToString() });
+            row.Cells.Add(new HtmlTableCell() { InnerText = job.TaskCount.ToString() });
+            row.Cells.Add(new HtmlTableCell() { InnerText = job.ErrorTaskCount.ToString() });
+            row.Cells.Add(new HtmlTableCell() { InnerText = job.NonDataLocalTaskCount.ToString() });
+            FailedJobsTable.Rows.Add(row);
+        }
     }
 }

@@ -8,16 +8,6 @@ using Tkl.Jumbo.Dfs;
 
 namespace JobServerApplication
 {
-    enum TaskState
-    {
-        Created,
-        Scheduled,
-        Running,
-        Finished,
-        Error,
-        Aborted
-    }
-
     class TaskInfo
     {
         public TaskInfo(JobInfo job, TaskConfiguration task)

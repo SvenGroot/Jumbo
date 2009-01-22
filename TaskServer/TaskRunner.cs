@@ -34,7 +34,7 @@ namespace TaskServerApplication
                 _taskServer = taskServer;
             }
 
-            public TaskStatus State { get; set; }
+            public TaskAttemptStatus State { get; set; }
 
             public Guid JobID { get; private set; }
 
@@ -71,7 +71,7 @@ namespace TaskServerApplication
                         Thread.Sleep(createProcessDelay);
                     }
                 }
-                State = TaskStatus.Running;
+                State = TaskAttemptStatus.Running;
             }
 
             public void Kill()
@@ -172,7 +172,7 @@ namespace TaskServerApplication
             {
                 foreach( RunningTask task in _runningTasks.Values )
                 {
-                    if( task.State == TaskStatus.Running )
+                    if( task.State == TaskAttemptStatus.Running )
                         task.Kill();
                 }
             }
@@ -195,10 +195,10 @@ namespace TaskServerApplication
             lock( _runningTasks )
             {
                 RunningTask task;
-                if( _runningTasks.TryGetValue(fullTaskID, out task) && task.State == TaskStatus.Running )
+                if( _runningTasks.TryGetValue(fullTaskID, out task) && task.State == TaskAttemptStatus.Running )
                 {
                     _log.InfoFormat("Task {0} has completed successfully.", task.FullTaskID);
-                    task.State = TaskStatus.Completed;
+                    task.State = TaskAttemptStatus.Completed;
                     _taskServer.NotifyTaskStatusChanged(task.JobID, task.TaskID, task.State);
                 }
                 else
@@ -215,7 +215,7 @@ namespace TaskServerApplication
                                           select item.Key).ToArray();
                 foreach( string task in tasksToRemove )
                 {
-                    if( _runningTasks[task].State == TaskStatus.Running )
+                    if( _runningTasks[task].State == TaskAttemptStatus.Running )
                     {
                         _log.WarnFormat("Received cleanup command for still running task {0} (this usually means the job failed).", task);
                         _runningTasks[task].Kill();
@@ -227,7 +227,7 @@ namespace TaskServerApplication
             }
         }
 
-        public TaskStatus GetTaskStatus(string fullTaskID)
+        public TaskAttemptStatus GetTaskStatus(string fullTaskID)
         {
             if( fullTaskID == null )
                 throw new ArgumentNullException("fullTaskID");
@@ -240,7 +240,7 @@ namespace TaskServerApplication
                     return task.State;
                 }
                 else
-                    return TaskStatus.NotStarted;
+                    return TaskAttemptStatus.NotStarted;
             }
         }
 
@@ -303,10 +303,10 @@ namespace TaskServerApplication
                 RunningTask task = (RunningTask)sender;
                 lock( _runningTasks )
                 {
-                    if( task.State != TaskStatus.Completed )
+                    if( task.State != TaskAttemptStatus.Completed )
                     {
                         _log.ErrorFormat("Task {0} did not complete sucessfully.", task.FullTaskID);
-                        task.State = TaskStatus.Error;
+                        task.State = TaskAttemptStatus.Error;
                         _runningTasks.Remove(task.FullTaskID);
                         _taskServer.NotifyTaskStatusChanged(task.JobID, task.TaskID, task.State);
                         task.Dispose();

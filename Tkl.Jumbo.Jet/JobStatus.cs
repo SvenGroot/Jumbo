@@ -17,9 +17,17 @@ namespace Tkl.Jumbo.Jet
         public Guid JobId { get; set; }
 
         /// <summary>
+        /// Gets or sets the tasks of this job.
+        /// </summary>
+        public TaskStatus[] Tasks { get; set; }
+
+        /// <summary>
         /// Gets or sets the total number of tasks in the job.
         /// </summary>
-        public int TaskCount { get; set; }
+        public int TaskCount
+        {
+            get { return Tasks.Length; }
+        }
 
         /// <summary>
         /// Gets or sets the number of tasks currently running.
