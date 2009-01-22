@@ -35,5 +35,13 @@ namespace Tkl.Jumbo.Jet
         /// </summary>
         /// <returns>The contents of the diagnostic log file.</returns>
         string GetLogFileContents();
+
+        /// <summary>
+        /// Gets the contents of the diagnostic log file for the specified task.
+        /// </summary>
+        /// <param name="jobId">The job ID.</param>
+        /// <param name="taskId">The task ID.</param>
+        /// <param name="attempt">The attempt number.</param>
+        string GetTaskLogFileContents(Guid jobId, string taskId, int attempt);
     }
 }

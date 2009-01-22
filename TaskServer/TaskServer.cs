@@ -148,6 +148,21 @@ namespace TaskServerApplication
             return null;
         }
 
+        public string GetTaskLogFileContents(Guid jobId, string taskId, int attempt)
+        {
+            string jobDirectory = GetJobDirectory(jobId);
+            string logFileName = System.IO.Path.Combine(jobDirectory, taskId + "_" + attempt.ToString() + ".log");
+            if( System.IO.File.Exists(logFileName) )
+            {
+                using( System.IO.FileStream stream = System.IO.File.Open(logFileName, System.IO.FileMode.Open, System.IO.FileAccess.Read, System.IO.FileShare.ReadWrite) )
+                using( System.IO.StreamReader reader = new System.IO.StreamReader(stream) )
+                {
+                    return reader.ReadToEnd();
+                }
+            }
+            return null;
+        }
+
         #endregion
         
         private void RunInternal()

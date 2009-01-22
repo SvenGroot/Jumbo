@@ -64,6 +64,7 @@
             <th scope="col">Job ID</th>
             <th scope="col">Start time</th>
             <th scope="col">End time</th>
+            <th scope="col">Duration</th>
             <th scope="col">Tasks</th>
             <th scope="col">Errors</th>
             <th scope="col">Non data local tasks</th>
@@ -75,6 +76,7 @@
             <th scope="col">Job ID</th>
             <th scope="col">Start time</th>
             <th scope="col">End time</th>
+            <th scope="col">Duration</th>
             <th scope="col">Tasks</th>
             <th scope="col">Errors</th>
             <th scope="col">Non data local tasks</th>

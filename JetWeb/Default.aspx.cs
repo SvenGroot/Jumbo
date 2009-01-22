@@ -39,7 +39,7 @@ public partial class _Default : System.Web.UI.Page
         {
             JobStatus job = client.JobServer.GetJobStatus(jobId);
             HtmlTableRow row = new HtmlTableRow();
-            row.Cells.Add(new HtmlTableCell() { InnerText = job.JobId.ToString() });
+            row.Cells.Add(new HtmlTableCell() { InnerHtml = string.Format("<a href=\"job.aspx?id={0}\">{{{0}}}</a>", jobId) });
             row.Cells.Add(new HtmlTableCell() { InnerText = job.StartTime.ToString(System.Globalization.DateTimeFormatInfo.InvariantInfo.UniversalSortableDateTimePattern) });
             row.Cells.Add(new HtmlTableCell() { InnerText = job.TaskCount.ToString() });
             row.Cells.Add(new HtmlTableCell() { InnerText = job.RunningTaskCount.ToString() });
@@ -54,9 +54,11 @@ public partial class _Default : System.Web.UI.Page
         {
             JobStatus job = client.JobServer.GetJobStatus(jobId);
             HtmlTableRow row = new HtmlTableRow();
-            row.Cells.Add(new HtmlTableCell() { InnerText = job.JobId.ToString() });
+            row.Cells.Add(new HtmlTableCell() { InnerHtml = string.Format("<a href=\"job.aspx?id={0}\">{{{0}}}</a>", jobId) });
             row.Cells.Add(new HtmlTableCell() { InnerText = job.StartTime.ToString(System.Globalization.DateTimeFormatInfo.InvariantInfo.UniversalSortableDateTimePattern) });
             row.Cells.Add(new HtmlTableCell() { InnerText = job.EndTime.ToString(System.Globalization.DateTimeFormatInfo.InvariantInfo.UniversalSortableDateTimePattern) });
+            TimeSpan duration = job.EndTime - job.StartTime;
+            row.Cells.Add(new HtmlTableCell() { InnerText = string.Format("{0} ({1}s)", duration, duration.TotalSeconds) });
             row.Cells.Add(new HtmlTableCell() { InnerText = job.TaskCount.ToString() });
             row.Cells.Add(new HtmlTableCell() { InnerText = job.ErrorTaskCount.ToString() });
             row.Cells.Add(new HtmlTableCell() { InnerText = job.NonDataLocalTaskCount.ToString() });
@@ -67,9 +69,11 @@ public partial class _Default : System.Web.UI.Page
         {
             JobStatus job = client.JobServer.GetJobStatus(jobId);
             HtmlTableRow row = new HtmlTableRow();
-            row.Cells.Add(new HtmlTableCell() { InnerText = job.JobId.ToString() });
+            row.Cells.Add(new HtmlTableCell() { InnerHtml = string.Format("<a href=\"job.aspx?id={0}\">{{{0}}}</a>", jobId) });
             row.Cells.Add(new HtmlTableCell() { InnerText = job.StartTime.ToString(System.Globalization.DateTimeFormatInfo.InvariantInfo.UniversalSortableDateTimePattern) });
             row.Cells.Add(new HtmlTableCell() { InnerText = job.EndTime.ToString() });
+            TimeSpan duration = job.EndTime - job.StartTime;
+            row.Cells.Add(new HtmlTableCell() { InnerText = string.Format("{0} ({1}s)", duration, duration.TotalSeconds) });
             row.Cells.Add(new HtmlTableCell() { InnerText = job.TaskCount.ToString() });
             row.Cells.Add(new HtmlTableCell() { InnerText = job.ErrorTaskCount.ToString() });
             row.Cells.Add(new HtmlTableCell() { InnerText = job.NonDataLocalTaskCount.ToString() });

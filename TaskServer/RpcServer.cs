@@ -44,6 +44,11 @@ namespace TaskServerApplication
             return TaskServer.Instance.GetLogFileContents();
         }
 
+        public string GetTaskLogFileContents(Guid jobId, string taskId, int attempt)
+        {
+            return TaskServer.Instance.GetTaskLogFileContents(jobId, taskId, attempt);
+        }
+
         #endregion
     }
 }

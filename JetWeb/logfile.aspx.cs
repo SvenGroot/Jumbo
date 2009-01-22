@@ -17,7 +17,7 @@ public partial class logfile : System.Web.UI.Page
         string taskServer = Request.QueryString["taskServer"];
         if( taskServer == null )
         {
-            Title = "Job server log file - Jumbo DFS";
+            Title = "Job server log file - Jumbo Jet";
             HeaderText.InnerText = "Job server log file";
             JetClient client = new JetClient();
             string log = client.JobServer.GetLogFileContents();
@@ -27,9 +27,23 @@ public partial class logfile : System.Web.UI.Page
         {
             int port = Convert.ToInt32(Request.QueryString["port"]);
             ITaskServerClientProtocol client = JetClient.CreateTaskServerClient(new ServerAddress(taskServer, port));
-            LogFileContents.InnerText = client.GetLogFileContents();
-            Title = string.Format("Data server {0} log file - Jumbo DFS", taskServer);
-            HeaderText.InnerText = string.Format("Data server {0} log file", taskServer);
+
+            string taskId = Request.QueryString["task"];
+            if( taskId == null )
+            {
+                LogFileContents.InnerText = client.GetLogFileContents();
+                Title = string.Format("Data server {0} log file - Jumbo Jet", taskServer);
+                HeaderText.InnerText = string.Format("Data server {0} log file", taskServer);
+            }
+            else
+            {
+                Guid jobId = new Guid(Request.QueryString["job"]);
+                int attempt = Convert.ToInt32(Request.QueryString["attempt"]);
+
+                LogFileContents.InnerText = client.GetTaskLogFileContents(jobId, taskId, attempt);
+                Title = string.Format("Task {{{0}}}_{1}_{2} log file (on {3}) - Jumbo Jet", jobId, taskId, attempt, taskServer);
+                HeaderText.InnerText = string.Format("Task {{{0}}}_{1}_{2} log file (on {3})", jobId, taskId, attempt, taskServer);
+            }
         }
     }
 }
