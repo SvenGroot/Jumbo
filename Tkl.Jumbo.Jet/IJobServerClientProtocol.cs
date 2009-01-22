@@ -51,5 +51,11 @@ namespace Tkl.Jumbo.Jet
         /// </summary>
         /// <returns>An object holding the metrics for the job server.</returns>
         JetMetrics GetMetrics();
+
+        /// <summary>
+        /// Gets the contents of the diagnostic log file.
+        /// </summary>
+        /// <returns>The contents of the diagnostic log file.</returns>
+        string GetLogFileContents();
     }
 }

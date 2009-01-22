@@ -34,6 +34,7 @@ namespace Tkl.Jumbo.Dfs
         /// <summary>
         /// Initializes a new instance of the <see cref="DfsClient"/> class using the specified configuration.
         /// </summary>
+        /// <param name="config">The configuration to use.</param>
         public DfsClient(DfsConfiguration config)
         {
             NameServer = CreateNameServerClient(config);
@@ -50,7 +51,7 @@ namespace Tkl.Jumbo.Dfs
         }
 
         /// <summary>
-        /// Gets or sets the <see cref="INameServerClientProtocol"/> used by this instance to communicate with the name server.
+        /// Gets the <see cref="INameServerClientProtocol"/> used by this instance to communicate with the name server.
         /// </summary>
         public INameServerClientProtocol NameServer { get; private set; }
 

@@ -1,6 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <project name="Jumbo" default="all" xmlns="http://nant.sf.net/release/0.86-beta1/nant.xsd">
-  <target name="all" depends="NameServer,DataServer,DfsShell,ClientSample,JobServer,TaskServer,TaskHost,Tkl.Jumbo.Test,JetShell,DfsWeb">
+  <target name="all" depends="NameServer,DataServer,DfsShell,ClientSample,JobServer,TaskServer,TaskHost,Tkl.Jumbo.Test,JetShell,DfsWeb,JetWeb">
     <copy todir="nantbin">
       <fileset>
         <include name="jumbo-config.sh"/>
@@ -155,6 +155,15 @@
     <nant buildfile="DfsWeb/DfsWeb.build" />
     <copy todir="nantbin/DfsWeb">
       <fileset basedir="DfsWeb">
+        <include name="**"/>
+      </fileset>
+    </copy>
+  </target>
+  <target name="JetWeb" depends="Tkl.Jumbo.Jet,Tkl.Jumbo,Version.cs">
+    <mkdir dir="nantbin/JetWeb"/>
+    <nant buildfile="JetWeb/DfsWeb.build" />
+    <copy todir="nantbin/JetWeb">
+      <fileset basedir="JetWeb">
         <include name="**"/>
       </fileset>
     </copy>

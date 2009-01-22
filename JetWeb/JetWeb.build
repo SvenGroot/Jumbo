@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8" ?>
-<project name="DfsWeb" default="build" xmlns="http://nant.sf.net/release/0.86-beta1/nant.xsd">
+<project name="JetWeb" default="build" xmlns="http://nant.sf.net/release/0.86-beta1/nant.xsd">
   <property name="debug" value="false" overwrite="false"/>
   <property name="rebuild" value="false" overwrite="false"/>
   <property if="${debug}" name="define" value="DEBUG;TRACE"/>
@@ -10,7 +10,7 @@
     <mkdir dir="Bin"/>
     <copy todir="Bin">
       <fileset>
-        <include name="../Tkl.Jumbo.Dfs/nantbin/*.*"/>
+        <include name="../Tkl.Jumbo.Jet/nantbin/*.*"/>
         <include name="../Tkl.Jumbo/nantbin/*.*"/>
       </fileset>
     </copy>

@@ -1,0 +1,71 @@
+﻿#MainContent
+{
+	margin-left: 201px; /* width+border of sidebar */
+}
+#MainContent.mainContentCollapsedSideBar
+{
+	margin-left: 11px;
+}
+.sideBar, .sideBarCollapsed
+{
+	position: absolute;
+	left: 0;
+	border-right: solid 1px black;
+	border-bottom: solid 1px black;
+	background: #a2a6b5;
+	overflow: hidden;
+}
+.sideBar
+{
+	width: 200px;
+}
+.sideBarCollapsed
+{
+	width: 10px;
+}
+.sideBarPanel
+{
+	margin-left: 10px;
+	padding: 15px 10px 10px 2px;
+	background: #002E65;
+	min-height: 500px;
+}
+.sideBarPanel ul
+{
+	list-style: none;
+	margin: 0;
+	padding: 0;
+}
+.sideBarPanel h2
+{
+	margin: 0;
+	font-size: 100%;
+	font-style: italic;
+	color: white;
+}
+.sideBarPanel a
+{
+	color: #C2C6D5;
+}
+.sideBarPanel a:hover
+{
+	color: white;
+}
+.sideBarPanel .selectedPage
+{
+	color: white;
+}
+.sideBarCollapseButton
+{
+	width: 6px;
+	height: 9px;
+	background-image: url('../images/arrowleft.gif');
+	position: absolute;
+	top: 5px;
+	right: 2px;
+	overflow: hidden;
+}
+.sideBarCollapsed .sideBarCollapseButton
+{
+	background-image: url('../images/arrowright.gif');
+}

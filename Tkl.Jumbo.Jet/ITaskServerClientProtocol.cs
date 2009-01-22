@@ -29,5 +29,11 @@ namespace Tkl.Jumbo.Jet
         /// <param name="fullTaskID">The full ID of the task.</param>
         /// <returns>The output directory of the task.</returns>
         string GetOutputFileDirectory(string fullTaskID);
+
+        /// <summary>
+        /// Gets the contents of the diagnostic log file.
+        /// </summary>
+        /// <returns>The contents of the diagnostic log file.</returns>
+        string GetLogFileContents();
     }
 }

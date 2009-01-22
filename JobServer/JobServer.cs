@@ -186,15 +186,38 @@ namespace JobServerApplication
             lock( _taskServers )
             {
                 result.TaskServers = (from server in _taskServers.Values
-                                      select new ServerMetrics()
+                                      select new TaskServerMetrics()
                                       {
                                           Address = server.Address,
-                                          LastContactUtc = server.LastContactUtc
+                                          LastContactUtc = server.LastContactUtc,
+                                          MaxTasks = server.MaxTasks,
+                                          MaxNonInputTasks = server.MaxNonInputTasks
                                       }).ToArray();
                 result.Capacity = (from server in _taskServers.Values
                                    select server.MaxTasks).Sum();
+                result.NonInputTaskCapacity = (from server in _taskServers.Values
+                                               select server.MaxNonInputTasks).Sum();
             }
+            result.Scheduler = _scheduler.GetType().Name;
             return result;
+        }
+
+        public string GetLogFileContents()
+        {
+            _log.Debug("GetLogFileContents");
+            foreach( log4net.Appender.IAppender appender in log4net.LogManager.GetRepository().GetAppenders() )
+            {
+                log4net.Appender.FileAppender fileAppender = appender as log4net.Appender.FileAppender;
+                if( fileAppender != null )
+                {
+                    using( System.IO.FileStream stream = System.IO.File.Open(fileAppender.File, System.IO.FileMode.Open, System.IO.FileAccess.Read, System.IO.FileShare.ReadWrite) )
+                    using( System.IO.StreamReader reader = new System.IO.StreamReader(stream) )
+                    {
+                        return reader.ReadToEnd();
+                    }
+                }
+            }
+            return null;
         }
 
         #endregion

@@ -50,6 +50,11 @@ namespace JobServerApplication
             return JobServer.Instance.GetMetrics();
         }
 
+        public string GetLogFileContents()
+        {
+            return JobServer.Instance.GetLogFileContents();
+        }
+
         #endregion
     }
 }

@@ -87,6 +87,7 @@
     <Compile Include="TaskDfsOutput.cs" />
     <Compile Include="TaskServerConfigurationElement.cs" />
     <Compile Include="TaskServerHeartbeatCommand.cs" />
+    <Compile Include="TaskServerMetrics.cs" />
     <Compile Include="TaskStatus.cs" />
     <Compile Include="TaskStatusChangedJetHeartbeatData.cs" />
   </ItemGroup>

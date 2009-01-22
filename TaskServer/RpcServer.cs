@@ -39,6 +39,11 @@ namespace TaskServerApplication
             return TaskServer.Instance.GetOutputFileDirectory(fullTaskID);
         }
 
+        public string GetLogFileContents()
+        {
+            return TaskServer.Instance.GetLogFileContents();
+        }
+
         #endregion
     }
 }

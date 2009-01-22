@@ -19,6 +19,31 @@ namespace Tkl.Jumbo.Jet
         }
 
         /// <summary>
+        /// Initializes a new instance of the <see cref="JetClient"/> class.
+        /// </summary>
+        public JetClient()
+            : this(JetConfiguration.GetConfiguration())
+        {
+        }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="JetClient"/> class with the specified configuration.
+        /// </summary>
+        /// <param name="config">The configuration to use.</param>
+        public JetClient(JetConfiguration config)
+        {
+            if( config == null )
+                throw new ArgumentNullException("config");
+
+            JobServer = CreateJobServerClient(config);
+        }
+
+        /// <summary>
+        /// Gets the <see cref="IJobServerClientProtocol"/> instance used by this instance to communicate with the job server.
+        /// </summary>
+        public IJobServerClientProtocol JobServer { get; private set; }
+
+        /// <summary>
         /// Creates a client object that can be used to communicate with a job server via the heartbeat protocol.
         /// </summary>
         /// <returns>An object implementing <see cref="IJobServerHeartbeatProtocol"/> that is a proxy class for

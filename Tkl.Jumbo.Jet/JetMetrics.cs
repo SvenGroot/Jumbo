@@ -30,15 +30,22 @@ namespace Tkl.Jumbo.Jet
         /// <summary>
         /// Gets or sets a list of task servers registered with the system.
         /// </summary>
-        public ServerMetrics[] TaskServers { get; set; }
+        public TaskServerMetrics[] TaskServers { get; set; }
 
         /// <summary>
-        /// Gets or sets the total task capacity.
+        /// Gets or sets the total input task capacity.
         /// </summary>
-        /// <remarks>
-        /// For the staged scheduler, this is the capacity per stage.
-        /// </remarks>
         public int Capacity { get; set; }
+
+        /// <summary>
+        /// Gets or sets the total non-input task capacity (staged scheduler only).
+        /// </summary>
+        public int NonInputTaskCapacity { get; set; }
+
+        /// <summary>
+        /// Gets or sets the name of the scheduler being used.
+        /// </summary>
+        public string Scheduler { get; set; }
 
         /// <summary>
         /// Prints the metrics.
@@ -53,6 +60,8 @@ namespace Tkl.Jumbo.Jet
             writer.WriteLine("Failed jobs: {0}", FailedJobs.Length);
             PrintList(writer, FailedJobs);
             writer.WriteLine("Capacity: {0}", Capacity);
+            writer.WriteLine("Non-input task capacity: {0}", NonInputTaskCapacity);
+            writer.WriteLine("Scheduler: {0}", Scheduler);
             writer.WriteLine("Task servers: {0}", TaskServers.Length);
             PrintList(writer, TaskServers);
         }
