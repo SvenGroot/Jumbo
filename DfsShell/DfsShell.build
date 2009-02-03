@@ -17,6 +17,7 @@
         <include name="System.Core.dll"/>
         <include name="../Tkl.Jumbo.Dfs/nantbin/Tkl.Jumbo.Dfs.dll"/>
         <include name="../Tkl.Jumbo/nantbin/Tkl.Jumbo.dll"/>
+        <include name="../lib/log4net.dll"/>
       </references>
       <sources>
         <include name="Properties/AssemblyInfo.cs"/>

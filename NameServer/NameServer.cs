@@ -453,8 +453,6 @@ namespace NameServerApplication
                 return ProcessNewBlock(dataServer, newBlock);
             }
 
-            if( !(data is InitialHeartbeatData) )
-                _log.WarnFormat("Unknown HeartbeatData type {0}.", data.GetType().AssemblyQualifiedName);
             return null;
         }
 

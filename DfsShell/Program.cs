@@ -16,6 +16,7 @@ namespace DfsShell
 
         public static void Main(string[] args)
         {
+            log4net.Config.XmlConfigurator.Configure();
             if( args.Length == 0 )
                 PrintUsage();
             else

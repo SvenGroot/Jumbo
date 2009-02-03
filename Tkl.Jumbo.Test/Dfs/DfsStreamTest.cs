@@ -20,7 +20,7 @@ namespace Tkl.Jumbo.Test.Dfs
         [TestFixtureSetUp]
         public void Setup()
         {
-            _cluster = new TestDfsCluster(1, 1);
+            _cluster = new TestDfsCluster(2, 2);
             Trace.WriteLine("Starting nameserver.");
             DfsConfiguration config = TestDfsCluster.CreateClientConfig();
             _nameServer = DfsClient.CreateNameServerClient(config);
@@ -99,6 +99,57 @@ namespace Tkl.Jumbo.Test.Dfs
                     input.Read(buffer, 0, buffer.Length);
                     stream.Read(buffer2, 0, buffer.Length);
                     Assert.IsTrue(Utilities.CompareArray(buffer, 0, buffer2, 0, buffer.Length));
+                }
+            }
+        }
+
+        [Test]
+        public void DfsInputStreamErrorRecovery()
+        {
+            const int size = 100000000;
+
+            using( MemoryStream stream = new MemoryStream() )
+            {
+                // Create a file. This size is chosen so it's not a whole number of packets.
+                Trace.WriteLine("Creating file");
+                Trace.Flush();
+                Utilities.GenerateData(stream, size);
+                stream.Position = 0;
+                Trace.WriteLine("Uploading file");
+                Trace.Flush();
+                using( DfsOutputStream output = new DfsOutputStream(_nameServer, "/DfsInputStreamErrorRecovery.dat") )
+                {
+                    Utilities.CopyStream(stream, output);
+                    Assert.AreEqual(size, output.Length);
+                    Assert.AreEqual(size, output.Position);
+                }
+
+                // Make a modification so it'll cause an InvalidChecksumException
+                Tkl.Jumbo.Dfs.File file = _nameServer.GetFileInfo("/DfsInputStreamErrorRecovery.dat");
+                ServerAddress[] servers = _nameServer.GetDataServersForBlock(file.Blocks[0]);
+                string blockFile = Path.Combine(Path.Combine(Utilities.TestOutputPath, "blocks" + (servers[0].Port - TestDfsCluster.FirstDataServerPort).ToString()), file.Blocks[0].ToString());
+                using( FileStream fileStream = new FileStream(blockFile, FileMode.Open, FileAccess.ReadWrite) )
+                {
+                    fileStream.Position = 500000;
+                    int b = fileStream.ReadByte();
+                    fileStream.Position = 500000;
+                    fileStream.WriteByte((byte)(b + 10));
+                }
+
+                Trace.WriteLine("Comparing file");
+                Trace.Flush();
+                stream.Position = 0;
+                using( DfsInputStream input = new DfsInputStream(_nameServer, "/DfsInputStreamErrorRecovery.dat") )
+                {
+                    Assert.AreEqual(_nameServer.BlockSize, input.BlockSize);
+                    Assert.IsTrue(input.CanRead);
+                    Assert.IsTrue(input.CanSeek);
+                    Assert.IsFalse(input.CanWrite);
+                    Assert.AreEqual(size, input.Length);
+                    Assert.AreEqual(0, input.Position);
+                    Assert.IsTrue(Utilities.CompareStream(stream, input));
+                    Assert.AreEqual(size, input.Position);
+                    Assert.AreEqual(1, input.DataServerErrors); // We should've had one recovered error.
                 }
             }
         }
