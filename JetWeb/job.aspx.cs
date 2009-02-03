@@ -36,9 +36,28 @@ public partial class job : System.Web.UI.Page
             row.Cells.Add(new HtmlTableCell() { InnerText = task.TaskServer == null ? "" : task.TaskServer.ToString() });
             row.Cells.Add(new HtmlTableCell() { InnerText = task.Attempts.ToString() });
             if( task.State >= TaskState.Running && task.TaskServer != null )
+            {
+                row.Cells.Add(new HtmlTableCell() { InnerText = task.StartTime.ToString(System.Globalization.DateTimeFormatInfo.InvariantInfo.UniversalSortableDateTimePattern) });
+                if( task.State == TaskState.Finished )
+                {
+                    row.Cells.Add(new HtmlTableCell() { InnerText = task.EndTime.ToString(System.Globalization.DateTimeFormatInfo.InvariantInfo.UniversalSortableDateTimePattern) });
+                    TimeSpan duration = task.EndTime - task.StartTime;
+                    row.Cells.Add(new HtmlTableCell() { InnerText = string.Format("{0} ({1}s)", duration, duration.TotalSeconds) });
+                }
+                else
+                {
+                    row.Cells.Add(new HtmlTableCell() { InnerText = "" });
+                    row.Cells.Add(new HtmlTableCell() { InnerText = "" });
+                }
                 row.Cells.Add(new HtmlTableCell() { InnerHtml = string.Format("<a href=\"logfile.aspx?taskServer={0}&amp;port={1}&amp;job={2}&amp;task={3}&amp;attempt={4}\">View</a>", task.TaskServer.HostName, task.TaskServer.Port, job.JobId, task.TaskID, task.Attempts) });
+            }
             else
+            {
                 row.Cells.Add(new HtmlTableCell() { InnerText = "" });
+                row.Cells.Add(new HtmlTableCell() { InnerText = "" });
+                row.Cells.Add(new HtmlTableCell() { InnerText = "" });
+                row.Cells.Add(new HtmlTableCell() { InnerText = "" });
+            }
             TasksTable.Rows.Add(row);
         }
     }

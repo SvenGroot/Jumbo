@@ -25,6 +25,8 @@ namespace JobServerApplication
         public TaskState State { get; set; }
         public TaskServerInfo Server { get; set; }
         public int Attempts { get; set; }
+        public DateTime StartTimeUtc { get; set; }
+        public DateTime EndTimeUtc { get; set; }
         public string GlobalID
         {
             get

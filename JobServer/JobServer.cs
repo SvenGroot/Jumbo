@@ -122,7 +122,7 @@ namespace JobServerApplication
                 ScheduleTasks(jobInfo);
 
                 jobInfo.State = JobState.Running;
-                jobInfo.StartTime = DateTime.UtcNow;
+                jobInfo.StartTimeUtc = DateTime.UtcNow;
                 _log.InfoFormat("Job {0} has entered the running state. Number of tasks: {1}.", jobID, jobInfo.Tasks.Count);
             }
         }
@@ -285,6 +285,7 @@ namespace JobServerApplication
                             ++task.Attempts;
                             responses.Add(new RunTaskJetHeartbeatResponse(task.Job.Job, task.Task.TaskID, task.Attempts));
                             task.State = TaskState.Running;
+                            task.StartTimeUtc = DateTime.UtcNow;
                         }
                     }
                 }
@@ -377,6 +378,7 @@ namespace JobServerApplication
                     switch( data.Status )
                     {
                     case TaskAttemptStatus.Completed:
+                        task.EndTimeUtc = DateTime.UtcNow;
                         task.State = TaskState.Finished;
                         _log.InfoFormat("Task {0} completed successfully.", Job.CreateFullTaskID(data.JobID, data.TaskID));
                         ++job.FinishedTasks;
@@ -419,7 +421,7 @@ namespace JobServerApplication
                         lock( _finishedJobs )
                             _finishedJobs.Add(job.Job.JobID, job);
                         jobFinished = true;
-                        job.EndTime = DateTime.UtcNow;
+                        job.EndTimeUtc = DateTime.UtcNow;
                         job.JobCompletedEvent.Set();
                     }
                     else if( job.UnscheduledTasks > 0 )
@@ -464,7 +466,9 @@ namespace JobServerApplication
                                  TaskID = task.Task.TaskID,
                                  State = task.State,
                                  TaskServer = task.Server == null ? null : task.Server.Address,
-                                 Attempts = task.Attempts
+                                 Attempts = task.Attempts,
+                                 StartTime = task.StartTimeUtc,
+                                 EndTime = task.EndTimeUtc
                              }).ToArray(),
                     RunningTaskCount = (from task in job.Tasks.Values
                                         where task.State == TaskState.Running
@@ -473,8 +477,8 @@ namespace JobServerApplication
                     FinishedTaskCount = job.FinishedTasks,
                     ErrorTaskCount = job.Errors,
                     NonDataLocalTaskCount = job.NonDataLocal,
-                    StartTime = job.StartTime,
-                    EndTime = job.EndTime
+                    StartTime = job.StartTimeUtc,
+                    EndTime = job.EndTimeUtc
                 };
             }
         }

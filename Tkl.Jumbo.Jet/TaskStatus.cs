@@ -33,5 +33,15 @@ namespace Tkl.Jumbo.Jet
         /// Gets or sets the number of times this task has been attempted.
         /// </summary>
         public int Attempts { get; set; }
+
+        /// <summary>
+        /// Gets or sets the UTC start time of the task.
+        /// </summary>
+        public DateTime StartTime { get; set; }
+
+        /// <summary>
+        /// Gets or sets the UTC end time of the task.
+        /// </summary>
+        public DateTime EndTime { get; set; }
     }
 }

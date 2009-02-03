@@ -37,8 +37,8 @@ namespace JobServerApplication
         public int FinishedTasks { get; set; }
         public int Errors { get; set; }
         public int NonDataLocal { get; set; }
-        public DateTime StartTime { get; set; }
-        public DateTime EndTime { get; set; }
+        public DateTime StartTimeUtc { get; set; }
+        public DateTime EndTimeUtc { get; set; }
         public SortedList<string, TaskInfo> Tasks
         {
             get { return _tasks; }

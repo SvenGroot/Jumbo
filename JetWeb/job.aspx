@@ -20,6 +20,9 @@
             <th scope="col">State</th>
             <th scope="col">Task Server</th>
             <th scope="col">Attempts</th>
+            <th scope="col">Start time</th>
+            <th scope="col">End time</th>
+            <th scope="col">Duration</th>
             <th scope="col">Log file</th>
         </tr>
     </table>
