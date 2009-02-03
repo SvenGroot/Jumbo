@@ -39,14 +39,14 @@ namespace TaskServerApplication
             return TaskServer.Instance.GetOutputFileDirectory(fullTaskID);
         }
 
-        public string GetLogFileContents()
+        public string GetLogFileContents(int maxSize)
         {
-            return TaskServer.Instance.GetLogFileContents();
+            return TaskServer.Instance.GetLogFileContents(maxSize);
         }
 
-        public string GetTaskLogFileContents(Guid jobId, string taskId, int attempt)
+        public string GetTaskLogFileContents(Guid jobId, string taskId, int attempt, int maxSize)
         {
-            return TaskServer.Instance.GetTaskLogFileContents(jobId, taskId, attempt);
+            return TaskServer.Instance.GetTaskLogFileContents(jobId, taskId, attempt, maxSize);
         }
 
         #endregion

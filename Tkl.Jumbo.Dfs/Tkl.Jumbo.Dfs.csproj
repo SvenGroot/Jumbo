@@ -57,6 +57,7 @@
     <Compile Include="BlockSender.cs" />
     <Compile Include="ChecksumConfigurationElement.cs" />
     <Compile Include="CRC32.cs" />
+    <Compile Include="DataServerClientProtocolGetLogFileContentsHeader.cs" />
     <Compile Include="DataServerClientProtocolHeader.cs" />
     <Compile Include="DataServerClientProtocolReadHeader.cs" />
     <Compile Include="DataServerClientProtocolResult.cs" />

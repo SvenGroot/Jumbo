@@ -130,7 +130,7 @@ namespace TaskServerApplication
             return _taskRunner.GetJobDirectory(fullTaskID);
         }
 
-        public string GetLogFileContents()
+        public string GetLogFileContents(int maxSize)
         {
             _log.Debug("GetLogFileContents");
             foreach( log4net.Appender.IAppender appender in log4net.LogManager.GetRepository().GetAppenders() )
@@ -141,6 +141,11 @@ namespace TaskServerApplication
                     using( System.IO.FileStream stream = System.IO.File.Open(fileAppender.File, System.IO.FileMode.Open, System.IO.FileAccess.Read, System.IO.FileShare.ReadWrite) )
                     using( System.IO.StreamReader reader = new System.IO.StreamReader(stream) )
                     {
+                        if( stream.Length > maxSize )
+                        {
+                            stream.Position = stream.Length - maxSize;
+                            reader.ReadLine(); // Scan to the first new line.
+                        }
                         return reader.ReadToEnd();
                     }
                 }
@@ -148,7 +153,7 @@ namespace TaskServerApplication
             return null;
         }
 
-        public string GetTaskLogFileContents(Guid jobId, string taskId, int attempt)
+        public string GetTaskLogFileContents(Guid jobId, string taskId, int attempt, int maxSize)
         {
             string jobDirectory = GetJobDirectory(jobId);
             string logFileName = System.IO.Path.Combine(jobDirectory, taskId + "_" + attempt.ToString() + ".log");
@@ -157,6 +162,11 @@ namespace TaskServerApplication
                 using( System.IO.FileStream stream = System.IO.File.Open(logFileName, System.IO.FileMode.Open, System.IO.FileAccess.Read, System.IO.FileShare.ReadWrite) )
                 using( System.IO.StreamReader reader = new System.IO.StreamReader(stream) )
                 {
+                    if( stream.Length > maxSize )
+                    {
+                        stream.Position = stream.Length - maxSize;
+                        reader.ReadLine(); // Scan to the first new line.
+                    }
                     return reader.ReadToEnd();
                 }
             }

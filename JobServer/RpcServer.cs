@@ -50,9 +50,9 @@ namespace JobServerApplication
             return JobServer.Instance.GetMetrics();
         }
 
-        public string GetLogFileContents()
+        public string GetLogFileContents(int maxSize)
         {
-            return JobServer.Instance.GetLogFileContents();
+            return JobServer.Instance.GetLogFileContents(maxSize);
         }
 
         #endregion

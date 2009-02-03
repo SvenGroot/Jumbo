@@ -202,7 +202,7 @@ namespace JobServerApplication
             return result;
         }
 
-        public string GetLogFileContents()
+        public string GetLogFileContents(int maxSize)
         {
             _log.Debug("GetLogFileContents");
             foreach( log4net.Appender.IAppender appender in log4net.LogManager.GetRepository().GetAppenders() )
@@ -213,6 +213,11 @@ namespace JobServerApplication
                     using( System.IO.FileStream stream = System.IO.File.Open(fileAppender.File, System.IO.FileMode.Open, System.IO.FileAccess.Read, System.IO.FileShare.ReadWrite) )
                     using( System.IO.StreamReader reader = new System.IO.StreamReader(stream) )
                     {
+                        if( stream.Length > maxSize )
+                        {
+                            stream.Position = stream.Length - maxSize;
+                            reader.ReadLine(); // Scan to the first new line.
+                        }
                         return reader.ReadToEnd();
                     }
                 }

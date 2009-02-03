@@ -9,13 +9,13 @@ namespace Tkl.Jumbo.Dfs
     /// Abstract base class for the header sent by a client when communicating with a data server.
     /// </summary>
     [Serializable]
-    public class DataServerClientProtocolHeader
+    public abstract class DataServerClientProtocolHeader
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="DataServerClientProtocolHeader"/> class with the specified command.
         /// </summary>
         /// <param name="command">The command to send to the server.</param>
-        public DataServerClientProtocolHeader(DataServerCommand command)
+        protected DataServerClientProtocolHeader(DataServerCommand command)
         {
             Command = command;
         }

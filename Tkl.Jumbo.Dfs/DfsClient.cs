@@ -123,13 +123,14 @@ namespace Tkl.Jumbo.Dfs
         /// Gets the contents of the diagnostic log file of a data server.
         /// </summary>
         /// <param name="address">The <see cref="ServerAddress"/> of the data server.</param>
+        /// <param name="maxSize">The maximum size of the log data to return.</param>
         /// <returns>The contents of the log file.</returns>
-        public static string GetDataServerLogFileContents(ServerAddress address)
+        public static string GetDataServerLogFileContents(ServerAddress address, int maxSize)
         {
             if( address == null )
                 throw new ArgumentNullException("address");
 
-            return GetDataServerLogFileContents(address.HostName, address.Port);
+            return GetDataServerLogFileContents(address.HostName, address.Port, maxSize);
         }
 
         /// <summary>
@@ -137,8 +138,9 @@ namespace Tkl.Jumbo.Dfs
         /// </summary>
         /// <param name="hostName">The host name of the data server.</param>
         /// <param name="port">The port on which the data server is listening.</param>
+        /// <param name="maxSize">The maximum size of the log data to return.</param>
         /// <returns>The contents of the log file.</returns>
-        public static string GetDataServerLogFileContents(string hostName, int port)
+        public static string GetDataServerLogFileContents(string hostName, int port, int maxSize)
         {
             if( hostName == null )
                 throw new ArgumentNullException("hostName");
@@ -146,7 +148,7 @@ namespace Tkl.Jumbo.Dfs
             using( TcpClient client = new TcpClient(hostName, port) )
             using( NetworkStream stream = client.GetStream() )
             {
-                DataServerClientProtocolHeader header = new DataServerClientProtocolHeader(DataServerCommand.GetLogFileContents);
+                DataServerClientProtocolHeader header = new DataServerClientProtocolGetLogFileContentsHeader(maxSize);
                 BinaryFormatter formatter = new BinaryFormatter();
                 formatter.Serialize(stream, header);
                 using( StreamReader reader = new StreamReader(stream) )

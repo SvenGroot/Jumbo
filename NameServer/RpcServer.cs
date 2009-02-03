@@ -82,9 +82,9 @@ namespace NameServerApplication
             return NameServer.Instance.GetDataServerBlockCount(dataServer, blocks);
         }
 
-        public string GetLogFileContents()
+        public string GetLogFileContents(int maxSize)
         {
-            return NameServer.Instance.GetLogFileContents();
+            return NameServer.Instance.GetLogFileContents(maxSize);
         }
 
         #endregion

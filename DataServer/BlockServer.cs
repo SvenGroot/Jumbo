@@ -61,7 +61,9 @@ namespace DataServerApplication
                         }
                         break;
                     case DataServerCommand.GetLogFileContents:
-                        SendLogFile(stream);
+                        DataServerClientProtocolGetLogFileContentsHeader logHeader = header as DataServerClientProtocolGetLogFileContentsHeader;
+                        if( logHeader != null )
+                            SendLogFile(stream, logHeader);
                         break;
                     }
                 }
@@ -290,7 +292,7 @@ namespace DataServerApplication
             _log.InfoFormat("Finished sending block {0}", header.BlockID);
         }
 
-        private void SendLogFile(NetworkStream stream)
+        private void SendLogFile(NetworkStream stream, DataServerClientProtocolGetLogFileContentsHeader header)
         {
             _log.InfoFormat("GetLogFileContents command received.");
             foreach( log4net.Appender.IAppender appender in log4net.LogManager.GetRepository().GetAppenders() )
@@ -300,6 +302,12 @@ namespace DataServerApplication
                 {
                     using( System.IO.FileStream logStream = System.IO.File.Open(fileAppender.File, System.IO.FileMode.Open, System.IO.FileAccess.Read, System.IO.FileShare.ReadWrite) )
                     {
+                        if( logStream.Length > header.MaxSize )
+                        {
+                            logStream.Position = logStream.Length - header.MaxSize;
+                            while( logStream.ReadByte() != '\n' )
+                                ;
+                        }
                         CopyStream(logStream, stream);
                     }
                 }

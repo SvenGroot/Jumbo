@@ -33,8 +33,9 @@ namespace Tkl.Jumbo.Jet
         /// <summary>
         /// Gets the contents of the diagnostic log file.
         /// </summary>
+        /// <param name="maxSize">The maximum size of the log data to return.</param>
         /// <returns>The contents of the diagnostic log file.</returns>
-        string GetLogFileContents();
+        string GetLogFileContents(int maxSize);
 
         /// <summary>
         /// Gets the contents of the diagnostic log file for the specified task.
@@ -42,6 +43,7 @@ namespace Tkl.Jumbo.Jet
         /// <param name="jobId">The job ID.</param>
         /// <param name="taskId">The task ID.</param>
         /// <param name="attempt">The attempt number.</param>
-        string GetTaskLogFileContents(Guid jobId, string taskId, int attempt);
+        /// <param name="maxSize">The maximum size of the log data to return.</param>
+        string GetTaskLogFileContents(Guid jobId, string taskId, int attempt, int maxSize);
     }
 }

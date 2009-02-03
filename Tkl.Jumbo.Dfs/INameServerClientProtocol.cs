@@ -112,8 +112,13 @@ namespace Tkl.Jumbo.Dfs
         /// <summary>
         /// Gets the contents of the diagnostic log file.
         /// </summary>
+        /// <param name="maxSize">The maximum number of bytes to return.</param>
         /// <returns>The contents of the diagnostic log file.</returns>
-        string GetLogFileContents();
+        /// <remarks>
+        /// If the log file is larger than <paramref name="maxSize"/>, the tail of the file up to the
+        /// specified size is returned.
+        /// </remarks>
+        string GetLogFileContents(int maxSize);
 
         /// <summary>
         /// Gets a value that indicates whether safe mode is on or off.
