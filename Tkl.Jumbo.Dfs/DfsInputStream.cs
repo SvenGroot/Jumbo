@@ -352,6 +352,7 @@ namespace Tkl.Jumbo.Dfs
         {
             using( TcpClient client = new TcpClient(server.HostName, server.Port) )
             {
+                _log.Debug("Connection established.");
                 DataServerClientProtocolReadHeader header = new DataServerClientProtocolReadHeader();
                 header.BlockID = block;
                 header.Offset = blockOffset;
@@ -367,6 +368,7 @@ namespace Tkl.Jumbo.Dfs
                         DataServerClientProtocolResult status = (DataServerClientProtocolResult)reader.ReadInt32();
                         if( status != DataServerClientProtocolResult.Ok )
                             throw new DfsException("The server encountered an error while sending data.");
+                        _log.Debug("Header sent and accepted by server.");
                         int offset = reader.ReadInt32();
                         int difference = blockOffset - offset;
                         position -= difference; // Correct position

@@ -83,7 +83,7 @@ namespace Tkl.Jumbo
         private void Run()
         {
             _running = true;
-            _listener.Start();
+            _listener.Start(Int32.MaxValue);
             _log.InfoFormat("TCP server started on address {0}.", _listener.LocalEndpoint);
 
             while( _running )
