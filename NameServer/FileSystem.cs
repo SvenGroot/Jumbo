@@ -214,13 +214,15 @@ namespace NameServerApplication
 
             _log.DebugFormat("GetFileInfo: path = \"{0}\"", path);
 
+            File result = null;
             lock( _root )
             {
-                File result = GetFileInfoInternal(path);
+                result = GetFileInfoInternal(path);
                 if( result != null )
-                    return (File)result.ShallowClone();
-                return null;
+                    result = (File)result.ShallowClone();
             }
+            _log.Debug("GetFileInfo complete.");
+            return result;
         }
 
         /// <summary>

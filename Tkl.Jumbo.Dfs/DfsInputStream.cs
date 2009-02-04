@@ -43,11 +43,14 @@ namespace Tkl.Jumbo.Dfs
                 throw new ArgumentNullException("path");
 
             _nameServer = nameServer;
+            _log.Debug("Retrieving file information.");
             _file = nameServer.GetFileInfo(path);
             // GetFileInfo doesn't throw if the file doesn't exist; we do.
             if( _file == null )
                 throw new FileNotFoundException(string.Format("The file '{0}' does not exist on the distributed file system.", path));
+            _log.Debug("Retrieving block size.");
             BlockSize = nameServer.BlockSize;
+            _log.Debug("DfsInputStream construction complete.");
         }
 
         /// <summary>
