@@ -45,12 +45,17 @@ namespace TaskHost
 
             _log.InfoFormat("Running task; job ID = \"{0}\", job directory = \"{1}\", task ID = \"{2}\", attempt, = {3}, DFS job directory = \"{4}\"", jobID, jobDirectory, taskID, _attempt, dfsJobDirectory);
             _log.LogEnvironmentInformation();
+            _log.DebugFormat("Command line: {0}", Environment.CommandLine);
 
+            _log.Debug("Creating name server, job server and umbilical clients.");
             ITaskServerUmbilicalProtocol umbilical = JetClient.CreateTaskServerUmbilicalClient(umbilicalPort);
             _client = new DfsClient(nameServerHost, nameServerPort);
             _jobServer = JetClient.CreateJobServerClient(jobServerHost, jobServerPort);
 
-            JobConfiguration config = JobConfiguration.LoadXml(Path.Combine(jobDirectory, Job.JobConfigFileName));
+            string xmlConfigPath = Path.Combine(jobDirectory, Job.JobConfigFileName);
+            _log.DebugFormat("Loading job configuration from local file {0}.", xmlConfigPath);
+            JobConfiguration config = JobConfiguration.LoadXml(xmlConfigPath);
+            _log.Debug("Job configuration loaded.");
 
             TaskConfiguration taskConfig = config.GetTask(taskID);
             if( taskConfig == null )
@@ -61,9 +66,10 @@ namespace TaskHost
 
             RunTask(jobID, jobDirectory, config, taskConfig, dfsJobDirectory);
 
+            _log.Info("Reporting completion to task server.");
             umbilical.ReportCompletion(jobID, taskID);
-            _log.Info("Task execution finished.");
 
+            _log.Info("TaskHost finished execution.");
             return 0;
         }
 
@@ -82,17 +88,23 @@ namespace TaskHost
 
         private static void RunTask(Guid jobID, string jobDirectory, JobConfiguration jobConfig, TaskConfiguration taskConfig, string dfsJobDirectory)
         {
-            Assembly taskAssembly = Assembly.LoadFrom(Path.Combine(jobDirectory, jobConfig.AssemblyFileName));
+            string assemblyPath = Path.Combine(jobDirectory, jobConfig.AssemblyFileName);
+            _log.DebugFormat("Loading task assembly from {0}", assemblyPath);
+            Assembly taskAssembly = Assembly.LoadFrom(assemblyPath);
 
+            _log.DebugFormat("Determining task type and input and output types.");
             Type taskType = taskAssembly.GetType(taskConfig.TypeName);
             Type taskInterfaceType = FindGenericInterfaceType(taskType, typeof(ITask<,>));
             Type inputType = taskInterfaceType.GetGenericArguments()[0];
             Type outputType = taskInterfaceType.GetGenericArguments()[1];
+            _log.InfoFormat("Input type: {0}", inputType.AssemblyQualifiedName);
+            _log.InfoFormat("Output type: {0}", outputType.AssemblyQualifiedName);
 
             ChannelConfiguration inputChannelConfig = jobConfig.GetInputChannelForTask(taskConfig.TaskID);
             IInputChannel inputChannel = null;
             if( inputChannelConfig != null )
             {
+                _log.DebugFormat("Creating input channel {0}.", inputChannelConfig.ChannelType);
                 inputChannel = inputChannelConfig.CreateInputChannel(jobID, jobDirectory, _jobServer, taskConfig.TaskID);
                 inputChannel.WaitUntilReady(Timeout.Infinite);
             }
@@ -100,11 +112,16 @@ namespace TaskHost
             ChannelConfiguration outputChannelConfig = jobConfig.GetOutputChannelForTask(taskConfig.TaskID);
             IOutputChannel outputChannel = null;
             if( outputChannelConfig != null )
+            {
+                _log.DebugFormat("Creating output channel {0}, partitioner {1}.", outputChannelConfig.ChannelType, outputChannelConfig.PartitionerType);
                 outputChannel = outputChannelConfig.CreateOutputChannel(jobDirectory, taskConfig.TaskID);
+            }
 
+            _log.Debug("Creating generic method to run task.");
             MethodInfo doRunTaskMethod = typeof(Program)
                                             .GetMethod("DoRunTask", BindingFlags.NonPublic | BindingFlags.Static)
                                             .MakeGenericMethod(inputType, outputType);
+            _log.Debug("Invoking generic method.");
             doRunTaskMethod.Invoke(null, new object[] { taskType, taskConfig, inputChannel, outputChannel, dfsJobDirectory });
         }
 
@@ -112,13 +129,17 @@ namespace TaskHost
             where TInput : IWritable, new()
             where TOutput : IWritable, new()
         {
+            _log.Debug("DoRunTask invoked.");
             using( DfsInputStream inputStream = OpenInputFile(taskConfig) )
             using( RecordReader<TInput> input = CreateRecordReader<TInput>(inputStream, taskConfig, inputChannel) )
             using( DfsOutputStream outputStream = OpenOutputFile(taskConfig, dfsJobDirectory) )
             using( RecordWriter<TOutput> output = CreateRecordWriter<TOutput>(outputStream, taskConfig, outputChannel) )
             {
+                _log.DebugFormat("Creating {0} task instance.", taskType.AssemblyQualifiedName);
                 ITask<TInput, TOutput> task = (ITask<TInput, TOutput>)Activator.CreateInstance(taskType);
+                _log.Info("Running task.");
                 task.Run(input, output);
+                _log.Info("Task finished execution.");
             }
 
             if( taskConfig.DfsOutput != null )
@@ -132,6 +153,7 @@ namespace TaskHost
         {
             if( taskConfig.DfsInput != null )
             {
+                _log.DebugFormat("Opening input file {0}", taskConfig.DfsInput.Path);
                 return _client.OpenFile(taskConfig.DfsInput.Path);
             }
             return null;
@@ -142,6 +164,7 @@ namespace TaskHost
         {
             if( taskConfig.DfsInput != null )
             {
+                _log.DebugFormat("Creating record reader of type {0}", taskConfig.DfsInput.RecordReaderType);
                 Type recordReaderType = Type.GetType(taskConfig.DfsInput.RecordReaderType);
                 long offset;
                 long size;
@@ -152,6 +175,7 @@ namespace TaskHost
             }
             else if( inputChannel != null )
             {
+                _log.Debug("Creating input channel record reader.");
                 return inputChannel.CreateRecordReader<T>();
             }
             return null;
@@ -162,6 +186,7 @@ namespace TaskHost
             if( taskConfig.DfsOutput != null )
             {
                 string file = DfsPath.Combine(dfsJobDirectory, taskConfig.TaskID + "_" + _attempt.ToString());
+                _log.DebugFormat("Opening output file {0}", file);
                 taskConfig.DfsOutput.TempPath = file;
                 return _client.CreateFile(file);
             }
@@ -173,11 +198,13 @@ namespace TaskHost
         {
             if( taskConfig.DfsOutput != null )
             {
+                _log.DebugFormat("Creating record writer of type {0}", taskConfig.DfsOutput.RecordWriterType);
                 Type recordWriterType = Type.GetType(taskConfig.DfsOutput.RecordWriterType);
                 return (StreamRecordWriter<T>)Activator.CreateInstance(recordWriterType, outputStream);
             }
             else if( outputChannel != null )
             {
+                _log.DebugFormat("Creating output channel record writer.");
                 return outputChannel.CreateRecordWriter<T>();
             }
             return null;
