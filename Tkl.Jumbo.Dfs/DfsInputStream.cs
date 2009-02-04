@@ -304,7 +304,7 @@ namespace Tkl.Jumbo.Dfs
                 {
                     int blockIndex = (int)(position / BlockSize);
                     Guid block = _file.Blocks[blockIndex];
-                    _log.DebugFormat("Retrieving list of servers for block {{{0}}.", block);
+                    _log.DebugFormat("Retrieving list of servers for block {{{0}}}.", block);
                     List<ServerAddress> servers = _nameServer.GetDataServersForBlock(block).ToList();
 
                     bool retry;
