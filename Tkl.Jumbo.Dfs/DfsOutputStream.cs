@@ -16,6 +16,7 @@ namespace Tkl.Jumbo.Dfs
     public class DfsOutputStream : Stream
     {
         private BlockSender _sender;
+        private BlockAssignment _block;
         private const int _packetSize = 0x10000;
         private readonly INameServerClientProtocol _nameServer;
         private readonly string _path;
@@ -42,7 +43,7 @@ namespace Tkl.Jumbo.Dfs
             BlockSize = nameServer.BlockSize;
             _nameServer = nameServer;
             _path = path;
-            _sender = new BlockSender(nameServer.CreateFile(path));
+            _block = nameServer.CreateFile(path);
         }
 
         /// <summary>
@@ -173,7 +174,8 @@ namespace Tkl.Jumbo.Dfs
             if( offset + count > buffer.Length )
                 throw new ArgumentException("The sum of offset and count is greater than the buffer length.");
 
-            _sender.ThrowIfErrorOccurred();
+            if( _sender != null )
+                _sender.ThrowIfErrorOccurred();
             int bufferPos = offset;
             int end = offset + count;
             
@@ -194,7 +196,8 @@ namespace Tkl.Jumbo.Dfs
                         // It would also require the name server to allow appending of new blocks while old ones are still pending.
                         _sender.WaitUntilSendFinished();
                         _sender.ThrowIfErrorOccurred();
-                        _sender = new BlockSender(_nameServer.AppendBlock(_path));
+                        _sender = null;
+                        _block = null;
                         _blockBytesWritten = 0;
                     }
                 } 
@@ -224,7 +227,7 @@ namespace Tkl.Jumbo.Dfs
                 try
                 {
                     _disposed = true;
-                    if( _bufferPos > 0 || _fileBytesWritten == 0 && _sender != null )
+                    if( _bufferPos > 0 || _fileBytesWritten == 0 && _block != null )
                     {
                         WritePacket(_buffer, _bufferPos, true);
                         _bufferPos = 0;
@@ -261,6 +264,12 @@ namespace Tkl.Jumbo.Dfs
         
         private void WritePacket(byte[] buffer, int length, bool finalPacket)
         {
+            if( _sender == null )
+            {
+                if( _block == null )
+                    _block = _nameServer.AppendBlock(_path);
+                _sender = new BlockSender(_block);
+            }
             _sender.AddPacket(buffer, length, finalPacket);
         }
     }

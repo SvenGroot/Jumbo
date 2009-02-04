@@ -16,6 +16,7 @@ namespace Tkl.Jumbo.Dfs
     /// </summary>
     public class BlockSender : IDisposable
     {
+        private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(BlockSender));
         private const int _bufferSize = 10;
         private readonly PacketBuffer _buffer = new PacketBuffer(_bufferSize);
         private volatile DataServerClientProtocolResult _lastResult = DataServerClientProtocolResult.Ok;
@@ -237,7 +238,9 @@ namespace Tkl.Jumbo.Dfs
                 {
                     ServerAddress server = _dataServers[0];
                     disposeClient = true;
+                    _log.DebugFormat("Connecting to data server {0} to write block {1}.", server, _blockID);
                     client = new TcpClient(server.HostName, server.Port);
+                    _log.Debug("Connection established.");
                     stream = client.GetStream();
                 }
                 using( BinaryWriter writer = new BinaryWriter(stream) )
@@ -249,7 +252,7 @@ namespace Tkl.Jumbo.Dfs
 
                     if( WriteHeader(stream, writer, reader) )
                     {
-
+                        _log.Debug("Header sent and accepted.");
                         SendPackets(writer, stream, reader);
 
                         //if( _resultReaderThread != null )
