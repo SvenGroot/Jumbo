@@ -21,7 +21,7 @@ namespace ClientSample
     {
         static void Main(string[] args)
         {
-            if( args.Length < 2 || args.Length > 4 )
+            if( args.Length < 2 || args.Length > 5 )
             {
                 Console.WriteLine("Usage: ClientSample.exe <task> <inputfile> [aggregate task count] [outputpath] [profile options]");
                 return;
