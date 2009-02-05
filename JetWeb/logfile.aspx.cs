@@ -36,7 +36,7 @@ public partial class logfile : System.Web.UI.Page
             if( taskId == null )
             {
                 LogFileContents.InnerText = client.GetLogFileContents(maxSize);
-                Title = string.Format("Data server {0} log file - Jumbo Jet", taskServer);
+                Title = string.Format("Task server {0} log file - Jumbo Jet", taskServer);
                 HeaderText.InnerText = string.Format("Data server {0} log file", taskServer);
             }
             else
@@ -44,9 +44,18 @@ public partial class logfile : System.Web.UI.Page
                 Guid jobId = new Guid(Request.QueryString["job"]);
                 int attempt = Convert.ToInt32(Request.QueryString["attempt"]);
 
-                LogFileContents.InnerText = client.GetTaskLogFileContents(jobId, taskId, attempt, maxSize);
-                Title = string.Format("Task {{{0}}}_{1}_{2} log file (on {3}) - Jumbo Jet", jobId, taskId, attempt, taskServer);
-                HeaderText.InnerText = string.Format("Task {{{0}}}_{1}_{2} log file (on {3})", jobId, taskId, attempt, taskServer);
+                if( Request.QueryString["profile"] == "true" )
+                {
+                    LogFileContents.InnerText = client.GetTaskProfileOutput(jobId, taskId, attempt);
+                    Title = string.Format("Task {{{0}}}_{1}_{2} profile output (on {3}) - Jumbo Jet", jobId, taskId, attempt, taskServer);
+                    HeaderText.InnerText = string.Format("Task {{{0}}}_{1}_{2} profile output (on {3})", jobId, taskId, attempt, taskServer);
+                }
+                else
+                {
+                    LogFileContents.InnerText = client.GetTaskLogFileContents(jobId, taskId, attempt, maxSize);
+                    Title = string.Format("Task {{{0}}}_{1}_{2} log file (on {3}) - Jumbo Jet", jobId, taskId, attempt, taskServer);
+                    HeaderText.InnerText = string.Format("Task {{{0}}}_{1}_{2} log file (on {3})", jobId, taskId, attempt, taskServer);
+                }
             }
         }
     }

@@ -17,11 +17,27 @@ namespace Tkl.Jumbo.Jet
         /// </summary>
         [XmlAttribute("id")]
         public string TaskID { get; set; }
+        
         /// <summary>
         /// Gets or sets the name of the type implementing this task.
         /// </summary>
         [XmlAttribute("type")]
         public string TypeName { get; set; }
+
+        /// <summary>
+        /// Gets or sets the profiling options for the task.
+        /// </summary>
+        /// <remarks>
+        /// <note>
+        ///   Profiling is supported only under Mono.
+        /// </note>
+        /// <para>
+        ///   This property can be set to a comma-separated list of options for the Mono default profiler
+        ///   (see the man page for mono for more details). Leave it empty to disable profiling.
+        /// </para>
+        /// </remarks>
+        [XmlAttribute("profileOptions")]
+        public string ProfileOptions { get; set; }
 
         /// <summary>
         /// Gets or sets the input from the distributed file system for this task.

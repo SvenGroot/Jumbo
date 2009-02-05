@@ -44,6 +44,17 @@ namespace Tkl.Jumbo.Jet
         /// <param name="taskId">The task ID.</param>
         /// <param name="attempt">The attempt number.</param>
         /// <param name="maxSize">The maximum size of the log data to return.</param>
+        /// <returns>The contents of the diagnostic log file, or <see langword="null"/> if it doesn't exist.</returns>
         string GetTaskLogFileContents(Guid jobId, string taskId, int attempt, int maxSize);
+
+        /// <summary>
+        /// Gets the profile output for the specified task.
+        /// </summary>
+        /// <param name="jobId">The job ID.</param>
+        /// <param name="taskId">The task ID.</param>
+        /// <param name="attempt">The attempt number.</param>
+        /// <returns>The profile output, or <see langword="null"/> if it doesn't exist.</returns>
+        string GetTaskProfileOutput(Guid jobId, string taskId, int attempt);
+
     }
 }

@@ -23,7 +23,7 @@ namespace ClientSample
         {
             if( args.Length < 2 || args.Length > 4 )
             {
-                Console.WriteLine("Usage: ClientSample.exe <task> <inputfile> [aggregate task count] [outputpath]");
+                Console.WriteLine("Usage: ClientSample.exe <task> <inputfile> [aggregate task count] [outputpath] [profile options]");
                 return;
             }
 
@@ -31,6 +31,7 @@ namespace ClientSample
             string input = args[1];
             int aggregateTaskCount = args.Length == 3 ? Convert.ToInt32(args[2]) : 1;
             string output = args.Length == 4 ? args[3] : "/output";
+            string profileOptions = args.Length == 5 ? args[4] : null;
 
             Type inputTaskType;
             Type aggregateTaskType;
@@ -60,7 +61,7 @@ namespace ClientSample
             //Stopwatch sw = new Stopwatch();
             //sw.Start();
 
-            RunJob(dfsClient, jobServer, inputTaskType, aggregateTaskType, input, "/output", aggregateTaskCount);
+            RunJob(dfsClient, jobServer, inputTaskType, aggregateTaskType, input, output, aggregateTaskCount, profileOptions);
 
             //sw.Stop();
             //Console.WriteLine(sw.Elapsed);
@@ -70,10 +71,10 @@ namespace ClientSample
             Console.ReadKey();
         }
 
-        private static void RunJob(DfsClient dfsClient, IJobServerClientProtocol jobServer, Type inputTaskType, Type aggregateTaskType, string fileName, string outputPath, int aggregateTaskCount)
+        private static void RunJob(DfsClient dfsClient, IJobServerClientProtocol jobServer, Type inputTaskType, Type aggregateTaskType, string fileName, string outputPath, int aggregateTaskCount, string profileOptions)
         {
             const int interval = 5000;
-            Guid jobId = StartJob(dfsClient, jobServer, inputTaskType, aggregateTaskType, fileName, outputPath, aggregateTaskCount);
+            Guid jobId = StartJob(dfsClient, jobServer, inputTaskType, aggregateTaskType, fileName, outputPath, aggregateTaskCount, profileOptions);
             if( jobId != Guid.Empty )
             {
                 JobStatus status;
@@ -93,7 +94,7 @@ namespace ClientSample
             }
         }
 
-        private static Guid StartJob(DfsClient dfsClient, IJobServerClientProtocol jobServer, Type inputTaskType, Type aggregateTaskType, string fileName, string outputPath, int aggregateTaskCount)
+        private static Guid StartJob(DfsClient dfsClient, IJobServerClientProtocol jobServer, Type inputTaskType, Type aggregateTaskType, string fileName, string outputPath, int aggregateTaskCount, string profileOptions)
         {
             Tkl.Jumbo.Dfs.File file = dfsClient.NameServer.GetFileInfo(fileName);
             if( file == null )
@@ -116,6 +117,7 @@ namespace ClientSample
                 config.Tasks.Add(new TaskConfiguration()
                 {
                     TaskID = inputTaskType.Name + (x + 1).ToString(),
+                    ProfileOptions = profileOptions,
                     TypeName = inputTaskType.FullName,
                     DfsInput = new TaskDfsInput()
                     {
@@ -136,6 +138,7 @@ namespace ClientSample
                 config.Tasks.Add(new TaskConfiguration()
                 {
                     TaskID = aggregateTaskType.Name + (x + 1).ToString(),
+                    ProfileOptions = profileOptions,
                     TypeName = aggregateTaskType.FullName,
                     DfsOutput = new TaskDfsOutput()
                     {

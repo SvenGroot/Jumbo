@@ -49,17 +49,32 @@ namespace Tkl.Jumbo
         /// Modifies a <see cref="ProcessStartInfo"/> to use the runtime environment.
         /// </summary>
         /// <param name="startInfo">The <see cref="ProcessStartInfo"/>.</param>
+        /// <param name="profileOutputFile">The file to write the profiler output to. Specify <see langword="null"/> to disable profiling.</param>
+        /// <param name="profileOptions">Additional options to pass to the profiler.</param>
         /// <remarks>
-        /// When running under Mono, this function will modify the specified <see cref="ProcessStartInfo"/> to use
-        /// Mono to launch the application.
+        /// <para>
+        ///   When running under Mono, this function will modify the specified <see cref="ProcessStartInfo"/> to use
+        ///   Mono to launch the application.
+        /// </para>
+        /// <para>
+        ///   Profiling is enabled when <paramref name="profileOutputFile"/> is not <see langword="null"/>. Profiling is supported
+        ///   only on Mono.
+        /// </para>
         /// </remarks>
-        public static void ModifyProcessStartInfo(ProcessStartInfo startInfo)
+        public static void ModifyProcessStartInfo(ProcessStartInfo startInfo, string profileOutputFile, string profileOptions)
         {
             if( startInfo == null )
                 throw new ArgumentNullException("startInfo");
             if( RuntimeType == RuntimeEnvironmentType.Mono )
             {
                 startInfo.Arguments = startInfo.FileName + " " + startInfo.Arguments;
+                if( !string.IsNullOrEmpty(profileOutputFile) )
+                {
+                    if( !string.IsNullOrEmpty(profileOptions) )
+                        profileOptions += ",";
+
+                    startInfo.Arguments = string.Format("--profile=default:{0}file={1} {2}", profileOptions, profileOutputFile, startInfo.Arguments);
+                }
                 startInfo.FileName = "mono";
             }
         }

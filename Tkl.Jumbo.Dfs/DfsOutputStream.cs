@@ -15,6 +15,7 @@ namespace Tkl.Jumbo.Dfs
     /// <threadsafety static="true" instance="false" />
     public class DfsOutputStream : Stream
     {
+        private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(DfsOutputStream));
         private BlockSender _sender;
         private BlockAssignment _block;
         private const int _packetSize = 0x10000;
@@ -40,10 +41,13 @@ namespace Tkl.Jumbo.Dfs
             if( path == null )
                 throw new ArgumentNullException("path");
 
+            _log.Debug("Getting block size from name server.");
             BlockSize = nameServer.BlockSize;
             _nameServer = nameServer;
             _path = path;
+            _log.DebugFormat("Creating file {0} on name server.", _path);
             _block = nameServer.CreateFile(path);
+            _log.Debug("DfsOutputStream construction complete.");
         }
 
         /// <summary>

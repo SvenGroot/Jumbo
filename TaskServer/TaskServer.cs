@@ -155,6 +155,7 @@ namespace TaskServerApplication
 
         public string GetTaskLogFileContents(Guid jobId, string taskId, int attempt, int maxSize)
         {
+            _log.DebugFormat("GetTaskLogFileContents; jobId = {{{0}}}, taskId = \"{1}\", attempt = {2}, maxSize = {3}", jobId, taskId, attempt, maxSize);
             string jobDirectory = GetJobDirectory(jobId);
             string logFileName = System.IO.Path.Combine(jobDirectory, taskId + "_" + attempt.ToString() + ".log");
             if( System.IO.File.Exists(logFileName) )
@@ -167,6 +168,22 @@ namespace TaskServerApplication
                         stream.Position = stream.Length - maxSize;
                         reader.ReadLine(); // Scan to the first new line.
                     }
+                    return reader.ReadToEnd();
+                }
+            }
+            return null;
+        }
+
+        public string GetTaskProfileOutput(Guid jobId, string taskId, int attempt)
+        {
+            _log.DebugFormat("GetTaskProfileOutput; jobId = {{{0}}}, taskId = \"{1}\", attempt = {2}", jobId, taskId, attempt);
+            string jobDirectory = GetJobDirectory(jobId);
+            string profileOutputFileName = System.IO.Path.Combine(jobDirectory, taskId + "_" + attempt.ToString() + "_profile.txt");
+            if( System.IO.File.Exists(profileOutputFileName) )
+            {
+                using( System.IO.FileStream stream = System.IO.File.Open(profileOutputFileName, System.IO.FileMode.Open, System.IO.FileAccess.Read, System.IO.FileShare.ReadWrite) )
+                using( System.IO.StreamReader reader = new System.IO.StreamReader(stream) )
+                {
                     return reader.ReadToEnd();
                 }
             }

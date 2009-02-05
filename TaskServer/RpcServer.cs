@@ -49,6 +49,11 @@ namespace TaskServerApplication
             return TaskServer.Instance.GetTaskLogFileContents(jobId, taskId, attempt, maxSize);
         }
 
+        public string GetTaskProfileOutput(Guid jobId, string taskId, int attempt)
+        {
+            return TaskServer.Instance.GetTaskProfileOutput(jobId, taskId, attempt);
+        }
+
         #endregion
     }
 }

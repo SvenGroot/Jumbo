@@ -23,7 +23,7 @@ namespace TaskServerApplication
 
             public event EventHandler ProcessExited;
 
-            public RunningTask(Guid jobID, string jobDirectory, string taskID, int attempt, string dfsJobDirectory, TaskServer taskServer)
+            public RunningTask(Guid jobID, string jobDirectory, string taskID, int attempt, string dfsJobDirectory, TaskConfiguration taskConfiguration, TaskServer taskServer)
             {
                 JobID = jobID;
                 TaskID = taskID;
@@ -32,6 +32,7 @@ namespace TaskServerApplication
                 JobDirectory = jobDirectory;
                 DfsJobDirectory = dfsJobDirectory;
                 _taskServer = taskServer;
+                TaskConfiguration = taskConfiguration;
             }
 
             public TaskAttemptStatus State { get; set; }
@@ -48,6 +49,8 @@ namespace TaskServerApplication
 
             public int Attempt { get; private set; }
 
+            public TaskConfiguration TaskConfiguration { get; private set; }
+
             public void Run(int createProcessDelay)
             {
                 if( Debugger.IsAttached )
@@ -58,7 +61,16 @@ namespace TaskServerApplication
                     ProcessStartInfo startInfo = new ProcessStartInfo("TaskHost.exe", string.Format("\"{0}\" \"{1}\" \"{2}\" \"{3}\" {4} {5} {6} {7} {8} {9}", JobID, JobDirectory, TaskID, DfsJobDirectory, _taskServer.Configuration.TaskServer.Port, _taskServer.Configuration.JobServer.HostName, _taskServer.Configuration.JobServer.Port, _taskServer.DfsConfiguration.NameServer.HostName, _taskServer.DfsConfiguration.NameServer.Port, Attempt));
                     startInfo.UseShellExecute = false;
                     startInfo.CreateNoWindow = true;
-                    RuntimeEnvironment.ModifyProcessStartInfo(startInfo);
+                    string profileOutputFile = null;
+                    if( !string.IsNullOrEmpty(TaskConfiguration.ProfileOptions) )
+                    {
+                        profileOutputFile = IO.Path.Combine(JobDirectory, string.Format(System.Globalization.CultureInfo.InvariantCulture, "{0}_{1}_profile.txt", TaskID, Attempt));
+                        if( RuntimeEnvironment.RuntimeType == RuntimeEnvironmentType.Mono )
+                            _log.InfoFormat("Profiling is enabled for task {0}, output file {1}.", FullTaskID, profileOutputFile);
+                        else
+                            _log.WarnFormat("Profiling is requested for task {0}, but not supported on this platform.", FullTaskID);
+                    }
+                    RuntimeEnvironment.ModifyProcessStartInfo(startInfo, profileOutputFile, TaskConfiguration.ProfileOptions);
                     _process = new Process();
                     _process.StartInfo = startInfo;
                     _process.EnableRaisingEvents = true;
@@ -149,6 +161,7 @@ namespace TaskServerApplication
         private int _createProcessDelay;
         private readonly DfsClient _dfsClient;
         private readonly Dictionary<string, RunningTask> _runningTasks = new Dictionary<string,RunningTask>();
+        private readonly Dictionary<Guid, JobConfiguration> _jobConfigurations = new Dictionary<Guid, JobConfiguration>();
 
         public TaskRunner(TaskServer taskServer)
         {
@@ -281,15 +294,21 @@ namespace TaskServerApplication
         {
             _log.InfoFormat("Running task {{{0}}}_{1}.", task.Job.JobID, task.TaskID);
             string jobDirectory = _taskServer.GetJobDirectory(task.Job.JobID);
+            JobConfiguration config;
             if( !IO.Directory.Exists(jobDirectory) )
             {
                 IO.Directory.CreateDirectory(jobDirectory);
                 _dfsClient.DownloadDirectory(task.Job.Path, jobDirectory);
+                config = JobConfiguration.LoadXml(IO.Path.Combine(jobDirectory, Job.JobConfigFileName));
+                _jobConfigurations.Add(task.Job.JobID, config);
             }
+            else
+                config = _jobConfigurations[task.Job.JobID];
+            TaskConfiguration taskConfig = config.GetTask(task.TaskID);
             RunningTask runningTask;
             lock( _runningTasks )
             {
-                runningTask = new RunningTask(task.Job.JobID, jobDirectory, task.TaskID, task.Attempt, task.Job.Path, _taskServer);
+                runningTask = new RunningTask(task.Job.JobID, jobDirectory, task.TaskID, task.Attempt, task.Job.Path, taskConfig, _taskServer);
                 runningTask.ProcessExited += new EventHandler(RunningTask_ProcessExited);
                 _runningTasks.Add(runningTask.FullTaskID, runningTask);
             }
