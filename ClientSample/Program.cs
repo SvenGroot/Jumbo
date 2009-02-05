@@ -29,9 +29,9 @@ namespace ClientSample
 
             string task = args[0];
             string input = args[1];
-            int aggregateTaskCount = args.Length == 3 ? Convert.ToInt32(args[2]) : 1;
-            string output = args.Length == 4 ? args[3] : "/output";
-            string profileOptions = args.Length == 5 ? args[4] : null;
+            int aggregateTaskCount = args.Length >= 3 ? Convert.ToInt32(args[2]) : 1;
+            string output = args.Length >= 4 ? args[3] : "/output";
+            string profileOptions = args.Length >= 5 ? args[4] : null;
 
             Type inputTaskType;
             Type aggregateTaskType;
