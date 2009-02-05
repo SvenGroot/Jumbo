@@ -87,24 +87,25 @@ namespace JobServerApplication.Scheduling
         {
             int taskIndex = 0;
             bool outOfSlots = false;
+            Random rnd = new Random();
             while( !outOfSlots && taskIndex < tasks.Count )
             {
                 outOfSlots = true;
-                foreach( var item in taskServers )
+                while( taskIndex < tasks.Count && tasks[taskIndex].State != TaskState.Created )
+                    ++taskIndex;
+                if( taskIndex == tasks.Count )
+                    break;
+                TaskServerInfo taskServer = (from server in taskServers.Values
+                                             where server.AvailableNonInputTasks > 0
+                                             orderby server.AvailableNonInputTasks descending, rnd.Next()
+                                             select server).FirstOrDefault();
+                if( taskServer != null )
                 {
-                    while( taskIndex < tasks.Count && tasks[taskIndex].State != TaskState.Created )
-                        ++taskIndex;
-                    if( taskIndex == tasks.Count )
-                        break;
-                    TaskServerInfo taskServer = item.Value;
-                    if( taskServer.AvailableNonInputTasks > 0 )
-                    {
-                        TaskInfo task = tasks[taskIndex];
-                        taskServer.AssignTask(job, task, false);
-                        _log.InfoFormat("Task {0} has been assigned to server {1}.", task.GlobalID, taskServer.Address);
-                        outOfSlots = false;
-                        ++taskIndex;
-                    }
+                    TaskInfo task = tasks[taskIndex];
+                    taskServer.AssignTask(job, task, false);
+                    _log.InfoFormat("Task {0} has been assigned to server {1}.", task.GlobalID, taskServer.Address);
+                    outOfSlots = false;
+                    ++taskIndex;
                 }
             }
             if( outOfSlots )
