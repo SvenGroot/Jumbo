@@ -50,7 +50,8 @@ namespace TaskHost
                 TaskExecutionInfo taskInfo = null;
                 try
                 {
-                    taskInfo = umbilical.WaitForTask(instanceId, 60000);
+                    taskInfo = umbilical.WaitForTask(instanceId, 10000);
+                    _blockSize = _dfsClient.NameServer.BlockSize; // this keeps the connection alive
                 }
                 catch( ServerShutdownException )
                 {
@@ -185,7 +186,7 @@ namespace TaskHost
                 Type recordReaderType = Type.GetType(taskConfig.DfsInput.RecordReaderType);
                 long offset;
                 long size;
-                long blockSize = _dfsClient.NameServer.BlockSize;
+                long blockSize = _blockSize;
                 offset = blockSize * (long)taskConfig.DfsInput.Block;
                 size = Math.Min(blockSize, _dfsClient.NameServer.GetFileInfo(taskConfig.DfsInput.Path).Size - offset);
                 return (RecordReader<T>)Activator.CreateInstance(recordReaderType, inputStream, offset, size);
