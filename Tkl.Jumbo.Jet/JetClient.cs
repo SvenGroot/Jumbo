@@ -39,6 +39,18 @@ namespace Tkl.Jumbo.Jet
         }
 
         /// <summary>
+        /// Initializes a new instance of the <see cref="JetClient"/> class with the specified host name and port.
+        /// </summary>
+        /// <param name="hostName">The host name of the job server.</param>
+        /// <param name="port">The port on which the job server is listening.</param>
+        public JetClient(string hostName, int port)
+        {
+            if( hostName == null )
+                throw new ArgumentNullException("hostName");
+            JobServer = CreateJobServerClient(hostName, port);
+        }
+
+        /// <summary>
         /// Gets the <see cref="IJobServerClientProtocol"/> instance used by this instance to communicate with the job server.
         /// </summary>
         public IJobServerClientProtocol JobServer { get; private set; }

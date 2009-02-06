@@ -15,123 +15,103 @@ namespace TaskServerApplication
     {
         #region Nested types
 
-        private sealed class RunningTask : IDisposable
+        private sealed class TaskHostProcess : IDisposable
         {
             private Process _process;
-            private Thread _appDomainThread; // only used when running the task in an appdomain rather than a different process.
-            private TaskServer _taskServer;
+            private Thread _appDomainThread; // only used when running the task hosts in an appdomain rather than a different process.
+            private TaskRunner _taskRunner;
 
-            public event EventHandler ProcessExited;
-
-            public RunningTask(Guid jobID, string jobDirectory, string taskID, int attempt, string dfsJobDirectory, TaskConfiguration taskConfiguration, TaskServer taskServer)
+            public TaskHostProcess(TaskRunner taskRunner, int instanceId)
             {
-                JobID = jobID;
-                TaskID = taskID;
-                Attempt = attempt;
-                FullTaskID = Job.CreateFullTaskID(jobID, taskID);
-                JobDirectory = jobDirectory;
-                DfsJobDirectory = dfsJobDirectory;
-                _taskServer = taskServer;
-                TaskConfiguration = taskConfiguration;
+                InstanceId = instanceId;
+                _taskRunner = taskRunner;
+                RunTaskHost();
             }
 
-            public TaskAttemptStatus State { get; set; }
+            public int InstanceId { get; private set; }
 
-            public Guid JobID { get; private set; }
-
-            public string TaskID { get; private set; }
-
-            public string JobDirectory { get; private set; }
-
-            public string FullTaskID { get; private set; }
-
-            public string DfsJobDirectory { get; private set; }
-
-            public int Attempt { get; private set; }
-
-            public TaskConfiguration TaskConfiguration { get; private set; }
-
-            public void Run(int createProcessDelay)
-            {
-                if( Debugger.IsAttached )
-                    RunTaskAppDomain();
-                else
-                {
-                    _log.DebugFormat("Launching new process for task {0}.", FullTaskID);
-                    ProcessStartInfo startInfo = new ProcessStartInfo("TaskHost.exe", string.Format("\"{0}\" \"{1}\" \"{2}\" \"{3}\" {4} {5} {6} {7} {8} {9}", JobID, JobDirectory, TaskID, DfsJobDirectory, _taskServer.Configuration.TaskServer.Port, _taskServer.Configuration.JobServer.HostName, _taskServer.Configuration.JobServer.Port, _taskServer.DfsConfiguration.NameServer.HostName, _taskServer.DfsConfiguration.NameServer.Port, Attempt));
-                    startInfo.UseShellExecute = false;
-                    startInfo.CreateNoWindow = true;
-                    string profileOutputFile = null;
-                    if( !string.IsNullOrEmpty(TaskConfiguration.ProfileOptions) )
-                    {
-                        profileOutputFile = IO.Path.Combine(JobDirectory, string.Format(System.Globalization.CultureInfo.InvariantCulture, "{0}_{1}_profile.txt", TaskID, Attempt));
-                        if( RuntimeEnvironment.RuntimeType == RuntimeEnvironmentType.Mono )
-                            _log.InfoFormat("Profiling is enabled for task {0}, output file {1}.", FullTaskID, profileOutputFile);
-                        else
-                            _log.WarnFormat("Profiling is requested for task {0}, but not supported on this platform.", FullTaskID);
-                    }
-                    RuntimeEnvironment.ModifyProcessStartInfo(startInfo, profileOutputFile, TaskConfiguration.ProfileOptions);
-                    _process = new Process();
-                    _process.StartInfo = startInfo;
-                    _process.EnableRaisingEvents = true;
-                    _process.Exited += new EventHandler(_process_Exited);
-                    _process.Start();
-                    _log.DebugFormat("Host process for task {0} has started, pid = {1}.", FullTaskID, _process.Id);
-                    if( createProcessDelay > 0 )
-                    {
-                        _log.DebugFormat("Sleeping for {0}ms", createProcessDelay);
-                        Thread.Sleep(createProcessDelay);
-                    }
-                }
-                State = TaskAttemptStatus.Running;
-            }
+            public RunningTask CurrentRunningTask { get; set; }
 
             public void Kill()
             {
+                CurrentRunningTask = null;
                 if( Debugger.IsAttached )
                     _appDomainThread.Abort();
                 else
                     _process.Kill();
             }
 
-            private void OnProcessExited(EventArgs e)
+            private void RunTaskHost()
             {
-                EventHandler handler = ProcessExited;
-                if( handler != null )
-                    handler(this, e);
+                if( _taskRunner.IsRunning )
+                {
+                    if( Debugger.IsAttached )
+                        RunTaskHostAppDomain();
+                    else
+                    {
+                        _log.InfoFormat("Launching new process for task host {0}.", InstanceId);
+                        ProcessStartInfo startInfo = new ProcessStartInfo("TaskHost.exe", string.Format("{0} {1} {2} {3} {4} {5}", InstanceId, _taskRunner.TaskServer.Configuration.TaskServer.Port, _taskRunner.TaskServer.Configuration.JobServer.HostName, _taskRunner.TaskServer.Configuration.JobServer.Port, _taskRunner.TaskServer.DfsConfiguration.NameServer.HostName, _taskRunner.TaskServer.DfsConfiguration.NameServer.Port));
+                        startInfo.UseShellExecute = false;
+                        startInfo.CreateNoWindow = true;
+                        RuntimeEnvironment.ModifyProcessStartInfo(startInfo, null, null);
+                        _process = new Process();
+                        _process.StartInfo = startInfo;
+                        _process.EnableRaisingEvents = true;
+                        _process.Exited += new EventHandler(_process_Exited);
+                        _process.Start();
+                        _log.DebugFormat("Task host {0} process has started, pid = {1}.", InstanceId, _process.Id);
+                        int createProcessDelay = _taskRunner.TaskServer.Configuration.TaskServer.ProcessCreationDelay;
+                        if( createProcessDelay > 0 )
+                        {
+                            _log.DebugFormat("Sleeping for {0}ms", createProcessDelay);
+                            Thread.Sleep(createProcessDelay);
+                        }
+                    }
+                }
             }
 
-            private void _process_Exited(object sender, EventArgs e)
+            private void RunTaskHostAppDomain()
             {
-                OnProcessExited(EventArgs.Empty);
-            }
-
-            private void RunTaskAppDomain()
-            {
-                _log.DebugFormat("Running task {0} in an AppDomain.", FullTaskID);
-                _appDomainThread = new Thread(RunTaskAppDomainThread);
-                _appDomainThread.Name = FullTaskID;
+                _log.InfoFormat("Starting task host {0} in an AppDomain.", InstanceId);
+                _appDomainThread = new Thread(RunTaskHostAppDomainThread);
+                _appDomainThread.Name = "TaskHost" + InstanceId.ToString();
                 _appDomainThread.Start();
             }
 
-            private void RunTaskAppDomainThread()
+            private void RunTaskHostAppDomainThread()
             {
                 AppDomainSetup setup = new AppDomainSetup();
                 setup.ApplicationBase = Environment.CurrentDirectory;
-                AppDomain taskDomain = AppDomain.CreateDomain(FullTaskID, null, setup);
+                AppDomain taskDomain = AppDomain.CreateDomain("TaskHost" + InstanceId.ToString(), null, setup);
                 try
                 {
-                    taskDomain.ExecuteAssembly("TaskHost.exe", null, new string[] { JobID.ToString(), JobDirectory, TaskID, DfsJobDirectory, _taskServer.Configuration.TaskServer.Port.ToString(), _taskServer.Configuration.JobServer.HostName, _taskServer.Configuration.JobServer.Port.ToString(), _taskServer.DfsConfiguration.NameServer.HostName, _taskServer.DfsConfiguration.NameServer.Port.ToString(), Attempt.ToString() });
+                    taskDomain.ExecuteAssembly("TaskHost.exe", null, new string[] { InstanceId.ToString(), _taskRunner.TaskServer.Configuration.TaskServer.Port.ToString(), _taskRunner.TaskServer.Configuration.JobServer.HostName, _taskRunner.TaskServer.Configuration.JobServer.Port.ToString(), _taskRunner.TaskServer.DfsConfiguration.NameServer.HostName, _taskRunner.TaskServer.DfsConfiguration.NameServer.Port.ToString() });
                 }
                 catch( Exception ex )
                 {
-                    _log.Error(string.Format("Error running task {0} in task domain", FullTaskID), ex);
+                    _log.Error("Error running task host in task domain", ex);
                 }
                 finally
                 {
                     AppDomain.Unload(taskDomain);
                 }
-                OnProcessExited(EventArgs.Empty);
+                _log.InfoFormat("Task host {0} app domain has unloaded.", InstanceId);
+                OnProcessExited();
+                RunTaskHost();
+            }
+
+            private void _process_Exited(object sender, EventArgs e)
+            {
+                _log.InfoFormat("Process for task host {0} has exited.", InstanceId);
+                OnProcessExited();
+                RunTaskHost();
+            }
+
+            private void OnProcessExited()
+            {
+                RunningTask task = CurrentRunningTask;
+                if( task != null )
+                    task.NotifyProcessExit();
             }
 
             #region IDisposable Members
@@ -149,44 +129,80 @@ namespace TaskServerApplication
             #endregion
         }
 
+        private sealed class RunningTask
+        {
+            public event EventHandler TaskTerminated;
+
+            public RunningTask(TaskExecutionInfo task, TaskHostProcess process)
+            {
+                Debug.Assert(process.CurrentRunningTask == null);
+                process.CurrentRunningTask = this;
+                Process = process;
+                TaskInfo = task;
+                FullTaskId = Job.CreateFullTaskID(task.JobId, task.TaskId);
+            }
+
+            public TaskExecutionInfo TaskInfo { get; private set; }
+
+            public TaskAttemptStatus State { get; set; }
+
+            public TaskHostProcess Process { get; private set; }
+
+            public string FullTaskId { get; private set; }
+
+            public void NotifyProcessExit()
+            {
+                OnTaskTerminated(EventArgs.Empty);
+            }
+
+            private void OnTaskTerminated(EventArgs e)
+            {
+                EventHandler handler = TaskTerminated;
+                if( handler != null )
+                    handler(this, e);
+            }
+        }
+
         #endregion
 
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(TaskRunner));
 
-        private Thread _taskStarterThread;
-        private TaskServer _taskServer;
-        private AutoResetEvent _taskAddedEvent = new AutoResetEvent(false);
         private Queue<RunTaskJetHeartbeatResponse> _tasks = new Queue<RunTaskJetHeartbeatResponse>();
-        private bool _running = true;
-        private int _createProcessDelay;
+        private volatile bool _running = true;
         private readonly DfsClient _dfsClient;
         private readonly Dictionary<string, RunningTask> _runningTasks = new Dictionary<string,RunningTask>();
-        private readonly Dictionary<Guid, JobConfiguration> _jobConfigurations = new Dictionary<Guid, JobConfiguration>();
+        private TaskHostProcess[] _processes;
+        private ManualResetEvent _taskAddedEvent = new ManualResetEvent(false);
+        private EventHandler _taskTerminatedHandler;
 
         public TaskRunner(TaskServer taskServer)
         {
             if( taskServer == null )
                 throw new ArgumentNullException("taskServer");
-            _taskServer = taskServer;
-            _createProcessDelay = _taskServer.Configuration.TaskServer.ProcessCreationDelay;
+            TaskServer = taskServer;
             _dfsClient = new DfsClient(taskServer.DfsConfiguration);
-            _taskStarterThread = new Thread(TaskRunnerThread);
-            _taskStarterThread.IsBackground = true;
-            _taskStarterThread.Name = "TaskStarter";
-            _taskStarterThread.Start();
+
+            _taskTerminatedHandler = new EventHandler(RunningTask_TaskTerminated);
+            _processes = new TaskHostProcess[taskServer.Configuration.TaskServer.MaxTasks * 2];
+            for( int x = 0; x < _processes.Length; ++x )
+            {
+                _processes[x] = new TaskHostProcess(this, x);
+            }
         }
+
+        public TaskServer TaskServer { get; private set; }
+
+        public bool IsRunning { get { return _running; } }
 
         public void Stop()
         {
             _running = false;
             _taskAddedEvent.Set();
-            _taskStarterThread.Join();
             lock( _runningTasks )
             {
-                foreach( RunningTask task in _runningTasks.Values )
+                foreach( TaskHostProcess process in _processes )
                 {
-                    if( task.State == TaskAttemptStatus.Running )
-                        task.Kill();
+                    process.Kill();
                 }
             }
         }
@@ -210,12 +226,12 @@ namespace TaskServerApplication
                 RunningTask task;
                 if( _runningTasks.TryGetValue(fullTaskID, out task) && task.State == TaskAttemptStatus.Running )
                 {
-                    _log.InfoFormat("Task {0} has completed successfully.", task.FullTaskID);
+                    _log.InfoFormat("Task {0} has completed successfully.", task.FullTaskId);
                     task.State = TaskAttemptStatus.Completed;
-                    _taskServer.NotifyTaskStatusChanged(task.JobID, task.TaskID, task.State);
+                    TaskServer.NotifyTaskStatusChanged(task.TaskInfo.JobId, task.TaskInfo.TaskId, task.State);
                 }
                 else
-                    _log.WarnFormat("Task {0} was reported as completed but was not running.", task.FullTaskID);
+                    _log.WarnFormat("Task {0} was reported as completed but was not running.", task.FullTaskId);
             }
         }
 
@@ -224,17 +240,17 @@ namespace TaskServerApplication
             lock( _runningTasks )
             {
                 string[] tasksToRemove = (from item in _runningTasks
-                                          where item.Value.JobID == jobID
+                                          where item.Value.TaskInfo.JobId == jobID
                                           select item.Key).ToArray();
                 foreach( string task in tasksToRemove )
                 {
+                    _runningTasks[task].TaskTerminated -= _taskTerminatedHandler;
                     if( _runningTasks[task].State == TaskAttemptStatus.Running )
                     {
                         _log.WarnFormat("Received cleanup command for still running task {0} (this usually means the job failed).", task);
-                        _runningTasks[task].Kill();
+                        _runningTasks[task].Process.Kill(); // the process will automatically restart.
                     }
                     _log.InfoFormat("Removing data pertaining to task {0}.", task);
-                    _runningTasks[task].Dispose();
                     _runningTasks.Remove(task);
                 }
             }
@@ -265,57 +281,82 @@ namespace TaskServerApplication
             lock( _runningTasks )
             {
                 RunningTask task = _runningTasks[fullTaskID];
-                return task.JobDirectory;
+                return task.TaskInfo.JobDirectory;
             }
         }
 
-        private void TaskRunnerThread()
+        public TaskExecutionInfo WaitForTask(int instanceId, int timeout)
         {
-            while( _running )
-            {
-                RunTaskJetHeartbeatResponse task = null;
-                lock( _tasks )
-                {
-                    if( _tasks.Count > 0 )
-                    {
-                        task = _tasks.Dequeue();
-                    }
-                }
-                if( task != null )
-                {
-                    RunTask(task);
-                }
-                else
-                    _taskAddedEvent.WaitOne();
-            }
-        }
+            if( instanceId < 0 || instanceId >= _processes.Length )
+                throw new ArgumentOutOfRangeException("instanceId", "Invalid instance id");
 
-        private void RunTask(RunTaskJetHeartbeatResponse task)
-        {
-            _log.InfoFormat("Running task {{{0}}}_{1}.", task.Job.JobID, task.TaskID);
-            string jobDirectory = _taskServer.GetJobDirectory(task.Job.JobID);
-            JobConfiguration config;
-            if( !IO.Directory.Exists(jobDirectory) )
+            _log.InfoFormat("Task host {0} is waiting for tasks.", instanceId);
+            TaskHostProcess process = _processes[instanceId];
+            lock( process )
             {
-                IO.Directory.CreateDirectory(jobDirectory);
-                _dfsClient.DownloadDirectory(task.Job.Path, jobDirectory);
-                config = JobConfiguration.LoadXml(IO.Path.Combine(jobDirectory, Job.JobConfigFileName));
-                _jobConfigurations.Add(task.Job.JobID, config);
+                // This function called means the task host isn't running anything, so we need to reset CurrentRunningTask
+                if( process.CurrentRunningTask != null )
+                {
+                    process.CurrentRunningTask.NotifyProcessExit();
+                }
+                process.CurrentRunningTask = null;
             }
+
+            RunTaskJetHeartbeatResponse taskResponse = null;
+            _taskAddedEvent.WaitOne(timeout, false);
+
+            if( !_running )
+                throw new ServerShutdownException("Task server is shut down");
+
+            lock( _tasks )
+            {
+                if( _tasks.Count > 0 )
+                    taskResponse = _tasks.Dequeue();
+                if( _tasks.Count == 0 )
+                    _taskAddedEvent.Reset();
+            }
+            if( taskResponse != null )
+                return RunTask(instanceId, taskResponse);
             else
-                config = _jobConfigurations[task.Job.JobID];
-            TaskConfiguration taskConfig = config.GetTask(task.TaskID);
+                return null;
+        }
+
+
+        private TaskExecutionInfo RunTask(int instanceId, RunTaskJetHeartbeatResponse task)
+        {
+
+            _log.InfoFormat("Running task {{{0}}}_{1} in task host {2}.", task.Job.JobID, task.TaskID, instanceId);
+            string jobDirectory = TaskServer.GetJobDirectory(task.Job.JobID);
+            lock( _tasks )
+            {
+                if( !IO.Directory.Exists(jobDirectory) )
+                {
+                    IO.Directory.CreateDirectory(jobDirectory);
+                    _dfsClient.DownloadDirectory(task.Job.Path, jobDirectory);
+                }
+            }
+
+            TaskExecutionInfo taskInfo = new TaskExecutionInfo()
+            {
+                JobId = task.Job.JobID,
+                TaskId = task.TaskID,
+                JobDirectory = jobDirectory,
+                DfsJobDirectory = task.Job.Path,
+                Attempt = task.Attempt
+            };
+
             RunningTask runningTask;
             lock( _runningTasks )
             {
-                runningTask = new RunningTask(task.Job.JobID, jobDirectory, task.TaskID, task.Attempt, task.Job.Path, taskConfig, _taskServer);
-                runningTask.ProcessExited += new EventHandler(RunningTask_ProcessExited);
-                _runningTasks.Add(runningTask.FullTaskID, runningTask);
+                runningTask = new RunningTask(taskInfo, _processes[instanceId]);
+                runningTask.State = TaskAttemptStatus.Running;
+                runningTask.TaskTerminated += _taskTerminatedHandler;
+                _runningTasks.Add(runningTask.FullTaskId, runningTask);
             }
-            runningTask.Run(_createProcessDelay);
+            return taskInfo;
         }
 
-        private void RunningTask_ProcessExited(object sender, EventArgs e)
+        private void RunningTask_TaskTerminated(object sender, EventArgs e)
         {
             if( _running )
             {
@@ -324,13 +365,13 @@ namespace TaskServerApplication
                 {
                     if( task.State != TaskAttemptStatus.Completed )
                     {
-                        _log.ErrorFormat("Task {0} did not complete sucessfully.", task.FullTaskID);
+                        _log.ErrorFormat("Task {0} did not complete sucessfully.", task.FullTaskId);
                         task.State = TaskAttemptStatus.Error;
-                        _runningTasks.Remove(task.FullTaskID);
-                        _taskServer.NotifyTaskStatusChanged(task.JobID, task.TaskID, task.State);
-                        task.Dispose();
+                        _runningTasks.Remove(task.FullTaskId);
+                        task.TaskTerminated -= _taskTerminatedHandler;
+                        TaskServer.NotifyTaskStatusChanged(task.TaskInfo.JobId, task.TaskInfo.TaskId, task.State);
                     }
-                    _log.InfoFormat("Task {0} has finished, state = {1}.", task.FullTaskID, task.State);
+                    _log.InfoFormat("Task {0} has finished, state = {1}.", task.FullTaskId, task.State);
                 }
             }
         }

@@ -13,68 +13,85 @@ using Tkl.Jumbo;
 
 namespace TaskHost
 {
-    class Program
+    static class Program
     {
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(Program));
-        private static DfsClient _client;
-        private static IJobServerClientProtocol _jobServer;
+        private static DfsClient _dfsClient;
+        private static JetClient _jetClient;
+        private static int _blockSize;
         private static int _attempt;
 
         public static int Main(string[] args)
         {
             AppDomain.CurrentDomain.UnhandledException += new UnhandledExceptionEventHandler(CurrentDomain_UnhandledException);
 
-            if( args.Length != 10 )
+            if( args.Length != 6 )
             {
                 _log.Error("Invalid invocation.");
                 return 1;
             }
 
-            Guid jobID = new Guid(args[0]);
-            string jobDirectory = args[1];
-            string taskID = args[2];
-            string dfsJobDirectory = args[3];
-            int umbilicalPort = Convert.ToInt32(args[4]);
-            string jobServerHost = args[5];
-            int jobServerPort = Convert.ToInt32(args[6]);
-            string nameServerHost = args[7];
-            int nameServerPort = Convert.ToInt32(args[8]);
-            _attempt = Convert.ToInt32(args[9]);
-            string logFile = Path.Combine(jobDirectory, taskID + "_" + _attempt.ToString() + ".log");
-            ConfigureLog(logFile);
+            int instanceId = Convert.ToInt32(args[0]);
+            int umbilicalPort = Convert.ToInt32(args[1]);
+            string jobServerHost = args[2];
+            int jobServerPort = Convert.ToInt32(args[3]);
+            string nameServerHost = args[4];
+            int nameServerPort = Convert.ToInt32(args[5]);
 
-            _log.InfoFormat("Running task; job ID = \"{0}\", job directory = \"{1}\", task ID = \"{2}\", attempt, = {3}, DFS job directory = \"{4}\"", jobID, jobDirectory, taskID, _attempt, dfsJobDirectory);
-            _log.LogEnvironmentInformation();
-            _log.DebugFormat("Command line: {0}", Environment.CommandLine);
-
-            _log.Debug("Creating name server, job server and umbilical clients.");
             ITaskServerUmbilicalProtocol umbilical = JetClient.CreateTaskServerUmbilicalClient(umbilicalPort);
-            _client = new DfsClient(nameServerHost, nameServerPort);
-            _jobServer = JetClient.CreateJobServerClient(jobServerHost, jobServerPort);
+            _dfsClient = new DfsClient(nameServerHost, nameServerPort);
+            _jetClient = new JetClient(jobServerHost, jobServerPort);
 
-            string xmlConfigPath = Path.Combine(jobDirectory, Job.JobConfigFileName);
-            _log.DebugFormat("Loading job configuration from local file {0}.", xmlConfigPath);
-            JobConfiguration config = JobConfiguration.LoadXml(xmlConfigPath);
-            _log.Debug("Job configuration loaded.");
+            _blockSize = _dfsClient.NameServer.BlockSize;
+            JetMetrics metrics = _jetClient.JobServer.GetMetrics(); // We're just doing this to establish and test the connection.
 
-            TaskConfiguration taskConfig = config.GetTask(taskID);
-            if( taskConfig == null )
+            while( true )
             {
-                _log.ErrorFormat("Task {0} does not exist in the job configuration.", taskID);
-                return 1;
+                TaskExecutionInfo taskInfo = null;
+                try
+                {
+                    taskInfo = umbilical.WaitForTask(instanceId, 60000);
+                }
+                catch( ServerShutdownException )
+                {
+                    return 0;
+                }
+                if( taskInfo != null )
+                {
+                    string logFile = Path.Combine(taskInfo.JobDirectory, taskInfo.TaskId + "_" + taskInfo.Attempt.ToString() + ".log");
+                    ConfigureLog(logFile);
+
+                    _log.InfoFormat("Running task; job ID = \"{0}\", job directory = \"{1}\", task ID = \"{2}\", attempt, = {3}, DFS job directory = \"{4}\"", taskInfo.JobId, taskInfo.JobDirectory, taskInfo.TaskId, taskInfo.Attempt, taskInfo.DfsJobDirectory);
+                    _log.LogEnvironmentInformation();
+
+                    _attempt = taskInfo.Attempt;
+
+                    string xmlConfigPath = Path.Combine(taskInfo.JobDirectory, Job.JobConfigFileName);
+                    _log.DebugFormat("Loading job configuration from local file {0}.", xmlConfigPath);
+                    JobConfiguration config = JobConfiguration.LoadXml(xmlConfigPath);
+                    _log.Debug("Job configuration loaded.");
+
+                    TaskConfiguration taskConfig = config.GetTask(taskInfo.TaskId);
+                    if( taskConfig == null )
+                    {
+                        _log.ErrorFormat("Task {0} does not exist in the job configuration.", taskInfo.TaskId);
+                        return 1;
+                    }
+
+                    RunTask(taskInfo.JobId, taskInfo.JobDirectory, config, taskConfig, taskInfo.DfsJobDirectory);
+
+                    _log.Info("Reporting completion to task server.");
+                    umbilical.ReportCompletion(taskInfo.JobId, taskInfo.TaskId);
+
+                    _log.Info("Task host finished execution of task.");
+                    return 0;
+                }
             }
-
-            RunTask(jobID, jobDirectory, config, taskConfig, dfsJobDirectory);
-
-            _log.Info("Reporting completion to task server.");
-            umbilical.ReportCompletion(jobID, taskID);
-
-            _log.Info("TaskHost finished execution.");
-            return 0;
         }
 
         private static void ConfigureLog(string logFile)
         {
+            log4net.LogManager.ResetConfiguration();
             log4net.Appender.FileAppender appender = new log4net.Appender.FileAppender()
             {
                 File = logFile,
@@ -105,7 +122,7 @@ namespace TaskHost
             if( inputChannelConfig != null )
             {
                 _log.DebugFormat("Creating input channel {0}.", inputChannelConfig.ChannelType);
-                inputChannel = inputChannelConfig.CreateInputChannel(jobID, jobDirectory, _jobServer, taskConfig.TaskID);
+                inputChannel = inputChannelConfig.CreateInputChannel(jobID, jobDirectory, _jetClient.JobServer, taskConfig.TaskID);
                 inputChannel.WaitUntilReady(Timeout.Infinite);
             }
 
@@ -145,7 +162,7 @@ namespace TaskHost
             if( taskConfig.DfsOutput != null )
             {
                 _log.InfoFormat("Moving task output file from \"{0}\" to \"{1}\".", taskConfig.DfsOutput.TempPath, taskConfig.DfsOutput.Path);
-                _client.NameServer.Move(taskConfig.DfsOutput.TempPath, taskConfig.DfsOutput.Path);
+                _dfsClient.NameServer.Move(taskConfig.DfsOutput.TempPath, taskConfig.DfsOutput.Path);
             }
         }
 
@@ -154,7 +171,7 @@ namespace TaskHost
             if( taskConfig.DfsInput != null )
             {
                 _log.DebugFormat("Opening input file {0}", taskConfig.DfsInput.Path);
-                return _client.OpenFile(taskConfig.DfsInput.Path);
+                return _dfsClient.OpenFile(taskConfig.DfsInput.Path);
             }
             return null;
         }
@@ -168,9 +185,9 @@ namespace TaskHost
                 Type recordReaderType = Type.GetType(taskConfig.DfsInput.RecordReaderType);
                 long offset;
                 long size;
-                long blockSize = _client.NameServer.BlockSize;
+                long blockSize = _dfsClient.NameServer.BlockSize;
                 offset = blockSize * (long)taskConfig.DfsInput.Block;
-                size = Math.Min(blockSize, _client.NameServer.GetFileInfo(taskConfig.DfsInput.Path).Size - offset);
+                size = Math.Min(blockSize, _dfsClient.NameServer.GetFileInfo(taskConfig.DfsInput.Path).Size - offset);
                 return (RecordReader<T>)Activator.CreateInstance(recordReaderType, inputStream, offset, size);
             }
             else if( inputChannel != null )
@@ -188,7 +205,7 @@ namespace TaskHost
                 string file = DfsPath.Combine(dfsJobDirectory, taskConfig.TaskID + "_" + _attempt.ToString());
                 _log.DebugFormat("Opening output file {0}", file);
                 taskConfig.DfsOutput.TempPath = file;
-                return _client.CreateFile(file);
+                return _dfsClient.CreateFile(file);
             }
             return null;
         }

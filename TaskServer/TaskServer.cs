@@ -20,7 +20,7 @@ namespace TaskServerApplication
         private IJobServerHeartbeatProtocol _jobServer;
         private volatile bool _running;
         private readonly List<JetHeartbeatData> _pendingHeartbeatData = new List<JetHeartbeatData>();
-        private readonly TaskRunner _taskRunner;
+        private TaskRunner _taskRunner;
         private static object _startupLock = new object();
         private FileChannelServer _fileServer;
         private FileChannelServer _fileServerIPv4;
@@ -42,7 +42,6 @@ namespace TaskServerApplication
                 System.IO.Directory.CreateDirectory(config.TaskServer.TaskDirectory);
 
             _jobServer = JetClient.CreateJobServerHeartbeatClient(config);
-            _taskRunner = new TaskRunner(this);
         }
 
         public static TaskServer Instance { get; private set; }
@@ -50,6 +49,7 @@ namespace TaskServerApplication
         public JetConfiguration Configuration { get; private set; }
         public DfsConfiguration DfsConfiguration { get; private set; }
         public ServerAddress LocalAddress { get; private set; }
+        public bool IsRunning { get { return _running; } }
 
         public static void Run()
         {
@@ -93,6 +93,13 @@ namespace TaskServerApplication
 
         #region ITaskServerUmbilicalProtocol Members
 
+        public TaskExecutionInfo WaitForTask(int instanceId, int timeout)
+        {
+            if( !_running )
+                throw new ServerShutdownException("Task server is shut down");
+            return _taskRunner.WaitForTask(instanceId, timeout);
+        }
+
         public void ReportCompletion(Guid jobID, string taskID)
         {
             if( taskID == null )
@@ -104,7 +111,7 @@ namespace TaskServerApplication
 
         public void ReportStart(Guid jobID, string taskID)
         {
-            _log.InfoFormat("TaskHost for {0} has initialized.", Job.CreateFullTaskID(jobID, taskID));
+            _log.InfoFormat("TaskHost has started task {0}.", Job.CreateFullTaskID(jobID, taskID));
         }
 
         #endregion
@@ -197,6 +204,9 @@ namespace TaskServerApplication
             _log.Info("-----Task server is starting-----");
             _log.LogEnvironmentInformation();
             _running = true;
+
+            _taskRunner = new TaskRunner(this);
+
             LocalAddress = new ServerAddress(Dns.GetHostName(), Configuration.TaskServer.Port);
 
             AddDataForNextHeartbeat(new StatusJetHeartbeatData() { MaxTasks = Configuration.TaskServer.MaxTasks });
@@ -226,11 +236,11 @@ namespace TaskServerApplication
 
         private void ShutdownInternal()
         {
+            _taskRunner.Stop();
             if( _fileServer != null )
                 _fileServer.Stop();
             if( _fileServerIPv4 != null )
                 _fileServerIPv4.Stop();
-            _taskRunner.Stop();
             _running = false;
             _log.InfoFormat("-----Task server is shutting down-----");
         }
