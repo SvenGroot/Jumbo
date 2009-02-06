@@ -12,7 +12,7 @@ namespace DataServerApplication
 {
     public class DataServer
     {
-        private const int _heartbeatInterval = 2000;
+        private const int _heartbeatInterval = 3000;
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(DataServer));
         private readonly string _blockStorageDirectory;
         private readonly string _temporaryBlockStorageDirectory;
@@ -81,7 +81,11 @@ namespace DataServerApplication
 
             while( _running )
             {
+                int start = Environment.TickCount;
                 SendHeartbeat();
+                int end = Environment.TickCount;
+                if( end - start > 500 )
+                    _log.WarnFormat("Long heartbeat time: {0}", end - start);
                 Thread.Sleep(_heartbeatInterval);
             }
         }

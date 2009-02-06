@@ -182,28 +182,39 @@ namespace NameServerApplication
 
         public int BlockSize
         {
-            get { return _blockSize; }
+            get 
+            {
+                _log.Debug("BlockSize called");
+                return _blockSize; 
+            }
         }
 
         public bool SafeMode
         {
-            get { return _safeMode; }
+            get 
+            {
+                _log.Debug("SafeMode called");
+                return _safeMode; 
+            }
         }
 
         public void CreateDirectory(string path)
         {
+            _log.Debug("CreateDirectory called");
             CheckSafeMode();
             _fileSystem.CreateDirectory(path);
         }
 
         public Directory GetDirectoryInfo(string path)
         {
+            _log.Debug("GetDirectoryInfo called");
             return _fileSystem.GetDirectoryInfo(path);
         }
 
 
         public BlockAssignment CreateFile(string path)
         {
+            _log.Debug("CreateFile called");
             CheckSafeMode();
             Guid guid = _fileSystem.CreateFile(path);
             try
@@ -220,23 +231,27 @@ namespace NameServerApplication
 
         public bool Delete(string path, bool recursive)
         {
+            _log.Debug("Delete called");
             CheckSafeMode();
             return _fileSystem.Delete(path, recursive);
         }
 
         public void Move(string from, string to)
         {
+            _log.Debug("Move called");
             CheckSafeMode();
             _fileSystem.Move(from, to);
         }
 
         public File GetFileInfo(string path)
         {
+            _log.Debug("GetFileInfo called");
             return _fileSystem.GetFileInfo(path);
         }
 
         public BlockAssignment AppendBlock(string path)
         {
+            _log.Debug("AppendBlock called");
             CheckSafeMode();
             if( _dataServers.Count < _replicationFactor )
                 throw new InvalidOperationException("Insufficient data servers.");
@@ -248,12 +263,14 @@ namespace NameServerApplication
 
         public void CloseFile(string path)
         {
+            _log.Debug("CloseFile called");
             CheckSafeMode();
             _fileSystem.CloseFile(path);
         }
 
         public ServerAddress[] GetDataServersForBlock(Guid blockID)
         {
+            _log.Debug("GetDataServersForBlock called");
             // I allow calling this even if safemode is on, but it might return an empty list in that case.
             lock( _blocks )
             {
@@ -273,6 +290,7 @@ namespace NameServerApplication
 
         public bool WaitForSafeModeOff(int timeOut)
         {
+            _log.Debug("WaitForSafeModeOff called");
             if( _safeMode )
                 if( _safeModeEvent.WaitOne(timeOut, false) )
                     Debug.Assert(!_safeMode);
@@ -282,6 +300,7 @@ namespace NameServerApplication
 
         public DfsMetrics GetMetrics()
         {
+            _log.Debug("GetMetrics called");
             DfsMetrics metrics = new DfsMetrics();
             lock( _blocks )
             {
@@ -364,7 +383,7 @@ namespace NameServerApplication
 
         public HeartbeatResponse[] Heartbeat(ServerAddress address, HeartbeatData[] data)
         {
-            //_log.Debug("Data server heartbeat received.");
+            _log.Debug("Data server heartbeat received.");
             if( address == null )
                 throw new ArgumentNullException("address");
 
