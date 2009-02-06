@@ -383,7 +383,7 @@ namespace NameServerApplication
 
         public HeartbeatResponse[] Heartbeat(ServerAddress address, HeartbeatData[] data)
         {
-            _log.Debug("Data server heartbeat received.");
+            //_log.Debug("Data server heartbeat received.");
             if( address == null )
                 throw new ArgumentNullException("address");
 
