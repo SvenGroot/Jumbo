@@ -10,6 +10,7 @@
     <mkdir dir="Bin"/>
     <copy todir="Bin">
       <fileset>
+        <include name="../lib/ICSharpCode.SharpZipLib.dll" />
         <include name="../Tkl.Jumbo.Jet/nantbin/*.*"/>
         <include name="../Tkl.Jumbo/nantbin/*.*"/>
       </fileset>

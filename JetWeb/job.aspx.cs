@@ -20,6 +20,20 @@ public partial class job : System.Web.UI.Page
         HtmlTableRow row = new HtmlTableRow();
         row.Cells.Add(new HtmlTableCell() { InnerText = job.JobId.ToString() });
         row.Cells.Add(new HtmlTableCell() { InnerText = job.StartTime.ToString(System.Globalization.DateTimeFormatInfo.InvariantInfo.UniversalSortableDateTimePattern) });
+        if( job.IsFinished )
+        {
+            _downloadLink.HRef = "jobinfo.ashx?id=" + jobId.ToString();
+            _downloadLink.Visible = true;
+
+            row.Cells.Add(new HtmlTableCell() { InnerText = job.EndTime.ToString(System.Globalization.DateTimeFormatInfo.InvariantInfo.UniversalSortableDateTimePattern) });
+            TimeSpan duration = job.EndTime - job.StartTime;
+            row.Cells.Add(new HtmlTableCell() { InnerText = string.Format("{0} ({1}s)", duration, duration.TotalSeconds) });
+        }
+        else
+        {
+            row.Cells.Add(new HtmlTableCell());
+            row.Cells.Add(new HtmlTableCell());
+        }
         row.Cells.Add(new HtmlTableCell() { InnerText = job.TaskCount.ToString() });
         row.Cells.Add(new HtmlTableCell() { InnerText = job.RunningTaskCount.ToString() });
         row.Cells.Add(new HtmlTableCell() { InnerText = job.UnscheduledTaskCount.ToString() });

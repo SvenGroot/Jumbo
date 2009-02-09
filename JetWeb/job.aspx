@@ -5,6 +5,8 @@
         <tr>
             <th scope="col">Job ID</th>
             <th scope="col">Start time</th>
+            <th scope="col">End time</th>
+            <th scope="col">Duration</th>
             <th scope="col">Tasks</th>
             <th scope="col">Running tasks</th>
             <th scope="col">Pending tasks</th>
@@ -13,6 +15,9 @@
             <th scope="col">Non data local tasks</th>
         </tr>
     </table>
+    <p>
+        <a id="_downloadLink" href="jobinfo.ashx" visible="false" runat="server">Download job information.</a>
+    </p>
     <h3>Tasks</h3>
     <table id="TasksTable" runat="server">
         <tr>

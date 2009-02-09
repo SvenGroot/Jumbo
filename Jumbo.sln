@@ -5,6 +5,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NameServer", "NameServer\Na
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Libraries", "Libraries", "{4B8F81B1-6636-44ED-92D6-9B31BFF2EE8B}"
 	ProjectSection(SolutionItems) = preProject
+		lib\ICSharpCode.SharpZipLib.dll = lib\ICSharpCode.SharpZipLib.dll
+		lib\ICSharpCode.SharpZipLib.xml = lib\ICSharpCode.SharpZipLib.xml
 		lib\log4net-license.txt = lib\log4net-license.txt
 		lib\log4net.dll = lib\log4net.dll
 		lib\log4net.xml = lib\log4net.xml
