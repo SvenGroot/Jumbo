@@ -84,6 +84,7 @@ namespace TaskServerApplication
         public void NotifyTaskStatusChanged(Guid jobID, string taskID, TaskAttemptStatus newStatus)
         {
             AddDataForNextHeartbeat(new TaskStatusChangedJetHeartbeatData(jobID, taskID, newStatus));
+            SendHeartbeat();
         }
 
         public string GetJobDirectory(Guid jobID)

@@ -10,6 +10,7 @@ using Tkl.Jumbo.Jet.Channels;
 using Tkl.Jumbo.IO;
 using System.Threading;
 using Tkl.Jumbo;
+using System.Diagnostics;
 
 namespace TaskHost
 {
@@ -51,7 +52,6 @@ namespace TaskHost
                 try
                 {
                     taskInfo = umbilical.WaitForTask(instanceId, 10000);
-                    _blockSize = _dfsClient.NameServer.BlockSize; // this keeps the connection alive
                 }
                 catch( ServerShutdownException )
                 {
@@ -59,6 +59,8 @@ namespace TaskHost
                 }
                 if( taskInfo != null )
                 {
+                    Stopwatch sw = new Stopwatch();
+                    sw.Start();
                     string logFile = Path.Combine(taskInfo.JobDirectory, taskInfo.TaskId + "_" + taskInfo.Attempt.ToString() + ".log");
                     ConfigureLog(logFile);
 
@@ -81,11 +83,12 @@ namespace TaskHost
 
                     RunTask(taskInfo.JobId, taskInfo.JobDirectory, config, taskConfig, taskInfo.DfsJobDirectory);
 
+                    sw.Stop();
+
                     _log.Info("Reporting completion to task server.");
                     umbilical.ReportCompletion(taskInfo.JobId, taskInfo.TaskId);
 
-                    _log.Info("Task host finished execution of task.");
-                    return 0;
+                    _log.InfoFormat("Task host finished execution of task, execution time: {0}s", sw.Elapsed.TotalSeconds);
                 }
             }
         }
