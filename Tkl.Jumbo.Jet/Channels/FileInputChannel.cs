@@ -16,20 +16,7 @@ namespace Tkl.Jumbo.Jet.Channels
     /// </summary>
     public class FileInputChannel : IInputChannel
     {
-        #region Nested types
-
-        private class InputTask
-        {
-            public string TaskID { get; set; }
-            public string FullTaskID { get; set; }
-            public TaskAttemptStatus Status { get; set; }
-            public ServerAddress TaskServerAddress { get; set; }
-            public ITaskServerClientProtocol TaskServer { get; set; }
-        }
-
-        #endregion
-
-        private const int _pollingInterval = 5000;
+        private const int _pollingInterval = 10000;
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(FileInputChannel));
 
         private string _jobDirectory;
@@ -109,26 +96,19 @@ namespace Tkl.Jumbo.Jet.Channels
         {
             try
             {
-                // The list is randomized so not all tasks hit the same TaskServer at once.
-                Random rnd = new Random();
-                List<InputTask> filesLeft = (from taskID in _channelConfig.InputTasks
-                                             orderby rnd.Next()
-                                             select new InputTask()
-                                             {
-                                                 TaskID = taskID,
-                                                 FullTaskID = string.Format("{{{0}}}_{1}", _jobID, taskID)
-                                             }).ToList();
+                HashSet<string> tasksLeft = new HashSet<string>(_channelConfig.InputTasks);
+                string[] tasksLeftArray = _channelConfig.InputTasks;
 
-                _log.InfoFormat("Start polling for output file completion of {0} tasks, interval {1}ms", filesLeft.Count, _pollingInterval);
+                _log.InfoFormat("Start checking for output file completion of {0} tasks, timeout {1}ms", tasksLeft.Count, _pollingInterval);
 
-                List<InputTask> completedTasks = new List<InputTask>();
-                while( filesLeft.Count > 0 )
+                while( tasksLeft.Count > 0 )
                 {
-                    CheckForCompletedTasks(filesLeft, completedTasks);
-
-                    DownloadCompletedFiles(reader, filesLeft, completedTasks);
-                    if( filesLeft.Count > 0 )
-                        Thread.Sleep(_pollingInterval);
+                    CompletedTask task = _jobServer.WaitForTaskCompletion(_jobID, tasksLeftArray, _pollingInterval);
+                    if( task != null )
+                    {
+                        DownloadCompletedFile(reader, tasksLeft, task);
+                        tasksLeftArray = tasksLeft.ToArray();
+                    }
                 }
             }
             catch( ObjectDisposedException ex )
@@ -140,71 +120,39 @@ namespace Tkl.Jumbo.Jet.Channels
             }
         }
 
-        private void DownloadCompletedFiles<T>(MultiRecordReader<T> reader, List<InputTask> filesLeft, List<InputTask> completedTasks)
+        private void DownloadCompletedFile<T>(MultiRecordReader<T> reader, HashSet<string> tasksLeft, CompletedTask task)
             where T : IWritable, new()
         {
-            foreach( InputTask task in completedTasks )
+            _log.InfoFormat("Task {0} output file is now available.", task.TaskId);
+            string fileName = null;
+            if( !_channelConfig.ForceFileDownload && task.TaskServer.HostName == Dns.GetHostName() )
             {
-                _log.InfoFormat("Task {0} output file is now available.", task.TaskID);
-                string fileName = null;
-                if( !_channelConfig.ForceFileDownload && task.TaskServerAddress.HostName == Dns.GetHostName() )
-                {
-                    string taskOutputDirectory = task.TaskServer.GetOutputFileDirectory(task.FullTaskID);
-                    fileName = Path.Combine(taskOutputDirectory, FileOutputChannel.CreateChannelFileName(task.TaskID, _outputTaskId));
-                    _log.InfoFormat("Using local file {0} as input.", fileName);
-                }
-                else
-                {
-                    fileName = DownloadFile(task, _outputTaskId);
-                }
-                bool removed = filesLeft.Remove(task);
-                Debug.Assert(removed);
-                reader.AddReader(new BinaryRecordReader<T>(File.OpenRead(fileName)), filesLeft.Count == 0);
-                if( filesLeft.Count == 0 )
-                {
-                    _log.Info("All files downloaded.");
-                }
+                ITaskServerClientProtocol taskServer = JetClient.CreateTaskServerClient(task.TaskServer);
+                string taskOutputDirectory = taskServer.GetOutputFileDirectory(task.FullTaskId);
+                fileName = Path.Combine(taskOutputDirectory, FileOutputChannel.CreateChannelFileName(task.TaskId, _outputTaskId));
+                _log.InfoFormat("Using local file {0} as input.", fileName);
+            }
+            else
+            {
+                fileName = DownloadFile(task, _outputTaskId);
+            }
+            bool removed = tasksLeft.Remove(task.TaskId);
+            Debug.Assert(removed);
+            reader.AddReader(new BinaryRecordReader<T>(File.OpenRead(fileName)), tasksLeft.Count == 0);
+            if( tasksLeft.Count == 0 )
+            {
+                _log.Info("All files downloaded.");
             }
         }
 
-        private void CheckForCompletedTasks(List<InputTask> filesLeft, List<InputTask> completedTasks)
+        private string DownloadFile(CompletedTask task, string outputTaskId)
         {
-            completedTasks.Clear();
-            foreach( InputTask task in filesLeft )
-            {
-                if( task.TaskServerAddress == null )
-                {
-                    task.TaskServerAddress = _jobServer.GetTaskServerForTask(_jobID, task.TaskID);
-                    if( task.TaskServerAddress != null )
-                        task.TaskServer = JetClient.CreateTaskServerClient(task.TaskServerAddress);
-                }
-                if( task.TaskServer != null )
-                {
-                    task.Status = task.TaskServer.GetTaskStatus(task.FullTaskID);
-                    if( task.Status > TaskAttemptStatus.Running )
-                    {
-                        if( task.Status == TaskAttemptStatus.Completed )
-                        {
-                            completedTasks.Add(task);
-                        }
-                        else
-                        {
-                            _log.ErrorFormat("Task {0} failed, status = {1}.", task.TaskID, task.Status);
-                            throw new Exception(); // TODO: Recover from this by waiting for a reschedule and trying again.
-                        }
-                    }
-                }
-            }
-        }
+            string fileToDownload = FileOutputChannel.CreateChannelFileName(task.TaskId, outputTaskId);
+            string targetFile = Path.Combine(_jobDirectory, string.Format("{0}_{1}.input", task.TaskId, outputTaskId));
 
-        private string DownloadFile(InputTask task, string outputTaskId)
-        {
-            string fileToDownload = FileOutputChannel.CreateChannelFileName(task.TaskID, outputTaskId);
-            string targetFile = Path.Combine(_jobDirectory, string.Format("{0}_{1}.input", task.TaskID, outputTaskId));
-
-            int port = task.TaskServer.FileServerPort;
-            _log.InfoFormat("Downloading file {0} from server {1}:{2}.", fileToDownload, task.TaskServerAddress.HostName, port);
-            using( TcpClient client = new TcpClient(task.TaskServerAddress.HostName, port) )
+            int port = task.TaskServerFileServerPort;
+            _log.InfoFormat("Downloading file {0} from server {1}:{2}.", fileToDownload, task.TaskServer.HostName, port);
+            using( TcpClient client = new TcpClient(task.TaskServer.HostName, port) )
             using( NetworkStream stream = client.GetStream() )
             using( BinaryWriter writer = new BinaryWriter(stream) )
             using( BinaryReader reader = new BinaryReader(stream) )

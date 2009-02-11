@@ -40,6 +40,16 @@ namespace Tkl.Jumbo.Jet
         ServerAddress GetTaskServerForTask(Guid jobID, string taskID);
 
         /// <summary>
+        /// Waits until any of the specified tasks complete.
+        /// </summary>
+        /// <param name="jobId">The ID of the job containing the tasks.</param>
+        /// <param name="tasks">The IDs of the tasks to wait for.</param>
+        /// <param name="timeout">The maximum amount of time to wait, in milliseconds.</param>
+        /// <returns>A <see cref="CompletedTask"/> instance indicating which of the tasks completed, or <see langword="null"/>
+        /// if the timeout expired.</returns>
+        CompletedTask WaitForTaskCompletion(Guid jobId, string[] tasks, int timeout);
+
+        /// <summary>
         /// Gets the current status for the specified job.
         /// </summary>
         /// <param name="jobId">The job ID.</param>

@@ -23,6 +23,7 @@ namespace JobServerApplication
         public int MaxTasks { get; set; }
         public int MaxNonInputTasks { get; set; }
         public DateTime LastContactUtc { get; set; }
+        public int FileServerPort { get; set; }
 
         /// <summary>
         /// Not safe to call without lock.

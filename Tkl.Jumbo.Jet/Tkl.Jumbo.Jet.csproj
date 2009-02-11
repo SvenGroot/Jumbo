@@ -65,6 +65,7 @@
     <Compile Include="Channels\IInputChannel.cs" />
     <Compile Include="Channels\IOutputChannel.cs" />
     <Compile Include="CleanupJobJetHeartbeatResponse.cs" />
+    <Compile Include="CompletedTask.cs" />
     <Compile Include="ITaskServerClientProtocol.cs" />
     <Compile Include="IJobServerClientProtocol.cs" />
     <Compile Include="IJobServerHeartbeatProtocol.cs" />

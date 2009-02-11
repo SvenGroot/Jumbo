@@ -6,6 +6,7 @@ using Tkl.Jumbo.Jet;
 using System.Runtime.CompilerServices;
 using Tkl.Jumbo;
 using Tkl.Jumbo.Dfs;
+using System.Threading;
 
 namespace JobServerApplication
 {
@@ -127,23 +128,10 @@ namespace JobServerApplication
             }
         }
 
-        public bool WaitForJobCompletion(Guid jobID, int timeout)
+        public bool WaitForJobCompletion(Guid jobId, int timeout)
         {
-            JobInfo job = null;
-            bool found;
-            lock( _jobs )
-            {
-                found = _jobs.TryGetValue(jobID, out job);
-            }
-            if( !found )
-            {
-                lock( _finishedJobs )
-                    found = _finishedJobs.TryGetValue(jobID, out job);
-            }
-            if( found )
-                return job.JobCompletedEvent.WaitOne(timeout, false);
-            else
-                throw new ArgumentException("Job not found.");
+            JobInfo job = GetRunningOrFinishedJob(jobId);
+            return job.JobCompletedEvent.WaitOne(timeout, false);
         }
 
         public ServerAddress GetTaskServerForTask(Guid jobID, string taskID)
@@ -156,6 +144,34 @@ namespace JobServerApplication
                 JobInfo job = _jobs[jobID];
                 TaskInfo task = job.Tasks[taskID];
                 return task.Server == null ? null : task.Server.Address;
+            }
+        }
+
+        public CompletedTask WaitForTaskCompletion(Guid jobId, string[] tasks, int timeout)
+        {
+            if( jobId == null )
+                throw new ArgumentNullException("jobId");
+            if( tasks == null )
+                throw new ArgumentNullException("tasks");
+            if( tasks.Length == 0 )
+                throw new ArgumentException("You must specify at least one task.", "tasks");
+
+            WaitHandle[] events = new WaitHandle[tasks.Length];
+            JobInfo job = GetRunningOrFinishedJob(jobId);
+            // Accessing Tasks outside the lock is safe; it won't change after the job starts running. TaskCompletedEvent also never changes.
+            for( int x = 0; x < tasks.Length; ++x )
+            {
+                events[x] = job.Tasks[tasks[x]].TaskCompletedEvent;
+            }
+
+            int waitResult = WaitHandle.WaitAny(events, timeout, false);
+
+            if( waitResult == WaitHandle.WaitTimeout )
+                return null;
+            else
+            {
+                TaskInfo task = job.Tasks[tasks[waitResult]];
+                return new CompletedTask() { JobId = jobId, TaskId = task.Task.TaskID, TaskServer = task.Server.Address, TaskServerFileServerPort = task.Server.FileServerPort };
             }
         }
 
@@ -355,8 +371,10 @@ namespace JobServerApplication
 
         private void ProcessStatusHeartbeat(TaskServerInfo server, StatusJetHeartbeatData data)
         {
+            _log.InfoFormat("Task server {0} reported status: MaxTasks = {1}, MaxNonInputTasks = {2}, FileServerPort = {3}", server.Address, data.MaxTasks, data.MaxNonInputTasks, data.FileServerPort);
             server.MaxTasks = data.MaxTasks;
-            server.MaxNonInputTasks = data.MaxTasks;
+            server.MaxNonInputTasks = data.MaxNonInputTasks;
+            server.FileServerPort = data.FileServerPort;
         }
 
         private void ProcessTaskStatusChangedHeartbeat(TaskServerInfo server, TaskStatusChangedJetHeartbeatData data)
@@ -380,6 +398,7 @@ namespace JobServerApplication
                     case TaskAttemptStatus.Completed:
                         task.EndTimeUtc = DateTime.UtcNow;
                         task.State = TaskState.Finished;
+                        task.TaskCompletedEvent.Set();
                         _log.InfoFormat("Task {0} completed successfully.", Job.CreateFullTaskID(data.JobID, data.TaskID));
                         ++job.FinishedTasks;
                         break;
@@ -447,6 +466,36 @@ namespace JobServerApplication
             {
                 _scheduler.ScheduleTasks(_taskServers, job, _dfsClient);
             }
+        }
+
+        /// <summary>
+        /// NOTE: Don't use this if you need to access any of the mutable state of the <see cref="JobInfo"/>
+        /// which requires a lock.
+        /// </summary>
+        /// <param name="jobId"></param>
+        /// <returns></returns>
+        private JobInfo GetRunningOrFinishedJob(Guid jobId)
+        {
+            JobInfo job = null;
+            bool found;
+            lock( _jobs )
+            {
+                found = _jobs.TryGetValue(jobId, out job);
+                if( found && job.State == JobState.Created )
+                    throw new ArgumentException("Job not running.", "jobId");
+            }
+
+            if( !found )
+            {
+                lock( _finishedJobs )
+                {
+                    found = _finishedJobs.TryGetValue(jobId, out job);
+                }
+            }
+
+            if( !found )
+                throw new ArgumentException("Job not found.", "jobId");
+            return job;
         }
 
         private JobStatus TryGetJobStatus(Dictionary<Guid, JobInfo> jobs, Guid jobId)

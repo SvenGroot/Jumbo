@@ -5,11 +5,14 @@ using System.Text;
 using Tkl.Jumbo.Jet;
 using System.IO;
 using Tkl.Jumbo.Dfs;
+using System.Threading;
 
 namespace JobServerApplication
 {
     class TaskInfo
     {
+        private readonly ManualResetEvent _taskCompletedEvent = new ManualResetEvent(false);
+
         public TaskInfo(JobInfo job, TaskConfiguration task)
         {
             if( task == null )
@@ -21,12 +24,25 @@ namespace JobServerApplication
         }
 
         public TaskConfiguration Task { get; private set; }
+
         public JobInfo Job { get; private set; }
+
         public TaskState State { get; set; }
+
         public TaskServerInfo Server { get; set; }
+
         public int Attempts { get; set; }
+
         public DateTime StartTimeUtc { get; set; }
+
         public DateTime EndTimeUtc { get; set; }
+
+        // TODO: This even should be reset if the task server dies or other tasks cannot download the task's output data.
+        public ManualResetEvent TaskCompletedEvent
+        {
+            get { return _taskCompletedEvent; }
+        }
+
         public string GlobalID
         {
             get
