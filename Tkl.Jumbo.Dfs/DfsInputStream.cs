@@ -28,8 +28,8 @@ namespace Tkl.Jumbo.Dfs
         private Exception _lastException;
         private Thread _fillBufferThread;
         private bool _disposed;
-	private long _totalReadTime;
-	private int _totalReads;
+        private readonly Stopwatch _readTime = new Stopwatch();
+	    private int _totalReads;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="DfsInputStream"/> with the specified name server and file.
@@ -170,7 +170,7 @@ namespace Tkl.Jumbo.Dfs
             if( offset + count > buffer.Length )
                 throw new ArgumentException("The sum of offset and count is greater than the buffer length.");
 
-            int startTime = Environment.TickCount;
+            _readTime.Start();
 
             if( _fillBufferThread == null )
             {
@@ -216,10 +216,8 @@ namespace Tkl.Jumbo.Dfs
                 Debug.Assert(sizeRemaining == 0);
             }
             int endTime = Environment.TickCount;
-	    _totalReadTime += endTime - startTime;
-	    ++_totalReads;
-            if( endTime - startTime > 1000 )
-                _log.DebugFormat("Long Read time: {0}ms", endTime - startTime);
+            _readTime.Stop();
+            ++_totalReads;
             return count;
         }
 
@@ -290,10 +288,10 @@ namespace Tkl.Jumbo.Dfs
         /// <param name="disposing"><see langword="true"/> to release both managed and unmanaged resources; <see langword="false"/> to release only unmanaged resources.</param>
         protected override void Dispose(bool disposing)
         {
-	    _log.DebugFormat("Total: {0}, count: {1}, average: {2}", _totalReadTime, _totalReads, _totalReadTime / (float)_totalReads);
             base.Dispose(disposing);
             if( !_disposed )
             {
+                _log.DebugFormat("Total: {0}, count: {1}, average: {2}", _readTime.ElapsedMilliseconds, _totalReads, _readTime.ElapsedMilliseconds / (float)_totalReads);
                 _disposed = true;
                 if( _fillBufferThread != null )
                 {
