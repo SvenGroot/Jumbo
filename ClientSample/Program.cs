@@ -161,6 +161,7 @@ namespace ClientSample
             dfsClient.NameServer.CreateDirectory(outputPath);
             Job job = jobServer.CreateJob();
             Console.WriteLine(job.JobID);
+            System.IO.File.WriteAllText("jobid.txt", job.JobID.ToString());
             using( DfsOutputStream stream = dfsClient.CreateFile(job.JobConfigurationFilePath) )
             {
                 config.SaveXml(stream);
