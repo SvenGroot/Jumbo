@@ -248,28 +248,28 @@ namespace DataServerApplication
                     Packet packet = new Packet();
                     writer.WriteResult(DataServerClientProtocolResult.Ok);
                     writer.Write(offset);
-					try
-					{
-					  do
-					  {
-						packet.Read(reader, true, false);
+                    try
+                    {
+                        do
+                        {
+                            packet.Read(reader, true, false);
 
-                        if( sizeRemaining == 0 )
-                            packet.IsLastPacket = true;
+                            if( sizeRemaining == 0 )
+                                packet.IsLastPacket = true;
 
-						writer.Write((int)DataServerClientProtocolResult.Ok);
-                        packet.Write(writer, false);
+                            writer.Write((int)DataServerClientProtocolResult.Ok);
+                            packet.Write(writer, false);
 
-                        // assertion to check if we don't jump over zero.
-                        System.Diagnostics.Debug.Assert(sizeRemaining > 0 ? sizeRemaining - packet.Size >= 0 : true);
-                        sizeRemaining -= packet.Size;
-					  } while( !packet.IsLastPacket );
-					}
-					catch( InvalidPacketException )
-					{
-					  writer.WriteResult(DataServerClientProtocolResult.Error);
-					  return;
-					}
+                            // assertion to check if we don't jump over zero.
+                            System.Diagnostics.Debug.Assert(sizeRemaining > 0 ? sizeRemaining - packet.Size >= 0 : true);
+                            sizeRemaining -= packet.Size;
+                        } while( !packet.IsLastPacket );
+                    }
+                    catch( InvalidPacketException )
+                    {
+                        writer.WriteResult(DataServerClientProtocolResult.Error);
+                        return;
+                    }
                 }
             }
             catch( IOException ex )

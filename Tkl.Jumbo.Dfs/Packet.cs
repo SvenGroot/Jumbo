@@ -149,7 +149,7 @@ namespace Tkl.Jumbo.Dfs
             if( checkSumOnly )
             {
                 // Determine the size from the stream length.
-			  Size = (int)Math.Min(reader.BaseStream.Length - reader.BaseStream.Position, PacketSize);
+                Size = (int)Math.Min(reader.BaseStream.Length - reader.BaseStream.Position, PacketSize);
                 IsLastPacket = reader.BaseStream.Length - reader.BaseStream.Position <= PacketSize;
             }
             else
