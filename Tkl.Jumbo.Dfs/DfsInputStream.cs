@@ -367,9 +367,11 @@ namespace Tkl.Jumbo.Dfs
                 header.Size = -1;
 
                 using( NetworkStream stream = client.GetStream() )
+                using( Tkl.Jumbo.IO.WriteBufferedStream bufferedStream = new Tkl.Jumbo.IO.WriteBufferedStream(stream) )
                 {
                     BinaryFormatter formatter = new BinaryFormatter();
-                    formatter.Serialize(stream, header);
+                    formatter.Serialize(bufferedStream, header);
+                    bufferedStream.Flush();
 
                     using( BinaryReader reader = new BinaryReader(stream) )
                     {
