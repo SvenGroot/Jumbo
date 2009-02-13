@@ -83,7 +83,6 @@ namespace Tkl.Jumbo.Test.Jet
         private static JobConfiguration CreateConfiguration(DfsClient dfsClient, string fileName, string outputFileName, bool forceFileDownload)
         {
             Tkl.Jumbo.Dfs.File file = dfsClient.NameServer.GetFileInfo(fileName);
-            int blockSize = dfsClient.NameServer.BlockSize;
 
             JobConfiguration config = new JobConfiguration()
             {

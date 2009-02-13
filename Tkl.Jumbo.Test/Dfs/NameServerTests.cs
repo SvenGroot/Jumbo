@@ -493,7 +493,6 @@ namespace Tkl.Jumbo.Test.Dfs
         [Test]
         public void TestMove()
         {
-            INameServerClientProtocol target = _nameServer;
             _nameServer.CreateDirectory("/move/dir1");
             _nameServer.CreateDirectory("/move/dir2");
             _nameServer.CreateFile("/move/dir1/file1");

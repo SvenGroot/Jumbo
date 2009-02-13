@@ -90,7 +90,11 @@ namespace Tkl.Jumbo.IO
             }
         }
 
-        private void CheckDisposed()
+        /// <summary>
+        /// Checks if the object is disposed, and if so throws a <see cref="ObjectDisposedException"/>.
+        /// </summary>
+        /// <exception cref="ObjectDisposedException">The <see cref="StreamRecordReader{T}"/> was disposed.</exception>
+        protected void CheckDisposed()
         {
             if( _disposed )
                 throw new ObjectDisposedException("StreamRecordReader");

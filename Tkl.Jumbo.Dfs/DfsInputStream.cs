@@ -215,7 +215,6 @@ namespace Tkl.Jumbo.Dfs
 
                 Debug.Assert(sizeRemaining == 0);
             }
-            int endTime = Environment.TickCount;
             _readTime.Stop();
             ++_totalReads;
             return count;

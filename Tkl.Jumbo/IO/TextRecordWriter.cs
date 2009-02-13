@@ -47,6 +47,8 @@ namespace Tkl.Jumbo.IO
         /// <param name="record">The record to write.</param>
         public override void WriteRecord(T record)
         {
+            CheckDisposed();
+
             _writer.Write(record);
             _writer.Write(_recordSeparator);
         }

@@ -42,6 +42,8 @@ namespace Tkl.Jumbo.IO
         /// <returns>The record, or the default value of <typeparamref name="T"/> if it is beyond the end of the stream.</returns>
         public override bool ReadRecord(out T record)
         {
+            CheckDisposed();
+
             record = default(T);
             if( Stream.Position == Stream.Length )
                 return false;

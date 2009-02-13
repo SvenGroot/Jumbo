@@ -44,7 +44,6 @@ namespace TaskHost
             _jetClient = new JetClient(jobServerHost, jobServerPort);
 
             _blockSize = _dfsClient.NameServer.BlockSize;
-            JetMetrics metrics = _jetClient.JobServer.GetMetrics(); // We're just doing this to establish and test the connection.
 
             while( true )
             {
@@ -146,6 +145,8 @@ namespace TaskHost
             doRunTaskMethod.Invoke(null, new object[] { taskType, taskConfig, inputChannel, outputChannel, dfsJobDirectory });
         }
 
+#pragma warning disable 0169 // Disable private member not used warning in Mono C# compiler; it's used with reflection.
+
         private static void DoRunTask<TInput, TOutput>(Type taskType, TaskConfiguration taskConfig, IInputChannel inputChannel, IOutputChannel outputChannel, string dfsJobDirectory) 
             where TInput : IWritable, new()
             where TOutput : IWritable, new()
@@ -169,6 +170,8 @@ namespace TaskHost
                 _dfsClient.NameServer.Move(taskConfig.DfsOutput.TempPath, taskConfig.DfsOutput.Path);
             }
         }
+
+#pragma warning restore 0169
 
         private static DfsInputStream OpenInputFile(TaskConfiguration taskConfig)
         {

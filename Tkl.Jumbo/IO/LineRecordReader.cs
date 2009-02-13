@@ -145,6 +145,8 @@ namespace Tkl.Jumbo.IO
         /// <returns><see langword="true"/> if an object was successfully read from the stream; <see langword="false"/> if the end of the stream or stream fragment was reached.</returns>
         public override bool ReadRecord(out StringWritable record)
         {
+            CheckDisposed();
+
             record = null;
             if( _position > _end )
                 return false;

@@ -102,7 +102,6 @@ namespace ClientSample
                 Console.WriteLine("Input file not found.");
                 return Guid.Empty;
             }
-            int blockSize = dfsClient.NameServer.BlockSize;
 
             JobConfiguration config = new JobConfiguration()
             {

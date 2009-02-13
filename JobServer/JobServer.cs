@@ -149,8 +149,6 @@ namespace JobServerApplication
 
         public CompletedTask WaitForTaskCompletion(Guid jobId, string[] tasks, int timeout)
         {
-            if( jobId == null )
-                throw new ArgumentNullException("jobId");
             if( tasks == null )
                 throw new ArgumentNullException("tasks");
             if( tasks.Length == 0 )
