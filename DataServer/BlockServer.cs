@@ -245,33 +245,31 @@ namespace DataServerApplication
 
                     blockFile.Seek(fileOffset, SeekOrigin.Begin);
                     int sizeRemaining = endOffset - offset;
-                    Packet packet = null;
+                    Packet packet = new Packet();
                     writer.WriteResult(DataServerClientProtocolResult.Ok);
                     writer.Write(offset);
-                    do
-                    {
-                        packet = new Packet();
-                        try
-                        {
-                            packet.Read(reader, true, false);
-                        }
-                        catch( InvalidPacketException )
-                        {
-                            writer.WriteResult(DataServerClientProtocolResult.Error);
-                            return;
-                        }
+					try
+					{
+					  do
+					  {
+						packet.Read(reader, true, false);
 
                         if( sizeRemaining == 0 )
                             packet.IsLastPacket = true;
 
-                        writer.WriteResult(DataServerClientProtocolResult.Ok);
+						writer.Write((int)DataServerClientProtocolResult.Ok);
                         packet.Write(writer, false);
 
                         // assertion to check if we don't jump over zero.
                         System.Diagnostics.Debug.Assert(sizeRemaining > 0 ? sizeRemaining - packet.Size >= 0 : true);
                         sizeRemaining -= packet.Size;
-                    } while( !packet.IsLastPacket );
-
+					  } while( !packet.IsLastPacket );
+					}
+					catch( InvalidPacketException )
+					{
+					  writer.WriteResult(DataServerClientProtocolResult.Error);
+					  return;
+					}
                 }
             }
             catch( IOException ex )
