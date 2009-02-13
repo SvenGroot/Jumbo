@@ -45,7 +45,7 @@ namespace Tkl.Jumbo.Test.Dfs
             {
                 writer.Write((uint)checksum);
                 writer.Write(5000);
-                writer.Write(true);
+                writer.Write(1);
                 writer.Write(data, 0, 5000);
 
                 stream.Position = 0;
@@ -101,7 +101,7 @@ namespace Tkl.Jumbo.Test.Dfs
                 stream.Position = 0;
                 Assert.AreEqual(checksum, reader.ReadUInt32());
                 Assert.AreEqual(5000, reader.ReadInt32());
-                Assert.AreEqual(true, reader.ReadBoolean());
+                Assert.AreEqual(1, reader.ReadInt32());
                 byte[] readData = new byte[5000];
                 Assert.AreEqual(5000, reader.Read(readData, 0, 5000));
                 Assert.IsTrue(Utilities.CompareArray(data, 0, readData, 0, 5000));

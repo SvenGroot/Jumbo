@@ -155,7 +155,7 @@ namespace Tkl.Jumbo.Dfs
             else
             {
                 Size = reader.ReadInt32();
-                IsLastPacket = reader.ReadBoolean();
+                IsLastPacket = reader.ReadInt32() == 0 ? false : true;
                 if( Size > PacketSize || (!IsLastPacket && Size != PacketSize) )
                     throw new InvalidPacketException("The packet has an invalid size.");
             }
@@ -193,7 +193,7 @@ namespace Tkl.Jumbo.Dfs
             if( !checkSumOnly )
             {
                 writer.Write(Size);
-                writer.Write(IsLastPacket);
+                writer.Write(IsLastPacket ? 1 : 0); // Writing an int, not a boolean, to keep it word-aligned.
             }
             writer.Write(_data, 0, Size);
         }

@@ -75,7 +75,7 @@ Project("{E24C65DC-7377-472B-9ABA-BC803B73C61A}") = "DfsWeb", "DfsWeb\", "{0B408
 		Release.AspNetCompiler.ForceOverwrite = "true"
 		Release.AspNetCompiler.FixedNames = "false"
 		Release.AspNetCompiler.Debug = "False"
-		VWDPort = "5103"
+		VWDPort = "18102"
 		DefaultWebSiteLanguage = "Visual C#"
 	EndProjectSection
 EndProject
@@ -97,7 +97,7 @@ Project("{E24C65DC-7377-472B-9ABA-BC803B73C61A}") = "JetWeb", "JetWeb\", "{84659
 		Release.AspNetCompiler.ForceOverwrite = "true"
 		Release.AspNetCompiler.FixedNames = "false"
 		Release.AspNetCompiler.Debug = "False"
-		VWDPort = "1598"
+		VWDPort = "18104"
 		DefaultWebSiteLanguage = "Visual C#"
 	EndProjectSection
 EndProject

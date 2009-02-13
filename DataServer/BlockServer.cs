@@ -222,7 +222,8 @@ namespace DataServerApplication
                 _log.Debug("Open block file.");
                 using( FileStream blockFile = _dataServer.OpenBlock(header.BlockID) )
                 using( BinaryReader reader = new BinaryReader(blockFile) )
-                using( BinaryWriter writer = new BinaryWriter(stream) )
+                using( Tkl.Jumbo.IO.WriteBufferedStream bufferedStream = new Tkl.Jumbo.IO.WriteBufferedStream(stream) )
+                using( BinaryWriter writer = new BinaryWriter(bufferedStream) )
                 {
                     _log.DebugFormat("Block file opened, beginning send.");
                     if( header.Size >= 0 )
@@ -246,7 +247,7 @@ namespace DataServerApplication
                     blockFile.Seek(fileOffset, SeekOrigin.Begin);
                     int sizeRemaining = endOffset - offset;
                     Packet packet = new Packet();
-                    writer.WriteResult(DataServerClientProtocolResult.Ok);
+                    writer.Write((int)DataServerClientProtocolResult.Ok);
                     writer.Write(offset);
                     try
                     {
