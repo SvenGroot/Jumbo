@@ -283,7 +283,7 @@ namespace JobServerApplication
                     }
                 }
 
-                if( timeout != 0 && responses == null && server.AssignedTasks.Count == 0 && server.AssignedNonInputTasks.Count == 0 )
+                if( timeout != 0 && responses == null )
                 {
                     Monitor.Exit(_taskServers); // Exit the lock while waiting.
                     server.TasksAssignedEvent.WaitOne(timeout, false);
