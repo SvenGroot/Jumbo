@@ -30,6 +30,7 @@ namespace Tkl.Jumbo.Dfs
         private bool _disposed;
         private readonly Stopwatch _readTime = new Stopwatch();
 	    private int _totalReads;
+        private Packet _currentPacket;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="DfsInputStream"/> with the specified name server and file.
@@ -191,13 +192,14 @@ namespace Tkl.Jumbo.Dfs
                 while( _lastResult == DataServerClientProtocolResult.Ok && sizeRemaining > 0 )
                 {
                     //Debug.WriteLine(string.Format("Read: {0}", _bufferReadPos));
-                    Packet packet = _packetBuffer.ReadItem;
+                    if( _currentPacket == null )
+                        _currentPacket = _packetBuffer.ReadItem;
 
                     // Where in the current packet do we need to read?
                     int packetOffset = (int)(_position % Packet.PacketSize);
-                    int packetCount = Math.Min(packet.Size - packetOffset, sizeRemaining);
+                    int packetCount = Math.Min(_currentPacket.Size - packetOffset, sizeRemaining);
 
-                    int copied = packet.CopyTo(packetOffset, buffer, offset, packetCount);
+                    int copied = _currentPacket.CopyTo(packetOffset, buffer, offset, packetCount);
                     Debug.Assert(copied == packetCount);
                     offset += copied;
                     sizeRemaining -= copied;
@@ -205,7 +207,7 @@ namespace Tkl.Jumbo.Dfs
 
                     if( _position % Packet.PacketSize == 0 )
                     {
-                        _packetBuffer.NotifyRead();
+                        _currentPacket = null;
                     }
                 }
                 if( _lastException != null )
@@ -256,6 +258,7 @@ namespace Tkl.Jumbo.Dfs
                 _fillBufferThread.IsBackground = true;
                 _fillBufferThread.Name = "FillBuffer";
                 _packetBuffer.Reset();
+                _currentPacket = null;
                 _fillBufferThread.Start();
             }
             return _position;

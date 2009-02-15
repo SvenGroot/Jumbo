@@ -312,7 +312,6 @@ namespace Tkl.Jumbo.Dfs
                 }
                 packet.Write(writer, false);
                 lastPacket = packet.IsLastPacket;
-                _buffer.NotifyRead();
             }
         }
 
