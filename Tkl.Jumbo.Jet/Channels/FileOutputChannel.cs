@@ -12,6 +12,8 @@ namespace Tkl.Jumbo.Jet.Channels
     /// </summary>
     public class FileOutputChannel : IOutputChannel
     {
+        private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(FileOutputChannel));
+
         private readonly string[] _fileNames;
         private string _partitionerType;
 
@@ -32,6 +34,12 @@ namespace Tkl.Jumbo.Jet.Channels
 
             _fileNames = (from outputTaskId in channelConfig.OutputTasks
                           select Path.Combine(jobDirectory, CreateChannelFileName(inputTaskId, outputTaskId))).ToArray();
+            if( _fileNames.Length == 0 )
+            {
+                // This is allowed for debugging and testing purposes so you don't have to have an output task.
+                _log.Warn("The file channel has no output tasks; writing channel output to a dummy file.");
+                _fileNames = new[] { Path.Combine(jobDirectory, CreateChannelFileName(inputTaskId, "DummyTask")) };
+            }
             _partitionerType = channelConfig.PartitionerType;
         }
 
