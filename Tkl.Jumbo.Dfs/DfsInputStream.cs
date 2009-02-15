@@ -370,44 +370,41 @@ namespace Tkl.Jumbo.Dfs
                 header.Size = -1;
 
                 using( NetworkStream stream = client.GetStream() )
+                using( BinaryReader reader = new BinaryReader(stream) )
                 using( Tkl.Jumbo.IO.WriteBufferedStream bufferedStream = new Tkl.Jumbo.IO.WriteBufferedStream(stream) )
                 {
                     BinaryFormatter formatter = new BinaryFormatter();
                     formatter.Serialize(bufferedStream, header);
                     bufferedStream.Flush();
 
-                    using( BinaryReader reader = new BinaryReader(stream) )
+                    DataServerClientProtocolResult status = (DataServerClientProtocolResult)reader.ReadInt32();
+                    if( status != DataServerClientProtocolResult.Ok )
+                        throw new DfsException("The server encountered an error while sending data.");
+                    _log.Debug("Header sent and accepted by server.");
+                    int offset = reader.ReadInt32();
+                    int difference = blockOffset - offset;
+                    position -= difference; // Correct position
+
+                    Packet packet = null;
+                    while( !_disposed && _lastResult == DataServerClientProtocolResult.Ok && (packet == null || !packet.IsLastPacket) )
                     {
-                        DataServerClientProtocolResult status = (DataServerClientProtocolResult)reader.ReadInt32();
+                        //Debug.WriteLine(string.Format("Write: {0}", _bufferWritePos));
+                        packet = _packetBuffer.WriteItem;
+                        if( packet == null )
+                            return false; // cancelled
+                        status = (DataServerClientProtocolResult)reader.ReadInt32();
                         if( status != DataServerClientProtocolResult.Ok )
-                            throw new DfsException("The server encountered an error while sending data.");
-                        _log.Debug("Header sent and accepted by server.");
-                        int offset = reader.ReadInt32();
-                        int difference = blockOffset - offset;
-                        position -= difference; // Correct position
-
-                        Packet packet = null;
-                        while( !_disposed && _lastResult == DataServerClientProtocolResult.Ok && (packet == null || !packet.IsLastPacket) )
                         {
-                            //Debug.WriteLine(string.Format("Write: {0}", _bufferWritePos));
-                            packet = _packetBuffer.WriteItem;
-                            if( packet == null )
-                                return false; // cancelled
-                            status = (DataServerClientProtocolResult)reader.ReadInt32();
-                            if( status != DataServerClientProtocolResult.Ok )
-                            {
-                                throw new DfsException("The server encountered an error while sending data.");
-                            }
-                            else
-                            {
-                                packet.Read(reader, false, true);
-
-                                position += packet.Size;
-                                // There is no need to lock this write because no other threads will update this value.
-                                _packetBuffer.NotifyWrite();
-                            }
+                            throw new DfsException("The server encountered an error while sending data.");
                         }
+                        else
+                        {
+                            packet.Read(reader, false, true);
 
+                            position += packet.Size;
+                            // There is no need to lock this write because no other threads will update this value.
+                            _packetBuffer.NotifyWrite();
+                        }
                     }
                 }
             }

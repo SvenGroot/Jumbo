@@ -243,17 +243,20 @@ namespace Tkl.Jumbo.Dfs
                     _log.Debug("Connection established.");
                     stream = client.GetStream();
                 }
-                using( BinaryWriter writer = new BinaryWriter(stream) )
                 using( BinaryReader reader = new BinaryReader(stream) )
+                using( Tkl.Jumbo.IO.WriteBufferedStream bufferedStream = new Tkl.Jumbo.IO.WriteBufferedStream(stream) )
+                using( BinaryWriter writer = new BinaryWriter(bufferedStream) )
                 {
                     // TODO: Configurable timeouts
                     stream.ReadTimeout = 30000;
                     stream.WriteTimeout = 30000;
 
-                    if( WriteHeader(stream, writer, reader) )
+                    if( WriteHeader(bufferedStream, writer, reader) )
                     {
                         _log.Debug("Header sent and accepted.");
                         SendPackets(writer, stream, reader);
+
+                        bufferedStream.Flush(); // We need to flush before waiting for the final OK
 
                         //if( _resultReaderThread != null )
                         //{
@@ -327,7 +330,7 @@ namespace Tkl.Jumbo.Dfs
             return true;
         }
 
-        private bool WriteHeader(NetworkStream stream, BinaryWriter writer, BinaryReader reader)
+        private bool WriteHeader(Stream stream, BinaryWriter writer, BinaryReader reader)
         {
             // If the data server is using this class to return data to the client, we don't need to send
             // a header or listen for results. We do need to send an initial OK and the offset.
@@ -344,6 +347,7 @@ namespace Tkl.Jumbo.Dfs
                 header.DataServers = _dataServers;
                 BinaryFormatter formatter = new BinaryFormatter();
                 formatter.Serialize(stream, header);
+                stream.Flush();
 
                 return ReadResult(reader);
             }
