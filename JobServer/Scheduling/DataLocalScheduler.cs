@@ -13,7 +13,7 @@ namespace JobServerApplication.Scheduling
 
         #region IScheduler Members
 
-        public void ScheduleTasks(Dictionary<Tkl.Jumbo.ServerAddress, TaskServerInfo> taskServers, JobInfo job, DfsClient dfsClient)
+        public IEnumerable<TaskServerInfo> ScheduleTasks(Dictionary<Tkl.Jumbo.ServerAddress, TaskServerInfo> taskServers, JobInfo job, DfsClient dfsClient)
         {
             /* For each task taking input from the DFS, see if there is a server that has the 
              * input block the task needs and free slots.
@@ -24,22 +24,24 @@ namespace JobServerApplication.Scheduling
              * schedule some tasks that are not data-local.
              * */
             IEnumerable<TaskInfo> inputTasks = job.GetDfsInputTasks();
+            List<TaskServerInfo> newServers = new List<TaskServerInfo>();
 
             int capacity = (from server in taskServers.Values
                             select server.AvailableTasks).Sum();
 
             Guid[] inputBlocks = job.GetInputBlocks(dfsClient);
 
-            capacity = ScheduleTaskList(job, taskServers, inputTasks, capacity, inputBlocks, true, dfsClient);
+            capacity = ScheduleTaskList(job, taskServers, inputTasks, capacity, inputBlocks, true, dfsClient, newServers);
             if( capacity > 0 && job.UnscheduledTasks > 0 )
             {
-                ScheduleTaskList(job, taskServers, job.Tasks.Values, capacity, inputBlocks, false, dfsClient);
+                ScheduleTaskList(job, taskServers, job.Tasks.Values, capacity, inputBlocks, false, dfsClient, newServers);
             }
+            return newServers;
         }
 
         #endregion
 
-        private static int ScheduleTaskList(JobInfo job, Dictionary<ServerAddress, TaskServerInfo> servers, IEnumerable<TaskInfo> tasks, int capacity, Guid[] inputBlocks, bool localServers, DfsClient dfsClient)
+        private static int ScheduleTaskList(JobInfo job, Dictionary<ServerAddress, TaskServerInfo> servers, IEnumerable<TaskInfo> tasks, int capacity, Guid[] inputBlocks, bool localServers, DfsClient dfsClient, List<TaskServerInfo> newServers)
         {
             foreach( TaskInfo task in tasks )
             {
@@ -64,6 +66,8 @@ namespace JobServerApplication.Scheduling
                     {
                         TaskServerInfo server = availableServers[0];
                         server.AssignTask(job, task);
+                        if( !newServers.Contains(server) )
+                            newServers.Add(server);
                         _log.InfoFormat("Task {0} has been assigned to server {1}{2}.", task.GlobalID, server.Address, task.Task.DfsInput == null ? "" : (localServers ? " (data local)" : " (NOT data local)"));
                         --capacity;
                         if( capacity == 0 )

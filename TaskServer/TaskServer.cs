@@ -15,7 +15,7 @@ namespace TaskServerApplication
     {
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(TaskServer));
 
-        private const int _heartbeatInterval = 2000;
+        private const int _heartbeatInterval = 3000;
 
         private IJobServerHeartbeatProtocol _jobServer;
         private volatile bool _running;
@@ -84,7 +84,7 @@ namespace TaskServerApplication
         public void NotifyTaskStatusChanged(Guid jobID, string taskID, TaskAttemptStatus newStatus)
         {
             AddDataForNextHeartbeat(new TaskStatusChangedJetHeartbeatData(jobID, taskID, newStatus));
-            SendHeartbeat();
+            SendHeartbeat(false);
         }
 
         public string GetJobDirectory(Guid jobID)
@@ -230,8 +230,7 @@ namespace TaskServerApplication
 
             while( _running )
             {
-                SendHeartbeat();
-                Thread.Sleep(_heartbeatInterval);
+                SendHeartbeat(true);
             }
         }
 
@@ -246,7 +245,7 @@ namespace TaskServerApplication
             _log.InfoFormat("-----Task server is shutting down-----");
         }
 
-        private void SendHeartbeat()
+        private void SendHeartbeat(bool waitForTasks)
         {
             JetHeartbeatData[] data = null;
             lock( _pendingHeartbeatData )
@@ -257,7 +256,7 @@ namespace TaskServerApplication
                     _pendingHeartbeatData.Clear();
                 }
             }
-            JetHeartbeatResponse[] responses = _jobServer.Heartbeat(LocalAddress, data);
+            JetHeartbeatResponse[] responses = _jobServer.Heartbeat(LocalAddress, data, waitForTasks ? _heartbeatInterval : 0);
             if( responses != null )
                 ProcessResponses(responses);
         }

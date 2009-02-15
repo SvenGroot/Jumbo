@@ -14,8 +14,9 @@ namespace JobServerApplication.Scheduling
 
         #region IScheduler Members
 
-        public void ScheduleTasks(Dictionary<ServerAddress, TaskServerInfo> taskServers, JobInfo job, DfsClient dfsClient)
+        public IEnumerable<TaskServerInfo> ScheduleTasks(Dictionary<ServerAddress, TaskServerInfo> taskServers, JobInfo job, DfsClient dfsClient)
         {
+            List<TaskServerInfo> newServers = new List<TaskServerInfo>();
             int taskIndex = 0;
             bool outOfSlots = false;
             while( !outOfSlots && taskIndex < job.Tasks.Count )
@@ -32,6 +33,8 @@ namespace JobServerApplication.Scheduling
                     {
                         TaskInfo task = job.Tasks.Values[taskIndex];
                         taskServer.AssignTask(job, task);
+                        if( !newServers.Contains(taskServer) )
+                            newServers.Add(taskServer);
                         _log.InfoFormat("Task {0} has been assigned to server {1}.", task.GlobalID, taskServer.Address);
                         outOfSlots = false;
                         ++taskIndex;
@@ -40,6 +43,7 @@ namespace JobServerApplication.Scheduling
             }
             if( outOfSlots )
                 _log.InfoFormat("Job {{{0}}}: not all task could be immediately scheduled, there are {1} tasks left.", job.Job.JobID, job.UnscheduledTasks);
+            return newServers;
         }
 
         #endregion

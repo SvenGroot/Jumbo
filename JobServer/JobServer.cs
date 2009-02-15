@@ -243,7 +243,7 @@ namespace JobServerApplication
 
         #region IJobServerHeartbeatProtocol Members
 
-        public JetHeartbeatResponse[] Heartbeat(Tkl.Jumbo.ServerAddress address, JetHeartbeatData[] data)
+        public JetHeartbeatResponse[] Heartbeat(Tkl.Jumbo.ServerAddress address, JetHeartbeatData[] data, int timeout)
         {
             if( address == null )
                 throw new ArgumentNullException("address");
@@ -281,6 +281,13 @@ namespace JobServerApplication
                             responses.Add(response);
                         }
                     }
+                }
+
+                if( timeout != 0 && responses == null && server.AssignedTasks.Count == 0 && server.AssignedNonInputTasks.Count == 0 )
+                {
+                    Monitor.Exit(_taskServers); // Exit the lock while waiting.
+                    server.TasksAssignedEvent.WaitOne(timeout, false);
+                    Monitor.Enter(_taskServers);
                 }
 
                 if( server.AssignedTasks.Count > 0 || server.AssignedNonInputTasks.Count > 0 )
@@ -462,7 +469,9 @@ namespace JobServerApplication
         {
             lock( _taskServers )
             {
-                _scheduler.ScheduleTasks(_taskServers, job, _dfsClient);
+                IEnumerable<TaskServerInfo> newServers = _scheduler.ScheduleTasks(_taskServers, job, _dfsClient);
+                foreach( TaskServerInfo server in newServers )
+                    server.TasksAssignedEvent.Set();
             }
         }
 

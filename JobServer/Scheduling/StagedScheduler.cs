@@ -15,30 +15,32 @@ namespace JobServerApplication.Scheduling
 
         #region IScheduler Members
 
-        public void ScheduleTasks(Dictionary<Tkl.Jumbo.ServerAddress, TaskServerInfo> taskServers, JobInfo job, Tkl.Jumbo.Dfs.DfsClient dfsClient)
+        public IEnumerable<TaskServerInfo> ScheduleTasks(Dictionary<Tkl.Jumbo.ServerAddress, TaskServerInfo> taskServers, JobInfo job, Tkl.Jumbo.Dfs.DfsClient dfsClient)
         {
             IEnumerable<TaskInfo> inputTasks = job.GetDfsInputTasks();
+            List<TaskServerInfo> newServers = new List<TaskServerInfo>();
 
             int capacity = (from server in taskServers.Values
                             select server.AvailableTasks).Sum();
 
             Guid[] inputBlocks = job.GetInputBlocks(dfsClient);
 
-            capacity = ScheduleInputTaskList(job, taskServers, inputTasks, capacity, inputBlocks, true, dfsClient);
+            capacity = ScheduleInputTaskList(job, taskServers, inputTasks, capacity, inputBlocks, true, dfsClient, newServers);
             if( capacity > 0 && job.UnscheduledTasks > 0 )
             {
-                ScheduleInputTaskList(job, taskServers, inputTasks, capacity, inputBlocks, false, dfsClient);
+                ScheduleInputTaskList(job, taskServers, inputTasks, capacity, inputBlocks, false, dfsClient, newServers);
             }
 
             if( job.UnscheduledTasks > 0 )
             {
-                ScheduleNonInputTasks(taskServers, job, job.GetNonInputTasks().ToList(), dfsClient);
+                ScheduleNonInputTasks(taskServers, job, job.GetNonInputTasks().ToList(), dfsClient, newServers);
             }
+            return newServers;
         }
 
         #endregion
 
-        private static int ScheduleInputTaskList(JobInfo job, Dictionary<ServerAddress, TaskServerInfo> servers, IEnumerable<TaskInfo> tasks, int capacity, Guid[] inputBlocks, bool localServers, DfsClient dfsClient)
+        private static int ScheduleInputTaskList(JobInfo job, Dictionary<ServerAddress, TaskServerInfo> servers, IEnumerable<TaskInfo> tasks, int capacity, Guid[] inputBlocks, bool localServers, DfsClient dfsClient, List<TaskServerInfo> newServers)
         {
             foreach( TaskInfo task in tasks )
             {
@@ -63,6 +65,8 @@ namespace JobServerApplication.Scheduling
                     {
                         TaskServerInfo server = availableServers[0];
                         server.AssignTask(job, task);
+                        if( !newServers.Contains(server) )
+                            newServers.Add(server);
                         if( !localServers )
                             ++job.NonDataLocal;
                         _log.InfoFormat("Task {0} has been assigned to server {1}{2}.", task.GlobalID, server.Address, task.Task.DfsInput == null ? "" : (localServers ? " (data local)" : " (NOT data local)"));
@@ -83,7 +87,7 @@ namespace JobServerApplication.Scheduling
                     select server).First();
         }
 
-        public void ScheduleNonInputTasks(Dictionary<ServerAddress, TaskServerInfo> taskServers, JobInfo job, IList<TaskInfo> tasks, DfsClient dfsClient)
+        public void ScheduleNonInputTasks(Dictionary<ServerAddress, TaskServerInfo> taskServers, JobInfo job, IList<TaskInfo> tasks, DfsClient dfsClient, List<TaskServerInfo> newServers)
         {
             int taskIndex = 0;
             bool outOfSlots = false;
@@ -103,6 +107,8 @@ namespace JobServerApplication.Scheduling
                 {
                     TaskInfo task = tasks[taskIndex];
                     taskServer.AssignTask(job, task, false);
+                    if( !newServers.Contains(taskServer) )
+                        newServers.Add(taskServer);
                     _log.InfoFormat("Task {0} has been assigned to server {1}.", task.GlobalID, taskServer.Address);
                     outOfSlots = false;
                     ++taskIndex;

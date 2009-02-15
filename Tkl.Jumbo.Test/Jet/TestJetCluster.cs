@@ -50,6 +50,7 @@ namespace Tkl.Jumbo.Test.Jet
             _taskServerThread.Name = "TaskServer";
             _taskServerThread.Start();
 
+            Thread.Sleep(1000);
             Utilities.TraceLineAndFlush("Jet cluster started.");
         }
 

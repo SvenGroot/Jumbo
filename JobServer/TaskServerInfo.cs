@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using Tkl.Jumbo;
 using Tkl.Jumbo.Jet;
+using System.Threading;
 
 namespace JobServerApplication
 {
@@ -11,6 +12,7 @@ namespace JobServerApplication
     {
         private readonly List<TaskInfo> _assignedTasks = new List<TaskInfo>();
         private readonly List<TaskInfo> _assignedNonInputTasks = new List<TaskInfo>();
+        private readonly AutoResetEvent _tasksAssignedEvent = new AutoResetEvent(false);
 
         public TaskServerInfo(ServerAddress address)
         {
@@ -24,6 +26,14 @@ namespace JobServerApplication
         public int MaxNonInputTasks { get; set; }
         public DateTime LastContactUtc { get; set; }
         public int FileServerPort { get; set; }
+
+        public AutoResetEvent TasksAssignedEvent 
+        {
+            get
+            {
+                return _tasksAssignedEvent;
+            }
+        }
 
         /// <summary>
         /// Not safe to call without lock.

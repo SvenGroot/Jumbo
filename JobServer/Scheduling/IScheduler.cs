@@ -9,6 +9,6 @@ namespace JobServerApplication.Scheduling
 {
     interface IScheduler
     {
-        void ScheduleTasks(Dictionary<ServerAddress, TaskServerInfo> taskServers, JobInfo job, DfsClient dfsClient);
+        IEnumerable<TaskServerInfo> ScheduleTasks(Dictionary<ServerAddress, TaskServerInfo> taskServers, JobInfo job, DfsClient dfsClient);
     }
 }
