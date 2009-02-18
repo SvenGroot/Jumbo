@@ -82,6 +82,11 @@ namespace NameServerApplication
             return NameServer.Instance.GetDataServerBlockCount(dataServer, blocks);
         }
 
+        public Guid[] GetDataServerBlocks(ServerAddress dataServer)
+        {
+            return NameServer.Instance.GetDataServerBlocks(dataServer);
+        }
+
         public string GetLogFileContents(int maxSize)
         {
             return NameServer.Instance.GetLogFileContents(maxSize);

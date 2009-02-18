@@ -110,6 +110,13 @@ namespace Tkl.Jumbo.Dfs
         int GetDataServerBlockCount(ServerAddress dataServer, Guid[] blocks);
 
         /// <summary>
+        /// Gets the list of blocks that a particular data server has.
+        /// </summary>
+        /// <param name="dataServer">The data server whose blocks to return.</param>
+        /// <returns>The block IDs of all the blocks on that server.</returns>
+        Guid[] GetDataServerBlocks(ServerAddress dataServer);
+
+        /// <summary>
         /// Gets the contents of the diagnostic log file.
         /// </summary>
         /// <param name="maxSize">The maximum number of bytes to return.</param>

@@ -40,6 +40,7 @@
             <th scope="col">Blocks</th>
             <th scope="col">Disk space</th>
             <th scope="col">Log file</th>
+            <th scope="col">Block list</th>
         </tr>
     </table>
 </asp:Content>

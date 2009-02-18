@@ -332,7 +332,7 @@ namespace NameServerApplication
 
         public int GetDataServerBlockCount(ServerAddress dataServer, Guid[] blocks)
         {
-            _log.DebugFormat("GetDataServerBlockCount, dataServer = {{{0}}}", dataServer);
+            _log.DebugFormat("GetDataServerBlockCount, dataServer = {0}", dataServer);
             if( dataServer == null )
                 throw new ArgumentNullException("dataServer");
             if( blocks == null )
@@ -347,6 +347,19 @@ namespace NameServerApplication
                               select s).First();
                 }
                 return server.Blocks.Intersect(blocks).Count();
+            }
+        }
+
+        public Guid[] GetDataServerBlocks(ServerAddress dataServer)
+        {
+            _log.DebugFormat("GetDataServerBlocks, dataServer = {0}", dataServer);
+            if( dataServer == null )
+                throw new ArgumentNullException("dataServer");
+
+            lock( _dataServers )
+            {
+                DataServerInfo server = _dataServers[dataServer];
+                return server.Blocks.ToArray();
             }
         }
 
