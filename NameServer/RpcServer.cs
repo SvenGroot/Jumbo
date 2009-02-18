@@ -70,6 +70,7 @@ namespace NameServerApplication
         public bool SafeMode
         {
             get { return NameServer.Instance.SafeMode; }
+            set { NameServer.Instance.SafeMode = value; }
         }
 
         public int BlockSize
@@ -90,6 +91,11 @@ namespace NameServerApplication
         public string GetLogFileContents(int maxSize)
         {
             return NameServer.Instance.GetLogFileContents(maxSize);
+        }
+
+        public void RemoveDataServer(ServerAddress dataServer)
+        {
+            NameServer.Instance.RemoveDataServer(dataServer);
         }
 
         #endregion

@@ -57,6 +57,7 @@
     <Compile Include="Dfs\DataServerClientProtocolReadHeaderTests.cs" />
     <Compile Include="Dfs\DataServerClientProtocolWriteHeaderTests.cs" />
     <Compile Include="Dfs\DataServerConfigurationElementTests.cs" />
+    <Compile Include="Dfs\DataServerDeathTests.cs" />
     <Compile Include="Dfs\DataServerTests.cs" />
     <Compile Include="Dfs\DeleteBlocksHeartbeatResponseTests.cs" />
     <Compile Include="Dfs\DfsClientTests.cs" />

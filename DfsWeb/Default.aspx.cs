@@ -20,7 +20,8 @@ public partial class _Default : System.Web.UI.Page
         UnderReplicatedBlocksColumn.InnerText = metrics.UnderReplicatedBlockCount.ToString();
         PendingBlocksColumn.InnerText = metrics.PendingBlockCount.ToString();
         DataServersColumn.InnerText = metrics.DataServers.Length.ToString();
-        SafeModeColumn.InnerText = client.NameServer.SafeMode ? "ON" : "OFF";
+        bool safeMode = client.NameServer.SafeMode;
+        SafeModeColumn.InnerHtml = string.Format("<a href=\"setsafemode.aspx?safeMode={0}\">{1}</a>", (!safeMode).ToString(), safeMode ? "ON" : "OFF");
 
         foreach( DataServerMetrics server in metrics.DataServers )
         {

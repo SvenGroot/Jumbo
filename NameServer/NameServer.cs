@@ -11,6 +11,7 @@ using System.Runtime.Remoting.Channels.Tcp;
 using System.Runtime.Remoting;
 using System.Diagnostics;
 using Tkl.Jumbo;
+using System.Threading;
 
 namespace NameServerApplication
 {
@@ -30,6 +31,8 @@ namespace NameServerApplication
         private readonly Dictionary<Guid, BlockInfo> _blocks = new Dictionary<Guid, BlockInfo>();
         private readonly Dictionary<Guid, PendingBlock> _pendingBlocks = new Dictionary<Guid, PendingBlock>();
         private readonly Dictionary<Guid, BlockInfo> _underReplicatedBlocks = new Dictionary<Guid, BlockInfo>();
+        private readonly Thread _dataServerMonitorThread;
+        private readonly AutoResetEvent _dataServerMonitorEvent = new AutoResetEvent(false);
         private bool _safeMode = true;
         private System.Threading.ManualResetEvent _safeModeEvent = new System.Threading.ManualResetEvent(false);
 
@@ -53,6 +56,13 @@ namespace NameServerApplication
             _fileSystem = new FileSystem(this, replayLog);
             // TODO: Once leases are in place, we probably shouldn't clear the _pendingBlocks collection.
             _pendingBlocks.Clear();
+
+            _dataServerMonitorThread = new Thread(DataServerMonitorThread)
+            {
+                Name = "DataServerMonitor",
+                IsBackground = true,
+            };
+            _dataServerMonitorThread.Start();
         }
 
         public static NameServer Instance { get; private set; }
@@ -81,6 +91,7 @@ namespace NameServerApplication
         public static void Shutdown()
         {
             RpcHelper.UnregisterServerChannels(Instance.Configuration.NameServer.Port);
+            Instance.ShutdownInternal();
             Instance = null;
             _log.Info("---- NameServer has shut down ----");
         }
@@ -195,6 +206,34 @@ namespace NameServerApplication
             {
                 _log.Debug("SafeMode called");
                 return _safeMode; 
+            }
+            [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.Synchronized)]
+            set
+            {
+                _log.DebugFormat("Setting SafeMode to {0}, current value {1}.", value, _safeMode);
+                if( _safeMode != value )
+                {
+                    if( !value )
+                    {
+                        lock( _dataServers )
+                        {
+                            if( _dataServers.Count < _replicationFactor )
+                                throw new InvalidOperationException("Safe mode cannot be disabled if there are insufficient data servers for full replication.");
+                        }
+                    }
+                    _safeMode = value;
+                    if( _safeMode )
+                    {
+                        _log.InfoFormat("Safemode is ON.");
+                        _safeModeEvent.Reset();
+                    }
+                    else
+                    {
+                        _log.InfoFormat("Safemode is OFF.");
+                        _safeModeEvent.Set();
+                        _dataServerMonitorEvent.Set(); // Force an immediate replication check if safe mode is disabled prematurely.
+                    }
+                }
             }
         }
 
@@ -390,6 +429,22 @@ namespace NameServerApplication
             return null;
         }
 
+        public void RemoveDataServer(ServerAddress dataServer)
+        {
+            if( dataServer == null )
+                throw new ArgumentNullException("dataServer");
+
+            DataServerInfo info;
+            lock( _dataServers )
+            {
+                if( _dataServers.TryGetValue(dataServer, out info) )
+                {
+                    RemoveDataServer(info);
+                    _dataServerMonitorEvent.Set();
+                }
+            }
+        }
+
         #endregion
 
         #region INameServerHeartbeatProtocol Members
@@ -447,12 +502,12 @@ namespace NameServerApplication
                     return new[] { new HeartbeatResponse(DataServerHeartbeatCommand.ReportBlocks) };
                 }
 
-                Guid[] blocksToDelete = dataServer.GetAndClearBlocksToDelete();
-                if( blocksToDelete.Length > 0 )
+                HeartbeatResponse[] pendingResponses = dataServer.GetAndClearPendingResponses();
+                if( pendingResponses.Length > 0 )
                 {
                     if( responseList == null )
                         responseList = new List<HeartbeatResponse>();
-                    responseList.Add(new DeleteBlocksHeartbeatResponse(blocksToDelete));
+                    responseList.AddRange(pendingResponses);
                 }
             }
 
@@ -461,6 +516,12 @@ namespace NameServerApplication
 
         #endregion
 
+        private void ShutdownInternal()
+        {
+            _dataServerMonitorThread.Abort();
+            _dataServerMonitorEvent.Set();
+            _dataServerMonitorThread.Join();
+        }
 
         private HeartbeatResponse ProcessHeartbeat(HeartbeatData data, DataServerInfo dataServer)
         {
@@ -514,11 +575,6 @@ namespace NameServerApplication
                         commitBlock = true;
                     }
                 }
-                else
-                {
-                    _log.WarnFormat("Block {0} is not pending.", newBlock.BlockID);
-                    response = new DeleteBlocksHeartbeatResponse(new Guid[] { newBlock.BlockID });
-                }
                 // We don't need to check in _blocks; they're not moved there until all data servers have been checked in.
             }
             if( commitBlock )
@@ -526,6 +582,31 @@ namespace NameServerApplication
                 // CommitBlock will also call back into NameServer to commit the block on this side.
                 _log.InfoFormat("Pending block {0} is now fully replicated and is being committed.", newBlock.BlockID);
                 _fileSystem.CommitBlock(pendingBlock.Block.File.FullPath, newBlock.BlockID, newBlock.Size);
+            }
+            else if( pendingBlock == null )
+            {
+                lock( _blocks )
+                {
+                    lock( _underReplicatedBlocks )
+                    {
+                        BlockInfo block;
+                        if( _underReplicatedBlocks.TryGetValue(newBlock.BlockID, out block) )
+                        {
+                            dataServer.Blocks.Add(newBlock.BlockID);
+                            block.DataServers.Add(dataServer);
+                            if( block.DataServers.Count >= _replicationFactor )
+                            {
+                                _log.InfoFormat("Block {0} is now fully replicated.", newBlock.BlockID);
+                                _underReplicatedBlocks.Remove(newBlock.BlockID);
+                            }
+                        }
+                        else
+                        {
+                            _log.WarnFormat("Block {0} is not pending and not underreplicated.", newBlock.BlockID);
+                            response = new DeleteBlocksHeartbeatResponse(new Guid[] { newBlock.BlockID });
+                        }
+                    }
+                }
             }
 
             return response;
@@ -617,46 +698,57 @@ namespace NameServerApplication
         {
             // TODO: Better selection policy.
             List<DataServerInfo> unassignedDataServers;
+            int serversNeeded;
             lock( _dataServers )
             {
+                // This function is also used to find new data servers to send an
                 unassignedDataServers = (from server in _dataServers.Values
-                                         where server.HasReportedBlocks
+                                         where server.HasReportedBlocks && !server.Blocks.Contains(blockId)
                                          select server).ToList();
+                serversNeeded = _replicationFactor - (from server in _dataServers.Values where server.Blocks.Contains(blockId) select server).Count();
             }
 
-            if( unassignedDataServers.Count < _replicationFactor )
+            if( unassignedDataServers.Count < serversNeeded )
                 throw new DfsException("Insufficient data servers to replicate new block.");
-            
-            int serversNeeded = _replicationFactor;
-            List<ServerAddress> dataServers = new List<ServerAddress>(_replicationFactor);
+
+            List<ServerAddress> dataServers = new List<ServerAddress>(serversNeeded);
 
             // Check if any data servers are running on the client's own system.
-            var clientHostName = ServerContext.Current.ClientHostName;
-            var localServers = (from server in unassignedDataServers
-                                where server.Address.HostName == clientHostName
-                                select server).ToArray();
-
-            if( localServers.Length > 0 )
+            if( ServerContext.Current != null )
             {
-                if( localServers.Length == 1 )
+                string clientHostName = ServerContext.Current.ClientHostName;
+                var localServers = (from server in unassignedDataServers
+                                    where server.Address.HostName == clientHostName
+                                    select server).ToArray();
+
+                if( localServers.Length > 0 )
                 {
-                    dataServers.Add(localServers[0].Address);
-                    unassignedDataServers.Remove(localServers[0]);
+                    if( localServers.Length == 1 )
+                    {
+                        dataServers.Add(localServers[0].Address);
+                        unassignedDataServers.Remove(localServers[0]);
+                    }
+                    else
+                    {
+                        lock( _random )
+                        {
+                            int server = _random.Next(localServers.Length);
+                            dataServers.Add(localServers[server].Address);
+                            unassignedDataServers.Remove(localServers[server]);
+                        }
+                    }
+                    --serversNeeded;
                 }
-                else
-                {
-                    int server = _random.Next(localServers.Length);
-                    dataServers.Add(localServers[server].Address);
-                    unassignedDataServers.Remove(localServers[server]);
-                }
-                --serversNeeded;
             }
 
-            for( int x = 0; x < serversNeeded; ++x )
+            lock( _random )
             {
-                int server = _random.Next(unassignedDataServers.Count);
-                dataServers.Add(unassignedDataServers[server].Address);
-                unassignedDataServers.RemoveAt(server);
+                for( int x = 0; x < serversNeeded; ++x )
+                {
+                    int server = _random.Next(unassignedDataServers.Count);
+                    dataServers.Add(unassignedDataServers[server].Address);
+                    unassignedDataServers.RemoveAt(server);
+                }
             }
 
             if( _log.IsInfoEnabled )
@@ -666,6 +758,28 @@ namespace NameServerApplication
             }
 
             return new BlockAssignment() { BlockID = blockId, DataServers = dataServers };
+        }
+
+        private void ReassignBlock(Guid blockId, BlockInfo block)
+        {
+            // TODO: This should take topology into account.
+            _log.InfoFormat("Reassigning new servers for underreplicated block {0}.", blockId);
+            if( block.DataServers.Count == 0 )
+            {
+                _log.WarnFormat("Cannot reassign block {0} because no data servers have this block.", blockId);
+            }
+            else
+            {
+                BlockAssignment assignment = AssignBlockToDataServers(blockId);
+
+                DataServerInfo source;
+                lock( _random )
+                {
+                    source = block.DataServers[_random.Next(block.DataServers.Count)];
+                }
+
+                source.AddResponseForNextHeartbeat(new ReplicateBlockHeartbeatResponse(assignment));
+            }
         }
 
         private static void ConfigureRemoting(DfsConfiguration config)
@@ -692,9 +806,7 @@ namespace NameServerApplication
             // TODO: After re-replication is implemented, we can disable safemode before having full replication.
             if( _safeMode && dataServerCount >= _replicationFactor && blockCount == 0 )
             {
-                _safeMode = false;
-                _safeModeEvent.Set();
-                _log.Info("Safe mode is disabled.");
+                SafeMode = false;
             }
         }
 
@@ -711,6 +823,8 @@ namespace NameServerApplication
             lock( _dataServers )
             {
                 _dataServers.Remove(info.Address);
+                if( _dataServers.Count < _replicationFactor )
+                    SafeMode = true;
             }
             lock( _blocks )
             {
@@ -738,6 +852,56 @@ namespace NameServerApplication
                                 _underReplicatedBlocks.Add(blockID, blockInfo);
                             }
                         }
+                    }
+                }
+            }
+        }
+
+        private void DataServerMonitorThread()
+        {
+            int timeout = Configuration.NameServer.DataServerTimeout * 1000;
+            // This function will periodically check for dead data servers and underreplicated blocks.
+            while( true )
+            {
+                if( !SafeMode )
+                {
+                    CheckDeadDataServers();
+
+                    CheckUnderReplicatedBlocks();
+                }
+                // The event can be used to force an immediate check, e.g. after forcibly removing a data server.
+                _dataServerMonitorEvent.WaitOne(timeout, false);
+            }
+        }
+
+        private void CheckUnderReplicatedBlocks()
+        {
+            lock( _blocks )
+            {
+                lock( _underReplicatedBlocks )
+                {
+                    if( _underReplicatedBlocks.Count > 0 )
+                    {
+                        foreach( var item in _underReplicatedBlocks )
+                        {
+                            ReassignBlock(item.Key, item.Value);
+                        }
+                    }
+                }
+            }
+        }
+
+        private void CheckDeadDataServers()
+        {
+            lock( _dataServers )
+            {
+                foreach( DataServerInfo server in _dataServers.Values )
+                {
+                    TimeSpan lastContact = DateTime.UtcNow - server.LastContactUtc;
+                    if( lastContact.TotalSeconds > Configuration.NameServer.DataServerTimeout )
+                    {
+                        _log.WarnFormat("Data server {0} has not reported in {1} seconds and is considered dead.", server.Address, lastContact.TotalSeconds);
+                        RemoveDataServer(server);
                     }
                 }
             }

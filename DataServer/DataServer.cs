@@ -7,6 +7,7 @@ using System.Threading;
 using System.Configuration;
 using System.IO;
 using Tkl.Jumbo;
+using System.Net.Sockets;
 
 namespace DataServerApplication
 {
@@ -28,6 +29,8 @@ namespace DataServerApplication
         private BlockServer _blockServer; // listens for TCP connections.
         private BlockServer _blockServerIPv4;
         private volatile bool _running;
+        private readonly Queue<ReplicateBlockHeartbeatResponse> _blocksToReplicate = new Queue<ReplicateBlockHeartbeatResponse>();
+        private readonly Thread _replicateBlocksThread;
 
         public DataServer()
             : this(DfsConfiguration.GetConfiguration())
@@ -47,6 +50,8 @@ namespace DataServerApplication
             _nameServer = DfsClient.CreateNameServerHeartbeatClient(config);
             _nameServerClient = DfsClient.CreateNameServerClient(config);
 
+            _replicateBlocksThread = new Thread(ReplicateBlocksThread) { Name = "ReplicateBlockThread", IsBackground = true };
+
             LoadBlocks();
         }
 
@@ -60,33 +65,54 @@ namespace DataServerApplication
             LocalAddress = new ServerAddress(System.Net.Dns.GetHostName(), _port);
 
             _log.Info("Data server main loop starting.");
-            BlockSize = _nameServerClient.BlockSize;
-            if( System.Net.Sockets.Socket.OSSupportsIPv6 )
+
+            bool retry = true;
+            do
             {
-                _blockServer = new BlockServer(this, System.Net.IPAddress.IPv6Any, _port);
-                _blockServer.Start();
-                if( _config.DataServer.ListenIPv4AndIPv6 )
+                try
                 {
-                    _blockServerIPv4 = new BlockServer(this, System.Net.IPAddress.Any, _port);
-                    _blockServerIPv4.Start();
+                    BlockSize = _nameServerClient.BlockSize;
+                    retry = false;
                 }
-            }
-            else
-            {
-                _blockServer = new BlockServer(this, System.Net.IPAddress.Any, _port);
-                _blockServer.Start();
-            }
+                catch( SocketException ex )
+                {
+                    _log.Error(string.Format("An error occurred contacting the name server. Retrying in {0}.", _heartbeatInterval), ex);
+                    Thread.Sleep(_heartbeatInterval);
+                }
+            } while( _running && retry );
 
-            AddDataForNextHeartbeat(new InitialHeartbeatData());
-
-            while( _running )
+            if( _running )
             {
-                int start = Environment.TickCount;
-                SendHeartbeat();
-                int end = Environment.TickCount;
-                if( end - start > 500 )
-                    _log.WarnFormat("Long heartbeat time: {0}", end - start);
-                Thread.Sleep(_heartbeatInterval);
+
+                if( System.Net.Sockets.Socket.OSSupportsIPv6 )
+                {
+                    _blockServer = new BlockServer(this, System.Net.IPAddress.IPv6Any, _port);
+                    _blockServer.Start();
+                    if( _config.DataServer.ListenIPv4AndIPv6 )
+                    {
+                        _blockServerIPv4 = new BlockServer(this, System.Net.IPAddress.Any, _port);
+                        _blockServerIPv4.Start();
+                    }
+                }
+                else
+                {
+                    _blockServer = new BlockServer(this, System.Net.IPAddress.Any, _port);
+                    _blockServer.Start();
+                }
+
+                _replicateBlocksThread.Start();
+
+                AddDataForNextHeartbeat(new InitialHeartbeatData());
+
+                while( _running )
+                {
+                    int start = Environment.TickCount;
+                    SendHeartbeat();
+                    int end = Environment.TickCount;
+                    if( end - start > 500 )
+                        _log.WarnFormat("Long heartbeat time: {0}", end - start);
+                    Thread.Sleep(_heartbeatInterval);
+                }
             }
         }
 
@@ -103,6 +129,17 @@ namespace DataServerApplication
                 _blockServerIPv4 = null;
             }
             _running = false;
+            lock( _blocksToReplicate )
+            {
+                Monitor.Pulse(_blocksToReplicate);
+            }
+            try
+            {
+                _replicateBlocksThread.Join();
+            }
+            catch( ThreadStateException )
+            {
+            }
         }
 
         public FileStream AddNewBlock(Guid blockID)
@@ -180,8 +217,21 @@ namespace DataServerApplication
                     _pendingHeartbeatData.Clear();
                 }
             }
-            // TODO: Retry this if it fails.
-            HeartbeatResponse[] response = _nameServer.Heartbeat(LocalAddress, data);
+            bool retry = true;
+            HeartbeatResponse[] response = null;
+            do
+            {
+                try
+                {
+                    response = _nameServer.Heartbeat(LocalAddress, data);
+                    retry = false;
+                }
+                catch( SocketException ex )
+                {
+                    _log.Error(string.Format("An error occurred contacting the name server. Retrying in {0}.", _heartbeatInterval), ex);
+                    Thread.Sleep(_heartbeatInterval);
+                }
+            } while( _running && retry );
             if( response != null )
                 ProcessResponses(response);
         }
@@ -212,6 +262,14 @@ namespace DataServerApplication
                 StatusHeartbeatData statusData = new StatusHeartbeatData();
                 GetDiskUsage(statusData);
                 AddDataForNextHeartbeat(statusData);
+                break;
+            case DataServerHeartbeatCommand.ReplicateBlock:
+                _log.Info("Received ReplicateBlock command.");
+                lock( _blocksToReplicate )
+                {
+                    _blocksToReplicate.Enqueue((ReplicateBlockHeartbeatResponse)response);
+                    Monitor.Pulse(_blocksToReplicate);
+                }
                 break;
             }
         }
@@ -289,6 +347,53 @@ namespace DataServerApplication
         private string GetBlockFileName(Guid blockID)
         {
             return Path.Combine(_blockStorageDirectory, blockID.ToString());
+        }
+
+        private void ReplicateBlocksThread()
+        {
+            while( _running )
+            {
+                try
+                {
+                    ReplicateBlockHeartbeatResponse response;
+                    lock( _blocksToReplicate )
+                    {
+                        while( _running && _blocksToReplicate.Count == 0 )
+                            Monitor.Wait(_blocksToReplicate);
+                        if( !_running )
+                            return;
+                        response = _blocksToReplicate.Dequeue();
+                    }
+
+                    lock( _blocks )
+                    {
+                        if( !_blocks.Contains(response.BlockAssignment.BlockID) )
+                        {
+                            _log.WarnFormat("Received a command to replicate an unknown block with ID {0}.", response.BlockAssignment.BlockID);
+                            return;
+                        }
+                    }
+                    _log.InfoFormat("Replicating block {0} to {1} data servers; first is {2}.", response.BlockAssignment.BlockID, response.BlockAssignment.DataServers.Count, response.BlockAssignment.DataServers[0]);
+                    Packet packet = new Packet();
+                    using( BlockSender sender = new BlockSender(response.BlockAssignment) )
+                    using( FileStream file = System.IO.File.OpenRead(GetBlockFileName(response.BlockAssignment.BlockID)) )
+                    using( BinaryReader reader = new BinaryReader(file) )
+                    {
+                        do
+                        {
+                            packet.Read(reader, true, true);
+                            sender.AddPacket(packet);
+                        } while( !packet.IsLastPacket );
+                        sender.WaitUntilSendFinished();
+                        sender.ThrowIfErrorOccurred();
+                    }
+                    _log.InfoFormat("Finished replicating block {0}.", response.BlockAssignment.BlockID);
+                }
+                catch( Exception ex )
+                {
+                    _log.Error("Failed to replicate block.", ex);
+                }
+            }
         }
     }
 }

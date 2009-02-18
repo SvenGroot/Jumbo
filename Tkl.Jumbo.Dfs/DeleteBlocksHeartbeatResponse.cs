@@ -26,6 +26,6 @@ namespace Tkl.Jumbo.Dfs
         /// <summary>
         /// Gets a list with the identifiers of the blocks to delete.
         /// </summary>
-        public IEnumerable<Guid> Blocks { get; private set; }
+        public IList<Guid> Blocks { get; private set; }
     }
 }

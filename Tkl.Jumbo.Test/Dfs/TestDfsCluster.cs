@@ -76,6 +76,19 @@ namespace Tkl.Jumbo.Test.Dfs
                 NameServer.Shutdown();
             }
 
+            public ServerAddress ShutdownDataServer(int index)
+            {
+                lock( _dataServers )
+                {
+                    var info = _dataServers[index];
+                    ServerAddress address = info.Server.LocalAddress;
+                    info.Server.Abort();
+                    info.Thread.Join();
+                    _dataServers.RemoveAt(index);
+                    return address;
+                }
+            }
+
             private void RunDataServer(string path, int port)
             {
                 DfsConfiguration config = new DfsConfiguration();
@@ -135,6 +148,13 @@ namespace Tkl.Jumbo.Test.Dfs
             //AppDomain.Unload(_clusterDomain);
             //_clusterDomain = null;
         }
+
+        public ServerAddress ShutdownDataServer(int index)
+        {
+            return _clusterRunner.ShutdownDataServer(index);
+        }
+
+
 
         public void StartDataServers(int dataServers)
         {

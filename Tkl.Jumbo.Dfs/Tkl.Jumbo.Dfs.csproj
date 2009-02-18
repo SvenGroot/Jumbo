@@ -88,6 +88,7 @@
     <Compile Include="Packet.cs" />
     <Compile Include="PacketBuffer.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="ReplicateBlockHeartbeatResponse.cs" />
     <Compile Include="SafeModeException.cs" />
     <Compile Include="StatusHeartbeatData.cs" />
   </ItemGroup>

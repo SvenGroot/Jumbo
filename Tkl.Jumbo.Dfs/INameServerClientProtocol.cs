@@ -128,9 +128,25 @@ namespace Tkl.Jumbo.Dfs
         string GetLogFileContents(int maxSize);
 
         /// <summary>
-        /// Gets a value that indicates whether safe mode is on or off.
+        /// Removes the specified data server from the name server's list of known data servers.
         /// </summary>
-        bool SafeMode { get; }
+        /// <param name="dataServer">The address of the data server to remove.</param>
+        /// <remarks>
+        /// <para>
+        ///   If a data server has been shutdown, and is known not to restart soon, you can use this function to remove it
+        ///   immediately rather than waiting for the timeout to expire. The name server will remove all information regarding
+        ///   to the data server and force an immediate replication check.
+        /// </para>
+        /// </remarks>
+        void RemoveDataServer(ServerAddress dataServer);
+
+        /// <summary>
+        /// Gets or sets a value that indicates whether safe mode is on or off.
+        /// </summary>
+        /// <remarks>
+        /// Disabling safe mode before full replication is achieved will cause an immediate replication check.
+        /// </remarks>
+        bool SafeMode { get; set; }
 
         /// <summary>
         /// Gets the maximum size of a single block in a file.

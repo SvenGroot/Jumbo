@@ -78,5 +78,19 @@ namespace Tkl.Jumbo.Dfs
             get { return (string)this["editLogDirectory"]; }
             set { this["editLogDirectory"] = value; }
         }
+
+        /// <summary>
+        /// Gets or sets the minimum amount of time, in seconds, that a data server must be unresponsive before
+        /// it is considered dead.
+        /// </summary>
+        /// <remarks>
+        /// Depending on circumstances, it can be up to twice as long before a data server is actually considered dead.
+        /// </remarks>
+        [ConfigurationProperty("dataServerTimeout", DefaultValue = 300, IsRequired = false, IsKey = false)]
+        public int DataServerTimeout
+        {
+            get { return (int)this["dataServerTimeout"]; }
+            set { this["dataServerTimeout"] = value; }
+        }
     }
 }

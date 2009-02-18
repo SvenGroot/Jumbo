@@ -25,6 +25,10 @@ namespace Tkl.Jumbo.Dfs
         /// The most likely causes for this command would be if the data server reported blocks that the name server
         /// does not recognise, or if the some blocks are over-replicated.
         /// </remarks>
-        DeleteBlocks
+        DeleteBlocks,
+        /// <summary>
+        /// The name server wants the data server to replicate a block to a different data server.
+        /// </summary>
+        ReplicateBlock
     }
 }

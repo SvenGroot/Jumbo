@@ -9,7 +9,7 @@ namespace NameServerApplication
 {
     class DataServerInfo
     {
-        private readonly List<Guid> _blocksToDelete = new List<Guid>();
+        private readonly List<HeartbeatResponse> _pendingResponses = new List<HeartbeatResponse>();
         private readonly List<Guid> _blocks = new List<Guid>();
 
         public DataServerInfo(string hostName, int port)
@@ -34,18 +34,40 @@ namespace NameServerApplication
 
         public long DiskSpaceFree { get; set; }
 
-        public void AddBlockToDelete(Guid blockID)
+        public void AddResponseForNextHeartbeat(HeartbeatResponse response)
         {
-            lock( _blocksToDelete )
-                _blocksToDelete.Add(blockID);
+            if( response == null )
+                throw new ArgumentNullException("response");
+
+            lock( _pendingResponses )
+                _pendingResponses.Add(response);
         }
 
-        public Guid[] GetAndClearBlocksToDelete()
+        public void AddBlockToDelete(Guid blockID)
         {
-            lock( _blocksToDelete )
+            lock( _pendingResponses )
             {
-                Guid[] result = _blocksToDelete.ToArray();
-                _blocksToDelete.Clear();
+                DeleteBlocksHeartbeatResponse response = (from r in _pendingResponses
+                                                          let dr = r as DeleteBlocksHeartbeatResponse 
+                                                          where dr != null
+                                                          select dr).SingleOrDefault();
+                if( response == null )
+                {
+                    _pendingResponses.Add(new DeleteBlocksHeartbeatResponse(new[] { blockID }));
+                }
+                else
+                {
+                    response.Blocks.Add(blockID);
+                }
+            }
+        }
+
+        public HeartbeatResponse[] GetAndClearPendingResponses()
+        {
+            lock( _pendingResponses )
+            {
+                HeartbeatResponse[] result = _pendingResponses.ToArray();
+                _pendingResponses.Clear();
                 return result;
             }
         }
