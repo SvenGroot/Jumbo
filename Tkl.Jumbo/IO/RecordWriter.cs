@@ -14,11 +14,33 @@ namespace Tkl.Jumbo.IO
     public abstract class RecordWriter<T> : IDisposable
         where T : IWritable
     {
+        private int _recordsWritten;
+
+        /// <summary>
+        /// Gets the total number of records written by this record writer.
+        /// </summary>
+        public int RecordsWritten
+        {
+            get { return _recordsWritten; }
+        }
+
+        /// <summary>
+        /// Writes a record.
+        /// </summary>
+        /// <param name="record">The record to write.</param>
+        public void WriteRecord(T record)
+        {
+            WriteRecordInternal(record);
+            // Increment this after the write, so if the implementation of WriteRecordsInternal throws an exception the count
+            // is not incremented.
+            ++_recordsWritten;
+        }
+
         /// <summary>
         /// When implemented in a derived class, writes a record.
         /// </summary>
         /// <param name="record">The record to write.</param>
-        public abstract void WriteRecord(T record);
+        protected abstract void WriteRecordInternal(T record);
 
         /// <summary>
         /// Cleans up all resources associated with this <see cref="RecordWriter{T}"/>.

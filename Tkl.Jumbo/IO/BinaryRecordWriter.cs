@@ -30,7 +30,7 @@ namespace Tkl.Jumbo.IO
         /// Writes the specified record to the stream.
         /// </summary>
         /// <param name="record">The record to write.</param>
-        public override void WriteRecord(T record)
+        protected override void WriteRecordInternal(T record)
         {
             if( record == null )
                 throw new ArgumentNullException("record");

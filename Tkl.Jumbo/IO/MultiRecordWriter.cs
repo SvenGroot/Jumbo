@@ -35,10 +35,23 @@ namespace Tkl.Jumbo.IO
         }
 
         /// <summary>
+        /// Gets the record writers that this <see cref="MultiRecordWriter{T}"/> is writing to.
+        /// </summary>
+        /// <remarks>
+        /// <note>
+        ///   Writing directly to any of these writers breaks the partitioning.
+        /// </note>
+        /// </remarks>
+        public IEnumerable<RecordWriter<T>> Writers
+        {
+            get { return _writers; }
+        }
+
+        /// <summary>
         /// When implemented in a derived class, writes a record to one of the underlying record writers.
         /// </summary>
         /// <param name="record">The record to write to the stream.</param>
-        public override void WriteRecord(T record)
+        protected override void WriteRecordInternal(T record)
         {
             if( _writers == null )
                 throw new ObjectDisposedException("MultiRecordWriter");

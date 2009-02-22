@@ -13,6 +13,8 @@ namespace Tkl.Jumbo.IO
     public abstract class RecordReader<T> : IDisposable
         where T : IWritable, new()
     {
+        private int _recordsRead;
+
         /// <summary>
         /// Initializes a new instance of the <see cref="RecordReader{T}"/> class.
         /// </summary>
@@ -21,11 +23,32 @@ namespace Tkl.Jumbo.IO
         }
 
         /// <summary>
+        /// Returns the number of records that has been read by this record reader.
+        /// </summary>
+        public int RecordsRead
+        {
+            get { return _recordsRead; }
+        }
+
+        /// <summary>
         /// Reads a record.
         /// </summary>
         /// <param name="record">Receives the value of the record, or the default value of <typeparamref name="T"/> if it is beyond the end of the stream</param>
         /// <returns><see langword="true"/> if an object was successfully read from the stream; <see langword="false"/> if the end of the stream or stream fragment was reached.</returns>
-        public abstract bool ReadRecord(out T record);
+        public bool ReadRecord(out T record)
+        {
+            bool result = ReadRecordInternal(out record);
+            if( result )
+                ++_recordsRead;
+            return result;
+        }
+
+        /// <summary>
+        /// Reads a record.
+        /// </summary>
+        /// <param name="record">Receives the value of the record, or the default value of <typeparamref name="T"/> if it is beyond the end of the stream</param>
+        /// <returns><see langword="true"/> if an object was successfully read from the stream; <see langword="false"/> if the end of the stream or stream fragment was reached.</returns>
+        protected abstract bool ReadRecordInternal(out T record);
 
         /// <summary>
         /// Enumerates all records.

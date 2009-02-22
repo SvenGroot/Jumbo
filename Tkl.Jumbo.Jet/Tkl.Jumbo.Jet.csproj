@@ -88,6 +88,7 @@
     <Compile Include="TaskDfsInput.cs" />
     <Compile Include="TaskDfsOutput.cs" />
     <Compile Include="TaskExecutionInfo.cs" />
+    <Compile Include="TaskMetrics.cs" />
     <Compile Include="TaskServerConfigurationElement.cs" />
     <Compile Include="TaskServerHeartbeatCommand.cs" />
     <Compile Include="TaskServerMetrics.cs" />

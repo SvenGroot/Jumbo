@@ -53,6 +53,20 @@ namespace Tkl.Jumbo.Jet.Channels
             _outputTaskId = outputTaskId;
         }
 
+        /// <summary>
+        /// Gets the number of bytes read from the local disk.
+        /// </summary>
+        /// <remarks>
+        /// This property actually returns the size of all the local input files combined; this assumes that the user
+        /// of the channel actually reads all the records.
+        /// </remarks>
+        public long LocalBytesRead { get; private set; }
+
+        /// <summary>
+        /// Gets the number of bytes read from the network.
+        /// </summary>
+        public long NetworkBytesRead { get; private set; }
+
         #region IInputChannel Members
 
         /// <summary>
@@ -130,6 +144,7 @@ namespace Tkl.Jumbo.Jet.Channels
                 ITaskServerClientProtocol taskServer = JetClient.CreateTaskServerClient(task.TaskServer);
                 string taskOutputDirectory = taskServer.GetOutputFileDirectory(task.FullTaskId);
                 fileName = Path.Combine(taskOutputDirectory, FileOutputChannel.CreateChannelFileName(task.TaskId, _outputTaskId));
+                LocalBytesRead += new FileInfo(fileName).Length;
                 _log.InfoFormat("Using local file {0} as input.", fileName);
             }
             else
@@ -168,6 +183,7 @@ namespace Tkl.Jumbo.Jet.Channels
                         stream.CopySize(fileStream, size);
                     }
                     _log.InfoFormat("Download complete, file stored in {0}.", targetFile);
+                    NetworkBytesRead += size;
                     return targetFile;
                 }
                 else

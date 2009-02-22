@@ -47,7 +47,7 @@ namespace Tkl.Jumbo.IO
         /// </summary>
         /// <param name="record">Receives the value of the record, or the default value of <typeparamref name="T"/> if it is beyond the end of the stream</param>
         /// <returns><see langword="true"/> if an object was successfully read from the stream; <see langword="false"/> if the end of the stream or stream fragment was reached.</returns>
-        public override bool ReadRecord(out T record)
+        protected override bool ReadRecordInternal(out T record)
         {
             record = default(T);
             CheckDisposed();

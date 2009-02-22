@@ -162,6 +162,9 @@ namespace TaskHost
                 _log.Info("Running task.");
                 task.Run(input, output);
                 _log.Info("Task finished execution.");
+
+                TaskMetrics metrics = CalculateMetrics<TInput, TOutput>(taskConfig, inputChannel, outputChannel, inputStream, input, outputStream, output);
+                _log.Info(metrics);
             }
 
             if( taskConfig.DfsOutput != null )
@@ -251,5 +254,51 @@ namespace TaskHost
             }
             throw new ArgumentException(string.Format("Type {0} does not implement interface {1}.", type, interfaceType));
         }
+
+        private static TaskMetrics CalculateMetrics<TInput, TOutput>(TaskConfiguration taskConfig, IInputChannel inputChannel, IOutputChannel outputChannel, DfsInputStream inputStream, RecordReader<TInput> input, DfsOutputStream outputStream, RecordWriter<TOutput> output)
+            where TInput : IWritable, new()
+            where TOutput : IWritable, new()
+        {
+            TaskMetrics metrics = new TaskMetrics();
+            if( input != null )
+                metrics.RecordsRead = input.RecordsRead;
+            if( output != null )
+                metrics.RecordsWritten += output.RecordsWritten;
+
+            if( taskConfig.DfsInput != null )
+                metrics.DfsBytesRead = inputStream.Position - (taskConfig.DfsInput.Block * _blockSize);
+            else
+            {
+                FileInputChannel fileInputChannel = inputChannel as FileInputChannel;
+                if( fileInputChannel != null )
+                {
+                    metrics.LocalBytesRead = fileInputChannel.LocalBytesRead;
+                    metrics.NetworkBytesRead = fileInputChannel.NetworkBytesRead;
+                }
+            }
+
+            if( taskConfig.DfsOutput != null )
+                metrics.DfsBytesWritten = outputStream.Length;
+            else if( outputChannel is FileOutputChannel )
+            {
+                StreamRecordWriter<TOutput> streamOutput = output as StreamRecordWriter<TOutput>;
+                if( streamOutput != null )
+                {
+                    metrics.LocalBytesWritten = streamOutput.Stream.Length;
+                }
+                else
+                {
+                    MultiRecordWriter<TOutput> multiOutput = output as MultiRecordWriter<TOutput>;
+                    if( multiOutput != null )
+                    {
+                        metrics.LocalBytesWritten = (from writer in multiOutput.Writers
+                                                     let streamWriter = writer as StreamRecordWriter<TOutput>
+                                                     where streamWriter != null
+                                                     select streamWriter.Stream.Length).Sum();
+                    }
+                }
+            }
+            return metrics;
+        }    
     }
 }
