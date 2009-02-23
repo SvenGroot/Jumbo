@@ -157,25 +157,28 @@ namespace JobServerApplication
             JobInfo job = GetRunningOrFinishedJob(jobId);
             // Because of the 64 handle limit in WaitHandle.WaitAny we prefer to wait on tasks that are
             // running or finished already.
-            var events = (from taskId in tasks
-                          let task = job.Tasks[taskId]
-                          where task.State == TaskState.Running || task.State == TaskState.Finished
-                          orderby task.State descending
-                          select task.TaskCompletedEvent).ToArray();
+            var waitTasks = (from taskId in tasks
+                             let task = job.Tasks[taskId]
+                             where task.State == TaskState.Running || task.State == TaskState.Finished
+                             orderby task.State descending
+                             select new { TaskId = taskId, TaskCompletedEvent = task.TaskCompletedEvent }).ToArray();
 
             // If none of the requested tasks are running yet, we wait on all tasks.
-            if( events.Length == 0 )
+            if( waitTasks.Length == 0 )
             {
-                events = (from taskId in tasks
-                          let task = job.Tasks[taskId]
-                          select task.TaskCompletedEvent).ToArray();
+                waitTasks = (from taskId in tasks
+                             let task = job.Tasks[taskId]
+                             select new { TaskId = taskId, TaskCompletedEvent = task.TaskCompletedEvent }).ToArray();
             }
 
             // Of course, even the number of running tasks can be more than 64
-            if( events.Length > 64 )
+            if( waitTasks.Length > 64 )
             {
-                events = events.Take(64).ToArray();
+                waitTasks = waitTasks.Take(64).ToArray();
             }
+
+            var events = (from task in waitTasks
+                          select task.TaskCompletedEvent).ToArray();
 
             int waitResult = WaitHandle.WaitAny(events, timeout, false);
 
@@ -183,7 +186,7 @@ namespace JobServerApplication
                 return null;
             else
             {
-                TaskInfo task = job.Tasks[tasks[waitResult]];
+                TaskInfo task = job.Tasks[waitTasks[waitResult].TaskId];
                 return new CompletedTask() { JobId = jobId, TaskId = task.Task.TaskID, TaskServer = task.Server.Address, TaskServerFileServerPort = task.Server.FileServerPort };
             }
         }
