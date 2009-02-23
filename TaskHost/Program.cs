@@ -266,7 +266,7 @@ namespace TaskHost
                 metrics.RecordsWritten += output.RecordsWritten;
 
             if( taskConfig.DfsInput != null )
-                metrics.DfsBytesRead = inputStream.Position - (taskConfig.DfsInput.Block * _blockSize);
+                metrics.DfsBytesRead = inputStream.Position - (taskConfig.DfsInput.Block * (long)_blockSize);
             else
             {
                 FileInputChannel fileInputChannel = inputChannel as FileInputChannel;
