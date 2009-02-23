@@ -154,8 +154,29 @@ namespace JobServerApplication
             if( tasks.Length == 0 )
                 throw new ArgumentException("You must specify at least one task.", "tasks");
 
-            WaitHandle[] events = new WaitHandle[tasks.Length];
             JobInfo job = GetRunningOrFinishedJob(jobId);
+            // Because of the 64 handle limit in WaitHandle.WaitAny we prefer to wait on tasks that are
+            // running or finished already.
+            var events = (from taskId in tasks
+                          let task = job.Tasks[taskId]
+                          where task.State == TaskState.Running || task.State == TaskState.Finished
+                          orderby task.State descending
+                          select task.TaskCompletedEvent).ToArray();
+
+            // If non of the requested tasks are running yet, we wait on all tasks.
+            if( events.Length == 0 )
+            {
+                events = (from taskId in tasks
+                          let task = job.Tasks[taskId]
+                          select task.TaskCompletedEvent).ToArray();
+            }
+
+            // Of course, even the number of running tasks can be more than 64
+            if( events.Length > 64 )
+            {
+                events = events.Take(64).ToArray();
+            }
+
             // Accessing Tasks outside the lock is safe; it won't change after the job starts running. TaskCompletedEvent also never changes.
             for( int x = 0; x < tasks.Length; ++x )
             {
