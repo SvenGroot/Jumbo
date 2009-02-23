@@ -163,7 +163,7 @@ namespace JobServerApplication
                           orderby task.State descending
                           select task.TaskCompletedEvent).ToArray();
 
-            // If non of the requested tasks are running yet, we wait on all tasks.
+            // If none of the requested tasks are running yet, we wait on all tasks.
             if( events.Length == 0 )
             {
                 events = (from taskId in tasks
@@ -175,12 +175,6 @@ namespace JobServerApplication
             if( events.Length > 64 )
             {
                 events = events.Take(64).ToArray();
-            }
-
-            // Accessing Tasks outside the lock is safe; it won't change after the job starts running. TaskCompletedEvent also never changes.
-            for( int x = 0; x < tasks.Length; ++x )
-            {
-                events[x] = job.Tasks[tasks[x]].TaskCompletedEvent;
             }
 
             int waitResult = WaitHandle.WaitAny(events, timeout, false);
