@@ -50,7 +50,9 @@ namespace JobServerApplication.Scheduling
                     if( localServers )
                     {
                         eligibleServers = (from address in dfsClient.NameServer.GetDataServersForBlock(task.GetBlockId(dfsClient))
-                                           select FindLocalTaskServer(servers, address));
+                                           let localServer = FindLocalTaskServer(servers, address)
+                                           where localServer != null
+                                           select localServer);
                     }
                     else
                     {
@@ -84,7 +86,7 @@ namespace JobServerApplication.Scheduling
             return (from server in servers.Values
                     where server.Address.HostName == dataServerAddress.HostName
                     orderby server.AvailableTasks descending
-                    select server).First();
+                    select server).FirstOrDefault();
         }
 
         public void ScheduleNonInputTasks(Dictionary<ServerAddress, TaskServerInfo> taskServers, JobInfo job, IList<TaskInfo> tasks, DfsClient dfsClient, List<TaskServerInfo> newServers)
