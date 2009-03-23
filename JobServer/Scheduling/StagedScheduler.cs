@@ -5,6 +5,7 @@ using System.Text;
 using Tkl.Jumbo;
 using Tkl.Jumbo.Dfs;
 using Tkl.Jumbo.Jet;
+using System.Diagnostics;
 
 namespace JobServerApplication.Scheduling
 {
@@ -73,10 +74,58 @@ namespace JobServerApplication.Scheduling
                             ++job.NonDataLocal;
                         _log.InfoFormat("Task {0} has been assigned to server {1}{2}.", task.GlobalID, server.Address, task.Task.DfsInput == null ? "" : (localServers ? " (data local)" : " (NOT data local)"));
                         --capacity;
-                        if( capacity == 0 )
+                    }
+                    else if( localServers )
+                    {
+                        // if we cannot find a server, we will attempt to find an already assigned task that can be scheduled elsewhere (but still local) so that
+                        // this task can be scheduled locally.
+                        capacity = AttemptTaskSwap(job, servers, capacity, inputBlocks, dfsClient, task, eligibleServers, newServers);
+                    }
+                    if( capacity == 0 )
+                        break;
+                }
+            }
+            return capacity;
+        }
+
+        private static int AttemptTaskSwap(JobInfo job, Dictionary<ServerAddress, TaskServerInfo> servers, int capacity, Guid[] inputBlocks, DfsClient dfsClient, TaskInfo task, IEnumerable<TaskServerInfo> eligibleServers, List<TaskServerInfo> newServers)
+        {
+            bool canSwitch = false;
+            // we need, from the servers that have this block, any task that could be scheduled locally elsewhere.
+            foreach( var server in eligibleServers )
+            {
+                foreach( var candidateTask in server.AssignedTasks )
+                {
+                    if( candidateTask.State == TaskState.Scheduled )
+                    {
+                        var alternatives = (from address in dfsClient.NameServer.GetDataServersForBlock(task.GetBlockId(dfsClient))
+                                            let s = FindLocalTaskServer(servers, address)
+                                            where s.AvailableTasks > 0
+                                            orderby dfsClient.NameServer.GetDataServerBlockCount(server.Address, inputBlocks) // TODO: Same here, cache this
+                                            select s);
+                        if( alternatives.Count() > 0 )
+                        {
+                            var alternative = alternatives.ElementAt(0);
+                            Debug.Assert(alternative != server);
+                            server.UnassignTask(job, candidateTask);
+                            alternative.AssignTask(job, candidateTask);
+                            if( !newServers.Contains(alternative) )
+                                newServers.Add(alternative);
+                            Debug.Assert(alternative.AvailableTasks >= 0);
+                            Debug.Assert(server.AvailableTasks > 0);
+                            server.AssignTask(job, task);
+                            if( !newServers.Contains(server) )
+                                newServers.Add(server);
+                            _log.InfoFormat("Switched task {0} from server {1} to server {2}.", candidateTask, server.Address, alternative.Address);
+                            _log.InfoFormat("Task {0} has been assigned to server {1} (data local).", task, server.Address);
+                            --capacity;
+                            canSwitch = true;
                             break;
+                        }
                     }
                 }
+                if( canSwitch )
+                    break;
             }
             return capacity;
         }
