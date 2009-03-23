@@ -98,10 +98,10 @@ namespace JobServerApplication.Scheduling
                 {
                     if( candidateTask.State == TaskState.Scheduled )
                     {
-                        var alternatives = (from address in dfsClient.NameServer.GetDataServersForBlock(task.GetBlockId(dfsClient))
+                        var alternatives = (from address in dfsClient.NameServer.GetDataServersForBlock(candidateTask.GetBlockId(dfsClient))
                                             let s = FindLocalTaskServer(servers, address)
                                             where s.AvailableTasks > 0
-                                            orderby dfsClient.NameServer.GetDataServerBlockCount(server.Address, inputBlocks) // TODO: Same here, cache this
+                                            orderby dfsClient.NameServer.GetDataServerBlockCount(s.Address, inputBlocks) // TODO: Same here, cache this
                                             select s);
                         if( alternatives.Count() > 0 )
                         {
