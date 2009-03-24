@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using Tkl.Jumbo.IO;
 using System.Threading;
+using System.Diagnostics;
 
 namespace Tkl.Jumbo.IO
 {
@@ -19,6 +20,7 @@ namespace Tkl.Jumbo.IO
         private readonly AutoResetEvent _readerAdded = new AutoResetEvent(false);
         private bool _disposed;
         private bool _hasFinalReader;
+        private readonly Stopwatch _timeWaitingStopwatch = new Stopwatch();
 
         /// <summary>
         /// Initializes a new instance of the <see cref="MultiRecordReader{T}"/> class with the specified
@@ -39,6 +41,17 @@ namespace Tkl.Jumbo.IO
                     _readers.Enqueue(item);
                 if( _readers.Count > 0 )
                     _currentReader = _readers.Dequeue();
+            }
+        }
+
+        /// <summary>
+        /// Gets the amount of time the record reader spent waiting for input to become available.
+        /// </summary>
+        public TimeSpan TimeWaiting
+        {
+            get
+            {
+                return _timeWaitingStopwatch.Elapsed;
             }
         }
 
@@ -84,7 +97,11 @@ namespace Tkl.Jumbo.IO
                         _currentReader = _readers.Dequeue();
                 }
                 if( _currentReader == null )
+                {
+                    _timeWaitingStopwatch.Start();
                     _readerAdded.WaitOne();
+                    _timeWaitingStopwatch.Stop();
+                }
             }
             return true;
         }

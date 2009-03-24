@@ -122,27 +122,35 @@ namespace TaskHost
 
             ChannelConfiguration inputChannelConfig = jobConfig.GetInputChannelForTask(taskConfig.TaskID);
             IInputChannel inputChannel = null;
-            if( inputChannelConfig != null )
+            try
             {
-                _log.DebugFormat("Creating input channel {0}.", inputChannelConfig.ChannelType);
-                inputChannel = inputChannelConfig.CreateInputChannel(jobID, jobDirectory, _jetClient.JobServer, taskConfig.TaskID);
-                inputChannel.WaitUntilReady(Timeout.Infinite);
-            }
+                if( inputChannelConfig != null )
+                {
+                    _log.DebugFormat("Creating input channel {0}.", inputChannelConfig.ChannelType);
+                    inputChannel = inputChannelConfig.CreateInputChannel(jobID, jobDirectory, _jetClient.JobServer, taskConfig.TaskID);
+                }
 
-            ChannelConfiguration outputChannelConfig = jobConfig.GetOutputChannelForTask(taskConfig.TaskID);
-            IOutputChannel outputChannel = null;
-            if( outputChannelConfig != null )
+                ChannelConfiguration outputChannelConfig = jobConfig.GetOutputChannelForTask(taskConfig.TaskID);
+                IOutputChannel outputChannel = null;
+                if( outputChannelConfig != null )
+                {
+                    _log.DebugFormat("Creating output channel {0}, partitioner {1}.", outputChannelConfig.ChannelType, outputChannelConfig.PartitionerType);
+                    outputChannel = outputChannelConfig.CreateOutputChannel(jobDirectory, taskConfig.TaskID);
+                }
+
+                _log.Debug("Creating generic method to run task.");
+                MethodInfo doRunTaskMethod = typeof(Program)
+                                                .GetMethod("DoRunTask", BindingFlags.NonPublic | BindingFlags.Static)
+                                                .MakeGenericMethod(inputType, outputType);
+                _log.Debug("Invoking generic method.");
+                doRunTaskMethod.Invoke(null, new object[] { taskType, taskConfig, inputChannel, outputChannel, dfsJobDirectory });
+            }
+            finally
             {
-                _log.DebugFormat("Creating output channel {0}, partitioner {1}.", outputChannelConfig.ChannelType, outputChannelConfig.PartitionerType);
-                outputChannel = outputChannelConfig.CreateOutputChannel(jobDirectory, taskConfig.TaskID);
+                IDisposable inputChannelDisposable = inputChannel as IDisposable;
+                if( inputChannelDisposable != null )
+                    inputChannelDisposable.Dispose();
             }
-
-            _log.Debug("Creating generic method to run task.");
-            MethodInfo doRunTaskMethod = typeof(Program)
-                                            .GetMethod("DoRunTask", BindingFlags.NonPublic | BindingFlags.Static)
-                                            .MakeGenericMethod(inputType, outputType);
-            _log.Debug("Invoking generic method.");
-            doRunTaskMethod.Invoke(null, new object[] { taskType, taskConfig, inputChannel, outputChannel, dfsJobDirectory });
         }
 
 #pragma warning disable 0169 // Disable private member not used warning in Mono C# compiler; it's used with reflection.
@@ -160,8 +168,17 @@ namespace TaskHost
                 _log.DebugFormat("Creating {0} task instance.", taskType.AssemblyQualifiedName);
                 ITask<TInput, TOutput> task = (ITask<TInput, TOutput>)Activator.CreateInstance(taskType);
                 _log.Info("Running task.");
+                Stopwatch taskStopwatch = new Stopwatch();
+                taskStopwatch.Start();
                 task.Run(input, output);
-                _log.Info("Task finished execution.");
+                taskStopwatch.Stop();
+                TimeSpan timeWaiting;
+                MultiRecordReader<TInput> multiReader = input as MultiRecordReader<TInput>;
+                if( multiReader != null )
+                    timeWaiting = multiReader.TimeWaiting;
+                else
+                    timeWaiting = TimeSpan.Zero;
+                _log.InfoFormat("Task finished execution, execution time: {0}s; time spent waiting for input: {1}s.", taskStopwatch.Elapsed.TotalSeconds, timeWaiting.TotalSeconds);
 
                 TaskMetrics metrics = CalculateMetrics<TInput, TOutput>(taskConfig, inputChannel, outputChannel, inputStream, input, outputStream, output);
                 _log.Info(metrics);

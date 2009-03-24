@@ -14,7 +14,7 @@ namespace Tkl.Jumbo.Jet.Channels
     /// <summary>
     /// Represents the reading end of a file channel.
     /// </summary>
-    public class FileInputChannel : IInputChannel
+    public class FileInputChannel : IInputChannel, IDisposable
     {
         private const int _pollingInterval = 10000;
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(FileInputChannel));
@@ -25,6 +25,9 @@ namespace Tkl.Jumbo.Jet.Channels
         private Thread _inputPollThread;
         private IJobServerClientProtocol _jobServer;
         private string _outputTaskId;
+        private bool _isReady;
+        private readonly ManualResetEvent _readyEvent = new ManualResetEvent(false);
+        private bool _disposed;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="FileInputChannel"/>.
@@ -70,25 +73,6 @@ namespace Tkl.Jumbo.Jet.Channels
         #region IInputChannel Members
 
         /// <summary>
-        /// Gets a value that indicates whether the input channel is ready to begin reading data.
-        /// </summary>
-        public bool IsReady
-        {
-            get { return true; }
-        }
-
-        /// <summary>
-        /// Waits until the input channel becomes ready.
-        /// </summary>
-        /// <param name="timeout">The maximum amount of time to wait, or <see cref="System.Threading.Timeout.Infinite"/> to wait
-        /// indefinitely.</param>
-        /// <returns><see langword="true"/> if the channel has become ready; otherwise, <see langword="false"/>.</returns>
-        public bool WaitUntilReady(int timeout)
-        {
-            return true;
-        }
-
-        /// <summary>
         /// Creates a <see cref="StreamRecordReader{T}"/> from which the channel can write its output.
         /// </summary>
         /// <typeparam name="T">The type of the records.</typeparam>
@@ -100,10 +84,38 @@ namespace Tkl.Jumbo.Jet.Channels
             _inputPollThread.Name = "FileInputChannelPolling";
             _inputPollThread.Start();
 
+            // Wait until the reader has at least one input.
+            _readyEvent.WaitOne();
             return reader;
         }
 
         #endregion
+
+        #region IDisposable Members
+
+        /// <summary>
+        /// Cleans up all the resources held by this class.
+        /// </summary>
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        #endregion
+
+        /// <summary>
+        /// Cleans up all the resources held by this class.
+        /// </summary>
+        /// <param name="disposing"><see langword="true"/> to clean up managed and unmanaged resources; <see langword="false" /> to clean up unmanaged resources only.</param>
+        protected virtual void Dispose(bool disposing)
+        {
+            if( !_disposed && disposing )
+            {
+                ((IDisposable)_readyEvent).Dispose();
+            }
+            _disposed = true;
+        }
 
         private void InputPollThread<T>(MultiRecordReader<T> reader)
             where T : IWritable, new()
@@ -154,6 +166,12 @@ namespace Tkl.Jumbo.Jet.Channels
             bool removed = tasksLeft.Remove(task.TaskId);
             Debug.Assert(removed);
             reader.AddReader(new BinaryRecordReader<T>(File.OpenRead(fileName)), tasksLeft.Count == 0);
+            if( !_isReady )
+            {
+                _log.Info("Input channel is now ready.");
+                _isReady = true;
+                _readyEvent.Set();
+            }
             if( tasksLeft.Count == 0 )
             {
                 _log.Info("All files downloaded.");
