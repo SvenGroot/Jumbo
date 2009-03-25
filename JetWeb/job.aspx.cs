@@ -9,6 +9,8 @@ using System.Web.UI.HtmlControls;
 
 public partial class job : System.Web.UI.Page
 {
+    private const string _datePattern = "yyyy'-'MM'-'dd' 'HH':'mm':'ss'.'fff'Z'";
+
     protected void Page_Load(object sender, EventArgs e)
     {
         Guid jobId = new Guid(Request.QueryString["id"]);
@@ -19,13 +21,13 @@ public partial class job : System.Web.UI.Page
 
         HtmlTableRow row = new HtmlTableRow();
         row.Cells.Add(new HtmlTableCell() { InnerText = job.JobId.ToString() });
-        row.Cells.Add(new HtmlTableCell() { InnerText = job.StartTime.ToString(System.Globalization.DateTimeFormatInfo.InvariantInfo.UniversalSortableDateTimePattern) });
+        row.Cells.Add(new HtmlTableCell() { InnerText = job.StartTime.ToString(_datePattern, System.Globalization.CultureInfo.InvariantCulture) });
         if( job.IsFinished )
         {
             _downloadLink.HRef = "jobinfo.ashx?id=" + jobId.ToString();
             _downloadLink.Visible = true;
 
-            row.Cells.Add(new HtmlTableCell() { InnerText = job.EndTime.ToString(System.Globalization.DateTimeFormatInfo.InvariantInfo.UniversalSortableDateTimePattern) });
+            row.Cells.Add(new HtmlTableCell() { InnerText = job.EndTime.ToString(_datePattern, System.Globalization.CultureInfo.InvariantCulture) });
             TimeSpan duration = job.EndTime - job.StartTime;
             row.Cells.Add(new HtmlTableCell() { InnerText = string.Format("{0} ({1}s)", duration, duration.TotalSeconds) });
         }
@@ -51,10 +53,10 @@ public partial class job : System.Web.UI.Page
             row.Cells.Add(new HtmlTableCell() { InnerText = task.Attempts.ToString() });
             if( task.State >= TaskState.Running && task.TaskServer != null )
             {
-                row.Cells.Add(new HtmlTableCell() { InnerText = task.StartTime.ToString(System.Globalization.DateTimeFormatInfo.InvariantInfo.UniversalSortableDateTimePattern) });
+                row.Cells.Add(new HtmlTableCell() { InnerText = task.StartTime.ToString(_datePattern, System.Globalization.CultureInfo.InvariantCulture) });
                 if( task.State == TaskState.Finished )
                 {
-                    row.Cells.Add(new HtmlTableCell() { InnerText = task.EndTime.ToString(System.Globalization.DateTimeFormatInfo.InvariantInfo.UniversalSortableDateTimePattern) });
+                    row.Cells.Add(new HtmlTableCell() { InnerText = task.EndTime.ToString(_datePattern, System.Globalization.CultureInfo.InvariantCulture) });
                     TimeSpan duration = task.EndTime - task.StartTime;
                     row.Cells.Add(new HtmlTableCell() { InnerText = string.Format("{0} ({1}s)", duration, duration.TotalSeconds) });
                 }

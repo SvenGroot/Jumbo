@@ -165,8 +165,8 @@ namespace JobServerApplication.Scheduling
                     ++taskIndex;
                 }
             }
-            if( outOfSlots )
-                _log.InfoFormat("Job {{{0}}}: not all non-input task could be immediately scheduled, there are {1} tasks left.", job.Job.JobID, job.UnscheduledTasks);
+            if( outOfSlots && taskIndex < tasks.Count )
+                _log.InfoFormat("Job {{{0}}}: not all non-input tasks could be immediately scheduled.", job.Job.JobID);
         }
 
     }

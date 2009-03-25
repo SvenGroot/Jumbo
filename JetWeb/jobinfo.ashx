@@ -10,6 +10,7 @@ using Tkl.Jumbo.Dfs;
 
 public class jobinfo : IHttpHandler
 {
+    private const string _datePattern = "yyyy'-'MM'-'dd' 'HH':'mm':'ss'.'fff'Z'";
 
     public void ProcessRequest(HttpContext context)
     {
@@ -34,8 +35,8 @@ public class jobinfo : IHttpHandler
                     writer.WriteAttributeString("id", jobId.ToString());
 
                     writer.WriteStartElement("JobInfo");
-                    writer.WriteAttributeString("startTime", job.StartTime.ToString(System.Globalization.DateTimeFormatInfo.InvariantInfo.UniversalSortableDateTimePattern));
-                    writer.WriteAttributeString("endTime", job.EndTime.ToString(System.Globalization.DateTimeFormatInfo.InvariantInfo.UniversalSortableDateTimePattern));
+                    writer.WriteAttributeString("startTime", job.StartTime.ToString(_datePattern, System.Globalization.CultureInfo.InvariantCulture));
+                    writer.WriteAttributeString("endTime", job.EndTime.ToString(_datePattern, System.Globalization.CultureInfo.InvariantCulture));
                     writer.WriteAttributeString("duration", (job.EndTime - job.StartTime).TotalSeconds.ToString(System.Globalization.CultureInfo.InvariantCulture));
                     writer.WriteAttributeString("tasks", job.TaskCount.ToString(System.Globalization.CultureInfo.InvariantCulture));
                     writer.WriteAttributeString("finishedTasks", job.FinishedTaskCount.ToString(System.Globalization.CultureInfo.InvariantCulture));
@@ -52,8 +53,8 @@ public class jobinfo : IHttpHandler
                         writer.WriteAttributeString("state", task.State.ToString(System.Globalization.CultureInfo.InvariantCulture));
                         writer.WriteAttributeString("server", task.TaskServer.ToString());
                         writer.WriteAttributeString("attempts", task.Attempts.ToString(System.Globalization.CultureInfo.InvariantCulture));
-                        writer.WriteAttributeString("startTime", task.StartTime.ToString(System.Globalization.DateTimeFormatInfo.InvariantInfo.UniversalSortableDateTimePattern));
-                        writer.WriteAttributeString("endTime", task.EndTime.ToString(System.Globalization.DateTimeFormatInfo.InvariantInfo.UniversalSortableDateTimePattern));
+                        writer.WriteAttributeString("startTime", task.StartTime.ToString(_datePattern, System.Globalization.CultureInfo.InvariantCulture));
+                        writer.WriteAttributeString("endTime", task.EndTime.ToString(_datePattern, System.Globalization.CultureInfo.InvariantCulture));
                         writer.WriteAttributeString("duration", (task.EndTime - task.StartTime).TotalSeconds.ToString(System.Globalization.CultureInfo.InvariantCulture));
                         writer.WriteEndElement(); // Task
                     }
