@@ -29,41 +29,7 @@ public class jobinfo : IHttpHandler
             {
                 using( XmlWriter writer = XmlWriter.Create(xmlStream) )
                 {
-                    writer.WriteStartDocument();
-
-                    writer.WriteStartElement("Job");
-                    writer.WriteAttributeString("id", jobId.ToString());
-
-                    writer.WriteStartElement("JobInfo");
-                    writer.WriteAttributeString("startTime", job.StartTime.ToString(_datePattern, System.Globalization.CultureInfo.InvariantCulture));
-                    writer.WriteAttributeString("endTime", job.EndTime.ToString(_datePattern, System.Globalization.CultureInfo.InvariantCulture));
-                    writer.WriteAttributeString("duration", (job.EndTime - job.StartTime).TotalSeconds.ToString(System.Globalization.CultureInfo.InvariantCulture));
-                    writer.WriteAttributeString("tasks", job.TaskCount.ToString(System.Globalization.CultureInfo.InvariantCulture));
-                    writer.WriteAttributeString("finishedTasks", job.FinishedTaskCount.ToString(System.Globalization.CultureInfo.InvariantCulture));
-                    writer.WriteAttributeString("errors", job.ErrorTaskCount.ToString(System.Globalization.CultureInfo.InvariantCulture));
-                    writer.WriteAttributeString("nonDataLocalTasks", job.NonDataLocalTaskCount.ToString(System.Globalization.CultureInfo.InvariantCulture));
-                    writer.WriteEndElement(); // JobInfo
-
-                    writer.WriteStartElement("Tasks");
-
-                    foreach( TaskStatus task in job.Tasks )
-                    {
-                        writer.WriteStartElement("Task");
-                        writer.WriteAttributeString("id", task.TaskID);
-                        writer.WriteAttributeString("state", task.State.ToString(System.Globalization.CultureInfo.InvariantCulture));
-                        writer.WriteAttributeString("server", task.TaskServer.ToString());
-                        writer.WriteAttributeString("attempts", task.Attempts.ToString(System.Globalization.CultureInfo.InvariantCulture));
-                        writer.WriteAttributeString("startTime", task.StartTime.ToString(_datePattern, System.Globalization.CultureInfo.InvariantCulture));
-                        writer.WriteAttributeString("endTime", task.EndTime.ToString(_datePattern, System.Globalization.CultureInfo.InvariantCulture));
-                        writer.WriteAttributeString("duration", (task.EndTime - task.StartTime).TotalSeconds.ToString(System.Globalization.CultureInfo.InvariantCulture));
-                        writer.WriteEndElement(); // Task
-                    }
-
-                    writer.WriteEndElement(); // Tasks
-
-                    writer.WriteEndElement(); // Job
-
-                    writer.WriteEndDocument();
+                    job.ToXml().Save(writer);
                 }
                 xmlStream.WriteTo(stream);
             }

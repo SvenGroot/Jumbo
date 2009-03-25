@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Xml.Linq;
 
 namespace Tkl.Jumbo.Jet
 {
@@ -43,5 +44,66 @@ namespace Tkl.Jumbo.Jet
         /// Gets or sets the UTC end time of the task.
         /// </summary>
         public DateTime EndTime { get; set; }
+
+        /// <summary>
+        /// Gets the duration of the task.
+        /// </summary>
+        public TimeSpan Duration
+        {
+            get
+            {
+                return EndTime - StartTime;
+            }
+        }
+
+        /// <summary>
+        /// Gets or sets the instance ID of the task host that executed the task.
+        /// </summary>
+        /// <remarks>
+        /// This value can be used to track the precise execution sequence of tasks on a particular task server.
+        /// </remarks>
+        public int ExecutionInstanceId { get; set; }
+
+        /// <summary>
+        /// Gets an XML element containing the task status.
+        /// </summary>
+        /// <returns>An <see cref="XElement"/> containing the task status.</returns>
+        public XElement ToXml()
+        {
+            return new XElement("Task",
+                new XAttribute("id", TaskID),
+                new XAttribute("state", State.ToString()),
+                new XAttribute("server", TaskServer.ToString()),
+                new XAttribute("attempts", Attempts.ToString(System.Globalization.CultureInfo.InvariantCulture)),
+                new XAttribute("startTime", StartTime.ToString(JobStatus.DatePattern, System.Globalization.CultureInfo.InvariantCulture)),
+                new XAttribute("endTime", EndTime.ToString(JobStatus.DatePattern, System.Globalization.CultureInfo.InvariantCulture)),
+                new XAttribute("duration", Duration.TotalSeconds.ToString(System.Globalization.CultureInfo.InvariantCulture)),
+                new XAttribute("executionInstance", ExecutionInstanceId.ToString(System.Globalization.CultureInfo.InvariantCulture)));
+        }
+
+        /// <summary>
+        /// Creates a <see cref="TaskStatus"/> instance from an XML element.
+        /// </summary>
+        /// <param name="task">The XML element containing the task status.</param>
+        /// <returns>A new instance of the <see cref="TaskStatus"/> class with the information from the XML document.</returns>
+        public static TaskStatus FromXml(XElement task)
+        {
+            if( task == null )
+                throw new ArgumentNullException("task");
+
+            if( task.Name != "Task" )
+                throw new ArgumentException("Invalid task element.", "task");
+
+            return new TaskStatus()
+            {
+                TaskID = task.Attribute("id").Value,
+                State = (TaskState)Enum.Parse(typeof(TaskState), task.Attribute("state").Value),
+                TaskServer = new ServerAddress(task.Attribute("server").Value),
+                Attempts = (int)task.Attribute("attempts"),
+                StartTime = DateTime.ParseExact(task.Attribute("startTime").Value, JobStatus.DatePattern, System.Globalization.CultureInfo.InvariantCulture),
+                EndTime = DateTime.ParseExact(task.Attribute("endTime").Value, JobStatus.DatePattern, System.Globalization.CultureInfo.InvariantCulture),
+                ExecutionInstanceId = (int)task.Attribute("executionInstance")
+            };
+        }
     }
 }

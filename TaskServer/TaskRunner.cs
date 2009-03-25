@@ -183,7 +183,7 @@ namespace TaskServerApplication
             _dfsClient = new DfsClient(taskServer.DfsConfiguration);
 
             _taskTerminatedHandler = new EventHandler(RunningTask_TaskTerminated);
-            _processes = new TaskHostProcess[taskServer.Configuration.TaskServer.MaxTasks * 2];
+            _processes = new TaskHostProcess[taskServer.Configuration.TaskServer.MaxTasks + taskServer.Configuration.TaskServer.MaxNonInputTasks];
             for( int x = 0; x < _processes.Length; ++x )
             {
                 _processes[x] = new TaskHostProcess(this, x);
@@ -228,7 +228,7 @@ namespace TaskServerApplication
                 {
                     _log.InfoFormat("Task {0} has completed successfully.", task.FullTaskId);
                     task.State = TaskAttemptStatus.Completed;
-                    TaskServer.NotifyTaskStatusChanged(task.TaskInfo.JobId, task.TaskInfo.TaskId, task.State);
+                    TaskServer.NotifyTaskStatusChanged(task.TaskInfo.JobId, task.TaskInfo.TaskId, task.State, task.Process.InstanceId);
                 }
                 else
                     _log.WarnFormat("Task {0} was reported as completed but was not running.", task.FullTaskId);
@@ -312,7 +312,7 @@ namespace TaskServerApplication
             {
                 if( _tasks.Count > 0 )
                     taskResponse = _tasks.Dequeue();
-                if( _tasks.Count == 0 )
+                else
                     _taskAddedEvent.Reset();
             }
             if( taskResponse != null )
@@ -352,7 +352,10 @@ namespace TaskServerApplication
                 runningTask.State = TaskAttemptStatus.Running;
                 runningTask.TaskTerminated += _taskTerminatedHandler;
                 _runningTasks.Add(runningTask.FullTaskId, runningTask);
+                TaskServer.NotifyTaskStatusChanged(task.Job.JobID, task.TaskID, runningTask.State, runningTask.Process.InstanceId);
             }
+
+
             return taskInfo;
         }
 
@@ -369,7 +372,7 @@ namespace TaskServerApplication
                         task.State = TaskAttemptStatus.Error;
                         _runningTasks.Remove(task.FullTaskId);
                         task.TaskTerminated -= _taskTerminatedHandler;
-                        TaskServer.NotifyTaskStatusChanged(task.TaskInfo.JobId, task.TaskInfo.TaskId, task.State);
+                        TaskServer.NotifyTaskStatusChanged(task.TaskInfo.JobId, task.TaskInfo.TaskId, task.State, task.Process.InstanceId);
                     }
                     _log.InfoFormat("Task {0} has finished, state = {1}.", task.FullTaskId, task.State);
                 }

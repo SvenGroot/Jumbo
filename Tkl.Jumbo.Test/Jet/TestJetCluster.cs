@@ -39,6 +39,7 @@ namespace Tkl.Jumbo.Test.Jet
             jetConfig.TaskServer.Port = TaskServerPort;
             jetConfig.TaskServer.TaskDirectory = Path.Combine(_path, "TaskServer");
             jetConfig.TaskServer.MaxTasks = maxTasks;
+            jetConfig.TaskServer.MaxNonInputTasks = maxTasks;
             if( Environment.OSVersion.Platform == PlatformID.Unix )
                 jetConfig.TaskServer.ListenIPv4AndIPv6 = false;
             DfsConfiguration dfsConfig = Dfs.TestDfsCluster.CreateClientConfig();

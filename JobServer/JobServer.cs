@@ -402,7 +402,7 @@ namespace JobServerApplication
 
         private void ProcessTaskStatusChangedHeartbeat(TaskServerInfo server, TaskStatusChangedJetHeartbeatData data)
         {
-            if( data.Status > TaskAttemptStatus.Running )
+            if( data.Status >= TaskAttemptStatus.Running )
             {
                 JobInfo job = null;
                 bool jobFinished = false;
@@ -414,60 +414,66 @@ namespace JobServerApplication
                         return;
                     }
                     TaskInfo task = job.Tasks[data.TaskID];
-                    server.AssignedTasks.Remove(task);
-                    // We don't set task.Server to null because output tasks can still query that information!
-                    switch( data.Status )
-                    {
-                    case TaskAttemptStatus.Completed:
-                        task.EndTimeUtc = DateTime.UtcNow;
-                        task.State = TaskState.Finished;
-                        task.TaskCompletedEvent.Set();
-                        _log.InfoFormat("Task {0} completed successfully.", Job.CreateFullTaskID(data.JobID, data.TaskID));
-                        ++job.FinishedTasks;
-                        break;
-                    case TaskAttemptStatus.Error:
-                        task.State = TaskState.Error;
-                        _log.WarnFormat("Task {0} encountered an error.", Job.CreateFullTaskID(data.JobID, data.TaskID));
-                        if( task.Attempts < Configuration.JobServer.MaxTaskAttempts )
-                        {
-                            // Reschedule
-                            task.Server.UnassignTask(job, task);
-                        }
-                        else
-                        {
-                            _log.ErrorFormat("Task {0} failed more than {1} times; aborting the job.", Job.CreateFullTaskID(data.JobID, data.TaskID), Configuration.JobServer.MaxTaskAttempts);
-                            job.State = JobState.Failed;
-                        }
-                        ++job.Errors;
-                        break;
-                    }
+                    task.ExecutionInstanceId = data.ExecutionInstanceId;
 
-                    if( job.FinishedTasks == job.Tasks.Count || job.State == JobState.Failed )
+                    if( data.Status > TaskAttemptStatus.Running )
                     {
-                        if( job.State != JobState.Failed )
+                        server.AssignedTasks.Remove(task);
+                        // We don't set task.Server to null because output tasks can still query that information!
+
+                        switch( data.Status )
                         {
-                            _log.InfoFormat("Job {0}: all tasks in the job have finished.", data.JobID);
-                            job.State = JobState.Finished;
-                        }
-                        else
-                        {
-                            _log.ErrorFormat("Job {0} failed.", data.JobID);
-                            foreach( TaskInfo jobTask in job.Tasks.Values )
+                        case TaskAttemptStatus.Completed:
+                            task.EndTimeUtc = DateTime.UtcNow;
+                            task.State = TaskState.Finished;
+                            task.TaskCompletedEvent.Set();
+                            _log.InfoFormat("Task {0} completed successfully.", Job.CreateFullTaskID(data.JobID, data.TaskID));
+                            ++job.FinishedTasks;
+                            break;
+                        case TaskAttemptStatus.Error:
+                            task.State = TaskState.Error;
+                            _log.WarnFormat("Task {0} encountered an error.", Job.CreateFullTaskID(data.JobID, data.TaskID));
+                            if( task.Attempts < Configuration.JobServer.MaxTaskAttempts )
                             {
-                                if( jobTask.State <= TaskState.Running )
-                                    jobTask.State = TaskState.Aborted;
+                                // Reschedule
+                                task.Server.UnassignTask(job, task);
                             }
+                            else
+                            {
+                                _log.ErrorFormat("Task {0} failed more than {1} times; aborting the job.", Job.CreateFullTaskID(data.JobID, data.TaskID), Configuration.JobServer.MaxTaskAttempts);
+                                job.State = JobState.Failed;
+                            }
+                            ++job.Errors;
+                            break;
                         }
 
-                        _jobs.Remove(data.JobID);
-                        lock( _finishedJobs )
-                            _finishedJobs.Add(job.Job.JobID, job);
-                        jobFinished = true;
-                        job.EndTimeUtc = DateTime.UtcNow;
-                        job.JobCompletedEvent.Set();
+                        if( job.FinishedTasks == job.Tasks.Count || job.State == JobState.Failed )
+                        {
+                            if( job.State != JobState.Failed )
+                            {
+                                _log.InfoFormat("Job {0}: all tasks in the job have finished.", data.JobID);
+                                job.State = JobState.Finished;
+                            }
+                            else
+                            {
+                                _log.ErrorFormat("Job {0} failed.", data.JobID);
+                                foreach( TaskInfo jobTask in job.Tasks.Values )
+                                {
+                                    if( jobTask.State <= TaskState.Running )
+                                        jobTask.State = TaskState.Aborted;
+                                }
+                            }
+
+                            _jobs.Remove(data.JobID);
+                            lock( _finishedJobs )
+                                _finishedJobs.Add(job.Job.JobID, job);
+                            jobFinished = true;
+                            job.EndTimeUtc = DateTime.UtcNow;
+                            job.JobCompletedEvent.Set();
+                        }
+                        else if( job.UnscheduledTasks > 0 )
+                            ScheduleTasks(job); // TODO: Once multiple jobs at once are supported, this shouldn't just consider that job
                     }
-                    else if( job.UnscheduledTasks > 0 )
-                        ScheduleTasks(job); // TODO: Once multiple jobs at once are supported, this shouldn't just consider that job
                 }
                 if( jobFinished )
                 {
@@ -542,7 +548,8 @@ namespace JobServerApplication
                                  TaskServer = task.Server == null ? null : task.Server.Address,
                                  Attempts = task.Attempts,
                                  StartTime = task.StartTimeUtc,
-                                 EndTime = task.EndTimeUtc
+                                 EndTime = task.EndTimeUtc,
+                                 ExecutionInstanceId = task.ExecutionInstanceId
                              }).ToArray(),
                     RunningTaskCount = (from task in job.Tasks.Values
                                         where task.State == TaskState.Running

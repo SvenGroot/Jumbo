@@ -56,6 +56,16 @@ namespace Tkl.Jumbo.Jet
         }
 
         /// <summary>
+        /// Gets or sets the maximum number of non-input tasks.
+        /// </summary>
+        [ConfigurationProperty("maxNonInputTasks", DefaultValue = 2, IsRequired = false, IsKey = false)]
+        public int MaxNonInputTasks
+        {
+            get { return (int)this["maxNonInputTasks"]; }
+            set { this["maxNonInputTasks"] = value; }
+        }
+
+        /// <summary>
         /// The port number that the TCP server for file channels listens on.
         /// </summary>
         [ConfigurationProperty("fileServerPort", DefaultValue = 9502, IsRequired = true, IsKey = false)]

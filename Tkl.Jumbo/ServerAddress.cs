@@ -37,6 +37,25 @@ namespace Tkl.Jumbo
         }
 
         /// <summary>
+        /// Initializes a new instance of the <see cref="ServerAddress"/> class with the specified address.
+        /// </summary>
+        /// <param name="address">A string representation of the server address, in the form hostname:port, e.g. "my_server:9000".</param>
+        public ServerAddress(string address)
+        {
+            if( address == null )
+                throw new ArgumentNullException("address");
+            string[] parts = address.Split(':');
+            if( parts.Length != 2 )
+                throw new ArgumentException("Invalid server address string.", "address");
+
+            HostName = parts[0];
+            Port = Convert.ToInt32(parts[1], System.Globalization.CultureInfo.InvariantCulture);
+
+            if( Port <= 0 || Port > 0xFFFF )
+                throw new ArgumentOutOfRangeException("address", "Invalid port number in server address string");
+        }
+
+        /// <summary>
         /// Gets the host name of the server.
         /// </summary>
         public string HostName { get; private set; }

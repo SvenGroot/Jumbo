@@ -81,9 +81,9 @@ namespace TaskServerApplication
             }
         }
 
-        public void NotifyTaskStatusChanged(Guid jobID, string taskID, TaskAttemptStatus newStatus)
+        public void NotifyTaskStatusChanged(Guid jobID, string taskID, TaskAttemptStatus newStatus, int instanceId)
         {
-            AddDataForNextHeartbeat(new TaskStatusChangedJetHeartbeatData(jobID, taskID, newStatus));
+            AddDataForNextHeartbeat(new TaskStatusChangedJetHeartbeatData(jobID, taskID, newStatus, instanceId));
             SendHeartbeat(false);
         }
 
@@ -210,7 +210,7 @@ namespace TaskServerApplication
 
             LocalAddress = new ServerAddress(Dns.GetHostName(), Configuration.TaskServer.Port);
 
-            AddDataForNextHeartbeat(new StatusJetHeartbeatData() { MaxTasks = Configuration.TaskServer.MaxTasks, MaxNonInputTasks = Configuration.TaskServer.MaxTasks, FileServerPort = Configuration.TaskServer.FileServerPort });
+            AddDataForNextHeartbeat(new StatusJetHeartbeatData() { MaxTasks = Configuration.TaskServer.MaxTasks, MaxNonInputTasks = Configuration.TaskServer.MaxNonInputTasks, FileServerPort = Configuration.TaskServer.FileServerPort });
 
             if( System.Net.Sockets.Socket.OSSupportsIPv6 )
             {
@@ -271,7 +271,7 @@ namespace TaskServerApplication
                 switch( response.Command )
                 {
                 case TaskServerHeartbeatCommand.ReportStatus:
-                    AddDataForNextHeartbeat(new StatusJetHeartbeatData() { MaxTasks = Configuration.TaskServer.MaxTasks, MaxNonInputTasks = Configuration.TaskServer.MaxTasks, FileServerPort = Configuration.TaskServer.FileServerPort });
+                    AddDataForNextHeartbeat(new StatusJetHeartbeatData() { MaxTasks = Configuration.TaskServer.MaxTasks, MaxNonInputTasks = Configuration.TaskServer.MaxNonInputTasks, FileServerPort = Configuration.TaskServer.FileServerPort });
                     break;
                 case TaskServerHeartbeatCommand.RunTask:
                     RunTaskJetHeartbeatResponse runResponse = (RunTaskJetHeartbeatResponse)response;
