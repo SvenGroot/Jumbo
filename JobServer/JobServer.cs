@@ -549,7 +549,8 @@ namespace JobServerApplication
                                  Attempts = task.Attempts,
                                  StartTime = task.StartTimeUtc,
                                  EndTime = task.EndTimeUtc,
-                                 ExecutionInstanceId = task.ExecutionInstanceId
+                                 ExecutionInstanceId = task.ExecutionInstanceId,
+                                 StartOffset = task.StartTimeUtc - job.StartTimeUtc
                              }).ToArray(),
                     RunningTaskCount = (from task in job.Tasks.Values
                                         where task.State == TaskState.Running

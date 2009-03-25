@@ -128,7 +128,7 @@ namespace Tkl.Jumbo.Jet
                 throw new ArgumentException("Invalid job element.", "job");
 
             XElement jobInfo = job.Element("JobInfo");
-            return new JobStatus()
+            JobStatus jobStatus = new JobStatus()
             {
                 JobId = new Guid(job.Attribute("id").Value),
                 StartTime = DateTime.ParseExact(jobInfo.Attribute("startTime").Value, JobStatus.DatePattern, System.Globalization.CultureInfo.InvariantCulture),
@@ -136,9 +136,11 @@ namespace Tkl.Jumbo.Jet
                 FinishedTaskCount = (int)jobInfo.Attribute("finishedTasks"),
                 ErrorTaskCount = (int)jobInfo.Attribute("errors"),
                 NonDataLocalTaskCount = (int)jobInfo.Attribute("nonDataLocalTasks"),
-                Tasks = (from task in job.Element("Tasks").Elements("Task")
-                         select TaskStatus.FromXml(task)).ToArray()
             };
+            jobStatus.Tasks = (from task in job.Element("Tasks").Elements("Task")
+                               select TaskStatus.FromXml(task, jobStatus)).ToArray();
+            return jobStatus;
+
         }
     }
 }

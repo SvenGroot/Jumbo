@@ -57,6 +57,11 @@ namespace Tkl.Jumbo.Jet
         }
 
         /// <summary>
+        /// The amount of time after the start of the job that this task started.
+        /// </summary>
+        public TimeSpan StartOffset { get; set; }
+
+        /// <summary>
         /// Gets or sets the instance ID of the task host that executed the task.
         /// </summary>
         /// <remarks>
@@ -85,16 +90,19 @@ namespace Tkl.Jumbo.Jet
         /// Creates a <see cref="TaskStatus"/> instance from an XML element.
         /// </summary>
         /// <param name="task">The XML element containing the task status.</param>
+        /// <param name="job">The job that this task belongs to.</param>
         /// <returns>A new instance of the <see cref="TaskStatus"/> class with the information from the XML document.</returns>
-        public static TaskStatus FromXml(XElement task)
+        public static TaskStatus FromXml(XElement task, JobStatus job)
         {
             if( task == null )
                 throw new ArgumentNullException("task");
+            if( job == null )
+                throw new ArgumentNullException("job");
 
             if( task.Name != "Task" )
                 throw new ArgumentException("Invalid task element.", "task");
 
-            return new TaskStatus()
+            TaskStatus status = new TaskStatus()
             {
                 TaskID = task.Attribute("id").Value,
                 State = (TaskState)Enum.Parse(typeof(TaskState), task.Attribute("state").Value),
@@ -102,8 +110,10 @@ namespace Tkl.Jumbo.Jet
                 Attempts = (int)task.Attribute("attempts"),
                 StartTime = DateTime.ParseExact(task.Attribute("startTime").Value, JobStatus.DatePattern, System.Globalization.CultureInfo.InvariantCulture),
                 EndTime = DateTime.ParseExact(task.Attribute("endTime").Value, JobStatus.DatePattern, System.Globalization.CultureInfo.InvariantCulture),
-                ExecutionInstanceId = (int)task.Attribute("executionInstance")
+                ExecutionInstanceId = (int)task.Attribute("executionInstance"),
             };
+            status.StartOffset = status.StartTime - job.StartTime;
+            return status;
         }
     }
 }
