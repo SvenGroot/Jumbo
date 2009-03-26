@@ -124,3 +124,8 @@ ul#FileSystem img, ul#FileSystem span
     vertical-align: middle;
     margin-right: 0.5em;
 }
+#silverlightControlHost
+{
+    margin-top: 2em;
+    height: 500px;
+}

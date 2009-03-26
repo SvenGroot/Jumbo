@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Xml.Linq;
+using System.Xml.Serialization;
 
 namespace Tkl.Jumbo.Jet
 {
@@ -59,6 +60,7 @@ namespace Tkl.Jumbo.Jet
         /// <summary>
         /// The amount of time after the start of the job that this task started.
         /// </summary>
+        [XmlIgnore]
         public TimeSpan StartOffset { get; set; }
 
         /// <summary>
