@@ -19,7 +19,7 @@ public partial class job : System.Web.UI.Page
         JetClient client = new JetClient();
         JobStatus job = client.JobServer.GetJobStatus(jobId);
 
-        HtmlTableRow row = new HtmlTableRow();
+        HtmlTableRow row = new HtmlTableRow() { ID = "CurrentJobRow" };
         row.Cells.Add(new HtmlTableCell() { InnerText = job.JobId.ToString() });
         row.Cells.Add(new HtmlTableCell() { InnerText = job.StartTime.ToString(_datePattern, System.Globalization.CultureInfo.InvariantCulture) });
         if( job.IsFinished )
@@ -46,7 +46,7 @@ public partial class job : System.Web.UI.Page
 
         foreach( TaskStatus task in job.Tasks )
         {
-            row = new HtmlTableRow();
+            row = new HtmlTableRow() { ID = "TaskStatusRow_" + task.TaskID };
             row.Cells.Add(new HtmlTableCell() { InnerText = task.TaskID });
             row.Cells.Add(new HtmlTableCell() { InnerText = task.State.ToString() });
             row.Cells.Add(new HtmlTableCell() { InnerText = task.TaskServer == null ? "" : task.TaskServer.ToString() });

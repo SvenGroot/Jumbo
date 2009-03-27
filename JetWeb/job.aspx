@@ -18,22 +18,6 @@
     <p>
         <a id="_downloadLink" href="jobinfo.ashx" visible="false" runat="server">Download job information.</a>
     </p>
-    <p>
-        <a href="#silverlightControlHost">Progress</a>
-    </p>
-    <h3>Tasks</h3>
-    <table id="TasksTable" runat="server">
-        <tr>
-            <th scope="col">Task ID</th>
-            <th scope="col">State</th>
-            <th scope="col">Task Server</th>
-            <th scope="col">Attempts</th>
-            <th scope="col">Start time</th>
-            <th scope="col">End time</th>
-            <th scope="col">Duration</th>
-            <th scope="col">Log file</th>
-        </tr>
-    </table>
     <script type="text/javascript" src="Silverlight.js"></script>
     <script type="text/javascript">
         function onSilverlightError(sender, args) {
@@ -74,11 +58,25 @@
 			<param name="background" value="white" />
 			<param name="minRuntimeVersion" value="2.0.31005.0" />
 			<param name="autoUpgrade" value="true" />
+			<param name="initParams" value="prefix=ctl00_MainContentPlaceHolder_" />
 			<a href="http://go.microsoft.com/fwlink/?LinkID=124807" style="text-decoration: none;">
      			<img src="http://go.microsoft.com/fwlink/?LinkId=108181" alt="Get Microsoft Silverlight" style="border-style: none"/>
 			</a>
 		</object>
 		<iframe style='visibility:hidden;height:0;width:0;border:0px'></iframe>
     </div>      
+    <h3>Tasks</h3>
+    <table id="TasksTable" runat="server">
+        <tr>
+            <th scope="col">Task ID</th>
+            <th scope="col">State</th>
+            <th scope="col">Task Server</th>
+            <th scope="col">Attempts</th>
+            <th scope="col">Start time</th>
+            <th scope="col">End time</th>
+            <th scope="col">Duration</th>
+            <th scope="col">Log file</th>
+        </tr>
+    </table>
 </asp:Content>
 
