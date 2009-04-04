@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using Tkl.Jumbo.Dfs;
 
 namespace Tkl.Jumbo.Jet
 {
@@ -12,6 +13,7 @@ namespace Tkl.Jumbo.Jet
     {
         private const string _jobServerUrlFormat = "tcp://{0}:{1}/JobServer";
         private const string _taskServerUrlFormat = "tcp://{0}:{1}/TaskServer";
+        private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(JetClient));
 
         static JetClient()
         {
@@ -142,6 +144,58 @@ namespace Tkl.Jumbo.Jet
                 throw new ArgumentNullException("address");
 
             return CreateTaskServerClientInternal<ITaskServerClientProtocol>(address.HostName, address.Port);
+        }
+
+        /// <summary>
+        /// Creates a new job, stores the job configuration and the specified files on the DFS, and runs the job.
+        /// </summary>
+        /// <param name="config">The <see cref="JobConfiguration"/> for the job.</param>
+        /// <param name="files">The local paths of the files to store in the job directory on the DFS. This should include the assembly containing the task classes.</param>
+        /// <returns>An instance of the <see cref="Job"/> class describing the job that was started.</returns>
+        /// <remarks>
+        /// This function uses the application's configuration to create a <see cref="DfsClient"/> to access the DFS.
+        /// </remarks>
+        public Job RunJob(JobConfiguration config, params string[] files)
+        {
+            return RunJob(config, new DfsClient(), files);
+        }
+
+        /// <summary>
+        /// Creates a new job, stores the job configuration and the specified files on the DFS using the specified <see cref="DfsClient"/>, and runs the job.
+        /// </summary>
+        /// <param name="config">The <see cref="JobConfiguration"/> for the job.</param>
+        /// <param name="dfsClient">A <see cref="DfsClient"/> used to access the Jumbo DFS.</param>
+        /// <param name="files">The local paths of the files to store in the job directory on the DFS. This should include the assembly containing the task classes.</param>
+        /// <returns>An instance of the <see cref="Job"/> class describing the job that was started.</returns>
+        public Job RunJob(JobConfiguration config, DfsClient dfsClient, params string[] files)
+        {
+            if( config == null )
+                throw new ArgumentNullException("config");
+            if( files == null )
+                throw new ArgumentNullException("files");
+            if( files.Length == 0 )
+                throw new ArgumentException("You must specify at least one file to upload.", "files");
+            if( dfsClient == null )
+                throw new ArgumentNullException("dfsClient");
+
+            Job job = JobServer.CreateJob();
+            _log.InfoFormat("Created job {{{0}}}", job.JobID);
+            _log.InfoFormat("Saving job configuration to DFS file {0}.", job.JobConfigurationFilePath);
+            using( DfsOutputStream stream = dfsClient.CreateFile(job.JobConfigurationFilePath) )
+            {
+                config.SaveXml(stream);
+            }
+
+            foreach( string file in files )
+            {
+                _log.InfoFormat("Uploading local file {0} to DFS directory {1}.", file, job.Path);
+                dfsClient.UploadFile(file, job.Path);
+            }
+
+            _log.InfoFormat("Running job {0}.", job.JobID);
+            JobServer.RunJob(job.JobID);
+
+            return job;
         }
         
         private static T CreateJobServerClientInternal<T>(string hostName, int port)

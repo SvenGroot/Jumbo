@@ -43,33 +43,29 @@ namespace Tkl.Jumbo.Test.Jet
         [Test]
         public void TestJobExecution()
         {
-            RunJob(false, "/joboutput.txt");
+            RunJob(false, "/joboutput");
         }
 
         [Test]
         public void TestJobExecutionTcpFileDownload()
         {
-            RunJob(true, "/joboutput2.txt");
+            RunJob(true, "/joboutput2");
         }
 
-        private void RunJob(bool forceFileDownload, string outputFileName)
+        private void RunJob(bool forceFileDownload, string outputPath)
         {
             DfsClient dfsClient = new DfsClient(Dfs.TestDfsCluster.CreateClientConfig());
+            dfsClient.NameServer.CreateDirectory(outputPath);
 
-            JobConfiguration config = CreateConfiguration(dfsClient, _fileName, outputFileName, forceFileDownload);
+            JobConfiguration config = CreateConfiguration(dfsClient, _fileName, outputPath, forceFileDownload);
 
-            IJobServerClientProtocol target = JetClient.CreateJobServerClient(TestJetCluster.CreateClientConfig());
-            Job job = target.CreateJob();
+            JetClient target = new JetClient(TestJetCluster.CreateClientConfig());
+            Job job = target.RunJob(config, dfsClient, typeof(LineCounterTask).Assembly.Location);
 
-            using( DfsOutputStream stream = dfsClient.CreateFile(job.JobConfigurationFilePath) )
-            {
-                config.SaveXml(stream);
-            }
-            dfsClient.UploadFile(typeof(LineCounterTask).Assembly.Location, DfsPath.Combine(job.Path, "Tkl.Jumbo.Test.Tasks.dll"));
-
-            target.RunJob(job.JobID);
-            bool complete = target.WaitForJobCompletion(job.JobID, Timeout.Infinite);
+            bool complete = target.JobServer.WaitForJobCompletion(job.JobID, Timeout.Infinite);
             Assert.IsTrue(complete);
+
+            string outputFileName = DfsPath.Combine(outputPath, "OutputTask001");
 
             using( DfsInputStream stream = dfsClient.OpenFile(outputFileName) )
             using( StreamReader reader = new StreamReader(stream) )
@@ -80,52 +76,16 @@ namespace Tkl.Jumbo.Test.Jet
             Console.WriteLine(config);
         }
 
-        private static JobConfiguration CreateConfiguration(DfsClient dfsClient, string fileName, string outputFileName, bool forceFileDownload)
+        private static JobConfiguration CreateConfiguration(DfsClient dfsClient, string fileName, string outputPath, bool forceFileDownload)
         {
             Tkl.Jumbo.Dfs.File file = dfsClient.NameServer.GetFileInfo(fileName);
 
-            JobConfiguration config = new JobConfiguration()
-            {
-                AssemblyFileName = "Tkl.Jumbo.Test.Tasks.dll",
-                Tasks = new List<TaskConfiguration>(),
-                Channels = new List<ChannelConfiguration>()
-            };
+            JobConfiguration config = new JobConfiguration(System.IO.Path.GetFileName(typeof(LineCounterTask).Assembly.Location));
 
-            string[] tasks = new string[file.Blocks.Count];
-            for( int x = 0; x < file.Blocks.Count; ++x )
-            {
-                config.Tasks.Add(new TaskConfiguration()
-                {
-                    TaskID = "Task" + (x + 1).ToString(),
-                    TypeName = typeof(LineCounterTask).FullName,
-                    DfsInput = new TaskDfsInput()
-                    {
-                        Path = fileName,
-                        Block = x,
-                        RecordReaderType = typeof(LineRecordReader).AssemblyQualifiedName
-                    }
-                });
-                tasks[x] = "Task" + (x + 1).ToString();
-            }
+            config.AddInputStage("Task", file, typeof(LineCounterTask), typeof(LineRecordReader));
+            config.AddStage("OutputTask", new[] { "Task" }, typeof(LineAdderTask), 1, ChannelType.File, null, outputPath, typeof(TextRecordWriter<Int32Writable>));
+            config.Channels[0].ForceFileDownload = forceFileDownload;
 
-            config.Tasks.Add(new TaskConfiguration()
-            {
-                TaskID = "OutputTask",
-                TypeName = typeof(LineAdderTask).FullName,
-                DfsOutput = new TaskDfsOutput()
-                {
-                    Path = outputFileName,
-                    RecordWriterType = typeof(TextRecordWriter<Int32Writable>).AssemblyQualifiedName
-                }
-            });
-
-            config.Channels.Add(new ChannelConfiguration()
-            {
-                ChannelType = ChannelType.File,
-                InputTasks = tasks,
-                OutputTasks = new[] { "OutputTask" },
-                ForceFileDownload = forceFileDownload
-            });
             return config;
         }
     }

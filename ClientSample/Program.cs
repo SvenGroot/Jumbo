@@ -21,6 +21,9 @@ namespace ClientSample
     {
         static void Main(string[] args)
         {
+            log4net.Config.BasicConfigurator.Configure();
+            log4net.LogManager.GetRepository().Threshold = log4net.Core.Level.Info;
+
             if( args.Length < 2 || args.Length > 5 )
             {
                 Console.WriteLine("Usage: ClientSample.exe <task> <inputfile> [aggregate task count] [outputpath] [profile options]");
@@ -55,13 +58,13 @@ namespace ClientSample
             
             Console.WriteLine("Running task {0}, input file {1}, {2} aggregate tasks, output path {3}.", task, input, aggregateTaskCount, output);
             DfsClient dfsClient = new DfsClient();
-            IJobServerClientProtocol jobServer = JetClient.CreateJobServerClient();
+            JetClient jetClient = new JetClient();
             Console.WriteLine("Press any key to start");
             Console.ReadKey();
             //Stopwatch sw = new Stopwatch();
             //sw.Start();
 
-            RunJob(dfsClient, jobServer, inputTaskType, aggregateTaskType, input, output, aggregateTaskCount, profileOptions);
+            RunJob(dfsClient, jetClient, inputTaskType, aggregateTaskType, input, output, aggregateTaskCount, profileOptions);
 
             //sw.Stop();
             //Console.WriteLine(sw.Elapsed);
@@ -71,19 +74,19 @@ namespace ClientSample
             Console.ReadKey();
         }
 
-        private static void RunJob(DfsClient dfsClient, IJobServerClientProtocol jobServer, Type inputTaskType, Type aggregateTaskType, string fileName, string outputPath, int aggregateTaskCount, string profileOptions)
+        private static void RunJob(DfsClient dfsClient, JetClient jetClient, Type inputTaskType, Type aggregateTaskType, string fileName, string outputPath, int aggregateTaskCount, string profileOptions)
         {
             const int interval = 5000;
-            Guid jobId = StartJob(dfsClient, jobServer, inputTaskType, aggregateTaskType, fileName, outputPath, aggregateTaskCount, profileOptions);
+            Guid jobId = StartJob(dfsClient, jetClient, inputTaskType, aggregateTaskType, fileName, outputPath, aggregateTaskCount, profileOptions);
             if( jobId != Guid.Empty )
             {
                 JobStatus status;
-                while( !jobServer.WaitForJobCompletion(jobId, interval) )
+                while( !jetClient.JobServer.WaitForJobCompletion(jobId, interval) )
                 {
-                    status = jobServer.GetJobStatus(jobId);
+                    status = jetClient.JobServer.GetJobStatus(jobId);
                     Console.WriteLine(status);
                 }
-                status = jobServer.GetJobStatus(jobId);
+                status = jetClient.JobServer.GetJobStatus(jobId);
                 Console.WriteLine(status);
                 Console.WriteLine();
                 Console.WriteLine("Job completed.");
@@ -94,7 +97,7 @@ namespace ClientSample
             }
         }
 
-        private static Guid StartJob(DfsClient dfsClient, IJobServerClientProtocol jobServer, Type inputTaskType, Type aggregateTaskType, string fileName, string outputPath, int aggregateTaskCount, string profileOptions)
+        private static Guid StartJob(DfsClient dfsClient, JetClient jetClient, Type inputTaskType, Type aggregateTaskType, string fileName, string outputPath, int aggregateTaskCount, string profileOptions)
         {
             Tkl.Jumbo.Dfs.File file = dfsClient.NameServer.GetFileInfo(fileName);
             if( file == null )
@@ -103,71 +106,17 @@ namespace ClientSample
                 return Guid.Empty;
             }
 
-            JobConfiguration config = new JobConfiguration()
-            {
-                AssemblyFileName = Path.GetFileName(inputTaskType.Assembly.Location),
-                Tasks = new List<TaskConfiguration>(),
-                Channels = new List<ChannelConfiguration>()
-            };
-
-            string[] tasks = new string[file.Blocks.Count];
-            for( int x = 0; x < file.Blocks.Count; ++x )
-            {
-                config.Tasks.Add(new TaskConfiguration()
-                {
-                    TaskID = inputTaskType.Name + (x + 1).ToString(),
-                    ProfileOptions = profileOptions,
-                    TypeName = inputTaskType.FullName,
-                    DfsInput = new TaskDfsInput()
-                    {
-                        Path = fileName,
-                        Block = x,
-                        RecordReaderType = typeof(LineRecordReader).AssemblyQualifiedName
-                    }
-                });
-                tasks[x] = inputTaskType.Name + (x + 1).ToString();
-            }
-
-            Type interfaceType = FindGenericInterfaceType(aggregateTaskType, typeof(ITask<,>));
-            Type outputType = interfaceType.GetGenericArguments()[1];
-            Type recordWriterType = typeof(TextRecordWriter<>).MakeGenericType(outputType);
-            string[] outputTasks = new string[aggregateTaskCount];
-            for( int x = 0; x < aggregateTaskCount; ++x )
-            {
-                config.Tasks.Add(new TaskConfiguration()
-                {
-                    TaskID = aggregateTaskType.Name + (x + 1).ToString(),
-                    ProfileOptions = profileOptions,
-                    TypeName = aggregateTaskType.FullName,
-                    DfsOutput = new TaskDfsOutput()
-                    {
-                        Path = DfsPath.Combine(outputPath, string.Format("result{0}.txt", x + 1)),
-                        RecordWriterType = recordWriterType.AssemblyQualifiedName
-                    }
-                });
-                outputTasks[x] = aggregateTaskType.Name + (x + 1).ToString();
-            }
-
-            config.Channels.Add(new ChannelConfiguration()
-            {
-                ChannelType = ChannelType.File,
-                InputTasks = tasks,
-                OutputTasks = outputTasks,
-                PartitionerType = typeof(HashPartitioner<>).MakeGenericType(outputType).AssemblyQualifiedName
-            });
-
             dfsClient.NameServer.Delete(outputPath, true);
             dfsClient.NameServer.CreateDirectory(outputPath);
-            Job job = jobServer.CreateJob();
-            Console.WriteLine(job.JobID);
-            System.IO.File.WriteAllText("jobid.txt", job.JobID.ToString());
-            using( DfsOutputStream stream = dfsClient.CreateFile(job.JobConfigurationFilePath) )
-            {
-                config.SaveXml(stream);
-            }
-            dfsClient.UploadFile(inputTaskType.Assembly.Location, DfsPath.Combine(job.Path, config.AssemblyFileName));
 
-            jobServer.RunJob(job.JobID);
+            JobConfiguration config = new JobConfiguration(inputTaskType.Assembly);
+            config.AddInputStage(inputTaskType.Name, file, inputTaskType, typeof(LineRecordReader));
+            Type interfaceType = FindGenericInterfaceType(aggregateTaskType, typeof(ITask<,>));
+            Type outputType = interfaceType.GetGenericArguments()[1];
+            config.AddStage(aggregateTaskType.Name, new[] { inputTaskType.Name }, aggregateTaskType, aggregateTaskCount, ChannelType.File, null, outputPath, typeof(TextRecordWriter<>).MakeGenericType(outputType));
+
+
+            Job job = jetClient.RunJob(config, dfsClient, inputTaskType.Assembly.Location);
 
             return job.JobID;
         }
