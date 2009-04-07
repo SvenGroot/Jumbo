@@ -258,10 +258,7 @@ namespace DataServerApplication
                 break;
             case DataServerHeartbeatCommand.DeleteBlocks:
                 _log.Info("Received DeleteBlocks command.");
-                DeleteBlocks(((DeleteBlocksHeartbeatResponse)response).Blocks);
-                StatusHeartbeatData statusData = new StatusHeartbeatData();
-                GetDiskUsage(statusData);
-                AddDataForNextHeartbeat(statusData);
+                ThreadPool.QueueUserWorkItem(state => DeleteBlocks((IEnumerable<Guid>)state), ((DeleteBlocksHeartbeatResponse)response).Blocks);
                 break;
             case DataServerHeartbeatCommand.ReplicateBlock:
                 _log.Info("Received ReplicateBlock command.");
@@ -328,6 +325,9 @@ namespace DataServerApplication
                     _log.Error(string.Format("Failed to delete block {0}.", block), ex);
                 }
             }
+            StatusHeartbeatData statusData = new StatusHeartbeatData();
+            GetDiskUsage(statusData);
+            AddDataForNextHeartbeat(statusData);
         }
 
         private void GetDiskUsage(StatusHeartbeatData data)
