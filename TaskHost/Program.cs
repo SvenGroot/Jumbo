@@ -168,10 +168,25 @@ namespace TaskHost
                 _log.DebugFormat("Creating {0} task instance.", taskType.AssemblyQualifiedName);
                 ITask<TInput, TOutput> task = (ITask<TInput, TOutput>)Activator.CreateInstance(taskType);
                 _log.Info("Running task.");
+                IPullTask<TInput, TOutput> pullTask = task as IPullTask<TInput, TOutput>;
                 Stopwatch taskStopwatch = new Stopwatch();
-                taskStopwatch.Start();
-                task.Run(input, output);
-                taskStopwatch.Stop();
+                if( pullTask != null )
+                {
+                    taskStopwatch.Start();
+                    pullTask.Run(input, output);
+                    taskStopwatch.Stop();
+                }
+                else
+                {
+                    IPushTask<TInput, TOutput> pushTask = (IPushTask<TInput, TOutput>)task;
+                    taskStopwatch.Start();
+                    foreach( TInput record in input.EnumerateRecords() )
+                    {
+                        pushTask.ProcessRecord(record, output);
+                    }
+                    pushTask.Finish(output);
+                    taskStopwatch.Stop();
+                }
                 TimeSpan timeWaiting;
                 MultiRecordReader<TInput> multiReader = input as MultiRecordReader<TInput>;
                 if( multiReader != null )

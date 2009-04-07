@@ -8,7 +8,7 @@ using Tkl.Jumbo.IO;
 namespace Tkl.Jumbo.Test.Tasks
 {
 
-    public class LineAdderTask : ITask<Int32Writable, Int32Writable>
+    public class LineAdderTask : IPullTask<Int32Writable, Int32Writable>
     {
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(LineAdderTask));
 

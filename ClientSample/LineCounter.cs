@@ -7,7 +7,7 @@ using Tkl.Jumbo.Jet;
 
 namespace ClientSample
 {
-    public class LineCounterTask : ITask<StringWritable, Int32Writable>
+    public class LineCounterTask : IPullTask<StringWritable, Int32Writable>
     {
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(LineCounterTask));
 
@@ -31,7 +31,7 @@ namespace ClientSample
         #endregion
     }
 
-    public class LineCounterAggregateTask : ITask<Int32Writable, Int32Writable>
+    public class LineCounterAggregateTask : IPullTask<Int32Writable, Int32Writable>
     {
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(LineCounterAggregateTask));
 

@@ -43,21 +43,27 @@ namespace Tkl.Jumbo.Test.Jet
         [Test]
         public void TestJobExecution()
         {
-            RunJob(false, "/joboutput");
+            RunJob(false, "/joboutput", false);
         }
 
         [Test]
         public void TestJobExecutionTcpFileDownload()
         {
-            RunJob(true, "/joboutput2");
+            RunJob(true, "/joboutput2", false);
         }
 
-        private void RunJob(bool forceFileDownload, string outputPath)
+        [Test]
+        public void TestJobExecutionPushTask()
+        {
+            RunJob(false, "/joboutput3", true);
+        }
+
+        private void RunJob(bool forceFileDownload, string outputPath, bool pushTask)
         {
             DfsClient dfsClient = new DfsClient(Dfs.TestDfsCluster.CreateClientConfig());
             dfsClient.NameServer.CreateDirectory(outputPath);
 
-            JobConfiguration config = CreateConfiguration(dfsClient, _fileName, outputPath, forceFileDownload);
+            JobConfiguration config = CreateConfiguration(dfsClient, _fileName, outputPath, forceFileDownload, pushTask ? typeof(LineCounterPushTask) : typeof(LineCounterTask), pushTask ? typeof(LineAdderPushTask) : typeof(LineAdderTask));
 
             JetClient target = new JetClient(TestJetCluster.CreateClientConfig());
             Job job = target.RunJob(config, dfsClient, typeof(LineCounterTask).Assembly.Location);
@@ -76,14 +82,14 @@ namespace Tkl.Jumbo.Test.Jet
             Console.WriteLine(config);
         }
 
-        private static JobConfiguration CreateConfiguration(DfsClient dfsClient, string fileName, string outputPath, bool forceFileDownload)
+        private static JobConfiguration CreateConfiguration(DfsClient dfsClient, string fileName, string outputPath, bool forceFileDownload, Type counterTask, Type adderTask)
         {
             Tkl.Jumbo.Dfs.File file = dfsClient.NameServer.GetFileInfo(fileName);
 
             JobConfiguration config = new JobConfiguration(System.IO.Path.GetFileName(typeof(LineCounterTask).Assembly.Location));
 
-            config.AddInputStage("Task", file, typeof(LineCounterTask), typeof(LineRecordReader));
-            config.AddStage("OutputTask", new[] { "Task" }, typeof(LineAdderTask), 1, ChannelType.File, null, outputPath, typeof(TextRecordWriter<Int32Writable>));
+            config.AddInputStage("Task", file, counterTask, typeof(LineRecordReader));
+            config.AddStage("OutputTask", new[] { "Task" }, adderTask, 1, ChannelType.File, null, outputPath, typeof(TextRecordWriter<Int32Writable>));
             config.Channels[0].ForceFileDownload = forceFileDownload;
 
             return config;

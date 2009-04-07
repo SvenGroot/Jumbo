@@ -12,7 +12,7 @@ namespace ClientSample
         public int Count = 1;
     }
 
-    public class WordCountTask : ITask<StringWritable, KeyValuePairWritable<StringWritable, Int32Writable>>
+    public class WordCountTask : IPullTask<StringWritable, KeyValuePairWritable<StringWritable, Int32Writable>>
     {
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(WordCountTask));
 
@@ -50,7 +50,7 @@ namespace ClientSample
         #endregion
     }
 
-    public class WordCountAggregateTask : ITask<KeyValuePairWritable<StringWritable, Int32Writable>, KeyValuePairWritable<StringWritable, Int32Writable>>
+    public class WordCountAggregateTask : IPullTask<KeyValuePairWritable<StringWritable, Int32Writable>, KeyValuePairWritable<StringWritable, Int32Writable>>
     {
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(WordCountAggregateTask));
 
