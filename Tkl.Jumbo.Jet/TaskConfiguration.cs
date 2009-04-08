@@ -3,6 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Xml.Serialization;
+using Tkl.Jumbo.IO;
+using Tkl.Jumbo.Jet.Channels;
+using Tkl.Jumbo.Dfs;
 
 namespace Tkl.Jumbo.Jet
 {
@@ -78,5 +81,19 @@ namespace Tkl.Jumbo.Jet
         /// Gets or sets the output to the distributed file system for this task.
         /// </summary>
         public TaskDfsOutput DfsOutput { get; set; }
+    }
+
+    /// <summary>
+    /// Class containing extension methods for <see cref="TaskConfiguration"/>.
+    /// </summary>
+    /// <remarks>
+    /// This seems like a strange thing to do but if I don't the XmlSerializer throws a hissy fit about IWritable for some reason.
+    /// </remarks>
+    public static class TaskConfigurationExtensions
+    {
+        private static log4net.ILog _log = log4net.LogManager.GetLogger(typeof(TaskConfiguration));
+
+
+
     }
 }

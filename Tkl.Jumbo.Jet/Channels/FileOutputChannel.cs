@@ -20,25 +20,20 @@ namespace Tkl.Jumbo.Jet.Channels
         /// <summary>
         /// Initializes a new instance of the <see cref="FileOutputChannel"/> class.
         /// </summary>
-        /// <param name="jobDirectory">The directory on the local file system where files related to this job are stored.</param>
-        /// <param name="channelConfig">The <see cref="ChannelConfiguration"/> this channel.</param>
-        /// <param name="inputTaskId">The name of the task for which this channel is created. This should be one of the
-        /// task IDs listed in the <see cref="ChannelConfiguration.InputTasks"/> property of the <paramref name="channelConfig"/>
-        /// parameter.</param>
-        public FileOutputChannel(string jobDirectory, ChannelConfiguration channelConfig, string inputTaskId)
+        /// <param name="taskExecution">The task execution utility for the task that this channel is for.</param>
+        public FileOutputChannel(TaskExecutionUtility taskExecution)
         {
-            if( jobDirectory == null )
-                throw new ArgumentNullException("jobDirectory");
-            if( channelConfig == null )
-                throw new ArgumentNullException("channelConfig");
+            if( taskExecution == null )
+                throw new ArgumentNullException("taskExecution");
 
+            ChannelConfiguration channelConfig = taskExecution.OutputChannelConfiguration;
             _fileNames = (from outputTaskId in channelConfig.OutputTasks
-                          select Path.Combine(jobDirectory, CreateChannelFileName(inputTaskId, outputTaskId))).ToArray();
+                          select Path.Combine(taskExecution.LocalJobDirectory, CreateChannelFileName(taskExecution.TaskConfiguration.TaskID, outputTaskId))).ToArray();
             if( _fileNames.Length == 0 )
             {
                 // This is allowed for debugging and testing purposes so you don't have to have an output task.
                 _log.Warn("The file channel has no output tasks; writing channel output to a dummy file.");
-                _fileNames = new[] { Path.Combine(jobDirectory, CreateChannelFileName(inputTaskId, "DummyTask")) };
+                _fileNames = new[] { Path.Combine(taskExecution.LocalJobDirectory, CreateChannelFileName(taskExecution.TaskConfiguration.TaskID, "DummyTask")) };
             }
             _partitionerType = channelConfig.PartitionerType;
         }

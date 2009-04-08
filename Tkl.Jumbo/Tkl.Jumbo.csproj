@@ -83,6 +83,7 @@
     <Compile Include="ServerContext.cs" />
     <Compile Include="ServerMetrics.cs" />
     <Compile Include="TcpServer.cs" />
+    <Compile Include="TypeExtensions.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="jumbo.snk" />

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Xml.Serialization;
+using Tkl.Jumbo.Dfs;
 
 namespace Tkl.Jumbo.Jet.Channels
 {
@@ -54,46 +55,5 @@ namespace Tkl.Jumbo.Jet.Channels
         /// </remarks>
         [XmlAttribute("partitionerType")]
         public string PartitionerType { get; set; }
-
-        /// <summary>
-        /// Creates an output channel for use by the input task.
-        /// </summary>
-        /// <param name="jobDirectory">The directory where files related to the job are stored.</param>
-        /// <param name="inputTaskID">The name of the input task for which the channel is created. This should be one of
-        /// the IDs listed in <see cref="InputTasks"/>.</param>
-        /// <returns>An implementation of <see cref="IOutputChannel"/> for the specified channel type.</returns>
-        public IOutputChannel CreateOutputChannel(string jobDirectory, string inputTaskID)
-        {
-            if( jobDirectory == null )
-                throw new ArgumentNullException("jobDirectory");
-
-            switch( ChannelType )
-            {
-            case ChannelType.File:
-                return new FileOutputChannel(jobDirectory, this, inputTaskID);
-            default:
-                throw new InvalidOperationException("Invalid channel type.");
-            }
-        }
-
-        /// <summary>
-        /// Creates an input channel for use by the output task.
-        /// </summary>
-        /// <param name="jobID">The job ID.</param>
-        /// <param name="jobDirectory">The directory where files related to the job are stored.</param>
-        /// <param name="jobServer">The object to use for communicating with the job server.</param>
-        /// <param name="outputTaskId">The ID of the output task for which this channel is created. This should be one of the IDs listed
-        /// in <see cref="ChannelConfiguration.OutputTasks"/>.</param>
-        /// <returns>An implementation of <see cref="IInputChannel"/> for the specified channel type.</returns>
-        public IInputChannel CreateInputChannel(Guid jobID, string jobDirectory, IJobServerClientProtocol jobServer, string outputTaskId)
-        {
-            switch( ChannelType )
-            {
-            case ChannelType.File:
-                return new FileInputChannel(jobID, jobDirectory, this, jobServer, outputTaskId);
-            default:
-                throw new InvalidOperationException("Invalid channel type.");
-            }
-        }
     }
 }

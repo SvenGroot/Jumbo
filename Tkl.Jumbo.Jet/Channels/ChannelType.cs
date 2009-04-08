@@ -13,6 +13,15 @@ namespace Tkl.Jumbo.Jet.Channels
         /// <summary>
         /// The input task writes a file to disk, which the output task then downloads and reads from.
         /// </summary>
-        File
+        File,
+        /// <summary>
+        /// The input task's output is directly pipelined to the output task.
+        /// </summary>
+        /// <remarks>
+        /// This requires the output task to use <see cref="IPushTask{TInput,TOutput}"/>. Tasks connected by
+        /// this channel type are treated as a single entity from the scheduler's point of view because they
+        /// are executed in the same process.
+        /// </remarks>
+        Pipeline
     }
 }

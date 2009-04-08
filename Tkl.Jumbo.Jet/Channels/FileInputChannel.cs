@@ -32,28 +32,16 @@ namespace Tkl.Jumbo.Jet.Channels
         /// <summary>
         /// Initializes a new instance of the <see cref="FileInputChannel"/>.
         /// </summary>
-        /// <param name="jobID">The job ID.</param>
-        /// <param name="jobDirectory">The local directory where files related to the job are stored.</param>
-        /// <param name="channelConfig">The channel configuration for this file channel.</param>
-        /// <param name="jobServer">The object to use to communicate with the job server.</param>
-        /// <param name="outputTaskId">The ID of the output task for which this channel is created. This should be one of the IDs listed
-        /// in <see cref="ChannelConfiguration.OutputTasks"/>.</param>
-        public FileInputChannel(Guid jobID, string jobDirectory, ChannelConfiguration channelConfig, IJobServerClientProtocol jobServer, string outputTaskId)
+        /// <param name="taskExecution">The task execution utility for the task that this channel is for.</param>
+        public FileInputChannel(TaskExecutionUtility taskExecution)
         {
-            if( jobDirectory == null )
-                throw new ArgumentNullException("jobDirectory");
-            if( channelConfig == null )
-                throw new ArgumentNullException("channelConfig");
-            if( jobServer == null )
-                throw new ArgumentNullException("jobServer");
-            if( outputTaskId == null )
-                throw new ArgumentNullException("outputTaskId");
-
-            _jobDirectory = jobDirectory;
-            _channelConfig = channelConfig;
-            _jobID = jobID;
-            _jobServer = jobServer;
-            _outputTaskId = outputTaskId;
+            if( taskExecution == null )
+                throw new ArgumentNullException("taskExecution");
+            _jobDirectory = taskExecution.LocalJobDirectory;
+            _channelConfig = taskExecution.InputChannelConfiguration;
+            _jobID = taskExecution.JobId;
+            _jobServer = taskExecution.JetClient.JobServer;
+            _outputTaskId = taskExecution.TaskConfiguration.TaskID;
         }
 
         /// <summary>

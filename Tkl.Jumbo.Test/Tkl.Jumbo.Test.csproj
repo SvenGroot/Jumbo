@@ -74,6 +74,7 @@
     <Compile Include="Dfs\PacketTests.cs" />
     <Compile Include="Jet\JetClientTests.cs" />
     <Compile Include="Jet\JobAndTaskServerTests.cs" />
+    <Compile Include="Jet\PipelineOutputChannelTests.cs" />
     <Compile Include="Jet\TestJetCluster.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Dfs\ServerAdressTests.cs" />
