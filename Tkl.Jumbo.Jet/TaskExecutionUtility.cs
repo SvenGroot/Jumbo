@@ -14,6 +14,46 @@ namespace Tkl.Jumbo.Jet
     /// </summary>
     public class TaskExecutionUtility : IDisposable
     {
+        #region Nested types
+
+        private interface ITaskContainer
+        {
+            object Task { get; }
+            void Finish();
+        }
+
+        private class TaskContainer<TInput, TOutput> : ITaskContainer
+            where TInput : IWritable, new()
+            where TOutput : IWritable, new()
+        {
+            private ITask<TInput, TOutput> _task;
+            private RecordWriter<TOutput> _output;
+
+            public TaskContainer(ITask<TInput, TOutput> task, RecordWriter<TOutput> output)
+            {
+                _task = task;
+                _output = output;
+            }
+
+            #region ITaskContainer Members
+
+            public object Task
+            {
+                get { return _task; }
+            }
+
+            public void Finish()
+            {
+                IPushTask<TInput, TOutput> pushTask = _task as IPushTask<TInput, TOutput>;
+                if( pushTask != null )
+                    pushTask.Finish(_output);
+            }
+
+            #endregion
+        }
+
+        #endregion
+
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(TaskExecutionUtility));
 
         private List<TaskExecutionUtility> _associatedTasks = new List<TaskExecutionUtility>();
@@ -24,6 +64,7 @@ namespace Tkl.Jumbo.Jet
         private object _inputReader;
         private object _outputWriter;
         private bool _disposed;
+        private ITaskContainer _task;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="TaskExecutionUtility"/> class.
@@ -228,22 +269,32 @@ namespace Tkl.Jumbo.Jet
         /// <typeparam name="TInput">The input record type of the task.</typeparam>
         /// <typeparam name="TOutput">The output record type of the task.</typeparam>
         /// <returns>An instance of <see cref="TaskType"/>.</returns>
-        public ITask<TInput, TOutput> InstantiateTask<TInput, TOutput>()
+        public ITask<TInput, TOutput> GetTaskInstance<TInput, TOutput>()
             where TInput : IWritable, new()
             where TOutput : IWritable, new()
         {
-            _log.DebugFormat("Creating {0} task instance.", TaskType.AssemblyQualifiedName);
-            return (ITask<TInput, TOutput>)Activator.CreateInstance(TaskType);
+            if( _task == null )
+            {
+                _log.DebugFormat("Creating {0} task instance.", TaskType.AssemblyQualifiedName);
+                _task = new TaskContainer<TInput, TOutput>((ITask<TInput, TOutput>)Activator.CreateInstance(TaskType), GetOutputWriter<TOutput>());
+            }
+            return (ITask<TInput, TOutput>)_task.Task;
         }
 
         /// <summary>
-        /// Closes the output stream and moves any DFS output to its final location, for this task and all associated tasks.
+        /// If the task is a push task, calls <see cref="IPushTask{TInput,TOutput}.Finish"/>, then closes the output stream and moves any DFS output to its final location, for this task and all associated tasks.
         /// </summary>
-        public void FinalizeOutput()
+        public void FinishTask()
         {
             CheckDisposed();
+
+            if( _task != null )
+                _task.Finish();
+
             foreach( TaskExecutionUtility associatedTask in _associatedTasks )
-                associatedTask.FinalizeOutput();
+            {
+                associatedTask.FinishTask();
+            }
 
             if( TaskConfiguration.DfsOutput != null )
             {

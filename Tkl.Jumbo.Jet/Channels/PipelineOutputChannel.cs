@@ -54,8 +54,6 @@ namespace Tkl.Jumbo.Jet.Channels
                 {
                     if( disposing )
                     {
-                        _task.Finish(_output);
-                        _task = null;
                         _output.Dispose();
                         _output = null;
                     }
@@ -109,18 +107,18 @@ namespace Tkl.Jumbo.Jet.Channels
         private RecordWriter<T> CreateRecordWriter<T>(TaskExecutionUtility pipelinedTask) where T : IWritable, new()
         {
             MethodInfo createWriterMethod = typeof(PipelineOutputChannel)
-                                                .GetMethod("CreateRecordWriter", BindingFlags.NonPublic | BindingFlags.Static)
+                                                .GetMethod("CreateRecordWriterInternal", BindingFlags.NonPublic | BindingFlags.Static)
                                                 .MakeGenericMethod(typeof(T), pipelinedTask.OutputRecordType);
             return (RecordWriter<T>)createWriterMethod.Invoke(this, new object[] { pipelinedTask });
         }
 
-        private RecordWriter<TRecord> CreateRecordWriter<TRecord, TPipelinedTaskOutput>(TaskExecutionUtility pipelinedTask)
+        private static RecordWriter<TRecord> CreateRecordWriterInternal<TRecord, TPipelinedTaskOutput>(TaskExecutionUtility pipelinedTask)
             where TRecord : IWritable, new()
             where TPipelinedTaskOutput : IWritable, new()
         {
             RecordWriter<TPipelinedTaskOutput> output = pipelinedTask.GetOutputWriter<TPipelinedTaskOutput>();
 
-            IPushTask<TRecord, TPipelinedTaskOutput> task = (IPushTask<TRecord, TPipelinedTaskOutput>)pipelinedTask.InstantiateTask<TRecord, TPipelinedTaskOutput>();
+            IPushTask<TRecord, TPipelinedTaskOutput> task = (IPushTask<TRecord, TPipelinedTaskOutput>)pipelinedTask.GetTaskInstance<TRecord, TPipelinedTaskOutput>();
 
             return new PipelineRecordWriter<TRecord, TPipelinedTaskOutput>(task, output);
         }

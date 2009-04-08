@@ -11,7 +11,9 @@ namespace JobServerApplication
 {
     class TaskInfo
     {
-        private readonly ManualResetEvent _taskCompletedEvent = new ManualResetEvent(false);
+        private readonly ManualResetEvent _taskCompletedEvent;
+        private TaskServerInfo _server;
+        private TaskInfo _owner;
 
         public TaskInfo(JobInfo job, TaskConfiguration task)
         {
@@ -21,6 +23,19 @@ namespace JobServerApplication
                 throw new ArgumentNullException("job");
             Task = task;
             Job = job;
+            _taskCompletedEvent = new ManualResetEvent(false);
+        }
+
+        public TaskInfo(TaskInfo owner, TaskConfiguration task)
+        {
+            if( owner == null )
+                throw new ArgumentNullException("owner");
+            if( task == null )
+                throw new ArgumentNullException("task");
+            Job = owner.Job;
+            Task = task;
+            _taskCompletedEvent = owner.TaskCompletedEvent;
+            _owner = owner;
         }
 
         public TaskConfiguration Task { get; private set; }
@@ -29,7 +44,17 @@ namespace JobServerApplication
 
         public TaskState State { get; set; }
 
-        public TaskServerInfo Server { get; set; }
+        public TaskServerInfo Server 
+        {
+            get
+            {
+                if( _owner == null )
+                    return _server;
+                else
+                    return _owner.Server;
+            }
+            set { _server = value; }
+        }
 
         public int Attempts { get; set; }
 

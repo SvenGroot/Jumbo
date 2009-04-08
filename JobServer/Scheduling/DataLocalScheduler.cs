@@ -34,7 +34,7 @@ namespace JobServerApplication.Scheduling
             capacity = ScheduleTaskList(job, taskServers, inputTasks, capacity, inputBlocks, true, dfsClient, newServers);
             if( capacity > 0 && job.UnscheduledTasks > 0 )
             {
-                ScheduleTaskList(job, taskServers, job.Tasks.Values, capacity, inputBlocks, false, dfsClient, newServers);
+                ScheduleTaskList(job, taskServers, job.SchedulingTasks.Values, capacity, inputBlocks, false, dfsClient, newServers);
             }
             return newServers;
         }

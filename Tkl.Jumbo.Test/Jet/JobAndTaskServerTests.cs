@@ -43,27 +43,33 @@ namespace Tkl.Jumbo.Test.Jet
         [Test]
         public void TestJobExecution()
         {
-            RunJob(false, "/joboutput", false);
+            RunJob(false, "/joboutput", false, ChannelType.File);
         }
 
         [Test]
         public void TestJobExecutionTcpFileDownload()
         {
-            RunJob(true, "/joboutput2", false);
+            RunJob(true, "/joboutput2", false, ChannelType.File);
         }
 
         [Test]
         public void TestJobExecutionPushTask()
         {
-            RunJob(false, "/joboutput3", true);
+            RunJob(false, "/joboutput3", true, ChannelType.File);
         }
 
-        private void RunJob(bool forceFileDownload, string outputPath, bool pushTask)
+        [Test]
+        public void TestJobExecutionPipelineChannel()
+        {
+            RunJob(false, "/joboutput4", true, ChannelType.Pipeline);
+        }
+
+        private void RunJob(bool forceFileDownload, string outputPath, bool pushTask, ChannelType channelType)
         {
             DfsClient dfsClient = new DfsClient(Dfs.TestDfsCluster.CreateClientConfig());
             dfsClient.NameServer.CreateDirectory(outputPath);
 
-            JobConfiguration config = CreateConfiguration(dfsClient, _fileName, outputPath, forceFileDownload, pushTask ? typeof(LineCounterPushTask) : typeof(LineCounterTask), pushTask ? typeof(LineAdderPushTask) : typeof(LineAdderTask));
+            JobConfiguration config = CreateConfiguration(dfsClient, _fileName, outputPath, forceFileDownload, pushTask ? typeof(LineCounterPushTask) : typeof(LineCounterTask), pushTask ? typeof(LineAdderPushTask) : typeof(LineAdderTask), channelType);
 
             JetClient target = new JetClient(TestJetCluster.CreateClientConfig());
             Job job = target.RunJob(config, dfsClient, typeof(LineCounterTask).Assembly.Location);
@@ -82,14 +88,21 @@ namespace Tkl.Jumbo.Test.Jet
             Console.WriteLine(config);
         }
 
-        private static JobConfiguration CreateConfiguration(DfsClient dfsClient, string fileName, string outputPath, bool forceFileDownload, Type counterTask, Type adderTask)
+        private static JobConfiguration CreateConfiguration(DfsClient dfsClient, string fileName, string outputPath, bool forceFileDownload, Type counterTask, Type adderTask, ChannelType channelType)
         {
             Tkl.Jumbo.Dfs.File file = dfsClient.NameServer.GetFileInfo(fileName);
 
             JobConfiguration config = new JobConfiguration(System.IO.Path.GetFileName(typeof(LineCounterTask).Assembly.Location));
 
             config.AddInputStage("Task", file, counterTask, typeof(LineRecordReader));
-            config.AddStage("OutputTask", new[] { "Task" }, adderTask, 1, ChannelType.File, null, outputPath, typeof(TextRecordWriter<Int32Writable>));
+            string stage = "Task";
+            if( channelType == ChannelType.Pipeline )
+            {
+                // Pipeline channel cannot merge so we will add another stage in between.
+                config.AddPointToPointStage("IntermediateTask", "Task", adderTask, ChannelType.Pipeline, null, null);
+                stage = "IntermediateTask";
+            }
+            config.AddStage("OutputTask", new[] { stage }, adderTask, 1, ChannelType.File, null, outputPath, typeof(TextRecordWriter<Int32Writable>));
             config.Channels[0].ForceFileDownload = forceFileDownload;
 
             return config;

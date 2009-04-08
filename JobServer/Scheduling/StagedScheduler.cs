@@ -34,7 +34,7 @@ namespace JobServerApplication.Scheduling
 
             if( job.UnscheduledTasks > 0 )
             {
-                ScheduleNonInputTasks(taskServers, job, job.GetNonInputTasks().ToList(), dfsClient, newServers);
+                ScheduleNonInputTasks(taskServers, job, job.GetNonInputSchedulingTasks().ToList(), dfsClient, newServers);
             }
             return newServers;
         }

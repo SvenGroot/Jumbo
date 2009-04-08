@@ -115,7 +115,7 @@ namespace TaskHost
             where TOutput : IWritable, new()
         {
             _log.Debug("DoRunTask invoked.");
-            ITask<TInput, TOutput> task = taskExecution.InstantiateTask<TInput, TOutput>();
+            ITask<TInput, TOutput> task = taskExecution.GetTaskInstance<TInput, TOutput>();
             _log.Info("Running task.");
             IPullTask<TInput, TOutput> pullTask = task as IPullTask<TInput, TOutput>;
             Stopwatch taskStopwatch = new Stopwatch();
@@ -138,11 +138,11 @@ namespace TaskHost
                 {
                     pushTask.ProcessRecord(record, output);
                 }
-                pushTask.Finish(output);
+                // Finish is called by taskExecution.FinishTask below.
                 taskStopwatch.Stop();
             }
 
-            taskExecution.FinalizeOutput();
+            taskExecution.FinishTask();
 
             TimeSpan timeWaiting;
             MultiRecordReader<TInput> multiReader = input as MultiRecordReader<TInput>;

@@ -20,6 +20,7 @@ namespace JobServerApplication
     class JobInfo
     {
         private readonly SortedList<string, TaskInfo> _tasks = new SortedList<string, TaskInfo>();
+        private readonly SortedList<string, TaskInfo> _schedulingTasks = new SortedList<string, TaskInfo>();
         private readonly HashSet<ServerAddress> _taskServers = new HashSet<ServerAddress>();
         private readonly ManualResetEvent _jobCompletedEvent = new ManualResetEvent(false);
         private Guid[] _inputBlocks;
@@ -42,6 +43,10 @@ namespace JobServerApplication
         public SortedList<string, TaskInfo> Tasks
         {
             get { return _tasks; }
+        }
+        public SortedList<string, TaskInfo> SchedulingTasks
+        {
+            get { return _schedulingTasks; }
         }
         public HashSet<ServerAddress> TaskServers
         {
@@ -68,14 +73,14 @@ namespace JobServerApplication
 
         public IEnumerable<TaskInfo> GetDfsInputTasks()
         {
-            return from task in Tasks.Values
+            return from task in SchedulingTasks.Values
                    where task.Task.DfsInput != null
                    select task;
         }
 
-        public IEnumerable<TaskInfo> GetNonInputTasks()
+        public IEnumerable<TaskInfo> GetNonInputSchedulingTasks()
         {
-            return from task in Tasks.Values
+            return from task in SchedulingTasks.Values
                    where task.Task.DfsInput == null
                    select task;
         }

@@ -26,9 +26,10 @@ namespace Tkl.Jumbo.Jet
         /// <summary>
         /// Gets the local directory where output files for a particular task are stored if that task uses a file output channel.
         /// </summary>
-        /// <param name="fullTaskID">The full ID of the task.</param>
+        /// <param name="jobId">The job ID.</param>
+        /// <param name="taskId">The task ID.</param>
         /// <returns>The output directory of the task.</returns>
-        string GetOutputFileDirectory(string fullTaskID);
+        string GetOutputFileDirectory(Guid jobId, string taskId);
 
         /// <summary>
         /// Gets the contents of the diagnostic log file.

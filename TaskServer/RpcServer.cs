@@ -39,9 +39,9 @@ namespace TaskServerApplication
             return TaskServer.Instance.GetTaskStatus(fullTaskID);
         }
 
-        public string GetOutputFileDirectory(string fullTaskID)
+        public string GetOutputFileDirectory(Guid jobId, string taskId)
         {
-            return TaskServer.Instance.GetOutputFileDirectory(fullTaskID);
+            return TaskServer.Instance.GetOutputFileDirectory(jobId, taskId);
         }
 
         public string GetLogFileContents(int maxSize)

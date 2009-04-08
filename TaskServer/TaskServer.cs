@@ -132,10 +132,10 @@ namespace TaskServerApplication
             return status;
         }
 
-        public string GetOutputFileDirectory(string fullTaskID)
+        public string GetOutputFileDirectory(Guid jobId, string taskId)
         {
-            _log.DebugFormat("GetOutputFileDirectory, fullTaskID = \"{0}\"", fullTaskID);
-            return _taskRunner.GetJobDirectory(fullTaskID);
+            _log.DebugFormat("GetOutputFileDirectory, jobId = \"{0}\", taskId = \"{0}\"", jobId, taskId);
+            return GetJobDirectory(jobId);
         }
 
         public string GetLogFileContents(int maxSize)

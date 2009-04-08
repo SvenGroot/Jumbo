@@ -82,18 +82,4 @@ namespace Tkl.Jumbo.Jet
         /// </summary>
         public TaskDfsOutput DfsOutput { get; set; }
     }
-
-    /// <summary>
-    /// Class containing extension methods for <see cref="TaskConfiguration"/>.
-    /// </summary>
-    /// <remarks>
-    /// This seems like a strange thing to do but if I don't the XmlSerializer throws a hissy fit about IWritable for some reason.
-    /// </remarks>
-    public static class TaskConfigurationExtensions
-    {
-        private static log4net.ILog _log = log4net.LogManager.GetLogger(typeof(TaskConfiguration));
-
-
-
-    }
 }

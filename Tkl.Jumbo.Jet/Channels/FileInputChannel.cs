@@ -142,7 +142,7 @@ namespace Tkl.Jumbo.Jet.Channels
             if( !_channelConfig.ForceFileDownload && task.TaskServer.HostName == Dns.GetHostName() )
             {
                 ITaskServerClientProtocol taskServer = JetClient.CreateTaskServerClient(task.TaskServer);
-                string taskOutputDirectory = taskServer.GetOutputFileDirectory(task.FullTaskId);
+                string taskOutputDirectory = taskServer.GetOutputFileDirectory(task.JobId, task.TaskId);
                 fileName = Path.Combine(taskOutputDirectory, FileOutputChannel.CreateChannelFileName(task.TaskId, _outputTaskId));
                 LocalBytesRead += new FileInfo(fileName).Length;
                 _log.InfoFormat("Using local file {0} as input.", fileName);

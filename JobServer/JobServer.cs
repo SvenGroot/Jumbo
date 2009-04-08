@@ -113,12 +113,37 @@ namespace JobServerApplication
                     throw;
                 }
 
+                List<TaskConfiguration> nonSchedulingTasks = null;
                 foreach( TaskConfiguration task in config.Tasks )
                 {
-                    TaskInfo taskInfo = new TaskInfo(jobInfo, task);
-                    jobInfo.Tasks.Add(task.TaskID, taskInfo);
+                    TaskInfo taskInfo;
+                    if( config.IsPipelinedTask(task.TaskID) )
+                    {
+                        taskInfo = new TaskInfo(jobInfo, task);
+                        jobInfo.SchedulingTasks.Add(task.TaskID, taskInfo);
+                        jobInfo.Tasks.Add(task.TaskID, taskInfo);
+                    }
+                    else
+                    {
+                        if( nonSchedulingTasks == null )
+                            nonSchedulingTasks = new List<TaskConfiguration>();
+                        nonSchedulingTasks.Add(task);
+                    }
                 }
-                jobInfo.UnscheduledTasks = jobInfo.Tasks.Count;
+
+                if( nonSchedulingTasks != null )
+                {
+                    foreach( TaskConfiguration task in nonSchedulingTasks )
+                    {
+                        Tkl.Jumbo.Jet.Channels.ChannelConfiguration inputChannel = config.GetInputChannelForTask(task.TaskID);
+                        if( inputChannel.InputTasks.Length != 1 )
+                            throw new InvalidOperationException("Pipeline channel must have a single input.");
+                        TaskInfo inputTask = jobInfo.Tasks[inputChannel.InputTasks[0]];
+                        jobInfo.Tasks.Add(task.TaskID, new TaskInfo(inputTask, task));
+                    }
+                }
+
+                jobInfo.UnscheduledTasks = jobInfo.SchedulingTasks.Count;
 
                 ScheduleTasks(jobInfo);
 
@@ -447,7 +472,7 @@ namespace JobServerApplication
                             break;
                         }
 
-                        if( job.FinishedTasks == job.Tasks.Count || job.State == JobState.Failed )
+                        if( job.FinishedTasks == job.SchedulingTasks.Count || job.State == JobState.Failed )
                         {
                             if( job.State != JobState.Failed )
                             {
@@ -540,7 +565,7 @@ namespace JobServerApplication
                 return new JobStatus()
                 {
                     JobId = jobId,
-                    Tasks = (from task in job.Tasks.Values
+                    Tasks = (from task in job.SchedulingTasks.Values
                              select new TaskStatus()
                              {
                                  TaskID = task.Task.TaskID,
@@ -552,7 +577,7 @@ namespace JobServerApplication
                                  ExecutionInstanceId = task.ExecutionInstanceId,
                                  StartOffset = task.StartTimeUtc - job.StartTimeUtc
                              }).ToArray(),
-                    RunningTaskCount = (from task in job.Tasks.Values
+                    RunningTaskCount = (from task in job.SchedulingTasks.Values
                                         where task.State == TaskState.Running
                                         select task).Count(),
                     UnscheduledTaskCount = job.UnscheduledTasks,

@@ -144,16 +144,9 @@ namespace Tkl.Jumbo.Jet
                 throw new ArgumentNullException("recordWriterType");
 
             Type taskInterfaceType = FindGenericInterfaceType(taskType, typeof(ITask<,>));
+            ValidateOutputType(outputPath, recordWriterType, taskInterfaceType);
+
             Type inputType = taskInterfaceType.GetGenericArguments()[0];
-            if( outputPath != null )
-            {
-                // Validate output type.
-                Type outputType = taskInterfaceType.GetGenericArguments()[1];
-                Type recordWriterBaseType = FindGenericBaseType(recordWriterType, typeof(RecordWriter<>));
-                Type recordType = recordWriterBaseType.GetGenericArguments()[0];
-                if( outputType != recordType )
-                    throw new ArgumentException(string.Format("The specified record type {0} is not identical to the specified task type's output type {1}.", recordType, outputType));
-            }
 
             if( partitionerType != null )
             {
@@ -168,21 +161,10 @@ namespace Tkl.Jumbo.Jet
                              from inputTask in inputStage
                              select inputTask;
 
-            // Validate channel type
-            foreach( TaskConfiguration task in inputTasks )
-            {
-                if( task.DfsOutput != null || GetOutputChannelForTask(task.TaskID) != null )
-                    throw new ArgumentException(string.Format("Input task {0} already has an output channel or DFS output.", task.TaskID), "inputStages");
-                Type inputTaskType = task.TaskType;
-                // We skip the check if the task type isn't stored.
-                if( inputTaskType != null )
-                {
-                    Type inputTaskInterfaceType = FindGenericInterfaceType(inputTaskType, typeof(ITask<,>));
-                    Type inputTaskOutputType = inputTaskInterfaceType.GetGenericArguments()[1];
-                    if( inputTaskOutputType != inputType )
-                        throw new ArgumentException(string.Format("Input task {0} has output type {1} instead of the required type {2}.", task.TaskID, inputTaskOutputType, inputType), "inputStages");
-                }
-            }
+            if( inputTasks.Count() > 1 && channelType == ChannelType.Pipeline )
+                throw new ArgumentException("You cannot use a pipeline channel type with a channel that merges several inputs.");
+
+            ValidateChannelRecordType(inputType, inputTasks);
 
             List<TaskConfiguration> stage = CreateStage(stageName, taskType, taskCount, outputPath, recordWriterType, null, null);
 
@@ -200,6 +182,60 @@ namespace Tkl.Jumbo.Jet
             Tasks.AddRange(stage);
             Channels.Add(channel);
             return stage.AsReadOnly();
+        }
+
+        /// <summary>
+        /// Creates a stage where each task reads data from precisely one task of another stage.
+        /// </summary>
+        /// <param name="stageName">The name of the new stage.</param>
+        /// <param name="inputStage">The stage to use as input for this stage. The new stage will have the same number of tasks as the input stage.</param>
+        /// <param name="taskType">The type of the stage's tasks.</param>
+        /// <param name="channelType">One of the <see cref="ChannelType"/> files indicating the type of channel to use between the the input stages and the new stage.</param>
+        /// <param name="outputPath">The name of a DFS directory to write the stage's output files to, or <see langword="null"/> to indicate this stage does not write to the DFS.</param>
+        /// <param name="recordWriterType">The type of the record writer to use when writing to the output files; this parameter is ignored if <paramref name="outputPath"/> is <see langword="null" />.</param>
+        /// <returns>The list of tasks in the new stage.</returns>
+        /// <remarks>
+        /// <note>
+        ///   Information about stages is not preserved through XML serialization, so you should not use this method on a <see cref="JobConfiguration"/>
+        ///   object created using the <see cref="LoadXml(string)"/> method.
+        /// </note>
+        /// </remarks>
+        public IList<TaskConfiguration> AddPointToPointStage(string stageName, string inputStage, Type taskType, ChannelType channelType, string outputPath, Type recordWriterType)
+        {
+            if( stageName == null )
+                throw new ArgumentNullException("stageName");
+            if( inputStage == null )
+                throw new ArgumentNullException("inputStage");
+            if( taskType == null )
+                throw new ArgumentNullException("taskType");
+
+            Type taskInterfaceType = FindGenericInterfaceType(taskType, typeof(ITask<,>));
+            ValidateOutputType(outputPath, recordWriterType, taskInterfaceType);
+
+            Type inputType = taskInterfaceType.GetGenericArguments()[0];
+
+            List<TaskConfiguration> inputTasks = _stages[inputStage];
+
+            ValidateChannelRecordType(inputType, inputTasks);
+
+            List<TaskConfiguration> stage = CreateStage(stageName, taskType, inputTasks.Count, outputPath, recordWriterType, null, null);
+
+            _stages.Add(stageName, stage);
+            Tasks.AddRange(stage);
+            for( int x = 0; x < inputTasks.Count; ++x )
+            {
+                TaskConfiguration inputTask = inputTasks[x];
+                TaskConfiguration outputTask = stage[x];
+                ChannelConfiguration channel = new ChannelConfiguration()
+                {
+                    ChannelType = channelType,
+                    InputTasks = new[] { inputTask.TaskID },
+                    OutputTasks = new[] { outputTask.TaskID },
+                    PartitionerType = typeof(HashPartitioner<>).MakeGenericType(inputType).AssemblyQualifiedName
+                };
+                Channels.Add(channel);
+            }
+            return stage;
         }
 
         private List<TaskConfiguration> CreateStage(string stageName, Type taskType, int taskCount, string outputPath, Type recordWriterType, string inputPath, Type recordReaderType)
@@ -308,6 +344,67 @@ namespace Tkl.Jumbo.Jet
             }
         }
 
+        /// <summary>
+        /// Gets a value that indicates if the specified task should be scheduled.
+        /// </summary>
+        /// <param name="taskId">The task ID.</param>
+        /// <returns><see langword="true"/> if the specified task should be scheduled, or <see langword="false"/> if the specified task is executed
+        /// in-process with another task.</returns>
+        public bool IsPipelinedTask(string taskId)
+        {
+            ChannelConfiguration inputChannel = GetInputChannelForTask(taskId);
+            return inputChannel == null || inputChannel.ChannelType != ChannelType.Pipeline;
+        }
+
+        /// <summary>
+        /// Gets a list of tasks that need to be scheduled, which excludes those tasks that will be executed in-process with another task.
+        /// </summary>
+        /// <returns>A list of tasks that need to be scheduled.</returns>
+        /// <remarks>
+        /// If you modify the job configuration after calling this function, the next time you call this function it will return invalid results.
+        /// </remarks>
+        public IEnumerable<TaskConfiguration> GetSchedulingTasks()
+        {
+            // Tasks whose input channel uses ChannelType.Pipeline will be executed in-process with their input task so don't need to be schedueld.
+            return from task in Tasks
+                   let inputChannel = GetInputChannelForTask(task.TaskID)
+                   where inputChannel == null || inputChannel.ChannelType != ChannelType.Pipeline
+                   select task;
+        }
+
+        private void ValidateChannelRecordType(Type inputType, IEnumerable<TaskConfiguration> inputTasks)
+        {
+            // Validate channel type
+            foreach( TaskConfiguration task in inputTasks )
+            {
+                if( task.DfsOutput != null || GetOutputChannelForTask(task.TaskID) != null )
+                    throw new ArgumentException(string.Format("Input task {0} already has an output channel or DFS output.", task.TaskID), "inputStages");
+                Type inputTaskType = task.TaskType;
+                // We skip the check if the task type isn't stored.
+                if( inputTaskType != null )
+                {
+                    Type inputTaskInterfaceType = FindGenericInterfaceType(inputTaskType, typeof(ITask<,>));
+                    Type inputTaskOutputType = inputTaskInterfaceType.GetGenericArguments()[1];
+                    if( inputTaskOutputType != inputType )
+                        throw new ArgumentException(string.Format("Input task {0} has output type {1} instead of the required type {2}.", task.TaskID, inputTaskOutputType, inputType), "inputStages");
+                }
+            }
+        }
+
+        private static void ValidateOutputType(string outputPath, Type recordWriterType, Type taskInterfaceType)
+        {
+            if( outputPath != null )
+            {
+                // Validate output type.
+                Type outputType = taskInterfaceType.GetGenericArguments()[1];
+                Type recordWriterBaseType = FindGenericBaseType(recordWriterType, typeof(RecordWriter<>));
+                Type recordType = recordWriterBaseType.GetGenericArguments()[0];
+                if( outputType != recordType )
+                    throw new ArgumentException(string.Format("The specified record type {0} is not identical to the specified task type's output type {1}.", recordType, outputType));
+            }
+        }
+
+
         private static Type FindGenericInterfaceType(Type type, Type interfaceType)
         {
             // This is necessary because while in .Net you can use type.GetInterface with a generic interface type,
@@ -332,5 +429,7 @@ namespace Tkl.Jumbo.Jet
             }
             throw new ArgumentException(string.Format("Type {0} does not inherit from {1}.", type, baseType));
         }
+
+    
     }
 }
