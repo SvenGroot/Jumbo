@@ -27,19 +27,19 @@ namespace Tkl.Jumbo.Jet
         /// <summary>
         /// Gets or sets the task type.
         /// </summary>
-        /// <remarks>
-        /// This property will be <see langword="null"/> if this <see cref="TaskConfiguration"/> is part of
-        /// a <see cref="JobConfiguration"/> loaded with <see cref="JobConfiguration.LoadXml(string)"/>; in that case,
-        /// manually load the type using <see cref="JobConfiguration.AssemblyFileName"/> and <see cref="TypeName"/>.
-        /// </remarks>
         [XmlIgnore]
         public Type TaskType
         {
-            get { return _type; }
+            get 
+            {
+                if( _type == null && _typeName != null )
+                    _type = Type.GetType(_typeName);
+                return _type; 
+            }
             set
             {
                 _type = value;
-                _typeName = _type == null ? null : _type.FullName;
+                _typeName = _type == null ? null : _type.AssemblyQualifiedName;
             }
         }
         

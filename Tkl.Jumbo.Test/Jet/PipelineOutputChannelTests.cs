@@ -24,7 +24,6 @@ namespace Tkl.Jumbo.Test.Jet
             if( System.IO.Directory.Exists(path) )
                 System.IO.Directory.Delete(path, true);
             System.IO.Directory.CreateDirectory(path);
-            System.IO.File.Copy(typeof(LineCounterPushTask).Assembly.Location, System.IO.Path.Combine(path, config.AssemblyFileName));
             // This depends on the fact that TaskExecutionUtility will not use the JetClient and DfsClient unless a DfsInput or DfsOutput is used. Since we will never
             // call GetInputReader that won't happen.
             using( TaskExecutionUtility taskExecution = new TaskExecutionUtility(new JetClient(), Guid.NewGuid(), config, "Task001", new DfsClient(), path, "/foo", 1) )

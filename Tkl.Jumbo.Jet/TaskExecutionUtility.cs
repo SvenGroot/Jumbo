@@ -103,10 +103,9 @@ namespace Tkl.Jumbo.Jet
             InputChannelConfiguration = jobConfiguration.GetInputChannelForTask(taskId);
             OutputChannelConfiguration = jobConfiguration.GetOutputChannelForTask(taskId);
 
-            _log.DebugFormat("Loading assembly {0}", jobConfiguration.AssemblyFileName);
-            TaskAssembly = Assembly.LoadFrom(System.IO.Path.Combine(LocalJobDirectory, jobConfiguration.AssemblyFileName));
+            _log.DebugFormat("Loading type {0}.", TaskConfiguration.TypeName);
+            TaskType = Type.GetType(TaskConfiguration.TypeName, true);
             _log.Debug("Determining input and output types.");
-            TaskType = TaskAssembly.GetType(TaskConfiguration.TypeName);
             Type taskInterfaceType = TaskType.FindGenericInterfaceType(typeof(ITask<,>));
             Type[] arguments = taskInterfaceType.GetGenericArguments();
             InputRecordType = arguments[0];
@@ -201,11 +200,6 @@ namespace Tkl.Jumbo.Jet
                 return _outputChannel;
             }
         }
-
-        /// <summary>
-        /// Gets the assembly containing the task's type.
-        /// </summary>
-        public Assembly TaskAssembly { get; private set; }
 
         /// <summary>
         /// Gets the type of the task.

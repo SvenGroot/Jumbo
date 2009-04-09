@@ -27,34 +27,34 @@ namespace Tkl.Jumbo.Jet
         /// Initializes a new instance of the <see cref="JobConfiguration"/> class.
         /// </summary>
         public JobConfiguration()
-            : this((string)null)
+            : this((string[])null)
         {
         }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="JobConfiguration"/> class with the specified assembly.
         /// </summary>
-        /// <param name="assembly">The assembly containing the task types.</param>
-        public JobConfiguration(Assembly assembly)
-            : this(assembly == null ? (string)null : System.IO.Path.GetFileName(assembly.Location))
+        /// <param name="assemblies">The assemblies containing the task types.</param>
+        public JobConfiguration(params Assembly[] assemblies)
+            : this(assemblies == null ? (string[])null : (from a in assemblies select System.IO.Path.GetFileName(a.Location)).ToArray())
         {
         }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="JobConfiguration"/> class with the specified assembly file name.
         /// </summary>
-        /// <param name="assemblyFileName">The file name of the assembly containing the task types for this class.</param>
-        public JobConfiguration(string assemblyFileName)
+        /// <param name="assemblyFileNames">The file names of the assemblies containing the task types for this class.</param>
+        public JobConfiguration(params string[] assemblyFileNames)
         {
             Tasks = new List<TaskConfiguration>();
             Channels = new List<ChannelConfiguration>();
-            AssemblyFileName = assemblyFileName;
+            AssemblyFileNames = assemblyFileNames == null ? new List<string>() : assemblyFileNames.ToList();
         }
 
         /// <summary>
         /// Gets or sets the file name of the assembly holding the task classes.
         /// </summary>
-        public string AssemblyFileName { get; set; }
+        public List<string> AssemblyFileNames { get; set; }
 
         /// <summary>
         /// Gets or sets a list of tasks that make up this job.

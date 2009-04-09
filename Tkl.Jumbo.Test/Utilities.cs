@@ -119,13 +119,26 @@ namespace Tkl.Jumbo.Test
 
         public static bool CompareArray<T>(T[] array1, int offset1, T[] array2, int offset2, int count)
         {
+            return CompareList(array1, offset1, array2, offset2, count);
+        }
+
+        public static bool CompareList<T>(IList<T> list1, int offset1, IList<T> list2, int offset2, int count)
+        {
             int end = offset1 + count;
             for( int i1 = offset1, i2 = offset2; i1 < end; ++i1, ++i2 )
             {
-                if( !object.Equals(array1[i1], array2[i2] ) )
+                if( !object.Equals(list1[i1], list2[i2]) )
                     return false;
             }
             return true;
+        }
+
+        public static bool CompareList<T>(IList<T> list1, IList<T> list2)
+        {
+            if( list1.Count != list2.Count )
+                return false;
+            else
+                return CompareList(list1, 0, list2, 0, list1.Count);
         }
 
         public static void TraceLineAndFlush(string message)

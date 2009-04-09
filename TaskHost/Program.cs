@@ -16,6 +16,7 @@ namespace TaskHost
 {
     static class Program
     {
+        private static readonly AssemblyResolver _resolver = new AssemblyResolver();
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(Program));
         private static DfsClient _dfsClient;
         private static JetClient _jetClient;
@@ -68,6 +69,15 @@ namespace TaskHost
                     _log.DebugFormat("Loading job configuration from local file {0}.", xmlConfigPath);
                     JobConfiguration config = JobConfiguration.LoadXml(xmlConfigPath);
                     _log.Debug("Job configuration loaded.");
+
+                    if( config.AssemblyFileNames != null )
+                    {
+                        foreach( string assemblyFileName in config.AssemblyFileNames )
+                        {
+                            _log.DebugFormat("Loading assembly {0}.", assemblyFileName);
+                            Assembly.LoadFrom(Path.Combine(taskInfo.JobDirectory, assemblyFileName));
+                        }
+                    }
 
                     using( TaskExecutionUtility taskExecution = new TaskExecutionUtility(_jetClient, taskInfo.JobId, config, taskInfo.TaskId, _dfsClient, taskInfo.JobDirectory, taskInfo.DfsJobDirectory, taskInfo.Attempt) )
                     {
