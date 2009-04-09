@@ -376,13 +376,21 @@ namespace Tkl.Jumbo.Jet
                 {
                     for( int x = 0; x < newTasks.Count; ++x )
                     {
-                        ChannelConfiguration channel = new ChannelConfiguration();
-                        channel.ChannelType = outputChannelTemplate.ChannelType;
-                        channel.ForceFileDownload = outputChannelTemplate.ForceFileDownload;
-                        channel.PartitionerType = outputChannelTemplate.PartitionerType;
-                        channel.InputTasks = new[] { newTasks[x].TaskID };
-                        channel.OutputTasks = new[] { outputTasks[x].TaskID };
-                        Channels.Add(channel);
+                        ChannelConfiguration channel = GetInputChannelForTask(outputTasks[x].TaskID);
+                        if( channel == null )
+                        {
+                            channel = new ChannelConfiguration();
+                            channel.ChannelType = outputChannelTemplate.ChannelType;
+                            channel.ForceFileDownload = outputChannelTemplate.ForceFileDownload;
+                            channel.PartitionerType = outputChannelTemplate.PartitionerType;
+                            channel.InputTasks = new[] { newTasks[x].TaskID };
+                            channel.OutputTasks = new[] { outputTasks[x].TaskID };
+                            Channels.Add(channel);
+                        }
+                        else
+                        {
+                            channel.InputTasks = channel.InputTasks.Union(new[] { newTasks[x].TaskID }).ToArray();
+                        }
                     }
                 }
 
@@ -395,13 +403,22 @@ namespace Tkl.Jumbo.Jet
             {
                 if( outputTasks != null )
                 {
-                    ChannelConfiguration channel = new ChannelConfiguration();
-                    channel.ChannelType = outputChannelTemplate.ChannelType;
-                    channel.ForceFileDownload = outputChannelTemplate.ForceFileDownload;
-                    channel.PartitionerType = outputChannelTemplate.PartitionerType;
-                    channel.InputTasks = new[] { task.TaskID };
-                    channel.OutputTasks = (from t in outputTasks select t.TaskID).ToArray();
-                    Channels.Add(channel);
+                    ChannelConfiguration channel = GetInputChannelForTask(outputTasks[0].TaskID);
+                    if( channel == null )
+                    {
+                        channel = new ChannelConfiguration();
+                        channel.ChannelType = outputChannelTemplate.ChannelType;
+                        channel.ForceFileDownload = outputChannelTemplate.ForceFileDownload;
+                        channel.PartitionerType = outputChannelTemplate.PartitionerType;
+                        channel.InputTasks = new[] { task.TaskID };
+                        channel.OutputTasks = (from t in outputTasks select t.TaskID).ToArray();
+                        Channels.Add(channel);
+                    }
+                    else
+                    {
+                        channel.InputTasks = channel.InputTasks.Union(new[] { task.TaskID }).ToArray();
+                    }
+
                 }
             }
         }

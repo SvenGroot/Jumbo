@@ -177,6 +177,8 @@ namespace Tkl.Jumbo.Test.Jet
 
             IList<TaskConfiguration> outputStage = target.AddStage("OutputStage", new[] { "MergeStage" }, typeof(Tasks.LineAdderTask), 1, ChannelType.Pipeline, null, "/output", typeof(TextRecordWriter<Int32Writable>));
 
+            Assert.AreEqual(12, target.Channels.Count);
+
             // The stage (pardon the pun) is set, lets do the split
             const int partitions = 2;
             target.SplitStageOutput(new[] { "InputStage1_", "InputStage2_" }, partitions);
@@ -191,12 +193,18 @@ namespace Tkl.Jumbo.Test.Jet
             Assert.AreEqual(partitions, mergeStage.Count);
             Assert.AreEqual(partitions, outputStage.Count);
 
-            CheckStageSplit(target, file1, inputStage1, partitions, "InputStage1_", "FollowStage1_");
+            Assert.AreEqual(inputStage1.Count + inputStage2.Count + followStage1.Count + followStage2.Count + mergeStage.Count + outputStage.Count, target.Tasks.Count);
 
-            CheckStageSplit(target, file2, inputStage2, partitions, "InputStage2_", "FollowStage2_");
+            // Only two channels get multiplied
+            Assert.AreEqual(12 + 2 * (partitions - 1), target.Channels.Count);
+
+            int inputTaskCount = inputStage1.Count + inputStage2.Count;
+            CheckStageSplit(inputTaskCount, target, file1, inputStage1, partitions, "InputStage1_", "FollowStage1_");
+
+            CheckStageSplit(inputTaskCount, target, file2, inputStage2, partitions, "InputStage2_", "FollowStage2_");
         }
 
-        private static void CheckStageSplit(JobConfiguration target, File file1, IList<TaskConfiguration> inputStage1, int partitions, string stageName, string followStageName)
+        private static void CheckStageSplit(int inputTaskCount, JobConfiguration target, File file1, IList<TaskConfiguration> inputStage1, int partitions, string stageName, string followStageName)
         {
             for( int x = 0; x < inputStage1.Count; ++x )
             {
@@ -231,8 +239,8 @@ namespace Tkl.Jumbo.Test.Jet
                     ChannelConfiguration followTaskOutputChannel = target.GetOutputChannelForTask(followTask.TaskID);
                     Assert.AreEqual(ChannelType.File, followTaskOutputChannel.ChannelType);
                     Assert.AreEqual(typeof(HashPartitioner<Int32Writable>).AssemblyQualifiedName, followTaskOutputChannel.PartitionerType);
-                    Assert.AreEqual(1, followTaskOutputChannel.InputTasks.Length);
-                    Assert.AreEqual(followTask.TaskID, followTaskOutputChannel.InputTasks[0]);
+                    Assert.AreEqual(inputTaskCount, followTaskOutputChannel.InputTasks.Length);
+                    Assert.IsTrue(followTaskOutputChannel.InputTasks.Contains(followTask.TaskID));
                     Assert.AreEqual(1, followTaskOutputChannel.OutputTasks.Length);
 
                     TaskConfiguration mergeTask = target.GetTask(followTaskOutputChannel.OutputTasks[0]);
