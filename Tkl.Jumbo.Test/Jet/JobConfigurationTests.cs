@@ -160,6 +160,109 @@ namespace Tkl.Jumbo.Test.Jet
             Assert.IsNull(target.GetOutputChannelForTask("BadName"));
         }
 
+        [Test]
+        public void TestSplitStageOutput()
+        {
+            JobConfiguration target = new JobConfiguration(typeof(Tasks.LineCounterTask).Assembly);
+            File file1 = CreateFakeTestFile("test1");
+            File file2 = CreateFakeTestFile("test2");
+
+            IList<TaskConfiguration> inputStage1 = target.AddInputStage("InputStage1_", file1, typeof(Tasks.LineCounterTask), typeof(LineRecordReader));
+            IList<TaskConfiguration> inputStage2 = target.AddInputStage("InputStage2_", file2, typeof(Tasks.LineCounterTask), typeof(LineRecordReader));
+
+            IList<TaskConfiguration> followStage1 = target.AddPointToPointStage("FollowStage1_", "InputStage1_", typeof(Tasks.LineAdderPushTask), ChannelType.Pipeline, null, null, null);
+            IList<TaskConfiguration> followStage2 = target.AddPointToPointStage("FollowStage2_", "InputStage2_", typeof(Tasks.LineAdderPushTask), ChannelType.Pipeline, null, null, null);
+
+            IList<TaskConfiguration> mergeStage = target.AddStage("MergeStage", new[] { "FollowStage1_", "FollowStage2_" }, typeof(Tasks.LineAdderTask), 1, ChannelType.File, null, null, null);
+
+            IList<TaskConfiguration> outputStage = target.AddStage("OutputStage", new[] { "MergeStage" }, typeof(Tasks.LineAdderTask), 1, ChannelType.Pipeline, null, "/output", typeof(TextRecordWriter<Int32Writable>));
+
+            // The stage (pardon the pun) is set, lets do the split
+            const int partitions = 2;
+            target.SplitStageOutput(new[] { "InputStage1_", "InputStage2_" }, partitions);
+
+            // These stages should be unchanged.
+            Assert.AreEqual(file1.Blocks.Count, inputStage1.Count);
+            Assert.AreEqual(file2.Blocks.Count, inputStage2.Count);
+
+            // These should all have multiplied the number of tasks.
+            Assert.AreEqual(file1.Blocks.Count * partitions, followStage1.Count);
+            Assert.AreEqual(file2.Blocks.Count * partitions, followStage2.Count);
+            Assert.AreEqual(partitions, mergeStage.Count);
+            Assert.AreEqual(partitions, outputStage.Count);
+
+            CheckStageSplit(target, file1, inputStage1, partitions, "InputStage1_", "FollowStage1_");
+
+            CheckStageSplit(target, file2, inputStage2, partitions, "InputStage2_", "FollowStage2_");
+        }
+
+        private static void CheckStageSplit(JobConfiguration target, File file1, IList<TaskConfiguration> inputStage1, int partitions, string stageName, string followStageName)
+        {
+            for( int x = 0; x < inputStage1.Count; ++x )
+            {
+                TaskConfiguration task = inputStage1[x];
+                string postfix = (x + 1).ToString("000", System.Globalization.CultureInfo.InvariantCulture);
+                Assert.AreEqual(stageName + postfix, task.TaskID);
+                Assert.IsNotNull(task.DfsInput);
+                Assert.AreEqual(file1.FullPath, task.DfsInput.Path);
+                Assert.AreEqual(x, task.DfsInput.Block);
+                Assert.AreEqual(typeof(LineRecordReader).AssemblyQualifiedName, task.DfsInput.RecordReaderType);
+                Assert.IsNull(task.DfsOutput);
+                Assert.AreEqual(stageName, task.Stage);
+                Assert.AreEqual(typeof(Tasks.LineCounterTask), task.TaskType);
+
+                ChannelConfiguration outputChannel = target.GetOutputChannelForTask(task.TaskID);
+                Assert.AreEqual(ChannelType.Pipeline, outputChannel.ChannelType);
+                Assert.AreEqual(typeof(HashPartitioner<Int32Writable>).AssemblyQualifiedName, outputChannel.PartitionerType);
+                Assert.AreEqual(1, outputChannel.InputTasks.Length);
+                Assert.AreEqual(task.TaskID, outputChannel.InputTasks[0]);
+                Assert.AreEqual(partitions, outputChannel.OutputTasks.Length);
+
+                for( int y = 0; y < partitions; ++y )
+                {
+                    string splitPostFix = "_" + (y + 1).ToString("000", System.Globalization.CultureInfo.InvariantCulture);
+                    TaskConfiguration followTask = target.GetTask(outputChannel.OutputTasks[y]);
+                    Assert.AreEqual(followStageName + postfix + splitPostFix, followTask.TaskID);
+                    Assert.IsNull(followTask.DfsOutput);
+                    Assert.IsNull(followTask.DfsInput);
+                    Assert.AreEqual(typeof(Tasks.LineAdderPushTask), followTask.TaskType);
+                    Assert.AreEqual(followStageName, followTask.Stage);
+
+                    ChannelConfiguration followTaskOutputChannel = target.GetOutputChannelForTask(followTask.TaskID);
+                    Assert.AreEqual(ChannelType.File, followTaskOutputChannel.ChannelType);
+                    Assert.AreEqual(typeof(HashPartitioner<Int32Writable>).AssemblyQualifiedName, followTaskOutputChannel.PartitionerType);
+                    Assert.AreEqual(1, followTaskOutputChannel.InputTasks.Length);
+                    Assert.AreEqual(followTask.TaskID, followTaskOutputChannel.InputTasks[0]);
+                    Assert.AreEqual(1, followTaskOutputChannel.OutputTasks.Length);
+
+                    TaskConfiguration mergeTask = target.GetTask(followTaskOutputChannel.OutputTasks[0]);
+                    Assert.AreEqual("MergeStage001" + splitPostFix, mergeTask.TaskID);
+                    Assert.IsNull(mergeTask.DfsOutput);
+                    Assert.IsNull(mergeTask.DfsInput);
+                    Assert.AreEqual(typeof(Tasks.LineAdderTask), mergeTask.TaskType);
+                    Assert.AreEqual("MergeStage", mergeTask.Stage);
+
+                    ChannelConfiguration mergeTaskOutputChannel = target.GetOutputChannelForTask(mergeTask.TaskID);
+                    Assert.AreEqual(ChannelType.Pipeline, mergeTaskOutputChannel.ChannelType);
+                    Assert.AreEqual(typeof(HashPartitioner<Int32Writable>).AssemblyQualifiedName, mergeTaskOutputChannel.PartitionerType);
+                    Assert.AreEqual(1, mergeTaskOutputChannel.InputTasks.Length);
+                    Assert.AreEqual(mergeTask.TaskID, mergeTaskOutputChannel.InputTasks[0]);
+                    Assert.AreEqual(1, mergeTaskOutputChannel.OutputTasks.Length);
+
+                    TaskConfiguration outputTask = target.GetTask(mergeTaskOutputChannel.OutputTasks[0]);
+                    Assert.AreEqual("OutputStage001" + splitPostFix, outputTask.TaskID);
+                    Assert.IsNotNull(outputTask.DfsOutput);
+                    Assert.AreEqual(DfsPath.Combine("/output", outputTask.TaskID), outputTask.DfsOutput.Path);
+                    Assert.AreEqual(typeof(TextRecordWriter<Int32Writable>).AssemblyQualifiedName, outputTask.DfsOutput.RecordWriterType);
+                    Assert.IsNull(outputTask.DfsInput);
+                    Assert.AreEqual(typeof(Tasks.LineAdderTask), outputTask.TaskType);
+                    Assert.AreEqual("OutputStage", outputTask.Stage);
+
+                    Assert.IsNull(target.GetOutputChannelForTask(outputTask.TaskID));
+                }
+            }
+        }
+
         private void TestAddStage(bool useOutput)
         {
             JobConfiguration target = new JobConfiguration(typeof(Tasks.LineCounterTask).Assembly);
@@ -219,7 +322,7 @@ namespace Tkl.Jumbo.Test.Jet
 
             // Note that it would make no sense to execute more than one lineaddertask, but we don't care here, it's just to see if the AddStage method work.
             const string outputPath = "/output";
-            IList<TaskConfiguration> stage = target.AddPointToPointStage("SecondStage", "InputStage", typeof(Tasks.LineAdderTask), ChannelType.File, useOutput ? outputPath : null, useOutput ? typeof(TextRecordWriter<Int32Writable>) : null);
+            IList<TaskConfiguration> stage = target.AddPointToPointStage("SecondStage", "InputStage", typeof(Tasks.LineAdderTask), ChannelType.File, null, useOutput ? outputPath : null, useOutput ? typeof(TextRecordWriter<Int32Writable>) : null);
 
             Assert.AreEqual(inputStage.Count, stage.Count);
             Assert.AreEqual(file.Blocks.Count + stage.Count, target.Tasks.Count);

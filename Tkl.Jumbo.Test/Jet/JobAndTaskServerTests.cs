@@ -99,7 +99,7 @@ namespace Tkl.Jumbo.Test.Jet
             if( channelType == ChannelType.Pipeline )
             {
                 // Pipeline channel cannot merge so we will add another stage in between.
-                config.AddPointToPointStage("IntermediateTask", "Task", adderTask, ChannelType.Pipeline, null, null);
+                config.AddPointToPointStage("IntermediateTask", "Task", adderTask, ChannelType.Pipeline, null, null, null);
                 stage = "IntermediateTask";
             }
             config.AddStage("OutputTask", new[] { stage }, adderTask, 1, ChannelType.File, null, outputPath, typeof(TextRecordWriter<Int32Writable>));

@@ -148,13 +148,7 @@ namespace Tkl.Jumbo.Jet
 
             Type inputType = taskInterfaceType.GetGenericArguments()[0];
 
-            if( partitionerType != null )
-            {
-                Type partitionerInterfaceType = FindGenericInterfaceType(partitionerType, typeof(IPartitioner<>));
-                Type partitionedType = partitionerInterfaceType.GetGenericArguments()[0];
-                if( partitionerType != inputType )
-                    throw new ArgumentException(string.Format("The partitioner type {0} cannot partition objects of type {1}.", partitionerType, inputType), "partitionerType");
-            }
+            ValidatePartitionerType(partitionerType, inputType);
 
             var inputTasks = from inputStageName in inputStages
                              let inputStage = _stages[inputStageName]
@@ -184,6 +178,17 @@ namespace Tkl.Jumbo.Jet
             return stage.AsReadOnly();
         }
 
+        private static void ValidatePartitionerType(Type partitionerType, Type inputType)
+        {
+            if( partitionerType != null )
+            {
+                Type partitionerInterfaceType = FindGenericInterfaceType(partitionerType, typeof(IPartitioner<>));
+                Type partitionedType = partitionerInterfaceType.GetGenericArguments()[0];
+                if( partitionerType != inputType )
+                    throw new ArgumentException(string.Format("The partitioner type {0} cannot partition objects of type {1}.", partitionerType, inputType), "partitionerType");
+            }
+        }
+
         /// <summary>
         /// Creates a stage where each task reads data from precisely one task of another stage.
         /// </summary>
@@ -191,6 +196,8 @@ namespace Tkl.Jumbo.Jet
         /// <param name="inputStage">The stage to use as input for this stage. The new stage will have the same number of tasks as the input stage.</param>
         /// <param name="taskType">The type of the stage's tasks.</param>
         /// <param name="channelType">One of the <see cref="ChannelType"/> files indicating the type of channel to use between the the input stages and the new stage.</param>
+        /// <param name="partitionerType">The type of partitioner to use in the event that the channel will be split using <see cref="SplitStageOutput"/>, or <see langword="null"/>
+        /// to use the default partitioner.</param>
         /// <param name="outputPath">The name of a DFS directory to write the stage's output files to, or <see langword="null"/> to indicate this stage does not write to the DFS.</param>
         /// <param name="recordWriterType">The type of the record writer to use when writing to the output files; this parameter is ignored if <paramref name="outputPath"/> is <see langword="null" />.</param>
         /// <returns>The list of tasks in the new stage.</returns>
@@ -200,7 +207,7 @@ namespace Tkl.Jumbo.Jet
         ///   object created using the <see cref="LoadXml(string)"/> method.
         /// </note>
         /// </remarks>
-        public IList<TaskConfiguration> AddPointToPointStage(string stageName, string inputStage, Type taskType, ChannelType channelType, string outputPath, Type recordWriterType)
+        public IList<TaskConfiguration> AddPointToPointStage(string stageName, string inputStage, Type taskType, ChannelType channelType, Type partitionerType, string outputPath, Type recordWriterType)
         {
             if( stageName == null )
                 throw new ArgumentNullException("stageName");
@@ -214,8 +221,9 @@ namespace Tkl.Jumbo.Jet
 
             Type inputType = taskInterfaceType.GetGenericArguments()[0];
 
+            ValidatePartitionerType(partitionerType, inputType);
+            
             List<TaskConfiguration> inputTasks = _stages[inputStage];
-
             ValidateChannelRecordType(inputType, inputTasks);
 
             List<TaskConfiguration> stage = CreateStage(stageName, taskType, inputTasks.Count, outputPath, recordWriterType, null, null);
@@ -231,11 +239,187 @@ namespace Tkl.Jumbo.Jet
                     ChannelType = channelType,
                     InputTasks = new[] { inputTask.TaskID },
                     OutputTasks = new[] { outputTask.TaskID },
-                    PartitionerType = typeof(HashPartitioner<>).MakeGenericType(inputType).AssemblyQualifiedName
+                    PartitionerType = (partitionerType ?? typeof(HashPartitioner<>).MakeGenericType(inputType)).AssemblyQualifiedName
                 };
                 Channels.Add(channel);
             }
             return stage;
+        }
+
+        /// <summary>
+        /// Split the output of the specified stages, duplicating every connected task after this.
+        /// </summary>
+        /// <param name="stageNames">The names of the stages whose output to split.</param>
+        /// <param name="partitions">The number of partitions to split the output into.</param>
+        /// <remarks>
+        /// <para>
+        ///   The primary reason this function exists is because it helps to insert a sort after every task in a stage and then partition before the sort.
+        /// </para>
+        /// <para>
+        ///   Splitting output is primarily useful for the situation where you have a stage with multiple tasks (stage 1), connected to a 
+        ///   point-to-point stage (stage 2), and then connected to a stage with just one task (stage 3), and you want to partition the output
+        ///   between stage 1 and stage 2. This will create duplicates of the tasks in stages 2 and 3, an make sure that each task in stage 3
+        ///   receives inputs from the tasks in stage 2 that receive the same partition.
+        /// </para>
+        /// <para>
+        ///   Splitting is only permitted if, starting from the specified stages, no task has an output channel with more than one output task,
+        ///   and the data flow from the specified all end in the same, single, task. The specified stages should also not follow each other.
+        /// </para>
+        /// <para>
+        ///   If you start with the following graph:
+        /// </para>
+        /// <pre>
+        /// A1 -> B1 \
+        ///           \
+        /// A2 -> B2 --> C1 -> D1
+        ///           /
+        /// A3 -> B3 /
+        /// </pre>
+        /// <para>
+        ///   And then call SplitStageOutput(new[] { "A" }, 2), the result is:
+        /// </para>
+        /// <pre>
+        ///     > B1_1 ----\
+        ///    /            \
+        /// A1               \
+        ///    \              \
+        ///     > B1_2 \ /---> C1_1 -> D1_1
+        ///             X     /
+        ///     > B2_1 / \   /
+        ///    /          \ /
+        /// A2             X
+        ///    \          / \
+        ///     > B2_2 \ /   \
+        ///             X     \
+        ///     > B3_1 / \---> D1_2 -> D1_2
+        ///    /              /
+        /// A3               /
+        ///    \            /
+        ///     > B3_2 ----/
+        /// </pre>
+        /// </remarks>
+        public void SplitStageOutput(string[] stageNames, int partitions)
+        {
+            if( stageNames == null )
+                throw new ArgumentNullException("stageNames");
+            if( partitions < 2 )
+                throw new ArgumentOutOfRangeException("partitions", "There must be at least two partitions.");
+
+            var inputTasks = (from stageName in stageNames
+                              from task in _stages[stageName]
+                              select task);
+
+            TaskConfiguration endTask = null;
+            HashSet<string> tasksToSplit = new HashSet<string>();
+            foreach( var task in inputTasks )
+            {
+                string currentEndTask = CheckChain(task, tasksToSplit);
+                if( currentEndTask == null )
+                {
+                    throw new ArgumentException(string.Format("The subgraph leading from task {0} already has a split.", task.TaskID), "stageNames");
+                }
+                if( endTask == null )
+                    endTask = GetTask(currentEndTask);
+                else if( endTask.TaskID != currentEndTask )
+                    throw new ArgumentException("Not all subgraphs terminate on the same task.", "stageNames");
+            }
+
+            SplitTask(endTask, partitions, tasksToSplit, inputTasks, null, null);
+        }
+
+        private void SplitTask(TaskConfiguration task, int partitions, HashSet<string> tasksToSplit, IEnumerable<TaskConfiguration> startTasks, List<TaskConfiguration> outputTasks, ChannelConfiguration outputChannelTemplate)
+        {
+            if( !startTasks.Contains(task) )
+            {
+                List<TaskConfiguration> stage = _stages[task.Stage];
+                List<TaskConfiguration> newTasks = new List<TaskConfiguration>(partitions);
+                string oldTaskId = task.TaskID;
+                string newTaskId = task.TaskID + "_001";
+                if( GetTask(newTaskId) != null )
+                    throw new InvalidOperationException(string.Format("Cannot complete split: a task with the ID {0} already exists.", newTaskId));
+                string oldOutputPath = null;
+                if( task.DfsOutput != null )
+                {
+                    oldOutputPath = task.DfsOutput.Path;
+                    task.DfsOutput.Path += "_001";
+                }
+                task.TaskID = newTaskId;
+                newTasks.Add(task);
+                for( int x = 1; x < partitions; ++x )
+                {
+                    TaskConfiguration newTask = task.Clone();
+                    string postfix = "_" + (x + 1).ToString("000", System.Globalization.CultureInfo.InvariantCulture);
+                    newTaskId = oldTaskId + postfix;
+                    if( GetTask(newTaskId) != null )
+                        throw new InvalidOperationException(string.Format("Cannot complete split: a task with the ID {0} already exists.", newTaskId));
+                    newTask.TaskID = newTaskId;
+                    if( newTask.DfsOutput != null )
+                        newTask.DfsOutput.Path = oldOutputPath + postfix;
+                    newTasks.Add(newTask);
+                    stage.Add(newTask);
+                    Tasks.Add(newTask);
+                }
+                ChannelConfiguration inputChannel = GetInputChannelForTask(oldTaskId);
+                // Remove any tasks from the channel that are part of the chain.
+                // We don't need to do that for outputchannel because that was already taken care of when processing the next task in the chain.
+                var precedingTasks = inputChannel.InputTasks.Intersect(tasksToSplit);
+                inputChannel.InputTasks = (from taskId in inputChannel.InputTasks
+                                           where !tasksToSplit.Contains(taskId)
+                                           select taskId).ToArray();
+
+                if( inputChannel.InputTasks.Length == 0 )
+                    Channels.Remove(inputChannel);
+                else
+                    inputChannel.OutputTasks = (from t in newTasks select t.TaskID).ToArray(); // hook up any other tasks to the newly split tasks (note: this will split their output too!)
+
+                if( outputTasks != null )
+                {
+                    for( int x = 0; x < newTasks.Count; ++x )
+                    {
+                        ChannelConfiguration channel = new ChannelConfiguration();
+                        channel.ChannelType = outputChannelTemplate.ChannelType;
+                        channel.ForceFileDownload = outputChannelTemplate.ForceFileDownload;
+                        channel.PartitionerType = outputChannelTemplate.PartitionerType;
+                        channel.InputTasks = new[] { newTasks[x].TaskID };
+                        channel.OutputTasks = new[] { outputTasks[x].TaskID };
+                        Channels.Add(channel);
+                    }
+                }
+
+                foreach( string taskId in precedingTasks )
+                {
+                    SplitTask(GetTask(taskId), partitions, tasksToSplit, startTasks, newTasks, inputChannel);
+                }
+            }
+            else
+            {
+                if( outputTasks != null )
+                {
+                    ChannelConfiguration channel = new ChannelConfiguration();
+                    channel.ChannelType = outputChannelTemplate.ChannelType;
+                    channel.ForceFileDownload = outputChannelTemplate.ForceFileDownload;
+                    channel.PartitionerType = outputChannelTemplate.PartitionerType;
+                    channel.InputTasks = new[] { task.TaskID };
+                    channel.OutputTasks = (from t in outputTasks select t.TaskID).ToArray();
+                    Channels.Add(channel);
+                }
+            }
+        }
+
+        private string CheckChain(TaskConfiguration task, HashSet<string> allTasks)
+        {
+            string taskId = task.TaskID;
+            ChannelConfiguration channel = GetOutputChannelForTask(taskId);
+            allTasks.Add(taskId);
+            while( channel != null )
+            {
+                if( channel.OutputTasks.Length != 1 )
+                    return null;
+                taskId = channel.OutputTasks[0];
+                allTasks.Add(taskId);
+                channel = GetOutputChannelForTask(taskId);
+            }
+            return taskId;
         }
 
         private List<TaskConfiguration> CreateStage(string stageName, Type taskType, int taskCount, string outputPath, Type recordWriterType, string inputPath, Type recordReaderType)
@@ -252,6 +436,7 @@ namespace Tkl.Jumbo.Jet
                     TaskID = stageName + (x + 1).ToString("000", System.Globalization.CultureInfo.InvariantCulture),
                     ProfileOptions = null, // Not supported currently.
                     TaskType = taskType,
+                    Stage = stageName,
                     DfsOutput = outputPath == null ? null : new TaskDfsOutput()
                     {
                         Path = DfsPath.Combine(outputPath, taskId),

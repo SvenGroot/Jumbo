@@ -13,7 +13,7 @@ namespace Tkl.Jumbo.Jet
     /// Provides configuration information about a task.
     /// </summary>
     [XmlType("Task", Namespace=JobConfiguration.XmlNamespace)]
-    public class TaskConfiguration
+    public class TaskConfiguration : ICloneable
     {
         private Type _type;
         private string _typeName;
@@ -81,5 +81,34 @@ namespace Tkl.Jumbo.Jet
         /// Gets or sets the output to the distributed file system for this task.
         /// </summary>
         public TaskDfsOutput DfsOutput { get; set; }
+
+        /// <summary>
+        /// Gets or sets the name of the stage that this task belongs to. This property is not serialized.
+        /// </summary>
+        [XmlIgnore]
+        public string Stage { get; set; }
+
+        /// <summary>
+        /// Creates a clone of the current object.
+        /// </summary>
+        /// <returns>A clone of the current object.</returns>
+        public TaskConfiguration Clone()
+        {
+            TaskConfiguration clone = (TaskConfiguration)MemberwiseClone();
+            if( DfsInput != null )
+                clone.DfsInput = DfsInput.Clone();
+            if( DfsOutput != null )
+                clone.DfsOutput = DfsOutput.Clone();
+            return clone;
+        }
+
+        #region ICloneable Members
+
+        object ICloneable.Clone()
+        {
+            return Clone();
+        }
+
+        #endregion
     }
 }

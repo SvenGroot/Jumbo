@@ -10,7 +10,7 @@ namespace Tkl.Jumbo.Jet
     /// Provides information about the input that a task will read from the distributed file system.
     /// </summary>
     [XmlType(Namespace=JobConfiguration.XmlNamespace)]
-    public class TaskDfsInput
+    public class TaskDfsInput : ICloneable
     {
         /// <summary>
         /// Gets or sets the path of the file to read.
@@ -29,5 +29,23 @@ namespace Tkl.Jumbo.Jet
         /// </summary>
         [XmlAttribute("recordReaderType")]
         public string RecordReaderType { get; set; }
+
+        /// <summary>
+        /// Creates a clone of the current object.
+        /// </summary>
+        /// <returns>A clone of the current object.</returns>
+        public TaskDfsInput Clone()
+        {
+            return (TaskDfsInput)MemberwiseClone();
+        }
+
+        #region ICloneable Members
+
+        object ICloneable.Clone()
+        {
+            return Clone();
+        }
+
+        #endregion
     }
 }

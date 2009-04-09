@@ -11,7 +11,7 @@ namespace Tkl.Jumbo.Jet
     /// Provides information about output that a task will write to the Distributed File System.
     /// </summary>
     [XmlType(Namespace=JobConfiguration.XmlNamespace)]
-    public class TaskDfsOutput
+    public class TaskDfsOutput : ICloneable
     {
         /// <summary>
         /// Gets or sets the path of the file to write.
@@ -34,5 +34,23 @@ namespace Tkl.Jumbo.Jet
         /// </summary>
         [XmlAttribute("recordWriteType")]
         public string RecordWriterType { get; set; }
+
+        /// <summary>
+        /// Creates a clone of the current object.
+        /// </summary>
+        /// <returns>A clone of the current object.</returns>
+        public TaskDfsOutput Clone()
+        {
+            return (TaskDfsOutput)MemberwiseClone();
+        }
+
+        #region ICloneable Members
+
+        object ICloneable.Clone()
+        {
+            return Clone();
+        }
+
+        #endregion
     }
 }
