@@ -10,6 +10,7 @@ using Tkl.Jumbo.Jet;
 using Tkl.Jumbo.Jet.Channels;
 using Tkl.Jumbo.Test.Tasks;
 using System.Threading;
+using Tkl.Jumbo.Jet.Tasks;
 
 namespace Tkl.Jumbo.Test.Jet
 {
@@ -75,6 +76,56 @@ namespace Tkl.Jumbo.Test.Jet
         public void TestJobExecutionMergeTask()
         {
             RunJob(false, "/joboutput5", TaskKind.Merge, ChannelType.File);
+        }
+
+        [Test]
+        public void TestJobExecutionSort()
+        {
+            Random rnd = new Random();
+            const int recordCount = 2500000;
+            List<int> expected = new List<int>(recordCount);
+
+            string outputPath = "/sortoutput";
+            DfsClient dfsClient = new DfsClient(Dfs.TestDfsCluster.CreateClientConfig());
+            dfsClient.NameServer.CreateDirectory(outputPath);
+
+            using( DfsOutputStream stream = dfsClient.CreateFile("/sortinput") )
+            using( TextRecordWriter<Int32Writable> writer = new TextRecordWriter<Int32Writable>(stream) )
+            {
+                for( int x = 0; x < recordCount; ++x )
+                {
+                    int record = rnd.Next();
+                    expected.Add(record);
+                    writer.WriteRecord(record);
+                }
+            }
+            expected.Sort();
+
+            JobConfiguration config = new JobConfiguration(typeof(StringConversionTask).Assembly);
+            config.AddInputStage("ConversionStage", dfsClient.NameServer.GetFileInfo("/sortinput"), typeof(StringConversionTask), typeof(LineRecordReader));
+            config.AddPointToPointStage("SortStage", "ConversionStage", typeof(SortTask<Int32Writable>), ChannelType.Pipeline, null, null, null);
+            config.AddStage("MergeStage", new[] { "SortStage" }, typeof(MergeSortTask<Int32Writable>), 1, ChannelType.File, null, outputPath, typeof(BinaryRecordWriter<Int32Writable>));
+
+            JetClient target = new JetClient(TestJetCluster.CreateClientConfig());
+            Job job = target.RunJob(config, dfsClient, typeof(StringConversionTask).Assembly.Location);
+
+            bool complete = target.JobServer.WaitForJobCompletion(job.JobID, Timeout.Infinite);
+            Assert.IsTrue(complete);
+
+            string outputFileName = DfsPath.Combine(outputPath, "MergeStage001");
+
+            List<int> actual = new List<int>();
+            using( DfsInputStream stream = dfsClient.OpenFile(outputFileName) )
+            using( BinaryRecordReader<Int32Writable> reader = new BinaryRecordReader<Int32Writable>(stream) )
+            {
+                Int32Writable record;
+                while( reader.ReadRecord(out record) )
+                {
+                    actual.Add(record.Value);
+                }
+            }
+
+            Assert.IsTrue(Utilities.CompareList(expected, actual));
         }
 
         private void RunJob(bool forceFileDownload, string outputPath, TaskKind taskKind, ChannelType channelType)

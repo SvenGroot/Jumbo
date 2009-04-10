@@ -171,10 +171,6 @@ namespace Tkl.Jumbo.Jet
         {
             if( config == null )
                 throw new ArgumentNullException("config");
-            if( files == null )
-                throw new ArgumentNullException("files");
-            if( files.Length == 0 )
-                throw new ArgumentException("You must specify at least one file to upload.", "files");
             if( dfsClient == null )
                 throw new ArgumentNullException("dfsClient");
 
@@ -186,10 +182,13 @@ namespace Tkl.Jumbo.Jet
                 config.SaveXml(stream);
             }
 
-            foreach( string file in files )
+            if( files != null )
             {
-                _log.InfoFormat("Uploading local file {0} to DFS directory {1}.", file, job.Path);
-                dfsClient.UploadFile(file, job.Path);
+                foreach( string file in files )
+                {
+                    _log.InfoFormat("Uploading local file {0} to DFS directory {1}.", file, job.Path);
+                    dfsClient.UploadFile(file, job.Path);
+                }
             }
 
             _log.InfoFormat("Running job {0}.", job.JobID);
