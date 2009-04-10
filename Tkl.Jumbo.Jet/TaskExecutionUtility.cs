@@ -6,6 +6,7 @@ using Tkl.Jumbo.Dfs;
 using Tkl.Jumbo.Jet.Channels;
 using Tkl.Jumbo.IO;
 using System.Reflection;
+using System.Collections;
 
 namespace Tkl.Jumbo.Jet
 {
@@ -61,7 +62,7 @@ namespace Tkl.Jumbo.Jet
         private IOutputChannel _outputChannel;
         private DfsInputStream _inputStream;
         private DfsOutputStream _outputStream;
-        private object _inputReader;
+        private IEnumerable _inputReaders; // non-generic because we don't know the type of T for RecordReader<T>.
         private object _outputWriter;
         private bool _disposed;
         private ITaskContainer _task;
@@ -235,13 +236,33 @@ namespace Tkl.Jumbo.Jet
         /// </summary>
         /// <typeparam name="T">The type of records for the task's input.</typeparam>
         /// <returns>A <see cref="RecordReader{T}"/> that reads from the task's input channel or DFS input.</returns>
+        /// <remarks>
+        /// You should call <see cref="GetInputReader{T}"/> or <see cref="GetInputReaders{T}"/>, never both on the same instance.
+        /// </remarks>
         public RecordReader<T> GetInputReader<T>()
             where T : IWritable, new()
         {
             CheckDisposed();
-            if( _inputReader == null )
-                _inputReader = CreateInputRecordReader<T>();
-            return (RecordReader<T>)_inputReader;
+            if( _inputReaders == null )
+                _inputReaders = CreateInputRecordReaders<T>(false);
+            return ((IList<RecordReader<T>>)_inputReaders)[0];
+        }
+
+        /// <summary>
+        /// Gets a separate record reader for each input task.
+        /// </summary>
+        /// <typeparam name="T">The type of records for the task's input.</typeparam>
+        /// <returns>A list of <see cref="RecordReader{T}"/> instances that read from the task's input channel or DFS input.</returns>
+        /// <remarks>
+        /// You should call <see cref="GetInputReader{T}"/> or <see cref="GetInputReaders{T}"/>, never both on the same instance.
+        /// </remarks>
+        public IList<RecordReader<T>> GetInputReaders<T>()
+            where T : IWritable, new()
+        {
+            CheckDisposed();
+            if( _inputReaders == null )
+                _inputReaders = CreateInputRecordReaders<T>(true);
+            return (IList<RecordReader<T>>)_inputReaders;
         }
 
         /// <summary>
@@ -337,8 +358,11 @@ namespace Tkl.Jumbo.Jet
                         ((IDisposable)_outputWriter).Dispose();
                     if( _outputStream != null )
                         _outputStream.Dispose();
-                    if( _inputReader != null )
-                        ((IDisposable)_inputReader).Dispose();
+                    if( _inputReaders != null )
+                    {
+                        foreach( object reader in _inputReaders )
+                            ((IDisposable)reader).Dispose();
+                    }
                     if( _inputStream != null )
                         _inputStream.Dispose();
                     IDisposable inputChannelDisposable = _inputChannel as IDisposable;
@@ -414,7 +438,7 @@ namespace Tkl.Jumbo.Jet
                 return null;
         }
 
-        private RecordReader<T> CreateInputRecordReader<T>()
+        private IList<RecordReader<T>> CreateInputRecordReaders<T>(bool createMultiple)
             where T : IWritable, new()
         {
             if( TaskConfiguration.DfsInput != null )
@@ -428,12 +452,16 @@ namespace Tkl.Jumbo.Jet
                 size = Math.Min(blockSize, DfsClient.NameServer.GetFileInfo(TaskConfiguration.DfsInput.Path).Size - offset);
                 _log.DebugFormat("Opening input file {0}", TaskConfiguration.DfsInput.Path);
                 _inputStream = DfsClient.OpenFile(TaskConfiguration.DfsInput.Path);
-                return (RecordReader<T>)Activator.CreateInstance(recordReaderType, _inputStream, offset, size);
+                return new[] { (RecordReader<T>)Activator.CreateInstance(recordReaderType, _inputStream, offset, size) };
             }
             else if( InputChannel != null )
             {
                 _log.Debug("Creating input channel record reader.");
-                return InputChannel.CreateRecordReader<T>();
+                if( createMultiple )
+                    return InputChannel.CreateRecordReaders<T>();
+                else
+                    return new[] { InputChannel.CreateRecordReader<T>() };
+                    
             }
             else
                 return null;

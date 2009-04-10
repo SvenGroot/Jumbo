@@ -68,6 +68,7 @@
     <Compile Include="Channels\PipelineOutputChannel.cs" />
     <Compile Include="CleanupJobJetHeartbeatResponse.cs" />
     <Compile Include="CompletedTask.cs" />
+    <Compile Include="IMergeTask.cs" />
     <Compile Include="IPullTask.cs" />
     <Compile Include="IPushTask.cs" />
     <Compile Include="ITaskServerClientProtocol.cs" />

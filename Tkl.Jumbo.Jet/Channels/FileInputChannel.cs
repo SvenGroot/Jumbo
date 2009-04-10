@@ -61,20 +61,52 @@ namespace Tkl.Jumbo.Jet.Channels
         #region IInputChannel Members
 
         /// <summary>
-        /// Creates a <see cref="StreamRecordReader{T}"/> from which the channel can write its output.
+        /// Creates a <see cref="RecordReader{T}"/> from which the channel can read its input.
         /// </summary>
         /// <typeparam name="T">The type of the records.</typeparam>
-        /// <returns>A <see cref="StreamRecordReader{T}"/> for the channel.</returns>
+        /// <returns>A <see cref="RecordReader{T}"/> for the channel.</returns>
+        /// <remarks>
+        /// This function will create a <see cref="MultiRecordReader{T}"/> that serializes the data from all the different input tasks.
+        /// </remarks>
         public RecordReader<T> CreateRecordReader<T>() where T : IWritable, new()
         {
+            if( _inputPollThread != null )
+                throw new InvalidOperationException("A record reader for this channel was already created.");
+
             MultiRecordReader<T> reader = new MultiRecordReader<T>(null, true);
-            _inputPollThread = new Thread(() => InputPollThread<T>(reader));
+            _inputPollThread = new Thread(() => InputPollThread<T>(reader, null));
             _inputPollThread.Name = "FileInputChannelPolling";
             _inputPollThread.Start();
 
             // Wait until the reader has at least one input.
             _readyEvent.WaitOne();
             return reader;
+        }
+
+        /// <summary>
+        /// Creates a separate <see cref="RecordReader{T}"/> for each input task of the channel.
+        /// </summary>
+        /// <typeparam name="T">The type of the records..</typeparam>
+        /// <returns>A list of <see cref="RecordReader{T}"/> instances.</returns>
+        /// <remarks>
+        /// <para>
+        ///   This method is used to create the input for a <see cref="IMergeTask{TInput,TOutput}"/>.
+        /// </para>
+        /// </remarks>
+        public IList<RecordReader<T>> CreateRecordReaders<T>()
+            where T : IWritable, new()
+        {
+            if( _inputPollThread != null )
+                throw new InvalidOperationException("A record reader for this channel was already created.");
+
+            List<RecordReader<T>> readers = new List<RecordReader<T>>(_channelConfig.InputTasks.Length);
+            _inputPollThread = new Thread(() => InputPollThread<T>(null, readers));
+            _inputPollThread.Name = "FileInputChannelPolling";
+            _inputPollThread.Start();
+
+            // Wait until all inputs are available.
+            _readyEvent.WaitOne();
+            return readers;
         }
 
         #endregion
@@ -105,7 +137,7 @@ namespace Tkl.Jumbo.Jet.Channels
             _disposed = true;
         }
 
-        private void InputPollThread<T>(MultiRecordReader<T> reader)
+        private void InputPollThread<T>(MultiRecordReader<T> reader, List<RecordReader<T>> readerList)
             where T : IWritable, new()
         {
             try
@@ -120,9 +152,17 @@ namespace Tkl.Jumbo.Jet.Channels
                     CompletedTask task = _jobServer.WaitForTaskCompletion(_jobID, tasksLeftArray, _pollingInterval);
                     if( task != null )
                     {
-                        DownloadCompletedFile(reader, tasksLeft, task);
+                        DownloadCompletedFile(reader, readerList, tasksLeft, task);
                         tasksLeftArray = tasksLeft.ToArray();
                     }
+                }
+                _log.Info("All files downloaded.");
+                if( readerList != null )
+                {
+                    // If we're using a list of readers, we need to signal we're ready now, after all files are downloaded.
+                    _log.Info("Input channel is now ready.");
+                    _isReady = true;
+                    _readyEvent.Set();
                 }
             }
             catch( ObjectDisposedException ex )
@@ -134,7 +174,7 @@ namespace Tkl.Jumbo.Jet.Channels
             }
         }
 
-        private void DownloadCompletedFile<T>(MultiRecordReader<T> reader, HashSet<string> tasksLeft, CompletedTask task)
+        private void DownloadCompletedFile<T>(MultiRecordReader<T> reader, List<RecordReader<T>> readerList, HashSet<string> tasksLeft, CompletedTask task)
             where T : IWritable, new()
         {
             _log.InfoFormat("Task {0} output file is now available.", task.TaskId);
@@ -153,16 +193,20 @@ namespace Tkl.Jumbo.Jet.Channels
             }
             bool removed = tasksLeft.Remove(task.TaskId);
             Debug.Assert(removed);
-            reader.AddReader(new BinaryRecordReader<T>(File.OpenRead(fileName)), tasksLeft.Count == 0);
-            if( !_isReady )
+
+            RecordReader<T> taskReader = new BinaryRecordReader<T>(File.OpenRead(fileName)) { SourceName = task.TaskId };
+            if( reader != null )
+                reader.AddReader(taskReader, tasksLeft.Count == 0);
+            else
+                readerList.Add(taskReader);
+
+            if( reader != null && !_isReady )
             {
+                // When we're using a MultiRecordReader we should become ready after the first downloaded file.
+                // If we're using a list of readers, we should become ready after all files are downloaded so we don't set the event yet.
                 _log.Info("Input channel is now ready.");
                 _isReady = true;
                 _readyEvent.Set();
-            }
-            if( tasksLeft.Count == 0 )
-            {
-                _log.Info("All files downloaded.");
             }
         }
 

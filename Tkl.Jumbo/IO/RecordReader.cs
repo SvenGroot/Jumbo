@@ -23,6 +23,15 @@ namespace Tkl.Jumbo.IO
         }
 
         /// <summary>
+        /// Gets or sets the an informational string indicating the source of the records.
+        /// </summary>
+        /// <remarks>
+        /// This property is used for record readers passed to merge tasks in Jumbo Jet to indicate
+        /// the task that this reader's data originates from.
+        /// </remarks>
+        public string SourceName { get; set; }
+
+        /// <summary>
         /// Returns the number of records that has been read by this record reader.
         /// </summary>
         public int RecordsRead

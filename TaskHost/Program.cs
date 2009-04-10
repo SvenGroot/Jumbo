@@ -126,41 +126,59 @@ namespace TaskHost
         {
             _log.Debug("DoRunTask invoked.");
             ITask<TInput, TOutput> task = taskExecution.GetTaskInstance<TInput, TOutput>();
-            _log.Info("Running task.");
-            IPullTask<TInput, TOutput> pullTask = task as IPullTask<TInput, TOutput>;
+            // Lifetime is managed by the TaskExecutionUtility class, no need to put them in a using block.
+            RecordWriter<TOutput> output = taskExecution.GetOutputWriter<TOutput>();
             Stopwatch taskStopwatch = new Stopwatch();
 
-            // Lifetime is managed by the TaskExecutionUtility class, no need to put them in a using block.
-            RecordReader<TInput> input = taskExecution.GetInputReader<TInput>();
-            RecordWriter<TOutput> output = taskExecution.GetOutputWriter<TOutput>();
-
-            if( pullTask != null )
+            IMergeTask<TInput, TOutput> mergeTask = task as IMergeTask<TInput, TOutput>;
+            if( mergeTask != null )
             {
+                // Lifetime is managed by the TaskExecutionUtility class, no need to put them in a using block.
+                IList<RecordReader<TInput>> input = taskExecution.GetInputReaders<TInput>();
+
+                _log.Info("Running merge task.");
                 taskStopwatch.Start();
-                pullTask.Run(input, output);
+                mergeTask.Run(input, output);
                 taskStopwatch.Stop();
+                _log.InfoFormat("Task finished execution, execution time: {0}s", taskStopwatch.Elapsed.TotalSeconds);
             }
             else
             {
-                IPushTask<TInput, TOutput> pushTask = (IPushTask<TInput, TOutput>)task;
-                taskStopwatch.Start();
-                foreach( TInput record in input.EnumerateRecords() )
+                IPullTask<TInput, TOutput> pullTask = task as IPullTask<TInput, TOutput>;
+
+                // Lifetime is managed by the TaskExecutionUtility class, no need to put them in a using block.
+                RecordReader<TInput> input = taskExecution.GetInputReader<TInput>();
+
+                if( pullTask != null )
                 {
-                    pushTask.ProcessRecord(record, output);
+                    _log.Info("Running pull task.");
+                    taskStopwatch.Start();
+                    pullTask.Run(input, output);
+                    taskStopwatch.Stop();
                 }
-                // Finish is called by taskExecution.FinishTask below.
-                taskStopwatch.Stop();
+                else
+                {
+                    _log.Info("Running push task.");
+                    IPushTask<TInput, TOutput> pushTask = (IPushTask<TInput, TOutput>)task;
+                    taskStopwatch.Start();
+                    foreach( TInput record in input.EnumerateRecords() )
+                    {
+                        pushTask.ProcessRecord(record, output);
+                    }
+                    // Finish is called by taskExecution.FinishTask below.
+                    taskStopwatch.Stop();
+                }
+                TimeSpan timeWaiting;
+                MultiRecordReader<TInput> multiReader = input as MultiRecordReader<TInput>;
+                if( multiReader != null )
+                    timeWaiting = multiReader.TimeWaiting;
+                else
+                    timeWaiting = TimeSpan.Zero;
+                _log.InfoFormat("Task finished execution, execution time: {0}s; time spent waiting for input: {1}s.", taskStopwatch.Elapsed.TotalSeconds, timeWaiting.TotalSeconds);
             }
 
             taskExecution.FinishTask();
 
-            TimeSpan timeWaiting;
-            MultiRecordReader<TInput> multiReader = input as MultiRecordReader<TInput>;
-            if( multiReader != null )
-                timeWaiting = multiReader.TimeWaiting;
-            else
-                timeWaiting = TimeSpan.Zero;
-            _log.InfoFormat("Task finished execution, execution time: {0}s; time spent waiting for input: {1}s.", taskStopwatch.Elapsed.TotalSeconds, timeWaiting.TotalSeconds);
 
             // TODO: Proper metrics for pipelined tasks.
             //TaskMetrics metrics = CalculateMetrics<TInput, TOutput>(taskExecution.TaskConfiguration, taskExecution.InputChannel, taskExecution.OutputChannel, inputStream, input, dfsOutputs, output);
