@@ -102,6 +102,8 @@
     <Compile Include="TaskAttemptStatus.cs" />
     <Compile Include="TaskStatus.cs" />
     <Compile Include="TaskStatusChangedJetHeartbeatData.cs" />
+    <Compile Include="Tasks\MergeSortTask.cs" />
+    <Compile Include="Tasks\SortTask.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="jumbo.snk" />

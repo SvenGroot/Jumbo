@@ -57,12 +57,14 @@
     <Compile Include="Extensions.cs" />
     <Compile Include="IO\BinaryRecordReader.cs" />
     <Compile Include="IO\BinaryRecordWriter.cs" />
+    <Compile Include="IO\EnumerableRecordReader.cs" />
     <Compile Include="IO\HashPartitioner.cs" />
     <Compile Include="IO\Int32Writable.cs" />
     <Compile Include="IO\IPartitioner.cs" />
     <Compile Include="IO\IWritable.cs" />
     <Compile Include="IO\KeyValuePairWritable.cs" />
     <Compile Include="IO\LineRecordReader.cs" />
+    <Compile Include="IO\ListRecordWriter.cs" />
     <Compile Include="IO\MultiRecordReader.cs" />
     <Compile Include="IO\RecordReader.cs" />
     <Compile Include="IO\RecordWriter.cs" />
@@ -73,6 +75,7 @@
     <Compile Include="IO\WritableComparable.cs" />
     <Compile Include="IO\MultiRecordWriter.cs" />
     <Compile Include="IO\WriteBufferedStream.cs" />
+    <Compile Include="PriorityQueue.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="RpcHelper.cs" />
     <Compile Include="RuntimeEnvironment.cs" />

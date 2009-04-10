@@ -19,6 +19,17 @@ namespace Tkl.Jumbo.IO
         public T Value { get; set; }
 
         /// <summary>
+        /// Gets a comparer to use to compare the values.
+        /// </summary>
+        protected virtual IComparer<T> Comparer
+        {
+            get
+            {
+                return Comparer<T>.Default;
+            }
+        }
+
+        /// <summary>
         /// Determines whether the specified <see cref="Object"/> is equal to the current <see cref="WritableComparable{T}"/>.
         /// </summary>
         /// <param name="obj">The <see cref="Object"/> to compare with the current <see cref="WritableComparable{T}"/>.</param>
@@ -94,11 +105,12 @@ namespace Tkl.Jumbo.IO
         /// </summary>
         /// <param name="other">An object to compare with this instance.</param>
         /// <returns>A 32-bit signed integer that indicates the relative order of the objects being compared.</returns>
-        public virtual int CompareTo(WritableComparable<T> other)
+        public int CompareTo(WritableComparable<T> other)
         {
             if( other == null )
-                throw new ArgumentNullException("other");
-            return (new Comparer(System.Globalization.CultureInfo.InvariantCulture)).Compare(Value, other.Value);
+                return 1;
+
+            return Comparer.Compare(Value, other.Value);
         }
 
         #endregion
@@ -127,7 +139,7 @@ namespace Tkl.Jumbo.IO
         /// <param name="other">The <see cref="WritableComparable{T}"/> to compare with the current <see cref="WritableComparable{T}"/>.</param>
         /// <returns><see langword="true"/> if the specified <see cref="WritableComparable{T}"/> is equal to the current 
         /// <see cref="WritableComparable{T}"/>; otherwise, <see langword="false"/>.</returns>
-        public bool Equals(WritableComparable<T> other)
+        public virtual bool Equals(WritableComparable<T> other)
         {
             if( other == null )
                 return false;

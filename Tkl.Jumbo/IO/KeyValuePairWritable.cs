@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.IO;
+using System.Collections;
 
 namespace Tkl.Jumbo.IO
 {
@@ -11,22 +12,44 @@ namespace Tkl.Jumbo.IO
     /// </summary>
     /// <typeparam name="TKey">The type of the key.</typeparam>
     /// <typeparam name="TValue">The type of the value.</typeparam>
-    public class KeyValuePairWritable<TKey, TValue> : IWritable, IEquatable<KeyValuePairWritable<TKey, TValue>>
-        where TKey : IWritable, new()
-        where TValue : IWritable, new()
+    public class KeyValuePairWritable<TKey, TValue> : WritableComparable<KeyValuePair<TKey, TValue>>, IComparable<KeyValuePairWritable<TKey, TValue>>
+        where TKey : IWritable, IComparable<TKey>, new()
+        where TValue : IWritable, IComparable<TValue>, new()
     {
-        /// <summary>
-        /// Gets or sets the underlying key/value pair.
-        /// </summary>
-        public KeyValuePair<TKey, TValue> Value { get; set; }
+        #region Nested types
+
+        private class KeyValuePairComparer : Comparer<KeyValuePair<TKey, TValue>>
+        {
+            private Comparer _comparer;
+
+            public override int Compare(KeyValuePair<TKey, TValue> x, KeyValuePair<TKey, TValue> y)
+            {
+                if( _comparer == null )
+                    _comparer = new Comparer(System.Globalization.CultureInfo.CurrentCulture);
+                int result = _comparer.Compare(x.Key, y.Key);
+                if( result == 0 )
+                    return _comparer.Compare(x.Value, y.Value);
+                else
+                    return result;
+                
+            }
+        }
+
+        #endregion
+
+        private KeyValuePairComparer _comparer;
 
         /// <summary>
-        /// Returns a string representation of this <see cref="KeyValuePairWritable{TKey,TValue}"/>.
+        /// Gets a comparer to use to compare the values.
         /// </summary>
-        /// <returns>A string representation of this <see cref="KeyValuePairWritable{TKey,TValue}"/>.</returns>
-        public override string ToString()
+        protected override IComparer<KeyValuePair<TKey, TValue>> Comparer
         {
-            return Value.ToString();
+            get
+            {
+                if( _comparer == null )
+                    _comparer = new KeyValuePairComparer();
+                return _comparer;
+            }
         }
 
         /// <summary>
@@ -37,7 +60,7 @@ namespace Tkl.Jumbo.IO
         /// <see cref="KeyValuePairWritable{TKey, TValue}"/>; otherwise, <see langword="false"/>.</returns>
         public override bool Equals(object obj)
         {
-            return Equals(obj as KeyValuePairWritable<TKey, TValue>);
+            return Equals(obj as WritableComparable<KeyValuePair<TKey, TValue>>);
         }
 
         /// <summary>
@@ -49,13 +72,11 @@ namespace Tkl.Jumbo.IO
             return Value.Key == null ? 0 : Value.Key.GetHashCode();
         }
 
-        #region IWritable Members
-
         /// <summary>
         /// Writes the object to the specified writer.
         /// </summary>
         /// <param name="writer">The <see cref="BinaryWriter"/> to serialize the object to.</param>
-        public void Write(System.IO.BinaryWriter writer)
+        public override void Write(System.IO.BinaryWriter writer)
         {
             if( writer == null )
                 throw new ArgumentNullException("writer");
@@ -69,7 +90,7 @@ namespace Tkl.Jumbo.IO
         /// Reads the object from the specified reader.
         /// </summary>
         /// <param name="reader">The <see cref="BinaryReader"/> to deserialize the object from.</param>
-        public void Read(System.IO.BinaryReader reader)
+        public override void Read(System.IO.BinaryReader reader)
         {
             if( reader == null )
                 throw new ArgumentNullException("reader");
@@ -80,22 +101,23 @@ namespace Tkl.Jumbo.IO
             Value = new KeyValuePair<TKey, TValue>(key, value);
         }
 
-        #endregion
 
-        #region IEquatable<KeyValuePairWritable<TKey,TValue>> Members
+        #region IComparable<KeyValuePairWritable<TKey,TValue>> Members
 
         /// <summary>
-        /// Determines whether the specified <see cref="KeyValuePairWritable{TKey, TValue}"/> is equal to the current <see cref="KeyValuePairWritable{TKey, TValue}"/>.
+        /// Compares the current instance with another object of the same type and returns an integer that 
+        /// indicates whether the current instance precedes, follows, or occurs in the same position in the 
+        /// sort order as the other object. 
         /// </summary>
-        /// <param name="other">The <see cref="KeyValuePairWritable{TKey, TValue}"/> to compare with the current <see cref="KeyValuePairWritable{TKey, TValue}"/>.</param>
-        /// <returns><see langword="true"/> if the specified <see cref="KeyValuePairWritable{TKey, TValue}"/> is equal to the current 
-        /// <see cref="KeyValuePairWritable{TKey, TValue}"/>; otherwise, <see langword="false"/>.</returns>
-        public bool Equals(KeyValuePairWritable<TKey, TValue> other)
+        /// <param name="other">An object to compare with this instance.</param>
+        /// <returns>A 32-bit signed integer that indicates the relative order of the objects being compared.</returns>
+        public int CompareTo(KeyValuePairWritable<TKey, TValue> other)
         {
+            if( this == other )
+                return 0;
             if( other == null )
-                return false;
-
-            return object.Equals(Value, other.Value);
+                return 1;
+            return Comparer.Compare(Value, other.Value);
         }
 
         #endregion

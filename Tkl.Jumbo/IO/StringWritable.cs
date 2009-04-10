@@ -9,7 +9,7 @@ namespace Tkl.Jumbo.IO
     /// <summary>
     /// An implementation of <see cref="IWritable"/> for strings.
     /// </summary>
-    public class StringWritable : WritableComparable<string>
+    public class StringWritable : WritableComparable<string>, IComparable<StringWritable>
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="StringWritable"/> class.
@@ -66,6 +66,22 @@ namespace Tkl.Jumbo.IO
         public override string ToString()
         {
             return Value == null ? "" : Value.ToString();
-        }    
+        }
+
+        #region IComparable<StringWritable> Members
+
+        /// <summary>
+        /// Compares the current instance with another object of the same type and returns an integer that 
+        /// indicates whether the current instance precedes, follows, or occurs in the same position in the 
+        /// sort order as the other object. 
+        /// </summary>
+        /// <param name="other">An object to compare with this instance.</param>
+        /// <returns>A 32-bit signed integer that indicates the relative order of the objects being compared.</returns>
+        public int CompareTo(StringWritable other)
+        {
+            return CompareTo((WritableComparable<string>)other);
+        }
+
+        #endregion
     }
 }

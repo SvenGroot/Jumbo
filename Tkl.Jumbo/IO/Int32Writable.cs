@@ -9,7 +9,7 @@ namespace Tkl.Jumbo.IO
     /// <summary>
     /// An implementation of <see cref="IWritable"/> for integers.
     /// </summary>
-    public class Int32Writable : WritableComparable<int>
+    public class Int32Writable : WritableComparable<int>, IComparable<Int32Writable>
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="Int32Writable"/> class.
@@ -58,5 +58,21 @@ namespace Tkl.Jumbo.IO
                 throw new ArgumentNullException("reader");
             Value = reader.ReadInt32();
         }
+
+        #region IComparable<Int32Writable> Members
+
+        /// <summary>
+        /// Compares the current instance with another object of the same type and returns an integer that 
+        /// indicates whether the current instance precedes, follows, or occurs in the same position in the 
+        /// sort order as the other object. 
+        /// </summary>
+        /// <param name="other">An object to compare with this instance.</param>
+        /// <returns>A 32-bit signed integer that indicates the relative order of the objects being compared.</returns>
+        public int CompareTo(Int32Writable other)
+        {
+            return CompareTo((WritableComparable<int>)other);
+        }
+
+        #endregion
     }
 }

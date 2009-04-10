@@ -68,7 +68,7 @@ namespace Tkl.Jumbo.Test.Jet
         [Test]
         public void TestJobExecutionPipelineChannel()
         {
-            RunJob(false, "/joboutput4", TaskKind.Pull, ChannelType.Pipeline);
+            RunJob(false, "/joboutput4", TaskKind.Push, ChannelType.Pipeline);
         }
 
         [Test]
