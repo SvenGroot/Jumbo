@@ -9,110 +9,115 @@ namespace Tkl.Jumbo.Test
     [TestFixture]
     public class PriorityQueueTests
     {
-        [Test]
-        public void TestPriorityQueue()
+        /// <summary>
+        /// Used for AdjustFirstItem test.
+        /// </summary>
+        private class QueueItem : IComparable<QueueItem>
         {
-            PriorityQueue<string, int> queue = new PriorityQueue<string, int>(false);
+            public QueueItem(string value)
+            {
+                Value = value;
+            }
 
-            Assert.AreEqual(0, queue.Count);
+            public string Value { get; set; }
 
-            queue.Enqueue("a", 1);
-            Assert.AreEqual("a", queue.Peek().Key);
-            Assert.AreEqual(1, queue.Count);
+            #region IComparable<QueueItem> Members
 
-            queue.Enqueue("b", 2);
-            Assert.AreEqual("b", queue.Peek().Key);
-            Assert.AreEqual(2, queue.Count);
+            public int CompareTo(QueueItem other)
+            {
+                return string.Compare(Value, other.Value);
+            }
 
-            queue.Enqueue("d", 3);
-            Assert.AreEqual("d", queue.Peek().Key);
-            Assert.AreEqual(3, queue.Count);
-
-            queue.Enqueue("c", 4);
-            Assert.AreEqual("d", queue.Peek().Key);
-            Assert.AreEqual(4, queue.Count);
-
-            queue.Enqueue("c", 5);
-            Assert.AreEqual(5, queue.Count);
-            
-            KeyValuePair<string, int> item = queue.Dequeue();
-            Assert.AreEqual("d", item.Key);
-            Assert.AreEqual(3, item.Value);
-            Assert.AreEqual(4, queue.Count);
-
-            item = queue.Dequeue();
-            Assert.AreEqual("c", item.Key);
-            Assert.AreEqual(5, item.Value);
-            Assert.AreEqual(3, queue.Count);
-
-            item = queue.Dequeue();
-            Assert.AreEqual("c", item.Key);
-            Assert.AreEqual(4, item.Value);
-            Assert.AreEqual(2, queue.Count);
-
-            item = queue.Dequeue();
-            Assert.AreEqual("b", item.Key);
-            Assert.AreEqual(2, item.Value);
-            Assert.AreEqual(1, queue.Count);
-
-            item = queue.Dequeue();
-            Assert.AreEqual("a", item.Key);
-            Assert.AreEqual(1, item.Value);
-            Assert.AreEqual(0, queue.Count);
-
+            #endregion
         }
 
         [Test]
-        public void TestPriorityQueueInverted()
+        public void TestEnqueueDequeue()
         {
-            PriorityQueue<string, int> queue = new PriorityQueue<string, int>(true);
+            PriorityQueue<string> queue = new PriorityQueue<string>();
 
             Assert.AreEqual(0, queue.Count);
 
-            queue.Enqueue("a", 1);
-            Assert.AreEqual("a", queue.Peek().Key);
+            queue.Enqueue("d");
+            Assert.AreEqual("d", queue.Peek());
             Assert.AreEqual(1, queue.Count);
 
-            queue.Enqueue("b", 2);
-            Assert.AreEqual("a", queue.Peek().Key);
+            queue.Enqueue("c");
+            Assert.AreEqual("c", queue.Peek());
             Assert.AreEqual(2, queue.Count);
 
-            queue.Enqueue("d", 3);
-            Assert.AreEqual("a", queue.Peek().Key);
+            queue.Enqueue("a");
+            Assert.AreEqual("a", queue.Peek());
             Assert.AreEqual(3, queue.Count);
 
-            queue.Enqueue("c", 4);
-            Assert.AreEqual("a", queue.Peek().Key);
+            queue.Enqueue("b");
+            Assert.AreEqual("a", queue.Peek());
             Assert.AreEqual(4, queue.Count);
 
-            queue.Enqueue("c", 5);
+            queue.Enqueue("c");
+            Assert.AreEqual("a", queue.Peek());
             Assert.AreEqual(5, queue.Count);
 
-            KeyValuePair<string, int> item = queue.Dequeue();
-            Assert.AreEqual("a", item.Key);
-            Assert.AreEqual(1, item.Value);
+            string item = queue.Dequeue();
+            Assert.AreEqual("a", item);
             Assert.AreEqual(4, queue.Count);
 
             item = queue.Dequeue();
-            Assert.AreEqual("b", item.Key);
-            Assert.AreEqual(2, item.Value);
+            Assert.AreEqual("b", item);
             Assert.AreEqual(3, queue.Count);
 
             item = queue.Dequeue();
-            Assert.AreEqual("c", item.Key);
-            Assert.AreEqual(5, item.Value);
+            Assert.AreEqual("c", item);
             Assert.AreEqual(2, queue.Count);
 
             item = queue.Dequeue();
-            Assert.AreEqual("c", item.Key);
-            Assert.AreEqual(4, item.Value);
+            Assert.AreEqual("c", item);
             Assert.AreEqual(1, queue.Count);
 
             item = queue.Dequeue();
-            Assert.AreEqual("d", item.Key);
-            Assert.AreEqual(3, item.Value);
+            Assert.AreEqual("d", item);
             Assert.AreEqual(0, queue.Count);
+        }
 
+        [Test]
+        public void TestAdjustFirstItem()
+        {
+            PriorityQueue<QueueItem> target = new PriorityQueue<QueueItem>();
+
+            target.Enqueue(new QueueItem("b"));
+            target.Enqueue(new QueueItem("d"));
+            target.Enqueue(new QueueItem("f"));
+            target.Enqueue(new QueueItem("h"));
+
+            Assert.AreEqual("b", target.Peek().Value);
+            Assert.AreEqual(4, target.Count);
+            
+            // changing b to c
+            target.Peek().Value = "c";
+            target.AdjustFirstItem();
+            Assert.AreEqual("c", target.Peek().Value);
+            Assert.AreEqual(4, target.Count);
+
+            // changing c to e
+            target.Peek().Value = "e";
+            target.AdjustFirstItem();
+            Assert.AreEqual("d", target.Peek().Value);
+            Assert.AreEqual(4, target.Count);
+
+            // changing d to g
+            target.Peek().Value = "g";
+            target.AdjustFirstItem();
+            Assert.AreEqual("e", target.Peek().Value);
+            Assert.AreEqual(4, target.Count);
+
+            Assert.AreEqual("e", target.Dequeue().Value);
+            Assert.AreEqual(3, target.Count);
+            Assert.AreEqual("f", target.Dequeue().Value);
+            Assert.AreEqual(2, target.Count);
+            Assert.AreEqual("g", target.Dequeue().Value);
+            Assert.AreEqual(1, target.Count);
+            Assert.AreEqual("h", target.Dequeue().Value);
+            Assert.AreEqual(0, target.Count);
         }
     }
 }

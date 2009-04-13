@@ -6,111 +6,252 @@ using System.Text;
 namespace Tkl.Jumbo
 {
     /// <summary>
-    /// Provides a queue where the element with the highest priority is always at the top.
+    /// Provides a queue where the element with the lowest value is always at the front of the queue.
     /// </summary>
-    /// <typeparam name="TPriority">The type of the priority indicator.</typeparam>
-    /// <typeparam name="TValue">The type of the values in the queue.</typeparam>
-    public class PriorityQueue<TPriority, TValue>
+    /// <typeparam name="T">The type of the items in the priority queue.</typeparam>
+    /// <remarks>
+    /// <para>
+    ///   The items must be immutable as long as they are in the <see cref="PriorityQueue{T}"/>. The only exception is the front
+    ///   item, which you may modify if you call <see cref="AdjustFirstItem"/> immediately afterward.
+    /// </para>
+    /// </remarks>
+    /// <threadsafety static="true" instance="false" />
+    public sealed class PriorityQueue<T> : IEnumerable<T>, System.Collections.ICollection
     {
-        // TODO: I don't like this implementation, we should replace it with one using a fibonacci heap or something similar.
+        private readonly List<T> _heap;
+        private readonly IComparer<T> _comparer;
+        private object _syncRoot;
 
-        #region Nested types
-
-        private class InvertedComparer : IComparer<TPriority>
+        /// <summary>
+        /// Initializes a new instance of the <see cref="PriorityQueue{T}"/> class with the default comparer.
+        /// </summary>
+        public PriorityQueue()
+            : this((IComparer<T>)null)
         {
-            private IComparer<TPriority> _baseComparer;
+        }
 
-            public InvertedComparer(IComparer<TPriority> baseComparer)
+        /// <summary>
+        /// Initializes a new instance of the <see cref="PriorityQueue{T}"/> that contains elements copied from the specified <see cref="IEnumerable{T}"/>
+        /// and that uses the specified comparer.
+        /// </summary>
+        /// <param name="collection">The <see cref="IEnumerable{T}"/> whose elements are copied into the <see cref="PriorityQueue{T}"/>.</param>
+        /// <param name="comparer">The comparer to use to compare priority values, or <see langword="null"/> to use the default comparer.</param>
+        public PriorityQueue(IEnumerable<T> collection, IComparer<T> comparer)
+            : this((List<T>)null, comparer)
+        {
+            if( collection == null )
+                throw new ArgumentNullException("collection");
+            _heap = new List<T>(collection);
+
+            // Starting at the parent of the last element (which is the last node in the before-last level of the tree), perform the
+            // down-heap operation to establish the heap property. This is quicker than inserting the items into the heap one by one.
+            for( int index = (_heap.Count - 1) >> 1; index >= 0; --index )
             {
-                if( baseComparer == null )
-                    throw new ArgumentNullException("baseComparer");
-                _baseComparer = baseComparer;
+                DownHeap(index);
             }
+        }
 
-            #region IComparer<TPriority> Members
+        /// <summary>
+        /// Initializes a new instance of the <see cref="PriorityQueue{T}"/> that contains elements copied from the specified <see cref="IEnumerable{T}"/>
+        /// and that uses the default comparer..
+        /// </summary>
+        /// <param name="collection">The <see cref="IEnumerable{T}"/> whose elements are copied into the <see cref="PriorityQueue{T}"/>.</param>
+        public PriorityQueue(IEnumerable<T> collection)
+            : this(collection, null)
+        {
+        }
 
-            public int Compare(TPriority x, TPriority y)
+        /// <summary>
+        /// Initializes a new instance of the <see cref="PriorityQueue{T}"/> class with the specified comparer and capacity.
+        /// </summary>
+        /// <param name="capacity">The initial capacity of the queue.</param>
+        /// <param name="comparer">The comparer to use to compare priority values, or <see langword="null"/> to use the default comparer.</param>
+        public PriorityQueue(int capacity, IComparer<T> comparer)
+            : this(new List<T>(capacity), comparer)
+        {
+        }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="PriorityQueue{T}"/> class with the specified comparer.
+        /// </summary>
+        /// <param name="comparer">The comparer to use to compare priority values, or <see langword="null"/> to use the default comparer.</param>
+        public PriorityQueue(IComparer<T> comparer)
+            : this(new List<T>(), comparer)
+        {
+        }
+
+        private PriorityQueue(List<T> heap, IComparer<T> comparer)
+        {
+            _comparer = comparer ?? Comparer<T>.Default;
+            _heap = heap;
+        }
+
+        /// <summary>
+        /// Inserts an item into the <see cref="PriorityQueue{T}"/>.
+        /// </summary>
+        /// <param name="item">The item to add to the queue.</param>
+        public void Enqueue(T item)
+        {
+            _heap.Add(item);
+            UpHeap();
+        }
+
+        /// <summary>
+        /// Removes the item with the lowest value from the <see cref="PriorityQueue{T}"/>.
+        /// </summary>
+        /// <returns>The item that was removed.</returns>
+        public T Dequeue()
+        {
+            if( _heap.Count == 0 )
+                throw new InvalidOperationException("The priority queue is empty.");
+            T result = _heap[0];
+            int lastIndex = _heap.Count - 1;
+            _heap[0] = _heap[lastIndex];
+            _heap.RemoveAt(lastIndex);
+            if( _heap.Count > 0 )
             {
-                return -_baseComparer.Compare(x, y);
+                DownHeap(0);
             }
+            return result;
+        }
 
-            #endregion
+        /// <summary>
+        /// Gets the item with the lowest value from the queue.
+        /// </summary>
+        /// <returns>The item with the lowest value from the queue.</returns>
+        public T Peek()
+        {
+            if( _heap.Count == 0 )
+                throw new InvalidOperationException("The priority queue is empty.");
+            return _heap[0];
+        }
+
+        /// <summary>
+        /// Notifies that the item currently at the front of the queue was modified and its priority has to be re-evaluated.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        ///   If <typeparamref name="T"/> is a reference type and not immutable, it may be possible to modify the value of
+        ///   items in the queue. In general, this is not allowed and doing this will break the priority queue and lead to
+        ///   undefined behaviour.
+        /// </para>
+        /// <para>
+        ///   However, it is allowed to modify the current front element in the queue (which is returned by <see cref="Peek"/>)
+        ///   if this change is followed by an immediate call to <see cref="AdjustFirstItem"/> which re-evaluates
+        ///   the item's value and moves a different item to the front if necessary.
+        /// </para>
+        /// <para>
+        ///   In the scenario that you are removing an item from the heap and immediately replacing it with a new one,
+        ///   using this function can yield better performance, as the sequence of <see cref="Dequeue"/>, modify, <see cref="Enqueue"/> is twice as slow
+        ///   as doing <see cref="Peek"/>, modify, <see cref="AdjustFirstItem"/>.
+        /// </para>
+        /// <para>
+        ///   Because the front element may change after calling <see cref="AdjustFirstItem"/>, it is not safe to continue
+        ///   modifying that same element afterwards. You must call <see cref="Peek"/> again to get the new front element which
+        ///   may now be changed.
+        /// </para>
+        /// </remarks>
+        public void AdjustFirstItem()
+        {
+            DownHeap(0);
+        }
+
+        private void UpHeap()
+        {
+            int index = _heap.Count - 1;
+            T item = _heap[index];
+            int parentIndex = (index - 1) >> 1;
+            // Because we can't easily tell when parentIndex goes beyond 0, we check index instead; if that was already zero, then we're at the top
+            while( index > 0 && _comparer.Compare(item, _heap[parentIndex]) < 0 )
+            {
+                _heap[index] = _heap[parentIndex];
+                index = parentIndex;
+                parentIndex = (index - 1) >> 1;
+            }
+            _heap[index] = item;
+        }
+
+        private void DownHeap(int index)
+        {
+            T item = _heap[index];
+            int count = _heap.Count;
+            int firstChild = (index << 1) + 1;
+            int secondChild = firstChild + 1;
+            int smallestChild = (secondChild < count && _comparer.Compare(_heap[secondChild], _heap[firstChild]) < 0) ? secondChild : firstChild;
+            while( smallestChild < count && _comparer.Compare(_heap[smallestChild], item) < 0 )
+            {
+                _heap[index] = _heap[smallestChild];
+                index = smallestChild;
+                firstChild = (index << 1) + 1;
+                secondChild = firstChild + 1;
+                smallestChild = (secondChild < count && _comparer.Compare(_heap[secondChild], _heap[firstChild]) < 0) ? secondChild : firstChild;
+            }
+            _heap[index] = item;
+        }
+
+        #region IEnumerable<T> Members
+
+        /// <summary>
+        /// Returns an enumerator that iterates through the values in the <see cref="PriorityQueue{T}"/>.
+        /// </summary>
+        /// <returns>An enumerator that iterates through the values in the <see cref="PriorityQueue{T}"/>.</returns>
+        /// <remarks>
+        /// <note>
+        /// The order in which the items are enumerated is not guaranteed.
+        /// </note>
+        /// </remarks>
+        public IEnumerator<T> GetEnumerator()
+        {
+            return _heap.GetEnumerator();
         }
 
         #endregion
 
-        // Because the sorteddictionary doesn't allow duplicate keys we will use a list of values.
-        private readonly SortedDictionary<TPriority, List<TValue>> _list;
+        #region IEnumerable Members
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="PriorityQueue{TPriority,TValue}"/> class.
-        /// </summary>
-        /// <param name="comparer">The comparer to use to compare priority values.</param>
-        /// <param name="isInverted"><see langword="true"/> to put the element with the lowest priority on the top; otherwise, <see langword="false" />.</param>
-        public PriorityQueue(IComparer<TPriority> comparer, bool isInverted)
+        System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator()
         {
-            if( comparer == null )
-                comparer = Comparer<TPriority>.Default;
-            _list = new SortedDictionary<TPriority, List<TValue>>(isInverted ? comparer : new InvertedComparer(comparer));
+            return ((System.Collections.IEnumerable)_heap).GetEnumerator();
         }
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="PriorityQueue{TPriority,TValue}"/> class.
-        /// </summary>
-        /// <param name="isInverted"><see langword="true"/> to put the element with the lowest priority on the top; otherwise, <see langword="false" />.</param>
-        public PriorityQueue(bool isInverted)
-            : this(null, isInverted)
-        {
-        }
+        #endregion
+
+        #region ICollection Members
 
         /// <summary>
         /// Gets the number of items in the priority queue.
         /// </summary>
-        public int Count { get; private set; }
-
-        /// <summary>
-        /// Inserts an item into the <see cref="PriorityQueue{TPriority,TValue}"/>.
-        /// </summary>
-        /// <param name="priority">The priority of the element.</param>
-        /// <param name="value">The value of the element.</param>
-        public void Enqueue(TPriority priority, TValue value)
+        /// <value>
+        /// The number of items in the priority queue.
+        /// </value>
+        public int Count
         {
-            List<TValue> values;
-            if( !_list.TryGetValue(priority, out values) )
+            get
             {
-                values = new List<TValue>();
-                _list.Add(priority, values);
+                return _heap.Count;
             }
-            values.Add(value);
-            ++Count;
         }
 
-        /// <summary>
-        /// Removes an item from the <see cref="PriorityQueue{TPriority,TValue}"/>
-        /// </summary>
-        /// <returns>The item that was removed.</returns>
-        public KeyValuePair<TPriority, TValue> Dequeue()
+        void System.Collections.ICollection.CopyTo(Array array, int index)
         {
-            KeyValuePair<TPriority, List<TValue>> item = _list.ElementAt(0);
-            TValue value = item.Value[item.Value.Count - 1];
-            if( item.Value.Count == 1 )
-                _list.Remove(item.Key);
-            else
-                item.Value.RemoveAt(item.Value.Count - 1);
-
-            --Count;
-            return new KeyValuePair<TPriority, TValue>(item.Key, value);
+            ((System.Collections.ICollection)_heap).CopyTo(array, index);
         }
 
-        /// <summary>
-        /// Gets the item with the highest priority from the queue.
-        /// </summary>
-        /// <returns>The item with the highest priority from the queue.</returns>
-        public KeyValuePair<TPriority, TValue> Peek()
+        bool System.Collections.ICollection.IsSynchronized
         {
-            KeyValuePair<TPriority, List<TValue>> item = _list.ElementAt(0);
-            return new KeyValuePair<TPriority, TValue>(item.Key, item.Value[item.Value.Count - 1]);
+            get { return false; }
         }
 
+        object System.Collections.ICollection.SyncRoot
+        {
+            get 
+            {
+                if( _syncRoot == null )
+                    System.Threading.Interlocked.CompareExchange(ref _syncRoot, new object(), null);
+                return _syncRoot;
+            }
+        }
+
+        #endregion
     }
 }

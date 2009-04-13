@@ -22,6 +22,21 @@ namespace Tkl.Jumbo.Jet.Tasks
     public class MergeSortTask<T> : IMergeTask<T, T>
         where T : IWritable, new()
     {
+        private class MergeInput
+        {
+            public T Value { get; set; }
+            public RecordReader<T> Reader { get; set; }
+        }
+
+        private class MergeInputComparer : Comparer<MergeInput>
+        {
+            private readonly Comparer<T> _comparer = Comparer<T>.Default;
+
+            public override int Compare(MergeInput x, MergeInput y)
+            {
+                return _comparer.Compare(x.Value, y.Value);
+            }
+        }
 
         #region IMergeTask<T,T> Members
 
@@ -32,24 +47,35 @@ namespace Tkl.Jumbo.Jet.Tasks
         /// <param name="output">A <see cref="RecordWriter{T}"/> to which the task's output should be written.</param>
         public void Run(IList<RecordReader<T>> input, RecordWriter<T> output)
         {
-            PriorityQueue<T, RecordReader<T>> queue = new PriorityQueue<T,RecordReader<T>>(true);
-            foreach( RecordReader<T> reader in input )
-            {
-                T item;
-                if( reader.ReadRecord(out item) )
-                    queue.Enqueue(item, reader);
-            }
+            PriorityQueue<MergeInput> queue = new PriorityQueue<MergeInput>(EnumerateInputs(input), new MergeInputComparer());
 
             while( queue.Count > 0 )
             {
-                KeyValuePair<T, RecordReader<T>> item = queue.Dequeue();
-                output.WriteRecord(item.Key);
+                MergeInput front = queue.Peek();
+                output.WriteRecord(front.Value);
                 T nextItem;
-                if( item.Value.ReadRecord(out nextItem) )
-                    queue.Enqueue(nextItem, item.Value);
+                if( front.Reader.ReadRecord(out nextItem) )
+                {
+                    front.Value = nextItem;
+                    queue.AdjustFirstItem();
+                }
+                else
+                    queue.Dequeue();
             }
         }
 
         #endregion
+
+        private static IEnumerable<MergeInput> EnumerateInputs(IList<RecordReader<T>> input)
+        {
+            foreach( RecordReader<T> reader in input )
+            {
+                T item;
+                if( reader.ReadRecord(out item) )
+                {
+                    yield return new MergeInput() { Reader = reader, Value = item };
+                }
+            }
+        }
     }
 }

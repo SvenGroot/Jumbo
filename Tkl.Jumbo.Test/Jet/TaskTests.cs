@@ -39,7 +39,7 @@ namespace Tkl.Jumbo.Test.Jet
         [Test]
         public void TestMergeSortTask()
         {
-            const int inputCount = 5;
+            const int inputCount = 50;
             const int recordCountMin = 1000;
             const int recordCountMax = 10000;
             List<Int32Writable> sortedList = new List<Int32Writable>();
