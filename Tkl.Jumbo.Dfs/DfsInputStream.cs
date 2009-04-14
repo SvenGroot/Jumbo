@@ -293,7 +293,8 @@ namespace Tkl.Jumbo.Dfs
             base.Dispose(disposing);
             if( !_disposed )
             {
-                _log.DebugFormat("Total: {0}, count: {1}, average: {2}", _readTime.ElapsedMilliseconds, _totalReads, _readTime.ElapsedMilliseconds / (float)_totalReads);
+                if( _readTime != null )
+                    _log.DebugFormat("Total: {0}, count: {1}, average: {2}", _readTime.ElapsedMilliseconds, _totalReads, _readTime.ElapsedMilliseconds / (float)_totalReads);
                 _disposed = true;
                 if( _fillBufferThread != null )
                 {

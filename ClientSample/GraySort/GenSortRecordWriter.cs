@@ -16,18 +16,27 @@ namespace ClientSample.GraySort
             : base(stream)
         {
             _writer = new StreamWriter(stream, Encoding.ASCII);
-            _writer.AutoFlush = true;
         }
 
         protected override void WriteRecordInternal(GenSortRecord record)
         {
-            Debug.Assert(record.Key.Length == 10);
-            Debug.Assert(record.Value.Length == 90);
-            if( record.Key == " ]P/~W@Y#f" )
-                Debugger.Break();
             _writer.Write(record.Key);
             _writer.Write(record.Value);
-            Debug.Assert(_writer.BaseStream.Length % 100 == 0);
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            try
+            {
+                if( disposing )
+                {
+                    _writer.Dispose();
+                }
+            }
+            finally
+            {
+                base.Dispose(disposing);
+            }
         }
     }
 }

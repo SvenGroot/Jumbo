@@ -32,7 +32,8 @@ namespace ClientSample.GraySort
             // gensort records are 100 bytes long, making it easy to find the first record.
             long rem = _position % _recordSize;
             if( rem != 0 )
-                _position += _recordSize - rem;
+                Stream.Position += _recordSize - rem;
+            _position = Stream.Position;
         }
 
         protected override bool ReadRecordInternal(out GenSortRecord record)
@@ -51,12 +52,23 @@ namespace ClientSample.GraySort
 
             string key = new string(_buffer, 0, _keySize);
             string value = new string(_buffer, _keySize, _recordSize - _keySize);
-            Debug.Assert(key.Length == 10);
-            Debug.Assert(value.Length == 90);
             record = new GenSortRecord() { Key = key, Value = value };
 
             _position += _recordSize;
             return true;
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            try
+            {
+                if( disposing )
+                    _reader.Dispose();
+            }
+            finally
+            {
+                base.Dispose(disposing);
+            }
         }
     }
 }
