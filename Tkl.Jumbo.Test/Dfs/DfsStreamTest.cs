@@ -54,7 +54,25 @@ namespace Tkl.Jumbo.Test.Dfs
         }
 
         [Test]
-        public void TestStreams()
+        public void TestStreamsSameBufferSize()
+        {
+            TestStreams("/TestStreamSameBufferSize", Packet.PacketSize);
+        }
+
+        [Test]
+        public void TestStreamsDivisibleBufferSize()
+        {
+            TestStreams("/TestStreamDivisibleBufferSize", Packet.PacketSize / 16);
+        }
+
+        [Test]
+        public void TestStreamsIndivisibleBufferSize()
+        {
+            // Use a buffer size that's different to test Write calls that straddle the boundary.
+            TestStreams("/TestStreamIndivisibleBufferSize", Packet.PacketSize / 16 + 100);
+        }
+
+        private void TestStreams(string fileName, int bufferSize)
         {
             const int size = 100000000;
 
@@ -70,9 +88,9 @@ namespace Tkl.Jumbo.Test.Dfs
                 stream.Position = 0;
                 Trace.WriteLine("Uploading file");
                 Trace.Flush();
-                using( DfsOutputStream output = new DfsOutputStream(_nameServer, "/TestStreams.dat") )
+                using( DfsOutputStream output = new DfsOutputStream(_nameServer, fileName) )
                 {
-                    Utilities.CopyStream(stream, output);
+                    Utilities.CopyStream(stream, output, bufferSize);
                     Assert.AreEqual(size, output.Length);
                     Assert.AreEqual(size, output.Position);
                 }
@@ -80,7 +98,7 @@ namespace Tkl.Jumbo.Test.Dfs
                 Trace.WriteLine("Comparing file");
                 Trace.Flush();
                 stream.Position = 0;
-                using( DfsInputStream input = new DfsInputStream(_nameServer, "/TestStreams.dat") )
+                using( DfsInputStream input = new DfsInputStream(_nameServer, fileName) )
                 {
                     Assert.AreEqual(_nameServer.BlockSize, input.BlockSize);
                     Assert.IsTrue(input.CanRead);
@@ -88,7 +106,7 @@ namespace Tkl.Jumbo.Test.Dfs
                     Assert.IsFalse(input.CanWrite);
                     Assert.AreEqual(size, input.Length);
                     Assert.AreEqual(0, input.Position);
-                    Assert.IsTrue(Utilities.CompareStream(stream, input));
+                    Assert.IsTrue(Utilities.CompareStream(stream, input, bufferSize));
                     Assert.AreEqual(size, input.Position);
                     Trace.WriteLine("Testing stream seek.");
                     Trace.Flush();

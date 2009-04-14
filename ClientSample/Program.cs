@@ -36,6 +36,8 @@ namespace ClientSample
             string output = args.Length >= 4 ? args[3] : "/output";
             string profileOptions = args.Length >= 5 ? args[4] : null;
 
+            DfsClient dfsClient = new DfsClient();
+            JetClient jetClient = new JetClient();
             Type inputTaskType;
             Type aggregateTaskType;
             switch( task )
@@ -51,14 +53,21 @@ namespace ClientSample
             case "readtest":
                 ReadTest(input);
                 return;
+            case "graysort":
+                Console.WriteLine("Running job GraySort, input file {0}, {1} aggregate tasks, output path {2}.", input, aggregateTaskCount, output);
+                Console.WriteLine("Press any key to start");
+                Console.ReadKey();
+                Guid id = GraySort.GraySortJob.RunJob(jetClient, dfsClient, input, output);
+                WaitForJobCompletion(jetClient, 5000, id);
+                Console.WriteLine("Done, press any key to exit");
+                Console.ReadKey();
+                return;
             default:
                 Console.WriteLine("Unknown task.");
                 return;
             }
             
             Console.WriteLine("Running task {0}, input file {1}, {2} aggregate tasks, output path {3}.", task, input, aggregateTaskCount, output);
-            DfsClient dfsClient = new DfsClient();
-            JetClient jetClient = new JetClient();
             Console.WriteLine("Press any key to start");
             Console.ReadKey();
             //Stopwatch sw = new Stopwatch();
@@ -80,21 +89,27 @@ namespace ClientSample
             Guid jobId = StartJob(dfsClient, jetClient, inputTaskType, aggregateTaskType, fileName, outputPath, aggregateTaskCount, profileOptions);
             if( jobId != Guid.Empty )
             {
-                JobStatus status;
-                while( !jetClient.JobServer.WaitForJobCompletion(jobId, interval) )
-                {
-                    status = jetClient.JobServer.GetJobStatus(jobId);
-                    Console.WriteLine(status);
-                }
+                jobId = WaitForJobCompletion(jetClient, interval, jobId);
+            }
+        }
+
+        private static Guid WaitForJobCompletion(JetClient jetClient, int interval, Guid jobId)
+        {
+            JobStatus status;
+            while( !jetClient.JobServer.WaitForJobCompletion(jobId, interval) )
+            {
                 status = jetClient.JobServer.GetJobStatus(jobId);
                 Console.WriteLine(status);
-                Console.WriteLine();
-                Console.WriteLine("Job completed.");
-                Console.WriteLine("Start time: {0:yyyy'-'MM'-'dd' 'HH':'mm':'ss'.'fff}", status.StartTime.ToLocalTime());
-                Console.WriteLine("End time:   {0:yyyy'-'MM'-'dd' 'HH':'mm':'ss'.'fff}", status.EndTime.ToLocalTime());
-                TimeSpan duration = status.EndTime - status.StartTime;
-                Console.WriteLine("Duration:   {0} ({1}s)", duration, duration.TotalSeconds);
             }
+            status = jetClient.JobServer.GetJobStatus(jobId);
+            Console.WriteLine(status);
+            Console.WriteLine();
+            Console.WriteLine("Job completed.");
+            Console.WriteLine("Start time: {0:yyyy'-'MM'-'dd' 'HH':'mm':'ss'.'fff}", status.StartTime.ToLocalTime());
+            Console.WriteLine("End time:   {0:yyyy'-'MM'-'dd' 'HH':'mm':'ss'.'fff}", status.EndTime.ToLocalTime());
+            TimeSpan duration = status.EndTime - status.StartTime;
+            Console.WriteLine("Duration:   {0} ({1}s)", duration, duration.TotalSeconds);
+            return jobId;
         }
 
         private static Guid StartJob(DfsClient dfsClient, JetClient jetClient, Type inputTaskType, Type aggregateTaskType, string fileName, string outputPath, int aggregateTaskCount, string profileOptions)

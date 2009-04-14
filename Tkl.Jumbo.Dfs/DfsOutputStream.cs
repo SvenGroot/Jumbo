@@ -206,7 +206,7 @@ namespace Tkl.Jumbo.Dfs
                     }
                 } 
                 int bufferRemaining = _buffer.Length - _bufferPos;
-                int writeSize = Math.Min(end, bufferRemaining);
+                int writeSize = Math.Min(end - bufferPos, bufferRemaining);
                 Array.Copy(buffer, bufferPos, _buffer, _bufferPos, writeSize);
                 _bufferPos += writeSize;
                 bufferPos += writeSize;

@@ -86,7 +86,12 @@ namespace Tkl.Jumbo.Test
 
         public static void CopyStream(Stream src, Stream dest)
         {
-            byte[] buffer = new byte[4096];
+            CopyStream(src, dest, 4096);
+        }
+
+        public static void CopyStream(Stream src, Stream dest, int bufferSize)
+        {
+            byte[] buffer = new byte[bufferSize];
             int bytesRead = 0;
             do
             {
@@ -100,8 +105,13 @@ namespace Tkl.Jumbo.Test
 
         public static bool CompareStream(Stream stream1, Stream stream2)
         {
-            byte[] buffer1 = new byte[4096];
-            byte[] buffer2 = new byte[4096];
+            return CompareStream(stream1, stream2, 4096);
+        }
+
+        public static bool CompareStream(Stream stream1, Stream stream2, int bufferSize)
+        {
+            byte[] buffer1 = new byte[bufferSize];
+            byte[] buffer2 = new byte[bufferSize];
             int bytesRead1 = 0;
             int bytesRead2 = 0;
             do

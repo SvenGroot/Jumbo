@@ -52,6 +52,10 @@
     <Compile Include="..\Version.cs">
       <Link>Properties\Version.cs</Link>
     </Compile>
+    <Compile Include="GraySort\GenSortRecord.cs" />
+    <Compile Include="GraySort\GraySortJob.cs" />
+    <Compile Include="GraySort\GenSortRecordReader.cs" />
+    <Compile Include="GraySort\GenSortRecordWriter.cs" />
     <Compile Include="LineCounter.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
