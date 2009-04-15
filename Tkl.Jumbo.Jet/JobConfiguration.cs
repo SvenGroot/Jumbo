@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Xml;
 using System.Xml.Serialization;
 using Tkl.Jumbo.Dfs;
 using Tkl.Jumbo.IO;
@@ -16,6 +17,7 @@ namespace Tkl.Jumbo.Jet
     [XmlRoot("Job", Namespace=JobConfiguration.XmlNamespace)]
     public class JobConfiguration
     {
+
         /// <summary>
         /// The XML namespace for the job configuration XML.
         /// </summary>
@@ -67,6 +69,11 @@ namespace Tkl.Jumbo.Jet
         public List<Channels.ChannelConfiguration> Channels { get; set; }
 
         /// <summary>
+        /// Gets or sets a list of settings that can be accessed by the tasks in this job.
+        /// </summary>
+        public SettingsDictionary JobSettings { get; set; }
+
+        /// <summary>
         /// Adds a stage that reads from the DFS.
         /// </summary>
         /// <param name="stageName">The name of the stage. This name will serve as the base name for all the tasks in the stage.</param>
@@ -85,6 +92,31 @@ namespace Tkl.Jumbo.Jet
         /// </remarks>
         public IList<TaskConfiguration> AddInputStage(string stageName, File inputFile, Type taskType, Type recordReaderType)
         {
+            return AddInputStage(stageName, inputFile, taskType, recordReaderType, null, null);
+        }
+
+
+        /// <summary>
+        /// Adds a stage that reads from the DFS.
+        /// </summary>
+        /// <param name="stageName">The name of the stage. This name will serve as the base name for all the tasks in the stage.</param>
+        /// <param name="inputFile">The DFS file that the stage will read from.</param>
+        /// <param name="taskType">The type implementing the task's functionality; this type must implement <see cref="ITask{TInput,TOutput}"/>.</param>
+        /// <param name="recordReaderType">The type of record reader to use when reading the file; this type must derive from <see cref="RecordReader{T}"/>.</param>
+        /// <param name="outputPath">The name of a DFS directory to write the stage's output files to, or <see langword="null"/> to indicate this stage does not write to the DFS.</param>
+        /// <param name="recordWriterType">The type of the record writer to use when writing to the output files; this parameter is ignored if <paramref name="outputPath"/> is <see langword="null" />.</param>
+        /// <returns>The list of tasks in the new stage.</returns>
+        /// <remarks>
+        /// <note>
+        ///   Information about stages is not preserved through XML serialization, so you should not use this method on a <see cref="JobConfiguration"/>
+        ///   object created using the <see cref="LoadXml(string)"/> method.
+        /// </note>
+        /// <para>
+        ///   The new stage will contain as many tasks are there are blocks in the input file.
+        /// </para>
+        /// </remarks>
+        public IList<TaskConfiguration> AddInputStage(string stageName, File inputFile, Type taskType, Type recordReaderType, string outputPath, Type recordWriterType)
+        {
             if( stageName == null )
                 throw new ArgumentNullException("stageName");
             if( stageName.Length == 0 )
@@ -95,6 +127,8 @@ namespace Tkl.Jumbo.Jet
                 throw new ArgumentNullException("taskType");
             if( recordReaderType == null )
                 throw new ArgumentNullException("recordReaderType");
+            if( outputPath != null && recordWriterType == null )
+                throw new ArgumentNullException("recordWriterType");
 
             Type taskInterfaceType = FindGenericInterfaceType(taskType, typeof(ITask<,>));
             Type inputType = taskInterfaceType.GetGenericArguments()[0];
@@ -103,7 +137,9 @@ namespace Tkl.Jumbo.Jet
             if( inputType != recordType )
                 throw new ArgumentException(string.Format("The specified record reader type {0} is not identical to the specified task type's input type {1}.", recordType, inputType));
 
-            List<TaskConfiguration> stage = CreateStage(stageName, taskType, inputFile.Blocks.Count, null, null, inputFile.FullPath, recordReaderType);
+            ValidateOutputType(outputPath, recordWriterType, taskInterfaceType);
+
+            List<TaskConfiguration> stage = CreateStage(stageName, taskType, inputFile.Blocks.Count, outputPath, recordWriterType, inputFile.FullPath, recordReaderType);
 
             _stages.Add(stageName, stage);
             Tasks.AddRange(stage); // this is done at the end so the job's state isn't altered if one of the tasks has a duplicate name and causes an exception.

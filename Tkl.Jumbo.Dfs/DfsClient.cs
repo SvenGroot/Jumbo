@@ -38,6 +38,7 @@ namespace Tkl.Jumbo.Dfs
         public DfsClient(DfsConfiguration config)
         {
             NameServer = CreateNameServerClient(config);
+            Configuration = config;
         }
 
         /// <summary>
@@ -47,6 +48,11 @@ namespace Tkl.Jumbo.Dfs
         /// <param name="port">The port at which the name server is listening.</param>
         public DfsClient(string hostName, int port)
         {
+            if( hostName == null )
+                throw new ArgumentNullException("hostName");
+            Configuration = new DfsConfiguration();
+            Configuration.NameServer.HostName = hostName;
+            Configuration.NameServer.Port = port;
             NameServer = CreateNameServerClient(hostName, port);
         }
 
@@ -54,6 +60,11 @@ namespace Tkl.Jumbo.Dfs
         /// Gets the <see cref="INameServerClientProtocol"/> used by this instance to communicate with the name server.
         /// </summary>
         public INameServerClientProtocol NameServer { get; private set; }
+
+        /// <summary>
+        /// Gets the <see cref="DfsConfiguration"/> used to create this instance.
+        /// </summary>
+        public DfsConfiguration Configuration { get; private set; }
 
         /// <summary>
         /// Creates a client object that can be used to communicate with a name server.

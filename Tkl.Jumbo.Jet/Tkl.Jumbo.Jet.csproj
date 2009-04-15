@@ -68,6 +68,8 @@
     <Compile Include="Channels\PipelineOutputChannel.cs" />
     <Compile Include="CleanupJobJetHeartbeatResponse.cs" />
     <Compile Include="CompletedTask.cs" />
+    <Compile Include="Configurable.cs" />
+    <Compile Include="IConfigurable.cs" />
     <Compile Include="IMergeTask.cs" />
     <Compile Include="IPullTask.cs" />
     <Compile Include="IPushTask.cs" />
@@ -76,6 +78,7 @@
     <Compile Include="IJobServerHeartbeatProtocol.cs" />
     <Compile Include="ITask.cs" />
     <Compile Include="ITaskServerUmbilicalProtocol.cs" />
+    <Compile Include="JetActivator.cs" />
     <Compile Include="JetClient.cs" />
     <Compile Include="JetConfiguration.cs" />
     <Compile Include="JetHeartbeatData.cs" />
@@ -88,6 +91,7 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="RunTaskJetHeartbeatResponse.cs" />
     <Compile Include="ServerShutdownException.cs" />
+    <Compile Include="SettingsDictionary.cs" />
     <Compile Include="StatusJetHeartbeatData.cs" />
     <Compile Include="TaskConfiguration.cs" />
     <Compile Include="TaskDfsInput.cs" />

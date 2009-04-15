@@ -81,24 +81,13 @@ namespace Tkl.Jumbo.Test.Jet
         [Test]
         public void TestJobExecutionSort()
         {
-            Random rnd = new Random();
             const int recordCount = 2500000;
-            List<int> expected = new List<int>(recordCount);
-
+            const string inputFileName = "/sortinput";
             string outputPath = "/sortoutput";
             DfsClient dfsClient = new DfsClient(Dfs.TestDfsCluster.CreateClientConfig());
             dfsClient.NameServer.CreateDirectory(outputPath);
 
-            using( DfsOutputStream stream = dfsClient.CreateFile("/sortinput") )
-            using( TextRecordWriter<Int32Writable> writer = new TextRecordWriter<Int32Writable>(stream) )
-            {
-                for( int x = 0; x < recordCount; ++x )
-                {
-                    int record = rnd.Next();
-                    expected.Add(record);
-                    writer.WriteRecord(record);
-                }
-            }
+            List<int> expected = CreateNumberListInputFile(recordCount, inputFileName, dfsClient);
             expected.Sort();
 
             JobConfiguration config = new JobConfiguration(typeof(StringConversionTask).Assembly);
@@ -106,14 +95,37 @@ namespace Tkl.Jumbo.Test.Jet
             config.AddPointToPointStage("SortStage", "ConversionStage", typeof(SortTask<Int32Writable>), ChannelType.Pipeline, null, null, null);
             config.AddStage("MergeStage", new[] { "SortStage" }, typeof(MergeSortTask<Int32Writable>), 1, ChannelType.File, null, outputPath, typeof(BinaryRecordWriter<Int32Writable>));
 
-            JetClient target = new JetClient(TestJetCluster.CreateClientConfig());
-            Job job = target.RunJob(config, dfsClient, typeof(StringConversionTask).Assembly.Location);
-
-            bool complete = target.JobServer.WaitForJobCompletion(job.JobID, Timeout.Infinite);
-            Assert.IsTrue(complete);
+            RunJob(dfsClient, config);
 
             string outputFileName = DfsPath.Combine(outputPath, "MergeStage001");
 
+            CheckOutput(dfsClient, expected, outputFileName);
+        }
+
+        [Test]
+        public void TestJobSettings()
+        {
+            string outputPath = "/settingsoutput";
+            DfsClient dfsClient = new DfsClient(Dfs.TestDfsCluster.CreateClientConfig());
+            dfsClient.NameServer.CreateDirectory(outputPath);
+
+            List<int> expected = CreateNumberListInputFile(10000, "/settingsinput", dfsClient);
+
+            JobConfiguration config = new JobConfiguration(typeof(MultiplierTask).Assembly);
+            config.AddInputStage("MultiplyStage", dfsClient.NameServer.GetFileInfo("/settingsinput"), typeof(MultiplierTask), typeof(LineRecordReader), outputPath, typeof(BinaryRecordWriter<Int32Writable>));
+            config.JobSettings = new SettingsDictionary();
+            int factor = new Random().Next(2, 100);
+            config.JobSettings.Add("factor", factor.ToString());
+
+            RunJob(dfsClient, config);
+
+            var multiplied = (from item in expected
+                             select item * factor).ToList();
+            CheckOutput(dfsClient, multiplied, DfsPath.Combine(outputPath, "MultiplyStage001"));
+        }
+
+        private static void CheckOutput(DfsClient dfsClient, IList<int> expected, string outputFileName)
+        {
             List<int> actual = new List<int>();
             using( DfsInputStream stream = dfsClient.OpenFile(outputFileName) )
             using( BinaryRecordReader<Int32Writable> reader = new BinaryRecordReader<Int32Writable>(stream) )
@@ -126,6 +138,33 @@ namespace Tkl.Jumbo.Test.Jet
             }
 
             Assert.IsTrue(Utilities.CompareList(expected, actual));
+        }
+
+        private static void RunJob(DfsClient dfsClient, JobConfiguration config)
+        {
+            JetClient target = new JetClient(TestJetCluster.CreateClientConfig());
+            Job job = target.RunJob(config, dfsClient, typeof(StringConversionTask).Assembly.Location);
+
+            bool complete = target.JobServer.WaitForJobCompletion(job.JobID, Timeout.Infinite);
+            Assert.IsTrue(complete);
+        }
+
+        private static List<int> CreateNumberListInputFile(int recordCount, string inputFileName, DfsClient dfsClient)
+        {
+            Random rnd = new Random();
+            List<int> expected = new List<int>(recordCount);
+
+            using( DfsOutputStream stream = dfsClient.CreateFile(inputFileName) )
+            using( TextRecordWriter<Int32Writable> writer = new TextRecordWriter<Int32Writable>(stream) )
+            {
+                for( int x = 0; x < recordCount; ++x )
+                {
+                    int record = rnd.Next();
+                    expected.Add(record);
+                    writer.WriteRecord(record);
+                }
+            }
+            return expected;
         }
 
         private void RunJob(bool forceFileDownload, string outputPath, TaskKind taskKind, ChannelType channelType)

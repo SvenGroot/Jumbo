@@ -16,6 +16,7 @@ namespace Tkl.Jumbo.Jet.Channels
 
         private readonly string[] _fileNames;
         private string _partitionerType;
+        private TaskExecutionUtility _taskExecution;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="FileOutputChannel"/> class.
@@ -25,6 +26,7 @@ namespace Tkl.Jumbo.Jet.Channels
         {
             if( taskExecution == null )
                 throw new ArgumentNullException("taskExecution");
+            _taskExecution = taskExecution;
 
             ChannelConfiguration channelConfig = taskExecution.OutputChannelConfiguration;
             _fileNames = (from outputTaskId in channelConfig.OutputTasks
@@ -57,7 +59,7 @@ namespace Tkl.Jumbo.Jet.Channels
                 return new BinaryRecordWriter<T>(File.Create(_fileNames[0]));
             else
             {
-                IPartitioner<T> partitioner = (IPartitioner<T>)Activator.CreateInstance(Type.GetType(_partitionerType));
+                IPartitioner<T> partitioner = (IPartitioner<T>)JetActivator.CreateInstance(Type.GetType(_partitionerType, true), _taskExecution);
                 var writers = from file in _fileNames
                               select (RecordWriter<T>)new BinaryRecordWriter<T>(File.Create(file));
                 return new MultiRecordWriter<T>(writers, partitioner);

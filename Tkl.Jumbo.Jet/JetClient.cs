@@ -38,6 +38,7 @@ namespace Tkl.Jumbo.Jet
                 throw new ArgumentNullException("config");
 
             JobServer = CreateJobServerClient(config);
+            Configuration = config;
         }
 
         /// <summary>
@@ -49,6 +50,9 @@ namespace Tkl.Jumbo.Jet
         {
             if( hostName == null )
                 throw new ArgumentNullException("hostName");
+            Configuration = new JetConfiguration();
+            Configuration.JobServer.HostName = hostName;
+            Configuration.JobServer.Port = port;
             JobServer = CreateJobServerClient(hostName, port);
         }
 
@@ -56,6 +60,11 @@ namespace Tkl.Jumbo.Jet
         /// Gets the <see cref="IJobServerClientProtocol"/> instance used by this instance to communicate with the job server.
         /// </summary>
         public IJobServerClientProtocol JobServer { get; private set; }
+
+        /// <summary>
+        /// Gets the <see cref="JetConfiguration"/> that was used to create this instance.
+        /// </summary>
+        public JetConfiguration Configuration { get; private set; }
 
         /// <summary>
         /// Creates a client object that can be used to communicate with a job server via the heartbeat protocol.

@@ -59,6 +59,7 @@
     <Compile Include="LineAdderTask.cs" />
     <Compile Include="LineCounterPushTask.cs" />
     <Compile Include="LineCounterTask.cs" />
+    <Compile Include="MultiplierTask.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="StringConversionTask.cs" />
   </ItemGroup>

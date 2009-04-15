@@ -291,7 +291,7 @@ namespace Tkl.Jumbo.Jet
             if( _task == null )
             {
                 _log.DebugFormat("Creating {0} task instance.", TaskType.AssemblyQualifiedName);
-                _task = new TaskContainer<TInput, TOutput>((ITask<TInput, TOutput>)Activator.CreateInstance(TaskType), GetOutputWriter<TOutput>());
+                _task = new TaskContainer<TInput, TOutput>((ITask<TInput, TOutput>)JetActivator.CreateInstance(TaskType, this), GetOutputWriter<TOutput>());
             }
             return (ITask<TInput, TOutput>)_task.Task;
         }
@@ -427,7 +427,7 @@ namespace Tkl.Jumbo.Jet
                 _outputStream = DfsClient.CreateFile(file);
                 _log.DebugFormat("Creating record writer of type {0}", TaskConfiguration.DfsOutput.RecordWriterType);
                 Type recordWriterType = Type.GetType(TaskConfiguration.DfsOutput.RecordWriterType);
-                return (StreamRecordWriter<T>)Activator.CreateInstance(recordWriterType, _outputStream);
+                return (RecordWriter<T>)JetActivator.CreateInstance(recordWriterType, this, _outputStream);
             }
             else if( OutputChannel != null )
             {
@@ -452,7 +452,7 @@ namespace Tkl.Jumbo.Jet
                 size = Math.Min(blockSize, DfsClient.NameServer.GetFileInfo(TaskConfiguration.DfsInput.Path).Size - offset);
                 _log.DebugFormat("Opening input file {0}", TaskConfiguration.DfsInput.Path);
                 _inputStream = DfsClient.OpenFile(TaskConfiguration.DfsInput.Path);
-                return new[] { (RecordReader<T>)Activator.CreateInstance(recordReaderType, _inputStream, offset, size) };
+                return new[] { (RecordReader<T>)JetActivator.CreateInstance(recordReaderType, this, _inputStream, offset, size) };
             }
             else if( InputChannel != null )
             {

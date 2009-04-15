@@ -94,7 +94,7 @@ namespace Tkl.Jumbo.Jet.Channels
                 return CreateRecordWriter<T>(_taskExecution.CreateAssociatedTask(_taskExecution.OutputChannelConfiguration.OutputTasks[0]));
             else
             {
-                IPartitioner<T> partitioner = (IPartitioner<T>)Activator.CreateInstance(Type.GetType(_taskExecution.OutputChannelConfiguration.PartitionerType));
+                IPartitioner<T> partitioner = (IPartitioner<T>)JetActivator.CreateInstance(Type.GetType(_taskExecution.OutputChannelConfiguration.PartitionerType), _taskExecution);
                 var writers = from taskId in _taskExecution.OutputChannelConfiguration.OutputTasks
                               let taskExecution = _taskExecution.CreateAssociatedTask(taskId)
                               select CreateRecordWriter<T>(taskExecution);
