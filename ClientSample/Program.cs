@@ -57,7 +57,7 @@ namespace ClientSample
                 Console.WriteLine("Running job GraySort, input file {0}, {1} aggregate tasks, output path {2}.", input, aggregateTaskCount, output);
                 Console.WriteLine("Press any key to start");
                 Console.ReadKey();
-                Guid id = GraySort.GraySortJob.RunJob(jetClient, dfsClient, input, output);
+                Guid id = GraySort.GraySortJob.RunJob(jetClient, dfsClient, input, output, aggregateTaskCount);
                 WaitForJobCompletion(jetClient, 5000, id);
                 Console.WriteLine("Done, press any key to exit");
                 Console.ReadKey();

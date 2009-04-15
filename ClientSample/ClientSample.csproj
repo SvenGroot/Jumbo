@@ -36,6 +36,7 @@
       <HintPath>..\lib\log4net.dll</HintPath>
     </Reference>
     <Reference Include="System" />
+    <Reference Include="System.configuration" />
     <Reference Include="System.Core">
       <RequiredTargetFramework>3.5</RequiredTargetFramework>
     </Reference>
@@ -52,6 +53,7 @@
     <Compile Include="..\Version.cs">
       <Link>Properties\Version.cs</Link>
     </Compile>
+    <Compile Include="GraySort\RangePartitioner.cs" />
     <Compile Include="GraySort\GenSortRecord.cs" />
     <Compile Include="GraySort\GraySortJob.cs" />
     <Compile Include="GraySort\GenSortRecordReader.cs" />

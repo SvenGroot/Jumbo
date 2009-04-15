@@ -324,7 +324,6 @@ namespace TaskServerApplication
 
         private TaskExecutionInfo RunTask(int instanceId, RunTaskJetHeartbeatResponse task)
         {
-
             _log.InfoFormat("Running task {{{0}}}_{1} in task host {2}.", task.Job.JobID, task.TaskID, instanceId);
             string jobDirectory = TaskServer.GetJobDirectory(task.Job.JobID);
             lock( _tasks )

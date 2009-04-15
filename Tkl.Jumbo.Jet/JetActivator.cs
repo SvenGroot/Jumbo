@@ -56,9 +56,9 @@ namespace Tkl.Jumbo.Jet
         public static object CreateInstance(Type type, TaskExecutionUtility taskExecution, params object[] args)
         {
             if( taskExecution == null )
-                throw new ArgumentNullException("taskExecution");
-
-            return CreateInstance(type, taskExecution.DfsClient.Configuration, taskExecution.JetClient.Configuration, taskExecution.JobConfiguration, args);
+                return CreateInstance(type, null, null, null, args);
+            else
+                return CreateInstance(type, taskExecution.DfsClient.Configuration, taskExecution.JetClient.Configuration, taskExecution.JobConfiguration, args);
         }
 
         /// <summary>

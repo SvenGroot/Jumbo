@@ -60,7 +60,6 @@ namespace Tkl.Jumbo.Jet
         private List<TaskExecutionUtility> _associatedTasks = new List<TaskExecutionUtility>();
         private IInputChannel _inputChannel;
         private IOutputChannel _outputChannel;
-        private DfsInputStream _inputStream;
         private DfsOutputStream _outputStream;
         private IEnumerable _inputReaders; // non-generic because we don't know the type of T for RecordReader<T>.
         private object _outputWriter;
@@ -363,8 +362,6 @@ namespace Tkl.Jumbo.Jet
                         foreach( object reader in _inputReaders )
                             ((IDisposable)reader).Dispose();
                     }
-                    if( _inputStream != null )
-                        _inputStream.Dispose();
                     IDisposable inputChannelDisposable = _inputChannel as IDisposable;
                     if( inputChannelDisposable != null )
                         inputChannelDisposable.Dispose();
@@ -444,15 +441,7 @@ namespace Tkl.Jumbo.Jet
             if( TaskConfiguration.DfsInput != null )
             {
                 _log.DebugFormat("Creating record reader of type {0}", TaskConfiguration.DfsInput.RecordReaderType);
-                Type recordReaderType = Type.GetType(TaskConfiguration.DfsInput.RecordReaderType);
-                long offset;
-                long size;
-                long blockSize = DfsClient.NameServer.BlockSize;
-                offset = blockSize * (long)TaskConfiguration.DfsInput.Block;
-                size = Math.Min(blockSize, DfsClient.NameServer.GetFileInfo(TaskConfiguration.DfsInput.Path).Size - offset);
-                _log.DebugFormat("Opening input file {0}", TaskConfiguration.DfsInput.Path);
-                _inputStream = DfsClient.OpenFile(TaskConfiguration.DfsInput.Path);
-                return new[] { (RecordReader<T>)JetActivator.CreateInstance(recordReaderType, this, _inputStream, offset, size) };
+                return new[] { TaskConfiguration.DfsInput.CreateRecordReader<T>(DfsClient, this) };
             }
             else if( InputChannel != null )
             {

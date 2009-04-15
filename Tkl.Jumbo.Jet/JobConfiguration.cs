@@ -220,7 +220,7 @@ namespace Tkl.Jumbo.Jet
             {
                 Type partitionerInterfaceType = FindGenericInterfaceType(partitionerType, typeof(IPartitioner<>));
                 Type partitionedType = partitionerInterfaceType.GetGenericArguments()[0];
-                if( partitionerType != inputType )
+                if( partitionedType != inputType )
                     throw new ArgumentException(string.Format("The partitioner type {0} cannot partition objects of type {1}.", partitionerType, inputType), "partitionerType");
             }
         }

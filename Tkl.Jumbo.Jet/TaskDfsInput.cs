@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Xml.Serialization;
+using Tkl.Jumbo.IO;
+using Tkl.Jumbo.Dfs;
 
 namespace Tkl.Jumbo.Jet
 {
@@ -47,5 +49,38 @@ namespace Tkl.Jumbo.Jet
         }
 
         #endregion
+    }
+
+    /// <summary>
+    /// Extension methods for <see cref="TaskDfsInput"/>.
+    /// </summary>
+    public static class TaskDfsInputExtensions
+    {
+        /// <summary>
+        /// Creates a record reader for the specified <see cref="TaskDfsInput"/>.
+        /// </summary>
+        /// <param name="input">The <see cref="TaskDfsInput"/> for which to create a record reader.</param>
+        /// <param name="dfsClient">The <see cref="DfsClient"/> to use to access the DFS.</param>
+        /// <param name="taskExecution">The <see cref="TaskExecutionUtility"/> whose configuration to pass to the record reader. May be <see langword="null"/>.</param>
+        /// <returns>A <see cref="RecordReader{T}"/> that reads the input specified in the <see cref="TaskDfsInput"/>.</returns>
+        /// <remarks>
+        /// This is done as an extension because XML serialization doesn't like it if this method is on the actual class.
+        /// </remarks>
+        public static RecordReader<T> CreateRecordReader<T>(this TaskDfsInput input, DfsClient dfsClient, TaskExecutionUtility taskExecution)
+            where T : IWritable, new()
+        {
+            if( input == null )
+                throw new ArgumentNullException("input");
+            if( dfsClient == null )
+                throw new ArgumentNullException("dfsClient");
+            Type recordReaderType = Type.GetType(input.RecordReaderType);
+            long offset;
+            long size;
+            long blockSize = dfsClient.NameServer.BlockSize;
+            offset = blockSize * (long)input.Block;
+            size = Math.Min(blockSize, dfsClient.NameServer.GetFileInfo(input.Path).Size - offset);
+            DfsInputStream inputStream = dfsClient.OpenFile(input.Path);
+            return (RecordReader<T>)JetActivator.CreateInstance(recordReaderType, taskExecution, inputStream, offset, size);
+        }
     }
 }

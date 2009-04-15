@@ -23,6 +23,7 @@
       </references>
       <sources>
         <include name="Properties/AssemblyInfo.cs"/>
+        <include name="GraySort/*.cs" />
         <include name="*.cs"/>
         <include name="../Version.cs"/>
       </sources>
