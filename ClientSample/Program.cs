@@ -31,15 +31,23 @@ namespace ClientSample
             }
 
             string task = args[0];
-            string input = args[1];
-            int aggregateTaskCount = args.Length >= 3 ? Convert.ToInt32(args[2]) : 1;
-            string output = args.Length >= 4 ? args[3] : "/output";
-            string profileOptions = args.Length >= 5 ? args[4] : null;
+            string input = null;
+            int aggregateTaskCount = 0;
+            string output = null;
+            string profileOptions = null;
+            if( args[0] != "gensort" )
+            {
+                input = args[1];
+                aggregateTaskCount = args.Length >= 3 ? Convert.ToInt32(args[2]) : 1;
+                output = args.Length >= 4 ? args[3] : "/output";
+                profileOptions = args.Length >= 5 ? args[4] : null;
+            }
 
             DfsClient dfsClient = new DfsClient();
             JetClient jetClient = new JetClient();
             Type inputTaskType;
             Type aggregateTaskType;
+            Guid id;
             switch( task )
             {
             case "linecount":
@@ -57,7 +65,19 @@ namespace ClientSample
                 Console.WriteLine("Running job GraySort, input file {0}, {1} aggregate tasks, output path {2}.", input, aggregateTaskCount, output);
                 Console.WriteLine("Press any key to start");
                 Console.ReadKey();
-                Guid id = GraySort.GraySortJob.RunJob(jetClient, dfsClient, input, output, aggregateTaskCount);
+                id = GraySort.GraySortJob.RunGraySortJob(jetClient, dfsClient, input, output, aggregateTaskCount);
+                WaitForJobCompletion(jetClient, 5000, id);
+                Console.WriteLine("Done, press any key to exit");
+                Console.ReadKey();
+                return;
+            case "gensort":
+                output = args[1];
+                ulong count = Convert.ToUInt64(args[2]);
+                int tasks = Convert.ToInt32(args[3]);
+                Console.WriteLine("Running job GenSort, output path {0}, {1} records, {2} tasks.", output, count, tasks);
+                Console.WriteLine("Press any key to start");
+                Console.ReadKey();
+                id = GraySort.GraySortJob.RunGenSortJob(jetClient, dfsClient, 0, count, tasks, output);
                 WaitForJobCompletion(jetClient, 5000, id);
                 Console.WriteLine("Done, press any key to exit");
                 Console.ReadKey();

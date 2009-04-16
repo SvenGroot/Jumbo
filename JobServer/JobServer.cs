@@ -444,6 +444,7 @@ namespace JobServerApplication
                     if( data.Status > TaskAttemptStatus.Running )
                     {
                         server.AssignedTasks.Remove(task);
+                        server.AssignedNonInputTasks.Remove(task);
                         // We don't set task.Server to null because output tasks can still query that information!
 
                         switch( data.Status )

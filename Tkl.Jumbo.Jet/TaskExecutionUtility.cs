@@ -360,7 +360,10 @@ namespace Tkl.Jumbo.Jet
                     if( _inputReaders != null )
                     {
                         foreach( object reader in _inputReaders )
-                            ((IDisposable)reader).Dispose();
+                        {
+                            if( reader != null )
+                                ((IDisposable)reader).Dispose();
+                        }
                     }
                     IDisposable inputChannelDisposable = _inputChannel as IDisposable;
                     if( inputChannelDisposable != null )
@@ -453,7 +456,7 @@ namespace Tkl.Jumbo.Jet
                     
             }
             else
-                return null;
+                return new RecordReader<T>[] { null };
         }
     }
 }

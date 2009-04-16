@@ -11,7 +11,7 @@ namespace ClientSample.GraySort
 {
     static class GraySortJob
     {
-        public static Guid RunJob(JetClient jetClient, DfsClient dfsClient, string inputFile, string outputPath, int mergeTasks)
+        public static Guid RunGraySortJob(JetClient jetClient, DfsClient dfsClient, string inputFile, string outputPath, int mergeTasks)
         {
             dfsClient.NameServer.Delete(outputPath, true);
             dfsClient.NameServer.CreateDirectory(outputPath);
@@ -29,6 +29,36 @@ namespace ClientSample.GraySort
             }
             
             return jetClient.RunJob(job, typeof(GenSortRecordReader).Assembly.Location).JobID;
+        }
+
+        public static Guid RunGenSortJob(JetClient jetClient, DfsClient dfsClient, ulong startRecord, ulong count, int tasks, string outputPath)
+        {
+            dfsClient.NameServer.Delete(outputPath, true);
+            dfsClient.NameServer.CreateDirectory(outputPath);
+
+            JobConfiguration job = new JobConfiguration(typeof(GenSortTask).Assembly);
+
+            ulong countPerTask = count / (ulong)tasks;
+
+            for( uint x = 0; x < tasks; ++x )
+            {
+                TaskConfiguration task = new TaskConfiguration()
+                {
+                    TaskID = "GenSort" + (x + 1).ToString("000"),
+                    TaskType = typeof(GenSortTask),
+                    TaskSettings = new SettingsDictionary(),
+                    DfsOutput = new TaskDfsOutput()
+                    {
+                        Path = DfsPath.Combine(outputPath, "GenSort" + (x + 1).ToString("000")),
+                        RecordWriterType = typeof(BinaryRecordWriter<ByteArrayWritable>).AssemblyQualifiedName
+                    }
+                };
+                task.TaskSettings["startRecord"] = (startRecord + x * countPerTask).ToString();
+                task.TaskSettings["count"] = countPerTask.ToString();
+                job.Tasks.Add(task);
+            }
+
+            return jetClient.RunJob(job, typeof(GenSortTask).Assembly.Location).JobID;
         }
     }
 }

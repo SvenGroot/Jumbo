@@ -83,6 +83,11 @@ namespace Tkl.Jumbo.Jet
         public TaskDfsOutput DfsOutput { get; set; }
 
         /// <summary>
+        /// Gets or sets a list of settings that are specific to this task.
+        /// </summary>
+        public SettingsDictionary TaskSettings { get; set; }
+
+        /// <summary>
         /// Gets or sets the name of the stage that this task belongs to. This property is not serialized.
         /// </summary>
         [XmlIgnore]
