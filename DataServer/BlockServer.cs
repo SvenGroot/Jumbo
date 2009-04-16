@@ -232,10 +232,12 @@ namespace DataServerApplication
                     }
                     else
                     {
-                        endPacketOffset = (int)(blockFile.Length / Packet.PacketSize);
+					  endPacketOffset = (int)(blockFile.Length / (Packet.PacketSize + sizeof(uint)));
                     }
                     endOffset = endPacketOffset * Packet.PacketSize;
                     endFileOffset = endPacketOffset * (Packet.PacketSize + sizeof(uint));
+
+					_log.DebugFormat("Block file length: {0}, offset: {1}, end offset = {2}", blockFile.Length, fileOffset, endFileOffset);
 
                     if( fileOffset > blockFile.Length || endFileOffset > blockFile.Length )
                     {
