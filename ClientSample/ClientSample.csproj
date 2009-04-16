@@ -63,6 +63,9 @@
     <Compile Include="GraySort\GenSortRecordReader.cs" />
     <Compile Include="GraySort\GenSortRecordWriter.cs" />
     <Compile Include="GraySort\UInt128.cs" />
+    <Compile Include="GraySort\ValSortCombinerTask.cs" />
+    <Compile Include="GraySort\ValSortRecord.cs" />
+    <Compile Include="GraySort\ValSortTask.cs" />
     <Compile Include="LineCounter.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

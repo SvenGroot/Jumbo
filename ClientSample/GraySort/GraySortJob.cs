@@ -17,7 +17,11 @@ namespace ClientSample.GraySort
             dfsClient.NameServer.CreateDirectory(outputPath);
 
             JobConfiguration job = new JobConfiguration(typeof(GenSortRecordReader).Assembly);
-            job.AddInputStage("SortStage", dfsClient.NameServer.GetFileInfo(inputFile), typeof(SortTask<GenSortRecord>), typeof(GenSortRecordReader));
+            Directory dir = dfsClient.NameServer.GetDirectoryInfo(inputFile);
+            if( dir == null )
+                job.AddInputStage("SortStage", dfsClient.NameServer.GetFileInfo(inputFile), typeof(SortTask<GenSortRecord>), typeof(GenSortRecordReader));
+            else
+                job.AddInputStage("SortStage", dir, typeof(SortTask<GenSortRecord>), typeof(GenSortRecordReader));
             job.AddStage("MergeStage", new[] { "SortStage" }, typeof(MergeSortTask<GenSortRecord>), mergeTasks, Tkl.Jumbo.Jet.Channels.ChannelType.File, typeof(RangePartitioner), outputPath, typeof(GenSortRecordWriter));
 
             if( mergeTasks > 1 )

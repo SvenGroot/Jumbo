@@ -19,7 +19,7 @@ namespace ClientSample.GraySort
 
         public void Read(System.IO.BinaryReader reader)
         {
-            throw new NotSupportedException();
+            Value = reader.ReadBytes(100);
         }
 
         #endregion

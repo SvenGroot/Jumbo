@@ -117,33 +117,61 @@ namespace Tkl.Jumbo.Jet
         /// </remarks>
         public IList<TaskConfiguration> AddInputStage(string stageName, File inputFile, Type taskType, Type recordReaderType, string outputPath, Type recordWriterType)
         {
-            if( stageName == null )
-                throw new ArgumentNullException("stageName");
-            if( stageName.Length == 0 )
-                throw new ArgumentException("Stage name cannot be empty.", "stageName");
-            if( inputFile == null )
-                throw new ArgumentNullException("inputFile");
-            if( taskType == null )
-                throw new ArgumentNullException("taskType");
-            if( recordReaderType == null )
-                throw new ArgumentNullException("recordReaderType");
-            if( outputPath != null && recordWriterType == null )
-                throw new ArgumentNullException("recordWriterType");
+            return AddInputStage(stageName, new[] { inputFile }, taskType, recordReaderType, outputPath, recordWriterType);
+        }
 
-            Type taskInterfaceType = FindGenericInterfaceType(taskType, typeof(ITask<,>));
-            Type inputType = taskInterfaceType.GetGenericArguments()[0];
-            Type recordReaderBaseType = FindGenericBaseType(recordReaderType, typeof(RecordReader<>));
-            Type recordType = recordReaderBaseType.GetGenericArguments()[0];
-            if( inputType != recordType )
-                throw new ArgumentException(string.Format("The specified record reader type {0} is not identical to the specified task type's input type {1}.", recordType, inputType));
+        /// <summary>
+        /// Adds a stage that reads from the DFS.
+        /// </summary>
+        /// <param name="stageName">The name of the stage. This name will serve as the base name for all the tasks in the stage.</param>
+        /// <param name="inputDirectory">The DFS directory containing the files that the stage will read from.</param>
+        /// <param name="taskType">The type implementing the task's functionality; this type must implement <see cref="ITask{TInput,TOutput}"/>.</param>
+        /// <param name="recordReaderType">The type of record reader to use when reading the file; this type must derive from <see cref="RecordReader{T}"/>.</param>
+        /// <returns>The list of tasks in the new stage.</returns>
+        /// <remarks>
+        /// <note>
+        ///   Information about stages is not preserved through XML serialization, so you should not use this method on a <see cref="JobConfiguration"/>
+        ///   object created using the <see cref="LoadXml(string)"/> method.
+        /// </note>
+        /// <para>
+        ///   The new stage will contain as many tasks are there are blocks in the input file.
+        /// </para>
+        /// </remarks>
+        public IList<TaskConfiguration> AddInputStage(string stageName, Directory inputDirectory, Type taskType, Type recordReaderType)
+        {
+            var files = (from item in inputDirectory.Children
+                         let file = item as File
+                         where file != null
+                         select file);
+            return AddInputStage(stageName, files, taskType, recordReaderType, null, null);
+        }
 
-            ValidateOutputType(outputPath, recordWriterType, taskInterfaceType);
-
-            List<TaskConfiguration> stage = CreateStage(stageName, taskType, inputFile.Blocks.Count, outputPath, recordWriterType, inputFile.FullPath, recordReaderType);
-
-            _stages.Add(stageName, stage);
-            Tasks.AddRange(stage); // this is done at the end so the job's state isn't altered if one of the tasks has a duplicate name and causes an exception.
-            return stage.AsReadOnly();
+        /// <summary>
+        /// Adds a stage that reads from the DFS.
+        /// </summary>
+        /// <param name="stageName">The name of the stage. This name will serve as the base name for all the tasks in the stage.</param>
+        /// <param name="inputDirectory">The DFS directory containing the files that the stage will read from.</param>
+        /// <param name="taskType">The type implementing the task's functionality; this type must implement <see cref="ITask{TInput,TOutput}"/>.</param>
+        /// <param name="recordReaderType">The type of record reader to use when reading the file; this type must derive from <see cref="RecordReader{T}"/>.</param>
+        /// <param name="outputPath">The name of a DFS directory to write the stage's output files to, or <see langword="null"/> to indicate this stage does not write to the DFS.</param>
+        /// <param name="recordWriterType">The type of the record writer to use when writing to the output files; this parameter is ignored if <paramref name="outputPath"/> is <see langword="null" />.</param>
+        /// <returns>The list of tasks in the new stage.</returns>
+        /// <remarks>
+        /// <note>
+        ///   Information about stages is not preserved through XML serialization, so you should not use this method on a <see cref="JobConfiguration"/>
+        ///   object created using the <see cref="LoadXml(string)"/> method.
+        /// </note>
+        /// <para>
+        ///   The new stage will contain as many tasks are there are blocks in the input file.
+        /// </para>
+        /// </remarks>
+        public IList<TaskConfiguration> AddInputStage(string stageName, Directory inputDirectory, Type taskType, Type recordReaderType, string outputPath, Type recordWriterType)
+        {
+            var files = (from item in inputDirectory.Children
+                         let file = item as File
+                         where file != null
+                         select file);
+            return AddInputStage(stageName, files, taskType, recordReaderType, outputPath, recordWriterType);
         }
 
         /// <summary>
@@ -196,7 +224,7 @@ namespace Tkl.Jumbo.Jet
 
             ValidateChannelRecordType(inputType, inputTasks);
 
-            List<TaskConfiguration> stage = CreateStage(stageName, taskType, taskCount, outputPath, recordWriterType, null, null);
+            List<TaskConfiguration> stage = CreateStage(stageName, taskType, taskCount, 1, outputPath, recordWriterType, null, null);
 
             ChannelConfiguration channel = new ChannelConfiguration()
             {
@@ -262,7 +290,7 @@ namespace Tkl.Jumbo.Jet
             List<TaskConfiguration> inputTasks = _stages[inputStage];
             ValidateChannelRecordType(inputType, inputTasks);
 
-            List<TaskConfiguration> stage = CreateStage(stageName, taskType, inputTasks.Count, outputPath, recordWriterType, null, null);
+            List<TaskConfiguration> stage = CreateStage(stageName, taskType, inputTasks.Count, 1, outputPath, recordWriterType, null, null);
 
             _stages.Add(stageName, stage);
             Tasks.AddRange(stage);
@@ -475,18 +503,18 @@ namespace Tkl.Jumbo.Jet
             return taskId;
         }
 
-        private List<TaskConfiguration> CreateStage(string stageName, Type taskType, int taskCount, string outputPath, Type recordWriterType, string inputPath, Type recordReaderType)
+        private List<TaskConfiguration> CreateStage(string stageName, Type taskType, int taskCount, int start, string outputPath, Type recordWriterType, string inputPath, Type recordReaderType)
         {
             List<TaskConfiguration> stage = new List<TaskConfiguration>(taskCount);
             for( int x = 0; x < taskCount; ++x )
             {
-                string taskId = stageName + (x + 1).ToString("000", System.Globalization.CultureInfo.InvariantCulture);
+                string taskId = stageName + (x + start).ToString("000", System.Globalization.CultureInfo.InvariantCulture);
                 if( GetTask(taskId) != null )
                     throw new InvalidOperationException(string.Format("A task with the ID {0} already exists.", taskId));
 
                 TaskConfiguration task = new TaskConfiguration()
                 {
-                    TaskID = stageName + (x + 1).ToString("000", System.Globalization.CultureInfo.InvariantCulture),
+                    TaskID = stageName + (x + start).ToString("000", System.Globalization.CultureInfo.InvariantCulture),
                     ProfileOptions = null, // Not supported currently.
                     TaskType = taskType,
                     Stage = stageName,
@@ -608,6 +636,47 @@ namespace Tkl.Jumbo.Jet
                    let inputChannel = GetInputChannelForTask(task.TaskID)
                    where inputChannel == null || inputChannel.ChannelType != ChannelType.Pipeline
                    select task;
+        }
+
+        private IList<TaskConfiguration> AddInputStage(string stageName, IEnumerable<File> inputFiles, Type taskType, Type recordReaderType, string outputPath, Type recordWriterType)
+        {
+            if( stageName == null )
+                throw new ArgumentNullException("stageName");
+            if( stageName.Length == 0 )
+                throw new ArgumentException("Stage name cannot be empty.", "stageName");
+            if( inputFiles == null )
+                throw new ArgumentNullException("inputFile");
+            if( inputFiles.Count() == 0 )
+                throw new ArgumentException("You must specify at least one input file.");
+            if( taskType == null )
+                throw new ArgumentNullException("taskType");
+            if( recordReaderType == null )
+                throw new ArgumentNullException("recordReaderType");
+            if( outputPath != null && recordWriterType == null )
+                throw new ArgumentNullException("recordWriterType");
+
+            List<TaskConfiguration> stage = new List<TaskConfiguration>();
+            int start = 1;
+            foreach( File inputFile in inputFiles )
+            {
+                if( inputFile == null )
+                    throw new ArgumentException("Input files contains a null entry.");
+
+                Type taskInterfaceType = FindGenericInterfaceType(taskType, typeof(ITask<,>));
+                Type inputType = taskInterfaceType.GetGenericArguments()[0];
+                Type recordReaderBaseType = FindGenericBaseType(recordReaderType, typeof(RecordReader<>));
+                Type recordType = recordReaderBaseType.GetGenericArguments()[0];
+                if( inputType != recordType )
+                    throw new ArgumentException(string.Format("The specified record reader type {0} is not identical to the specified task type's input type {1}.", recordType, inputType));
+
+                ValidateOutputType(outputPath, recordWriterType, taskInterfaceType);
+
+                stage.AddRange(CreateStage(stageName, taskType, inputFile.Blocks.Count, start, outputPath, recordWriterType, inputFile.FullPath, recordReaderType));
+                start += inputFile.Blocks.Count;
+            }
+            _stages.Add(stageName, stage);
+            Tasks.AddRange(stage); // this is done at the end so the job's state isn't altered if one of the tasks has a duplicate name and causes an exception.
+            return stage.AsReadOnly();
         }
 
         private void ValidateChannelRecordType(Type inputType, IEnumerable<TaskConfiguration> inputTasks)
