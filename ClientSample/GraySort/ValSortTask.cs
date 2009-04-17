@@ -49,12 +49,12 @@ namespace ClientSample.GraySort
 
             ValSortRecord result = new ValSortRecord()
             {
-                TaskId = TaskConfiguration.TaskID,
-                FirstKey = first.ExtractKey(),
-                LastKey = prev.ExtractKey(),
+                TaskId = TaskConfiguration.DfsInput.Path,
+                FirstKey = first.ExtractKeyBytes(),
+                LastKey = prev.ExtractKeyBytes(),
                 Records = count,
                 UnsortedRecords = unsorted,
-                FirstUnsorted = firstUnordered == null ? firstUnordered.Value : UInt128.Zero,
+                FirstUnsorted = firstUnordered != null ? firstUnordered.Value : UInt128.Zero,
                 Checksum = checksum,
                 Duplicates = duplicates
             };

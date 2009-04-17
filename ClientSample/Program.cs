@@ -26,7 +26,7 @@ namespace ClientSample
 
             if( args.Length < 2 || args.Length > 5 )
             {
-                Console.WriteLine("Usage: ClientSample.exe <task> <inputfile> [aggregate task count] [outputpath] [profile options]");
+                Console.WriteLine("Usage: ClientSample.exe <task> <inputpath> [aggregate task count] [outputpath] [profile options]");
                 return;
             }
 
@@ -78,6 +78,15 @@ namespace ClientSample
                 Console.WriteLine("Press any key to start");
                 Console.ReadKey();
                 id = GraySort.GraySortJob.RunGenSortJob(jetClient, dfsClient, 0, count, tasks, output);
+                WaitForJobCompletion(jetClient, 5000, id);
+                Console.WriteLine("Done, press any key to exit");
+                Console.ReadKey();
+                return;
+            case "valsort":
+                Console.WriteLine("Running job GraySort, input file {0}, {1} aggregate tasks, output path {2}.", input, aggregateTaskCount, output);
+                Console.WriteLine("Press any key to start");
+                Console.ReadKey();
+                id = GraySort.GraySortJob.RunValSortJob(jetClient, dfsClient, input, output);
                 WaitForJobCompletion(jetClient, 5000, id);
                 Console.WriteLine("Done, press any key to exit");
                 Console.ReadKey();

@@ -10,6 +10,32 @@ namespace ClientSample.GraySort
         private readonly ulong _high64;
         private readonly ulong _low64;
 
+        private static ulong[] _hi2loQuot = new ulong[] {
+            0UL,
+            1844674407370955161UL,
+            3689348814741910323UL,
+            5534023222112865484UL,
+            7378697629483820646UL,
+            9223372036854775808UL,
+            11068046444225730969UL,
+            12912720851596686131UL,
+            14757395258967641292UL,
+            16602069666338596454UL
+        };
+
+        private static int[] _hi2loMod = new int[] {
+            0,
+            6,
+            2,
+            8,
+            4,
+            0,
+            6,
+            2,
+            8,
+            4
+        };
+
         public static readonly UInt128 Zero = new UInt128();
 
         public UInt128(ulong high64, ulong low64)
@@ -34,6 +60,49 @@ namespace ClientSample.GraySort
                 return false;
             UInt128 other = (UInt128)obj;
             return this == other;
+        }
+
+        public override string ToString()
+        {
+            ulong          hi8 = High64;
+            ulong          lo8 = Low64;
+            int         himod;
+            int         lomod;
+            char[] temp = new char[39];
+            int digit = 0;
+
+            while (hi8 != 0)
+            {
+                himod = (int)(hi8 % 10);
+                hi8 /= 10;
+                lomod = (int)(lo8 % 10);
+                lo8 /= 10;
+
+                lo8 += _hi2loQuot[himod] ;
+                lomod += _hi2loMod[himod];
+
+                if (lomod >= 10)       /* if adding to 2 mods caused a "carry" */
+                {
+                    lomod -= 10;
+                    lo8 += 1;
+                }
+                temp[digit++] = (char)('0' + lomod);
+            }
+            string lowString = lo8.ToString();
+            StringBuilder result = new StringBuilder(lowString.Length + digit);
+            result.Append(lowString);
+            /* concatenate low order digits computed before hi8 was reduced to 0 */
+            while( digit > 0 )
+                result.Append(temp[--digit]);
+            return result.ToString();
+        }
+
+        public string ToHexString()
+        {
+            if( High64 != 0 )
+                return High64.ToString("x") + Low64.ToString("x");
+            else
+                return Low64.ToString("x");
         }
 
         public override int GetHashCode()

@@ -31,6 +31,27 @@ namespace ClientSample.GraySort
             return result;
         }
 
+        public static int CompareKeys(byte[] left, byte[] right)
+        {
+            for( int x = 0; x < GenSortRecord.KeySize; ++x )
+            {
+                if( left[x] != right[x] )
+                    return left[x] - right[x];
+            }
+            return 0;
+        }
+
+        public static int ComparePartialKeys(byte[] left, byte[] right)
+        {
+            int length = Math.Min(left.Length, right.Length);
+            for( int x = 0; x < length; ++x )
+            {
+                if( left[x] != right[x] )
+                    return left[x] - right[x];
+            }
+            return left.Length - right.Length;
+        }
+
         #region IWritable Members
 
         public void Write(System.IO.BinaryWriter writer)
@@ -52,12 +73,7 @@ namespace ClientSample.GraySort
             if( other == null )
                 return 1;
 
-            for( int x = 0; x < KeySize; ++x )
-            {
-                if( _recordBuffer[x] != other._recordBuffer[x] )
-                    return _recordBuffer[x] - other._recordBuffer[x];
-            }
-            return 0;
+            return CompareKeys(_recordBuffer, other._recordBuffer);
         }
 
         #endregion

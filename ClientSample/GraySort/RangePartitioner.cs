@@ -64,7 +64,7 @@ namespace ClientSample.GraySort
             {
                 for( int x = _begin; x < _end; ++x )
                 {
-                    if( CompareKeys(key, _splitPoints[x]) < 0 )
+                    if( GenSortRecord.CompareKeys(key, _splitPoints[x]) < 0 )
                         return x;
                 }
                 return _end;
@@ -127,7 +127,7 @@ namespace ClientSample.GraySort
                 }
             }
 
-            sampleData.Sort(CompareKeys);
+            sampleData.Sort(GenSortRecord.CompareKeys);
 
             dfsClient.NameServer.Delete(partitionFileName, false);
 
@@ -140,27 +140,6 @@ namespace ClientSample.GraySort
                     stream.Write(sampleData[(int)Math.Round(x * stepSize)], 0, GenSortRecord.KeySize);
                 }
             }
-        }
-
-        private static int CompareKeys(byte[] left, byte[] right)
-        {
-            for( int x = 0; x < GenSortRecord.KeySize; ++x )
-            {
-                if( left[x] != right[x] )
-                    return left[x] - right[x];
-            }
-            return 0;
-        }
-
-        private static int ComparePartialKeys(byte[] left, byte[] right)
-        {
-            int length = Math.Min(left.Length, right.Length);
-            for( int x = 0; x < length; ++x )
-            {
-                if( left[x] != right[x] )
-                    return left[x] - right[x];
-            }
-            return left.Length - right.Length;
         }
 
         private void ReadPartitionFile()
@@ -201,7 +180,7 @@ namespace ClientSample.GraySort
                 prefix.CopyTo(newPrefix, 0);
                 newPrefix[depth] = (byte)(x + 1);
                 begin = current;
-                while( current < end && ComparePartialKeys(_splitPoints[current], newPrefix) < 0 )
+                while( current < end && GenSortRecord.ComparePartialKeys(_splitPoints[current], newPrefix) < 0 )
                 {
                     ++current;
                 }

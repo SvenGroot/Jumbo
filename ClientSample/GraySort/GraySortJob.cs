@@ -70,5 +70,25 @@ namespace ClientSample.GraySort
 
             return jetClient.RunJob(job, typeof(GenSortTask).Assembly.Location).JobID;
         }
+
+        public static Guid RunValSortJob(JetClient jetClient, DfsClient dfsClient, string inputPath, string outputPath)
+        {
+            dfsClient.NameServer.Delete(outputPath, true);
+            dfsClient.NameServer.CreateDirectory(outputPath);
+            JobConfiguration job = new JobConfiguration(typeof(ValSortTask).Assembly);
+
+            File file = dfsClient.NameServer.GetFileInfo(inputPath);
+            if( file == null )
+                job.AddInputStage("ValSortStage", dfsClient.NameServer.GetDirectoryInfo(inputPath), typeof(ValSortTask), typeof(GenSortRecordReader));
+            else
+                job.AddInputStage("ValSortStage", file, typeof(ValSortTask), typeof(GenSortRecordReader));
+
+            // Sort the records by input task name, this ensures that the combiner task gets the records in order of file so it can easily compre the first and last records
+            // of consecutive files.
+            job.AddStage("SortStage", new[] { "ValSortStage" }, typeof(SortTask<ValSortRecord>), 1, Tkl.Jumbo.Jet.Channels.ChannelType.File, null, null, null);
+            job.AddPointToPointStage("CombinerStage", "SortStage", typeof(ValSortCombinerTask), Tkl.Jumbo.Jet.Channels.ChannelType.Pipeline, null, outputPath, typeof(TextRecordWriter<StringWritable>));
+
+            return jetClient.RunJob(job, typeof(ValSortTask).Assembly.Location).JobID;
+        }
     }
 }

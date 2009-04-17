@@ -9,8 +9,8 @@ namespace ClientSample.GraySort
     public class ValSortRecord : IWritable, IComparable<ValSortRecord>
     {
         public string TaskId { get; set; }
-        public string FirstKey { get; set; }
-        public string LastKey { get; set; }
+        public byte[] FirstKey { get; set; }
+        public byte[] LastKey { get; set; }
         public UInt128 Records { get; set; }
         public UInt128 FirstUnsorted { get; set; }
         public UInt128 Checksum { get; set; }
@@ -39,8 +39,8 @@ namespace ClientSample.GraySort
         public void Read(System.IO.BinaryReader reader)
         {
             TaskId = reader.ReadString();
-            FirstKey = reader.ReadString();
-            LastKey = reader.ReadString();
+            FirstKey = reader.ReadBytes(GenSortRecord.KeySize);
+            LastKey = reader.ReadBytes(GenSortRecord.KeySize);
             Records = ReadUInt128(reader);
             FirstUnsorted = ReadUInt128(reader);
             Checksum = ReadUInt128(reader);
