@@ -10,7 +10,6 @@ namespace ClientSample.GraySort
     public class ValSortTask : Configurable, IPullTask<GenSortRecord, ValSortRecord>
     {
         private Crc32 _crc = new Crc32();
-        private byte[] _recordBuffer = new byte[100];
 
         #region IPullTask<GenSortRecord,ValSortRecord> Members
 
@@ -51,8 +50,8 @@ namespace ClientSample.GraySort
             ValSortRecord result = new ValSortRecord()
             {
                 TaskId = TaskConfiguration.TaskID,
-                FirstKey = first.Key,
-                LastKey = prev.Value,
+                FirstKey = first.ExtractKey(),
+                LastKey = prev.ExtractKey(),
                 Records = count,
                 UnsortedRecords = unsorted,
                 FirstUnsorted = firstUnordered == null ? firstUnordered.Value : UInt128.Zero,
@@ -67,9 +66,7 @@ namespace ClientSample.GraySort
         private long CalculateCrc(GenSortRecord record)
         {
             _crc.Reset();
-            Encoding.ASCII.GetBytes(record.Key, 0, 10, _recordBuffer, 0);
-            Encoding.ASCII.GetBytes(record.Value, 0, 90, _recordBuffer, 10);
-            _crc.Update(_recordBuffer);
+            _crc.Update(record.RecordBuffer);
             return _crc.Value;
         }
     }

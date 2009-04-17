@@ -10,33 +10,14 @@ namespace ClientSample.GraySort
 {
     public class GenSortRecordWriter : StreamRecordWriter<GenSortRecord>
     {
-        private readonly StreamWriter _writer;
-
         public GenSortRecordWriter(Stream stream)
             : base(stream)
         {
-            _writer = new StreamWriter(stream, Encoding.ASCII);
         }
 
         protected override void WriteRecordInternal(GenSortRecord record)
         {
-            _writer.Write(record.Key);
-            _writer.Write(record.Value);
-        }
-
-        protected override void Dispose(bool disposing)
-        {
-            try
-            {
-                if( disposing )
-                {
-                    _writer.Dispose();
-                }
-            }
-            finally
-            {
-                base.Dispose(disposing);
-            }
+            Stream.Write(record.RecordBuffer, 0, GenSortRecord.RecordSize);
         }
     }
 }

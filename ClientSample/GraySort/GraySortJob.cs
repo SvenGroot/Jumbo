@@ -17,15 +17,21 @@ namespace ClientSample.GraySort
             dfsClient.NameServer.CreateDirectory(outputPath);
 
             JobConfiguration job = new JobConfiguration(typeof(GenSortRecordReader).Assembly);
-            Directory dir = dfsClient.NameServer.GetDirectoryInfo(inputFile);
+            File file = dfsClient.NameServer.GetFileInfo(inputFile);
+            Directory dir = null;
+            if( file == null )
+                dir = dfsClient.NameServer.GetDirectoryInfo(inputFile);
             if( dir == null )
-                job.AddInputStage("SortStage", dfsClient.NameServer.GetFileInfo(inputFile), typeof(SortTask<GenSortRecord>), typeof(GenSortRecordReader));
+                job.AddInputStage("InputStage", dfsClient.NameServer.GetFileInfo(inputFile), typeof(EmptyTask<GenSortRecord>), typeof(GenSortRecordReader));
             else
-                job.AddInputStage("SortStage", dir, typeof(SortTask<GenSortRecord>), typeof(GenSortRecordReader));
-            job.AddStage("MergeStage", new[] { "SortStage" }, typeof(MergeSortTask<GenSortRecord>), mergeTasks, Tkl.Jumbo.Jet.Channels.ChannelType.File, typeof(RangePartitioner), outputPath, typeof(GenSortRecordWriter));
+                job.AddInputStage("InputStage", dir, typeof(EmptyTask<GenSortRecord>), typeof(GenSortRecordReader));
+            job.AddPointToPointStage("SortStage", "InputStage", typeof(SortTask<GenSortRecord>), Tkl.Jumbo.Jet.Channels.ChannelType.Pipeline, typeof(RangePartitioner), null, null);
+
+            job.AddStage("MergeStage", new[] { "SortStage" }, typeof(MergeSortTask<GenSortRecord>), 1, Tkl.Jumbo.Jet.Channels.ChannelType.File, typeof(RangePartitioner), outputPath, typeof(GenSortRecordWriter));
 
             if( mergeTasks > 1 )
             {
+                job.SplitStageOutput(new[] { "InputStage" }, mergeTasks);
                 const string partitionFile = "/graysortpartitions";
                 RangePartitioner.CreatePartitionFile(dfsClient, partitionFile, (from task in job.Tasks where task.DfsInput != null select task.DfsInput).ToArray(), mergeTasks, 10000);
                 job.JobSettings = new SettingsDictionary();

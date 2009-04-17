@@ -10,12 +10,8 @@ namespace ClientSample.GraySort
 {
     public class GenSortRecordReader : StreamRecordReader<GenSortRecord>
     {
-        private readonly StreamReader _reader;
-        private const int _recordSize = 100;
-        private const int _keySize = 10;
         private long _position;
         private long _end;
-        private char[] _buffer = new char[_recordSize];
 
         public GenSortRecordReader(Stream stream)
             : this(stream, 0, stream.Length)
@@ -27,12 +23,11 @@ namespace ClientSample.GraySort
         {
             _position = offset;
             _end = offset + size;
-            _reader = new StreamReader(stream, Encoding.ASCII);
 
             // gensort records are 100 bytes long, making it easy to find the first record.
-            long rem = _position % _recordSize;
+            long rem = _position % GenSortRecord.RecordSize;
             if( rem != 0 )
-                Stream.Position += _recordSize - rem;
+                Stream.Position += GenSortRecord.RecordSize - rem;
             _position = Stream.Position;
         }
 
@@ -46,29 +41,15 @@ namespace ClientSample.GraySort
                 return false;
             }
 
-            int bytesRead = _reader.ReadBlock(_buffer, 0, _recordSize);
-            if( bytesRead != _recordSize )
+            GenSortRecord result = new GenSortRecord();
+            int bytesRead = Stream.Read(result.RecordBuffer, 0, GenSortRecord.RecordSize);
+            if( bytesRead != GenSortRecord.RecordSize )
                 throw new InvalidOperationException("Invalid input file format");
 
-            string key = new string(_buffer, 0, _keySize);
-            string value = new string(_buffer, _keySize, _recordSize - _keySize);
-            record = new GenSortRecord() { Key = key, Value = value };
+            record = result;
 
-            _position += _recordSize;
+            _position += GenSortRecord.RecordSize;
             return true;
-        }
-
-        protected override void Dispose(bool disposing)
-        {
-            try
-            {
-                if( disposing )
-                    _reader.Dispose();
-            }
-            finally
-            {
-                base.Dispose(disposing);
-            }
         }
     }
 }

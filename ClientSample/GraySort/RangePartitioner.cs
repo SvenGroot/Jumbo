@@ -21,7 +21,7 @@ namespace ClientSample.GraySort
 
             public int Depth { get; private set; }
 
-            public abstract int GetPartition(string value);
+            public abstract int GetPartition(byte[] key);
         }
 
         private sealed class InnerTrieNode : TrieNode
@@ -39,20 +39,20 @@ namespace ClientSample.GraySort
                 set { _children[index] = value; }
             }
 
-            public override int GetPartition(string value)
+            public override int GetPartition(byte[] key)
             {
-                return _children[(int)value[Depth]].GetPartition(value);
+                return _children[key[Depth]].GetPartition(key);
             }
         }
 
         private sealed class LeafTrieNode : TrieNode
         {
-            private string[] _splitPoints;
+            private byte[][] _splitPoints;
             private int _begin;
             private int _end;
             private StringComparer _comparer = StringComparer.Ordinal;
 
-            public LeafTrieNode(int depth, string[] splitPoints, int begin, int end)
+            public LeafTrieNode(int depth, byte[][] splitPoints, int begin, int end)
                 : base(depth)
             {
                 _splitPoints = splitPoints;
@@ -60,11 +60,11 @@ namespace ClientSample.GraySort
                 _end = end;
             }
 
-            public override int GetPartition(string value)
+            public override int GetPartition(byte[] key)
             {
                 for( int x = _begin; x < _end; ++x )
                 {
-                    if( _comparer.Compare(value, _splitPoints[x]) < 0 )
+                    if( CompareKeys(key, _splitPoints[x]) < 0 )
                         return x;
                 }
                 return _end;
@@ -85,7 +85,7 @@ namespace ClientSample.GraySort
         #endregion
 
         private TrieNode _trie;
-        private string[] _splitPoints;
+        private byte[][] _splitPoints;
 
         #region IPartitioner<GenSortRecord> Members
 
@@ -98,10 +98,10 @@ namespace ClientSample.GraySort
             if( _trie == null )
             {
                 ReadPartitionFile();
-                _trie = BuildTrie(0, _splitPoints.Length, string.Empty, 2);
+                _trie = BuildTrie(0, _splitPoints.Length, new byte[] {}, 2);
             }
 
-            return _trie.GetPartition(value.Key);
+            return _trie.GetPartition(value.RecordBuffer);
         }
 
         #endregion
@@ -112,7 +112,7 @@ namespace ClientSample.GraySort
             int recordsPerSample = sampleSize / samples;
             int sampleStep = inputs.Length / samples;
 
-            List<string> sampleData = new List<string>(sampleSize);
+            List<byte[]> sampleData = new List<byte[]>(sampleSize);
 
             for( int sample = 0; sample < samples; ++sample )
             {
@@ -122,46 +122,71 @@ namespace ClientSample.GraySort
                     GenSortRecord record;
                     while( records++ < recordsPerSample && reader.ReadRecord(out record) )
                     {
-                        sampleData.Add(record.Key);
+                        sampleData.Add(record.ExtractKeyBytes());
                     }
                 }
             }
 
-            sampleData.Sort(StringComparer.Ordinal);
+            sampleData.Sort(CompareKeys);
 
             dfsClient.NameServer.Delete(partitionFileName, false);
 
             float stepSize = sampleData.Count / (float)partitions;
 
             using( DfsOutputStream stream = dfsClient.CreateFile(partitionFileName) )
-            using( BinaryRecordWriter<StringWritable> writer = new BinaryRecordWriter<StringWritable>(stream) )
             {
                 for( int x = 1; x < partitions; ++x )
                 {
-                    writer.WriteRecord(sampleData[(int)Math.Round(x * stepSize)]);
+                    stream.Write(sampleData[(int)Math.Round(x * stepSize)], 0, GenSortRecord.KeySize);
                 }
             }
         }
 
+        private static int CompareKeys(byte[] left, byte[] right)
+        {
+            for( int x = 0; x < GenSortRecord.KeySize; ++x )
+            {
+                if( left[x] != right[x] )
+                    return left[x] - right[x];
+            }
+            return 0;
+        }
+
+        private static int ComparePartialKeys(byte[] left, byte[] right)
+        {
+            int length = Math.Min(left.Length, right.Length);
+            for( int x = 0; x < length; ++x )
+            {
+                if( left[x] != right[x] )
+                    return left[x] - right[x];
+            }
+            return left.Length - right.Length;
+        }
+
         private void ReadPartitionFile()
         {
-            List<string> splitPoints = new List<string>();
+            List<byte[]> splitPoints = new List<byte[]>();
             string partitionFileName = JobConfiguration.JobSettings["partitionFile"];
             DfsClient dfsClient = new DfsClient(DfsConfiguration);
             using( DfsInputStream stream = dfsClient.OpenFile(partitionFileName) )
-            using( BinaryRecordReader<StringWritable> reader = new BinaryRecordReader<StringWritable>(stream) )
             {
-                foreach( StringWritable record in reader.EnumerateRecords() )
+                int bytesRead;
+                do
                 {
-                    splitPoints.Add(record.Value);
-                }
+                    byte[] key = new byte[GenSortRecord.KeySize];
+                    bytesRead = stream.Read(key, 0, GenSortRecord.KeySize);
+                    if( bytesRead == GenSortRecord.KeySize )
+                    {
+                        splitPoints.Add(key);
+                    }
+                } while( bytesRead == GenSortRecord.KeySize );
             }
             if( splitPoints.Count != Partitions - 1 )
                 throw new InvalidOperationException("The partition file is invalid.");
             _splitPoints = splitPoints.ToArray();
         }
 
-        private TrieNode BuildTrie(int begin, int end, string prefix, int maxDepth)
+        private TrieNode BuildTrie(int begin, int end, byte[] prefix, int maxDepth)
         {
             StringComparer comparer = StringComparer.Ordinal;
             int depth = prefix.Length;
@@ -172,13 +197,16 @@ namespace ClientSample.GraySort
             int current = begin;
             for( int x = 0; x < 128; ++x )
             {
-                string newPrefix = prefix + (char)(x+1);
+                byte[] newPrefix = new byte[depth + 1];
+                prefix.CopyTo(newPrefix, 0);
+                newPrefix[depth] = (byte)(x + 1);
                 begin = current;
-                while( current < end && comparer.Compare(_splitPoints[current], newPrefix) < 0 )
+                while( current < end && ComparePartialKeys(_splitPoints[current], newPrefix) < 0 )
                 {
                     ++current;
                 }
-                result[x] = BuildTrie(begin, current, prefix + (char)x, maxDepth);
+                newPrefix[depth] = (byte)x;
+                result[x] = BuildTrie(begin, current, newPrefix, maxDepth);
             }
             return result;
         }
