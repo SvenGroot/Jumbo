@@ -97,6 +97,7 @@ namespace Tkl.Jumbo.Dfs
         {
             _bufferReadPos = _bufferSize - 1;
             _bufferWritePos = 0;
+            _cancelled = false;
         }
     }
 }

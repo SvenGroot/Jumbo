@@ -249,17 +249,15 @@ namespace Tkl.Jumbo.Dfs
             {
                 if( _fillBufferThread != null )
                 {
-                    _fillBufferThread.Abort();
+                    _packetBuffer.Cancel();
                     _fillBufferThread.Join();
+                    _fillBufferThread = null;
                 }
                 _lastResult = DataServerClientProtocolResult.Ok;
                 _position = newPosition;
-                _fillBufferThread = new Thread(ReadBufferThread);
-                _fillBufferThread.IsBackground = true;
-                _fillBufferThread.Name = "FillBuffer";
+                // We'll restart the thread when Read is called.
                 _packetBuffer.Reset();
                 _currentPacket = null;
-                _fillBufferThread.Start();
             }
             return _position;
         }
