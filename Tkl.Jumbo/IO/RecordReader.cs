@@ -10,7 +10,7 @@ namespace Tkl.Jumbo.IO
     /// Abstract base class for record readers.
     /// </summary>
     /// <typeparam name="T">The type of the record</typeparam>
-    public abstract class RecordReader<T> : IDisposable
+    public abstract class RecordReader<T> : IRecordReader, IDisposable
         where T : IWritable, new()
     {
         private int _recordsRead;
@@ -32,11 +32,19 @@ namespace Tkl.Jumbo.IO
         public string SourceName { get; set; }
 
         /// <summary>
-        /// Returns the number of records that has been read by this record reader.
+        /// Gets the number of records that has been read by this record reader.
         /// </summary>
         public int RecordsRead
         {
             get { return _recordsRead; }
+        }
+
+        /// <summary>
+        /// Gets the number of bytes read, if applicable.
+        /// </summary>
+        public virtual long BytesRead 
+        {
+            get { return 0; }
         }
 
         /// <summary>

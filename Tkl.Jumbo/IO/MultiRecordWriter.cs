@@ -48,6 +48,18 @@ namespace Tkl.Jumbo.IO
         }
 
         /// <summary>
+        /// Gets the total number of bytes written by each writer.
+        /// </summary>
+        public override long BytesWritten
+        {
+            get
+            {
+                return (from writer in Writers
+                        select writer.BytesWritten).Sum();
+            }
+        }
+
+        /// <summary>
         /// When implemented in a derived class, writes a record to one of the underlying record writers.
         /// </summary>
         /// <param name="record">The record to write to the stream.</param>

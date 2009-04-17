@@ -19,6 +19,7 @@ namespace Tkl.Jumbo.Jet.Tasks
     public class SortTask<T> : IPushTask<T, T>
         where T : IWritable, new()
     {
+        private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(SortTask<T>));
         private List<T> _records = new List<T>();
 
         #region IPushTask<TInput,TOutput> Members
@@ -42,8 +43,10 @@ namespace Tkl.Jumbo.Jet.Tasks
         /// </remarks>
         public void Finish(Tkl.Jumbo.IO.RecordWriter<T> output)
         {
+            _log.InfoFormat("Sorting {0} records.", _records.Count);
             // TODO: There should be some way in which the job configuration can specify a comparer to use.
             _records.Sort();
+            _log.Info("Sort complete.");
             foreach( T record in _records )
             {
                 output.WriteRecord(record);

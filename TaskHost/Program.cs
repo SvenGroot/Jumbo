@@ -172,8 +172,8 @@ namespace TaskHost
 
 
             // TODO: Proper metrics for pipelined tasks.
-            //TaskMetrics metrics = CalculateMetrics<TInput, TOutput>(taskExecution.TaskConfiguration, taskExecution.InputChannel, taskExecution.OutputChannel, inputStream, input, dfsOutputs, output);
-            //_log.Info(metrics);
+            TaskMetrics metrics = taskExecution.CalculateMetrics();
+            _log.Info(metrics);
         }
 
 #pragma warning restore 0169
@@ -181,52 +181,6 @@ namespace TaskHost
          private static void CurrentDomain_UnhandledException(object sender, UnhandledExceptionEventArgs e)
         {
             _log.Fatal("An unhandled exception occurred.", (Exception)e.ExceptionObject);
-        }
-
-        //private static TaskMetrics CalculateMetrics<TInput, TOutput>(TaskConfiguration taskConfig, IInputChannel inputChannel, IOutputChannel outputChannel, DfsInputStream inputStream, RecordReader<TInput> input, List<TaskDfsOutput> outputs, RecordWriter<TOutput> output)
-        //    where TInput : IWritable, new()
-        //    where TOutput : IWritable, new()
-        //{
-        //    TaskMetrics metrics = new TaskMetrics();
-        //    if( input != null )
-        //        metrics.RecordsRead = input.RecordsRead;
-        //    if( output != null )
-        //        metrics.RecordsWritten += output.RecordsWritten;
-
-        //    if( taskConfig.DfsInput != null )
-        //        metrics.DfsBytesRead = inputStream.Position - (taskConfig.DfsInput.Block * (long)_blockSize);
-        //    else
-        //    {
-        //        FileInputChannel fileInputChannel = inputChannel as FileInputChannel;
-        //        if( fileInputChannel != null )
-        //        {
-        //            metrics.LocalBytesRead = fileInputChannel.LocalBytesRead;
-        //            metrics.NetworkBytesRead = fileInputChannel.NetworkBytesRead;
-        //        }
-        //    }
-
-        //    if( taskConfig.DfsOutput != null )
-        //        metrics.DfsBytesWritten = (from o in outputs select o.Stream.Length).Sum();
-        //    else if( outputChannel is FileOutputChannel )
-        //    {
-        //        StreamRecordWriter<TOutput> streamOutput = output as StreamRecordWriter<TOutput>;
-        //        if( streamOutput != null )
-        //        {
-        //            metrics.LocalBytesWritten = streamOutput.Stream.Length;
-        //        }
-        //        else
-        //        {
-        //            MultiRecordWriter<TOutput> multiOutput = output as MultiRecordWriter<TOutput>;
-        //            if( multiOutput != null )
-        //            {
-        //                metrics.LocalBytesWritten = (from writer in multiOutput.Writers
-        //                                             let streamWriter = writer as StreamRecordWriter<TOutput>
-        //                                             where streamWriter != null
-        //                                             select streamWriter.Stream.Length).Sum();
-        //            }
-        //        }
-        //    }
-        //    return metrics;
-        //}    
+        } 
     }
 }

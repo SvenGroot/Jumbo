@@ -22,6 +22,8 @@ namespace Tkl.Jumbo.Jet.Tasks
     public class MergeSortTask<T> : IMergeTask<T, T>
         where T : IWritable, new()
     {
+        private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(MergeSortTask<T>));
+
         private class MergeInput
         {
             public T Value { get; set; }
@@ -47,6 +49,7 @@ namespace Tkl.Jumbo.Jet.Tasks
         /// <param name="output">A <see cref="RecordWriter{T}"/> to which the task's output should be written.</param>
         public void Run(IList<RecordReader<T>> input, RecordWriter<T> output)
         {
+            _log.InfoFormat("Merging {0} inputs.", input.Count);
             PriorityQueue<MergeInput> queue = new PriorityQueue<MergeInput>(EnumerateInputs(input), new MergeInputComparer());
 
             while( queue.Count > 0 )

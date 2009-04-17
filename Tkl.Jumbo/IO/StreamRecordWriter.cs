@@ -31,6 +31,14 @@ namespace Tkl.Jumbo.IO
         public Stream Stream { get; private set; }
 
         /// <summary>
+        /// Gets the number of bytes written to the stream.
+        /// </summary>
+        public override long BytesWritten
+        {
+            get { return Stream.Length; }
+        }
+        
+        /// <summary>
         /// Cleans up all resources associated with this <see cref="StreamRecordReader{T}"/>.
         /// </summary>
         /// <param name="disposing"><see langword="true"/> to clean up both managed and unmanaged resources; <see langword="false"/>

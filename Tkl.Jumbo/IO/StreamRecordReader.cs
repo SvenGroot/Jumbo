@@ -69,6 +69,17 @@ namespace Tkl.Jumbo.IO
         protected Stream Stream { get; private set; }
 
         /// <summary>
+        /// Gets the number of bytes read from the stream.
+        /// </summary>
+        public override long BytesRead
+        {
+            get
+            {
+                return Stream.Position - Offset;
+            }
+        }
+
+        /// <summary>
         /// Cleans up all resources associated with this <see cref="StreamRecordReader{T}"/>.
         /// </summary>
         /// <param name="disposing"><see langword="true"/> to clean up both managed and unmanaged resources; <see langword="false"/>

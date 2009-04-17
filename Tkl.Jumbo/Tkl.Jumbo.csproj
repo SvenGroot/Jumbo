@@ -61,6 +61,7 @@
     <Compile Include="IO\HashPartitioner.cs" />
     <Compile Include="IO\Int32Writable.cs" />
     <Compile Include="IO\IPartitioner.cs" />
+    <Compile Include="IO\IRecordWriter.cs" />
     <Compile Include="IO\IWritable.cs" />
     <Compile Include="IO\KeyValuePairWritable.cs" />
     <Compile Include="IO\LineRecordReader.cs" />
@@ -75,6 +76,7 @@
     <Compile Include="IO\WritableComparable.cs" />
     <Compile Include="IO\MultiRecordWriter.cs" />
     <Compile Include="IO\WriteBufferedStream.cs" />
+    <Compile Include="IO\IRecordReader.cs" />
     <Compile Include="PriorityQueue.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="RpcHelper.cs" />

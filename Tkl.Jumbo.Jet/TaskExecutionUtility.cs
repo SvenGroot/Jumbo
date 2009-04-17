@@ -62,9 +62,11 @@ namespace Tkl.Jumbo.Jet
         private IOutputChannel _outputChannel;
         private DfsOutputStream _outputStream;
         private IEnumerable _inputReaders; // non-generic because we don't know the type of T for RecordReader<T>.
-        private object _outputWriter;
+        private IRecordWriter _outputWriter;
         private bool _disposed;
         private ITaskContainer _task;
+        private int _recordsWritten;
+        private long _dfsBytesWritten;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="TaskExecutionUtility"/> class.
@@ -314,6 +316,9 @@ namespace Tkl.Jumbo.Jet
             {
                 if( _outputWriter != null )
                 {
+                    _recordsWritten = _outputWriter.RecordsWritten;
+                    _dfsBytesWritten = _outputWriter.BytesWritten;
+
                     ((IDisposable)_outputWriter).Dispose();
                     _outputWriter = null;
                 }
@@ -326,6 +331,17 @@ namespace Tkl.Jumbo.Jet
 
                 DfsClient.NameServer.Move(TaskConfiguration.DfsOutput.TempPath, TaskConfiguration.DfsOutput.Path);
             }
+        }
+
+        /// <summary>
+        /// Calculates metrics for the task.
+        /// </summary>
+        /// <returns>Metrics for the task.</returns>
+        public TaskMetrics CalculateMetrics()
+        {
+            TaskMetrics metrics = new TaskMetrics();
+            CalculateMetrics(metrics);
+            return metrics;
         }
 
         #region IDisposable Members
@@ -458,5 +474,47 @@ namespace Tkl.Jumbo.Jet
             else
                 return new RecordReader<T>[] { null };
         }
+
+        private void CalculateMetrics(TaskMetrics metrics)
+        {
+            // We don't count pipeline input or output.
+            ChannelConfiguration inputChannel = InputChannelConfiguration;
+            if( inputChannel == null || inputChannel.ChannelType != ChannelType.Pipeline )
+            {
+                foreach( IRecordReader input in _inputReaders )
+                {
+                    if( input != null )
+                        metrics.RecordsRead += input.RecordsRead;
+                }
+
+                if( TaskConfiguration.DfsInput != null )
+                {
+                    foreach( IRecordReader reader in _inputReaders )
+                        metrics.DfsBytesRead += reader.BytesRead;
+                }
+                else
+                {
+                    FileInputChannel fileInputChannel = InputChannel as FileInputChannel;
+                    if( fileInputChannel != null )
+                    {
+                        metrics.LocalBytesRead += fileInputChannel.LocalBytesRead;
+                        metrics.NetworkBytesRead += fileInputChannel.NetworkBytesRead;
+                    }
+                }
+            }
+
+            metrics.RecordsWritten += _recordsWritten;
+            metrics.DfsBytesWritten += _dfsBytesWritten;
+            if( OutputChannel is FileOutputChannel && _outputWriter != null )
+            {
+                metrics.LocalBytesWritten += _outputWriter.BytesWritten;
+                metrics.RecordsWritten += _outputWriter.RecordsWritten;
+            }
+
+            foreach( TaskExecutionUtility associatedTask in _associatedTasks )
+            {
+                associatedTask.CalculateMetrics(metrics);
+            }
+        }    
     }
 }

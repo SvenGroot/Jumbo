@@ -11,7 +11,7 @@ namespace Tkl.Jumbo.IO
     /// Abstract base class for classes that write records.
     /// </summary>
     /// <typeparam name="T">The type of the record.</typeparam>
-    public abstract class RecordWriter<T> : IDisposable
+    public abstract class RecordWriter<T> : IRecordWriter, IDisposable
         where T : IWritable
     {
         private int _recordsWritten;
@@ -22,6 +22,14 @@ namespace Tkl.Jumbo.IO
         public int RecordsWritten
         {
             get { return _recordsWritten; }
+        }
+
+        /// <summary>
+        /// Gets the total number of bytes written by this record reader, if applicable.
+        /// </summary>
+        public virtual long BytesWritten 
+        {
+            get { return 0; }
         }
 
         /// <summary>
