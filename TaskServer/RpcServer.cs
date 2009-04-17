@@ -10,11 +10,6 @@ namespace TaskServerApplication
     {
         #region ITaskServerUmbilicalProtocol Members
 
-        public TaskExecutionInfo WaitForTask(int instanceId, int timeOut)
-        {
-            return TaskServer.Instance.WaitForTask(instanceId, timeOut);
-        }
-
         public void ReportCompletion(Guid jobID, string taskID)
         {
             TaskServer.Instance.ReportCompletion(jobID, taskID);

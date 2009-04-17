@@ -26,72 +26,63 @@ namespace TaskHost
         {
             AppDomain.CurrentDomain.UnhandledException += new UnhandledExceptionEventHandler(CurrentDomain_UnhandledException);
 
-            if( args.Length != 6 )
+            if( args.Length != 10 )
             {
                 _log.Error("Invalid invocation.");
                 return 1;
             }
 
-            int instanceId = Convert.ToInt32(args[0]);
-            int umbilicalPort = Convert.ToInt32(args[1]);
-            string jobServerHost = args[2];
-            int jobServerPort = Convert.ToInt32(args[3]);
-            string nameServerHost = args[4];
-            int nameServerPort = Convert.ToInt32(args[5]);
+            Guid jobId = new Guid(args[0]);
+            string jobDirectory = args[1];
+            string taskId = args[2];
+            string dfsJobDirectory = args[3];
+            int umbilicalPort = Convert.ToInt32(args[4]);
+            string jobServerHost = args[5];
+            int jobServerPort = Convert.ToInt32(args[6]);
+            string nameServerHost = args[7];
+            int nameServerPort = Convert.ToInt32(args[8]);
+            int attempt = Convert.ToInt32(args[9]);
 
             ITaskServerUmbilicalProtocol umbilical = JetClient.CreateTaskServerUmbilicalClient(umbilicalPort);
             _dfsClient = new DfsClient(nameServerHost, nameServerPort);
             _jetClient = new JetClient(jobServerHost, jobServerPort);
             _blockSize = _dfsClient.NameServer.BlockSize;
 
-            while( true )
+            Stopwatch sw = new Stopwatch();
+            sw.Start();
+            string logFile = Path.Combine(jobDirectory, taskId + "_" + attempt.ToString() + ".log");
+            ConfigureLog(logFile);
+
+            _log.InfoFormat("Running task; job ID = \"{0}\", job directory = \"{1}\", task ID = \"{2}\", attempt, = {3}, DFS job directory = \"{4}\"", jobId, jobDirectory, taskId, attempt, dfsJobDirectory);
+            _log.DebugFormat("Command line: {0}", Environment.CommandLine);
+            _log.LogEnvironmentInformation();
+
+            string xmlConfigPath = Path.Combine(jobDirectory, Job.JobConfigFileName);
+            _log.DebugFormat("Loading job configuration from local file {0}.", xmlConfigPath);
+            JobConfiguration config = JobConfiguration.LoadXml(xmlConfigPath);
+            _log.Debug("Job configuration loaded.");
+
+            if( config.AssemblyFileNames != null )
             {
-                TaskExecutionInfo taskInfo = null;
-                try
+                foreach( string assemblyFileName in config.AssemblyFileNames )
                 {
-                    taskInfo = umbilical.WaitForTask(instanceId, 10000);
-                }
-                catch( ServerShutdownException )
-                {
-                    return 0;
-                }
-                if( taskInfo != null )
-                {
-                    Stopwatch sw = new Stopwatch();
-                    sw.Start();
-                    string logFile = Path.Combine(taskInfo.JobDirectory, taskInfo.TaskId + "_" + taskInfo.Attempt.ToString() + ".log");
-                    ConfigureLog(logFile);
-
-                    _log.InfoFormat("Running task; job ID = \"{0}\", job directory = \"{1}\", task ID = \"{2}\", attempt, = {3}, DFS job directory = \"{4}\"", taskInfo.JobId, taskInfo.JobDirectory, taskInfo.TaskId, taskInfo.Attempt, taskInfo.DfsJobDirectory);
-                    _log.LogEnvironmentInformation();
-
-                    string xmlConfigPath = Path.Combine(taskInfo.JobDirectory, Job.JobConfigFileName);
-                    _log.DebugFormat("Loading job configuration from local file {0}.", xmlConfigPath);
-                    JobConfiguration config = JobConfiguration.LoadXml(xmlConfigPath);
-                    _log.Debug("Job configuration loaded.");
-
-                    if( config.AssemblyFileNames != null )
-                    {
-                        foreach( string assemblyFileName in config.AssemblyFileNames )
-                        {
-                            _log.DebugFormat("Loading assembly {0}.", assemblyFileName);
-                            Assembly.LoadFrom(Path.Combine(taskInfo.JobDirectory, assemblyFileName));
-                        }
-                    }
-
-                    using( TaskExecutionUtility taskExecution = new TaskExecutionUtility(_jetClient, taskInfo.JobId, config, taskInfo.TaskId, _dfsClient, taskInfo.JobDirectory, taskInfo.DfsJobDirectory, taskInfo.Attempt) )
-                    {
-                        RunTask(taskExecution);
-                    }
-
-                    sw.Stop();
-
-                    _log.Info("Reporting completion to task server.");
-                    umbilical.ReportCompletion(taskInfo.JobId, taskInfo.TaskId);
-
-                    _log.InfoFormat("Task host finished execution of task, execution time: {0}s", sw.Elapsed.TotalSeconds);
+                    _log.DebugFormat("Loading assembly {0}.", assemblyFileName);
+                    Assembly.LoadFrom(Path.Combine(jobDirectory, assemblyFileName));
                 }
             }
+
+            using( TaskExecutionUtility taskExecution = new TaskExecutionUtility(_jetClient, jobId, config, taskId, _dfsClient, jobDirectory, dfsJobDirectory, attempt) )
+            {
+                RunTask(taskExecution);
+            }
+
+            sw.Stop();
+
+            _log.Info("Reporting completion to task server.");
+            umbilical.ReportCompletion(jobId, taskId);
+
+            _log.InfoFormat("Task host finished execution of task, execution time: {0}s", sw.Elapsed.TotalSeconds);
+            return 0;
         }
 
         private static void ConfigureLog(string logFile)

@@ -96,7 +96,6 @@
     <Compile Include="TaskConfiguration.cs" />
     <Compile Include="TaskDfsInput.cs" />
     <Compile Include="TaskDfsOutput.cs" />
-    <Compile Include="TaskExecutionInfo.cs" />
     <Compile Include="TaskExecutionUtility.cs" />
     <Compile Include="TaskMetrics.cs" />
     <Compile Include="TaskServerConfigurationElement.cs" />

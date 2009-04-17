@@ -64,14 +64,6 @@ namespace Tkl.Jumbo.Jet
         public TimeSpan StartOffset { get; set; }
 
         /// <summary>
-        /// Gets or sets the instance ID of the task host that executed the task.
-        /// </summary>
-        /// <remarks>
-        /// This value can be used to track the precise execution sequence of tasks on a particular task server.
-        /// </remarks>
-        public int ExecutionInstanceId { get; set; }
-
-        /// <summary>
         /// Gets an XML element containing the task status.
         /// </summary>
         /// <returns>An <see cref="XElement"/> containing the task status.</returns>
@@ -84,8 +76,7 @@ namespace Tkl.Jumbo.Jet
                 new XAttribute("attempts", Attempts.ToString(System.Globalization.CultureInfo.InvariantCulture)),
                 new XAttribute("startTime", StartTime.ToString(JobStatus.DatePattern, System.Globalization.CultureInfo.InvariantCulture)),
                 new XAttribute("endTime", EndTime.ToString(JobStatus.DatePattern, System.Globalization.CultureInfo.InvariantCulture)),
-                new XAttribute("duration", Duration.TotalSeconds.ToString(System.Globalization.CultureInfo.InvariantCulture)),
-                new XAttribute("executionInstance", ExecutionInstanceId.ToString(System.Globalization.CultureInfo.InvariantCulture)));
+                new XAttribute("duration", Duration.TotalSeconds.ToString(System.Globalization.CultureInfo.InvariantCulture)));
         }
 
         /// <summary>
@@ -112,7 +103,6 @@ namespace Tkl.Jumbo.Jet
                 Attempts = (int)task.Attribute("attempts"),
                 StartTime = DateTime.ParseExact(task.Attribute("startTime").Value, JobStatus.DatePattern, System.Globalization.CultureInfo.InvariantCulture),
                 EndTime = DateTime.ParseExact(task.Attribute("endTime").Value, JobStatus.DatePattern, System.Globalization.CultureInfo.InvariantCulture),
-                ExecutionInstanceId = (int)task.Attribute("executionInstance"),
             };
             status.StartOffset = status.StartTime - job.StartTime;
             return status;

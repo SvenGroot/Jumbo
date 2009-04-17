@@ -28,6 +28,29 @@ namespace ClientSample.GraySort
             get { return _low64; }
         }
 
+        public override bool Equals(object obj)
+        {
+            if( !(obj is UInt128) )
+                return false;
+            UInt128 other = (UInt128)obj;
+            return this == other;
+        }
+
+        public override int GetHashCode()
+        {
+            return High64.GetHashCode() ^ Low64.GetHashCode();
+        }
+
+        public static bool operator ==(UInt128 left, UInt128 right)
+        {
+            return left.High64 == right.High64 && left.Low64 == right.Low64;
+        }
+
+        public static bool operator !=(UInt128 left, UInt128 right)
+        {
+            return !(left.High64 == right.High64 && left.Low64 == right.Low64);
+        }
+
         public static UInt128 operator ++(UInt128 value)
         {
             ulong sumLow = value.Low64 + 1;

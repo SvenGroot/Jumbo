@@ -62,8 +62,6 @@ namespace JobServerApplication
 
         public DateTime EndTimeUtc { get; set; }
 
-        public int ExecutionInstanceId { get; set; }
-
         // TODO: This even should be reset if the task server dies or other tasks cannot download the task's output data.
         public ManualResetEvent TaskCompletedEvent
         {

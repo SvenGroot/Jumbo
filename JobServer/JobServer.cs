@@ -439,7 +439,6 @@ namespace JobServerApplication
                         return;
                     }
                     TaskInfo task = job.Tasks[data.TaskID];
-                    task.ExecutionInstanceId = data.ExecutionInstanceId;
 
                     if( data.Status > TaskAttemptStatus.Running )
                     {
@@ -575,7 +574,6 @@ namespace JobServerApplication
                                  Attempts = task.Attempts,
                                  StartTime = task.StartTimeUtc,
                                  EndTime = task.EndTimeUtc,
-                                 ExecutionInstanceId = task.ExecutionInstanceId,
                                  StartOffset = task.StartTimeUtc - job.StartTimeUtc
                              }).ToArray(),
                     RunningTaskCount = (from task in job.SchedulingTasks.Values

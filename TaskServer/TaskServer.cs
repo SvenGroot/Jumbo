@@ -81,9 +81,9 @@ namespace TaskServerApplication
             }
         }
 
-        public void NotifyTaskStatusChanged(Guid jobID, string taskID, TaskAttemptStatus newStatus, int instanceId)
+        public void NotifyTaskStatusChanged(Guid jobID, string taskID, TaskAttemptStatus newStatus)
         {
-            AddDataForNextHeartbeat(new TaskStatusChangedJetHeartbeatData(jobID, taskID, newStatus, instanceId));
+            AddDataForNextHeartbeat(new TaskStatusChangedJetHeartbeatData(jobID, taskID, newStatus));
             SendHeartbeat(false);
         }
 
@@ -93,13 +93,6 @@ namespace TaskServerApplication
         }
 
         #region ITaskServerUmbilicalProtocol Members
-
-        public TaskExecutionInfo WaitForTask(int instanceId, int timeout)
-        {
-            if( !_running )
-                throw new ServerShutdownException("Task server is shut down");
-            return _taskRunner.WaitForTask(instanceId, timeout);
-        }
 
         public void ReportCompletion(Guid jobID, string taskID)
         {

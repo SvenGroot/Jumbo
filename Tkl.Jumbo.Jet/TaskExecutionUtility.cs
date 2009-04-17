@@ -379,7 +379,7 @@ namespace Tkl.Jumbo.Jet
         private void CheckDisposed()
         {
             if( _disposed )
-                throw new ObjectDisposedException(typeof(TaskExecutionInfo).FullName);
+                throw new ObjectDisposedException(typeof(TaskExecutionUtility).FullName);
         }
 
         private IInputChannel CreateInputChannel()

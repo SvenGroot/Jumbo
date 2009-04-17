@@ -17,8 +17,7 @@ namespace Tkl.Jumbo.Jet
         /// <param name="jobID">The job ID.</param>
         /// <param name="taskID">The task ID.</param>
         /// <param name="status">The new status.</param>
-        /// <param name="executionInstanceId">The instance ID of the task host process that executed the task.</param>
-        public TaskStatusChangedJetHeartbeatData(Guid jobID, string taskID, TaskAttemptStatus status, int executionInstanceId)
+        public TaskStatusChangedJetHeartbeatData(Guid jobID, string taskID, TaskAttemptStatus status)
         {
             if( taskID == null )
                 throw new ArgumentNullException("taskID");
@@ -26,7 +25,6 @@ namespace Tkl.Jumbo.Jet
             JobID = jobID;
             TaskID = taskID;
             Status = status;
-            ExecutionInstanceId = executionInstanceId;
         }
 
         /// <summary>
@@ -43,13 +41,5 @@ namespace Tkl.Jumbo.Jet
         /// Gets the new status of the task.
         /// </summary>
         public TaskAttemptStatus Status { get; private set; }
-
-        /// <summary>
-        /// Gets the instance ID of the task host process that executed the task.
-        /// </summary>
-        /// <remarks>
-        /// This value is tracked only for debugging and analysis purposes.
-        /// </remarks>
-        public int ExecutionInstanceId { get; private set; }
     }
 }
