@@ -24,6 +24,7 @@ namespace Tkl.Jumbo.Jet
         public const string XmlNamespace = "http://www.tkl.iis.u-tokyo.ac.jp/schema/Jumbo/JobConfiguration";
         private static readonly XmlSerializer _serializer = new XmlSerializer(typeof(JobConfiguration));
         private Dictionary<string, List<TaskConfiguration>> _stages = new Dictionary<string, List<TaskConfiguration>>();
+        private Dictionary<string, TaskConfiguration> _tasksByName;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="JobConfiguration"/> class.
@@ -229,15 +230,13 @@ namespace Tkl.Jumbo.Jet
             ChannelConfiguration channel = new ChannelConfiguration()
             {
                 ChannelType = channelType,
-                InputTasks = (from inputTask in inputTasks
-                              select inputTask.TaskID).ToArray(),
-                OutputTasks = (from task in stage
-                               select task.TaskID).ToArray(),
                 PartitionerType = partitionerType == null ? typeof(HashPartitioner<>).MakeGenericType(inputType).AssemblyQualifiedName : partitionerType.AssemblyQualifiedName
             };
+            channel.AddInputTasks(inputTasks);
+            channel.AddOutputTasks(stage);
 
             _stages.Add(stageName, stage);
-            Tasks.AddRange(stage);
+            AddTasks(stage);
             Channels.Add(channel);
             return stage.AsReadOnly();
         }
@@ -293,7 +292,7 @@ namespace Tkl.Jumbo.Jet
             List<TaskConfiguration> stage = CreateStage(stageName, taskType, inputTasks.Count, 1, outputPath, recordWriterType, null, null);
 
             _stages.Add(stageName, stage);
-            Tasks.AddRange(stage);
+            AddTasks(stage);
             for( int x = 0; x < inputTasks.Count; ++x )
             {
                 TaskConfiguration inputTask = inputTasks[x];
@@ -301,10 +300,10 @@ namespace Tkl.Jumbo.Jet
                 ChannelConfiguration channel = new ChannelConfiguration()
                 {
                     ChannelType = channelType,
-                    InputTasks = new[] { inputTask.TaskID },
-                    OutputTasks = new[] { outputTask.TaskID },
                     PartitionerType = (partitionerType ?? typeof(HashPartitioner<>).MakeGenericType(inputType)).AssemblyQualifiedName
                 };
+                channel.AddInputTask(inputTask);
+                channel.AddOutputTask(outputTask);
                 Channels.Add(channel);
             }
             return stage;
@@ -408,6 +407,12 @@ namespace Tkl.Jumbo.Jet
                     task.DfsOutput.Path += "_001";
                 }
                 task.TaskID = newTaskId;
+                ChannelConfiguration inputChannel = GetInputChannelForTask(oldTaskId);
+                if( _tasksByName != null )
+                {
+                    _tasksByName.Remove(oldTaskId);
+                    _tasksByName.Add(newTaskId, task);
+                }
                 newTasks.Add(task);
                 for( int x = 1; x < partitions; ++x )
                 {
@@ -421,39 +426,39 @@ namespace Tkl.Jumbo.Jet
                         newTask.DfsOutput.Path = oldOutputPath + postfix;
                     newTasks.Add(newTask);
                     stage.Add(newTask);
-                    Tasks.Add(newTask);
+                    AddTask(newTask);
                 }
-                ChannelConfiguration inputChannel = GetInputChannelForTask(oldTaskId);
                 // Remove any tasks from the channel that are part of the chain.
                 // We don't need to do that for outputchannel because that was already taken care of when processing the next task in the chain.
                 var precedingTasks = inputChannel.InputTasks.Intersect(tasksToSplit);
-                inputChannel.InputTasks = (from taskId in inputChannel.InputTasks
-                                           where !tasksToSplit.Contains(taskId)
-                                           select taskId).ToArray();
+                inputChannel.RemoveInputTasks(from id in precedingTasks select GetTask(id));
 
                 if( inputChannel.InputTasks.Length == 0 )
-                    Channels.Remove(inputChannel);
+                    RemoveChannel(inputChannel);
                 else
-                    inputChannel.OutputTasks = (from t in newTasks select t.TaskID).ToArray(); // hook up any other tasks to the newly split tasks (note: this will split their output too!)
+                {
+                    inputChannel.ClearOutputTasks();
+                    inputChannel.AddOutputTasks(from t in newTasks select t); // hook up any other tasks to the newly split tasks (note: this will split their output too!)
+                }
 
                 if( outputTasks != null )
                 {
                     for( int x = 0; x < newTasks.Count; ++x )
                     {
-                        ChannelConfiguration channel = GetInputChannelForTask(outputTasks[x].TaskID);
+                        ChannelConfiguration channel = outputTasks[x].InputChannel;
                         if( channel == null )
                         {
                             channel = new ChannelConfiguration();
                             channel.ChannelType = outputChannelTemplate.ChannelType;
                             channel.ForceFileDownload = outputChannelTemplate.ForceFileDownload;
                             channel.PartitionerType = outputChannelTemplate.PartitionerType;
-                            channel.InputTasks = new[] { newTasks[x].TaskID };
-                            channel.OutputTasks = new[] { outputTasks[x].TaskID };
+                            channel.AddInputTask(newTasks[x]);
+                            channel.AddOutputTask(outputTasks[x]);
                             Channels.Add(channel);
                         }
                         else
                         {
-                            channel.InputTasks = channel.InputTasks.Union(new[] { newTasks[x].TaskID }).ToArray();
+                            channel.AddInputTask(newTasks[x]);
                         }
                     }
                 }
@@ -467,20 +472,20 @@ namespace Tkl.Jumbo.Jet
             {
                 if( outputTasks != null )
                 {
-                    ChannelConfiguration channel = GetInputChannelForTask(outputTasks[0].TaskID);
+                    ChannelConfiguration channel = outputTasks[0].InputChannel;
                     if( channel == null )
                     {
                         channel = new ChannelConfiguration();
                         channel.ChannelType = outputChannelTemplate.ChannelType;
                         channel.ForceFileDownload = outputChannelTemplate.ForceFileDownload;
                         channel.PartitionerType = outputChannelTemplate.PartitionerType;
-                        channel.InputTasks = new[] { task.TaskID };
-                        channel.OutputTasks = (from t in outputTasks select t.TaskID).ToArray();
+                        channel.AddInputTask(task);
+                        channel.AddOutputTasks(outputTasks);
                         Channels.Add(channel);
                     }
                     else
                     {
-                        channel.InputTasks = channel.InputTasks.Union(new[] { task.TaskID }).ToArray();
+                        channel.AddInputTask(task);
                     }
 
                 }
@@ -542,9 +547,18 @@ namespace Tkl.Jumbo.Jet
         /// <returns>The <see cref="TaskConfiguration"/> for the task, or <see langword="null"/> if no task with that ID exists.</returns>
         public TaskConfiguration GetTask(string taskID)
         {
-            return (from task in Tasks
-                    where task.TaskID == taskID
-                    select task).SingleOrDefault();
+            if( _tasksByName == null )
+                return (from task in Tasks
+                        where task.TaskID == taskID
+                        select task).SingleOrDefault();
+            else
+            {
+                TaskConfiguration task;
+                if( _tasksByName.TryGetValue(taskID, out task) )
+                    return task;
+                else
+                    return null;
+            }
         }
 
         /// <summary>
@@ -565,9 +579,21 @@ namespace Tkl.Jumbo.Jet
         /// <returns>The channel configuration.</returns>
         public Channels.ChannelConfiguration GetOutputChannelForTask(string taskID)
         {
-            return (from channel in Channels
-                    where channel.InputTasks != null && channel.InputTasks.Contains(taskID)
-                    select channel).SingleOrDefault();
+            if( _tasksByName == null )
+            {
+                return (from channel in Channels
+                        where channel.InputTasks != null && channel.InputTasks.Contains(taskID)
+                        select channel).SingleOrDefault();
+            }
+            else
+            {
+                // We assume that OutputChannel will be set if _tasksByName is used.
+                TaskConfiguration task;
+                if( _tasksByName.TryGetValue(taskID, out task) )
+                    return task.OutputChannel;
+                else
+                    return null;
+            }
         }
 
 
@@ -578,9 +604,21 @@ namespace Tkl.Jumbo.Jet
         /// <returns>The channel configuration.</returns>
         public Channels.ChannelConfiguration GetInputChannelForTask(string taskID)
         {
-            return (from channel in Channels
-                    where channel.OutputTasks != null && channel.OutputTasks.Contains(taskID)
-                    select channel).SingleOrDefault();
+            if( _tasksByName == null )
+            {
+                return (from channel in Channels
+                        where channel.OutputTasks != null && channel.OutputTasks.Contains(taskID)
+                        select channel).SingleOrDefault();
+            }
+            else
+            {
+                // We assume that OutputChannel will be set if _tasksByName is used.
+                TaskConfiguration task;
+                if( _tasksByName.TryGetValue(taskID, out task) )
+                    return task.InputChannel;
+                else
+                    return null;
+            }
         }
 
         /// <summary>
@@ -675,7 +713,7 @@ namespace Tkl.Jumbo.Jet
                 start += inputFile.Blocks.Count;
             }
             _stages.Add(stageName, stage);
-            Tasks.AddRange(stage); // this is done at the end so the job's state isn't altered if one of the tasks has a duplicate name and causes an exception.
+            AddTasks(stage); // this is done at the end so the job's state isn't altered if one of the tasks has a duplicate name and causes an exception.
             return stage.AsReadOnly();
         }
 
@@ -737,6 +775,28 @@ namespace Tkl.Jumbo.Jet
             throw new ArgumentException(string.Format("Type {0} does not inherit from {1}.", type, baseType));
         }
 
-    
+        private void AddTask(TaskConfiguration task)
+        {
+            if( _tasksByName == null )
+                _tasksByName = new Dictionary<string, TaskConfiguration>();
+            Tasks.Add(task);
+            _tasksByName.Add(task.TaskID, task);
+        }
+
+        private void AddTasks(IEnumerable<TaskConfiguration> tasks)
+        {
+            if( _tasksByName == null )
+                _tasksByName = new Dictionary<string, TaskConfiguration>();
+            Tasks.AddRange(tasks);
+            foreach( TaskConfiguration task in tasks )
+                _tasksByName.Add(task.TaskID, task);
+        }
+
+        private void RemoveChannel(ChannelConfiguration channel)
+        {
+            channel.ClearOutputTasks();
+            channel.ClearInputTasks();
+            Channels.Remove(channel);
+        }
     }
 }

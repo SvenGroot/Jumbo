@@ -104,6 +104,8 @@ namespace Tkl.Jumbo.Jet
                 clone.DfsInput = DfsInput.Clone();
             if( DfsOutput != null )
                 clone.DfsOutput = DfsOutput.Clone();
+            clone.InputChannel = null;
+            clone.OutputChannel = null;
             return clone;
         }
 
@@ -115,5 +117,11 @@ namespace Tkl.Jumbo.Jet
         }
 
         #endregion
+
+        [XmlIgnore]
+        internal ChannelConfiguration InputChannel { get; set; }
+
+        [XmlIgnore]
+        internal ChannelConfiguration OutputChannel { get; set; }
     }
 }
