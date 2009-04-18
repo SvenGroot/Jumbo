@@ -105,6 +105,7 @@ namespace JobServerApplication
                     using( DfsInputStream stream = _dfsClient.OpenFile(configFile) )
                     {
                         config = JobConfiguration.LoadXml(stream);
+                        config.RebuildLookupData();
                     }
                 }
                 catch( Exception ex )
@@ -117,7 +118,7 @@ namespace JobServerApplication
                 foreach( TaskConfiguration task in config.Tasks )
                 {
                     TaskInfo taskInfo;
-                    if( config.IsPipelinedTask(task.TaskID) )
+                    if( !config.IsPipelinedTask(task.TaskID) )
                     {
                         taskInfo = new TaskInfo(jobInfo, task);
                         jobInfo.SchedulingTasks.Add(task.TaskID, taskInfo);

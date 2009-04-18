@@ -657,23 +657,27 @@ namespace Tkl.Jumbo.Jet
         public bool IsPipelinedTask(string taskId)
         {
             ChannelConfiguration inputChannel = GetInputChannelForTask(taskId);
-            return inputChannel == null || inputChannel.ChannelType != ChannelType.Pipeline;
+            return inputChannel != null && inputChannel.ChannelType == ChannelType.Pipeline;
         }
 
         /// <summary>
-        /// Gets a list of tasks that need to be scheduled, which excludes those tasks that will be executed in-process with another task.
+        /// Rebuild the task dictionary and the task channel information so they can be quickly retrieved later.
         /// </summary>
-        /// <returns>A list of tasks that need to be scheduled.</returns>
         /// <remarks>
-        /// If you modify the job configuration after calling this function, the next time you call this function it will return invalid results.
+        /// Use this method after loading with LoadXml if you need to use GetTask or GetInput/OutputChannelForTask often.
         /// </remarks>
-        public IEnumerable<TaskConfiguration> GetSchedulingTasks()
+        public void RebuildLookupData()
         {
-            // Tasks whose input channel uses ChannelType.Pipeline will be executed in-process with their input task so don't need to be schedueld.
-            return from task in Tasks
-                   let inputChannel = GetInputChannelForTask(task.TaskID)
-                   where inputChannel == null || inputChannel.ChannelType != ChannelType.Pipeline
-                   select task;
+            _tasksByName = new Dictionary<string, TaskConfiguration>();
+            foreach( TaskConfiguration task in Tasks )
+                _tasksByName.Add(task.TaskID, task);
+            foreach( ChannelConfiguration channel in Channels )
+            {
+                foreach( string task in channel.InputTasks )
+                    _tasksByName[task].OutputChannel = channel;
+                foreach( string task in channel.OutputTasks )
+                    _tasksByName[task].InputChannel = channel;
+            }
         }
 
         private IList<TaskConfiguration> AddInputStage(string stageName, IEnumerable<File> inputFiles, Type taskType, Type recordReaderType, string outputPath, Type recordWriterType)
