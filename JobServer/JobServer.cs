@@ -73,6 +73,7 @@ namespace JobServerApplication
             Guid jobID = Guid.NewGuid();
             string path = DfsPath.Combine(Configuration.JobServer.JetDfsPath, string.Format("job_{{{0}}}", jobID));
             _dfsClient.NameServer.CreateDirectory(path);
+            _dfsClient.NameServer.CreateDirectory(DfsPath.Combine(path, "temp"));
             Job job = new Job(jobID, path);
             JobInfo info = new JobInfo(job);
             lock( _jobs )

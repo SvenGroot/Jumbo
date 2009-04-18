@@ -437,7 +437,7 @@ namespace Tkl.Jumbo.Jet
         {
             if( TaskConfiguration.DfsOutput != null )
             {
-                string file = DfsPath.Combine(DfsJobDirectory, TaskConfiguration.TaskID + "_" + Attempt.ToString());
+                string file = DfsPath.Combine(DfsPath.Combine(DfsJobDirectory, "temp"), TaskConfiguration.TaskID + "_" + Attempt.ToString());
                 _log.DebugFormat("Opening output file {0}", file);
                 TaskConfiguration.DfsOutput.TempPath = file;
                 _outputStream = DfsClient.CreateFile(file);
