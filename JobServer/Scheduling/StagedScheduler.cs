@@ -59,6 +59,10 @@ namespace JobServerApplication.Scheduling
                     {
                         eligibleServers = servers.Values;
                     }
+                    // Filter out servers that this task has failed on
+                    eligibleServers = (from server in eligibleServers
+                                       where !task.BadServers.Contains(server)
+                                       select server);
                     // TODO: We need to cache the block intersection at least for this scheduling run, this does way too many calls to the name server
                     TaskServerInfo[] availableServers = (from server in eligibleServers
                                                          where server.AvailableTasks > 0
@@ -150,13 +154,13 @@ namespace JobServerApplication.Scheduling
                     ++taskIndex;
                 if( taskIndex == tasks.Count )
                     break;
+                TaskInfo task = tasks[taskIndex];
                 TaskServerInfo taskServer = (from server in taskServers.Values
                                              where server.AvailableNonInputTasks > 0
                                              orderby server.AvailableNonInputTasks descending, rnd.Next()
                                              select server).FirstOrDefault();
                 if( taskServer != null )
                 {
-                    TaskInfo task = tasks[taskIndex];
                     taskServer.AssignTask(job, task, false);
                     if( !newServers.Contains(taskServer) )
                         newServers.Add(taskServer);

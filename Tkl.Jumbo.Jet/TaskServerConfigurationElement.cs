@@ -84,5 +84,19 @@ namespace Tkl.Jumbo.Jet
             get { return (int)this["processCreationDelay"]; }
             set { this["processCreationDelay"] = value; }
         }
+
+        /// <summary>
+        /// Gets or sets a value that indicates whether the task hosts should be run in an AppDomain.
+        /// </summary>
+        /// <remarks>
+        /// Task hosts are always run in an appdomain if a debugger is attached to the task server, even if this propert is <see langword="false"/>.
+        /// Setting this property to <see langword="true"/> under Mono is not recommended.
+        /// </remarks>
+        [ConfigurationProperty("runTaskHostInAppDomain", DefaultValue = false, IsRequired = false, IsKey = false)]
+        public bool RunTaskHostInAppDomain
+        {
+            get { return (bool)this["runTaskHostInAppDomain"]; }
+            set { this["runTaskHostInAppDomain"] = value; }
+        }
     }
 }

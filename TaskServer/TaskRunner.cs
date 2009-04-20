@@ -53,7 +53,7 @@ namespace TaskServerApplication
 
             public void Run(int createProcessDelay)
             {
-                if( Debugger.IsAttached )
+                if( Debugger.IsAttached || _taskServer.Configuration.TaskServer.RunTaskHostInAppDomain )
                     RunTaskAppDomain();
                 else
                 {
@@ -215,7 +215,7 @@ namespace TaskServerApplication
                     _taskServer.NotifyTaskStatusChanged(task.JobID, task.TaskID, task.State);
                 }
                 else
-                    _log.WarnFormat("Task {0} was reported as completed but was not running.", task.FullTaskID);
+                    _log.WarnFormat("Task {0} was reported as completed but was not running.", fullTaskID);
             }
         }
 

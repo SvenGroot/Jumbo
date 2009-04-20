@@ -467,6 +467,8 @@ namespace JobServerApplication
                             {
                                 // Reschedule
                                 task.Server.UnassignTask(job, task);
+                                if( task.BadServers.Count == _taskServers.Count )
+                                    task.BadServers.Clear(); // we've failed on all servers so try again anywhere.
                             }
                             else
                             {
