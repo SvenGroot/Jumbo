@@ -20,9 +20,6 @@ namespace ClientSample
 
         public void Run(RecordReader<StringWritable> input, RecordWriter<KeyValuePairWritable<StringWritable, Int32Writable>> output)
         {
-            Random rnd = new Random();
-            if( rnd.Next(0, 100) < 50 )
-                throw new Exception("Yep, it failed.");
             _log.Info("Beginning count.");
             Dictionary<string, Counter> wordCount = new Dictionary<string,Counter>(5000);
             foreach( var line in input.EnumerateRecords() )
