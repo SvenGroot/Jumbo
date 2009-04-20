@@ -15,9 +15,9 @@ namespace TaskServerApplication
             TaskServer.Instance.ReportCompletion(jobID, taskID);
         }
 
-        public void ReportStart(Guid jobID, string taskID)
+        public void ReportProgress(Guid jobId, string taskId, float progress)
         {
-            TaskServer.Instance.ReportStart(jobID, taskID);
+            TaskServer.Instance.ReportProgress(jobId, taskId, progress);
         }
 
         #endregion

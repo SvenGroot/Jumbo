@@ -18,10 +18,11 @@ namespace Tkl.Jumbo.Jet
         void ReportCompletion(Guid jobID, string taskID);
 
         /// <summary>
-        /// Reports the TaskHost process has started a task.
+        /// Reports progression of a task.
         /// </summary>
-        /// <param name="jobID">The job ID.</param>
-        /// <param name="taskID">The task ID.</param>
-        void ReportStart(Guid jobID, string taskID);
+        /// <param name="jobId">The job ID of the job containing the task.</param>
+        /// <param name="taskId">The task ID.</param>
+        /// <param name="progress">The progress value, between 0 and 1.</param>
+        void ReportProgress(Guid jobId, string taskId, float progress);
     }
 }

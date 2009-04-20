@@ -13,6 +13,7 @@ namespace Tkl.Jumbo.IO
         where T : IWritable, new()
     {
         private IEnumerator<T> _enumerator;
+        private int _count;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="EnumerableRecordReader{T}"/> class.
@@ -23,6 +24,15 @@ namespace Tkl.Jumbo.IO
             if( source == null )
                 throw new ArgumentNullException("source");
             _enumerator = source.GetEnumerator();
+            _count = source.Count();
+        }
+
+        /// <summary>
+        /// Gets the progress of the reader.
+        /// </summary>
+        public override float Progress
+        {
+            get { return (float)RecordsRead / (float)_count; }
         }
 
         /// <summary>

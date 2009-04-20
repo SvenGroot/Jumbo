@@ -80,6 +80,17 @@ namespace Tkl.Jumbo.IO
         }
 
         /// <summary>
+        /// Gets the progress of the reader.
+        /// </summary>
+        public override float Progress
+        {
+            get
+            {
+                return Math.Min(1.0f, (Stream.Position - Offset) / (float)Size);
+            }
+        }
+
+        /// <summary>
         /// Cleans up all resources associated with this <see cref="StreamRecordReader{T}"/>.
         /// </summary>
         /// <param name="disposing"><see langword="true"/> to clean up both managed and unmanaged resources; <see langword="false"/>

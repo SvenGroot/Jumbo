@@ -15,6 +15,21 @@ namespace Tkl.Jumbo.Test.Jet
     [TestFixture]
     public class PipelineOutputChannelTests
     {
+        private class FakeUmbilical : ITaskServerUmbilicalProtocol
+        {
+            #region ITaskServerUmbilicalProtocol Members
+
+            public void ReportCompletion(Guid jobID, string taskID)
+            {
+            }
+
+            public void ReportProgress(Guid jobId, string taskId, float progress)
+            {
+            }
+
+            #endregion
+        }
+
         [Test]
         public void TestPipelineChannel()
         {
@@ -26,7 +41,7 @@ namespace Tkl.Jumbo.Test.Jet
             System.IO.Directory.CreateDirectory(path);
             // This depends on the fact that TaskExecutionUtility will not use the JetClient and DfsClient unless a DfsInput or DfsOutput is used. Since we will never
             // call GetInputReader that won't happen.
-            using( TaskExecutionUtility taskExecution = new TaskExecutionUtility(new JetClient(), Guid.NewGuid(), config, "Task001", new DfsClient(), path, "/foo", 1) )
+            using( TaskExecutionUtility taskExecution = new TaskExecutionUtility(new JetClient(), new FakeUmbilical(), Guid.NewGuid(), config, "Task001", new DfsClient(), path, "/foo", 1) )
             {
                 RecordWriter<Int32Writable> output = taskExecution.GetOutputWriter<Int32Writable>(); // this will call PipelineOutputChannel.CreateRecordWriter
                 IPushTask<StringWritable, Int32Writable> task = (IPushTask<StringWritable, Int32Writable>)taskExecution.GetTaskInstance<StringWritable, Int32Writable>();
@@ -66,6 +81,7 @@ namespace Tkl.Jumbo.Test.Jet
                 OutputTasks = new string[] { },
                 PartitionerType = typeof(HashPartitioner<Int32Writable>).AssemblyQualifiedName,
             });
+            config.RebuildLookupData();
 
             return config;
         }

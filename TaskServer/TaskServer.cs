@@ -103,9 +103,10 @@ namespace TaskServerApplication
             _taskRunner.ReportCompletion(fullTaskID);
         }
 
-        public void ReportStart(Guid jobID, string taskID)
+        public void ReportProgress(Guid jobId, string taskId, float progress)
         {
-            _log.InfoFormat("TaskHost has started task {0}.", Job.CreateFullTaskID(jobID, taskID));
+            _log.InfoFormat("Task {0} progress: {1}%", Job.CreateFullTaskID(jobId, taskId), (int)(progress * 100));
+            // TODO: Report to job server.
         }
 
         #endregion

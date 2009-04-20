@@ -19,7 +19,9 @@ namespace Tkl.Jumbo.IO
         private RecordReader<T> _currentReader;
         private readonly AutoResetEvent _readerAdded = new AutoResetEvent(false);
         private bool _disposed;
-        private bool _hasFinalReader;
+        private int _totalReaderCount;
+        private int _receivedReaderCount;
+        private int _currentReaderNumber;
         private readonly Stopwatch _timeWaitingStopwatch = new Stopwatch();
 
         /// <summary>
@@ -27,20 +29,26 @@ namespace Tkl.Jumbo.IO
         /// record readers.
         /// </summary>
         /// <param name="readers">The readers to read from.</param>
-        /// <param name="allowMoreReaders"><see langword="true"/> if you can use the <see cref="AddReader"/> method to
-        /// add additional readers; otherwise, <see langword="false"/>.</param>
-        public MultiRecordReader(IEnumerable<RecordReader<T>> readers, bool allowMoreReaders)
+        /// <param name="totalReaderCount">The total number of readers that this reader will use.</param>
+        public MultiRecordReader(IEnumerable<RecordReader<T>> readers, int totalReaderCount)
         {
-            if( !allowMoreReaders && readers == null )
-                throw new ArgumentNullException("readers");
+            if( totalReaderCount <= 0 )
+                throw new ArgumentOutOfRangeException("totalReaderCount must be larger than zero.");
 
-            _hasFinalReader = !allowMoreReaders;
+            _totalReaderCount = totalReaderCount;
+
             if( readers != null )
             {
                 foreach( var item in readers )
                     _readers.Enqueue(item);
                 if( _readers.Count > 0 )
+                {
                     _currentReader = _readers.Dequeue();
+                    _currentReaderNumber = 1;
+                }
+                if( _readers.Count > totalReaderCount )
+                    throw new ArgumentOutOfRangeException("totalReaderCount is smaller than the initial reader count.");
+                _receivedReaderCount = _readers.Count;
             }
         }
 
@@ -52,6 +60,17 @@ namespace Tkl.Jumbo.IO
             get
             {
                 return _timeWaitingStopwatch.Elapsed;
+            }
+        }
+
+        /// <summary>
+        /// Gets the progress of the reader.
+        /// </summary>
+        public override float Progress
+        {
+            get 
+            {
+                return Math.Min(1.0f, (_currentReaderNumber - 1 + (_currentReader == null ? 1.0f : _currentReader.Progress)) / (float)_totalReaderCount);
             }
         }
 
@@ -88,13 +107,16 @@ namespace Tkl.Jumbo.IO
                     count = _readers.Count;
                     if( count == 0 )
                     {
-                        if( _hasFinalReader )
+                        if( _receivedReaderCount == _totalReaderCount )
                         {
                             return false;
                         }
                     }
                     else
+                    {
                         _currentReader = _readers.Dequeue();
+                        ++_currentReaderNumber;
+                    }
                 }
                 if( _currentReader == null )
                 {
@@ -110,11 +132,10 @@ namespace Tkl.Jumbo.IO
         /// Adds a record reader to the list of readers that this <see cref="MultiRecordReader{T}"/> will read from.
         /// </summary>
         /// <param name="reader">The reader to add.</param>
-        /// <param name="isFinalReader"><see langword="true"/> to indicate that this is the final reader; otherwise, <see langword="false"/>.</param>
-        public void AddReader(RecordReader<T> reader, bool isFinalReader)
+        public void AddReader(RecordReader<T> reader)
         {
             CheckDisposed();
-            if( _hasFinalReader )
+            if( _receivedReaderCount == _totalReaderCount  )
                 throw new InvalidOperationException("Cannot add more readers after the final reader has been added.");
             if( reader == null )
                 throw new ArgumentNullException("reader");
@@ -122,7 +143,7 @@ namespace Tkl.Jumbo.IO
             lock( _readers )
             {
                 _readers.Enqueue(reader);
-                _hasFinalReader = isFinalReader;
+                ++_receivedReaderCount;
             }
             _readerAdded.Set();
         }

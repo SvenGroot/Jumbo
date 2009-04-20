@@ -7,6 +7,8 @@ using Tkl.Jumbo.Jet.Channels;
 using Tkl.Jumbo.IO;
 using System.Reflection;
 using System.Collections;
+using System.Threading;
+using System.Net.Sockets;
 
 namespace Tkl.Jumbo.Jet
 {
@@ -56,6 +58,7 @@ namespace Tkl.Jumbo.Jet
         #endregion
 
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(TaskExecutionUtility));
+        private const int _progressInterval = 5000;
 
         private List<TaskExecutionUtility> _associatedTasks = new List<TaskExecutionUtility>();
         private IInputChannel _inputChannel;
@@ -63,15 +66,21 @@ namespace Tkl.Jumbo.Jet
         private DfsOutputStream _outputStream;
         private IEnumerable _inputReaders; // non-generic because we don't know the type of T for RecordReader<T>.
         private IRecordWriter _outputWriter;
+        private ITaskServerUmbilicalProtocol _umbilical;
+        private Thread _progressThread;
         private bool _disposed;
         private ITaskContainer _task;
         private int _recordsWritten;
         private long _dfsBytesWritten;
+        private bool _finished;
+        private bool _isAssociatedTask;
+        private readonly ManualResetEvent _finishedEvent = new ManualResetEvent(false);
 
         /// <summary>
         /// Initializes a new instance of the <see cref="TaskExecutionUtility"/> class.
         /// </summary>
         /// <param name="jetClient">The <see cref="JetClient"/> used to access the job server.</param>
+        /// <param name="umbilical">The <see cref="ITaskServerUmbilicalProtocol"/> used to communicate with the task server.</param>
         /// <param name="jobId">The ID of the job.</param>
         /// <param name="jobConfiguration">The configuration for the job.</param>
         /// <param name="taskId">The task ID.</param>
@@ -79,10 +88,12 @@ namespace Tkl.Jumbo.Jet
         /// <param name="localJobDirectory">The local directory where the task server stores the job's files.</param>
         /// <param name="dfsJobDirectory">The DFS directory where the job's files are stored.</param>
         /// <param name="attempt">The attempt number for this task.</param>
-        public TaskExecutionUtility(JetClient jetClient, Guid jobId, JobConfiguration jobConfiguration, string taskId, DfsClient dfsClient, string localJobDirectory, string dfsJobDirectory, int attempt)
+        public TaskExecutionUtility(JetClient jetClient, ITaskServerUmbilicalProtocol umbilical, Guid jobId, JobConfiguration jobConfiguration, string taskId, DfsClient dfsClient, string localJobDirectory, string dfsJobDirectory, int attempt)
         {
             if( jetClient == null )
                 throw new ArgumentNullException("jetClient");
+            if( umbilical == null )
+                throw new ArgumentNullException("umbilical");
             if( jobConfiguration == null )
                 throw new ArgumentNullException("jobConfiguration");
             if( taskId == null )
@@ -94,6 +105,7 @@ namespace Tkl.Jumbo.Jet
             if( dfsJobDirectory == null )
                 throw new ArgumentNullException("dfsJobDirectory");
             JetClient = jetClient;
+            _umbilical = umbilical;
             JobId = jobId;
             JobConfiguration = jobConfiguration;
             TaskConfiguration = jobConfiguration.GetTask(taskId);
@@ -117,8 +129,9 @@ namespace Tkl.Jumbo.Jet
         }
 
         private TaskExecutionUtility(TaskExecutionUtility baseTask, string taskId)
-            : this(baseTask.JetClient, baseTask.JobId, baseTask.JobConfiguration, taskId, baseTask.DfsClient, baseTask.LocalJobDirectory,baseTask.DfsJobDirectory, baseTask.Attempt)
+            : this(baseTask.JetClient, baseTask._umbilical, baseTask.JobId, baseTask.JobConfiguration, taskId, baseTask.DfsClient, baseTask.LocalJobDirectory,baseTask.DfsJobDirectory, baseTask.Attempt)
         {
+            _isAssociatedTask = true;
         }
 
         /// <summary>
@@ -245,7 +258,10 @@ namespace Tkl.Jumbo.Jet
         {
             CheckDisposed();
             if( _inputReaders == null )
+            {
                 _inputReaders = CreateInputRecordReaders<T>(false);
+                StartProgressThread();
+            }
             return ((IList<RecordReader<T>>)_inputReaders)[0];
         }
 
@@ -262,7 +278,10 @@ namespace Tkl.Jumbo.Jet
         {
             CheckDisposed();
             if( _inputReaders == null )
+            {
                 _inputReaders = CreateInputRecordReaders<T>(true);
+                StartProgressThread();
+            }
             return (IList<RecordReader<T>>)_inputReaders;
         }
 
@@ -306,6 +325,8 @@ namespace Tkl.Jumbo.Jet
 
             if( _task != null )
                 _task.Finish();
+
+            _finished = true;
 
             foreach( TaskExecutionUtility associatedTask in _associatedTasks )
             {
@@ -365,6 +386,7 @@ namespace Tkl.Jumbo.Jet
         {
             if( !_disposed )
             {
+                _disposed = true;
                 if( disposing )
                 {
                     foreach( TaskExecutionUtility task in _associatedTasks )
@@ -387,8 +409,13 @@ namespace Tkl.Jumbo.Jet
                     IDisposable outputChannelDisposable = _outputChannel as IDisposable;
                     if( outputChannelDisposable != null )
                         outputChannelDisposable.Dispose();
+                    if( _progressThread != null )
+                    {
+                        _finishedEvent.Set();
+                        _progressThread.Join();
+                    }
+                    ((IDisposable)_finishedEvent).Dispose();
                 }
-                _disposed = true;
             }
         }
 
@@ -515,6 +542,48 @@ namespace Tkl.Jumbo.Jet
             {
                 associatedTask.CalculateMetrics(metrics);
             }
-        }    
+        }
+
+        private void StartProgressThread()
+        {
+            if( _progressThread == null && !_isAssociatedTask )
+            {
+                _progressThread = new Thread(ProgressThread) { Name = "ProgressThread", IsBackground = true };
+                _progressThread.Start();
+            }
+        }
+
+        private void ProgressThread()
+        {
+            _log.Info("Progress thread has started.");
+            // Thread that reports progress
+            float previousProgress = -1;
+            while( !(_finished || _disposed) )
+            {
+                float progress = 0;
+                int count = 0;
+                foreach( IRecordReader reader in _inputReaders )
+                {
+                    progress += reader.Progress;
+                    ++count;
+                }
+                progress = progress / (float)count;
+                if( progress != previousProgress )
+                {
+                    try
+                    {
+                        _log.InfoFormat("Reporting progress: {0}%", (int)(progress * 100));
+                        _umbilical.ReportProgress(JobId, TaskConfiguration.TaskID, progress);
+                        previousProgress = progress;
+                    }
+                    catch( SocketException ex )
+                    {
+                        _log.Error("Failed to report progress to the task server.", ex);
+                    }
+                }
+                _finishedEvent.WaitOne(_progressInterval, false);
+            }
+            _log.Info("Progress thread has finished.");
+        }
     }
 }

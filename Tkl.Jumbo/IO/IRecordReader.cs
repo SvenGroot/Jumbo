@@ -24,5 +24,10 @@ namespace Tkl.Jumbo.IO
         /// Gets the number of bytes read, if applicable.
         /// </summary>
         long BytesRead { get; }
+
+        /// <summary>
+        /// Gets the progress for the task, between 0 and 1.
+        /// </summary>
+        float Progress { get; }
     }
 }

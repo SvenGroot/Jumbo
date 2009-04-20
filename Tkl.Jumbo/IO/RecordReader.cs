@@ -40,6 +40,11 @@ namespace Tkl.Jumbo.IO
         }
 
         /// <summary>
+        /// Gets a number between 0 and 1 that indicates the progress of the reader.
+        /// </summary>
+        public abstract float Progress { get; }
+
+        /// <summary>
         /// Gets the number of bytes read, if applicable.
         /// </summary>
         public virtual long BytesRead 
