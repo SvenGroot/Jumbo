@@ -46,35 +46,51 @@ public partial class job : System.Web.UI.Page
 
         foreach( TaskStatus task in job.Tasks )
         {
-            row = new HtmlTableRow() { ID = "TaskStatusRow_" + task.TaskID };
-            row.Cells.Add(new HtmlTableCell() { InnerText = task.TaskID });
-            row.Cells.Add(new HtmlTableCell() { InnerText = task.State.ToString() });
-            row.Cells.Add(new HtmlTableCell() { InnerText = task.TaskServer == null ? "" : task.TaskServer.ToString() });
-            row.Cells.Add(new HtmlTableCell() { InnerText = task.Attempts.ToString() });
-            if( task.State >= TaskState.Running && task.TaskServer != null )
+            row = CreateTaskTableRow(job, task, false);
+            TasksTable.Rows.Add(row);
+        }
+
+        if( job.ErrorTaskCount > 0 )
+        {
+            _failedTaskAttemptsPlaceHolder.Visible = true;
+            foreach( TaskStatus task in job.FailedTaskAttempts )
             {
-                row.Cells.Add(new HtmlTableCell() { InnerText = task.StartTime.ToString(_datePattern, System.Globalization.CultureInfo.InvariantCulture) });
-                if( task.State == TaskState.Finished )
-                {
-                    row.Cells.Add(new HtmlTableCell() { InnerText = task.EndTime.ToString(_datePattern, System.Globalization.CultureInfo.InvariantCulture) });
-                    TimeSpan duration = task.EndTime - task.StartTime;
-                    row.Cells.Add(new HtmlTableCell() { InnerText = string.Format("{0} ({1}s)", duration, duration.TotalSeconds) });
-                }
-                else
-                {
-                    row.Cells.Add(new HtmlTableCell() { InnerText = "" });
-                    row.Cells.Add(new HtmlTableCell() { InnerText = "" });
-                }
-                row.Cells.Add(new HtmlTableCell() { InnerHtml = string.Format("<a href=\"logfile.aspx?taskServer={0}&amp;port={1}&amp;job={2}&amp;task={3}&amp;attempt={4}\">View</a>", task.TaskServer.HostName, task.TaskServer.Port, job.JobId, task.TaskID, task.Attempts) });
+                row = CreateTaskTableRow(job, task, true);
+                _failedTaskAttemptsTable.Rows.Add(row);
+            }
+        }
+    }
+
+    private static HtmlTableRow CreateTaskTableRow(JobStatus job, TaskStatus task, bool useErrorEndTime)
+    {
+        HtmlTableRow row = new HtmlTableRow() { ID = "TaskStatusRow_" + task.TaskID };
+        row.Cells.Add(new HtmlTableCell() { InnerText = task.TaskID });
+        row.Cells.Add(new HtmlTableCell() { InnerText = task.State.ToString() });
+        row.Cells.Add(new HtmlTableCell() { InnerText = task.TaskServer == null ? "" : task.TaskServer.ToString() });
+        row.Cells.Add(new HtmlTableCell() { InnerText = task.Attempts.ToString() });
+        if( task.State >= TaskState.Running && task.TaskServer != null )
+        {
+            row.Cells.Add(new HtmlTableCell() { InnerText = task.StartTime.ToString(_datePattern, System.Globalization.CultureInfo.InvariantCulture) });
+            if( task.State == TaskState.Finished || (useErrorEndTime && task.State == TaskState.Error) )
+            {
+                row.Cells.Add(new HtmlTableCell() { InnerText = task.EndTime.ToString(_datePattern, System.Globalization.CultureInfo.InvariantCulture) });
+                TimeSpan duration = task.EndTime - task.StartTime;
+                row.Cells.Add(new HtmlTableCell() { InnerText = string.Format("{0} ({1}s)", duration, duration.TotalSeconds) });
             }
             else
             {
                 row.Cells.Add(new HtmlTableCell() { InnerText = "" });
                 row.Cells.Add(new HtmlTableCell() { InnerText = "" });
-                row.Cells.Add(new HtmlTableCell() { InnerText = "" });
-                row.Cells.Add(new HtmlTableCell() { InnerText = "" });
             }
-            TasksTable.Rows.Add(row);
+            row.Cells.Add(new HtmlTableCell() { InnerHtml = string.Format("<a href=\"logfile.aspx?taskServer={0}&amp;port={1}&amp;job={2}&amp;task={3}&amp;attempt={4}\">View</a>", task.TaskServer.HostName, task.TaskServer.Port, job.JobId, task.TaskID, task.Attempts) });
         }
+        else
+        {
+            row.Cells.Add(new HtmlTableCell() { InnerText = "" });
+            row.Cells.Add(new HtmlTableCell() { InnerText = "" });
+            row.Cells.Add(new HtmlTableCell() { InnerText = "" });
+            row.Cells.Add(new HtmlTableCell() { InnerText = "" });
+        }
+        return row;
     }
 }

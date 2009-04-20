@@ -26,9 +26,14 @@ public partial class _Default : System.Web.UI.Page
         foreach( DataServerMetrics server in metrics.DataServers )
         {
             HtmlTableRow row = new HtmlTableRow();
+            TimeSpan lastContact = DateTime.UtcNow - server.LastContactUtc;
+            if( lastContact.TotalSeconds > 60 )
+                row.BgColor = "red";
+            else if( lastContact.TotalSeconds > 5 )
+                row.BgColor = "yellow";
             row.Cells.Add(new HtmlTableCell() { InnerText = server.Address.HostName });
             row.Cells.Add(new HtmlTableCell() { InnerText = server.Address.Port.ToString() });
-            row.Cells.Add(new HtmlTableCell() { InnerText = string.Format("{0:0.0}s ago", (DateTime.UtcNow - server.LastContactUtc).TotalSeconds) });
+            row.Cells.Add(new HtmlTableCell() { InnerText = string.Format("{0:0.0}s ago", lastContact.TotalSeconds) });
             row.Cells.Add(new HtmlTableCell() { InnerText = server.BlockCount.ToString() });
             row.Cells.Add(new HtmlTableCell() { InnerHtml = string.Format("Used: {0} / Free: {1}", FormatSize(server.DiskSpaceUsed), FormatSize(server.DiskSpaceFree)) });
             row.Cells.Add(new HtmlTableCell() { InnerHtml = string.Format("<a href=\"logfile.aspx?dataServer={0}&amp;port={1}\">View</a>", Server.HtmlEncode(server.Address.HostName), server.Address.Port) });

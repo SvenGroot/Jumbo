@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Xml.Linq;
+using System.Xml.Serialization;
 
 namespace Tkl.Jumbo.Jet
 {
@@ -20,9 +21,14 @@ namespace Tkl.Jumbo.Jet
         public Guid JobId { get; set; }
 
         /// <summary>
-        /// Gets or sets the tasks of this 
+        /// Gets or sets the tasks of this job.
         /// </summary>
         public TaskStatus[] Tasks { get; set; }
+
+        /// <summary>
+        /// Gets or sets the task attempts that failed.
+        /// </summary>
+        public TaskStatus[] FailedTaskAttempts { get; set; }
 
         /// <summary>
         /// Gets or sets the total number of tasks in the 
@@ -51,11 +57,6 @@ namespace Tkl.Jumbo.Jet
         public int FinishedTaskCount { get; set; }
 
         /// <summary>
-        /// Gets or sets the number of tasks that encountered an error.
-        /// </summary>
-        public int ErrorTaskCount { get; set; }
-
-        /// <summary>
         /// Gets or sets the number of tasks that were not scheduled data local.
         /// </summary>
         /// <remarks>
@@ -75,6 +76,18 @@ namespace Tkl.Jumbo.Jet
         /// This property is not valid until the job is finished.
         /// </remarks>
         public DateTime EndTime { get; set; }
+
+        /// <summary>
+        /// Gets the number of task attempts that failed.
+        /// </summary>
+        [XmlIgnore]
+        public int ErrorTaskCount
+        {
+            get
+            {
+                return FailedTaskAttempts == null ? 0 : FailedTaskAttempts.Length;
+            }
+        }
 
         /// <summary>
         /// Gets a value that indicates whether the task has finished.
@@ -112,7 +125,12 @@ namespace Tkl.Jumbo.Jet
                         new XAttribute("nonDataLocalTasks", NonDataLocalTaskCount.ToString(System.Globalization.CultureInfo.InvariantCulture))),
                     new XElement("Tasks",
                         from task in Tasks
-                        select task.ToXml())));
+                        select task.ToXml()),
+                    ErrorTaskCount == 0 ? 
+                        null : 
+                        new XElement("FailedTaskAttempts",
+                            from task in FailedTaskAttempts
+                            select task.ToXml())));
         }
 
         /// <summary>
@@ -134,11 +152,12 @@ namespace Tkl.Jumbo.Jet
                 StartTime = DateTime.ParseExact(jobInfo.Attribute("startTime").Value, JobStatus.DatePattern, System.Globalization.CultureInfo.InvariantCulture),
                 EndTime = DateTime.ParseExact(jobInfo.Attribute("endTime").Value, JobStatus.DatePattern, System.Globalization.CultureInfo.InvariantCulture),
                 FinishedTaskCount = (int)jobInfo.Attribute("finishedTasks"),
-                ErrorTaskCount = (int)jobInfo.Attribute("errors"),
                 NonDataLocalTaskCount = (int)jobInfo.Attribute("nonDataLocalTasks"),
             };
             jobStatus.Tasks = (from task in job.Element("Tasks").Elements("Task")
                                select TaskStatus.FromXml(task, jobStatus)).ToArray();
+            jobStatus.FailedTaskAttempts = (from task in job.Element("FailedTaskAttempts").Elements("Task")
+                                            select TaskStatus.FromXml(task, jobStatus)).ToArray();
             return jobStatus;
 
         }

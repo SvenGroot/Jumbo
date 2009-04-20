@@ -78,5 +78,20 @@
             <th scope="col">Log file</th>
         </tr>
     </table>
+    <asp:PlaceHolder ID="_failedTaskAttemptsPlaceHolder" Visible="false" runat="server">
+        <h3>Failed task attempts</h3>
+        <table id="_failedTaskAttemptsTable" runat="server">
+            <tr>
+                <th scope="col">Task ID</th>
+                <th scope="col">State</th>
+                <th scope="col">Task Server</th>
+                <th scope="col">Attempt</th>
+                <th scope="col">Start time</th>
+                <th scope="col">End time</th>
+                <th scope="col">Duration</th>
+                <th scope="col">Log file</th>
+            </tr>        
+        </table>
+    </asp:PlaceHolder>
 </asp:Content>
 

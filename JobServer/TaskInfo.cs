@@ -14,6 +14,7 @@ namespace JobServerApplication
         private readonly ManualResetEvent _taskCompletedEvent;
         private TaskServerInfo _server;
         private TaskInfo _owner;
+        private List<TaskServerInfo> _badServers;
 
         public TaskInfo(JobInfo job, TaskConfiguration task)
         {
@@ -56,6 +57,23 @@ namespace JobServerApplication
             set { _server = value; }
         }
 
+        public List<TaskServerInfo> BadServers
+        {
+            get
+            {
+                if( _owner != null )
+                    return _owner.BadServers;
+                else
+                {
+                    if( _badServers == null )
+                    {
+                        Interlocked.CompareExchange(ref _badServers, new List<TaskServerInfo>(), null);
+                    }
+                    return _badServers;
+                }
+            }
+        }
+
         public int Attempts { get; set; }
 
         public DateTime StartTimeUtc { get; set; }
@@ -85,6 +103,20 @@ namespace JobServerApplication
         {
             Tkl.Jumbo.Dfs.File file = Job.GetFileInfo(dfsClient, Task.DfsInput.Path);
             return file.Blocks[Task.DfsInput.Block];
+        }
+
+        public TaskStatus ToTaskStatus()
+        {
+            return new TaskStatus()
+            {
+                TaskID = Task.TaskID,
+                State = State,
+                TaskServer = Server == null ? null : Server.Address,
+                Attempts = Attempts,
+                StartTime = StartTimeUtc,
+                EndTime = EndTimeUtc,
+                StartOffset = StartTimeUtc - StartTimeUtc
+            };
         }
     }
 }

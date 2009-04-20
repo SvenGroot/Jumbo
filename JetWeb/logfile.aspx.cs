@@ -37,7 +37,7 @@ public partial class logfile : System.Web.UI.Page
             {
                 LogFileContents.InnerText = client.GetLogFileContents(maxSize);
                 Title = string.Format("Task server {0} log file - Jumbo Jet", taskServer);
-                HeaderText.InnerText = string.Format("Data server {0} log file", taskServer);
+                HeaderText.InnerText = string.Format("Task server {0} log file", taskServer);
             }
             else
             {

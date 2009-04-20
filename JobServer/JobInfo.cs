@@ -25,6 +25,7 @@ namespace JobServerApplication
         private readonly ManualResetEvent _jobCompletedEvent = new ManualResetEvent(false);
         private Guid[] _inputBlocks;
         private readonly Dictionary<string, File> _files = new Dictionary<string, File>();
+        private List<TaskStatus> _failedTaskAttempts;
 
         public JobInfo(Job job)
         {
@@ -56,6 +57,16 @@ namespace JobServerApplication
         public ManualResetEvent JobCompletedEvent
         {
             get { return _jobCompletedEvent; }
+        }
+
+        public List<TaskStatus> FailedTaskAttempts
+        {
+            get
+            {
+                if( _failedTaskAttempts == null )
+                    Interlocked.CompareExchange(ref _failedTaskAttempts, new List<TaskStatus>(), null);
+                return _failedTaskAttempts;
+            }
         }
 
         public Guid[] GetInputBlocks(DfsClient dfsClient)

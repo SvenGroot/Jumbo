@@ -85,6 +85,7 @@ namespace JobServerApplication
             AssignedTasks.Remove(task);
             AssignedNonInputTasks.Remove(task);
             task.Server = null;
+            task.BadServers.Add(this);
             task.State = TaskState.Created;
             ++job.UnscheduledTasks;
         }

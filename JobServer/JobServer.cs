@@ -460,6 +460,9 @@ namespace JobServerApplication
                         case TaskAttemptStatus.Error:
                             task.State = TaskState.Error;
                             _log.WarnFormat("Task {0} encountered an error.", Job.CreateFullTaskID(data.JobID, data.TaskID));
+                            TaskStatus failedAttempt = task.ToTaskStatus();
+                            failedAttempt.EndTime = DateTime.UtcNow;
+                            job.FailedTaskAttempts.Add(failedAttempt);
                             if( task.Attempts < Configuration.JobServer.MaxTaskAttempts )
                             {
                                 // Reschedule
@@ -568,22 +571,13 @@ namespace JobServerApplication
                 {
                     JobId = jobId,
                     Tasks = (from task in job.SchedulingTasks.Values
-                             select new TaskStatus()
-                             {
-                                 TaskID = task.Task.TaskID,
-                                 State = task.State,
-                                 TaskServer = task.Server == null ? null : task.Server.Address,
-                                 Attempts = task.Attempts,
-                                 StartTime = task.StartTimeUtc,
-                                 EndTime = task.EndTimeUtc,
-                                 StartOffset = task.StartTimeUtc - job.StartTimeUtc
-                             }).ToArray(),
+                             select task.ToTaskStatus()).ToArray(),
+                    FailedTaskAttempts = job.FailedTaskAttempts.ToArray(),
                     RunningTaskCount = (from task in job.SchedulingTasks.Values
                                         where task.State == TaskState.Running
                                         select task).Count(),
                     UnscheduledTaskCount = job.UnscheduledTasks,
                     FinishedTaskCount = job.FinishedTasks,
-                    ErrorTaskCount = job.Errors,
                     NonDataLocalTaskCount = job.NonDataLocal,
                     StartTime = job.StartTimeUtc,
                     EndTime = job.EndTimeUtc
