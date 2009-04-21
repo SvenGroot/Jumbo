@@ -30,7 +30,6 @@ case $startStop in
 		nohup mono $command.exe > /dev/null 2>&1 < /dev/null &
 		echo $! > $pid
     fi
-    sleep 1;
     ;;
     (stop)
     if [ -f $pid ]; then

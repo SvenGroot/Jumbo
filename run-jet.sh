@@ -4,14 +4,16 @@ scriptDir=$(dirname $0)
 startStop=$1
 
 if [ $startStop = "start" ]; then
-	$scriptDir/run-server.sh $startStop JobServer
-	$scriptDir/run-server.sh $startStop JetWeb
+    $scriptDir/run-server.sh $startStop JobServer
+    $scriptDir/run-server.sh $startStop JetWeb
+    sleep 1
 fi
 for slave in `cat $scriptDir/slaves`; do
-    echo -n $slave:\ 
-    ssh $slave $jumboDir/run-server.sh $startStop TaskServer
+    ssh $slave $jumboDir/run-server.sh $startStop TaskServer 2>&1 | sed "s/^/$slave: /" &
 done
+wait
 if [ $startStop = "stop" ]; then
-	$scriptDir/run-server.sh $startStop JetWeb
-	$scriptDir/run-server.sh $startStop JobServer
+    sleep 1
+    $scriptDir/run-server.sh $startStop JetWeb
+    $scriptDir/run-server.sh $startStop JobServer
 fi
