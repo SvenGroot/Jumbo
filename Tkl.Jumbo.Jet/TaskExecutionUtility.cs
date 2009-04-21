@@ -126,6 +126,12 @@ namespace Tkl.Jumbo.Jet
             OutputRecordType = arguments[1];
             _log.InfoFormat("Input type: {0}", InputRecordType.AssemblyQualifiedName);
             _log.InfoFormat("Output type: {0}", OutputRecordType.AssemblyQualifiedName);
+
+            // TODO: Check for record reuse ability for pipeline channels.
+            if( OutputChannelConfiguration == null || OutputChannelConfiguration.ChannelType != ChannelType.Pipeline )
+                AllowRecordReuse = Attribute.IsDefined(TaskType, typeof(AllowRecordReuseAttribute));
+            else
+                AllowRecordReuse = false;
         }
 
         private TaskExecutionUtility(TaskExecutionUtility baseTask, string taskId)
@@ -230,6 +236,14 @@ namespace Tkl.Jumbo.Jet
         /// Gets the type of output records for the task.
         /// </summary>
         public Type OutputRecordType { get; private set; }
+        
+        /// <summary>
+        /// Gets a value that indicates whether the task type allows reusing the same object instance for every record.
+        /// </summary>
+        /// <remarks>
+        /// This value also takes associated tasks into account.
+        /// </remarks>
+        public bool AllowRecordReuse { get; private set; }
 
         /// <summary>
         /// Gets the output record writer.

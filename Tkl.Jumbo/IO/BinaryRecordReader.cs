@@ -25,15 +25,32 @@ namespace Tkl.Jumbo.IO
         where T : IWritable, new()
     {
         private BinaryReader _reader;
+        private T _record;
+        private bool _allowRecordReuse;
+
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="BinaryRecordReader{T}"/> class that doesn't reuse records.
+        /// </summary>
+        /// <param name="stream">The stream to read the records from.</param>
+        public BinaryRecordReader(Stream stream)
+            : this(stream, false)
+        {
+        }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="BinaryRecordReader{T}"/> class.
         /// </summary>
         /// <param name="stream">The stream to read the records from.</param>
-        public BinaryRecordReader(Stream stream)
+        /// <param name="allowRecordReuse"><see langword="true"/> if the reader can reuse the same instance of <typeparamref name="T"/> every time; <see langword="false"/>
+        /// if a new instance must be created for every record.</param>
+        public BinaryRecordReader(Stream stream, bool allowRecordReuse)
             : base(stream)
         {
             _reader = new BinaryReader(stream);
+            if( allowRecordReuse )
+                _record = new T();
+            _allowRecordReuse = allowRecordReuse;
         }
 
         /// <summary>
@@ -44,10 +61,15 @@ namespace Tkl.Jumbo.IO
         {
             CheckDisposed();
 
-            record = default(T);
             if( Stream.Position == Stream.Length )
+            {
+                record = default(T);
                 return false;
-            record = new T();
+            }
+            if( _allowRecordReuse )
+                record = _record;
+            else
+                record = new T();
             record.Read(_reader);
             return true;
         }

@@ -28,6 +28,7 @@ namespace Tkl.Jumbo.Jet.Channels
         private bool _isReady;
         private readonly ManualResetEvent _readyEvent = new ManualResetEvent(false);
         private bool _disposed;
+        private TaskExecutionUtility _taskExecution;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="FileInputChannel"/>.
@@ -42,6 +43,7 @@ namespace Tkl.Jumbo.Jet.Channels
             _jobID = taskExecution.JobId;
             _jobServer = taskExecution.JetClient.JobServer;
             _outputTaskId = taskExecution.TaskConfiguration.TaskID;
+            _taskExecution = taskExecution;
         }
 
         /// <summary>
@@ -194,7 +196,8 @@ namespace Tkl.Jumbo.Jet.Channels
             bool removed = tasksLeft.Remove(task.TaskId);
             Debug.Assert(removed);
 
-            RecordReader<T> taskReader = new BinaryRecordReader<T>(File.OpenRead(fileName)) { SourceName = task.TaskId };
+            _log.InfoFormat("Creating record reader for task {0}'s output, allowRecordReuse = {1}.", task.TaskId, _taskExecution.AllowRecordReuse);
+            RecordReader<T> taskReader = new BinaryRecordReader<T>(File.OpenRead(fileName), _taskExecution.AllowRecordReuse) { SourceName = task.TaskId };
             if( reader != null )
                 reader.AddReader(taskReader);
             else

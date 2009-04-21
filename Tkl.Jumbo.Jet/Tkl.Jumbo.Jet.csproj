@@ -58,6 +58,7 @@
     <Compile Include="..\Version.cs">
       <Link>Properties\Version.cs</Link>
     </Compile>
+    <Compile Include="AllowRecordReuseAttribute.cs" />
     <Compile Include="AssemblyResolver.cs" />
     <Compile Include="Channels\ChannelConfiguration.cs" />
     <Compile Include="Channels\ChannelType.cs" />
