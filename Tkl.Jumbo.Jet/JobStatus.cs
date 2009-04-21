@@ -90,6 +90,19 @@ namespace Tkl.Jumbo.Jet
         }
 
         /// <summary>
+        /// Gets the total progress of the job, between 0 and 1.
+        /// </summary>
+        [XmlIgnore]
+        public float Progress
+        {
+            get
+            {
+                return (from task in Tasks
+                        select task.Progress).Average();
+            }
+        }
+
+        /// <summary>
         /// Gets a value that indicates whether the task has finished.
         /// </summary>
         public bool IsFinished
@@ -103,7 +116,7 @@ namespace Tkl.Jumbo.Jet
         /// <returns>A string representation of this <see cref="JobStatus"/>.</returns>
         public override string ToString()
         {
-            return string.Format(System.Globalization.CultureInfo.CurrentCulture, "Tasks: {0}, running: {1}, pending {2}, finished: {3}, errors: {4}, not local: {5}", TaskCount, RunningTaskCount, UnscheduledTaskCount, FinishedTaskCount, ErrorTaskCount, NonDataLocalTaskCount);
+            return string.Format(System.Globalization.CultureInfo.CurrentCulture, "{6}%, tasks: {0}, running: {1}, pending {2}, finished: {3}, errors: {4}, not local: {5}", TaskCount, RunningTaskCount, UnscheduledTaskCount, FinishedTaskCount, ErrorTaskCount, NonDataLocalTaskCount, (int)(Progress * 100));
         }
 
         /// <summary>

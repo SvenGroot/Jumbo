@@ -36,6 +36,7 @@ public partial class job : System.Web.UI.Page
             row.Cells.Add(new HtmlTableCell());
             row.Cells.Add(new HtmlTableCell());
         }
+        row.Cells.Add(new HtmlTableCell() { InnerText = ((int)(job.Progress * 100)).ToString("0'%'") });
         row.Cells.Add(new HtmlTableCell() { InnerText = job.TaskCount.ToString() });
         row.Cells.Add(new HtmlTableCell() { InnerText = job.RunningTaskCount.ToString() });
         row.Cells.Add(new HtmlTableCell() { InnerText = job.UnscheduledTaskCount.ToString() });
@@ -46,7 +47,7 @@ public partial class job : System.Web.UI.Page
 
         foreach( TaskStatus task in job.Tasks )
         {
-            row = CreateTaskTableRow(job, task, false);
+            row = CreateTaskTableRow(job, task, false, true);
             TasksTable.Rows.Add(row);
         }
 
@@ -55,13 +56,13 @@ public partial class job : System.Web.UI.Page
             _failedTaskAttemptsPlaceHolder.Visible = true;
             foreach( TaskStatus task in job.FailedTaskAttempts )
             {
-                row = CreateTaskTableRow(job, task, true);
+                row = CreateTaskTableRow(job, task, true, false);
                 _failedTaskAttemptsTable.Rows.Add(row);
             }
         }
     }
 
-    private static HtmlTableRow CreateTaskTableRow(JobStatus job, TaskStatus task, bool useErrorEndTime)
+    private static HtmlTableRow CreateTaskTableRow(JobStatus job, TaskStatus task, bool useErrorEndTime, bool includeProgress)
     {
         HtmlTableRow row = new HtmlTableRow() { ID = "TaskStatusRow_" + task.TaskID };
         row.Cells.Add(new HtmlTableCell() { InnerText = task.TaskID });
@@ -82,10 +83,13 @@ public partial class job : System.Web.UI.Page
                 row.Cells.Add(new HtmlTableCell() { InnerText = "" });
                 row.Cells.Add(new HtmlTableCell() { InnerText = "" });
             }
+            if( includeProgress )
+                row.Cells.Add(new HtmlTableCell() { InnerText = ((int)(task.Progress * 100)).ToString("0'%'") });
             row.Cells.Add(new HtmlTableCell() { InnerHtml = string.Format("<a href=\"logfile.aspx?taskServer={0}&amp;port={1}&amp;job={2}&amp;task={3}&amp;attempt={4}\">View</a>", task.TaskServer.HostName, task.TaskServer.Port, job.JobId, task.TaskID, task.Attempts) });
         }
         else
         {
+            row.Cells.Add(new HtmlTableCell() { InnerText = "" });
             row.Cells.Add(new HtmlTableCell() { InnerText = "" });
             row.Cells.Add(new HtmlTableCell() { InnerText = "" });
             row.Cells.Add(new HtmlTableCell() { InnerText = "" });

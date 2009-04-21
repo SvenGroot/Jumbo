@@ -80,6 +80,8 @@ namespace JobServerApplication
 
         public DateTime EndTimeUtc { get; set; }
 
+        public float Progress { get; set; }
+
         // TODO: This even should be reset if the task server dies or other tasks cannot download the task's output data.
         public ManualResetEvent TaskCompletedEvent
         {
@@ -115,7 +117,8 @@ namespace JobServerApplication
                 Attempts = Attempts,
                 StartTime = StartTimeUtc,
                 EndTime = EndTimeUtc,
-                StartOffset = StartTimeUtc - StartTimeUtc
+                StartOffset = StartTimeUtc - StartTimeUtc,
+                Progress = Progress
             };
         }
     }

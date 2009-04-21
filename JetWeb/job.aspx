@@ -7,6 +7,7 @@
             <th scope="col">Start time</th>
             <th scope="col">End time</th>
             <th scope="col">Duration</th>
+            <th scope="col">Progress</th>
             <th scope="col">Tasks</th>
             <th scope="col">Running tasks</th>
             <th scope="col">Pending tasks</th>
@@ -75,6 +76,7 @@
             <th scope="col">Start time</th>
             <th scope="col">End time</th>
             <th scope="col">Duration</th>
+            <th scope="col">Progress</th>
             <th scope="col">Log file</th>
         </tr>
     </table>

@@ -47,6 +47,11 @@ namespace Tkl.Jumbo.Jet
         public DateTime EndTime { get; set; }
 
         /// <summary>
+        /// Gets or sets the progress of the task, between 0 and 1.
+        /// </summary>
+        public float Progress { get; set; }
+
+        /// <summary>
         /// Gets the duration of the task.
         /// </summary>
         public TimeSpan Duration

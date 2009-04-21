@@ -212,7 +212,7 @@ namespace TaskServerApplication
                 {
                     _log.InfoFormat("Task {0} has completed successfully.", task.FullTaskID);
                     task.State = TaskAttemptStatus.Completed;
-                    _taskServer.NotifyTaskStatusChanged(task.JobID, task.TaskID, task.State);
+                    _taskServer.NotifyTaskStatusChanged(task.JobID, task.TaskID, task.State, 1.0f);
                 }
                 else
                     _log.WarnFormat("Task {0} was reported as completed but was not running.", fullTaskID);
@@ -327,7 +327,7 @@ namespace TaskServerApplication
                         _log.ErrorFormat("Task {0} did not complete sucessfully.", task.FullTaskID);
                         task.State = TaskAttemptStatus.Error;
                         _runningTasks.Remove(task.FullTaskID);
-                        _taskServer.NotifyTaskStatusChanged(task.JobID, task.TaskID, task.State);
+                        _taskServer.NotifyTaskStatusChanged(task.JobID, task.TaskID, task.State, 0.0f);
                         task.Dispose();
                     }
                     _log.InfoFormat("Task {0} has finished, state = {1}.", task.FullTaskID, task.State);

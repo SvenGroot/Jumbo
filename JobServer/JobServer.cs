@@ -441,6 +441,9 @@ namespace JobServerApplication
                         return;
                     }
                     TaskInfo task = job.Tasks[data.TaskID];
+                    task.Progress = data.Progress;
+                    if( data.Status == TaskAttemptStatus.Running )
+                        _log.InfoFormat("Task {0} reported progress: {1}%", Job.CreateFullTaskID(data.JobID, data.TaskID), (int)(task.Progress * 100));
 
                     if( data.Status > TaskAttemptStatus.Running )
                     {

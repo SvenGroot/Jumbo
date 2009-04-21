@@ -46,6 +46,7 @@ public partial class _Default : System.Web.UI.Page
             HtmlTableRow row = new HtmlTableRow();
             row.Cells.Add(new HtmlTableCell() { InnerHtml = string.Format("<a href=\"job.aspx?id={0}\">{{{0}}}</a>", jobId) });
             row.Cells.Add(new HtmlTableCell() { InnerText = job.StartTime.ToString(System.Globalization.DateTimeFormatInfo.InvariantInfo.UniversalSortableDateTimePattern) });
+            row.Cells.Add(new HtmlTableCell() { InnerText = ((int)(job.Progress * 100)).ToString("0'%'") });
             row.Cells.Add(new HtmlTableCell() { InnerText = job.TaskCount.ToString() });
             row.Cells.Add(new HtmlTableCell() { InnerText = job.RunningTaskCount.ToString() });
             row.Cells.Add(new HtmlTableCell() { InnerText = job.UnscheduledTaskCount.ToString() });

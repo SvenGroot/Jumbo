@@ -81,9 +81,9 @@ namespace TaskServerApplication
             }
         }
 
-        public void NotifyTaskStatusChanged(Guid jobID, string taskID, TaskAttemptStatus newStatus)
+        public void NotifyTaskStatusChanged(Guid jobID, string taskID, TaskAttemptStatus newStatus, float progress)
         {
-            AddDataForNextHeartbeat(new TaskStatusChangedJetHeartbeatData(jobID, taskID, newStatus));
+            AddDataForNextHeartbeat(new TaskStatusChangedJetHeartbeatData(jobID, taskID, newStatus, progress));
             SendHeartbeat(false);
         }
 
@@ -106,7 +106,7 @@ namespace TaskServerApplication
         public void ReportProgress(Guid jobId, string taskId, float progress)
         {
             _log.InfoFormat("Task {0} progress: {1}%", Job.CreateFullTaskID(jobId, taskId), (int)(progress * 100));
-            // TODO: Report to job server.
+            NotifyTaskStatusChanged(jobId, taskId, TaskAttemptStatus.Running, progress);
         }
 
         #endregion
