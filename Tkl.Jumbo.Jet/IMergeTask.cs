@@ -31,6 +31,6 @@ namespace Tkl.Jumbo.Jet
         /// </summary>
         /// <param name="input">A list of <see cref="RecordReader{T}"/> instances from which the task's input can be read.</param>
         /// <param name="output">A <see cref="RecordWriter{T}"/> to which the task's output should be written.</param>
-        void Run(IList<RecordReader<TInput>> input, RecordWriter<TOutput> output);
+        void Run(MergeTaskInput<TInput> input, RecordWriter<TOutput> output);
     }
 }

@@ -64,7 +64,8 @@ namespace Tkl.Jumbo.Jet
         private IInputChannel _inputChannel;
         private IOutputChannel _outputChannel;
         private DfsOutputStream _outputStream;
-        private IEnumerable _inputReaders; // non-generic because we don't know the type of T for RecordReader<T>.
+        private IRecordReader _inputReader;
+        private IRecordReader _mergeTaskInput;
         private IRecordWriter _outputWriter;
         private ITaskServerUmbilicalProtocol _umbilical;
         private Thread _progressThread;
@@ -268,18 +269,18 @@ namespace Tkl.Jumbo.Jet
         /// <typeparam name="T">The type of records for the task's input.</typeparam>
         /// <returns>A <see cref="RecordReader{T}"/> that reads from the task's input channel or DFS input.</returns>
         /// <remarks>
-        /// You should call <see cref="GetInputReader{T}"/> or <see cref="GetInputReaders{T}"/>, never both on the same instance.
+        /// You should call <see cref="GetInputReader{T}"/> or <see cref="GetMergeTaskInput{T}"/>, never both on the same instance.
         /// </remarks>
         public RecordReader<T> GetInputReader<T>()
             where T : IWritable, new()
         {
             CheckDisposed();
-            if( _inputReaders == null )
+            if( _inputReader == null )
             {
-                _inputReaders = CreateInputRecordReaders<T>(false);
+                _inputReader = CreateInputRecordReader<T>();
                 StartProgressThread();
             }
-            return ((IList<RecordReader<T>>)_inputReaders)[0];
+            return (RecordReader<T>)_inputReader;
         }
 
         /// <summary>
@@ -288,18 +289,18 @@ namespace Tkl.Jumbo.Jet
         /// <typeparam name="T">The type of records for the task's input.</typeparam>
         /// <returns>A list of <see cref="RecordReader{T}"/> instances that read from the task's input channel or DFS input.</returns>
         /// <remarks>
-        /// You should call <see cref="GetInputReader{T}"/> or <see cref="GetInputReaders{T}"/>, never both on the same instance.
+        /// You should call <see cref="GetInputReader{T}"/> or <see cref="GetMergeTaskInput{T}"/>, never both on the same instance.
         /// </remarks>
-        public IList<RecordReader<T>> GetInputReaders<T>()
+        public MergeTaskInput<T> GetMergeTaskInput<T>()
             where T : IWritable, new()
         {
             CheckDisposed();
-            if( _inputReaders == null )
+            if( _mergeTaskInput == null )
             {
-                _inputReaders = CreateInputRecordReaders<T>(true);
+                _mergeTaskInput = CreateMergeTaskInput<T>();
                 StartProgressThread();
             }
-            return (IList<RecordReader<T>>)_inputReaders;
+            return (MergeTaskInput<T>)_mergeTaskInput;
         }
 
         /// <summary>
@@ -412,14 +413,12 @@ namespace Tkl.Jumbo.Jet
                         ((IDisposable)_outputWriter).Dispose();
                     if( _outputStream != null )
                         _outputStream.Dispose();
-                    if( _inputReaders != null )
+                    if( _inputReader != null )
                     {
-                        foreach( object reader in _inputReaders )
-                        {
-                            if( reader != null )
-                                ((IDisposable)reader).Dispose();
-                        }
+                        ((IDisposable)_inputReader).Dispose();
                     }
+                    if( _mergeTaskInput != null )
+                        ((IDisposable)_mergeTaskInput).Dispose();
                     IDisposable inputChannelDisposable = _inputChannel as IDisposable;
                     if( inputChannelDisposable != null )
                         inputChannelDisposable.Dispose();
@@ -498,25 +497,40 @@ namespace Tkl.Jumbo.Jet
                 return null;
         }
 
-        private IList<RecordReader<T>> CreateInputRecordReaders<T>(bool createMultiple)
+        private RecordReader<T> CreateInputRecordReader<T>()
             where T : IWritable, new()
         {
             if( TaskConfiguration.DfsInput != null )
             {
                 _log.DebugFormat("Creating record reader of type {0}", TaskConfiguration.DfsInput.RecordReaderType);
-                return new[] { TaskConfiguration.DfsInput.CreateRecordReader<T>(DfsClient, this) };
+                return TaskConfiguration.DfsInput.CreateRecordReader<T>(DfsClient, this);
             }
             else if( InputChannel != null )
             {
                 _log.Debug("Creating input channel record reader.");
-                if( createMultiple )
-                    return InputChannel.CreateRecordReaders<T>();
-                else
-                    return new[] { InputChannel.CreateRecordReader<T>() };
-                    
+                return InputChannel.CreateRecordReader<T>();                  
             }
             else
-                return new RecordReader<T>[] { null };
+                return null;
+        }
+
+        private MergeTaskInput<T> CreateMergeTaskInput<T>()
+            where T : IWritable, new()
+        {
+            if( TaskConfiguration.DfsInput != null )
+            {
+                _log.DebugFormat("Creating record reader of type {0}", TaskConfiguration.DfsInput.RecordReaderType);
+                MergeTaskInput<T> result = new MergeTaskInput<T>(1);
+                result.AddInput(TaskConfiguration.DfsInput.CreateRecordReader<T>(DfsClient, this));
+                return result;
+            }
+            else if( InputChannel != null )
+            {
+                _log.Debug("Creating input channel merge task input.");
+                return InputChannel.CreateMergeTaskInput<T>();
+            }
+            else
+                return null;
         }
 
         private void CalculateMetrics(TaskMetrics metrics)
@@ -525,16 +539,17 @@ namespace Tkl.Jumbo.Jet
             ChannelConfiguration inputChannel = InputChannelConfiguration;
             if( inputChannel == null || inputChannel.ChannelType != ChannelType.Pipeline )
             {
-                foreach( IRecordReader input in _inputReaders )
-                {
-                    if( input != null )
-                        metrics.RecordsRead += input.RecordsRead;
-                }
+                if( _inputReader != null )
+                    metrics.RecordsRead += _inputReader.RecordsRead;
+                if( _mergeTaskInput != null )
+                    metrics.RecordsRead += _mergeTaskInput.RecordsRead;
 
                 if( TaskConfiguration.DfsInput != null )
                 {
-                    foreach( IRecordReader reader in _inputReaders )
-                        metrics.DfsBytesRead += reader.BytesRead;
+                    if( _inputReader != null )
+                        metrics.DfsBytesRead += _inputReader.BytesRead;
+                    if( _mergeTaskInput != null )
+                        metrics.DfsBytesRead += _mergeTaskInput.BytesRead;
                 }
                 else
                 {
@@ -578,13 +593,10 @@ namespace Tkl.Jumbo.Jet
             while( !(_finished || _disposed) )
             {
                 float progress = 0;
-                int count = 0;
-                foreach( IRecordReader reader in _inputReaders )
-                {
-                    progress += reader.Progress;
-                    ++count;
-                }
-                progress = progress / (float)count;
+                if( _inputReader != null )
+                    progress = _inputReader.Progress;
+                else if( _mergeTaskInput != null )
+                    progress = _mergeTaskInput.Progress;
                 if( progress != previousProgress )
                 {
                     try

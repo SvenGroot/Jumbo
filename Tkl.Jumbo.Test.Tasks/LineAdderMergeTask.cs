@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using Tkl.Jumbo.Jet;
 using Tkl.Jumbo.IO;
+using System.Threading;
 
 namespace Tkl.Jumbo.Test.Tasks
 {
@@ -12,8 +13,9 @@ namespace Tkl.Jumbo.Test.Tasks
 
         #region IMergeTask<Int32Writable,Int32Writable> Members
 
-        public void Run(IList<RecordReader<Int32Writable>> input, RecordWriter<Int32Writable> output)
+        public void Run(MergeTaskInput<Int32Writable> input, RecordWriter<Int32Writable> output)
         {
+            input.WaitForAllInputs(Timeout.Infinite);
             output.WriteRecord(input.Count);
             int lines = 0;
             foreach( RecordReader<Int32Writable> reader in input )

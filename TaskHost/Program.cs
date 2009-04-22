@@ -125,7 +125,7 @@ namespace TaskHost
             if( mergeTask != null )
             {
                 // Lifetime is managed by the TaskExecutionUtility class, no need to put them in a using block.
-                IList<RecordReader<TInput>> input = taskExecution.GetInputReaders<TInput>();
+                MergeTaskInput<TInput> input = taskExecution.GetMergeTaskInput<TInput>();
 
                 _log.Info("Running merge task.");
                 taskStopwatch.Start();

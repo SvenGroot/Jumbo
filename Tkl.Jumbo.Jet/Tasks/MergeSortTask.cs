@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using Tkl.Jumbo.IO;
+using System.Threading;
 
 namespace Tkl.Jumbo.Jet.Tasks
 {
@@ -48,9 +49,10 @@ namespace Tkl.Jumbo.Jet.Tasks
         /// </summary>
         /// <param name="input">A list of <see cref="RecordReader{T}"/> instances from which the task's input can be read.</param>
         /// <param name="output">A <see cref="RecordWriter{T}"/> to which the task's output should be written.</param>
-        public void Run(IList<RecordReader<T>> input, RecordWriter<T> output)
+        public void Run(MergeTaskInput<T> input, RecordWriter<T> output)
         {
             _log.InfoFormat("Merging {0} inputs.", input.Count);
+            input.WaitForAllInputs(Timeout.Infinite);
             PriorityQueue<MergeInput> queue = new PriorityQueue<MergeInput>(EnumerateInputs(input), new MergeInputComparer());
 
             while( queue.Count > 0 )
@@ -70,7 +72,7 @@ namespace Tkl.Jumbo.Jet.Tasks
 
         #endregion
 
-        private static IEnumerable<MergeInput> EnumerateInputs(IList<RecordReader<T>> input)
+        private static IEnumerable<MergeInput> EnumerateInputs(IEnumerable<RecordReader<T>> input)
         {
             foreach( RecordReader<T> reader in input )
             {

@@ -88,27 +88,22 @@ namespace Tkl.Jumbo.Jet.Channels
         /// <summary>
         /// Creates a separate <see cref="RecordReader{T}"/> for each input task of the channel.
         /// </summary>
-        /// <typeparam name="T">The type of the records..</typeparam>
-        /// <returns>A list of <see cref="RecordReader{T}"/> instances.</returns>
-        /// <remarks>
-        /// <para>
-        ///   This method is used to create the input for a <see cref="IMergeTask{TInput,TOutput}"/>.
-        /// </para>
-        /// </remarks>
-        public IList<RecordReader<T>> CreateRecordReaders<T>()
+        /// <typeparam name="T">The type of the records.</typeparam>
+        /// <returns>A <see cref="MergeTaskInput{T}"/> that provides access to a list of <see cref="RecordReader{T}"/> instances.</returns>
+        public MergeTaskInput<T> CreateMergeTaskInput<T>()
             where T : IWritable, new()
         {
             if( _inputPollThread != null )
                 throw new InvalidOperationException("A record reader for this channel was already created.");
 
-            List<RecordReader<T>> readers = new List<RecordReader<T>>(_channelConfig.InputTasks.Length);
-            _inputPollThread = new Thread(() => InputPollThread<T>(null, readers));
+            MergeTaskInput<T> input = new MergeTaskInput<T>(_channelConfig.InputTasks.Length) { AllowRecordReuse = _taskExecution.AllowRecordReuse };
+            _inputPollThread = new Thread(() => InputPollThread<T>(null, input));
             _inputPollThread.Name = "FileInputChannelPolling";
             _inputPollThread.Start();
 
-            // Wait until all inputs are available.
+            // Wait until at least inputs are available.
             _readyEvent.WaitOne();
-            return readers;
+            return input;
         }
 
         #endregion
@@ -139,7 +134,7 @@ namespace Tkl.Jumbo.Jet.Channels
             _disposed = true;
         }
 
-        private void InputPollThread<T>(MultiRecordReader<T> reader, List<RecordReader<T>> readerList)
+        private void InputPollThread<T>(MultiRecordReader<T> reader, MergeTaskInput<T> mergeTaskInput)
             where T : IWritable, new()
         {
             try
@@ -154,18 +149,11 @@ namespace Tkl.Jumbo.Jet.Channels
                     CompletedTask task = _jobServer.WaitForTaskCompletion(_jobID, tasksLeftArray, _pollingInterval);
                     if( task != null )
                     {
-                        DownloadCompletedFile(reader, readerList, tasksLeft, task);
+                        DownloadCompletedFile(reader, mergeTaskInput, tasksLeft, task);
                         tasksLeftArray = tasksLeft.ToArray();
                     }
                 }
                 _log.Info("All files downloaded.");
-                if( readerList != null )
-                {
-                    // If we're using a list of readers, we need to signal we're ready now, after all files are downloaded.
-                    _log.Info("Input channel is now ready.");
-                    _isReady = true;
-                    _readyEvent.Set();
-                }
             }
             catch( ObjectDisposedException ex )
             {
@@ -176,7 +164,7 @@ namespace Tkl.Jumbo.Jet.Channels
             }
         }
 
-        private void DownloadCompletedFile<T>(MultiRecordReader<T> reader, List<RecordReader<T>> readerList, HashSet<string> tasksLeft, CompletedTask task)
+        private void DownloadCompletedFile<T>(MultiRecordReader<T> reader, MergeTaskInput<T> mergeTaskInput, HashSet<string> tasksLeft, CompletedTask task)
             where T : IWritable, new()
         {
             _log.InfoFormat("Task {0} output file is now available.", task.TaskId);
@@ -197,13 +185,17 @@ namespace Tkl.Jumbo.Jet.Channels
             Debug.Assert(removed);
 
             _log.InfoFormat("Creating record reader for task {0}'s output, allowRecordReuse = {1}.", task.TaskId, _taskExecution.AllowRecordReuse);
-            RecordReader<T> taskReader = new BinaryRecordReader<T>(File.OpenRead(fileName), _taskExecution.AllowRecordReuse) { SourceName = task.TaskId };
             if( reader != null )
+            {
+                RecordReader<T> taskReader = new BinaryRecordReader<T>(File.OpenRead(fileName), _taskExecution.AllowRecordReuse) { SourceName = task.TaskId };
                 reader.AddReader(taskReader);
+            }
             else
-                readerList.Add(taskReader);
+            {
+                mergeTaskInput.AddInput(fileName, task.TaskId);
+            }
 
-            if( reader != null && !_isReady )
+            if( !_isReady )
             {
                 // When we're using a MultiRecordReader we should become ready after the first downloaded file.
                 // If we're using a list of readers, we should become ready after all files are downloaded so we don't set the event yet.

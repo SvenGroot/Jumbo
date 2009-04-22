@@ -5,6 +5,7 @@ using System.Text;
 using NUnit.Framework;
 using Tkl.Jumbo.Jet.Tasks;
 using Tkl.Jumbo.IO;
+using Tkl.Jumbo.Jet;
 
 namespace Tkl.Jumbo.Test.Jet
 {
@@ -43,7 +44,7 @@ namespace Tkl.Jumbo.Test.Jet
             const int recordCountMin = 1000;
             const int recordCountMax = 10000;
             List<Int32Writable> sortedList = new List<Int32Writable>();
-            List<RecordReader<Int32Writable>> input = new List<RecordReader<Int32Writable>>(inputCount);
+            MergeTaskInput<Int32Writable> input = new MergeTaskInput<Int32Writable>(inputCount);
             Random rnd = new Random();
             for( int x = 0; x < inputCount; ++x )
             {
@@ -56,7 +57,7 @@ namespace Tkl.Jumbo.Test.Jet
                     sortedList.Add(value);
                 }
                 records.Sort();
-                input.Add(new EnumerableRecordReader<Int32Writable>(records));
+                input.AddInput(new EnumerableRecordReader<Int32Writable>(records));
             }
 
             sortedList.Sort();

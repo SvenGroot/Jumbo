@@ -89,6 +89,7 @@
     <Compile Include="JobConfiguration.cs" />
     <Compile Include="JobServerConfigurationElement.cs" />
     <Compile Include="JobStatus.cs" />
+    <Compile Include="MergeTaskInput.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="RunTaskJetHeartbeatResponse.cs" />
     <Compile Include="ServerShutdownException.cs" />
