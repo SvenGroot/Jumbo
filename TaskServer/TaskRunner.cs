@@ -58,7 +58,7 @@ namespace TaskServerApplication
                 else
                 {
                     _log.DebugFormat("Launching new process for task {0}.", FullTaskID);
-                    ProcessStartInfo startInfo = new ProcessStartInfo("TaskHost.exe", string.Format("\"{0}\" \"{1}\" \"{2}\" \"{3}\" {4} {5} {6} {7} {8} {9}", JobID, JobDirectory, TaskID, DfsJobDirectory, _taskServer.Configuration.TaskServer.Port, _taskServer.Configuration.JobServer.HostName, _taskServer.Configuration.JobServer.Port, _taskServer.DfsConfiguration.NameServer.HostName, _taskServer.DfsConfiguration.NameServer.Port, Attempt));
+                    ProcessStartInfo startInfo = new ProcessStartInfo("TaskHost.exe", string.Format("\"{0}\" \"{1}\" \"{2}\" \"{3}\" {4}", JobID, JobDirectory, TaskID, DfsJobDirectory, Attempt));
                     startInfo.UseShellExecute = false;
                     startInfo.CreateNoWindow = true;
                     string profileOutputFile = null;
@@ -121,7 +121,7 @@ namespace TaskServerApplication
                 AppDomain taskDomain = AppDomain.CreateDomain(FullTaskID, null, setup);
                 try
                 {
-                    taskDomain.ExecuteAssembly("TaskHost.exe", null, new string[] { JobID.ToString(), JobDirectory, TaskID, DfsJobDirectory, _taskServer.Configuration.TaskServer.Port.ToString(), _taskServer.Configuration.JobServer.HostName, _taskServer.Configuration.JobServer.Port.ToString(), _taskServer.DfsConfiguration.NameServer.HostName, _taskServer.DfsConfiguration.NameServer.Port.ToString(), Attempt.ToString() });
+                    taskDomain.ExecuteAssembly("TaskHost.exe", null, new string[] { JobID.ToString(), JobDirectory, TaskID, DfsJobDirectory, Attempt.ToString() });
                 }
                 catch( Exception ex )
                 {
@@ -299,6 +299,10 @@ namespace TaskServerApplication
             {
                 IO.Directory.CreateDirectory(jobDirectory);
                 _dfsClient.DownloadDirectory(task.Job.Path, jobDirectory);
+                string configPath = IO.Path.Combine(jobDirectory, "config");
+                IO.Directory.CreateDirectory(configPath);
+                _taskServer.Configuration.ToXml(IO.Path.Combine(configPath, "jet.config"));
+                _taskServer.DfsConfiguration.ToXml(IO.Path.Combine(configPath, "dfs.config"));
                 config = JobConfiguration.LoadXml(IO.Path.Combine(jobDirectory, Job.JobConfigFileName));
                 _jobConfigurations.Add(task.Job.JobID, config);
             }

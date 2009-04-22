@@ -16,6 +16,7 @@ namespace Tkl.Jumbo.Test.Jet
     {
         public const int JobServerPort = 11000;
         public const int TaskServerPort = 11001;
+        public const int TaskServerFileServerPort = 11002;
 
         private string _path;
         private Dfs.TestDfsCluster _dfsCluster;
@@ -40,6 +41,7 @@ namespace Tkl.Jumbo.Test.Jet
             jetConfig.TaskServer.TaskDirectory = Path.Combine(_path, "TaskServer");
             jetConfig.TaskServer.MaxTasks = maxTasks;
             jetConfig.TaskServer.MaxNonInputTasks = maxTasks;
+            jetConfig.TaskServer.FileServerPort = TaskServerFileServerPort;
             if( Environment.OSVersion.Platform == PlatformID.Unix )
                 jetConfig.TaskServer.ListenIPv4AndIPv6 = false;
             DfsConfiguration dfsConfig = Dfs.TestDfsCluster.CreateClientConfig();

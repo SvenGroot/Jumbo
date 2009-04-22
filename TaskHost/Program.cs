@@ -26,7 +26,7 @@ namespace TaskHost
         {
             AppDomain.CurrentDomain.UnhandledException += new UnhandledExceptionEventHandler(CurrentDomain_UnhandledException);
 
-            if( args.Length != 10 )
+            if( args.Length != 5 )
             {
                 _log.Error("Invalid invocation.");
                 return 1;
@@ -36,16 +36,15 @@ namespace TaskHost
             string jobDirectory = args[1];
             string taskId = args[2];
             string dfsJobDirectory = args[3];
-            int umbilicalPort = Convert.ToInt32(args[4]);
-            string jobServerHost = args[5];
-            int jobServerPort = Convert.ToInt32(args[6]);
-            string nameServerHost = args[7];
-            int nameServerPort = Convert.ToInt32(args[8]);
-            int attempt = Convert.ToInt32(args[9]);
+            int attempt = Convert.ToInt32(args[4]);
 
-            ITaskServerUmbilicalProtocol umbilical = JetClient.CreateTaskServerUmbilicalClient(umbilicalPort);
-            _dfsClient = new DfsClient(nameServerHost, nameServerPort);
-            _jetClient = new JetClient(jobServerHost, jobServerPort);
+            string configDirectory = Path.Combine(jobDirectory, "config");
+            DfsConfiguration dfsConfig = DfsConfiguration.FromXml(Path.Combine(configDirectory, "dfs.config"));
+            JetConfiguration jetConfig = JetConfiguration.FromXml(Path.Combine(configDirectory, "jet.config"));
+
+            ITaskServerUmbilicalProtocol umbilical = JetClient.CreateTaskServerUmbilicalClient(jetConfig.TaskServer.Port);
+            _dfsClient = new DfsClient(dfsConfig);
+            _jetClient = new JetClient(jetConfig);
             _blockSize = _dfsClient.NameServer.BlockSize;
 
             Stopwatch sw = new Stopwatch();

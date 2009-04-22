@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Configuration;
+using System.Xml;
 
 namespace Tkl.Jumbo.Jet
 {
@@ -38,6 +39,44 @@ namespace Tkl.Jumbo.Jet
         {
             JetConfiguration config = (JetConfiguration)ConfigurationManager.GetSection("tkl.jumbo.jet");
             return config ?? new JetConfiguration();
+        }
+
+        /// <summary>
+        /// Writes the configuration data to the specified file.
+        /// </summary>
+        /// <param name="fileName">The path to the file to write the configuration data to.</param>
+        public void ToXml(string fileName)
+        {
+            if( fileName == null )
+                throw new ArgumentNullException("fileName");
+
+            using( XmlWriter writer = XmlWriter.Create(fileName) )
+            {
+                writer.WriteStartDocument();
+                writer.WriteStartElement("tkl.jumbo.jet");
+                SerializeElement(writer, false);
+                writer.WriteEndElement();
+                writer.WriteEndDocument();
+            }
+        }
+
+        /// <summary>
+        /// Reads the configuration data from the specified file.
+        /// </summary>
+        /// <param name="fileName">The path to the file to read the configuration data from.</param>
+        /// <returns>An instance of <see cref="JetConfiguration"/> holding the configuration data.</returns>
+        public static JetConfiguration FromXml(string fileName)
+        {
+            if( fileName == null )
+                throw new ArgumentNullException("fileName");
+
+            using( XmlReader reader = XmlReader.Create(fileName) )
+            {
+                reader.MoveToContent();
+                JetConfiguration config = new JetConfiguration();
+                config.DeserializeElement(reader, false);
+                return config;
+            }
         }
     }
 }
