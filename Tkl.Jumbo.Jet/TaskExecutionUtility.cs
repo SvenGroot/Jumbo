@@ -75,6 +75,7 @@ namespace Tkl.Jumbo.Jet
         private bool _finished;
         private bool _isAssociatedTask;
         private readonly ManualResetEvent _finishedEvent = new ManualResetEvent(false);
+        private bool? _allowRecordReuse;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="TaskExecutionUtility"/> class.
@@ -126,12 +127,6 @@ namespace Tkl.Jumbo.Jet
             OutputRecordType = arguments[1];
             _log.InfoFormat("Input type: {0}", InputRecordType.AssemblyQualifiedName);
             _log.InfoFormat("Output type: {0}", OutputRecordType.AssemblyQualifiedName);
-
-            // TODO: Check for record reuse ability for pipeline channels.
-            if( OutputChannelConfiguration == null || OutputChannelConfiguration.ChannelType != ChannelType.Pipeline )
-                AllowRecordReuse = Attribute.IsDefined(TaskType, typeof(AllowRecordReuseAttribute));
-            else
-                AllowRecordReuse = false;
         }
 
         private TaskExecutionUtility(TaskExecutionUtility baseTask, string taskId)
@@ -243,7 +238,15 @@ namespace Tkl.Jumbo.Jet
         /// <remarks>
         /// This value also takes associated tasks into account.
         /// </remarks>
-        public bool AllowRecordReuse { get; private set; }
+        public bool AllowRecordReuse
+        {
+            get
+            {
+                if( _allowRecordReuse == null )
+                    _allowRecordReuse = CheckAllowRecordReuse(TaskConfiguration.TaskID, TaskType);
+                return _allowRecordReuse.Value;
+            }
+        }
 
         /// <summary>
         /// Gets the output record writer.
@@ -598,6 +601,38 @@ namespace Tkl.Jumbo.Jet
                 _finishedEvent.WaitOne(_progressInterval, false);
             }
             _log.Info("Progress thread has finished.");
+        }
+
+        private bool CheckAllowRecordReuse(string taskId)
+        {
+            TaskConfiguration task = JobConfiguration.GetTask(taskId);
+            Type taskType = Type.GetType(task.TypeName);
+            return CheckAllowRecordReuse(taskId, taskType);
+        }
+
+        private bool CheckAllowRecordReuse(string taskId, Type taskType)
+        {
+            AllowRecordReuseAttribute allowRecordReuse = (AllowRecordReuseAttribute)Attribute.GetCustomAttribute(taskType, typeof(AllowRecordReuseAttribute));
+            if( allowRecordReuse == null )
+                return false;
+            else
+            {
+                if( allowRecordReuse.PassThrough )
+                {
+                    // If the channel passes the instances to its output, and the channel used is a pipeline channel, then
+                    // we need to recursively check the output tasks.
+                    ChannelConfiguration config = taskId == TaskConfiguration.TaskID ? OutputChannelConfiguration : JobConfiguration.GetOutputChannelForTask(taskId);
+                    if( config != null && config.ChannelType == ChannelType.Pipeline )
+                    {
+                        foreach( string outputTaskId in config.OutputTasks )
+                        {
+                            if( !CheckAllowRecordReuse(outputTaskId) )
+                                return false;
+                        }
+                    }
+                }
+                return true;
+            }
         }
     }
 }

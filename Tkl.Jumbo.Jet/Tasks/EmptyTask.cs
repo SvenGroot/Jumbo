@@ -13,6 +13,7 @@ namespace Tkl.Jumbo.Jet.Tasks
     /// <remarks>
     /// This task is useful if you immediately want to partition your input without processing it first.
     /// </remarks>
+    [AllowRecordReuse(PassThrough=true)]
     public class EmptyTask<T> : IPullTask<T, T>
         where T : IWritable, new()
     {

@@ -19,7 +19,7 @@ namespace Tkl.Jumbo.Jet.Tasks
     ///   The inputs must individually be sorted, otherwise the result of this task is undefined.
     /// </para>
     /// </remarks>
-    [AllowRecordReuse]
+    [AllowRecordReuse(PassThrough=true)]
     public class MergeSortTask<T> : IMergeTask<T, T>
         where T : IWritable, new()
     {
