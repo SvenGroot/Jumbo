@@ -71,55 +71,78 @@ namespace Tkl.Jumbo.Jet.Tasks
             _log.InfoFormat("Merging {0} inputs with max {1} inputs per pass.", input.TotalInputCount, maxMergeInputs);
 
             int processed = 0;
-            string previousMergePassOutputFile = null;
+            List<string> previousMergePassOutputFiles = new List<string>();
             int pass = 1;
-            while( processed < input.TotalInputCount )
+            int mergeOutputsProcessed = 0;
+            while( processed < input.TotalInputCount || mergeOutputsProcessed < previousMergePassOutputFiles.Count )
             {
-                input.WaitForInputs(processed + maxMergeInputs, Timeout.Infinite);
-                using( RecordReader<T> previousMergePassOutput = previousMergePassOutputFile == null ? null : new BinaryRecordReader<T>(previousMergePassOutputFile, TaskAttemptConfiguration.AllowRecordReuse, JetConfiguration.FileChannel.DeleteIntermediateFiles, JetConfiguration.FileChannel.MergeTaskReadBufferSize) )
+                List<RecordReader<T>> previousMergePassOutputs = null;
+                RecordWriter<T> writer = null;
+                bool disposeWriter = false;
+                try
                 {
-                    PriorityQueue<MergeInput> queue = new PriorityQueue<MergeInput>(EnumerateInputs(previousMergePassOutput, input, processed, maxMergeInputs), new MergeInputComparer());
-                    processed += maxMergeInputs;
-                    _log.InfoFormat("Merge pass {0}: merging {1} inputs.", pass, queue.Count);
-
-                    RecordWriter<T> writer = null;
-                    bool disposeWriter = false;
-                    try
+                    input.WaitForInputs(processed + maxMergeInputs, Timeout.Infinite);
+                    PriorityQueue<MergeInput> queue = new PriorityQueue<MergeInput>(EnumerateInputs(input, processed, maxMergeInputs), new MergeInputComparer());
+                    processed += queue.Count;
+                    if( queue.Count < maxMergeInputs && previousMergePassOutputFiles.Count > 0 )
                     {
-                        if( processed < input.TotalInputCount )
+                        previousMergePassOutputs = new List<RecordReader<T>>();
+                        while( queue.Count < maxMergeInputs && mergeOutputsProcessed < previousMergePassOutputFiles.Count )
                         {
-                            previousMergePassOutputFile = Path.Combine(TaskAttemptConfiguration.LocalJobDirectory, string.Format(System.Globalization.CultureInfo.InvariantCulture, "{0}_{1}_pass{2}.mergeoutput.tmp", TaskAttemptConfiguration.TaskConfiguration.TaskID, TaskAttemptConfiguration.Attempt, pass));
-                            disposeWriter = true;
-                            writer = new BinaryRecordWriter<T>(new FileStream(previousMergePassOutputFile, FileMode.CreateNew, FileAccess.Write, FileShare.None, JetConfiguration.FileChannel.MergeTaskReadBufferSize));
-                            ++pass;
-                        }
-                        else
-                        {
-                            _log.Info("This is the final pass.");
-                            writer = output;
-                        }
-
-                        while( queue.Count > 0 )
-                        {
-                            MergeInput front = queue.Peek();
-                            writer.WriteRecord(front.Value);
-                            T nextItem;
-                            if( front.Reader.ReadRecord(out nextItem) )
+                            RecordReader<T> reader = new BinaryRecordReader<T>(previousMergePassOutputFiles[mergeOutputsProcessed], TaskAttemptConfiguration.AllowRecordReuse, JetConfiguration.FileChannel.DeleteIntermediateFiles, JetConfiguration.FileChannel.MergeTaskReadBufferSize);
+                            previousMergePassOutputs.Add(reader);
+                            T item;
+                            if( reader.ReadRecord(out item) )
                             {
-                                front.Value = nextItem;
-                                queue.AdjustFirstItem();
+                                queue.Enqueue(new MergeInput() { Value = item, Reader = reader });
                             }
-                            else
-                                queue.Dequeue();
+                            ++mergeOutputsProcessed;
                         }
                     }
-                    finally
+                    _log.InfoFormat("Merge pass {0}: merging {1} inputs.", pass, queue.Count);
+
+                    if( processed < input.TotalInputCount )
                     {
-                        if( disposeWriter && writer != null )
+                        string outputFile = Path.Combine(TaskAttemptConfiguration.LocalJobDirectory, string.Format(System.Globalization.CultureInfo.InvariantCulture, "{0}_{1}_pass{2}.mergeoutput.tmp", TaskAttemptConfiguration.TaskConfiguration.TaskID, TaskAttemptConfiguration.Attempt, pass));
+                        disposeWriter = true;
+                        writer = new BinaryRecordWriter<T>(new FileStream(outputFile, FileMode.CreateNew, FileAccess.Write, FileShare.None, JetConfiguration.FileChannel.MergeTaskReadBufferSize));
+                        previousMergePassOutputFiles.Add(outputFile);
+                        ++pass;
+                    }
+                    else
+                    {
+                        _log.Info("This is the final pass.");
+                        writer = output;
+                    }
+
+                    while( queue.Count > 0 )
+                    {
+                        MergeInput front = queue.Peek();
+                        writer.WriteRecord(front.Value);
+                        T nextItem;
+                        if( front.Reader.ReadRecord(out nextItem) )
                         {
-                            writer.Dispose();
-                            writer = null;
+                            front.Value = nextItem;
+                            queue.AdjustFirstItem();
                         }
+                        else
+                            queue.Dequeue();
+                    }
+                }
+                finally
+                {
+                    if( disposeWriter && writer != null )
+                    {
+                        writer.Dispose();
+                        writer = null;
+                    }
+                    if( previousMergePassOutputs != null )
+                    {
+                        foreach( RecordReader<T> reader in previousMergePassOutputs )
+                        {
+                            reader.Dispose();
+                        }
+                        previousMergePassOutputs = null;
                     }
                 }
             }
@@ -127,16 +150,8 @@ namespace Tkl.Jumbo.Jet.Tasks
 
         #endregion
 
-        private static IEnumerable<MergeInput> EnumerateInputs(RecordReader<T> previousMergePassOutput, MergeTaskInput<T> input, int start, int count)
+        private static IEnumerable<MergeInput> EnumerateInputs(MergeTaskInput<T> input, int start, int count)
         {
-            if( previousMergePassOutput != null )
-            {
-                T item;
-                if( previousMergePassOutput.ReadRecord(out item) )
-                {
-                    yield return new MergeInput() { Reader = previousMergePassOutput, Value = item };
-                }
-            }
             int end = Math.Min(start + count, input.Count);
             for( int x = start; x < end; ++x )
             {
