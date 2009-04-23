@@ -75,6 +75,7 @@ namespace Tkl.Jumbo.Jet.Channels
             if( _inputPollThread != null )
                 throw new InvalidOperationException("A record reader for this channel was already created.");
 
+            _log.InfoFormat("Creating MultiRecordReader for {0} inputs, allow record reuse = {1}, buffer size = {2}.", _channelConfig.InputTasks.Length, _taskExecution.AllowRecordReuse, _taskExecution.JetClient.Configuration.FileChannel.ReadBufferSize);
             MultiRecordReader<T> reader = new MultiRecordReader<T>(null, _channelConfig.InputTasks.Length);
             _inputPollThread = new Thread(() => InputPollThread<T>(reader, null));
             _inputPollThread.Name = "FileInputChannelPolling";
@@ -96,7 +97,12 @@ namespace Tkl.Jumbo.Jet.Channels
             if( _inputPollThread != null )
                 throw new InvalidOperationException("A record reader for this channel was already created.");
 
-            MergeTaskInput<T> input = new MergeTaskInput<T>(_channelConfig.InputTasks.Length) { AllowRecordReuse = _taskExecution.AllowRecordReuse };
+            _log.InfoFormat("Creating merge task input for {0} inputs, allow record reuse = {1}, buffer size = {2}.", _channelConfig.InputTasks.Length, _taskExecution.AllowRecordReuse, _taskExecution.JetClient.Configuration.FileChannel.MergeTaskReadBufferSize);
+            MergeTaskInput<T> input = new MergeTaskInput<T>(_channelConfig.InputTasks.Length)
+            { 
+                AllowRecordReuse = _taskExecution.AllowRecordReuse,
+                BufferSize = _taskExecution.JetClient.Configuration.FileChannel.MergeTaskReadBufferSize
+            };
             _inputPollThread = new Thread(() => InputPollThread<T>(null, input));
             _inputPollThread.Name = "FileInputChannelPolling";
             _inputPollThread.Start();
@@ -169,6 +175,7 @@ namespace Tkl.Jumbo.Jet.Channels
         {
             _log.InfoFormat("Task {0} output file is now available.", task.TaskId);
             string fileName = null;
+            bool deleteFile;
             if( !_channelConfig.ForceFileDownload && task.TaskServer.HostName == Dns.GetHostName() )
             {
                 ITaskServerClientProtocol taskServer = JetClient.CreateTaskServerClient(task.TaskServer);
@@ -176,10 +183,12 @@ namespace Tkl.Jumbo.Jet.Channels
                 fileName = Path.Combine(taskOutputDirectory, FileOutputChannel.CreateChannelFileName(task.TaskId, _outputTaskId));
                 LocalBytesRead += new FileInfo(fileName).Length;
                 _log.InfoFormat("Using local file {0} as input.", fileName);
+                deleteFile = false; // We don't delete output files; if this task fails they might still be needed
             }
             else
             {
                 fileName = DownloadFile(task, _outputTaskId);
+                deleteFile = _taskExecution.JetClient.Configuration.FileChannel.DeleteIntermediateFiles; // Files we've downloaded can be deleted.
             }
             bool removed = tasksLeft.Remove(task.TaskId);
             Debug.Assert(removed);
@@ -187,7 +196,7 @@ namespace Tkl.Jumbo.Jet.Channels
             _log.InfoFormat("Creating record reader for task {0}'s output, allowRecordReuse = {1}.", task.TaskId, _taskExecution.AllowRecordReuse);
             if( reader != null )
             {
-                RecordReader<T> taskReader = new BinaryRecordReader<T>(File.OpenRead(fileName), _taskExecution.AllowRecordReuse) { SourceName = task.TaskId };
+                RecordReader<T> taskReader = new BinaryRecordReader<T>(fileName, _taskExecution.AllowRecordReuse, deleteFile, _taskExecution.JetClient.Configuration.FileChannel.ReadBufferSize) { SourceName = task.TaskId };
                 reader.AddReader(taskReader);
             }
             else

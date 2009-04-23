@@ -15,6 +15,7 @@ namespace Tkl.Jumbo.IO
         where T : IWritable, new()
     {
         private bool _disposed;
+        private long? _bytesRead;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="StreamRecordReader{T}"/> class with the specified stream.
@@ -75,6 +76,8 @@ namespace Tkl.Jumbo.IO
         {
             get
             {
+                if( _bytesRead != null )
+                    return _bytesRead.Value;
                 return Stream.Position - Offset;
             }
         }
@@ -85,8 +88,8 @@ namespace Tkl.Jumbo.IO
         public override float Progress
         {
             get
-            {
-                return Math.Min(1.0f, (Stream.Position - Offset) / (float)Size);
+            {                    
+                return Math.Min(1.0f, BytesRead / (float)Size);
             }
         }
 
@@ -104,6 +107,7 @@ namespace Tkl.Jumbo.IO
                 {
                     if( Stream != null )
                     {
+                        _bytesRead = BytesRead; // Store so that property can be used after the object is disposed.
                         Stream.Dispose();
                         Stream = null;
                     }

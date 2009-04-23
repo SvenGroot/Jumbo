@@ -28,7 +28,6 @@ namespace Tkl.Jumbo.Jet
                 _sourceName = sourceName;
             }
 
-            private Stream _stream;
             private RecordReader<T> _reader;
             private MergeTaskInput<T> _input;
             private string _sourceName;
@@ -41,8 +40,7 @@ namespace Tkl.Jumbo.Jet
                 {
                     if( _reader == null )
                     {
-                        _stream = new FileStream(FileName, FileMode.Open, FileAccess.Read, FileShare.Read, _input.BufferSize);
-                        _reader = new BinaryRecordReader<T>(_stream, _input.AllowRecordReuse) { SourceName = _sourceName };
+                        _reader = new BinaryRecordReader<T>(FileName, _input.AllowRecordReuse, _input.DeleteFiles, _input.BufferSize) { SourceName = _sourceName };
                     }
                     return _reader;
                 }
@@ -64,11 +62,6 @@ namespace Tkl.Jumbo.Jet
                 {
                     _reader.Dispose();
                     _reader = null;
-                }
-                if( _stream != null )
-                {
-                    _stream.Dispose();
-                    _stream = null;
                 }
                 GC.SuppressFinalize(this);
             }
@@ -182,6 +175,8 @@ namespace Tkl.Jumbo.Jet
         }
 
         internal bool AllowRecordReuse { get; set; }
+
+        internal bool DeleteFiles { get; set; }
 
         /// <summary>
         /// Waits until the next input becomes available.

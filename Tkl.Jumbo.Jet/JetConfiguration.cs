@@ -31,6 +31,15 @@ namespace Tkl.Jumbo.Jet
         }
 
         /// <summary>
+        /// Gets configuration for the file channel.
+        /// </summary>
+        [ConfigurationProperty("fileChannel", IsRequired = false, IsKey = false)]
+        public FileChannelConfigurationElement FileChannel
+        {
+            get { return (FileChannelConfigurationElement)this["fileChannel"]; }
+        }
+
+        /// <summary>
         /// Loads the Jet configuration from the application configuration file.
         /// </summary>
         /// <returns>A <see cref="JetConfiguration"/> object representing the settings in the application configuration file, or

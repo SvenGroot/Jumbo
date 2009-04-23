@@ -8,6 +8,7 @@ using System.Net;
 using System.Threading;
 using Tkl.Jumbo.Dfs;
 using System.Diagnostics;
+using System.IO;
 
 namespace TaskServerApplication
 {
@@ -276,6 +277,8 @@ namespace TaskServerApplication
                     CleanupJobJetHeartbeatResponse cleanupResponse = (CleanupJobJetHeartbeatResponse)response;
                     _log.InfoFormat("Received cleanup job command for job {{{0}}}.", cleanupResponse.JobID);
                     _taskRunner.CleanupJobTasks(cleanupResponse.JobID);
+                    // Do file clean up asynchronously since it could take a long time.
+                    ThreadPool.QueueUserWorkItem((state) => CleanupJobFiles((Guid)state), cleanupResponse.JobID);
                     break;
                 }
             }
@@ -285,6 +288,33 @@ namespace TaskServerApplication
         {
             lock( _pendingHeartbeatData )
                 _pendingHeartbeatData.Add(data);
+        }
+
+        private void CleanupJobFiles(Guid jobId)
+        {
+            try
+            {
+                if( Configuration.FileChannel.DeleteIntermediateFiles )
+                {
+                    string jobDirectory = GetJobDirectory(jobId);
+                    foreach( string file in System.IO.Directory.GetFiles(jobDirectory) )
+                    {
+                        if( file.EndsWith(".output") )
+                        {
+                            _log.DebugFormat("Job {0} cleanup: deleting file {1}.", jobId, file);
+                            System.IO.File.Delete(file);
+                        }
+                    }
+                }
+            }
+            catch( UnauthorizedAccessException ex )
+            {
+                _log.Error("Failed to clean up job files", ex);
+            }
+            catch( IOException ex )
+            {
+                _log.Error("Failed to clean up job files", ex);
+            }
         }
     }
 }

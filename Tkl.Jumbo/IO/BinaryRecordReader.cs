@@ -24,10 +24,28 @@ namespace Tkl.Jumbo.IO
     public class BinaryRecordReader<T> : StreamRecordReader<T>
         where T : IWritable, new()
     {
+        private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(BinaryRecordReader<T>));
+
         private BinaryReader _reader;
         private T _record;
         private bool _allowRecordReuse;
+        private string _fileName;
+        private bool _deleteFile;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="BinaryRecordReader{T}"/> class that reads from the specified file.
+        /// </summary>
+        /// <param name="fileName">The path to the file to read from.</param>
+        /// <param name="allowRecordReuse"><see langword="true"/> if the reader can reuse the same instance of <typeparamref name="T"/> every time; <see langword="false"/>
+        /// if a new instance must be created for every record.</param>
+        /// <param name="deleteFile"><see langword="true"/> if the file should be deleted after reading is finished; otherwise, <see langword="false"/>.</param>
+        /// <param name="bufferSize">The size of the buffer to use when reading the file.</param>
+        public BinaryRecordReader(string fileName, bool allowRecordReuse, bool deleteFile, int bufferSize)
+            : this(new FileStream(fileName, FileMode.Open, FileAccess.Read, FileShare.Read, bufferSize), allowRecordReuse)
+        {
+            _fileName = fileName;
+            _deleteFile = deleteFile;
+        }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="BinaryRecordReader{T}"/> class that doesn't reuse records.
@@ -64,6 +82,7 @@ namespace Tkl.Jumbo.IO
             if( Stream.Position == Stream.Length )
             {
                 record = default(T);
+                Dispose(); // This will delete the file if necessary.
                 return false;
             }
             if( _allowRecordReuse )
@@ -81,20 +100,33 @@ namespace Tkl.Jumbo.IO
         /// to clean up unmanaged resources only.</param>
         protected override void Dispose(bool disposing)
         {
-            try
+            base.Dispose(disposing);
+            if( disposing )
             {
-                if( disposing )
+                if( _reader != null )
                 {
-                    if( _reader != null )
-                    {
-                        ((IDisposable)_reader).Dispose();
-                        _reader = null;
-                    }
+                    ((IDisposable)_reader).Dispose();
+                    _reader = null;
                 }
             }
-            finally
+            if( _deleteFile )
             {
-                base.Dispose(disposing);
+                try
+                {
+                    if( File.Exists(_fileName) )
+                    {
+                        _log.DebugFormat("Deleting file {0}.", _fileName);
+                        File.Delete(_fileName);
+                    }
+                }
+                catch( IOException ex )
+                {
+                    _log.Error(string.Format("Failed to delete file {0}.", _fileName), ex);
+                }
+                catch( UnauthorizedAccessException ex )
+                {
+                    _log.Error(string.Format("Failed to delete file {0}.", _fileName), ex);
+                }
             }
         }
     }

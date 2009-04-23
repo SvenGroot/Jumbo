@@ -70,6 +70,7 @@
     <Compile Include="CleanupJobJetHeartbeatResponse.cs" />
     <Compile Include="CompletedTask.cs" />
     <Compile Include="Configurable.cs" />
+    <Compile Include="FileChannelConfigurationElement.cs" />
     <Compile Include="IConfigurable.cs" />
     <Compile Include="IMergeTask.cs" />
     <Compile Include="IPullTask.cs" />
