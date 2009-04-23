@@ -38,11 +38,11 @@ namespace Tkl.Jumbo.Jet.Channels
         {
             if( taskExecution == null )
                 throw new ArgumentNullException("taskExecution");
-            _jobDirectory = taskExecution.LocalJobDirectory;
+            _jobDirectory = taskExecution.Configuration.LocalJobDirectory;
             _channelConfig = taskExecution.InputChannelConfiguration;
-            _jobID = taskExecution.JobId;
+            _jobID = taskExecution.Configuration.JobId;
             _jobServer = taskExecution.JetClient.JobServer;
-            _outputTaskId = taskExecution.TaskConfiguration.TaskID;
+            _outputTaskId = taskExecution.Configuration.TaskConfiguration.TaskID;
             _taskExecution = taskExecution;
         }
 

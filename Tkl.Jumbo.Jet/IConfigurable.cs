@@ -22,13 +22,8 @@ namespace Tkl.Jumbo.Jet
         JetConfiguration JetConfiguration { get; set; }
 
         /// <summary>
-        /// Gets or sets the configuration of the current job.
+        /// Gets or sets the configuration for the task attempt.
         /// </summary>
-        JobConfiguration JobConfiguration { get; set; }
-
-        /// <summary>
-        /// Gets or sets the configuration of the current task.
-        /// </summary>
-        TaskConfiguration TaskConfiguration { get; set; }
+        TaskAttemptConfiguration TaskAttemptConfiguration { get; set; }
     }
 }

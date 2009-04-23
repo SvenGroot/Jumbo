@@ -145,7 +145,7 @@ namespace ClientSample.GraySort
         private void ReadPartitionFile()
         {
             List<byte[]> splitPoints = new List<byte[]>();
-            string partitionFileName = JobConfiguration.JobSettings["partitionFile"];
+            string partitionFileName = TaskAttemptConfiguration.JobConfiguration.JobSettings["partitionFile"];
             DfsClient dfsClient = new DfsClient(DfsConfiguration);
             using( DfsInputStream stream = dfsClient.OpenFile(partitionFileName) )
             {

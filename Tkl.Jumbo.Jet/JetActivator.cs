@@ -19,8 +19,7 @@ namespace Tkl.Jumbo.Jet
         /// <param name="type">The type to instantiate.</param>
         /// <param name="dfsConfiguration">The configuration used to access the distributed file system.</param>
         /// <param name="jetConfiguration">The configuration used to access Jet.</param>
-        /// <param name="jobConfiguration">The configuration for the current Job.</param>
-        /// <param name="taskConfiguration">The configuration for the current task</param>
+        /// <param name="taskAttemptConfiguration">The configuration for the task attempt.</param>
         /// <param name="args">The arguments to pass to the object's constructor.</param>
         /// <returns>An instance of the specified type with the configuration applied to it.</returns>
         /// <remarks>
@@ -29,14 +28,14 @@ namespace Tkl.Jumbo.Jet
         ///   implements <see cref="IConfigurable"/> and if so, applies the configuration to it.
         /// </para>
         /// </remarks>
-        public static object CreateInstance(Type type, DfsConfiguration dfsConfiguration, JetConfiguration jetConfiguration, JobConfiguration jobConfiguration, TaskConfiguration taskConfiguration, params object[] args)
+        public static object CreateInstance(Type type, DfsConfiguration dfsConfiguration, JetConfiguration jetConfiguration, TaskAttemptConfiguration taskAttemptConfiguration, params object[] args)
         {
             if( type == null )
                 throw new ArgumentNullException("type");
             _log.DebugFormat("Creating instance of type {0}.", type.AssemblyQualifiedName);
             object instance = Activator.CreateInstance(type, args);
 
-            ApplyConfiguration(instance, dfsConfiguration, jetConfiguration, jobConfiguration, taskConfiguration);
+            ApplyConfiguration(instance, dfsConfiguration, jetConfiguration, taskAttemptConfiguration);
 
             return instance;
         }
@@ -57,9 +56,9 @@ namespace Tkl.Jumbo.Jet
         public static object CreateInstance(Type type, TaskExecutionUtility taskExecution, params object[] args)
         {
             if( taskExecution == null )
-                return CreateInstance(type, (DfsConfiguration)null, null, null, null, args);
+                return CreateInstance(type, (DfsConfiguration)null, null, null, args);
             else
-                return CreateInstance(type, taskExecution.DfsClient.Configuration, taskExecution.JetClient.Configuration, taskExecution.JobConfiguration, taskExecution.TaskConfiguration, args);
+                return CreateInstance(type, taskExecution.DfsClient.Configuration, taskExecution.JetClient.Configuration, taskExecution.Configuration, args);
         }
 
         /// <summary>
@@ -68,14 +67,13 @@ namespace Tkl.Jumbo.Jet
         /// <param name="obj">The object to configure.</param>
         /// <param name="dfsConfiguration">The configuration used to access the distributed file system.</param>
         /// <param name="jetConfiguration">The configuration used to access Jet.</param>
-        /// <param name="jobConfiguration">The configuration for the current Job.</param>
-        /// <param name="taskConfiguration">The configuration for the current task</param>
+        /// <param name="taskAttemptConfiguration">The configuration for the task attempt.</param>
         /// <remarks>
         /// <para>
         ///   This function checks if the object implements <see cref="IConfigurable"/> and if so, applies the configuration to it.
         /// </para>
         /// </remarks>
-        public static void ApplyConfiguration(object obj, DfsConfiguration dfsConfiguration, JetConfiguration jetConfiguration, JobConfiguration jobConfiguration, TaskConfiguration taskConfiguration)
+        public static void ApplyConfiguration(object obj, DfsConfiguration dfsConfiguration, JetConfiguration jetConfiguration, TaskAttemptConfiguration taskAttemptConfiguration)
         {
             if( obj == null )
                 throw new ArgumentNullException("obj");
@@ -87,8 +85,7 @@ namespace Tkl.Jumbo.Jet
                     _log.DebugFormat("Applying configuration to configurable object of type {0}.", obj.GetType().AssemblyQualifiedName);
                 configurable.DfsConfiguration = dfsConfiguration;
                 configurable.JetConfiguration = jetConfiguration;
-                configurable.JobConfiguration = jobConfiguration;
-                configurable.TaskConfiguration = taskConfiguration;
+                configurable.TaskAttemptConfiguration = taskAttemptConfiguration;
             }
         }
     }

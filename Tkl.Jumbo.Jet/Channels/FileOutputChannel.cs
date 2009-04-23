@@ -30,12 +30,12 @@ namespace Tkl.Jumbo.Jet.Channels
 
             ChannelConfiguration channelConfig = taskExecution.OutputChannelConfiguration;
             _fileNames = (from outputTaskId in channelConfig.OutputTasks
-                          select Path.Combine(taskExecution.LocalJobDirectory, CreateChannelFileName(taskExecution.TaskConfiguration.TaskID, outputTaskId))).ToArray();
+                          select Path.Combine(taskExecution.Configuration.LocalJobDirectory, CreateChannelFileName(taskExecution.Configuration.TaskConfiguration.TaskID, outputTaskId))).ToArray();
             if( _fileNames.Length == 0 )
             {
                 // This is allowed for debugging and testing purposes so you don't have to have an output task.
                 _log.Warn("The file channel has no output tasks; writing channel output to a dummy file.");
-                _fileNames = new[] { Path.Combine(taskExecution.LocalJobDirectory, CreateChannelFileName(taskExecution.TaskConfiguration.TaskID, "DummyTask")) };
+                _fileNames = new[] { Path.Combine(taskExecution.Configuration.LocalJobDirectory, CreateChannelFileName(taskExecution.Configuration.TaskConfiguration.TaskID, "DummyTask")) };
             }
             _partitionerType = channelConfig.PartitionerType;
         }

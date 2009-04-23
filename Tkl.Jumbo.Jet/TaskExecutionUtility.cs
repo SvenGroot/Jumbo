@@ -108,19 +108,14 @@ namespace Tkl.Jumbo.Jet
                 throw new ArgumentNullException("dfsJobDirectory");
             JetClient = jetClient;
             _umbilical = umbilical;
-            JobId = jobId;
-            JobConfiguration = jobConfiguration;
-            TaskConfiguration = jobConfiguration.GetTask(taskId);
+            Configuration = new TaskAttemptConfiguration(jobId, jobConfiguration, jobConfiguration.GetTask(taskId), localJobDirectory, dfsJobDirectory, attempt);
             DfsClient = dfsClient;
-            LocalJobDirectory = localJobDirectory;
-            DfsJobDirectory = dfsJobDirectory;
-            Attempt = attempt;
 
             InputChannelConfiguration = jobConfiguration.GetInputChannelForTask(taskId);
             OutputChannelConfiguration = jobConfiguration.GetOutputChannelForTask(taskId);
 
-            _log.DebugFormat("Loading type {0}.", TaskConfiguration.TypeName);
-            TaskType = Type.GetType(TaskConfiguration.TypeName, true);
+            _log.DebugFormat("Loading type {0}.", Configuration.TaskConfiguration.TypeName);
+            TaskType = Type.GetType(Configuration.TaskConfiguration.TypeName, true);
             _log.Debug("Determining input and output types.");
             Type taskInterfaceType = TaskType.FindGenericInterfaceType(typeof(ITask<,>));
             Type[] arguments = taskInterfaceType.GetGenericArguments();
@@ -131,7 +126,7 @@ namespace Tkl.Jumbo.Jet
         }
 
         private TaskExecutionUtility(TaskExecutionUtility baseTask, string taskId)
-            : this(baseTask.JetClient, baseTask._umbilical, baseTask.JobId, baseTask.JobConfiguration, taskId, baseTask.DfsClient, baseTask.LocalJobDirectory,baseTask.DfsJobDirectory, baseTask.Attempt)
+            : this(baseTask.JetClient, baseTask._umbilical, baseTask.Configuration.JobId, baseTask.Configuration.JobConfiguration, taskId, baseTask.DfsClient, baseTask.Configuration.LocalJobDirectory, baseTask.Configuration.DfsJobDirectory, baseTask.Configuration.Attempt)
         {
             _isAssociatedTask = true;
         }
@@ -142,39 +137,14 @@ namespace Tkl.Jumbo.Jet
         public JetClient JetClient { get; private set; }
 
         /// <summary>
-        /// Gets the ID of the job that this task is part of.
-        /// </summary>
-        public Guid JobId { get; private set; }
-
-        /// <summary>
-        /// Gets the job configuration of the job this task is part of.
-        /// </summary>
-        public JobConfiguration JobConfiguration { get; private set; }
-
-        /// <summary>
-        /// Gets the task configuration of the task to execute.
-        /// </summary>
-        public TaskConfiguration TaskConfiguration { get; private set; }
-
-        /// <summary>
         /// Gets the <see cref="DfsClient"/> used to access the DFS.
         /// </summary>
         public DfsClient DfsClient { get; private set; }
 
         /// <summary>
-        /// Gets the name of the local directory where the task server stores files related to this job.
+        /// Gets the configuration data for this task.
         /// </summary>
-        public string LocalJobDirectory { get; private set; }
-
-        /// <summary>
-        /// Gets the name of the DFS directory where the job's files are stored.
-        /// </summary>
-        public string DfsJobDirectory { get; private set; }
-
-        /// <summary>
-        /// Gets the attempt number for this task.
-        /// </summary>
-        public int Attempt { get; private set; }
+        public TaskAttemptConfiguration Configuration { get; private set; }
 
         /// <summary>
         /// Gets the configuration of the input channel for the task.
@@ -244,7 +214,7 @@ namespace Tkl.Jumbo.Jet
             get
             {
                 if( _allowRecordReuse == null )
-                    _allowRecordReuse = CheckAllowRecordReuse(TaskConfiguration.TaskID, TaskType);
+                    _allowRecordReuse = CheckAllowRecordReuse(Configuration.TaskConfiguration.TaskID, TaskType);
                 return _allowRecordReuse.Value;
             }
         }
@@ -351,7 +321,7 @@ namespace Tkl.Jumbo.Jet
                 associatedTask.FinishTask();
             }
 
-            if( TaskConfiguration.DfsOutput != null )
+            if( Configuration.TaskConfiguration.DfsOutput != null )
             {
                 if( _outputWriter != null )
                 {
@@ -368,7 +338,7 @@ namespace Tkl.Jumbo.Jet
                     _outputStream = null;
                 }
 
-                DfsClient.NameServer.Move(TaskConfiguration.DfsOutput.TempPath, TaskConfiguration.DfsOutput.Path);
+                DfsClient.NameServer.Move(Configuration.TaskConfiguration.DfsOutput.TempPath, Configuration.TaskConfiguration.DfsOutput.Path);
             }
         }
 
@@ -478,14 +448,14 @@ namespace Tkl.Jumbo.Jet
         private RecordWriter<T> CreateOutputRecordWriter<T>()
             where T : IWritable, new()
         {
-            if( TaskConfiguration.DfsOutput != null )
+            if( Configuration.TaskConfiguration.DfsOutput != null )
             {
-                string file = DfsPath.Combine(DfsPath.Combine(DfsJobDirectory, "temp"), TaskConfiguration.TaskID + "_" + Attempt.ToString());
+                string file = DfsPath.Combine(DfsPath.Combine(Configuration.DfsJobDirectory, "temp"), Configuration.TaskConfiguration.TaskID + "_" + Configuration.Attempt.ToString());
                 _log.DebugFormat("Opening output file {0}", file);
-                TaskConfiguration.DfsOutput.TempPath = file;
+                Configuration.TaskConfiguration.DfsOutput.TempPath = file;
                 _outputStream = DfsClient.CreateFile(file);
-                _log.DebugFormat("Creating record writer of type {0}", TaskConfiguration.DfsOutput.RecordWriterType);
-                Type recordWriterType = Type.GetType(TaskConfiguration.DfsOutput.RecordWriterType);
+                _log.DebugFormat("Creating record writer of type {0}", Configuration.TaskConfiguration.DfsOutput.RecordWriterType);
+                Type recordWriterType = Type.GetType(Configuration.TaskConfiguration.DfsOutput.RecordWriterType);
                 return (RecordWriter<T>)JetActivator.CreateInstance(recordWriterType, this, _outputStream);
             }
             else if( OutputChannel != null )
@@ -500,10 +470,10 @@ namespace Tkl.Jumbo.Jet
         private RecordReader<T> CreateInputRecordReader<T>()
             where T : IWritable, new()
         {
-            if( TaskConfiguration.DfsInput != null )
+            if( Configuration.TaskConfiguration.DfsInput != null )
             {
-                _log.DebugFormat("Creating record reader of type {0}", TaskConfiguration.DfsInput.RecordReaderType);
-                return TaskConfiguration.DfsInput.CreateRecordReader<T>(DfsClient, this);
+                _log.DebugFormat("Creating record reader of type {0}", Configuration.TaskConfiguration.DfsInput.RecordReaderType);
+                return Configuration.TaskConfiguration.DfsInput.CreateRecordReader<T>(DfsClient, this);
             }
             else if( InputChannel != null )
             {
@@ -517,11 +487,11 @@ namespace Tkl.Jumbo.Jet
         private MergeTaskInput<T> CreateMergeTaskInput<T>()
             where T : IWritable, new()
         {
-            if( TaskConfiguration.DfsInput != null )
+            if( Configuration.TaskConfiguration.DfsInput != null )
             {
-                _log.DebugFormat("Creating record reader of type {0}", TaskConfiguration.DfsInput.RecordReaderType);
+                _log.DebugFormat("Creating record reader of type {0}", Configuration.TaskConfiguration.DfsInput.RecordReaderType);
                 MergeTaskInput<T> result = new MergeTaskInput<T>(1);
-                result.AddInput(TaskConfiguration.DfsInput.CreateRecordReader<T>(DfsClient, this));
+                result.AddInput(Configuration.TaskConfiguration.DfsInput.CreateRecordReader<T>(DfsClient, this));
                 return result;
             }
             else if( InputChannel != null )
@@ -544,7 +514,7 @@ namespace Tkl.Jumbo.Jet
                 if( _mergeTaskInput != null )
                     metrics.RecordsRead += _mergeTaskInput.RecordsRead;
 
-                if( TaskConfiguration.DfsInput != null )
+                if( Configuration.TaskConfiguration.DfsInput != null )
                 {
                     if( _inputReader != null )
                         metrics.DfsBytesRead += _inputReader.BytesRead;
@@ -602,7 +572,7 @@ namespace Tkl.Jumbo.Jet
                     try
                     {
                         _log.InfoFormat("Reporting progress: {0}%", (int)(progress * 100));
-                        _umbilical.ReportProgress(JobId, TaskConfiguration.TaskID, progress);
+                        _umbilical.ReportProgress(Configuration.JobId, Configuration.TaskConfiguration.TaskID, progress);
                         previousProgress = progress;
                     }
                     catch( SocketException ex )
@@ -617,7 +587,7 @@ namespace Tkl.Jumbo.Jet
 
         private bool CheckAllowRecordReuse(string taskId)
         {
-            TaskConfiguration task = JobConfiguration.GetTask(taskId);
+            TaskConfiguration task = Configuration.JobConfiguration.GetTask(taskId);
             Type taskType = Type.GetType(task.TypeName);
             return CheckAllowRecordReuse(taskId, taskType);
         }
@@ -633,7 +603,7 @@ namespace Tkl.Jumbo.Jet
                 {
                     // If the channel passes the instances to its output, and the channel used is a pipeline channel, then
                     // we need to recursively check the output tasks.
-                    ChannelConfiguration config = taskId == TaskConfiguration.TaskID ? OutputChannelConfiguration : JobConfiguration.GetOutputChannelForTask(taskId);
+                    ChannelConfiguration config = taskId == Configuration.TaskConfiguration.TaskID ? OutputChannelConfiguration : Configuration.JobConfiguration.GetOutputChannelForTask(taskId);
                     if( config != null && config.ChannelType == ChannelType.Pipeline )
                     {
                         foreach( string outputTaskId in config.OutputTasks )

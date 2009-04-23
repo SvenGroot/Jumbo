@@ -13,8 +13,8 @@ namespace ClientSample.GraySort
 
         public void Run(RecordReader<StringWritable> input, RecordWriter<ByteArrayWritable> output)
         {
-            ulong startRecord = Convert.ToUInt64(TaskConfiguration.TaskSettings["startRecord"]);
-            ulong count = Convert.ToUInt64(TaskConfiguration.TaskSettings["count"]);
+            ulong startRecord = Convert.ToUInt64(TaskAttemptConfiguration.TaskConfiguration.TaskSettings["startRecord"]);
+            ulong count = Convert.ToUInt64(TaskAttemptConfiguration.TaskConfiguration.TaskSettings["count"]);
             GenSort generator = new GenSort();
             ByteArrayWritable recordWritable = new ByteArrayWritable();
             foreach( byte[] record in generator.GenerateRecords(new UInt128(0, startRecord), count) )

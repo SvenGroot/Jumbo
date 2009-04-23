@@ -95,6 +95,7 @@
     <Compile Include="ServerShutdownException.cs" />
     <Compile Include="SettingsDictionary.cs" />
     <Compile Include="StatusJetHeartbeatData.cs" />
+    <Compile Include="TaskAttemptConfiguration.cs" />
     <Compile Include="TaskConfiguration.cs" />
     <Compile Include="TaskDfsInput.cs" />
     <Compile Include="TaskDfsOutput.cs" />

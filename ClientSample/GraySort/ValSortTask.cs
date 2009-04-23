@@ -49,7 +49,7 @@ namespace ClientSample.GraySort
 
             ValSortRecord result = new ValSortRecord()
             {
-                TaskId = TaskConfiguration.DfsInput.Path + "_" + TaskConfiguration.DfsInput.Block.ToString("00000"),
+                TaskId = TaskAttemptConfiguration.TaskConfiguration.DfsInput.Path + "_" + TaskAttemptConfiguration.TaskConfiguration.DfsInput.Block.ToString("00000"),
                 FirstKey = first.ExtractKeyBytes(),
                 LastKey = prev.ExtractKeyBytes(),
                 Records = count,
