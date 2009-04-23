@@ -62,6 +62,7 @@
     <Compile Include="AssemblyResolver.cs" />
     <Compile Include="Channels\ChannelConfiguration.cs" />
     <Compile Include="Channels\ChannelType.cs" />
+    <Compile Include="Channels\FileChannelMemoryStorageManager.cs" />
     <Compile Include="Channels\FileInputChannel.cs" />
     <Compile Include="Channels\FileOutputChannel.cs" />
     <Compile Include="Channels\IInputChannel.cs" />

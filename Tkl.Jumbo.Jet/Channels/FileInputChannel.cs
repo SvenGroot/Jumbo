@@ -29,6 +29,7 @@ namespace Tkl.Jumbo.Jet.Channels
         private readonly ManualResetEvent _readyEvent = new ManualResetEvent(false);
         private bool _disposed;
         private TaskExecutionUtility _taskExecution;
+        private FileChannelMemoryStorageManager _memoryStorage;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="FileInputChannel"/>.
@@ -137,6 +138,11 @@ namespace Tkl.Jumbo.Jet.Channels
             if( !_disposed && disposing )
             {
                 ((IDisposable)_readyEvent).Dispose();
+                if( _memoryStorage != null )
+                {
+                    _memoryStorage.Dispose();
+                    _memoryStorage = null;
+                }
             }
             _disposed = true;
         }
@@ -148,6 +154,7 @@ namespace Tkl.Jumbo.Jet.Channels
             {
                 HashSet<string> tasksLeft = new HashSet<string>(_channelConfig.InputTasks);
                 string[] tasksLeftArray = _channelConfig.InputTasks;
+                _memoryStorage = new FileChannelMemoryStorageManager(_taskExecution.JetClient.Configuration.FileChannel.MemoryStorageSize);
 
                 _log.InfoFormat("Start checking for output file completion of {0} tasks, timeout {1}ms", tasksLeft.Count, _pollingInterval);
 
@@ -177,6 +184,7 @@ namespace Tkl.Jumbo.Jet.Channels
             _log.InfoFormat("Task {0} output file is now available.", task.TaskId);
             string fileName = null;
             bool deleteFile;
+            Stream memoryStream = null;
             if( !_channelConfig.ForceFileDownload && task.TaskServer.HostName == Dns.GetHostName() )
             {
                 ITaskServerClientProtocol taskServer = JetClient.CreateTaskServerClient(task.TaskServer);
@@ -188,7 +196,7 @@ namespace Tkl.Jumbo.Jet.Channels
             }
             else
             {
-                fileName = DownloadFile(task, _outputTaskId);
+                fileName = DownloadFile(task, _outputTaskId, out memoryStream);
                 deleteFile = _taskExecution.JetClient.Configuration.FileChannel.DeleteIntermediateFiles; // Files we've downloaded can be deleted.
             }
             bool removed = tasksLeft.Remove(task.TaskId);
@@ -197,12 +205,28 @@ namespace Tkl.Jumbo.Jet.Channels
             _log.InfoFormat("Creating record reader for task {0}'s output, allowRecordReuse = {1}.", task.TaskId, _taskExecution.AllowRecordReuse);
             if( reader != null )
             {
-                RecordReader<T> taskReader = new BinaryRecordReader<T>(fileName, _taskExecution.AllowRecordReuse, deleteFile, _taskExecution.JetClient.Configuration.FileChannel.ReadBufferSize) { SourceName = task.TaskId };
+                RecordReader<T> taskReader;
+                if( fileName == null )
+                {
+                    taskReader = new BinaryRecordReader<T>(memoryStream, _taskExecution.AllowRecordReuse);
+                }
+                else
+                {
+                    taskReader = new BinaryRecordReader<T>(fileName, _taskExecution.AllowRecordReuse, deleteFile, _taskExecution.JetClient.Configuration.FileChannel.ReadBufferSize);
+                }
+                taskReader.SourceName = task.TaskId;
                 reader.AddReader(taskReader);
             }
             else
             {
-                mergeTaskInput.AddInput(fileName, task.TaskId);
+                if( fileName == null )
+                {
+                    RecordReader<T> taskReader = new BinaryRecordReader<T>(memoryStream, _taskExecution.AllowRecordReuse);
+                    taskReader.SourceName = task.TaskId;
+                    mergeTaskInput.AddInput(taskReader);
+                }
+                else
+                    mergeTaskInput.AddInput(fileName, task.TaskId);
             }
 
             if( !_isReady )
@@ -215,10 +239,10 @@ namespace Tkl.Jumbo.Jet.Channels
             }
         }
 
-        private string DownloadFile(CompletedTask task, string outputTaskId)
+        private string DownloadFile(CompletedTask task, string outputTaskId, out Stream memoryStream)
         {
             string fileToDownload = FileOutputChannel.CreateChannelFileName(task.TaskId, outputTaskId);
-            string targetFile = Path.Combine(_jobDirectory, string.Format("{0}_{1}.input", task.TaskId, outputTaskId));
+            string targetFile = null;
 
             int port = task.TaskServerFileServerPort;
             _log.InfoFormat("Downloading file {0} from server {1}:{2}.", fileToDownload, task.TaskServer.HostName, port);
@@ -233,11 +257,36 @@ namespace Tkl.Jumbo.Jet.Channels
                 long size = reader.ReadInt64();
                 if( size >= 0 )
                 {
-                    using( FileStream fileStream = File.Create(targetFile) )
+                    Stream targetStream = null;
+                    bool disposeStream = false;
+                    try
                     {
-                        stream.CopySize(fileStream, size);
+                        targetStream = _memoryStorage.AddStreamIfSpaceAvailable((int)size);
+                        if( targetStream == null )
+                        {
+                            targetFile = Path.Combine(_jobDirectory, string.Format("{0}_{1}.input", task.TaskId, outputTaskId));
+                            targetStream = File.Create(targetFile);
+                            disposeStream = true;
+                            memoryStream = null;
+                        }
+                        else
+                        {
+                            memoryStream = targetStream;
+                        }
+                        stream.CopySize(targetStream, size);
                     }
-                    _log.InfoFormat("Download complete, file stored in {0}.", targetFile);
+                    finally
+                    {
+                        if( disposeStream && targetStream != null )
+                        {
+                            targetStream.Dispose();
+                            targetStream = null;
+                        }
+                    }
+                    if( targetFile == null )
+                        _log.InfoFormat("Download complete, file stored in memory.");
+                    else
+                        _log.InfoFormat("Download complete, file stored in {0}.", targetFile);
                     NetworkBytesRead += size;
                     return targetFile;
                 }

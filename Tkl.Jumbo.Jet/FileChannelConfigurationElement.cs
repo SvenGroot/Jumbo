@@ -43,5 +43,15 @@ namespace Tkl.Jumbo.Jet
             get { return (bool)this["deleteIntermediateFiles"]; }
             set { this["deleteIntermediateFiles"] = value; }
         }
+
+        /// <summary>
+        /// Gets or sets the maximum size of the the in-memory input storage.
+        /// </summary>
+        [ConfigurationProperty("memoryStorageSize", DefaultValue = 0x6400000L, IsRequired = false, IsKey = false)]
+        public long MemoryStorageSize
+        {
+            get { return (long)this["memoryStorageSize"]; }
+            set { this["memoryStorageSize"] = value; }
+        }
     }
 }
