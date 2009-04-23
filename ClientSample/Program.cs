@@ -24,9 +24,9 @@ namespace ClientSample
             log4net.Config.BasicConfigurator.Configure();
             log4net.LogManager.GetRepository().Threshold = log4net.Core.Level.Info;
 
-            if( args.Length < 2 || args.Length > 5 )
+            if( args.Length < 2 )
             {
-                Console.WriteLine("Usage: ClientSample.exe <task> <inputpath> [aggregate task count] [outputpath] [profile options]");
+                Console.WriteLine("Usage: ClientSample.exe <task> <inputpath> [aggregate task count] [outputpath]");
                 return;
             }
 
@@ -40,7 +40,6 @@ namespace ClientSample
                 input = args[1];
                 aggregateTaskCount = args.Length >= 3 ? Convert.ToInt32(args[2]) : 1;
                 output = args.Length >= 4 ? args[3] : "/output";
-                profileOptions = args.Length >= 5 ? args[4] : null;
             }
 
             DfsClient dfsClient = new DfsClient();
@@ -62,10 +61,11 @@ namespace ClientSample
                 ReadTest(input);
                 return;
             case "graysort":
+                int maxMergeInputs = args.Length >= 5 ? Convert.ToInt32(args[4]) : 0;
                 Console.WriteLine("Running job GraySort, input file {0}, {1} aggregate tasks, output path {2}.", input, aggregateTaskCount, output);
                 Console.WriteLine("Press any key to start");
                 Console.ReadKey();
-                id = GraySort.GraySortJob.RunGraySortJob(jetClient, dfsClient, input, output, aggregateTaskCount);
+                id = GraySort.GraySortJob.RunGraySortJob(jetClient, dfsClient, input, output, aggregateTaskCount, maxMergeInputs);
                 WaitForJobCompletion(jetClient, 5000, id);
                 Console.WriteLine("Done, press any key to exit");
                 Console.ReadKey();

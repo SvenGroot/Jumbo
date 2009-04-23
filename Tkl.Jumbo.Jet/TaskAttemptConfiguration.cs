@@ -10,6 +10,8 @@ namespace Tkl.Jumbo.Jet
     /// </summary>
     public class TaskAttemptConfiguration
     {
+        private TaskExecutionUtility _taskExecution;
+
         /// <summary>
         /// Initializes a new instance of the <see cref="TaskAttemptConfiguration"/> class.
         /// </summary>
@@ -18,8 +20,9 @@ namespace Tkl.Jumbo.Jet
         /// <param name="taskConfiguration">The configuration for the task.</param>
         /// <param name="localJobDirectory">The local directory where files related to the job are stored.</param>
         /// <param name="dfsJobDirectory">The DFS directory where files related to the job are stored.</param>
+        /// <param name="taskExecution">The task execution utility for this task attempt.</param>
         /// <param name="attempt">The attempt number for this task attempt.</param>
-        public TaskAttemptConfiguration(Guid jobId, JobConfiguration jobConfiguration, TaskConfiguration taskConfiguration, string localJobDirectory, string dfsJobDirectory, int attempt)
+        public TaskAttemptConfiguration(Guid jobId, JobConfiguration jobConfiguration, TaskConfiguration taskConfiguration, string localJobDirectory, string dfsJobDirectory, int attempt, TaskExecutionUtility taskExecution)
         {
             if( jobConfiguration == null )
                 throw new ArgumentNullException("jobConfiguration");
@@ -29,6 +32,8 @@ namespace Tkl.Jumbo.Jet
                 throw new ArgumentNullException("localJobDirectory");
             if( dfsJobDirectory == null )
                 throw new ArgumentNullException("dfsJobDirectory");
+            if( taskExecution == null )
+                throw new ArgumentNullException("taskExecution");
 
             JobId = jobId;
             JobConfiguration = jobConfiguration;
@@ -36,6 +41,7 @@ namespace Tkl.Jumbo.Jet
             LocalJobDirectory = localJobDirectory;
             DfsJobDirectory = dfsJobDirectory;
             Attempt = attempt;
+            _taskExecution = taskExecution;
         }
 
         /// <summary>
@@ -62,6 +68,14 @@ namespace Tkl.Jumbo.Jet
         /// Gets the directory on the DFS where files related to the job are stored.
         /// </summary>
         public string DfsJobDirectory { get; private set; }
+
+        /// <summary>
+        /// Gets a value that indicates whether record reuse is allowed.
+        /// </summary>
+        public bool AllowRecordReuse
+        {
+            get { return _taskExecution.AllowRecordReuse; }
+        }
 
         /// <summary>
         /// Gets the attempt number of this task attept.

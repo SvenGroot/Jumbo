@@ -802,5 +802,57 @@ namespace Tkl.Jumbo.Jet
             channel.ClearInputTasks();
             Channels.Remove(channel);
         }
+
+        /// <summary>
+        /// Gets a setting with the specified type and default value.
+        /// </summary>
+        /// <typeparam name="T">The type of the setting.</typeparam>
+        /// <param name="key">The name of the setting.</param>
+        /// <param name="defaultValue">The value to use if the setting is not present in the <see cref="SettingsDictionary"/>.</param>
+        /// <returns>The value of the setting, or <paramref name="defaultValue"/> if the setting was not present in the <see cref="SettingsDictionary"/>.</returns>
+        public T GetTypedSetting<T>(string key, T defaultValue)
+        {
+            if( JobSettings == null )
+                return defaultValue;
+            else
+                return JobSettings.GetTypedSetting(key, defaultValue);
+        }
+
+        /// <summary>
+        /// Gets a string setting with the specified default value.
+        /// </summary>
+        /// <param name="key">The name of the setting.</param>
+        /// <param name="defaultValue">The value to use if the setting is not present in the <see cref="SettingsDictionary"/>.</param>
+        /// <returns>The value of the setting, or <paramref name="defaultValue"/> if the setting was not present in the <see cref="SettingsDictionary"/>.</returns>
+        public string GetSetting(string key, string defaultValue)
+        {
+            if( JobSettings == null )
+                return defaultValue;
+            else
+                return JobSettings.GetSetting(key, defaultValue);
+        }
+
+        /// <summary>
+        /// Adds a setting.
+        /// </summary>
+        /// <param name="key">The name of the setting.</param>
+        /// <param name="value">The value of the setting.</param>
+        public void AddSetting(string key, string value)
+        {
+            if( JobSettings == null )
+                JobSettings = new SettingsDictionary();
+            JobSettings.Add(key, value);
+        }
+
+        /// <summary>
+        /// Adds a setting with the specified type.
+        /// </summary>
+        /// <typeparam name="T">The type of the setting.</typeparam>
+        /// <param name="key">The name of the setting.</param>
+        /// <param name="value">The value of the setting.</param>
+        public void AddTypedSetting<T>(string key, T value)
+        {
+            AddSetting(key, Convert.ToString(value, System.Globalization.CultureInfo.InvariantCulture));
+        }
     }
 }

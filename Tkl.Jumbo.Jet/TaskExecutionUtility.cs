@@ -108,7 +108,7 @@ namespace Tkl.Jumbo.Jet
                 throw new ArgumentNullException("dfsJobDirectory");
             JetClient = jetClient;
             _umbilical = umbilical;
-            Configuration = new TaskAttemptConfiguration(jobId, jobConfiguration, jobConfiguration.GetTask(taskId), localJobDirectory, dfsJobDirectory, attempt);
+            Configuration = new TaskAttemptConfiguration(jobId, jobConfiguration, jobConfiguration.GetTask(taskId), localJobDirectory, dfsJobDirectory, attempt, this);
             DfsClient = dfsClient;
 
             InputChannelConfiguration = jobConfiguration.GetInputChannelForTask(taskId);

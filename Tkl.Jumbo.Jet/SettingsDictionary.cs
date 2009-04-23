@@ -51,5 +51,36 @@ namespace Tkl.Jumbo.Jet
         }
 
         #endregion
+
+        /// <summary>
+        /// Gets a setting with the specified type and default value.
+        /// </summary>
+        /// <typeparam name="T">The type of the setting.</typeparam>
+        /// <param name="key">The name of the setting.</param>
+        /// <param name="defaultValue">The value to use if the setting is not present in the <see cref="SettingsDictionary"/>.</param>
+        /// <returns>The value of the setting, or <paramref name="defaultValue"/> if the setting was not present in the <see cref="SettingsDictionary"/>.</returns>
+        public T GetTypedSetting<T>(string key, T defaultValue)
+        {
+            string value;
+            if( TryGetValue(key, out value) )
+                return (T)Convert.ChangeType(value, typeof(T), System.Globalization.CultureInfo.InvariantCulture);
+            else
+                return defaultValue;
+        }
+
+        /// <summary>
+        /// Gets a string setting with the specified default value.
+        /// </summary>
+        /// <param name="key">The name of the setting.</param>
+        /// <param name="defaultValue">The value to use if the setting is not present in the <see cref="SettingsDictionary"/>.</param>
+        /// <returns>The value of the setting, or <paramref name="defaultValue"/> if the setting was not present in the <see cref="SettingsDictionary"/>.</returns>
+        public string GetSetting(string key, string defaultValue)
+        {
+            string value;
+            if( TryGetValue(key, out value) )
+                return value;
+            else
+                return defaultValue;
+        }
     }
 }

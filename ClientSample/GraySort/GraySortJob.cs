@@ -11,7 +11,7 @@ namespace ClientSample.GraySort
 {
     static class GraySortJob
     {
-        public static Guid RunGraySortJob(JetClient jetClient, DfsClient dfsClient, string inputFile, string outputPath, int mergeTasks)
+        public static Guid RunGraySortJob(JetClient jetClient, DfsClient dfsClient, string inputFile, string outputPath, int mergeTasks, int maxMergeInputs)
         {
             dfsClient.NameServer.Delete(outputPath, true);
             dfsClient.NameServer.CreateDirectory(outputPath);
@@ -27,15 +27,19 @@ namespace ClientSample.GraySort
                 job.AddInputStage("InputStage", dir, typeof(EmptyTask<GenSortRecord>), typeof(GenSortRecordReader));
             job.AddPointToPointStage("SortStage", "InputStage", typeof(SortTask<GenSortRecord>), Tkl.Jumbo.Jet.Channels.ChannelType.Pipeline, typeof(RangePartitioner), null, null);
 
-            job.AddStage("MergeStage", new[] { "SortStage" }, typeof(MergeSortTask<GenSortRecord>), 1, Tkl.Jumbo.Jet.Channels.ChannelType.File, typeof(RangePartitioner), outputPath, typeof(GenSortRecordWriter));
+            IList<TaskConfiguration> mergeStage = job.AddStage("MergeStage", new[] { "SortStage" }, typeof(MergeSortTask<GenSortRecord>), 1, Tkl.Jumbo.Jet.Channels.ChannelType.File, typeof(RangePartitioner), outputPath, typeof(GenSortRecordWriter));
+            if( maxMergeInputs > 0 )
+            {
+                Console.WriteLine("Using {0} max merge inputs per pass.", maxMergeInputs);
+                job.AddTypedSetting(MergeSortTask<GenSortRecord>.MaxMergeInputsSetting, maxMergeInputs);
+            }
 
             if( mergeTasks > 1 )
             {
                 job.SplitStageOutput(new[] { "InputStage" }, mergeTasks);
                 const string partitionFile = "/graysortpartitions";
                 RangePartitioner.CreatePartitionFile(dfsClient, partitionFile, (from task in job.Tasks where task.DfsInput != null select task.DfsInput).ToArray(), mergeTasks, 10000);
-                job.JobSettings = new SettingsDictionary();
-                job.JobSettings["partitionFile"] = partitionFile;
+                job.AddSetting("partitionFile", partitionFile);
             }
             
             return jetClient.RunJob(job, typeof(GenSortRecordReader).Assembly.Location).JobID;
