@@ -299,7 +299,7 @@ namespace TaskServerApplication
                     string jobDirectory = GetJobDirectory(jobId);
                     foreach( string file in System.IO.Directory.GetFiles(jobDirectory) )
                     {
-                        if( file.EndsWith(".output") )
+                        if( file.EndsWith(".output") || file.EndsWith(".input") )
                         {
                             _log.DebugFormat("Job {0} cleanup: deleting file {1}.", jobId, file);
                             System.IO.File.Delete(file);

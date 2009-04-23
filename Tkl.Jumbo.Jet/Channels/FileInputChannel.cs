@@ -101,7 +101,8 @@ namespace Tkl.Jumbo.Jet.Channels
             MergeTaskInput<T> input = new MergeTaskInput<T>(_channelConfig.InputTasks.Length)
             { 
                 AllowRecordReuse = _taskExecution.AllowRecordReuse,
-                BufferSize = _taskExecution.JetClient.Configuration.FileChannel.MergeTaskReadBufferSize
+                BufferSize = _taskExecution.JetClient.Configuration.FileChannel.MergeTaskReadBufferSize,
+                DeleteFiles = _taskExecution.JetClient.Configuration.FileChannel.DeleteIntermediateFiles
             };
             _inputPollThread = new Thread(() => InputPollThread<T>(null, input));
             _inputPollThread.Name = "FileInputChannelPolling";
