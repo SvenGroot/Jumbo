@@ -72,10 +72,10 @@ namespace Tkl.Jumbo.Jet.Tasks
 
             int processed = 0;
             string previousMergePassOutputFile = null;
+            int pass = 1;
             while( processed < input.TotalInputCount )
             {
                 input.WaitForInputs(processed + maxMergeInputs, Timeout.Infinite);
-                int pass = 1;
                 using( RecordReader<T> previousMergePassOutput = previousMergePassOutputFile == null ? null : new BinaryRecordReader<T>(previousMergePassOutputFile, TaskAttemptConfiguration.AllowRecordReuse, JetConfiguration.FileChannel.DeleteIntermediateFiles, JetConfiguration.FileChannel.MergeTaskReadBufferSize) )
                 {
                     PriorityQueue<MergeInput> queue = new PriorityQueue<MergeInput>(EnumerateInputs(previousMergePassOutput, input, processed, maxMergeInputs), new MergeInputComparer());
