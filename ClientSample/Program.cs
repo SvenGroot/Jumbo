@@ -62,10 +62,11 @@ namespace ClientSample
                 return;
             case "graysort":
                 int maxMergeInputs = args.Length >= 5 ? Convert.ToInt32(args[4]) : 0;
+                bool enableCompression = args.Length >= 6 ? Convert.ToBoolean(args[5]) : false;
                 Console.WriteLine("Running job GraySort, input file {0}, {1} aggregate tasks, output path {2}.", input, aggregateTaskCount, output);
                 Console.WriteLine("Press any key to start");
                 Console.ReadKey();
-                id = GraySort.GraySortJob.RunGraySortJob(jetClient, dfsClient, input, output, aggregateTaskCount, maxMergeInputs);
+                id = GraySort.GraySortJob.RunGraySortJob(jetClient, dfsClient, input, output, aggregateTaskCount, maxMergeInputs, enableCompression);
                 WaitForJobCompletion(jetClient, 5000, id);
                 Console.WriteLine("Done, press any key to exit");
                 Console.ReadKey();

@@ -40,8 +40,10 @@ namespace Tkl.Jumbo.IO
         /// if a new instance must be created for every record.</param>
         /// <param name="deleteFile"><see langword="true"/> if the file should be deleted after reading is finished; otherwise, <see langword="false"/>.</param>
         /// <param name="bufferSize">The size of the buffer to use when reading the file.</param>
-        public BinaryRecordReader(string fileName, bool allowRecordReuse, bool deleteFile, int bufferSize)
-            : this(new FileStream(fileName, FileMode.Open, FileAccess.Read, FileShare.Read, bufferSize), allowRecordReuse)
+        /// <param name="compressionType">The type of compression to use to decompress the file.</param>
+        /// <param name="uncompressedSize">The uncompressed size of the stream.</param>
+        public BinaryRecordReader(string fileName, bool allowRecordReuse, bool deleteFile, int bufferSize, CompressionType compressionType, long uncompressedSize)
+            : this(new FileStream(fileName, FileMode.Open, FileAccess.Read, FileShare.Read, bufferSize).CreateDecompressor(compressionType, uncompressedSize), allowRecordReuse)
         {
             _fileName = fileName;
             _deleteFile = deleteFile;

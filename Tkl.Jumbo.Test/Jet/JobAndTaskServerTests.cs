@@ -32,7 +32,7 @@ namespace Tkl.Jumbo.Test.Jet
         [TestFixtureSetUp]
         public void Setup()
         {
-            _cluster = new TestJetCluster(16777216, true, 2);
+            _cluster = new TestJetCluster(16777216, true, 2, CompressionType.None);
             DfsClient dfsClient = new DfsClient(Dfs.TestDfsCluster.CreateClientConfig());
             const int size = 50000000;
             using( DfsOutputStream stream = dfsClient.CreateFile(_fileName) )

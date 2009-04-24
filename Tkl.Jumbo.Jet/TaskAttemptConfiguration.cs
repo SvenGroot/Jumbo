@@ -32,8 +32,6 @@ namespace Tkl.Jumbo.Jet
                 throw new ArgumentNullException("localJobDirectory");
             if( dfsJobDirectory == null )
                 throw new ArgumentNullException("dfsJobDirectory");
-            if( taskExecution == null )
-                throw new ArgumentNullException("taskExecution");
 
             JobId = jobId;
             JobConfiguration = jobConfiguration;
@@ -74,7 +72,7 @@ namespace Tkl.Jumbo.Jet
         /// </summary>
         public bool AllowRecordReuse
         {
-            get { return _taskExecution.AllowRecordReuse; }
+            get { return _taskExecution == null ? false : _taskExecution.AllowRecordReuse; }
         }
 
         /// <summary>

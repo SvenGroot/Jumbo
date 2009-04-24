@@ -16,6 +16,11 @@ namespace Tkl.Jumbo.Jet.Channels
     /// </summary>
     public class FileInputChannel : IInputChannel, IDisposable
     {
+        /// <summary>
+        /// The name of the setting in <see cref="JobConfiguration.JobSettings"/> that overrides the global memory storage size setting.
+        /// </summary>
+        public const string MemoryStorageSizeSetting = "FileChannel.MemoryStorageSize";
+
         private const int _pollingInterval = 10000;
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(FileInputChannel));
 
@@ -30,6 +35,7 @@ namespace Tkl.Jumbo.Jet.Channels
         private bool _disposed;
         private TaskExecutionUtility _taskExecution;
         private FileChannelMemoryStorageManager _memoryStorage;
+        private CompressionType _compressionType;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="FileInputChannel"/>.
@@ -45,19 +51,29 @@ namespace Tkl.Jumbo.Jet.Channels
             _jobServer = taskExecution.JetClient.JobServer;
             _outputTaskId = taskExecution.Configuration.TaskConfiguration.TaskID;
             _taskExecution = taskExecution;
+            _compressionType = _taskExecution.Configuration.JobConfiguration.GetTypedSetting(FileOutputChannel.CompressionTypeSetting, _taskExecution.JetClient.Configuration.FileChannel.CompressionType);
         }
 
         /// <summary>
         /// Gets the number of bytes read from the local disk.
         /// </summary>
         /// <remarks>
-        /// This property actually returns the size of all the local input files combined; this assumes that the user
+        /// This property actually returns the uncompressed size of all the local input files combined; this assumes that the user
         /// of the channel actually reads all the records.
         /// </remarks>
         public long LocalBytesRead { get; private set; }
 
         /// <summary>
-        /// Gets the number of bytes read from the network.
+        /// Gets the number of compressed bytes read from the local disk.
+        /// </summary>
+        /// <remarks>
+        /// This property actually returns the compressed size of all the local input files combined; this assumes that the user
+        /// of the channel actually reads all the records.
+        /// </remarks>
+        public long CompressedLocalBytesRead { get; private set; }
+
+        /// <summary>
+        /// Gets the number of bytes read from the network. This is always the compressed figure.
         /// </summary>
         public long NetworkBytesRead { get; private set; }
 
@@ -99,7 +115,7 @@ namespace Tkl.Jumbo.Jet.Channels
                 throw new InvalidOperationException("A record reader for this channel was already created.");
 
             _log.InfoFormat("Creating merge task input for {0} inputs, allow record reuse = {1}, buffer size = {2}.", _channelConfig.InputTasks.Length, _taskExecution.AllowRecordReuse, _taskExecution.JetClient.Configuration.FileChannel.MergeTaskReadBufferSize);
-            MergeTaskInput<T> input = new MergeTaskInput<T>(_channelConfig.InputTasks.Length)
+            MergeTaskInput<T> input = new MergeTaskInput<T>(_channelConfig.InputTasks.Length, _compressionType)
             { 
                 AllowRecordReuse = _taskExecution.AllowRecordReuse,
                 BufferSize = _taskExecution.JetClient.Configuration.FileChannel.MergeTaskReadBufferSize,
@@ -154,7 +170,8 @@ namespace Tkl.Jumbo.Jet.Channels
             {
                 HashSet<string> tasksLeft = new HashSet<string>(_channelConfig.InputTasks);
                 string[] tasksLeftArray = _channelConfig.InputTasks;
-                _memoryStorage = new FileChannelMemoryStorageManager(_taskExecution.JetClient.Configuration.FileChannel.MemoryStorageSize);
+                long memoryStorageSize = _taskExecution.Configuration.JobConfiguration.GetTypedSetting(MemoryStorageSizeSetting, _taskExecution.JetClient.Configuration.FileChannel.MemoryStorageSize);
+                _memoryStorage = new FileChannelMemoryStorageManager(memoryStorageSize);
 
                 _log.InfoFormat("Start checking for output file completion of {0} tasks, timeout {1}ms", tasksLeft.Count, _pollingInterval);
 
@@ -185,18 +202,27 @@ namespace Tkl.Jumbo.Jet.Channels
             string fileName = null;
             bool deleteFile;
             Stream memoryStream = null;
+            long uncompressedSize = -1L;
             if( !_channelConfig.ForceFileDownload && task.TaskServer.HostName == Dns.GetHostName() )
             {
                 ITaskServerClientProtocol taskServer = JetClient.CreateTaskServerClient(task.TaskServer);
                 string taskOutputDirectory = taskServer.GetOutputFileDirectory(task.JobId, task.TaskId);
                 fileName = Path.Combine(taskOutputDirectory, FileOutputChannel.CreateChannelFileName(task.TaskId, _outputTaskId));
-                LocalBytesRead += new FileInfo(fileName).Length;
+                long size = new FileInfo(fileName).Length;
                 _log.InfoFormat("Using local file {0} as input.", fileName);
                 deleteFile = false; // We don't delete output files; if this task fails they might still be needed
+                uncompressedSize = _taskExecution.Umbilical.GetUncompressedTemporaryFileSize(task.JobId, Path.GetFileName(fileName));
+                if( uncompressedSize != -1 )
+                {
+                    LocalBytesRead += uncompressedSize;
+                    CompressedLocalBytesRead += size;
+                }
+                else
+                    LocalBytesRead += size;
             }
             else
             {
-                fileName = DownloadFile(task, _outputTaskId, out memoryStream);
+                fileName = DownloadFile(task, _outputTaskId, out memoryStream, out uncompressedSize);
                 deleteFile = _taskExecution.JetClient.Configuration.FileChannel.DeleteIntermediateFiles; // Files we've downloaded can be deleted.
             }
             bool removed = tasksLeft.Remove(task.TaskId);
@@ -212,7 +238,7 @@ namespace Tkl.Jumbo.Jet.Channels
                 }
                 else
                 {
-                    taskReader = new BinaryRecordReader<T>(fileName, _taskExecution.AllowRecordReuse, deleteFile, _taskExecution.JetClient.Configuration.FileChannel.ReadBufferSize);
+                    taskReader = new BinaryRecordReader<T>(fileName, _taskExecution.AllowRecordReuse, deleteFile, _taskExecution.JetClient.Configuration.FileChannel.ReadBufferSize, _compressionType, uncompressedSize);
                 }
                 taskReader.SourceName = task.TaskId;
                 reader.AddReader(taskReader);
@@ -226,7 +252,7 @@ namespace Tkl.Jumbo.Jet.Channels
                     mergeTaskInput.AddInput(taskReader);
                 }
                 else
-                    mergeTaskInput.AddInput(fileName, task.TaskId);
+                    mergeTaskInput.AddInput(fileName, task.TaskId, uncompressedSize);
             }
 
             if( !_isReady )
@@ -239,10 +265,9 @@ namespace Tkl.Jumbo.Jet.Channels
             }
         }
 
-        private string DownloadFile(CompletedTask task, string outputTaskId, out Stream memoryStream)
+        private string DownloadFile(CompletedTask task, string outputTaskId, out Stream memoryStream, out long uncompressedSize)
         {
             string fileToDownload = FileOutputChannel.CreateChannelFileName(task.TaskId, outputTaskId);
-            string targetFile = null;
 
             int port = task.TaskServerFileServerPort;
             _log.InfoFormat("Downloading file {0} from server {1}:{2}.", fileToDownload, task.TaskServer.HostName, port);
@@ -255,38 +280,29 @@ namespace Tkl.Jumbo.Jet.Channels
                 writer.Write(fileToDownload);
 
                 long size = reader.ReadInt64();
+                uncompressedSize = reader.ReadInt64();
                 if( size >= 0 )
                 {
-                    Stream targetStream = null;
-                    bool disposeStream = false;
-                    try
+                    string targetFile = null;
+                    memoryStream = _memoryStorage.AddStreamIfSpaceAvailable((int)uncompressedSize);
+                    if( memoryStream == null )
                     {
-                        targetStream = _memoryStorage.AddStreamIfSpaceAvailable((int)size);
-                        if( targetStream == null )
+                        targetFile = Path.Combine(_jobDirectory, string.Format("{0}_{1}.input", task.TaskId, outputTaskId));
+                        using( FileStream fileStream = File.Create(targetFile) )
                         {
-                            targetFile = Path.Combine(_jobDirectory, string.Format("{0}_{1}.input", task.TaskId, outputTaskId));
-                            targetStream = File.Create(targetFile);
-                            disposeStream = true;
-                            memoryStream = null;
+                            stream.CopySize(fileStream, size);
                         }
-                        else
-                        {
-                            memoryStream = targetStream;
-                        }
-                        stream.CopySize(targetStream, size);
-                    }
-                    finally
-                    {
-                        if( disposeStream && targetStream != null )
-                        {
-                            targetStream.Dispose();
-                            targetStream = null;
-                        }
-                    }
-                    if( targetFile == null )
-                        _log.InfoFormat("Download complete, file stored in memory.");
-                    else
                         _log.InfoFormat("Download complete, file stored in {0}.", targetFile);
+                    }
+                    else
+                    {
+                        using( Stream decompressorStream = stream.CreateDecompressor(_compressionType, uncompressedSize) )
+                        {
+                            decompressorStream.CopySize(memoryStream, uncompressedSize);
+                        }
+                        memoryStream.Position = 0;
+                        _log.InfoFormat("Download complete, file stored in memory.", targetFile);
+                    }
                     NetworkBytesRead += size;
                     return targetFile;
                 }

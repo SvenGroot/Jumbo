@@ -25,6 +25,16 @@ namespace Tkl.Jumbo.Jet.Tasks
     public class MergeSortTask<T> : Configurable, IMergeTask<T, T>
         where T : IWritable, new()
     {
+        #region Nested types
+
+        private class PreviousMergePassOutput
+        {
+            public string File { get; set; }
+            public long UncompressedSize { get; set; }
+        }
+
+        #endregion
+
         /// <summary>
         /// The name of the setting in <see cref="TaskConfiguration.TaskSettings"/> that specified the maximum number
         /// of files to merge in one pass.
@@ -71,7 +81,7 @@ namespace Tkl.Jumbo.Jet.Tasks
             _log.InfoFormat("Merging {0} inputs with max {1} inputs per pass.", input.TotalInputCount, maxMergeInputs);
 
             int processed = 0;
-            List<string> previousMergePassOutputFiles = new List<string>();
+            List<PreviousMergePassOutput> previousMergePassOutputFiles = new List<PreviousMergePassOutput>();
             int pass = 1;
             int mergeOutputsProcessed = 0;
             while( processed < input.TotalInputCount || mergeOutputsProcessed < previousMergePassOutputFiles.Count )
@@ -79,17 +89,23 @@ namespace Tkl.Jumbo.Jet.Tasks
                 List<RecordReader<T>> previousMergePassOutputs = null;
                 RecordWriter<T> writer = null;
                 bool disposeWriter = false;
+                PreviousMergePassOutput currentOutput = null;
                 try
                 {
+                    // Wait until we have enough inputs for another merge pass.
                     input.WaitForInputs(processed + maxMergeInputs, Timeout.Infinite);
+
+                    // Create the merge queue from the new inputs.
                     PriorityQueue<MergeInput> queue = new PriorityQueue<MergeInput>(EnumerateInputs(input, processed, maxMergeInputs), new MergeInputComparer());
                     processed += queue.Count;
+                    // If the queue size is smaller than the amount of inputs we can merge, and we have previous merge results, we'll add those.
                     if( queue.Count < maxMergeInputs && previousMergePassOutputFiles.Count > 0 )
                     {
                         previousMergePassOutputs = new List<RecordReader<T>>();
                         while( queue.Count < maxMergeInputs && mergeOutputsProcessed < previousMergePassOutputFiles.Count )
                         {
-                            RecordReader<T> reader = new BinaryRecordReader<T>(previousMergePassOutputFiles[mergeOutputsProcessed], TaskAttemptConfiguration.AllowRecordReuse, JetConfiguration.FileChannel.DeleteIntermediateFiles, JetConfiguration.FileChannel.MergeTaskReadBufferSize);
+                            PreviousMergePassOutput previousOutput = previousMergePassOutputFiles[mergeOutputsProcessed];
+                            RecordReader<T> reader = new BinaryRecordReader<T>(previousOutput.File, TaskAttemptConfiguration.AllowRecordReuse, JetConfiguration.FileChannel.DeleteIntermediateFiles, JetConfiguration.FileChannel.MergeTaskReadBufferSize, input.CompressionType, previousOutput.UncompressedSize);
                             previousMergePassOutputs.Add(reader);
                             T item;
                             if( reader.ReadRecord(out item) )
@@ -104,9 +120,11 @@ namespace Tkl.Jumbo.Jet.Tasks
                     if( processed < input.TotalInputCount )
                     {
                         string outputFile = Path.Combine(TaskAttemptConfiguration.LocalJobDirectory, string.Format(System.Globalization.CultureInfo.InvariantCulture, "{0}_{1}_pass{2}.mergeoutput.tmp", TaskAttemptConfiguration.TaskConfiguration.TaskID, TaskAttemptConfiguration.Attempt, pass));
+                        _log.InfoFormat("Creating file {0} to hold output of pass {1}.", outputFile, pass);
                         disposeWriter = true;
-                        writer = new BinaryRecordWriter<T>(new FileStream(outputFile, FileMode.CreateNew, FileAccess.Write, FileShare.None, JetConfiguration.FileChannel.MergeTaskReadBufferSize));
-                        previousMergePassOutputFiles.Add(outputFile);
+                        writer = new BinaryRecordWriter<T>(new FileStream(outputFile, FileMode.CreateNew, FileAccess.Write, FileShare.None, JetConfiguration.FileChannel.MergeTaskReadBufferSize).CreateCompressor(input.CompressionType));
+                        currentOutput = new PreviousMergePassOutput() { File = outputFile };
+                        previousMergePassOutputFiles.Add(currentOutput);
                         ++pass;
                     }
                     else
@@ -115,19 +133,10 @@ namespace Tkl.Jumbo.Jet.Tasks
                         writer = output;
                     }
 
-                    while( queue.Count > 0 )
-                    {
-                        MergeInput front = queue.Peek();
-                        writer.WriteRecord(front.Value);
-                        T nextItem;
-                        if( front.Reader.ReadRecord(out nextItem) )
-                        {
-                            front.Value = nextItem;
-                            queue.AdjustFirstItem();
-                        }
-                        else
-                            queue.Dequeue();
-                    }
+                    MergeQueue(queue, writer);
+
+                    if( currentOutput != null )
+                        currentOutput.UncompressedSize = writer.BytesWritten;
                 }
                 finally
                 {
@@ -145,6 +154,24 @@ namespace Tkl.Jumbo.Jet.Tasks
                         previousMergePassOutputs = null;
                     }
                 }
+            }
+        }
+
+        private static void MergeQueue(PriorityQueue<MergeInput> queue, RecordWriter<T> writer)
+        {
+            // merge the contents of the queue.
+            while( queue.Count > 0 )
+            {
+                MergeInput front = queue.Peek();
+                writer.WriteRecord(front.Value);
+                T nextItem;
+                if( front.Reader.ReadRecord(out nextItem) )
+                {
+                    front.Value = nextItem;
+                    queue.AdjustFirstItem();
+                }
+                else
+                    queue.Dequeue();
             }
         }
 

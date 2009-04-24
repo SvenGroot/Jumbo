@@ -72,6 +72,7 @@
     <Compile Include="Dfs\NameServerTests.cs" />
     <Compile Include="Dfs\NewBlockHeartbeatDataTests.cs" />
     <Compile Include="Dfs\PacketTests.cs" />
+    <Compile Include="Jet\FileChannelCompressionTests.cs" />
     <Compile Include="Jet\JetClientTests.cs" />
     <Compile Include="Jet\JobAndTaskServerTests.cs" />
     <Compile Include="Jet\JobConfigurationTests.cs" />

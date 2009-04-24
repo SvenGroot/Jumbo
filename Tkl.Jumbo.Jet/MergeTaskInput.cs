@@ -20,17 +20,19 @@ namespace Tkl.Jumbo.Jet
 
         private sealed class Input : IDisposable
         {
-            public Input(RecordReader<T> reader, string fileName, string sourceName, MergeTaskInput<T> input)
+            private RecordReader<T> _reader;
+            private MergeTaskInput<T> _input;
+            private string _sourceName;
+            private long _uncompressedSize;
+
+            public Input(RecordReader<T> reader, string fileName, string sourceName, MergeTaskInput<T> input, long uncompressedSize)
             {
                 _reader = reader;
                 FileName = fileName;
                 _input = input;
                 _sourceName = sourceName;
+                _uncompressedSize = uncompressedSize;
             }
-
-            private RecordReader<T> _reader;
-            private MergeTaskInput<T> _input;
-            private string _sourceName;
 
             public string FileName { get; private set; }
 
@@ -40,7 +42,7 @@ namespace Tkl.Jumbo.Jet
                 {
                     if( _reader == null )
                     {
-                        _reader = new BinaryRecordReader<T>(FileName, _input.AllowRecordReuse, _input.DeleteFiles, _input.BufferSize) { SourceName = _sourceName };
+                        _reader = new BinaryRecordReader<T>(FileName, _input.AllowRecordReuse, _input.DeleteFiles, _input.BufferSize, _input.CompressionType, _uncompressedSize) { SourceName = _sourceName };
                     }
                     return _reader;
                 }
@@ -75,7 +77,7 @@ namespace Tkl.Jumbo.Jet
         private bool _disposed;
         private const int _defaultBufferSize = 0x1000;
 
-        internal MergeTaskInput(int totalInputCount)
+        internal MergeTaskInput(int totalInputCount, CompressionType compressionType)
         {
             if( totalInputCount < 0 )
                 throw new ArgumentOutOfRangeException("totalInputCount", "Merge task must have at least one input.");
@@ -83,6 +85,7 @@ namespace Tkl.Jumbo.Jet
             TotalInputCount = totalInputCount;
             _inputs = new List<Input>(totalInputCount);
             BufferSize = _defaultBufferSize;
+            CompressionType = compressionType;
         }
 
         /// <summary>
@@ -174,6 +177,11 @@ namespace Tkl.Jumbo.Jet
             }
         }
 
+        /// <summary>
+        /// Gets the type of compression that was used on the input files.
+        /// </summary>
+        public CompressionType CompressionType { get; private set; }
+
         internal bool AllowRecordReuse { get; set; }
 
         internal bool DeleteFiles { get; set; }
@@ -224,13 +232,13 @@ namespace Tkl.Jumbo.Jet
         internal void AddInput(RecordReader<T> reader)
         {
             CheckDisposed();
-            AddInput(new Input(reader, null, null, this));
+            AddInput(new Input(reader, null, null, this, -1L));
         }
 
-        internal void AddInput(string fileName, string sourceName)
+        internal void AddInput(string fileName, string sourceName, long uncompressedSize)
         {
             CheckDisposed();
-            AddInput(new Input(null, fileName, sourceName, this));
+            AddInput(new Input(null, fileName, sourceName, this, uncompressedSize));
         }
 
         private void AddInput(Input input)

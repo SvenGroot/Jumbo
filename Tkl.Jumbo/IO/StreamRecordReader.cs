@@ -49,7 +49,8 @@ namespace Tkl.Jumbo.IO
                 throw new ArgumentException("Offset + size is beyond the end of the stream.");
 
             Stream = stream;
-            Stream.Position = offset;
+            if( offset != 0 ) // to prevent NotSupportedException on streams that can't seek.
+                Stream.Position = offset;
             Offset = offset;
             Size = size;
         }

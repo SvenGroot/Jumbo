@@ -6,12 +6,24 @@ using NUnit.Framework;
 using Tkl.Jumbo.Jet.Tasks;
 using Tkl.Jumbo.IO;
 using Tkl.Jumbo.Jet;
+using System.IO;
 
 namespace Tkl.Jumbo.Test.Jet
 {
     [TestFixture]
     public class TaskTests
     {
+        [TestFixtureSetUp]
+        public void SetUp()
+        {
+            if( Directory.Exists(Utilities.TestOutputPath) )
+                Directory.Delete(Utilities.TestOutputPath, true);
+            Directory.CreateDirectory(Utilities.TestOutputPath);
+
+            log4net.LogManager.ResetConfiguration();
+            log4net.Config.BasicConfigurator.Configure();
+        }
+
         [Test]
         public void TestSortTask()
         {
@@ -40,11 +52,28 @@ namespace Tkl.Jumbo.Test.Jet
         [Test]
         public void TestMergeSortTask()
         {
+            TestMergeSort(100, CompressionType.None);
+        }
+
+        [Test]
+        public void TestMergeSortTaskMultiplePasses()
+        {
+            TestMergeSort(20, CompressionType.None);
+        }
+
+        [Test]
+        public void TestMergeSortTaskMultiplePassesWithCompression()
+        {
+            TestMergeSort(20, CompressionType.GZip);
+        }
+
+        private static void TestMergeSort(int maxMergeInputs, CompressionType compression)
+        {
             const int inputCount = 50;
             const int recordCountMin = 1000;
             const int recordCountMax = 10000;
             List<Int32Writable> sortedList = new List<Int32Writable>();
-            MergeTaskInput<Int32Writable> input = new MergeTaskInput<Int32Writable>(inputCount);
+            MergeTaskInput<Int32Writable> input = new MergeTaskInput<Int32Writable>(inputCount, compression);
             Random rnd = new Random();
             for( int x = 0; x < inputCount; ++x )
             {
@@ -64,6 +93,11 @@ namespace Tkl.Jumbo.Test.Jet
             ListRecordWriter<Int32Writable> output = new ListRecordWriter<Int32Writable>();
 
             MergeSortTask<Int32Writable> target = new MergeSortTask<Int32Writable>();
+            TaskConfiguration taskConfig = new TaskConfiguration();
+            taskConfig.AddTypedSetting(MergeSortTask<Int32Writable>.MaxMergeInputsSetting, maxMergeInputs);
+            taskConfig.TaskID = "Merge";
+            target.TaskAttemptConfiguration = new TaskAttemptConfiguration(Guid.Empty, new JobConfiguration(), taskConfig, Utilities.TestOutputPath, "", 1, null);
+            target.JetConfiguration = new JetConfiguration();
             target.Run(input, output);
 
             Assert.IsTrue(Utilities.CompareList(sortedList, output.List));

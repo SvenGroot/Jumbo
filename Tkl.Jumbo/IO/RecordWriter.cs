@@ -33,6 +33,14 @@ namespace Tkl.Jumbo.IO
         }
 
         /// <summary>
+        /// Gets the number of bytes written to the stream after compression, or 0 if the stream was not compressed.
+        /// </summary>
+        public virtual long CompressedBytesWritten
+        {
+            get { return 0; }
+        }
+
+        /// <summary>
         /// Writes a record.
         /// </summary>
         /// <param name="record">The record to write.</param>

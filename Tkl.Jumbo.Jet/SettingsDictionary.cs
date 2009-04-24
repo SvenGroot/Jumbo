@@ -63,7 +63,12 @@ namespace Tkl.Jumbo.Jet
         {
             string value;
             if( TryGetValue(key, out value) )
-                return (T)Convert.ChangeType(value, typeof(T), System.Globalization.CultureInfo.InvariantCulture);
+            {
+                if( typeof(T).IsEnum )
+                    return (T)Enum.Parse(typeof(T), value);
+                else
+                    return (T)Convert.ChangeType(value, typeof(T), System.Globalization.CultureInfo.InvariantCulture);
+            }
             else
                 return defaultValue;
         }

@@ -20,6 +20,16 @@ namespace TaskServerApplication
             TaskServer.Instance.ReportProgress(jobId, taskId, progress);
         }
 
+        public void SetUncompressedTemporaryFileSize(Guid jobId, string fileName, long uncompressedSize)
+        {
+            TaskServer.Instance.SetUncompressedTemporaryFileSize(jobId, fileName, uncompressedSize);
+        }
+
+        public long GetUncompressedTemporaryFileSize(Guid jobId, string fileName)
+        {
+            return TaskServer.Instance.GetUncompressedTemporaryFileSize(jobId, fileName);
+        }
+
         #endregion
 
         #region ITaskServerClientProtocol Members

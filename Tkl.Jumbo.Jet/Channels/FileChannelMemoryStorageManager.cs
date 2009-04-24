@@ -14,6 +14,7 @@ namespace Tkl.Jumbo.Jet.Channels
         private sealed class NotifyDisposedMemoryStream : MemoryStream
         {
             private readonly FileChannelMemoryStorageManager _manager;
+            private bool _disposed;
 
             public NotifyDisposedMemoryStream(int capacity, FileChannelMemoryStorageManager manager)
                 : base(capacity)
@@ -27,7 +28,11 @@ namespace Tkl.Jumbo.Jet.Channels
             protected override void Dispose(bool disposing)
             {
                 base.Dispose(disposing);
-                _manager.NotifyStreamDisposed(this);
+                if( !_disposed )
+                {
+                    _disposed = true;
+                    _manager.NotifyStreamDisposed(this);
+                }
             }
         }
 

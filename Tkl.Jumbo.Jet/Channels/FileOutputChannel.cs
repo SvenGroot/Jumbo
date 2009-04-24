@@ -12,11 +12,18 @@ namespace Tkl.Jumbo.Jet.Channels
     /// </summary>
     public class FileOutputChannel : IOutputChannel
     {
+        /// <summary>
+        /// The name of the setting in <see cref="JobConfiguration.JobSettings"/> that overrides the global compression setting.
+        /// </summary>
+        public const string CompressionTypeSetting = "FileChannel.CompressionType";
+
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(FileOutputChannel));
 
         private readonly string[] _fileNames;
         private string _partitionerType;
         private TaskExecutionUtility _taskExecution;
+        private CompressionType _compressionType;
+        private IEnumerable<IRecordWriter> _writers;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="FileOutputChannel"/> class.
@@ -38,8 +45,24 @@ namespace Tkl.Jumbo.Jet.Channels
                 _fileNames = new[] { Path.Combine(taskExecution.Configuration.LocalJobDirectory, CreateChannelFileName(taskExecution.Configuration.TaskConfiguration.TaskID, "DummyTask")) };
             }
             _partitionerType = channelConfig.PartitionerType;
+            _compressionType = _taskExecution.Configuration.JobConfiguration.GetTypedSetting(CompressionTypeSetting, _taskExecution.JetClient.Configuration.FileChannel.CompressionType);
         }
 
+        internal void ReportFileSizesToTaskServer()
+        {
+            if( _compressionType != CompressionType.None )
+            {
+                int x = 0;
+                foreach( IRecordWriter writer in _writers )
+                {
+                    string fileName = Path.GetFileName(_fileNames[x]);
+                    _taskExecution.Umbilical.SetUncompressedTemporaryFileSize(_taskExecution.Configuration.JobId, fileName, writer.BytesWritten);
+
+                    ++x;
+                }
+                System.Diagnostics.Debug.Assert(x == _fileNames.Length);
+            }
+        }
 
         internal static string CreateChannelFileName(string inputTaskID, string outputTaskID)
         {
@@ -56,12 +79,17 @@ namespace Tkl.Jumbo.Jet.Channels
         public RecordWriter<T> CreateRecordWriter<T>() where T : IWritable, new()
         {
             if( _fileNames.Length == 1 )
-                return new BinaryRecordWriter<T>(File.Create(_fileNames[0]));
+            {
+                RecordWriter<T> result = new BinaryRecordWriter<T>(File.Create(_fileNames[0]).CreateCompressor(_compressionType));
+                _writers = new[] { result };
+                return result;
+            }
             else
             {
                 IPartitioner<T> partitioner = (IPartitioner<T>)JetActivator.CreateInstance(Type.GetType(_partitionerType, true), _taskExecution);
                 var writers = from file in _fileNames
-                              select (RecordWriter<T>)new BinaryRecordWriter<T>(File.Create(file));
+                              select (RecordWriter<T>)new BinaryRecordWriter<T>(File.Create(file).CreateCompressor(_compressionType));
+                _writers = writers.Cast<IRecordWriter>();
                 return new MultiRecordWriter<T>(writers, partitioner);
             }
         }

@@ -27,6 +27,15 @@ namespace Tkl.Jumbo.Test.Jet
             {
             }
 
+            public void SetUncompressedTemporaryFileSize(Guid jobId, string fileName, long uncompressedSize)
+            {
+            }
+
+            public long GetUncompressedTemporaryFileSize(Guid jobId, string fileName)
+            {
+                return -1;
+            }
+
             #endregion
         }
 

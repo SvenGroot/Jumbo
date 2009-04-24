@@ -18,7 +18,7 @@ namespace TaskServerApplication
     /// - Connect.
     /// - Send job ID as byte array.
     /// - Send requested file name using BinaryWriter.Write(string)
-    /// - Server writes a the size of the file to the stream as a long (Int64), or -1 if there's a failure.
+    /// - Server writes a the compressed and uncompressed size of the file to the stream as two longs (Int64), or -1 if there's a failure.
     /// - Server writes file if it exists.
     /// </remarks>
     class FileChannelServer : TcpServer
@@ -75,9 +75,15 @@ namespace TaskServerApplication
             string path = Path.Combine(dir, file);
             if( File.Exists(path) )
             {
+                long uncompressedSize = _taskServer.GetUncompressedTemporaryFileSize(jobID, file);
+
                 using( FileStream fileStream = File.OpenRead(path) )
                 {
                     writer.Write(fileStream.Length);
+                    if( uncompressedSize == -1 )
+                        writer.Write(fileStream.Length);
+                    else
+                        writer.Write(uncompressedSize);
                     fileStream.CopyTo(writer.BaseStream);
                 }
             }

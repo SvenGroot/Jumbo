@@ -24,5 +24,10 @@ namespace Tkl.Jumbo.IO
         /// Gets the number of bytes written to the stream.
         /// </summary>
         long BytesWritten { get; }
+
+        /// <summary>
+        /// Gets the number of bytes written to the stream after compression, or 0 if the stream was not compressed.
+        /// </summary>
+        long CompressedBytesWritten { get; }
     }
 }

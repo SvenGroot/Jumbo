@@ -25,6 +25,7 @@ namespace TaskServerApplication
         private static object _startupLock = new object();
         private FileChannelServer _fileServer;
         private FileChannelServer _fileServerIPv4;
+        private readonly Dictionary<Guid, Dictionary<string, long>> _uncompressedTemporaryFileSizes = new Dictionary<Guid, Dictionary<string, long>>();
 
         private TaskServer()
             : this(JetConfiguration.GetConfiguration(), DfsConfiguration.GetConfiguration())
@@ -109,6 +110,37 @@ namespace TaskServerApplication
             _log.InfoFormat("Task {0} progress: {1}%", Job.CreateFullTaskID(jobId, taskId), (int)(progress * 100));
             NotifyTaskStatusChanged(jobId, taskId, TaskAttemptStatus.Running, progress);
         }
+
+        public void SetUncompressedTemporaryFileSize(Guid jobId, string fileName, long uncompressedSize)
+        {
+            _log.DebugFormat("Uncompressed file size of job {0} file {1} is {2}.", jobId, fileName, uncompressedSize);
+            lock( _uncompressedTemporaryFileSizes )
+            {
+                Dictionary<string, long> jobFileSizes;
+                if( !_uncompressedTemporaryFileSizes.TryGetValue(jobId, out jobFileSizes) )
+                {
+                    jobFileSizes = new Dictionary<string, long>();
+                    _uncompressedTemporaryFileSizes.Add(jobId, jobFileSizes);
+                }
+                jobFileSizes[fileName] = uncompressedSize;
+            }
+        }
+
+        public long GetUncompressedTemporaryFileSize(Guid jobId, string fileName)
+        {
+            lock( _uncompressedTemporaryFileSizes )
+            {
+                Dictionary<string, long> jobFileSizes;
+                if( _uncompressedTemporaryFileSizes.TryGetValue(jobId, out jobFileSizes) )
+                {
+                    long uncompressedSize;
+                    if( jobFileSizes.TryGetValue(fileName, out uncompressedSize) )
+                        return uncompressedSize;
+                }
+                return -1;
+            }
+        }
+
 
         #endregion
 
@@ -292,6 +324,11 @@ namespace TaskServerApplication
 
         private void CleanupJobFiles(Guid jobId)
         {
+            lock( _uncompressedTemporaryFileSizes )
+            {
+                _uncompressedTemporaryFileSizes.Remove(jobId);
+            }
+
             try
             {
                 if( Configuration.FileChannel.DeleteIntermediateFiles )

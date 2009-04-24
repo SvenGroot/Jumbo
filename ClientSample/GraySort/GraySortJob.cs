@@ -6,12 +6,14 @@ using Tkl.Jumbo.Jet;
 using Tkl.Jumbo.Dfs;
 using Tkl.Jumbo.Jet.Tasks;
 using Tkl.Jumbo.IO;
+using Tkl.Jumbo.Jet.Channels;
+using Tkl.Jumbo;
 
 namespace ClientSample.GraySort
 {
     static class GraySortJob
     {
-        public static Guid RunGraySortJob(JetClient jetClient, DfsClient dfsClient, string inputFile, string outputPath, int mergeTasks, int maxMergeInputs)
+        public static Guid RunGraySortJob(JetClient jetClient, DfsClient dfsClient, string inputFile, string outputPath, int mergeTasks, int maxMergeInputs, bool useCompression)
         {
             dfsClient.NameServer.Delete(outputPath, true);
             dfsClient.NameServer.CreateDirectory(outputPath);
@@ -40,6 +42,12 @@ namespace ClientSample.GraySort
                 const string partitionFile = "/graysortpartitions";
                 RangePartitioner.CreatePartitionFile(dfsClient, partitionFile, (from task in job.Tasks where task.DfsInput != null select task.DfsInput).ToArray(), mergeTasks, 10000);
                 job.AddSetting("partitionFile", partitionFile);
+            }
+
+            if( useCompression )
+            {
+                Console.WriteLine("Enabling compression.");
+                job.AddTypedSetting(FileOutputChannel.CompressionTypeSetting, CompressionType.GZip);
             }
             
             return jetClient.RunJob(job, typeof(GenSortRecordReader).Assembly.Location).JobID;

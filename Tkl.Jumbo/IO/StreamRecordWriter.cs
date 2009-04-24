@@ -37,6 +37,21 @@ namespace Tkl.Jumbo.IO
         {
             get { return Stream.Length; }
         }
+
+        /// <summary>
+        /// Gets the number of bytes written to the stream after compression, or 0 if the stream was not compressed.
+        /// </summary>
+        public override long CompressedBytesWritten
+        {
+            get
+            {
+                ICompressionStream compressionStream = Stream as ICompressionStream;
+                if( compressionStream == null )
+                    return 0;
+                else
+                    return compressionStream.CompressedBytesWritten;
+            }
+        }
         
         /// <summary>
         /// Cleans up all resources associated with this <see cref="StreamRecordReader{T}"/>.

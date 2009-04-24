@@ -53,5 +53,15 @@ namespace Tkl.Jumbo.Jet
             get { return (long)this["memoryStorageSize"]; }
             set { this["memoryStorageSize"] = value; }
         }
+
+        /// <summary>
+        /// Gets or sets the type of compression to use for intermediate files.
+        /// </summary>
+        [ConfigurationProperty("compressionType", DefaultValue = CompressionType.None, IsRequired = false, IsKey = false)]
+        public CompressionType CompressionType
+        {
+            get { return (CompressionType)this["compressionType"]; }
+            set { this["compressionType"] = value; }
+        }
     }
 }

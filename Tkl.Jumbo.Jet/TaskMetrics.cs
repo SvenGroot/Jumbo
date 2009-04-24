@@ -27,9 +27,19 @@ namespace Tkl.Jumbo.Jet
         public long LocalBytesRead { get; set; }
 
         /// <summary>
+        /// Gets or sets the number of compressed bytes read from the local disk.
+        /// </summary>
+        public long CompressedLocalBytesRead { get; set; }
+
+        /// <summary>
         /// Gets or sets the number of bytes written to the local disk.
         /// </summary>
         public long LocalBytesWritten { get; set; }
+
+        /// <summary>
+        /// Gets or sets the number of compressed bytes written to the local disk.
+        /// </summary>
+        public long CompressedLocalBytesWritten { get; set; }
 
         /// <summary>
         /// Gets or sets the number of bytes read from the network, not counting DFS reads.
@@ -52,7 +62,7 @@ namespace Tkl.Jumbo.Jet
         /// <returns>A string representation of the <see cref="TaskMetrics"/> object.</returns>
         public override string ToString()
         {
-            return string.Format(System.Globalization.CultureInfo.CurrentCulture, "DFS bytes read: {0}\nDFS bytes written: {1}\nLocal bytes read: {2}\nLocal bytes written: {3}\nNetwork bytes read: {4}\nRecords read: {5}\nRecords written: {6}", DfsBytesRead, DfsBytesWritten, LocalBytesRead, LocalBytesWritten, NetworkBytesRead, RecordsRead, RecordsWritten);
+            return string.Format(System.Globalization.CultureInfo.CurrentCulture, "DFS bytes read: {0}\r\nDFS bytes written: {1}\r\nLocal bytes read: {2} (compressed: {7})\r\nLocal bytes written: {3} (compressed: {8})\r\nNetwork bytes read: {4}\r\nRecords read: {5}\r\nRecords written: {6}", DfsBytesRead, DfsBytesWritten, LocalBytesRead, LocalBytesWritten, NetworkBytesRead, RecordsRead, RecordsWritten, CompressedLocalBytesRead, CompressedLocalBytesWritten);
         }
     }
 }

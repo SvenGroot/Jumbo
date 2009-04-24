@@ -53,8 +53,11 @@
     </Compile>
     <Compile Include="ClientChannelSink.cs" />
     <Compile Include="ClientChannelSinkProvider.cs" />
+    <Compile Include="Compression.cs" />
+    <Compile Include="CompressionType.cs" />
     <Compile Include="DriveSpaceInfo.cs" />
     <Compile Include="Extensions.cs" />
+    <Compile Include="ICompressionStream.cs" />
     <Compile Include="IO\BinaryRecordReader.cs" />
     <Compile Include="IO\BinaryRecordWriter.cs" />
     <Compile Include="IO\EnumerableRecordReader.cs" />

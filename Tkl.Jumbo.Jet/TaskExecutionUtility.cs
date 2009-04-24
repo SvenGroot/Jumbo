@@ -67,7 +67,6 @@ namespace Tkl.Jumbo.Jet
         private IRecordReader _inputReader;
         private IRecordReader _mergeTaskInput;
         private IRecordWriter _outputWriter;
-        private ITaskServerUmbilicalProtocol _umbilical;
         private Thread _progressThread;
         private bool _disposed;
         private ITaskContainer _task;
@@ -107,7 +106,7 @@ namespace Tkl.Jumbo.Jet
             if( dfsJobDirectory == null )
                 throw new ArgumentNullException("dfsJobDirectory");
             JetClient = jetClient;
-            _umbilical = umbilical;
+            Umbilical = umbilical;
             Configuration = new TaskAttemptConfiguration(jobId, jobConfiguration, jobConfiguration.GetTask(taskId), localJobDirectory, dfsJobDirectory, attempt, this);
             DfsClient = dfsClient;
 
@@ -126,7 +125,7 @@ namespace Tkl.Jumbo.Jet
         }
 
         private TaskExecutionUtility(TaskExecutionUtility baseTask, string taskId)
-            : this(baseTask.JetClient, baseTask._umbilical, baseTask.Configuration.JobId, baseTask.Configuration.JobConfiguration, taskId, baseTask.DfsClient, baseTask.Configuration.LocalJobDirectory, baseTask.Configuration.DfsJobDirectory, baseTask.Configuration.Attempt)
+            : this(baseTask.JetClient, baseTask.Umbilical, baseTask.Configuration.JobId, baseTask.Configuration.JobConfiguration, taskId, baseTask.DfsClient, baseTask.Configuration.LocalJobDirectory, baseTask.Configuration.DfsJobDirectory, baseTask.Configuration.Attempt)
         {
             _isAssociatedTask = true;
         }
@@ -218,6 +217,11 @@ namespace Tkl.Jumbo.Jet
                 return _allowRecordReuse.Value;
             }
         }
+
+        /// <summary>
+        /// Gets the <see cref="ITaskServerUmbilicalProtocol"/> used to communicate with the task server.
+        /// </summary>
+        public ITaskServerUmbilicalProtocol Umbilical { get; private set; }
 
         /// <summary>
         /// Gets the output record writer.
@@ -320,6 +324,10 @@ namespace Tkl.Jumbo.Jet
             {
                 associatedTask.FinishTask();
             }
+
+            FileOutputChannel fileOutputChannel = OutputChannel as FileOutputChannel;
+            if( fileOutputChannel != null )
+                fileOutputChannel.ReportFileSizesToTaskServer();
 
             if( Configuration.TaskConfiguration.DfsOutput != null )
             {
@@ -490,7 +498,7 @@ namespace Tkl.Jumbo.Jet
             if( Configuration.TaskConfiguration.DfsInput != null )
             {
                 _log.DebugFormat("Creating record reader of type {0}", Configuration.TaskConfiguration.DfsInput.RecordReaderType);
-                MergeTaskInput<T> result = new MergeTaskInput<T>(1);
+                MergeTaskInput<T> result = new MergeTaskInput<T>(1, CompressionType.None);
                 result.AddInput(Configuration.TaskConfiguration.DfsInput.CreateRecordReader<T>(DfsClient, this));
                 return result;
             }
@@ -528,6 +536,7 @@ namespace Tkl.Jumbo.Jet
                     {
                         metrics.LocalBytesRead += fileInputChannel.LocalBytesRead;
                         metrics.NetworkBytesRead += fileInputChannel.NetworkBytesRead;
+                        metrics.CompressedLocalBytesRead += fileInputChannel.CompressedLocalBytesRead;
                     }
                 }
             }
@@ -537,6 +546,7 @@ namespace Tkl.Jumbo.Jet
             if( OutputChannel is FileOutputChannel && _outputWriter != null )
             {
                 metrics.LocalBytesWritten += _outputWriter.BytesWritten;
+                metrics.CompressedLocalBytesWritten += _outputWriter.CompressedBytesWritten;
                 metrics.RecordsWritten += _outputWriter.RecordsWritten;
             }
 
@@ -572,7 +582,7 @@ namespace Tkl.Jumbo.Jet
                     try
                     {
                         _log.InfoFormat("Reporting progress: {0}%", (int)(progress * 100));
-                        _umbilical.ReportProgress(Configuration.JobId, Configuration.TaskConfiguration.TaskID, progress);
+                        Umbilical.ReportProgress(Configuration.JobId, Configuration.TaskConfiguration.TaskID, progress);
                         previousProgress = progress;
                     }
                     catch( SocketException ex )
