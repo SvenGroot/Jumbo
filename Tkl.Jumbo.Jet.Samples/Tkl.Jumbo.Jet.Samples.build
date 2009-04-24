@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8" ?>
-<project name="JetShell" default="build" xmlns="http://nant.sf.net/release/0.86-beta1/nant.xsd">
+<project name="Tkl.Jumbo.Jet.Samples" default="build" xmlns="http://nant.sf.net/release/0.86-beta1/nant.xsd">
   <property name="debug" value="false" overwrite="false"/>
   <property name="rebuild" value="false" overwrite="false"/>
   <property if="${debug}" name="define" value="DEBUG;TRACE"/>
@@ -9,32 +9,31 @@
   </target>
   <target name="build">
     <mkdir dir="nantbin"/>
-    <csc output="nantbin/JetShell.exe" target="exe" debug="${debug}" optimize="${not debug}"
-         define="${define}" keyfile="jumbo.snk" rebuild="${rebuild}">
+    <csc output="nantbin/Tkl.Jumbo.Jet.Samples.dll" target="library" debug="${debug}" optimize="${not debug}"
+         define="${define}" doc="nantbin/Tkl.Jumbo.Jet.xml" keyfile="jumbo.snk" rebuild="${rebuild}">
       <references>
         <include name="System.dll"/>
         <include name="System.Configuration.dll"/>
         <include name="System.Core.dll"/>
+        <include name="System.Runtime.Remoting.dll"/>
         <include name="../lib/log4net.dll"/>
+        <include name="../Tkl.Jumbo/nantbin/Tkl.Jumbo.dll"/>
         <include name="../Tkl.Jumbo.Dfs/nantbin/Tkl.Jumbo.Dfs.dll"/>
         <include name="../Tkl.Jumbo.Jet/nantbin/Tkl.Jumbo.Jet.dll"/>
-        <include name="../Tkl.Jumbo/nantbin/Tkl.Jumbo.dll"/>
       </references>
       <sources>
         <include name="Properties/AssemblyInfo.cs"/>
+        <include name="Tasks/*.cs"/>
         <include name="*.cs"/>
         <include name="../Version.cs"/>
       </sources>
     </csc>
-    <copy file="App.config" tofile="nantbin/JetShell.exe.config"/>
     <copy todir="nantbin">
       <fileset>
         <include name="../lib/log4net.dll"/>
+        <include name="../Tkl.Jumbo/nantbin/*.*"/>
         <include name="../Tkl.Jumbo.Dfs/nantbin/*.*"/>
         <include name="../Tkl.Jumbo.Jet/nantbin/*.*"/>
-        <include name="../Tkl.Jumbo/nantbin/*.*"/>
-        <include name="../jet.config"/>
-        <include name="../dfs.config"/>
       </fileset>
     </copy>
   </target>

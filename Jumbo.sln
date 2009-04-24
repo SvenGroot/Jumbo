@@ -101,6 +101,8 @@ Project("{E24C65DC-7377-472B-9ABA-BC803B73C61A}") = "JetWeb", "JetWeb\", "{84659
 		DefaultWebSiteLanguage = "Visual C#"
 	EndProjectSection
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Tkl.Jumbo.Jet.Samples", "Tkl.Jumbo.Jet.Samples\Tkl.Jumbo.Jet.Samples.csproj", "{D9CBA673-454D-4821-AB1B-1A423C28B4A8}"
+EndProject
 Global
 	GlobalSection(SubversionScc) = preSolution
 		Svn-Managed = True
@@ -171,6 +173,10 @@ Global
 		{846592A0-A34E-499B-9052-8F3981062FE1}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{846592A0-A34E-499B-9052-8F3981062FE1}.Release|Any CPU.ActiveCfg = Debug|Any CPU
 		{846592A0-A34E-499B-9052-8F3981062FE1}.Release|Any CPU.Build.0 = Debug|Any CPU
+		{D9CBA673-454D-4821-AB1B-1A423C28B4A8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D9CBA673-454D-4821-AB1B-1A423C28B4A8}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D9CBA673-454D-4821-AB1B-1A423C28B4A8}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D9CBA673-454D-4821-AB1B-1A423C28B4A8}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -191,5 +197,6 @@ Global
 		{E739829A-3507-42EA-A8B4-D8D41060DF95} = {FB89B685-F2DA-45FF-A5B5-1DF6EF6E5F58}
 		{0F6B643E-3122-41A3-9B28-0D17CE824EDF} = {FB89B685-F2DA-45FF-A5B5-1DF6EF6E5F58}
 		{846592A0-A34E-499B-9052-8F3981062FE1} = {FB89B685-F2DA-45FF-A5B5-1DF6EF6E5F58}
+		{D9CBA673-454D-4821-AB1B-1A423C28B4A8} = {FB89B685-F2DA-45FF-A5B5-1DF6EF6E5F58}
 	EndGlobalSection
 EndGlobal

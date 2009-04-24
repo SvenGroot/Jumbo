@@ -10,7 +10,7 @@ namespace Tkl.Jumbo.Jet
     /// object instance for every record.
     /// </summary>
     [AttributeUsage(AttributeTargets.Class, Inherited = true, AllowMultiple = false)]
-    sealed class AllowRecordReuseAttribute : Attribute
+    public sealed class AllowRecordReuseAttribute : Attribute
     {
         /// <summary>
         /// Gets or sets a value that indicates whether the task will pass on the instances it receives
