@@ -33,7 +33,7 @@ namespace Tkl.Jumbo.Jet.Samples.Tasks
         public void Run(RecordReader<KeyValuePairWritable<StringWritable, Int32Writable>> input, RecordWriter<KeyValuePairWritable<StringWritable, Int32Writable>> output)
         {
             _log.Info("Reading word counts from the input channel.");
-            Dictionary<string, Counter> wordCount = new Dictionary<string, Counter>(5000);
+            Dictionary<string, Counter> wordCount = new Dictionary<string, Counter>();
             foreach( var record in input.EnumerateRecords() )
             {
                 Counter count;

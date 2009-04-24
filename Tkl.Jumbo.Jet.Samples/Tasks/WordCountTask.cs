@@ -33,7 +33,7 @@ namespace Tkl.Jumbo.Jet.Samples.Tasks
         public void Run(RecordReader<StringWritable> input, RecordWriter<KeyValuePairWritable<StringWritable, Int32Writable>> output)
         {
             _log.Info("Beginning count.");
-            Dictionary<string, Counter> wordCount = new Dictionary<string, Counter>(5000);
+            Dictionary<string, Counter> wordCount = new Dictionary<string, Counter>();
             foreach( var line in input.EnumerateRecords() )
             {
                 string[] words = line.Value.Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
