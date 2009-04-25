@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-namespace Tkl.Jumbo.Jet.Samples.Tasks
+namespace Tkl.Jumbo.Jet.Samples.IO
 {
     /// <summary>
     /// A 128-bit random generator based on the one included with gensort, see http://www.hpl.hp.com/hosted/sortbenchmark/

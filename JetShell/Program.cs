@@ -12,6 +12,7 @@ namespace JetShell
 {
     static class Program
     {
+        private static readonly AssemblyResolver _resolver = new AssemblyResolver();
         private static readonly Dictionary<string, Action<JetClient, string[]>> _commands = CreateCommandList();
         private const int _jobStatusPollInterval = 5000;
 

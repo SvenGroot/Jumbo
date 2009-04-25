@@ -23,6 +23,8 @@ namespace Tkl.Jumbo.Jet.Samples
         public LineCount(string inputPath, string outputPath)
             : base(inputPath, outputPath, 1, typeof(RecordCountTask<StringWritable>), "RecordCountTask", typeof(RecordCountCombinerTask), null, typeof(LineRecordReader), typeof(TextRecordWriter<Int32Writable>), null, false)
         {
+            if( inputPath == null )
+                throw new ArgumentNullException("inputPath");
         }
     }
 }

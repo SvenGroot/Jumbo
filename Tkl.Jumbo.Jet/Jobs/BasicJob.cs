@@ -13,7 +13,7 @@ namespace Tkl.Jumbo.Jet.Jobs
     /// <summary>
     /// Represents a basic one or two stage job, with optional sorting of stage one output.
     /// </summary>
-    public abstract class BasicJob : Configurable, IJobRunner
+    public abstract class BasicJob : BaseJobRunner
     {
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(BasicJob));
 
@@ -37,7 +37,7 @@ namespace Tkl.Jumbo.Jet.Jobs
                 throw new ArgumentNullException("outputPath");
             if( secondStageTaskCount < 0 )
                 throw new ArgumentOutOfRangeException("secondStageTaskCount", "Second stage task count cannot be smaller than zero.");
-            if( secondStageTaskCount > 0 && secondStageTaskType == null )
+            if( secondStageTaskCount > 0 && !sortFirstStageOutput && secondStageTaskType == null )
                 throw new ArgumentNullException("secondStageTaskType");
             if( firstStageTaskType == null )
                 throw new ArgumentNullException("firstStageTaskType");
@@ -45,6 +45,8 @@ namespace Tkl.Jumbo.Jet.Jobs
                 throw new ArgumentNullException("inputReaderType");
             if( outputWriterType == null )
                 throw new ArgumentNullException("outputWriterType");
+            if( sortFirstStageOutput && secondStageTaskCount <= 0 )
+                throw new ArgumentException("Second stage task count must be larger than zero when sorting.");
 
             InputPath = inputPath;
             OutputPath = outputPath;
@@ -59,18 +61,6 @@ namespace Tkl.Jumbo.Jet.Jobs
             if( secondStageTaskType != null )
                 SecondStageName = secondStageName ?? secondStageTaskType.Name;
         }
-
-        /// <summary>
-        /// Gets or sets a value that indicates whether the output directory should be deleted, if it exists, before the job is executed.
-        /// </summary>
-        [NamedArgument("d", Description = "Delete the output directory before running the task, if it exists.")]
-        public bool DeleteOutputBeforeRun { get; set; }
-
-        /// <summary>
-        /// Gets or sets a value that indicates whether the job runner should wait for user input before starting the job and before exitting.
-        /// </summary>
-        [NamedArgument("i", Description = "Wait for user confirmation before starting the job and before exitting.")]
-        public bool Interactive { get; set; }
 
         /// <summary>
         /// Gets the input file or directory for the job.
@@ -132,19 +122,13 @@ namespace Tkl.Jumbo.Jet.Jobs
         /// </summary>
         protected string SecondStageName { get; private set; }
        
-        #region IJobRunner Members
-
         /// <summary>
         /// Starts the job.
         /// </summary>
         /// <returns>The job ID of the newly created job.</returns>
-        public virtual Guid RunJob()
+        public override Guid RunJob()
         {
-            if( Interactive )
-            {
-                Console.WriteLine("Press any key to start . . .");
-                Console.ReadKey();
-            }
+            PromptIfInteractive(true);
 
             DfsClient dfsClient = new DfsClient(DfsConfiguration);
             CheckAndCreateOutputPath(dfsClient, OutputPath);
@@ -165,9 +149,7 @@ namespace Tkl.Jumbo.Jet.Jobs
             JobConfiguration config = new JobConfiguration(assemblies.ToArray());
             if( InputPath != null )
             {
-                FileSystemEntry input = dfsClient.NameServer.GetFileSystemEntryInfo(InputPath);
-                if( input == null )
-                    throw new ArgumentException("The specified input path doesn't exist.", "inputPath");
+                FileSystemEntry input = GetInputFileSystemEntry(dfsClient, InputPath);
 
                 // Add the input stage; if it's a one stage job without sorting, also set output.
                 if( SecondStageTaskCount == 0 && !SortFirstStageOutput )
@@ -193,9 +175,9 @@ namespace Tkl.Jumbo.Jet.Jobs
                 // Add sort stage, pipelined to first stage.
                 config.AddPointToPointStage("SortStage", FirstStageName, typeof(SortTask<>).MakeGenericType(outputType), ChannelType.Pipeline, PartitionerType, null, null);
                 // Add merge stage; this stage outputs if there is no second stage.
-                config.AddStage("MergeStage", new[] { "SortStage" }, typeof(MergeSortTask<>).MakeGenericType(outputType), 1, ChannelType.File, null, SecondStageTaskCount == 0 ? OutputPath : null, OutputWriterType);
+                config.AddStage("MergeStage", new[] { "SortStage" }, typeof(MergeSortTask<>).MakeGenericType(outputType), 1, ChannelType.File, null, SecondStageTaskType == null ? OutputPath : null, OutputWriterType);
                 // Add second stage if necessary, pipelined to merge stage.
-                if( SecondStageTaskCount > 0 )
+                if( SecondStageTaskType != null )
                     config.AddPointToPointStage(SecondStageName, "MergeStage", SecondStageTaskType, ChannelType.Pipeline, null, OutputPath, OutputWriterType);
                 // Split the first stage output based on the number of second stage tasks, if necessary.
                 if( SecondStageTaskCount > 1 )
@@ -219,20 +201,6 @@ namespace Tkl.Jumbo.Jet.Jobs
         }
 
         /// <summary>
-        /// Called when the job finishes.
-        /// </summary>
-        public virtual void FinishJob()
-        {
-            if( Interactive )
-            {
-                Console.WriteLine("Press any key to exit . . .");
-                Console.ReadKey();
-            }
-        }
-
-        #endregion
-
-        /// <summary>
         /// Called when the job has been created on the job server, but before running it.
         /// </summary>
         /// <param name="job">The <see cref="Job"/> instance describing the job.</param>
@@ -242,21 +210,6 @@ namespace Tkl.Jumbo.Jet.Jobs
         /// </remarks>
         protected virtual void OnJobCreated(Job job, JobConfiguration jobConfiguration)
         {
-        }
-
-        private void CheckAndCreateOutputPath(DfsClient dfsClient, string outputPath)
-        {
-            if( DeleteOutputBeforeRun )
-            {
-                dfsClient.NameServer.Delete(outputPath, true);
-            }
-            else
-            {
-                Directory outputDir = dfsClient.NameServer.GetDirectoryInfo(outputPath);
-                if( outputDir != null )
-                    throw new ArgumentException("The specified output path already exists on the DFS.", "outputPath");
-            }
-            dfsClient.NameServer.CreateDirectory(outputPath);
-        }    
+        } 
     }
 }

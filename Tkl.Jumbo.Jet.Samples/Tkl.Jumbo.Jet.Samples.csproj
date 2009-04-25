@@ -58,19 +58,25 @@
       <Link>Properties\Version.cs</Link>
     </Compile>
     <Compile Include="GenSort.cs" />
+    <Compile Include="GraySort.cs" />
     <Compile Include="IO\GenSortRecord.cs" />
     <Compile Include="IO\GenSortRecordReader.cs" />
     <Compile Include="IO\GenSortRecordWriter.cs" />
     <Compile Include="Tasks\GenSortTask.cs" />
     <Compile Include="Tasks\GenSortGenerator.cs" />
-    <Compile Include="Tasks\Random128.cs" />
-    <Compile Include="Tasks\UInt128.cs" />
+    <Compile Include="IO\Random128.cs" />
+    <Compile Include="IO\UInt128.cs" />
     <Compile Include="LineCount.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="IO\RangePartitioner.cs" />
     <Compile Include="Tasks\RecordCountCombinerTask.cs" />
     <Compile Include="Tasks\RecordCountTask.cs" />
+    <Compile Include="Tasks\ValSortCombinerTask.cs" />
+    <Compile Include="IO\ValSortRecord.cs" />
+    <Compile Include="Tasks\ValSortTask.cs" />
     <Compile Include="Tasks\WordCountCombinerTask.cs" />
     <Compile Include="Tasks\WordCountTask.cs" />
+    <Compile Include="ValSort.cs" />
     <Compile Include="WordCount.cs" />
   </ItemGroup>
   <ItemGroup>

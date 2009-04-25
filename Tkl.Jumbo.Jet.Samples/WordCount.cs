@@ -25,6 +25,8 @@ namespace Tkl.Jumbo.Jet.Samples
         public WordCount(string inputPath, string outputPath, [OptionalArgument(1)] int combinerTasks)
             : base(inputPath, outputPath, combinerTasks, typeof(WordCountTask), null, typeof(WordCountCombinerTask), null, typeof(LineRecordReader), typeof(TextRecordWriter<KeyValuePairWritable<StringWritable, Int32Writable>>), null, false)
         {
+            if( inputPath == null )
+                throw new ArgumentNullException("inputPath");
         }
     }
 }

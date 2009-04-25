@@ -3,12 +3,12 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-namespace Tkl.Jumbo.Jet.Samples.Tasks
+namespace Tkl.Jumbo.Jet.Samples.IO
 {
     /// <summary>
-    /// 128 bit unsigned integer, based on the code provided with gensort, see http://www.hpl.hp.com/hosted/sortbenchmark/.
+    /// A 128 bit unsigned integer, based on the code provided with gensort, see http://www.hpl.hp.com/hosted/sortbenchmark/.
     /// </summary>
-    struct UInt128
+    public struct UInt128
     {
         private readonly ulong _high64;
         private readonly ulong _low64;
@@ -39,24 +39,43 @@ namespace Tkl.Jumbo.Jet.Samples.Tasks
             4
         };
 
+        /// <summary>
+        /// A <see cref="UInt128"/> with the value zero.
+        /// </summary>
         public static readonly UInt128 Zero = new UInt128();
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="UInt128"/> struct with the specified high and low bits.
+        /// </summary>
+        /// <param name="high64">The high 64 bits of the value.</param>
+        /// <param name="low64">The low 64 bits of the value.</param>
         public UInt128(ulong high64, ulong low64)
         {
             _high64 = high64;
             _low64 = low64;
         }
 
+        /// <summary>
+        /// Gets the high 64 bits of the value.
+        /// </summary>
         public ulong High64
         {
             get { return _high64; }
         }
 
+        /// <summary>
+        /// Gets the low 64 bits of the value.
+        /// </summary>
         public ulong Low64
         {
             get { return _low64; }
         }
 
+        /// <summary>
+        /// Tests this instance for equality with the specified object.
+        /// </summary>
+        /// <param name="obj">The object to test for equality.</param>
+        /// <returns><see langword="true"/> if this instance is equal to <paramref name="obj"/>; otherwise, <see langword="false"/>.</returns>
         public override bool Equals(object obj)
         {
             if( !(obj is UInt128) )
@@ -65,6 +84,10 @@ namespace Tkl.Jumbo.Jet.Samples.Tasks
             return this == other;
         }
 
+        /// <summary>
+        /// Returns a decimal string representation of the <see cref="UInt128"/>.
+        /// </summary>
+        /// <returns>A decimal string representation of the <see cref="UInt128"/>.</returns>
         public override string ToString()
         {
             ulong          hi8 = High64;
@@ -100,6 +123,10 @@ namespace Tkl.Jumbo.Jet.Samples.Tasks
             return result.ToString();
         }
 
+        /// <summary>
+        /// Returns a hexadecimal string representation of the <see cref="UInt128"/>.
+        /// </summary>
+        /// <returns>A hexadecimal string representation of the <see cref="UInt128"/>.</returns>
         public string ToHexString()
         {
             if( High64 != 0 )
@@ -108,21 +135,42 @@ namespace Tkl.Jumbo.Jet.Samples.Tasks
                 return Low64.ToString("x");
         }
 
+        /// <summary>
+        /// Returns a 32 bit hash code for this <see cref="UInt128"/>.
+        /// </summary>
+        /// <returns>A 32 bit hash code for this <see cref="UInt128"/>.</returns>
         public override int GetHashCode()
         {
             return High64.GetHashCode() ^ Low64.GetHashCode();
         }
 
+        /// <summary>
+        /// Tests two instances of <see cref="UInt128"/> for equality
+        /// </summary>
+        /// <param name="left">The first <see cref="UInt128"/>.</param>
+        /// <param name="right">The second <see cref="UInt128"/>.</param>
+        /// <returns><see langword="true"/> if the two instances are equal; otherwise, <see langword="false"/>.</returns>
         public static bool operator ==(UInt128 left, UInt128 right)
         {
             return left.High64 == right.High64 && left.Low64 == right.Low64;
         }
 
+        /// <summary>
+        /// Tests two instances of <see cref="UInt128"/> for inequality
+        /// </summary>
+        /// <param name="left">The first <see cref="UInt128"/>.</param>
+        /// <param name="right">The second <see cref="UInt128"/>.</param>
+        /// <returns><see langword="true"/> if the two instances are not equal; otherwise, <see langword="false"/>.</returns>
         public static bool operator !=(UInt128 left, UInt128 right)
         {
             return !(left.High64 == right.High64 && left.Low64 == right.Low64);
         }
 
+        /// <summary>
+        /// Increments the value of the specified instance by one.
+        /// </summary>
+        /// <param name="value">The <see cref="UInt128"/> to increment.</param>
+        /// <returns>The incremented value.</returns>
         public static UInt128 operator ++(UInt128 value)
         {
             ulong sumLow = value.Low64 + 1;
@@ -130,6 +178,12 @@ namespace Tkl.Jumbo.Jet.Samples.Tasks
             return new UInt128(sumHigh, sumLow);
         }
 
+        /// <summary>
+        /// Adds two <see cref="UInt128"/> values.
+        /// </summary>
+        /// <param name="left">The first <see cref="UInt128"/>.</param>
+        /// <param name="right">The second <see cref="UInt128"/>.</param>
+        /// <returns>The result of the addition.</returns>
         public static UInt128 operator +(UInt128 left, UInt128 right)
         {
             ulong sumLow;
@@ -150,7 +204,13 @@ namespace Tkl.Jumbo.Jet.Samples.Tasks
             return new UInt128(sumHigh, sumLow);
         }
 
-        public static UInt128 operator *(UInt128 a, UInt128 b)
+        /// <summary>
+        /// Multiplies two <see cref="UInt128"/> values.
+        /// </summary>
+        /// <param name="left">The first <see cref="UInt128"/>.</param>
+        /// <param name="right">The second <see cref="UInt128"/>.</param>
+        /// <returns>The result of the multiplication.</returns>
+        public static UInt128 operator *(UInt128 left, UInt128 right)
         {
             ulong productHigh, productLow;
             ulong ahi4, alow4, bhi4, blow4, temp;
@@ -158,10 +218,10 @@ namespace Tkl.Jumbo.Jet.Samples.Tasks
 
             productHigh = 0;
 
-            ahi4 = a.Low64 >> 32;        /* get hi 4 bytes of the low 8 bytes */
-            alow4 = (a.Low64 & 0xFFFFFFFFL);  /* get low 4 bytes of the low 8 bytes */
-            bhi4 = b.Low64 >> 32;        /* get hi 4 bytes of the low 8 bytes */
-            blow4 = (b.Low64 & 0xFFFFFFFFL);  /* get low 4 bytes of the low 8 bytes */
+            ahi4 = left.Low64 >> 32;        /* get hi 4 bytes of the low 8 bytes */
+            alow4 = (left.Low64 & 0xFFFFFFFFL);  /* get low 4 bytes of the low 8 bytes */
+            bhi4 = right.Low64 >> 32;        /* get hi 4 bytes of the low 8 bytes */
+            blow4 = (right.Low64 & 0xFFFFFFFFL);  /* get low 4 bytes of the low 8 bytes */
 
             /* assign 8-byte product of the lower 4 bytes of "a" and the lower 4 bytes
              * of "b" to the lower 8 bytes of the result product.
@@ -189,8 +249,8 @@ namespace Tkl.Jumbo.Jet.Samples.Tasks
                 productHigh++;  /* add carry bit */
 
             productHigh += ahi4 * bhi4;
-            productHigh += a.Low64 * b.High64;
-            productHigh += a.High64 * b.Low64;
+            productHigh += left.Low64 * right.High64;
+            productHigh += left.High64 * right.Low64;
             return new UInt128(productHigh, productLow);
         }
     }
