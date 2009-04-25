@@ -57,6 +57,14 @@
     <Compile Include="..\Version.cs">
       <Link>Properties\Version.cs</Link>
     </Compile>
+    <Compile Include="GenSort.cs" />
+    <Compile Include="IO\GenSortRecord.cs" />
+    <Compile Include="IO\GenSortRecordReader.cs" />
+    <Compile Include="IO\GenSortRecordWriter.cs" />
+    <Compile Include="Tasks\GenSortTask.cs" />
+    <Compile Include="Tasks\GenSortGenerator.cs" />
+    <Compile Include="Tasks\Random128.cs" />
+    <Compile Include="Tasks\UInt128.cs" />
     <Compile Include="LineCount.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Tasks\RecordCountCombinerTask.cs" />

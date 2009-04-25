@@ -33,8 +33,6 @@ namespace Tkl.Jumbo.Jet.Jobs
         /// <param name="sortFirstStageOutput"><see langword="true"/> to sort the output of the first stage using a sort and merge stage; otherwise <see langword="false"/>.</param>
         protected BasicJob(string inputPath, string outputPath, int secondStageTaskCount, Type firstStageTaskType, string firstStageName, Type secondStageTaskType, string secondStageName, Type inputReaderType, Type outputWriterType, Type partitionerType, bool sortFirstStageOutput)
         {
-            if( inputPath == null )
-                throw new ArgumentNullException("inputPath");
             if( outputPath == null )
                 throw new ArgumentNullException("outputPath");
             if( secondStageTaskCount < 0 )
@@ -43,7 +41,7 @@ namespace Tkl.Jumbo.Jet.Jobs
                 throw new ArgumentNullException("secondStageTaskType");
             if( firstStageTaskType == null )
                 throw new ArgumentNullException("firstStageTaskType");
-            if( inputReaderType == null )
+            if( inputPath != null && inputReaderType == null )
                 throw new ArgumentNullException("inputReaderType");
             if( outputWriterType == null )
                 throw new ArgumentNullException("outputWriterType");
@@ -83,6 +81,11 @@ namespace Tkl.Jumbo.Jet.Jobs
         /// Gets the output directory for the job.
         /// </summary>
         protected string OutputPath { get; private set; }
+
+        /// <summary>
+        /// Gets or sets the number of tasks in the first stage. Only used when <see cref="InputPath"/> is <see langword="null" />.
+        /// </summary>
+        protected int FirstStageTaskCount { get; set; }
 
         /// <summary>
         /// Gets the number of tasks in the second stage.
@@ -150,7 +153,8 @@ namespace Tkl.Jumbo.Jet.Jobs
             assemblies.Add(FirstStageTaskType.Assembly);
             if( SecondStageTaskType != null )
                 assemblies.Add(SecondStageTaskType.Assembly);
-            assemblies.Add(InputReaderType.Assembly);
+            if( InputReaderType != null )
+                assemblies.Add(InputReaderType.Assembly);
             assemblies.Add(OutputWriterType.Assembly);
             if( PartitionerType != null )
                 assemblies.Add(PartitionerType.Assembly);
@@ -159,15 +163,28 @@ namespace Tkl.Jumbo.Jet.Jobs
             assemblies.Remove(typeof(RecordReader<>).Assembly); // Don't include Tkl.Jumbo assembly
 
             JobConfiguration config = new JobConfiguration(assemblies.ToArray());
-            FileSystemEntry input = dfsClient.NameServer.GetFileSystemEntryInfo(InputPath);
-            if( input == null )
-                throw new ArgumentException("The specified input path doesn't exist.", "inputPath");
+            if( InputPath != null )
+            {
+                FileSystemEntry input = dfsClient.NameServer.GetFileSystemEntryInfo(InputPath);
+                if( input == null )
+                    throw new ArgumentException("The specified input path doesn't exist.", "inputPath");
 
-            // Add the input stage; if it's a one stage job without sorting, also set output.
-            if( SecondStageTaskCount == 0 && !SortFirstStageOutput )
-                config.AddInputStage(FirstStageName, input, FirstStageTaskType, InputReaderType, OutputPath, OutputWriterType);
+                // Add the input stage; if it's a one stage job without sorting, also set output.
+                if( SecondStageTaskCount == 0 && !SortFirstStageOutput )
+                    config.AddInputStage(FirstStageName, input, FirstStageTaskType, InputReaderType, OutputPath, OutputWriterType);
+                else
+                    config.AddInputStage(FirstStageName, input, FirstStageTaskType, InputReaderType);
+            }
             else
-                config.AddInputStage(FirstStageName, input, FirstStageTaskType, InputReaderType);
+            {
+                if( FirstStageTaskCount <= 0 )
+                    throw new InvalidOperationException("First stage has no tasks.");
+                // Add the first stage, which doesn't have any input; if it's a one stage job without sorting, also set output.
+                if( SecondStageTaskCount == 0 && !SortFirstStageOutput )
+                    config.AddStage(FirstStageName, null, FirstStageTaskType, FirstStageTaskCount, ChannelType.File, null, OutputPath, OutputWriterType);
+                else
+                    config.AddStage(FirstStageName, null, FirstStageTaskType, FirstStageTaskCount, ChannelType.File, null, null, null);
+            }
 
             if( SortFirstStageOutput )
             {

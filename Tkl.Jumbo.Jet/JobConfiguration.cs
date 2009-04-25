@@ -138,7 +138,7 @@ namespace Tkl.Jumbo.Jet
         /// Adds a stage that reads data from another stage.
         /// </summary>
         /// <param name="stageName">The name of the stage; this will be used as the base name for all the tasks in the stage.</param>
-        /// <param name="inputStages">The stages from which this stage gets its input.</param>
+        /// <param name="inputStages">The stages from which this stage gets its input, or <see langword="null"/> to create a stage with no input at all.</param>
         /// <param name="taskType">The type implementing the task action; this type must implement <see cref="ITask{TInput,TOutput}"/>.</param>
         /// <param name="taskCount">The number of tasks to create in this stage.</param>
         /// <param name="channelType">One of the <see cref="ChannelType"/> files indicating the type of channel to use between the the input stages and the new stage.</param>
@@ -156,10 +156,6 @@ namespace Tkl.Jumbo.Jet
         {
             if( stageName == null )
                 throw new ArgumentNullException("stageName");
-            if( inputStages == null )
-                throw new ArgumentNullException("inputStages");
-            if( inputStages.Count() == 0 )
-                throw new ArgumentException("The stage must have at least one input stage.", "inputStages");
             if( taskType == null )
                 throw new ArgumentNullException("taskType");
             if( taskCount <= 0 )
@@ -174,29 +170,34 @@ namespace Tkl.Jumbo.Jet
 
             ValidatePartitionerType(partitionerType, inputType);
 
-            var inputTasks = from inputStageName in inputStages
+            IEnumerable<TaskConfiguration> inputTasks = null;
+            if( inputStages != null && inputStages.Count() > 0 )
+            {
+                inputTasks = from inputStageName in inputStages
                              let inputStage = _stages[inputStageName]
                              from inputTask in inputStage
                              select inputTask;
+                if( inputTasks.Count() > 1 && channelType == ChannelType.Pipeline )
+                    throw new ArgumentException("You cannot use a pipeline channel type with a channel that merges several inputs.");
 
-            if( inputTasks.Count() > 1 && channelType == ChannelType.Pipeline )
-                throw new ArgumentException("You cannot use a pipeline channel type with a channel that merges several inputs.");
-
-            ValidateChannelRecordType(inputType, inputTasks);
+                ValidateChannelRecordType(inputType, inputTasks);
+            }
 
             List<TaskConfiguration> stage = CreateStage(stageName, taskType, taskCount, 1, outputPath, recordWriterType, null, null);
 
-            ChannelConfiguration channel = new ChannelConfiguration()
-            {
-                ChannelType = channelType,
-                PartitionerType = partitionerType == null ? typeof(HashPartitioner<>).MakeGenericType(inputType).AssemblyQualifiedName : partitionerType.AssemblyQualifiedName
-            };
-            channel.AddInputTasks(inputTasks);
-            channel.AddOutputTasks(stage);
-
             _stages.Add(stageName, stage);
             AddTasks(stage);
-            Channels.Add(channel);
+            if( inputTasks != null )
+            {
+                ChannelConfiguration channel = new ChannelConfiguration()
+                {
+                    ChannelType = channelType,
+                    PartitionerType = partitionerType == null ? typeof(HashPartitioner<>).MakeGenericType(inputType).AssemblyQualifiedName : partitionerType.AssemblyQualifiedName
+                };
+                channel.AddInputTasks(inputTasks);
+                channel.AddOutputTasks(stage);
+                Channels.Add(channel);
+            }
             return stage.AsReadOnly();
         }
 

@@ -23,7 +23,7 @@ namespace Tkl.Jumbo.Jet.Samples.Tasks
         /// </summary>
         /// <param name="input">A <see cref="RecordReader{T}"/> from which the task's input can be read.</param>
         /// <param name="output">A <see cref="RecordWriter{T}"/> to which the task's output should be written.</param>
-        public void Run(RecordReader<TInput> input, RecordWriter<Int32Writable> writer)
+        public void Run(RecordReader<TInput> input, RecordWriter<Int32Writable> output)
         {
             _log.Info("Beginning count");
             int records = 0;
@@ -33,8 +33,8 @@ namespace Tkl.Jumbo.Jet.Samples.Tasks
                 ++records;
             }
             _log.InfoFormat("Counted {0} records.", records);
-            if( writer != null )
-                writer.WriteRecord(records);
+            if( output != null )
+                output.WriteRecord(records);
         }
 
         #endregion
