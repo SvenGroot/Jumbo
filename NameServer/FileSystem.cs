@@ -204,9 +204,9 @@ namespace NameServerApplication
         ///   The returned <see cref="File"/> object is a shallow copy and cannot be used to modify the internal
         ///   state of the file system.
         /// </remarks>
-        /// <exception cref="ArgumentNullException"><paramref name="directory"/> is <see langword="null" />, or <paramref name="name"/> is <see langword="null"/> or an empty string..</exception>
-        /// <exception cref="ArgumentException"><paramref name="directory"/> is not an absolute path, contains an empty component, contains a file name, or <paramref name="name"/> refers to an existing file or directory.</exception>
-        /// <exception cref="DirectoryNotFoundException"><paramref name="directory"/> does not exist.</exception>
+        /// <exception cref="ArgumentNullException"><paramref name="path"/> is <see langword="null" />.</exception>
+        /// <exception cref="ArgumentException"><paramref name="path"/> is not an absolute path, contains an empty component, or contains a file name.</exception>
+        /// <exception cref="System.IO.DirectoryNotFoundException">One of the parent directories in the path specified in <paramref name="path"/> does not exist.</exception>
         public File GetFileInfo(string path)
         {
             if( path == null )
@@ -222,6 +222,37 @@ namespace NameServerApplication
                     result = (File)result.ShallowClone();
             }
             _log.Debug("GetFileInfo complete.");
+            return result;
+        }
+
+        /// <summary>
+        /// Gets information about a file or directory.
+        /// </summary>
+        /// <param name="path">The full path of the file or directory.</param>
+        /// <returns>A <see cref="FileSystemEntry"/> object referring to the file or directory.</returns>
+        /// <remarks>
+        ///   The returned <see cref="FileSystemEntry"/> object is a shallow copy and cannot be used to modify the internal
+        ///   state of the file system.
+        /// </remarks>
+        /// <exception cref="ArgumentNullException"><paramref name="path"/> is <see langword="null" />.</exception>
+        /// <exception cref="ArgumentException"><paramref name="path"/> is not an absolute path, contains an empty component, or contains a file name.</exception>
+        /// <exception cref="System.IO.DirectoryNotFoundException">One of the parent directories in the path specified in <paramref name="path"/> does not exist.</exception>
+        public FileSystemEntry GetFileSystemEntryInfo(string path)
+        {
+            if( path == null )
+                throw new ArgumentNullException("path");
+
+            _log.DebugFormat("GetFileSystemEntryInfo: path = \"{0}\"", path);
+
+            FileSystemEntry result;
+            lock( _root )
+            {
+                string name;
+                Directory parent;
+                FindEntry(path, out name, out parent, out result);
+                if( result != null )
+                    result = result.ShallowClone();
+            }
             return result;
         }
 

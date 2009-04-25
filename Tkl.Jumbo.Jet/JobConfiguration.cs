@@ -78,7 +78,7 @@ namespace Tkl.Jumbo.Jet
         /// Adds a stage that reads from the DFS.
         /// </summary>
         /// <param name="stageName">The name of the stage. This name will serve as the base name for all the tasks in the stage.</param>
-        /// <param name="inputFile">The DFS file that the stage will read from.</param>
+        /// <param name="inputFileOrDirectory">The DFS file or directory that the stage will read from.</param>
         /// <param name="taskType">The type implementing the task's functionality; this type must implement <see cref="ITask{TInput,TOutput}"/>.</param>
         /// <param name="recordReaderType">The type of record reader to use when reading the file; this type must derive from <see cref="RecordReader{T}"/>.</param>
         /// <returns>The list of tasks in the new stage.</returns>
@@ -91,17 +91,16 @@ namespace Tkl.Jumbo.Jet
         ///   The new stage will contain as many tasks are there are blocks in the input file.
         /// </para>
         /// </remarks>
-        public IList<TaskConfiguration> AddInputStage(string stageName, File inputFile, Type taskType, Type recordReaderType)
+        public IList<TaskConfiguration> AddInputStage(string stageName, FileSystemEntry inputFileOrDirectory, Type taskType, Type recordReaderType)
         {
-            return AddInputStage(stageName, inputFile, taskType, recordReaderType, null, null);
+            return AddInputStage(stageName, inputFileOrDirectory, taskType, recordReaderType, null, null);
         }
-
 
         /// <summary>
         /// Adds a stage that reads from the DFS.
         /// </summary>
         /// <param name="stageName">The name of the stage. This name will serve as the base name for all the tasks in the stage.</param>
-        /// <param name="inputFile">The DFS file that the stage will read from.</param>
+        /// <param name="inputFileOrDirectory">The DFS file or directory containing the files that the stage will read from.</param>
         /// <param name="taskType">The type implementing the task's functionality; this type must implement <see cref="ITask{TInput,TOutput}"/>.</param>
         /// <param name="recordReaderType">The type of record reader to use when reading the file; this type must derive from <see cref="RecordReader{T}"/>.</param>
         /// <param name="outputPath">The name of a DFS directory to write the stage's output files to, or <see langword="null"/> to indicate this stage does not write to the DFS.</param>
@@ -116,62 +115,22 @@ namespace Tkl.Jumbo.Jet
         ///   The new stage will contain as many tasks are there are blocks in the input file.
         /// </para>
         /// </remarks>
-        public IList<TaskConfiguration> AddInputStage(string stageName, File inputFile, Type taskType, Type recordReaderType, string outputPath, Type recordWriterType)
+        public IList<TaskConfiguration> AddInputStage(string stageName, FileSystemEntry inputFileOrDirectory, Type taskType, Type recordReaderType, string outputPath, Type recordWriterType)
         {
-            return AddInputStage(stageName, new[] { inputFile }, taskType, recordReaderType, outputPath, recordWriterType);
-        }
-
-        /// <summary>
-        /// Adds a stage that reads from the DFS.
-        /// </summary>
-        /// <param name="stageName">The name of the stage. This name will serve as the base name for all the tasks in the stage.</param>
-        /// <param name="inputDirectory">The DFS directory containing the files that the stage will read from.</param>
-        /// <param name="taskType">The type implementing the task's functionality; this type must implement <see cref="ITask{TInput,TOutput}"/>.</param>
-        /// <param name="recordReaderType">The type of record reader to use when reading the file; this type must derive from <see cref="RecordReader{T}"/>.</param>
-        /// <returns>The list of tasks in the new stage.</returns>
-        /// <remarks>
-        /// <note>
-        ///   Information about stages is not preserved through XML serialization, so you should not use this method on a <see cref="JobConfiguration"/>
-        ///   object created using the <see cref="LoadXml(string)"/> method.
-        /// </note>
-        /// <para>
-        ///   The new stage will contain as many tasks are there are blocks in the input file.
-        /// </para>
-        /// </remarks>
-        public IList<TaskConfiguration> AddInputStage(string stageName, Directory inputDirectory, Type taskType, Type recordReaderType)
-        {
-            var files = (from item in inputDirectory.Children
-                         let file = item as File
-                         where file != null
-                         select file);
-            return AddInputStage(stageName, files, taskType, recordReaderType, null, null);
-        }
-
-        /// <summary>
-        /// Adds a stage that reads from the DFS.
-        /// </summary>
-        /// <param name="stageName">The name of the stage. This name will serve as the base name for all the tasks in the stage.</param>
-        /// <param name="inputDirectory">The DFS directory containing the files that the stage will read from.</param>
-        /// <param name="taskType">The type implementing the task's functionality; this type must implement <see cref="ITask{TInput,TOutput}"/>.</param>
-        /// <param name="recordReaderType">The type of record reader to use when reading the file; this type must derive from <see cref="RecordReader{T}"/>.</param>
-        /// <param name="outputPath">The name of a DFS directory to write the stage's output files to, or <see langword="null"/> to indicate this stage does not write to the DFS.</param>
-        /// <param name="recordWriterType">The type of the record writer to use when writing to the output files; this parameter is ignored if <paramref name="outputPath"/> is <see langword="null" />.</param>
-        /// <returns>The list of tasks in the new stage.</returns>
-        /// <remarks>
-        /// <note>
-        ///   Information about stages is not preserved through XML serialization, so you should not use this method on a <see cref="JobConfiguration"/>
-        ///   object created using the <see cref="LoadXml(string)"/> method.
-        /// </note>
-        /// <para>
-        ///   The new stage will contain as many tasks are there are blocks in the input file.
-        /// </para>
-        /// </remarks>
-        public IList<TaskConfiguration> AddInputStage(string stageName, Directory inputDirectory, Type taskType, Type recordReaderType, string outputPath, Type recordWriterType)
-        {
-            var files = (from item in inputDirectory.Children
-                         let file = item as File
-                         where file != null
-                         select file);
+            if( inputFileOrDirectory == null )
+                throw new ArgumentNullException("inputFileOrDirectory");
+            IEnumerable<File> files;
+            File file = inputFileOrDirectory as File;
+            if( file != null )
+                files = new[] { file };
+            else
+            {
+                Directory directory = (Directory)inputFileOrDirectory;
+                files = (from item in directory.Children
+                         let f = item as File
+                         where f != null
+                         select f);
+            }
             return AddInputStage(stageName, files, taskType, recordReaderType, outputPath, recordWriterType);
         }
 

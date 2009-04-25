@@ -42,6 +42,11 @@ namespace NameServerApplication
             return NameServer.Instance.GetFileInfo(path);
         }
 
+        public FileSystemEntry GetFileSystemEntryInfo(string path)
+        {
+            return NameServer.Instance.GetFileSystemEntryInfo(path);
+        }
+
         public BlockAssignment AppendBlock(string path)
         {
             return NameServer.Instance.AppendBlock(path);

@@ -288,6 +288,12 @@ namespace NameServerApplication
             return _fileSystem.GetFileInfo(path);
         }
 
+        public FileSystemEntry GetFileSystemEntryInfo(string path)
+        {
+            _log.Debug("GetFileSystemEntry called.");
+            return _fileSystem.GetFileSystemEntryInfo(path);
+        }
+
         public BlockAssignment AppendBlock(string path)
         {
             _log.Debug("AppendBlock called");

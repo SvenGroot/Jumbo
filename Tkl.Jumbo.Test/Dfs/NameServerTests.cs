@@ -363,6 +363,38 @@ namespace Tkl.Jumbo.Test.Dfs
         }
 
         [Test]
+        public void GetFileSystemEntryInfoTest()
+        {
+            INameServerClientProtocol target = _nameServer;
+            string directoryPath = "/getfilesystementryinfodir";
+            string filePath = DfsPath.Combine(directoryPath, "somefile");
+            target.CreateDirectory(directoryPath);
+            target.CreateFile(filePath);
+            target.CloseFile(filePath);
+
+            FileSystemEntry entry = target.GetFileSystemEntryInfo(directoryPath);
+            Tkl.Jumbo.Dfs.Directory dir = entry as Tkl.Jumbo.Dfs.Directory;
+            Assert.IsNotNull(dir);
+            Assert.AreEqual(directoryPath, dir.FullPath);
+            Assert.AreEqual(1, dir.Children.Count);
+
+            entry = target.GetFileSystemEntryInfo(filePath);
+            Tkl.Jumbo.Dfs.File file = entry as Tkl.Jumbo.Dfs.File;
+            Assert.IsNotNull(file);
+            Assert.AreEqual(filePath, file.FullPath);
+
+            Assert.IsNull(target.GetFileSystemEntryInfo("/directorythatdoesntexist"));
+        }
+
+        [Test]
+        [ExpectedException(typeof(System.IO.DirectoryNotFoundException))]
+        public void GetFileSystemEntryInfoDirectoryNotFoundTest()
+        {
+            INameServerClientProtocol target = _nameServer;
+            target.GetFileSystemEntryInfo("/directorythatdoesntexist/test");
+        }
+
+        [Test]
         public void DeleteTest()
         {
             INameServerClientProtocol target = _nameServer;

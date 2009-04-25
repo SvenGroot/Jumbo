@@ -56,10 +56,20 @@ namespace Tkl.Jumbo.Dfs
         /// </summary>
         /// <param name="path">The full path of the file.</param>
         /// <returns>A <see cref="File"/> object referring to the file.</returns>
-        /// <exception cref="ArgumentNullException"><paramref name="directory"/> is <see langword="null" />, or <paramref name="name"/> is <see langword="null"/> or an empty string..</exception>
-        /// <exception cref="ArgumentException"><paramref name="directory"/> is not an absolute path, contains an empty component, contains a file name, or <paramref name="name"/> refers to an existing file or directory.</exception>
-        /// <exception cref="System.IO.DirectoryNotFoundException"><paramref name="directory"/> does not exist.</exception>
+        /// <exception cref="ArgumentNullException"><paramref name="path"/> is <see langword="null" />.</exception>
+        /// <exception cref="ArgumentException"><paramref name="path"/> is not an absolute path, contains an empty component, or contains a file name.</exception>
+        /// <exception cref="System.IO.DirectoryNotFoundException">One of the parent directories in the path specified in <paramref name="path"/> does not exist.</exception>
         File GetFileInfo(string path);
+
+        /// <summary>
+        /// Gets information about a file or directory.
+        /// </summary>
+        /// <param name="path">The full path of the file or directory.</param>
+        /// <returns>A <see cref="FileSystemEntry"/> object referring to the file or directory, or <see langword="null" /> if the .</returns>
+        /// <exception cref="ArgumentNullException"><paramref name="path"/> is <see langword="null" />.</exception>
+        /// <exception cref="ArgumentException"><paramref name="path"/> is not an absolute path, contains an empty component, or contains a file name.</exception>
+        /// <exception cref="System.IO.DirectoryNotFoundException">One of the parent directories in the path specified in <paramref name="path"/> does not exist.</exception>
+        FileSystemEntry GetFileSystemEntryInfo(string path);
 
         /// <summary>
         /// Appends a new block to a file.
