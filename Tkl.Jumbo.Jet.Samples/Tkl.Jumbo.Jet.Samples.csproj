@@ -57,7 +57,10 @@
     <Compile Include="..\Version.cs">
       <Link>Properties\Version.cs</Link>
     </Compile>
+    <Compile Include="LineCount.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Tasks\RecordCountCombinerTask.cs" />
+    <Compile Include="Tasks\RecordCountTask.cs" />
     <Compile Include="Tasks\WordCountCombinerTask.cs" />
     <Compile Include="Tasks\WordCountTask.cs" />
     <Compile Include="WordCount.cs" />

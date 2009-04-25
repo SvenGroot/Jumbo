@@ -54,6 +54,8 @@ namespace Tkl.Jumbo.Jet.Jobs
                 }
                 _arguments[x] = new JobRunnerPositionalArgument(parameter.Name, parameter.ParameterType, optionalAttribute != null, optionalAttribute == null ? null : optionalAttribute.DefaultValue);
             }
+            if( !hasOptionalAttribute )
+                _minimumArgumentCount = _arguments.Length;
 
             PropertyInfo[] properties = type.GetProperties(BindingFlags.Public | BindingFlags.Instance);
             foreach( PropertyInfo prop in properties )

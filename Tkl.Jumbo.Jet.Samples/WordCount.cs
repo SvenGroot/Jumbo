@@ -20,8 +20,8 @@ namespace Tkl.Jumbo.Jet.Samples
         /// Initializes a new instance of the <see cref="WordCount"/> class.
         /// </summary>
         /// <param name="inputPath">The input file or directory on the DFS.</param>
+        /// <param name="outputPath">The directory on the DFS to which to write the output.</param>
         /// <param name="combinerTasks">The number of comber tasks to use.</param>
-        /// <param name="outputPath">The directory to which to write the output.</param>
         public WordCount(string inputPath, string outputPath, [OptionalArgument(1)] int combinerTasks)
             : base(inputPath, outputPath, combinerTasks, typeof(WordCountTask), null, typeof(WordCountCombinerTask), null, typeof(LineRecordReader), typeof(TextRecordWriter<KeyValuePairWritable<StringWritable, Int32Writable>>), null, false)
         {
