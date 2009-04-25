@@ -90,12 +90,9 @@ namespace JetShell
                         }
                         else
                         {
-                            Console.WriteLine("Press any key to start...");
-                            Console.ReadKey();
                             Guid jobId = jobRunner.RunJob();
                             WaitForJobCompletion(jetClient, _jobStatusPollInterval, jobId);
-                            Console.WriteLine("Press any key to exit...");
-                            Console.ReadKey();
+                            jobRunner.FinishJob();
                         }
                     }
                 }

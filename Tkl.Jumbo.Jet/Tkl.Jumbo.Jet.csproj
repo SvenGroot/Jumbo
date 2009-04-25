@@ -91,9 +91,13 @@
     <Compile Include="JobConfiguration.cs" />
     <Compile Include="JobServerConfigurationElement.cs" />
     <Compile Include="JobStatus.cs" />
+    <Compile Include="Jobs\BasicJob.cs" />
     <Compile Include="Jobs\IJobRunner.cs" />
     <Compile Include="Jobs\JobRunnerArgument.cs" />
     <Compile Include="Jobs\JobRunnerInfo.cs" />
+    <Compile Include="Jobs\JobRunnerNamedArgument.cs" />
+    <Compile Include="Jobs\JobRunnerPositionalArgument.cs" />
+    <Compile Include="Jobs\NamedArgumentAttribute.cs" />
     <Compile Include="Jobs\OptionalArgumentAttribute.cs" />
     <Compile Include="MergeTaskInput.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

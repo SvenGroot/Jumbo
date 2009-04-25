@@ -9,7 +9,7 @@ namespace Tkl.Jumbo.Jet.Jobs
     /// Indicates the specified argument is optional.
     /// </summary>
     [AttributeUsage(AttributeTargets.Parameter)]
-    public class OptionalArgumentAttribute : Attribute
+    public sealed class OptionalArgumentAttribute : Attribute
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="OptionalArgumentAttribute"/> class.

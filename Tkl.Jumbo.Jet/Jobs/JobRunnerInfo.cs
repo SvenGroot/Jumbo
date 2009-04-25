@@ -16,7 +16,8 @@ namespace Tkl.Jumbo.Jet.Jobs
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(JobRunnerInfo));
 
         private readonly Type _jobRunnerType;
-        private readonly JobRunnerArgument[] _arguments;
+        private readonly JobRunnerPositionalArgument[] _arguments;
+        private readonly Dictionary<string, JobRunnerNamedArgument> _namedArguments = new Dictionary<string,JobRunnerNamedArgument>();
         private readonly int _minimumArgumentCount;
 
         /// <summary>
@@ -38,7 +39,7 @@ namespace Tkl.Jumbo.Jet.Jobs
             // If there's more than one, we just use the first one; job runners should normally have only one constructor.
             ConstructorInfo ctor = ctors[0];
             ParameterInfo[] parameters = ctor.GetParameters();
-            _arguments = new JobRunnerArgument[parameters.Length];
+            _arguments = new JobRunnerPositionalArgument[parameters.Length];
             bool hasOptionalAttribute = false;
             for( int x = 0; x < parameters.Length; ++x )
             {
@@ -51,7 +52,17 @@ namespace Tkl.Jumbo.Jet.Jobs
                     hasOptionalAttribute = true;
                     _minimumArgumentCount = x;
                 }
-                _arguments[x] = new JobRunnerArgument(parameter.Name, parameter.ParameterType, optionalAttribute != null, optionalAttribute == null ? null : optionalAttribute.DefaultValue);
+                _arguments[x] = new JobRunnerPositionalArgument(parameter.Name, parameter.ParameterType, optionalAttribute != null, optionalAttribute == null ? null : optionalAttribute.DefaultValue);
+            }
+
+            PropertyInfo[] properties = type.GetProperties(BindingFlags.Public | BindingFlags.Instance);
+            foreach( PropertyInfo prop in properties )
+            {
+                if( Attribute.IsDefined(prop, typeof(NamedArgumentAttribute)) )
+                {
+                    JobRunnerNamedArgument argument = new JobRunnerNamedArgument(prop);
+                    _namedArguments.Add(argument.Name, argument);
+                }
             }
         }
 
@@ -83,7 +94,18 @@ namespace Tkl.Jumbo.Jet.Jobs
             get
             {
                 StringBuilder usage = new StringBuilder(Name);
-                foreach( JobRunnerArgument argument in _arguments )
+                foreach( JobRunnerNamedArgument argument in _namedArguments.Values )
+                {
+                    usage.Append(" [-");
+                    usage.Append(argument.Name);
+                    if( argument.ArgumentType != typeof(bool) )
+                    {
+                        usage.Append(" ");
+                        usage.Append(argument.PropertyName);
+                    }
+                    usage.Append("]");
+                }
+                foreach( JobRunnerPositionalArgument argument in _arguments )
                 {
                     usage.Append(" ");
                     if( argument.IsOptional )
@@ -91,15 +113,26 @@ namespace Tkl.Jumbo.Jet.Jobs
                     else
                         usage.Append("<");
                     usage.Append(argument.Name);
-                    if( argument.IsOptional )
+                    if( argument.IsOptional)
                     {
-                        usage.Append("=");
-                        usage.Append(argument.DefaultValue);
+                        if( argument.DefaultValue != null )
+                        {
+                            usage.Append("=");
+                            usage.Append(argument.DefaultValue);
+                        }
                         usage.Append("]");
                     }
                     else
                         usage.Append(">");
                 }
+
+                foreach( JobRunnerNamedArgument argument in _namedArguments.Values )
+                {
+                    usage.AppendLine();
+                    usage.AppendLine();
+                    usage.AppendFormat("{0,6} : {1}", "-" + argument.Name, argument.Description);
+                }
+
                 return usage.ToString();
             }
         }
@@ -116,7 +149,7 @@ namespace Tkl.Jumbo.Jet.Jobs
 
             Type[] types = assembly.GetTypes();
             return (from type in types
-                    where type.IsPublic && type.IsClass && type.GetInterfaces().Contains(typeof(IJobRunner))
+                    where type.IsPublic && type.IsClass && !type.IsAbstract && type.GetInterfaces().Contains(typeof(IJobRunner))
                     select new JobRunnerInfo(type)).ToArray();
         }
 
@@ -135,7 +168,7 @@ namespace Tkl.Jumbo.Jet.Jobs
 
             Type[] types = assembly.GetTypes();
             return (from type in types
-                    where type.IsPublic && type.IsClass && type.GetInterfaces().Contains(typeof(IJobRunner)) && string.Equals(type.Name, name, StringComparison.OrdinalIgnoreCase)
+                    where type.IsPublic && type.IsClass && !type.IsAbstract && type.GetInterfaces().Contains(typeof(IJobRunner)) && string.Equals(type.Name, name, StringComparison.OrdinalIgnoreCase)
                     select new JobRunnerInfo(type)).SingleOrDefault();
         }
 
@@ -154,16 +187,48 @@ namespace Tkl.Jumbo.Jet.Jobs
                 throw new ArgumentNullException("jetConfiguration");
             if( args == null )
                 throw new ArgumentNullException("args");
-            if( args.Length < _minimumArgumentCount || args.Length > _arguments.Length )
-                return null;
 
+            int arg;
             StringBuilder logMessage = new StringBuilder("Creating job runner for job ");
             logMessage.Append(Name);
+            for( arg = 0; arg < args.Length && args[arg].StartsWith("-"); ++arg )
+            {
+                string argumentName = args[arg].Substring(1);
+                JobRunnerNamedArgument argument;
+                if( _namedArguments.TryGetValue(argumentName, out argument) )
+                {
+                    if( argument.ArgumentType == typeof(bool) )
+                        argument.Value = true;
+                    else
+                    {
+                        ++arg;
+                        if( arg < args.Length )
+                            argument.Value = argument.ConvertToArgumentType(args[arg]);
+                        else
+                            throw new ArgumentException(string.Format("Argument {0} has no value.", argument.Name));
+                    }
+
+                    logMessage.Append(", ");
+                    logMessage.Append(argument.PropertyName);
+                    logMessage.Append(" = ");
+                    logMessage.Append(argument.Value);
+                }
+                else
+                    throw new ArgumentException("Unknown argument " + args[arg]);
+            }
+
+            if( args.Length - arg < _minimumArgumentCount || args.Length - arg > _arguments.Length )
+                return null;
+
             object[] typedArguments = new object[_arguments.Length];
             for( int x = 0; x < _arguments.Length; ++x )
             {
-                if( x < args.Length )
-                    typedArguments[x] = _arguments[x].ConvertToArgumentType(args[x]);
+                if( x + arg < args.Length )
+                {
+                    if( args[x + arg].StartsWith("-") )
+                        throw new ArgumentException("You cannot use a named argument after a positional argument.");
+                    typedArguments[x] = _arguments[x].ConvertToArgumentType(args[x + arg]);
+                }
                 else
                     typedArguments[x] = _arguments[x].DefaultValue;
                 logMessage.Append(", ");
@@ -173,7 +238,12 @@ namespace Tkl.Jumbo.Jet.Jobs
             }
 
             _log.Info(logMessage.ToString());
-            return (IJobRunner)JetActivator.CreateInstance(_jobRunnerType, dfsConfiguration, jetConfiguration, null, typedArguments);
+            IJobRunner jobRunner = (IJobRunner)JetActivator.CreateInstance(_jobRunnerType, dfsConfiguration, jetConfiguration, null, typedArguments);
+            foreach( JobRunnerNamedArgument argument in _namedArguments.Values )
+            {
+                argument.ApplyValue(jobRunner);
+            }
+            return jobRunner;
         }
 
         /// <summary>

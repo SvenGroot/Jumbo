@@ -15,5 +15,10 @@ namespace Tkl.Jumbo.Jet.Jobs
         /// </summary>
         /// <returns>The job ID of the newly created job.</returns>
         Guid RunJob();
+
+        /// <summary>
+        /// Called after the job finishes.
+        /// </summary>
+        void FinishJob();
     }
 }
