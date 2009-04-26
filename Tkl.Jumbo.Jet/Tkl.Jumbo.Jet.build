@@ -26,6 +26,7 @@
         <include name="*.cs"/>
         <include name="Channels/*.cs"/>
 	<include name="Tasks/*.cs"/>
+	<include name="Jobs/*.cs"/>
         <include name="../Version.cs"/>
       </sources>
       <nowarn>

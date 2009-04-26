@@ -12,7 +12,11 @@ namespace JetShell
 {
     static class Program
     {
+        // This field isn't used but the constructor does the work so
+        // it needs to be there.
+#pragma warning disable 414
         private static readonly AssemblyResolver _resolver = new AssemblyResolver();
+#pragma warning restore 414
         private static readonly Dictionary<string, Action<JetClient, string[]>> _commands = CreateCommandList();
         private const int _jobStatusPollInterval = 5000;
 

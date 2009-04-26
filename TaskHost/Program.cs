@@ -16,11 +16,14 @@ namespace TaskHost
 {
     static class Program
     {
+	  // It's the constructor that's important for AssemblyResolver,
+	  // so disable the warning about the field not being used.
+#pragma warning disable 414
         private static readonly AssemblyResolver _resolver = new AssemblyResolver();
+#pragma warning restore 414
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(Program));
         private static DfsClient _dfsClient;
         private static JetClient _jetClient;
-        private static int _blockSize;
 
         public static int Main(string[] args)
         {
@@ -42,10 +45,10 @@ namespace TaskHost
             DfsConfiguration dfsConfig = DfsConfiguration.FromXml(Path.Combine(configDirectory, "dfs.config"));
             JetConfiguration jetConfig = JetConfiguration.FromXml(Path.Combine(configDirectory, "jet.config"));
 
+			_log.DebugFormat("Merge task buffer size: {0}", jetConfig.FileChannel.MergeTaskReadBufferSize);
             ITaskServerUmbilicalProtocol umbilical = JetClient.CreateTaskServerUmbilicalClient(jetConfig.TaskServer.Port);
             _dfsClient = new DfsClient(dfsConfig);
             _jetClient = new JetClient(jetConfig);
-            _blockSize = _dfsClient.NameServer.BlockSize;
 
             Stopwatch sw = new Stopwatch();
             sw.Start();
@@ -69,17 +72,23 @@ namespace TaskHost
                     Assembly.LoadFrom(Path.Combine(jobDirectory, assemblyFileName));
                 }
             }
-
-            using( TaskExecutionUtility taskExecution = new TaskExecutionUtility(_jetClient, umbilical, jobId, config, taskId, _dfsClient, jobDirectory, dfsJobDirectory, attempt) )
+            
+            try
             {
-                RunTask(taskExecution);
+                using( TaskExecutionUtility taskExecution = new TaskExecutionUtility(_jetClient, umbilical, jobId, config, taskId, _dfsClient, jobDirectory, dfsJobDirectory, attempt) )
+                {
+                    RunTask(taskExecution);
+                }
+
+                sw.Stop();
+
+                _log.Info("Reporting completion to task server.");
+                umbilical.ReportCompletion(jobId, taskId);
             }
-
-            sw.Stop();
-
-            _log.Info("Reporting completion to task server.");
-            umbilical.ReportCompletion(jobId, taskId);
-
+            catch( Exception ex )
+            {
+                _log.Fatal("Failed to execute task.", ex);
+            }
             _log.InfoFormat("Task host finished execution of task, execution time: {0}s", sw.Elapsed.TotalSeconds);
             return 0;
         }

@@ -55,7 +55,6 @@ namespace Tkl.Jumbo.Jet.Samples.IO
             private byte[][] _splitPoints;
             private int _begin;
             private int _end;
-            private StringComparer _comparer = StringComparer.Ordinal;
 
             public LeafTrieNode(int depth, byte[][] splitPoints, int begin, int end)
                 : base(depth)
@@ -194,7 +193,6 @@ namespace Tkl.Jumbo.Jet.Samples.IO
 
         private TrieNode BuildTrie(int begin, int end, byte[] prefix, int maxDepth)
         {
-            StringComparer comparer = StringComparer.Ordinal;
             int depth = prefix.Length;
             if( depth >= maxDepth || begin == end )
                 return new LeafTrieNode(depth, _splitPoints, begin, end);

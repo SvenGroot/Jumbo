@@ -112,6 +112,9 @@ namespace Tkl.Jumbo.Jet.Channels
             return (RecordWriter<T>)createWriterMethod.Invoke(this, new object[] { pipelinedTask });
         }
 
+// disable Mono C# compile warning about unused method; it's used via reflection.
+#pragma warning disable 169
+
         private static RecordWriter<TRecord> CreateRecordWriterInternal<TRecord, TPipelinedTaskOutput>(TaskExecutionUtility pipelinedTask)
             where TRecord : IWritable, new()
             where TPipelinedTaskOutput : IWritable, new()
@@ -122,5 +125,8 @@ namespace Tkl.Jumbo.Jet.Channels
 
             return new PipelineRecordWriter<TRecord, TPipelinedTaskOutput>(task, output);
         }
+
+#pragma warning restore 169
+
     }
 }

@@ -29,7 +29,7 @@ namespace ClientSample.GraySort
                 job.AddInputStage("InputStage", dir, typeof(EmptyTask<GenSortRecord>), typeof(GenSortRecordReader));
             job.AddPointToPointStage("SortStage", "InputStage", typeof(SortTask<GenSortRecord>), Tkl.Jumbo.Jet.Channels.ChannelType.Pipeline, typeof(RangePartitioner), null, null);
 
-            IList<TaskConfiguration> mergeStage = job.AddStage("MergeStage", new[] { "SortStage" }, typeof(MergeSortTask<GenSortRecord>), 1, Tkl.Jumbo.Jet.Channels.ChannelType.File, typeof(RangePartitioner), outputPath, typeof(GenSortRecordWriter));
+            job.AddStage("MergeStage", new[] { "SortStage" }, typeof(MergeSortTask<GenSortRecord>), 1, Tkl.Jumbo.Jet.Channels.ChannelType.File, typeof(RangePartitioner), outputPath, typeof(GenSortRecordWriter));
             if( maxMergeInputs > 0 )
             {
                 Console.WriteLine("Using {0} max merge inputs per pass.", maxMergeInputs);
