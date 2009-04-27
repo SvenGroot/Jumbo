@@ -169,8 +169,11 @@ namespace Tkl.Jumbo.Jet
             };
             jobStatus.Tasks = (from task in job.Element("Tasks").Elements("Task")
                                select TaskStatus.FromXml(task, jobStatus)).ToArray();
-            jobStatus.FailedTaskAttempts = (from task in job.Element("FailedTaskAttempts").Elements("Task")
-                                            select TaskStatus.FromXml(task, jobStatus)).ToArray();
+            if( job.Element("FailedtaskAttempts") != null )
+            {
+                jobStatus.FailedTaskAttempts = (from task in job.Element("FailedTaskAttempts").Elements("Task")
+                                                select TaskStatus.FromXml(task, jobStatus)).ToArray();
+            }
             return jobStatus;
 
         }

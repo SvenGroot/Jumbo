@@ -41,15 +41,6 @@ namespace TaskHost
             string dfsJobDirectory = args[3];
             int attempt = Convert.ToInt32(args[4]);
 
-            string configDirectory = Path.Combine(jobDirectory, "config");
-            DfsConfiguration dfsConfig = DfsConfiguration.FromXml(Path.Combine(configDirectory, "dfs.config"));
-            JetConfiguration jetConfig = JetConfiguration.FromXml(Path.Combine(configDirectory, "jet.config"));
-
-			_log.DebugFormat("Merge task buffer size: {0}", jetConfig.FileChannel.MergeTaskReadBufferSize);
-            ITaskServerUmbilicalProtocol umbilical = JetClient.CreateTaskServerUmbilicalClient(jetConfig.TaskServer.Port);
-            _dfsClient = new DfsClient(dfsConfig);
-            _jetClient = new JetClient(jetConfig);
-
             Stopwatch sw = new Stopwatch();
             sw.Start();
             string logFile = Path.Combine(jobDirectory, taskId + "_" + attempt.ToString() + ".log");
@@ -58,6 +49,17 @@ namespace TaskHost
             _log.InfoFormat("Running task; job ID = \"{0}\", job directory = \"{1}\", task ID = \"{2}\", attempt, = {3}, DFS job directory = \"{4}\"", jobId, jobDirectory, taskId, attempt, dfsJobDirectory);
             _log.DebugFormat("Command line: {0}", Environment.CommandLine);
             _log.LogEnvironmentInformation();
+            
+            _log.Info("Loading configuration.");
+            string configDirectory = Path.Combine(jobDirectory, "config");
+            DfsConfiguration dfsConfig = DfsConfiguration.FromXml(Path.Combine(configDirectory, "dfs.config"));
+            JetConfiguration jetConfig = JetConfiguration.FromXml(Path.Combine(configDirectory, "jet.config"));
+
+            _log.Info("Creating RPC clients.");
+            ITaskServerUmbilicalProtocol umbilical = JetClient.CreateTaskServerUmbilicalClient(jetConfig.TaskServer.Port);
+            _dfsClient = new DfsClient(dfsConfig);
+            _jetClient = new JetClient(jetConfig);
+
 
             string xmlConfigPath = Path.Combine(jobDirectory, Job.JobConfigFileName);
             _log.DebugFormat("Loading job configuration from local file {0}.", xmlConfigPath);
