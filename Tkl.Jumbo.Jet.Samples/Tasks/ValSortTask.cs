@@ -57,9 +57,10 @@ namespace Tkl.Jumbo.Jet.Samples.Tasks
                 ++count;
             }
 
+            TaskDfsInput dfsInput = TaskAttemptConfiguration.StageConfiguration.DfsInputs[TaskAttemptConfiguration.TaskId.TaskNumber - 1];
             ValSortRecord result = new ValSortRecord()
             {
-                InputId = TaskAttemptConfiguration.TaskConfiguration.DfsInput.Path + "_" + TaskAttemptConfiguration.TaskConfiguration.DfsInput.Block.ToString("00000"),
+                InputId = dfsInput.Path + "_" + dfsInput.Block.ToString("00000"),
                 FirstKey = first.ExtractKeyBytes(),
                 LastKey = prev.ExtractKeyBytes(),
                 Records = count,

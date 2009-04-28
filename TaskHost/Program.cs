@@ -77,7 +77,7 @@ namespace TaskHost
             
             try
             {
-                using( TaskExecutionUtility taskExecution = new TaskExecutionUtility(_jetClient, umbilical, jobId, config, taskId, _dfsClient, jobDirectory, dfsJobDirectory, attempt) )
+                using( TaskExecutionUtility taskExecution = new TaskExecutionUtility(_jetClient, umbilical, jobId, config, new TaskId(taskId), _dfsClient, jobDirectory, dfsJobDirectory, attempt) )
                 {
                     RunTask(taskExecution);
                 }

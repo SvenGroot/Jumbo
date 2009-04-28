@@ -76,6 +76,8 @@ namespace Tkl.Jumbo.Jet
         private bool _isAssociatedTask;
         private readonly ManualResetEvent _finishedEvent = new ManualResetEvent(false);
         private bool? _allowRecordReuse;
+        private string _dfsOutputTempPath;
+        private string _dfsOutputPath;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="TaskExecutionUtility"/> class.
@@ -89,7 +91,19 @@ namespace Tkl.Jumbo.Jet
         /// <param name="localJobDirectory">The local directory where the task server stores the job's files.</param>
         /// <param name="dfsJobDirectory">The DFS directory where the job's files are stored.</param>
         /// <param name="attempt">The attempt number for this task.</param>
-        public TaskExecutionUtility(JetClient jetClient, ITaskServerUmbilicalProtocol umbilical, Guid jobId, JobConfiguration jobConfiguration, string taskId, DfsClient dfsClient, string localJobDirectory, string dfsJobDirectory, int attempt)
+        public TaskExecutionUtility(JetClient jetClient, ITaskServerUmbilicalProtocol umbilical, Guid jobId, JobConfiguration jobConfiguration, TaskId taskId, DfsClient dfsClient, string localJobDirectory, string dfsJobDirectory, int attempt)
+            : this(jetClient, umbilical, jobId, jobConfiguration, null, taskId, dfsClient, localJobDirectory, dfsJobDirectory, attempt)
+        {
+        }
+
+        private TaskExecutionUtility(TaskExecutionUtility baseTask, StageConfiguration childStage, int childTaskNumber)
+            : this(baseTask.JetClient, baseTask.Umbilical, baseTask.Configuration.JobId, baseTask.Configuration.JobConfiguration, childStage, new TaskId(baseTask.Configuration.TaskId, childStage.StageId, childTaskNumber), baseTask.DfsClient, baseTask.Configuration.LocalJobDirectory, baseTask.Configuration.DfsJobDirectory, baseTask.Configuration.Attempt)
+        {
+            _isAssociatedTask = true;
+            InputChannelConfiguration = baseTask.OutputChannelConfiguration;
+        }
+
+        private TaskExecutionUtility(JetClient jetClient, ITaskServerUmbilicalProtocol umbilical, Guid jobId, JobConfiguration jobConfiguration, StageConfiguration stageConfiguration, TaskId taskId, DfsClient dfsClient, string localJobDirectory, string dfsJobDirectory, int attempt)
         {
             if( jetClient == null )
                 throw new ArgumentNullException("jetClient");
@@ -105,16 +119,36 @@ namespace Tkl.Jumbo.Jet
                 throw new ArgumentNullException("localJobDirectory");
             if( dfsJobDirectory == null )
                 throw new ArgumentNullException("dfsJobDirectory");
+            if( stageConfiguration == null && taskId.ParentTaskId != null )
+                throw new ArgumentException("Cannot create task execution utility for pipelined task.");
+
+            _log.DebugFormat("Creating task execution utility for task {0}.", taskId);
+
             JetClient = jetClient;
             Umbilical = umbilical;
-            Configuration = new TaskAttemptConfiguration(jobId, jobConfiguration, jobConfiguration.GetTask(taskId), localJobDirectory, dfsJobDirectory, attempt, this);
+            Configuration = new TaskAttemptConfiguration(jobId, jobConfiguration, taskId, stageConfiguration ?? jobConfiguration.GetStage(taskId.StageId), localJobDirectory, dfsJobDirectory, attempt, this);
             DfsClient = dfsClient;
 
-            InputChannelConfiguration = jobConfiguration.GetInputChannelForTask(taskId);
-            OutputChannelConfiguration = jobConfiguration.GetOutputChannelForTask(taskId);
+            // if stage configuration is not null this is a child task so we can't set input channel configuration here.
+            if( stageConfiguration == null )
+                InputChannelConfiguration = jobConfiguration.GetInputChannelForStage(taskId.StageId);
 
-            _log.DebugFormat("Loading type {0}.", Configuration.TaskConfiguration.TypeName);
-            TaskType = Type.GetType(Configuration.TaskConfiguration.TypeName, true);
+            if( Configuration.StageConfiguration.ChildStages == null || Configuration.StageConfiguration.ChildStages.Count == 0 )
+                OutputChannelConfiguration = jobConfiguration.GetOutputChannelForStage(taskId.CompoundStageId);
+            else
+            {
+                OutputChannelConfiguration = new ChannelConfiguration()
+                {
+                    ChannelType = ChannelType.Pipeline,
+                    Connectivity = ChannelConnectivity.Full,
+                    PartitionerType = Configuration.StageConfiguration.ChildStagePartitionerType,
+                    InputStages = new[] { Configuration.StageConfiguration.StageId },
+                    OutputStages = (from stage in Configuration.StageConfiguration.ChildStages select stage.StageId).ToArray()
+                };
+            }
+
+            _log.DebugFormat("Loading type {0}.", Configuration.StageConfiguration.TaskTypeName);
+            TaskType = Configuration.StageConfiguration.TaskType;
             _log.Debug("Determining input and output types.");
             Type taskInterfaceType = TaskType.FindGenericInterfaceType(typeof(ITask<,>));
             Type[] arguments = taskInterfaceType.GetGenericArguments();
@@ -122,12 +156,6 @@ namespace Tkl.Jumbo.Jet
             OutputRecordType = arguments[1];
             _log.InfoFormat("Input type: {0}", InputRecordType.AssemblyQualifiedName);
             _log.InfoFormat("Output type: {0}", OutputRecordType.AssemblyQualifiedName);
-        }
-
-        private TaskExecutionUtility(TaskExecutionUtility baseTask, string taskId)
-            : this(baseTask.JetClient, baseTask.Umbilical, baseTask.Configuration.JobId, baseTask.Configuration.JobConfiguration, taskId, baseTask.DfsClient, baseTask.Configuration.LocalJobDirectory, baseTask.Configuration.DfsJobDirectory, baseTask.Configuration.Attempt)
-        {
-            _isAssociatedTask = true;
         }
 
         /// <summary>
@@ -213,7 +241,7 @@ namespace Tkl.Jumbo.Jet
             get
             {
                 if( _allowRecordReuse == null )
-                    _allowRecordReuse = CheckAllowRecordReuse(Configuration.TaskConfiguration.TaskID, TaskType);
+                    _allowRecordReuse = CheckAllowRecordReuse(Configuration.StageConfiguration);
                 return _allowRecordReuse.Value;
             }
         }
@@ -280,12 +308,14 @@ namespace Tkl.Jumbo.Jet
         /// <summary>
         /// Creates a task associated with this task, typically a pipelined task.
         /// </summary>
-        /// <param name="taskId">The ID of the associated task.</param>
+        /// <param name="childStage">The stage of the associated task.</param>
+        /// <param name="childTaskNumber">The task number of the associated task.</param>
         /// <returns>An instance of <see cref="TaskExecutionUtility"/> for the associated task.</returns>
-        public TaskExecutionUtility CreateAssociatedTask(string taskId)
+        public TaskExecutionUtility CreateAssociatedTask(StageConfiguration childStage, int childTaskNumber)
         {
+            // We don't check if childStage is actually a child stage of this task's stage; the behaviour is undefined if that isn't the case.
             CheckDisposed();
-            TaskExecutionUtility associatedTask = new TaskExecutionUtility(this, taskId);
+            TaskExecutionUtility associatedTask = new TaskExecutionUtility(this, childStage, childTaskNumber);
             _associatedTasks.Add(associatedTask);
             return associatedTask;
         }
@@ -318,18 +348,19 @@ namespace Tkl.Jumbo.Jet
             if( _task != null )
                 _task.Finish();
 
-            _finished = true;
-
             foreach( TaskExecutionUtility associatedTask in _associatedTasks )
             {
                 associatedTask.FinishTask();
             }
 
+            _finished = true;
+            _finishedEvent.Set();
+
             FileOutputChannel fileOutputChannel = OutputChannel as FileOutputChannel;
             if( fileOutputChannel != null )
                 fileOutputChannel.ReportFileSizesToTaskServer();
 
-            if( Configuration.TaskConfiguration.DfsOutput != null )
+            if( Configuration.StageConfiguration.DfsOutput != null )
             {
                 if( _outputWriter != null )
                 {
@@ -346,7 +377,7 @@ namespace Tkl.Jumbo.Jet
                     _outputStream = null;
                 }
 
-                DfsClient.NameServer.Move(Configuration.TaskConfiguration.DfsOutput.TempPath, Configuration.TaskConfiguration.DfsOutput.Path);
+                DfsClient.NameServer.Move(_dfsOutputTempPath, _dfsOutputPath);
             }
         }
 
@@ -456,14 +487,15 @@ namespace Tkl.Jumbo.Jet
         private RecordWriter<T> CreateOutputRecordWriter<T>()
             where T : IWritable, new()
         {
-            if( Configuration.TaskConfiguration.DfsOutput != null )
+            if( Configuration.StageConfiguration.DfsOutput != null )
             {
-                string file = DfsPath.Combine(DfsPath.Combine(Configuration.DfsJobDirectory, "temp"), Configuration.TaskConfiguration.TaskID + "_" + Configuration.Attempt.ToString());
+                string file = DfsPath.Combine(DfsPath.Combine(Configuration.DfsJobDirectory, "temp"), Configuration.TaskAttemptId);
                 _log.DebugFormat("Opening output file {0}", file);
-                Configuration.TaskConfiguration.DfsOutput.TempPath = file;
+                _dfsOutputTempPath = file;
+                _dfsOutputPath = Configuration.StageConfiguration.DfsOutput.GetPath(Configuration.TaskId.TaskNumber);
                 _outputStream = DfsClient.CreateFile(file);
-                _log.DebugFormat("Creating record writer of type {0}", Configuration.TaskConfiguration.DfsOutput.RecordWriterType);
-                Type recordWriterType = Type.GetType(Configuration.TaskConfiguration.DfsOutput.RecordWriterType);
+                _log.DebugFormat("Creating record writer of type {0}", Configuration.StageConfiguration.DfsOutput.RecordWriterTypeName);
+                Type recordWriterType = Configuration.StageConfiguration.DfsOutput.RecordWriterType;
                 return (RecordWriter<T>)JetActivator.CreateInstance(recordWriterType, this, _outputStream);
             }
             else if( OutputChannel != null )
@@ -478,10 +510,11 @@ namespace Tkl.Jumbo.Jet
         private RecordReader<T> CreateInputRecordReader<T>()
             where T : IWritable, new()
         {
-            if( Configuration.TaskConfiguration.DfsInput != null )
+            if( Configuration.StageConfiguration.DfsInputs != null && Configuration.StageConfiguration.DfsInputs.Count > 0 )
             {
-                _log.DebugFormat("Creating record reader of type {0}", Configuration.TaskConfiguration.DfsInput.RecordReaderType);
-                return Configuration.TaskConfiguration.DfsInput.CreateRecordReader<T>(DfsClient, this);
+                TaskDfsInput input = Configuration.StageConfiguration.DfsInputs[Configuration.TaskId.TaskNumber - 1];
+                _log.DebugFormat("Creating record reader of type {0}", input.RecordReaderTypeName);
+                return input.CreateRecordReader<T>(DfsClient, this);
             }
             else if( InputChannel != null )
             {
@@ -495,11 +528,12 @@ namespace Tkl.Jumbo.Jet
         private MergeTaskInput<T> CreateMergeTaskInput<T>()
             where T : IWritable, new()
         {
-            if( Configuration.TaskConfiguration.DfsInput != null )
+            if( Configuration.StageConfiguration.DfsInputs != null && Configuration.StageConfiguration.DfsInputs.Count > 0 )
             {
-                _log.DebugFormat("Creating record reader of type {0}", Configuration.TaskConfiguration.DfsInput.RecordReaderType);
+                TaskDfsInput input = Configuration.StageConfiguration.DfsInputs[Configuration.TaskId.TaskNumber];
+                _log.DebugFormat("Creating record reader of type {0}", input.RecordReaderTypeName);
                 MergeTaskInput<T> result = new MergeTaskInput<T>(1, CompressionType.None);
-                result.AddInput(Configuration.TaskConfiguration.DfsInput.CreateRecordReader<T>(DfsClient, this));
+                result.AddInput(input.CreateRecordReader<T>(DfsClient, this));
                 return result;
             }
             else if( InputChannel != null )
@@ -522,7 +556,7 @@ namespace Tkl.Jumbo.Jet
                 if( _mergeTaskInput != null )
                     metrics.RecordsRead += _mergeTaskInput.RecordsRead;
 
-                if( Configuration.TaskConfiguration.DfsInput != null )
+                if( Configuration.StageConfiguration.DfsInputs != null && Configuration.StageConfiguration.DfsInputs.Count > 0 )
                 {
                     if( _inputReader != null )
                         metrics.DfsBytesRead += _inputReader.BytesRead;
@@ -582,7 +616,7 @@ namespace Tkl.Jumbo.Jet
                     try
                     {
                         _log.InfoFormat("Reporting progress: {0}%", (int)(progress * 100));
-                        Umbilical.ReportProgress(Configuration.JobId, Configuration.TaskConfiguration.TaskID, progress);
+                        Umbilical.ReportProgress(Configuration.JobId, Configuration.TaskId.ToString(), progress);
                         previousProgress = progress;
                     }
                     catch( SocketException ex )
@@ -595,36 +629,23 @@ namespace Tkl.Jumbo.Jet
             _log.Info("Progress thread has finished.");
         }
 
-        private bool CheckAllowRecordReuse(string taskId)
+        private bool CheckAllowRecordReuse(StageConfiguration stage)
         {
-            TaskConfiguration task = Configuration.JobConfiguration.GetTask(taskId);
-            Type taskType = Type.GetType(task.TypeName);
-            return CheckAllowRecordReuse(taskId, taskType);
-        }
-
-        private bool CheckAllowRecordReuse(string taskId, Type taskType)
-        {
-            AllowRecordReuseAttribute allowRecordReuse = (AllowRecordReuseAttribute)Attribute.GetCustomAttribute(taskType, typeof(AllowRecordReuseAttribute));
+            AllowRecordReuseAttribute allowRecordReuse = (AllowRecordReuseAttribute)Attribute.GetCustomAttribute(stage.TaskType, typeof(AllowRecordReuseAttribute));
             if( allowRecordReuse == null )
                 return false;
             else
             {
-                if( allowRecordReuse.PassThrough )
+                if( allowRecordReuse.PassThrough && stage.ChildStages != null )
                 {
-                    // If the channel passes the instances to its output, and the channel used is a pipeline channel, then
-                    // we need to recursively check the output tasks.
-                    ChannelConfiguration config = taskId == Configuration.TaskConfiguration.TaskID ? OutputChannelConfiguration : Configuration.JobConfiguration.GetOutputChannelForTask(taskId);
-                    if( config != null && config.ChannelType == ChannelType.Pipeline )
+                    foreach( StageConfiguration childStage in stage.ChildStages )
                     {
-                        foreach( string outputTaskId in config.OutputTasks )
-                        {
-                            if( !CheckAllowRecordReuse(outputTaskId) )
-                                return false;
-                        }
+                        if( !CheckAllowRecordReuse(childStage) )
+                            return false;
                     }
                 }
-                return true;
             }
+            return false;
         }
     }
 }

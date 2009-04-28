@@ -36,7 +36,7 @@ namespace Tkl.Jumbo.Jet.Tasks
         #endregion
 
         /// <summary>
-        /// The name of the setting in <see cref="TaskConfiguration.TaskSettings"/> that specified the maximum number
+        /// The name of the setting in <see cref="StageConfiguration.StageSettings"/> that specified the maximum number
         /// of files to merge in one pass.
         /// </summary>
         public const string MaxMergeInputsSetting = "MergeSortTask.MaxMergeTasks";
@@ -72,7 +72,7 @@ namespace Tkl.Jumbo.Jet.Tasks
         /// <param name="output">A <see cref="RecordWriter{T}"/> to which the task's output should be written.</param>
         public void Run(MergeTaskInput<T> input, RecordWriter<T> output)
         {
-            int maxMergeInputs = TaskAttemptConfiguration.TaskConfiguration.GetTypedSetting(MaxMergeInputsSetting, 0);
+            int maxMergeInputs = TaskAttemptConfiguration.StageConfiguration.GetTypedSetting(MaxMergeInputsSetting, 0);
             if( maxMergeInputs == 0 )
                 maxMergeInputs = TaskAttemptConfiguration.JobConfiguration.GetTypedSetting(MaxMergeInputsSetting, DefaultMaxMergeInputs);
 
@@ -119,7 +119,7 @@ namespace Tkl.Jumbo.Jet.Tasks
 
                     if( processed < input.TotalInputCount )
                     {
-                        string outputFile = Path.Combine(TaskAttemptConfiguration.LocalJobDirectory, string.Format(System.Globalization.CultureInfo.InvariantCulture, "{0}_{1}_pass{2}.mergeoutput.tmp", TaskAttemptConfiguration.TaskConfiguration.TaskID, TaskAttemptConfiguration.Attempt, pass));
+                        string outputFile = Path.Combine(TaskAttemptConfiguration.LocalJobDirectory, string.Format(System.Globalization.CultureInfo.InvariantCulture, "{0}_pass{1}.mergeoutput.tmp", TaskAttemptConfiguration.TaskAttemptId, pass));
                         _log.InfoFormat("Creating file {0} to hold output of pass {1}.", outputFile, pass);
                         disposeWriter = true;
                         writer = new BinaryRecordWriter<T>(new FileStream(outputFile, FileMode.CreateNew, FileAccess.Write, FileShare.None, JetConfiguration.FileChannel.MergeTaskReadBufferSize).CreateCompressor(input.CompressionType));

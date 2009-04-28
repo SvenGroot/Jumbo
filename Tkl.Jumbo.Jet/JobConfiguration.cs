@@ -23,8 +23,6 @@ namespace Tkl.Jumbo.Jet
         /// </summary>
         public const string XmlNamespace = "http://www.tkl.iis.u-tokyo.ac.jp/schema/Jumbo/JobConfiguration";
         private static readonly XmlSerializer _serializer = new XmlSerializer(typeof(JobConfiguration));
-        private Dictionary<string, List<TaskConfiguration>> _stages = new Dictionary<string, List<TaskConfiguration>>();
-        private Dictionary<string, TaskConfiguration> _tasksByName;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="JobConfiguration"/> class.
@@ -49,7 +47,7 @@ namespace Tkl.Jumbo.Jet
         /// <param name="assemblyFileNames">The file names of the assemblies containing the task types for this class.</param>
         public JobConfiguration(params string[] assemblyFileNames)
         {
-            Tasks = new List<TaskConfiguration>();
+            Stages = new List<StageConfiguration>();
             Channels = new List<ChannelConfiguration>();
             AssemblyFileNames = assemblyFileNames == null ? new List<string>() : assemblyFileNames.ToList();
         }
@@ -60,9 +58,9 @@ namespace Tkl.Jumbo.Jet
         public List<string> AssemblyFileNames { get; set; }
 
         /// <summary>
-        /// Gets or sets a list of tasks that make up this job.
+        /// Gets or sets a list of stages.
         /// </summary>
-        public List<TaskConfiguration> Tasks { get; set; }
+        public List<StageConfiguration> Stages { get; set; }
 
         /// <summary>
         /// Gets or sets a list of communication channels between the tasks.
@@ -77,11 +75,11 @@ namespace Tkl.Jumbo.Jet
         /// <summary>
         /// Adds a stage that reads from the DFS.
         /// </summary>
-        /// <param name="stageName">The name of the stage. This name will serve as the base name for all the tasks in the stage.</param>
+        /// <param name="stageId">The name of the stage. This name will serve as the base name for all the tasks in the stage.</param>
         /// <param name="inputFileOrDirectory">The DFS file or directory that the stage will read from.</param>
         /// <param name="taskType">The type implementing the task's functionality; this type must implement <see cref="ITask{TInput,TOutput}"/>.</param>
         /// <param name="recordReaderType">The type of record reader to use when reading the file; this type must derive from <see cref="RecordReader{T}"/>.</param>
-        /// <returns>The list of tasks in the new stage.</returns>
+        /// <returns>A <see cref="StageConfiguration"/> for the new stage.</returns>
         /// <remarks>
         /// <note>
         ///   Information about stages is not preserved through XML serialization, so you should not use this method on a <see cref="JobConfiguration"/>
@@ -91,21 +89,21 @@ namespace Tkl.Jumbo.Jet
         ///   The new stage will contain as many tasks are there are blocks in the input file.
         /// </para>
         /// </remarks>
-        public IList<TaskConfiguration> AddInputStage(string stageName, FileSystemEntry inputFileOrDirectory, Type taskType, Type recordReaderType)
+        public StageConfiguration AddInputStage(string stageId, FileSystemEntry inputFileOrDirectory, Type taskType, Type recordReaderType)
         {
-            return AddInputStage(stageName, inputFileOrDirectory, taskType, recordReaderType, null, null);
+            return AddInputStage(stageId, inputFileOrDirectory, taskType, recordReaderType, null, null);
         }
 
         /// <summary>
         /// Adds a stage that reads from the DFS.
         /// </summary>
-        /// <param name="stageName">The name of the stage. This name will serve as the base name for all the tasks in the stage.</param>
+        /// <param name="stageId">The name of the stage. This name will serve as the base name for all the tasks in the stage.</param>
         /// <param name="inputFileOrDirectory">The DFS file or directory containing the files that the stage will read from.</param>
         /// <param name="taskType">The type implementing the task's functionality; this type must implement <see cref="ITask{TInput,TOutput}"/>.</param>
         /// <param name="recordReaderType">The type of record reader to use when reading the file; this type must derive from <see cref="RecordReader{T}"/>.</param>
         /// <param name="outputPath">The name of a DFS directory to write the stage's output files to, or <see langword="null"/> to indicate this stage does not write to the DFS.</param>
         /// <param name="recordWriterType">The type of the record writer to use when writing to the output files; this parameter is ignored if <paramref name="outputPath"/> is <see langword="null" />.</param>
-        /// <returns>The list of tasks in the new stage.</returns>
+        /// <returns>A <see cref="StageConfiguration"/> for the new stage.</returns>
         /// <remarks>
         /// <note>
         ///   Information about stages is not preserved through XML serialization, so you should not use this method on a <see cref="JobConfiguration"/>
@@ -115,7 +113,7 @@ namespace Tkl.Jumbo.Jet
         ///   The new stage will contain as many tasks are there are blocks in the input file.
         /// </para>
         /// </remarks>
-        public IList<TaskConfiguration> AddInputStage(string stageName, FileSystemEntry inputFileOrDirectory, Type taskType, Type recordReaderType, string outputPath, Type recordWriterType)
+        public StageConfiguration AddInputStage(string stageId, FileSystemEntry inputFileOrDirectory, Type taskType, Type recordReaderType, string outputPath, Type recordWriterType)
         {
             if( inputFileOrDirectory == null )
                 throw new ArgumentNullException("inputFileOrDirectory");
@@ -131,31 +129,32 @@ namespace Tkl.Jumbo.Jet
                          where f != null
                          select f);
             }
-            return AddInputStage(stageName, files, taskType, recordReaderType, outputPath, recordWriterType);
+            return AddInputStage(stageId, files, taskType, recordReaderType, outputPath, recordWriterType);
         }
 
         /// <summary>
         /// Adds a stage that reads data from another stage.
         /// </summary>
-        /// <param name="stageName">The name of the stage; this will be used as the base name for all the tasks in the stage.</param>
+        /// <param name="stageId">The name of the stage; this will be used as the base name for all the tasks in the stage.</param>
         /// <param name="inputStages">The stages from which this stage gets its input, or <see langword="null"/> to create a stage with no input at all.</param>
         /// <param name="taskType">The type implementing the task action; this type must implement <see cref="ITask{TInput,TOutput}"/>.</param>
         /// <param name="taskCount">The number of tasks to create in this stage.</param>
         /// <param name="channelType">One of the <see cref="ChannelType"/> files indicating the type of channel to use between the the input stages and the new stage.</param>
+        /// <param name="connectivity">The type of connectivity to use. Ignored if <paramref name="channelType"/> is <see cref="ChannelType.Pipeline"/>.</param>
         /// <param name="partitionerType">The type of the partitioner to use, or <see langword="null"/> to use the default <see cref="HashPartitioner{T}"/>. This type must implement <see cref="IPartitioner{T}"/>.</param>
         /// <param name="outputPath">The name of a DFS directory to write the stage's output files to, or <see langword="null"/> to indicate this stage does not write to the DFS.</param>
         /// <param name="recordWriterType">The type of the record writer to use when writing to the output files; this parameter is ignored if <paramref name="outputPath"/> is <see langword="null" />.</param>
-        /// <returns>The list of tasks in the new stage.</returns>
+        /// <returns>A <see cref="StageConfiguration"/> for the new stage.</returns>
         /// <remarks>
         /// <note>
         ///   Information about stages is not preserved through XML serialization, so you should not use this method on a <see cref="JobConfiguration"/>
         ///   object created using the <see cref="LoadXml(string)"/> method.
         /// </note>
         /// </remarks>
-        public IList<TaskConfiguration> AddStage(string stageName, IEnumerable<string> inputStages, Type taskType, int taskCount, ChannelType channelType, Type partitionerType, string outputPath, Type recordWriterType)
+        public StageConfiguration AddStage(string stageId, IEnumerable<StageConfiguration> inputStages, Type taskType, int taskCount, ChannelType channelType, ChannelConnectivity connectivity, Type partitionerType, string outputPath, Type recordWriterType)
         {
-            if( stageName == null )
-                throw new ArgumentNullException("stageName");
+            if( stageId == null )
+                throw new ArgumentNullException("stageId");
             if( taskType == null )
                 throw new ArgumentNullException("taskType");
             if( taskCount <= 0 )
@@ -170,35 +169,123 @@ namespace Tkl.Jumbo.Jet
 
             ValidatePartitionerType(partitionerType, inputType);
 
-            IEnumerable<TaskConfiguration> inputTasks = null;
+            
             if( inputStages != null && inputStages.Count() > 0 )
             {
-                inputTasks = from inputStageName in inputStages
-                             let inputStage = _stages[inputStageName]
-                             from inputTask in inputStage
-                             select inputTask;
-                if( inputTasks.Count() > 1 && channelType == ChannelType.Pipeline )
-                    throw new ArgumentException("You cannot use a pipeline channel type with a channel that merges several inputs.");
+                if( inputStages.Count() > 1 && channelType == ChannelType.Pipeline )
+                    throw new ArgumentException("You cannot use a pipeline channel type with a more than one input.");
 
-                ValidateChannelRecordType(inputType, inputTasks);
+                ValidateChannelRecordType(inputType, inputStages);
             }
 
-            List<TaskConfiguration> stage = CreateStage(stageName, taskType, taskCount, 1, outputPath, recordWriterType, null, null);
-
-            _stages.Add(stageName, stage);
-            AddTasks(stage);
-            if( inputTasks != null )
+            StageConfiguration stage = CreateStage(stageId, taskType, taskCount, outputPath, recordWriterType, null, null);
+            if( channelType == ChannelType.Pipeline && inputStages != null && inputStages.Count() > 0 )
             {
-                ChannelConfiguration channel = new ChannelConfiguration()
-                {
-                    ChannelType = channelType,
-                    PartitionerType = partitionerType == null ? typeof(HashPartitioner<>).MakeGenericType(inputType).AssemblyQualifiedName : partitionerType.AssemblyQualifiedName
-                };
-                channel.AddInputTasks(inputTasks);
-                channel.AddOutputTasks(stage);
-                Channels.Add(channel);
+                StageConfiguration parentStage = inputStages.ElementAt(0);
+                AddChildStage(partitionerType, inputType, stage, parentStage);
             }
-            return stage.AsReadOnly();
+            else
+            {
+                if( inputStages != null && inputStages.Count() > 0 )
+                {
+                    ValidateChannelConnectivityConstraints(inputStages, connectivity, stage);
+
+                    foreach( StageConfiguration inputStage in inputStages )
+                    {
+                        if( inputStage.ChildStages != null && inputStage.ChildStages.Count > 0 )
+                        {
+                            throw new ArgumentException("One of the specified input stages already has child stages so cannot be used as input.", "inputStages");
+                        }
+                    }
+
+                    ChannelConfiguration channel = new ChannelConfiguration()
+                    {
+                        InputStages = (from s in inputStages select s.CompoundStageId).ToArray(),
+                        OutputStages = new[] { stageId },
+                        ChannelType = channelType,
+                        PartitionerType = partitionerType ?? typeof(HashPartitioner<>).MakeGenericType(inputType),
+                        Connectivity = connectivity
+                    };
+                    Channels.Add(channel);
+                }
+                Stages.Add(stage);
+            }
+            return stage;
+        }
+
+        /// <summary>
+        /// Adds a point to point stage.
+        /// </summary>
+        /// <param name="stageId">The name of the stage; this will be used as the base name for all the tasks in the stage.</param>
+        /// <param name="inputStage">The stage from which this stage gets its input.</param>
+        /// <param name="taskType">The type implementing the task action; this type must implement <see cref="ITask{TInput,TOutput}"/>.</param>
+        /// <param name="channelType">One of the <see cref="ChannelType"/> files indicating the type of channel to use between the the input stages and the new stage.</param>
+        /// <param name="outputPath">The name of a DFS directory to write the stage's output files to, or <see langword="null"/> to indicate this stage does not write to the DFS.</param>
+        /// <param name="recordWriterType">The type of the record writer to use when writing to the output files; this parameter is ignored if <paramref name="outputPath"/> is <see langword="null" />.</param>
+        /// <returns>A <see cref="StageConfiguration"/> for the new stage.</returns>
+        public StageConfiguration AddPointToPointStage(string stageId, StageConfiguration inputStage, Type taskType, ChannelType channelType, string outputPath, Type recordWriterType)
+        {
+            if( inputStage == null )
+                throw new ArgumentNullException("inputStage");
+            return AddStage(stageId, new[] { inputStage }, taskType, channelType == ChannelType.Pipeline ? 1 : inputStage.TaskCount, channelType, ChannelConnectivity.PointToPoint, null, outputPath, recordWriterType);
+        }
+
+        private static void ValidateChannelConnectivityConstraints(IEnumerable<StageConfiguration> inputStages, ChannelConnectivity connectivity, StageConfiguration stage)
+        {
+            int inputTaskCount = 0;
+            switch( connectivity )
+            {
+            case ChannelConnectivity.PointToPoint:
+                foreach( StageConfiguration inputStage in inputStages )
+                {
+                    int inputStageTaskCount = inputStage.TaskCount;
+                    StageConfiguration current = inputStage.ParentStage;
+                    while( current != null )
+                    {
+                        inputStageTaskCount *= current.TaskCount;
+                        current = inputStage.ParentStage;
+                    }
+                    inputTaskCount += inputStageTaskCount;
+                }
+
+                if( inputTaskCount != stage.TaskCount )
+                    throw new ArgumentException("Point to point stage needs to have the same number of outputs as inputs.");
+                break;
+            case ChannelConnectivity.Full:
+                inputTaskCount = -1;
+                bool first = true;
+                foreach( StageConfiguration inputStage in inputStages )
+                {
+                    if( first )
+                        first = false;
+                    else
+                    {
+                        if( inputTaskCount == -1 && inputStage.ParentStage != null || inputTaskCount != -1 && inputStage.ParentStage == null )
+                            throw new ArgumentException("All inputs of a fully connected channel must be either child stages, or non-compound stages; you cannot mix them.");
+                    }
+
+                    if( inputStage.ParentStage != null )
+                    {
+                        if( inputTaskCount == -1 )
+                            inputTaskCount = inputStage.TaskCount;
+                        else if( inputTaskCount != inputStage.TaskCount )
+                            throw new ArgumentException("All inputs of a fully connected channel with a child stage as input need to have the same number of tasks.");
+                    }
+                }
+                break;
+            }
+        }
+
+        private static void AddChildStage(Type partitionerType, Type inputType, StageConfiguration stage, StageConfiguration parentStage)
+        {
+            stage.ParentStage = parentStage;
+            if( parentStage.ChildStages == null )
+                parentStage.ChildStages = new List<StageConfiguration>();
+            parentStage.ChildStages.Add(stage);
+            if( parentStage.ChildStagePartitionerType != null && partitionerType != null && parentStage.ChildStagePartitionerType != partitionerType )
+                throw new ArgumentException("The partitioner type for the pipeline output channel of the specified task is already specified.");
+            else
+                parentStage.ChildStagePartitionerType = partitionerType ?? typeof(HashPartitioner<>).MakeGenericType(inputType);
         }
 
         private static void ValidatePartitionerType(Type partitionerType, Type inputType)
@@ -212,313 +299,105 @@ namespace Tkl.Jumbo.Jet
             }
         }
 
-        /// <summary>
-        /// Creates a stage where each task reads data from precisely one task of another stage.
-        /// </summary>
-        /// <param name="stageName">The name of the new stage.</param>
-        /// <param name="inputStage">The stage to use as input for this stage. The new stage will have the same number of tasks as the input stage.</param>
-        /// <param name="taskType">The type of the stage's tasks.</param>
-        /// <param name="channelType">One of the <see cref="ChannelType"/> files indicating the type of channel to use between the the input stages and the new stage.</param>
-        /// <param name="partitionerType">The type of partitioner to use in the event that the channel will be split using <see cref="SplitStageOutput"/>, or <see langword="null"/>
-        /// to use the default partitioner.</param>
-        /// <param name="outputPath">The name of a DFS directory to write the stage's output files to, or <see langword="null"/> to indicate this stage does not write to the DFS.</param>
-        /// <param name="recordWriterType">The type of the record writer to use when writing to the output files; this parameter is ignored if <paramref name="outputPath"/> is <see langword="null" />.</param>
-        /// <returns>The list of tasks in the new stage.</returns>
-        /// <remarks>
-        /// <note>
-        ///   Information about stages is not preserved through XML serialization, so you should not use this method on a <see cref="JobConfiguration"/>
-        ///   object created using the <see cref="LoadXml(string)"/> method.
-        /// </note>
-        /// </remarks>
-        public IList<TaskConfiguration> AddPointToPointStage(string stageName, string inputStage, Type taskType, ChannelType channelType, Type partitionerType, string outputPath, Type recordWriterType)
+        private StageConfiguration CreateStage(string stageId, Type taskType, int taskCount, string outputPath, Type recordWriterType, IEnumerable<File> inputs, Type recordReaderType)
         {
-            if( stageName == null )
-                throw new ArgumentNullException("stageName");
-            if( inputStage == null )
-                throw new ArgumentNullException("inputStage");
-            if( taskType == null )
-                throw new ArgumentNullException("taskType");
-
-            Type taskInterfaceType = FindGenericInterfaceType(taskType, typeof(ITask<,>));
-            ValidateOutputType(outputPath, recordWriterType, taskInterfaceType);
-
-            Type inputType = taskInterfaceType.GetGenericArguments()[0];
-
-            ValidatePartitionerType(partitionerType, inputType);
-            
-            List<TaskConfiguration> inputTasks = _stages[inputStage];
-            ValidateChannelRecordType(inputType, inputTasks);
-
-            List<TaskConfiguration> stage = CreateStage(stageName, taskType, inputTasks.Count, 1, outputPath, recordWriterType, null, null);
-
-            _stages.Add(stageName, stage);
-            AddTasks(stage);
-            for( int x = 0; x < inputTasks.Count; ++x )
+            StageConfiguration stage = new StageConfiguration()
             {
-                TaskConfiguration inputTask = inputTasks[x];
-                TaskConfiguration outputTask = stage[x];
-                ChannelConfiguration channel = new ChannelConfiguration()
+                StageId = stageId,
+                TaskType = taskType,
+                TaskCount = taskCount,
+                DfsOutput = outputPath == null ? null : new TaskDfsOutput()
                 {
-                    ChannelType = channelType,
-                    PartitionerType = (partitionerType ?? typeof(HashPartitioner<>).MakeGenericType(inputType)).AssemblyQualifiedName
-                };
-                channel.AddInputTask(inputTask);
-                channel.AddOutputTask(outputTask);
-                Channels.Add(channel);
+                    PathFormat = DfsPath.Combine(outputPath, stageId + "{0:000}"),
+                    RecordWriterType = recordWriterType,
+                }
+            };
+            if( inputs != null )
+            {
+                stage.DfsInputs = new List<TaskDfsInput>();
+                foreach( File file in inputs )
+                {
+                    for( int block = 0; block < file.Blocks.Count; ++block )
+                    {
+                        stage.DfsInputs.Add(new TaskDfsInput()
+                        {
+                            Path = file.FullPath,
+                            Block = block,
+                            RecordReaderType = recordReaderType 
+                        });
+                    }
+                }
             }
             return stage;
         }
 
         /// <summary>
-        /// Split the output of the specified stages, duplicating every connected task after this.
+        /// Gets the stage with the specified ID.
         /// </summary>
-        /// <param name="stageNames">The names of the stages whose output to split.</param>
-        /// <param name="partitions">The number of partitions to split the output into.</param>
-        /// <remarks>
-        /// <para>
-        ///   The primary reason this function exists is because it helps to insert a sort after every task in a stage and then partition before the sort.
-        /// </para>
-        /// <para>
-        ///   Splitting output is primarily useful for the situation where you have a stage with multiple tasks (stage 1), connected to a 
-        ///   point-to-point stage (stage 2), and then connected to a stage with just one task (stage 3), and you want to partition the output
-        ///   between stage 1 and stage 2. This will create duplicates of the tasks in stages 2 and 3, an make sure that each task in stage 3
-        ///   receives inputs from the tasks in stage 2 that receive the same partition.
-        /// </para>
-        /// <para>
-        ///   Splitting is only permitted if, starting from the specified stages, no task has an output channel with more than one output task,
-        ///   and the data flow from the specified all end in the same, single, task. The specified stages should also not follow each other.
-        /// </para>
-        /// <para>
-        ///   If you start with the following graph:
-        /// </para>
-        /// <pre>
-        /// A1 -> B1 \
-        ///           \
-        /// A2 -> B2 --> C1 -> D1
-        ///           /
-        /// A3 -> B3 /
-        /// </pre>
-        /// <para>
-        ///   And then call SplitStageOutput(new[] { "A" }, 2), the result is:
-        /// </para>
-        /// <pre>
-        ///     > B1_1 ----\
-        ///    /            \
-        /// A1               \
-        ///    \              \
-        ///     > B1_2 \ /---> C1_1 -> D1_1
-        ///             X     /
-        ///     > B2_1 / \   /
-        ///    /          \ /
-        /// A2             X
-        ///    \          / \
-        ///     > B2_2 \ /   \
-        ///             X     \
-        ///     > B3_1 / \---> D1_2 -> D1_2
-        ///    /              /
-        /// A3               /
-        ///    \            /
-        ///     > B3_2 ----/
-        /// </pre>
-        /// </remarks>
-        public void SplitStageOutput(string[] stageNames, int partitions)
+        /// <param name="stageId">The ID of the task.</param>
+        /// <returns>The <see cref="StageConfiguration"/> for the stage, or <see langword="null"/> if no stage with that ID exists.</returns>
+        public StageConfiguration GetStage(string stageId)
         {
-            if( stageNames == null )
-                throw new ArgumentNullException("stageNames");
-            if( partitions < 2 )
-                throw new ArgumentOutOfRangeException("partitions", "There must be at least two partitions.");
-
-            var inputTasks = (from stageName in stageNames
-                              from task in _stages[stageName]
-                              select task);
-
-            TaskConfiguration endTask = null;
-            HashSet<string> tasksToSplit = new HashSet<string>();
-            foreach( var task in inputTasks )
-            {
-                string currentEndTask = CheckChain(task, tasksToSplit);
-                if( currentEndTask == null )
-                {
-                    throw new ArgumentException(string.Format("The subgraph leading from task {0} already has a split.", task.TaskID), "stageNames");
-                }
-                if( endTask == null )
-                    endTask = GetTask(currentEndTask);
-                else if( endTask.TaskID != currentEndTask )
-                    throw new ArgumentException("Not all subgraphs terminate on the same task.", "stageNames");
-            }
-
-            SplitTask(endTask, partitions, tasksToSplit, inputTasks, null, null);
-        }
-
-        private void SplitTask(TaskConfiguration task, int partitions, HashSet<string> tasksToSplit, IEnumerable<TaskConfiguration> startTasks, List<TaskConfiguration> outputTasks, ChannelConfiguration outputChannelTemplate)
-        {
-            if( !startTasks.Contains(task) )
-            {
-                List<TaskConfiguration> stage = _stages[task.Stage];
-                List<TaskConfiguration> newTasks = new List<TaskConfiguration>(partitions);
-                string oldTaskId = task.TaskID;
-                string newTaskId = task.TaskID + "_001";
-                if( GetTask(newTaskId) != null )
-                    throw new InvalidOperationException(string.Format("Cannot complete split: a task with the ID {0} already exists.", newTaskId));
-                string oldOutputPath = null;
-                if( task.DfsOutput != null )
-                {
-                    oldOutputPath = task.DfsOutput.Path;
-                    task.DfsOutput.Path += "_001";
-                }
-                task.TaskID = newTaskId;
-                ChannelConfiguration inputChannel = GetInputChannelForTask(oldTaskId);
-                if( _tasksByName != null )
-                {
-                    _tasksByName.Remove(oldTaskId);
-                    _tasksByName.Add(newTaskId, task);
-                }
-                newTasks.Add(task);
-                for( int x = 1; x < partitions; ++x )
-                {
-                    TaskConfiguration newTask = task.Clone();
-                    string postfix = "_" + (x + 1).ToString("000", System.Globalization.CultureInfo.InvariantCulture);
-                    newTaskId = oldTaskId + postfix;
-                    if( GetTask(newTaskId) != null )
-                        throw new InvalidOperationException(string.Format("Cannot complete split: a task with the ID {0} already exists.", newTaskId));
-                    newTask.TaskID = newTaskId;
-                    if( newTask.DfsOutput != null )
-                        newTask.DfsOutput.Path = oldOutputPath + postfix;
-                    newTasks.Add(newTask);
-                    stage.Add(newTask);
-                    AddTask(newTask);
-                }
-                // Remove any tasks from the channel that are part of the chain.
-                // We don't need to do that for outputchannel because that was already taken care of when processing the next task in the chain.
-                var precedingTasks = inputChannel.InputTasks.Intersect(tasksToSplit);
-                inputChannel.RemoveInputTasks(from id in precedingTasks select GetTask(id));
-
-                if( inputChannel.InputTasks.Length == 0 )
-                    RemoveChannel(inputChannel);
-                else
-                {
-                    inputChannel.ClearOutputTasks();
-                    inputChannel.AddOutputTasks(from t in newTasks select t); // hook up any other tasks to the newly split tasks (note: this will split their output too!)
-                }
-
-                if( outputTasks != null )
-                {
-                    for( int x = 0; x < newTasks.Count; ++x )
-                    {
-                        ChannelConfiguration channel = outputTasks[x].InputChannel;
-                        if( channel == null )
-                        {
-                            channel = new ChannelConfiguration();
-                            channel.ChannelType = outputChannelTemplate.ChannelType;
-                            channel.ForceFileDownload = outputChannelTemplate.ForceFileDownload;
-                            channel.PartitionerType = outputChannelTemplate.PartitionerType;
-                            channel.AddInputTask(newTasks[x]);
-                            channel.AddOutputTask(outputTasks[x]);
-                            Channels.Add(channel);
-                        }
-                        else
-                        {
-                            channel.AddInputTask(newTasks[x]);
-                        }
-                    }
-                }
-
-                foreach( string taskId in precedingTasks )
-                {
-                    SplitTask(GetTask(taskId), partitions, tasksToSplit, startTasks, newTasks, inputChannel);
-                }
-            }
-            else
-            {
-                if( outputTasks != null )
-                {
-                    ChannelConfiguration channel = outputTasks[0].InputChannel;
-                    if( channel == null )
-                    {
-                        channel = new ChannelConfiguration();
-                        channel.ChannelType = outputChannelTemplate.ChannelType;
-                        channel.ForceFileDownload = outputChannelTemplate.ForceFileDownload;
-                        channel.PartitionerType = outputChannelTemplate.PartitionerType;
-                        channel.AddInputTask(task);
-                        channel.AddOutputTasks(outputTasks);
-                        Channels.Add(channel);
-                    }
-                    else
-                    {
-                        channel.AddInputTask(task);
-                    }
-
-                }
-            }
-        }
-
-        private string CheckChain(TaskConfiguration task, HashSet<string> allTasks)
-        {
-            string taskId = task.TaskID;
-            ChannelConfiguration channel = GetOutputChannelForTask(taskId);
-            allTasks.Add(taskId);
-            while( channel != null )
-            {
-                if( channel.OutputTasks.Length != 1 )
-                    return null;
-                taskId = channel.OutputTasks[0];
-                allTasks.Add(taskId);
-                channel = GetOutputChannelForTask(taskId);
-            }
-            return taskId;
-        }
-
-        private List<TaskConfiguration> CreateStage(string stageName, Type taskType, int taskCount, int start, string outputPath, Type recordWriterType, string inputPath, Type recordReaderType)
-        {
-            List<TaskConfiguration> stage = new List<TaskConfiguration>(taskCount);
-            for( int x = 0; x < taskCount; ++x )
-            {
-                string taskId = stageName + (x + start).ToString("000", System.Globalization.CultureInfo.InvariantCulture);
-                if( GetTask(taskId) != null )
-                    throw new InvalidOperationException(string.Format("A task with the ID {0} already exists.", taskId));
-
-                TaskConfiguration task = new TaskConfiguration()
-                {
-                    TaskID = stageName + (x + start).ToString("000", System.Globalization.CultureInfo.InvariantCulture),
-                    ProfileOptions = null, // Not supported currently.
-                    TaskType = taskType,
-                    Stage = stageName,
-                    DfsOutput = outputPath == null ? null : new TaskDfsOutput()
-                    {
-                        Path = DfsPath.Combine(outputPath, taskId),
-                        RecordWriterType = recordWriterType.AssemblyQualifiedName
-                    },
-                    DfsInput = inputPath == null ? null : new TaskDfsInput()
-                    {
-                        Path = inputPath,
-                        Block = x,
-                        RecordReaderType = recordReaderType.AssemblyQualifiedName
-                    }
-                };
-                stage.Add(task);
-            }
-            return stage;
+            return (from stage in Stages
+                    where stage.StageId == stageId
+                    select stage).SingleOrDefault();
         }
 
         /// <summary>
-        /// Gets the task with the specified ID.
+        /// Gets all stages in a compount stage ID.
         /// </summary>
-        /// <param name="taskID">The ID of the task.</param>
-        /// <returns>The <see cref="TaskConfiguration"/> for the task, or <see langword="null"/> if no task with that ID exists.</returns>
-        public TaskConfiguration GetTask(string taskID)
+        /// <param name="compoundStageId">The compound stage ID.</param>
+        /// <returns>A list of all <see cref="StageConfiguration"/> instances for the stages, or <see langword="null"/> if any of the components
+        /// of the compound stage ID could not be found.</returns>
+        public IList<StageConfiguration> GetPipelinedStages(string compoundStageId)
         {
-            if( _tasksByName == null )
-                return (from task in Tasks
-                        where task.TaskID == taskID
-                        select task).SingleOrDefault();
-            else
+            if( compoundStageId == null )
+                throw new ArgumentNullException("compoundStageId");
+
+            string[] stageIds = compoundStageId.Split(TaskId.ChildStageSeparator);
+            List<StageConfiguration> stages = new List<StageConfiguration>(stageIds.Length);
+            StageConfiguration current = GetStage(stageIds[0]);
+            for( int x = 0; x < stageIds.Length; ++x )
             {
-                TaskConfiguration task;
-                if( _tasksByName.TryGetValue(taskID, out task) )
-                    return task;
-                else
+                if( x > 0 )
+                    current = current.GetChildStage(stageIds[x]);
+
+                if( current == null )
                     return null;
+                else
+                    stages.Add(current);
             }
+            return stages;
+        }
+
+        /// <summary>
+        /// Gets the total number of tasks in a particular child stage.
+        /// </summary>
+        /// <param name="compoundStageId">The compound stage ID.</param>
+        /// <returns>The number of tasks that will be created for the compound stage ID, which is the product of the number of tasks in each stage in the compound ID.</returns>
+        public int GetTotalTaskCount(string compoundStageId)
+        {
+            IList<StageConfiguration> stages = GetPipelinedStages(compoundStageId);
+            return GetTotalTaskCount(stages, 0);
+        }
+
+        /// <summary>
+        /// Gets the total number of tasks in a particular child stage.
+        /// </summary>
+        /// <param name="stages">A list of pipelined stages, as returned by <see cref="GetPipelinedStages"/>.</param>
+        /// <param name="start">The index in <paramref name="stages"/> at which to start.</param>
+        /// <returns>The number of tasks that will be created for the pipelined stages, which is the product of the number of tasks in each stage in the compound ID.</returns>
+        public static int GetTotalTaskCount(IList<StageConfiguration> stages, int start)
+        {
+            if( stages == null )
+                throw new ArgumentNullException("stages");
+
+            int result = 1;
+            for( int x = start; x < stages.Count; ++x )
+            {
+                result *= stages[0].TaskCount;
+            }
+            return result;
         }
 
         /// <summary>
@@ -533,52 +412,28 @@ namespace Tkl.Jumbo.Jet
         }
 
         /// <summary>
-        /// Gets the output channel configuration for a specific task.
+        /// Gets the output channel configuration for a specific stage.
         /// </summary>
-        /// <param name="taskID">The task ID.</param>
+        /// <param name="stageId">The task ID.</param>
         /// <returns>The channel configuration.</returns>
-        public Channels.ChannelConfiguration GetOutputChannelForTask(string taskID)
+        public Channels.ChannelConfiguration GetOutputChannelForStage(string stageId)
         {
-            if( _tasksByName == null )
-            {
-                return (from channel in Channels
-                        where channel.InputTasks != null && channel.InputTasks.Contains(taskID)
-                        select channel).SingleOrDefault();
-            }
-            else
-            {
-                // We assume that OutputChannel will be set if _tasksByName is used.
-                TaskConfiguration task;
-                if( _tasksByName.TryGetValue(taskID, out task) )
-                    return task.OutputChannel;
-                else
-                    return null;
-            }
+            return (from channel in Channels
+                    where channel.InputStages != null && channel.InputStages.Contains(stageId)
+                    select channel).SingleOrDefault();
         }
 
 
         /// <summary>
-        /// Gets the input channel configuration for a specific task.
+        /// Gets the output channel configuration for a specific stage.
         /// </summary>
-        /// <param name="taskID">The task ID.</param>
+        /// <param name="stageId">The task ID.</param>
         /// <returns>The channel configuration.</returns>
-        public Channels.ChannelConfiguration GetInputChannelForTask(string taskID)
+        public Channels.ChannelConfiguration GetInputChannelForStage(string stageId)
         {
-            if( _tasksByName == null )
-            {
-                return (from channel in Channels
-                        where channel.OutputTasks != null && channel.OutputTasks.Contains(taskID)
-                        select channel).SingleOrDefault();
-            }
-            else
-            {
-                // We assume that OutputChannel will be set if _tasksByName is used.
-                TaskConfiguration task;
-                if( _tasksByName.TryGetValue(taskID, out task) )
-                    return task.InputChannel;
-                else
-                    return null;
-            }
+            return (from channel in Channels
+                    where channel.OutputStages != null && channel.OutputStages.Contains(stageId) 
+                    select channel).SingleOrDefault();
         }
 
         /// <summary>
@@ -608,44 +463,12 @@ namespace Tkl.Jumbo.Jet
             }
         }
 
-        /// <summary>
-        /// Gets a value that indicates if the specified task should be scheduled.
-        /// </summary>
-        /// <param name="taskId">The task ID.</param>
-        /// <returns><see langword="true"/> if the specified task should be scheduled, or <see langword="false"/> if the specified task is executed
-        /// in-process with another task.</returns>
-        public bool IsPipelinedTask(string taskId)
+        private StageConfiguration AddInputStage(string stageId, IEnumerable<File> inputFiles, Type taskType, Type recordReaderType, string outputPath, Type recordWriterType)
         {
-            ChannelConfiguration inputChannel = GetInputChannelForTask(taskId);
-            return inputChannel != null && inputChannel.ChannelType == ChannelType.Pipeline;
-        }
-
-        /// <summary>
-        /// Rebuild the task dictionary and the task channel information so they can be quickly retrieved later.
-        /// </summary>
-        /// <remarks>
-        /// Use this method after loading with LoadXml if you need to use GetTask or GetInput/OutputChannelForTask often.
-        /// </remarks>
-        public void RebuildLookupData()
-        {
-            _tasksByName = new Dictionary<string, TaskConfiguration>();
-            foreach( TaskConfiguration task in Tasks )
-                _tasksByName.Add(task.TaskID, task);
-            foreach( ChannelConfiguration channel in Channels )
-            {
-                foreach( string task in channel.InputTasks )
-                    _tasksByName[task].OutputChannel = channel;
-                foreach( string task in channel.OutputTasks )
-                    _tasksByName[task].InputChannel = channel;
-            }
-        }
-
-        private IList<TaskConfiguration> AddInputStage(string stageName, IEnumerable<File> inputFiles, Type taskType, Type recordReaderType, string outputPath, Type recordWriterType)
-        {
-            if( stageName == null )
-                throw new ArgumentNullException("stageName");
-            if( stageName.Length == 0 )
-                throw new ArgumentException("Stage name cannot be empty.", "stageName");
+            if( stageId == null )
+                throw new ArgumentNullException("stageId");
+            if( stageId.Length == 0 )
+                throw new ArgumentException("Stage name cannot be empty.", "stageId");
             if( inputFiles == null )
                 throw new ArgumentNullException("inputFile");
             if( inputFiles.Count() == 0 )
@@ -657,45 +480,35 @@ namespace Tkl.Jumbo.Jet
             if( outputPath != null && recordWriterType == null )
                 throw new ArgumentNullException("recordWriterType");
 
-            List<TaskConfiguration> stage = new List<TaskConfiguration>();
-            int start = 1;
-            foreach( File inputFile in inputFiles )
-            {
-                if( inputFile == null )
-                    throw new ArgumentException("Input files contains a null entry.");
+            Type taskInterfaceType = taskType.FindGenericInterfaceType(typeof(ITask<,>));
+            Type inputType = taskInterfaceType.GetGenericArguments()[0];
+            Type recordReaderBaseType = FindGenericBaseType(recordReaderType, typeof(RecordReader<>));
+            Type recordType = recordReaderBaseType.GetGenericArguments()[0];
+            if( inputType != recordType )
+                throw new ArgumentException(string.Format("The specified record reader type {0} is not identical to the specified task type's input type {1}.", recordType, inputType));
 
-                Type taskInterfaceType = FindGenericInterfaceType(taskType, typeof(ITask<,>));
-                Type inputType = taskInterfaceType.GetGenericArguments()[0];
-                Type recordReaderBaseType = FindGenericBaseType(recordReaderType, typeof(RecordReader<>));
-                Type recordType = recordReaderBaseType.GetGenericArguments()[0];
-                if( inputType != recordType )
-                    throw new ArgumentException(string.Format("The specified record reader type {0} is not identical to the specified task type's input type {1}.", recordType, inputType));
+            ValidateOutputType(outputPath, recordWriterType, taskInterfaceType);
 
-                ValidateOutputType(outputPath, recordWriterType, taskInterfaceType);
-
-                stage.AddRange(CreateStage(stageName, taskType, inputFile.Blocks.Count, start, outputPath, recordWriterType, inputFile.FullPath, recordReaderType));
-                start += inputFile.Blocks.Count;
-            }
-            _stages.Add(stageName, stage);
-            AddTasks(stage); // this is done at the end so the job's state isn't altered if one of the tasks has a duplicate name and causes an exception.
-            return stage.AsReadOnly();
+            StageConfiguration stage = CreateStage(stageId, taskType, 0, outputPath, recordWriterType, inputFiles, recordReaderType);
+            Stages.Add(stage);
+            return stage;
         }
 
-        private void ValidateChannelRecordType(Type inputType, IEnumerable<TaskConfiguration> inputTasks)
+        private void ValidateChannelRecordType(Type inputType, IEnumerable<StageConfiguration> inputStages)
         {
             // Validate channel type
-            foreach( TaskConfiguration task in inputTasks )
+            foreach( StageConfiguration stage in inputStages )
             {
-                if( task.DfsOutput != null || GetOutputChannelForTask(task.TaskID) != null )
-                    throw new ArgumentException(string.Format("Input task {0} already has an output channel or DFS output.", task.TaskID), "inputStages");
-                Type inputTaskType = task.TaskType;
+                if( stage.DfsOutput != null || GetOutputChannelForStage(stage.StageId) != null )
+                    throw new ArgumentException(string.Format("Input stage {0} already has an output channel or DFS output.", stage.StageId), "inputStages");
+                Type inputTaskType = stage.TaskType;
                 // We skip the check if the task type isn't stored.
                 if( inputTaskType != null )
                 {
-                    Type inputTaskInterfaceType = FindGenericInterfaceType(inputTaskType, typeof(ITask<,>));
+                    Type inputTaskInterfaceType = inputTaskType.FindGenericInterfaceType(typeof(ITask<,>));
                     Type inputTaskOutputType = inputTaskInterfaceType.GetGenericArguments()[1];
                     if( inputTaskOutputType != inputType )
-                        throw new ArgumentException(string.Format("Input task {0} has output type {1} instead of the required type {2}.", task.TaskID, inputTaskOutputType, inputType), "inputStages");
+                        throw new ArgumentException(string.Format("Input stage {0} has output type {1} instead of the required type {2}.", stage.StageId, inputTaskOutputType, inputType), "inputStages");
                 }
             }
         }
@@ -737,30 +550,6 @@ namespace Tkl.Jumbo.Jet
                 current = current.BaseType;
             }
             throw new ArgumentException(string.Format("Type {0} does not inherit from {1}.", type, baseType));
-        }
-
-        private void AddTask(TaskConfiguration task)
-        {
-            if( _tasksByName == null )
-                _tasksByName = new Dictionary<string, TaskConfiguration>();
-            Tasks.Add(task);
-            _tasksByName.Add(task.TaskID, task);
-        }
-
-        private void AddTasks(IEnumerable<TaskConfiguration> tasks)
-        {
-            if( _tasksByName == null )
-                _tasksByName = new Dictionary<string, TaskConfiguration>();
-            Tasks.AddRange(tasks);
-            foreach( TaskConfiguration task in tasks )
-                _tasksByName.Add(task.TaskID, task);
-        }
-
-        private void RemoveChannel(ChannelConfiguration channel)
-        {
-            channel.ClearOutputTasks();
-            channel.ClearInputTasks();
-            Channels.Remove(channel);
         }
 
         /// <summary>

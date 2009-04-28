@@ -91,9 +91,9 @@ namespace Tkl.Jumbo.Test.Jet
             expected.Sort();
 
             JobConfiguration config = new JobConfiguration(typeof(StringConversionTask).Assembly);
-            config.AddInputStage("ConversionStage", dfsClient.NameServer.GetFileInfo("/sortinput"), typeof(StringConversionTask), typeof(LineRecordReader));
-            config.AddPointToPointStage("SortStage", "ConversionStage", typeof(SortTask<Int32Writable>), ChannelType.Pipeline, null, null, null);
-            config.AddStage("MergeStage", new[] { "SortStage" }, typeof(MergeSortTask<Int32Writable>), 1, ChannelType.File, null, outputPath, typeof(BinaryRecordWriter<Int32Writable>));
+            StageConfiguration conversionStage = config.AddInputStage("ConversionStage", dfsClient.NameServer.GetFileInfo("/sortinput"), typeof(StringConversionTask), typeof(LineRecordReader));
+            StageConfiguration sortStage = config.AddStage("SortStage", new[] { conversionStage }, typeof(SortTask<Int32Writable>), 1, ChannelType.Pipeline, ChannelConnectivity.PointToPoint, null, null, null);
+            config.AddStage("MergeStage", new[] { sortStage }, typeof(MergeSortTask<Int32Writable>), 1, ChannelType.File, ChannelConnectivity.Full, null, outputPath, typeof(BinaryRecordWriter<Int32Writable>));
 
             RunJob(dfsClient, config);
 
@@ -219,15 +219,13 @@ namespace Tkl.Jumbo.Test.Jet
 
             JobConfiguration config = new JobConfiguration(System.IO.Path.GetFileName(typeof(LineCounterTask).Assembly.Location));
 
-            config.AddInputStage("Task", file, counterTask, typeof(LineRecordReader));
-            string stage = "Task";
+            StageConfiguration stage = config.AddInputStage("Task", file, counterTask, typeof(LineRecordReader));
             if( channelType == ChannelType.Pipeline )
             {
                 // Pipeline channel cannot merge so we will add another stage in between.
-                config.AddPointToPointStage("IntermediateTask", "Task", adderTask, ChannelType.Pipeline, null, null, null);
-                stage = "IntermediateTask";
+                stage = config.AddPointToPointStage("IntermediateTask", stage, adderTask, ChannelType.Pipeline, null, null);
             }
-            config.AddStage("OutputTask", new[] { stage }, adderTask, 1, ChannelType.File, null, outputPath, typeof(TextRecordWriter<Int32Writable>));
+            config.AddStage("OutputTask", new[] { stage }, adderTask, 1, ChannelType.File, ChannelConnectivity.Full, null, outputPath, typeof(TextRecordWriter<Int32Writable>));
             config.Channels[0].ForceFileDownload = forceFileDownload;
 
             return config;

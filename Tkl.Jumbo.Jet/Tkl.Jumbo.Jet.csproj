@@ -61,6 +61,7 @@
     <Compile Include="AllowRecordReuseAttribute.cs" />
     <Compile Include="AssemblyResolver.cs" />
     <Compile Include="Channels\ChannelConfiguration.cs" />
+    <Compile Include="Channels\ChannelConnectivity.cs" />
     <Compile Include="Channels\ChannelType.cs" />
     <Compile Include="Channels\FileChannelMemoryStorageManager.cs" />
     <Compile Include="Channels\FileInputChannel.cs" />
@@ -105,12 +106,13 @@
     <Compile Include="RunTaskJetHeartbeatResponse.cs" />
     <Compile Include="ServerShutdownException.cs" />
     <Compile Include="SettingsDictionary.cs" />
+    <Compile Include="StageConfiguration.cs" />
     <Compile Include="StatusJetHeartbeatData.cs" />
     <Compile Include="TaskAttemptConfiguration.cs" />
-    <Compile Include="TaskConfiguration.cs" />
     <Compile Include="TaskDfsInput.cs" />
     <Compile Include="TaskDfsOutput.cs" />
     <Compile Include="TaskExecutionUtility.cs" />
+    <Compile Include="TaskId.cs" />
     <Compile Include="TaskMetrics.cs" />
     <Compile Include="TaskServerConfigurationElement.cs" />
     <Compile Include="TaskServerHeartbeatCommand.cs" />

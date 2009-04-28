@@ -14,6 +14,9 @@ namespace Tkl.Jumbo.Jet
     [XmlType(Namespace=JobConfiguration.XmlNamespace)]
     public class TaskDfsInput : ICloneable
     {
+        private string _recordReaderTypeName;
+        private Type _recordReaderType;
+
         /// <summary>
         /// Gets or sets the path of the file to read.
         /// </summary>
@@ -27,10 +30,37 @@ namespace Tkl.Jumbo.Jet
         public int Block { get; set; }
 
         /// <summary>
+        /// Gets or sets the name of the type of <see cref="Tkl.Jumbo.IO.RecordReader{T}"/> to use to read the file.
+        /// </summary>
+        [XmlAttribute("recordReader")]
+        public string RecordReaderTypeName
+        {
+            get { return _recordReaderTypeName; }
+            set
+            {
+                _recordReaderTypeName = value;
+                _recordReaderType = null;
+            }
+        }
+
+        /// <summary>
         /// Gets or sets the type of <see cref="Tkl.Jumbo.IO.RecordReader{T}"/> to use to read the file.
         /// </summary>
-        [XmlAttribute("recordReaderType")]
-        public string RecordReaderType { get; set; }
+        [XmlIgnore]
+        public Type RecordReaderType
+        {
+            get
+            {
+                if( _recordReaderType == null && _recordReaderTypeName != null )
+                    _recordReaderType = Type.GetType(_recordReaderTypeName, true);
+                return _recordReaderType;
+            }
+            set
+            {
+                _recordReaderType = value;
+                _recordReaderTypeName = value == null ? null : value.AssemblyQualifiedName;
+            }
+        }
 
         /// <summary>
         /// Creates a clone of the current object.
@@ -73,7 +103,7 @@ namespace Tkl.Jumbo.Jet
                 throw new ArgumentNullException("input");
             if( dfsClient == null )
                 throw new ArgumentNullException("dfsClient");
-            Type recordReaderType = Type.GetType(input.RecordReaderType);
+            Type recordReaderType = input.RecordReaderType;
             long offset;
             long size;
             long blockSize = dfsClient.NameServer.BlockSize;

@@ -16,30 +16,34 @@ namespace JobServerApplication
         private TaskInfo _owner;
         private List<TaskServerInfo> _badServers;
 
-        public TaskInfo(JobInfo job, TaskConfiguration task)
+        public TaskInfo(JobInfo job, StageConfiguration stage, int taskNumber)
         {
-            if( task == null )
-                throw new ArgumentNullException("task");
+            if( stage == null )
+                throw new ArgumentNullException("stage");
             if( job == null )
                 throw new ArgumentNullException("job");
-            Task = task;
+            Stage = stage;
+            TaskId = new TaskId(stage.StageId, taskNumber);
             Job = job;
             _taskCompletedEvent = new ManualResetEvent(false);
         }
 
-        public TaskInfo(TaskInfo owner, TaskConfiguration task)
+        public TaskInfo(TaskInfo owner, StageConfiguration stage, int taskNumber)
         {
             if( owner == null )
                 throw new ArgumentNullException("owner");
-            if( task == null )
-                throw new ArgumentNullException("task");
+            if( stage == null )
+                throw new ArgumentNullException("stage");
             Job = owner.Job;
-            Task = task;
+            Stage = stage;
+            TaskId = new TaskId(owner.TaskId, stage.StageId, taskNumber);
             _taskCompletedEvent = owner.TaskCompletedEvent;
             _owner = owner;
         }
 
-        public TaskConfiguration Task { get; private set; }
+        public StageConfiguration Stage { get; private set; }
+
+        public TaskId TaskId { get; private set; }
 
         public JobInfo Job { get; private set; }
 
@@ -92,26 +96,27 @@ namespace JobServerApplication
         {
             get
             {
-                return string.Format("{{{0}}}_{1}", Job.Job.JobID, Task.TaskID);
+                return string.Format("{{{0}}}_{1}", Job.Job.JobID, TaskId);
             }
         }
 
         /// <summary>
-        /// NOTE: Only call if Task.DfsInput is not null.
+        /// NOTE: Only call if Stage.DfsInputs is not null.
         /// </summary>
         /// <param name="dfsClient"></param>
         /// <returns></returns>
         public Guid GetBlockId(DfsClient dfsClient)
         {
-            Tkl.Jumbo.Dfs.File file = Job.GetFileInfo(dfsClient, Task.DfsInput.Path);
-            return file.Blocks[Task.DfsInput.Block];
+            TaskDfsInput input = Stage.DfsInputs[TaskId.TaskNumber - 1];
+            Tkl.Jumbo.Dfs.File file = Job.GetFileInfo(dfsClient, input.Path);
+            return file.Blocks[input.Block];
         }
 
         public TaskStatus ToTaskStatus()
         {
             return new TaskStatus()
             {
-                TaskID = Task.TaskID,
+                TaskID = TaskId.ToString(),
                 State = State,
                 TaskServer = Server == null ? null : Server.Address,
                 Attempts = Attempts,

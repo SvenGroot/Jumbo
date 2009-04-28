@@ -90,14 +90,22 @@ namespace Tkl.Jumbo.Jet.Channels
         /// <returns>A record writer for the channel.</returns>
         public Tkl.Jumbo.IO.RecordWriter<T> CreateRecordWriter<T>() where T : Tkl.Jumbo.IO.IWritable, new()
         {
-            if( _taskExecution.OutputChannelConfiguration.OutputTasks.Length == 1 )
-                return CreateRecordWriter<T>(_taskExecution.CreateAssociatedTask(_taskExecution.OutputChannelConfiguration.OutputTasks[0]));
+            List<StageConfiguration> childStages = _taskExecution.Configuration.StageConfiguration.ChildStages;
+            if( childStages.Count == 1 && childStages[0].TaskCount == 1 )
+                return CreateRecordWriter<T>(_taskExecution.CreateAssociatedTask(childStages[0], 1));
             else
             {
-                IPartitioner<T> partitioner = (IPartitioner<T>)JetActivator.CreateInstance(Type.GetType(_taskExecution.OutputChannelConfiguration.PartitionerType), _taskExecution);
-                var writers = from taskId in _taskExecution.OutputChannelConfiguration.OutputTasks
-                              let taskExecution = _taskExecution.CreateAssociatedTask(taskId)
-                              select CreateRecordWriter<T>(taskExecution);
+                List<RecordWriter<T>> writers = new List<RecordWriter<T>>();
+                IPartitioner<T> partitioner = (IPartitioner<T>)JetActivator.CreateInstance(_taskExecution.Configuration.StageConfiguration.ChildStagePartitionerType, _taskExecution);
+
+                foreach( StageConfiguration stage in childStages )
+                {
+                    for( int x = 1; x <= stage.TaskCount; ++x )
+                    {
+                        TaskExecutionUtility childTaskExecution = _taskExecution.CreateAssociatedTask(stage, x);
+                        writers.Add(CreateRecordWriter<T>(childTaskExecution));
+                    }
+                }
                 return new MultiRecordWriter<T>(writers, partitioner);
             }
         }

@@ -75,8 +75,7 @@ namespace JobServerApplication
             if( _inputBlocks == null )
             {
                 _inputBlocks = (from task in Tasks.Values
-                                let input = task.Task.DfsInput
-                                where input != null
+                                where task.Stage.DfsInputs != null && task.Stage.DfsInputs.Count > 0
                                 select task.GetBlockId(dfsClient)).ToArray();
             }
             return _inputBlocks;
@@ -85,14 +84,14 @@ namespace JobServerApplication
         public IEnumerable<TaskInfo> GetDfsInputTasks()
         {
             return from task in SchedulingTasks.Values
-                   where task.Task.DfsInput != null
+                   where task.Stage.DfsInputs != null && task.Stage.DfsInputs.Count > 0
                    select task;
         }
 
         public IEnumerable<TaskInfo> GetNonInputSchedulingTasks()
         {
             return from task in SchedulingTasks.Values
-                   where task.Task.DfsInput == null
+                   where task.Stage.DfsInputs == null || task.Stage.DfsInputs.Count == 0
                    select task;
         }
 

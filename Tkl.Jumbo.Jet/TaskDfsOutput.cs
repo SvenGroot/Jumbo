@@ -13,27 +13,47 @@ namespace Tkl.Jumbo.Jet
     [XmlType(Namespace=JobConfiguration.XmlNamespace)]
     public class TaskDfsOutput : ICloneable
     {
+        private string _recordWriterTypeName;
+        private Type _recordWriterType;
+
         /// <summary>
         /// Gets or sets the path of the file to write.
         /// </summary>
         [XmlAttribute("path")]
-        public string Path { get; set; }
+        public string PathFormat { get; set; }
 
         /// <summary>
-        /// Gets or sets the temporary location of the file. This property is not
-        /// part of the configuration and does not need to be set by the client.
+        /// Gets or sets the name of the type of <see cref="Tkl.Jumbo.IO.RecordWriter{T}"/> to use to write the file.
         /// </summary>
-        /// <remarks>
-        /// This property is used by the TaskHost to track the temporary file location.
-        /// </remarks>
+        [XmlAttribute("recordWriter")]
+        public string RecordWriterTypeName
+        {
+            get { return _recordWriterTypeName; }
+            set 
+            {
+                _recordWriterTypeName = value;
+                _recordWriterType = null;
+            }
+        }
+
+        /// <summary>
+        /// Gets or sets the type of <see cref="Tkl.Jumbo.IO.RecordWriter{T}"/> to use to write the file.
+        /// </summary>
         [XmlIgnore]
-        public string TempPath { get; set; }
-
-        /// <summary>
-        /// Gets or sets the type of <see cref="Tkl.Jumbo.IO.RecordWriter{T}"/> to use to read the file.
-        /// </summary>
-        [XmlAttribute("recordWriteType")]
-        public string RecordWriterType { get; set; }
+        public Type RecordWriterType
+        {
+            get 
+            {
+                if( _recordWriterType == null && _recordWriterTypeName != null )
+                    _recordWriterType = Type.GetType(_recordWriterTypeName, true);
+                return _recordWriterType; 
+            }
+            set 
+            {
+                _recordWriterType = value;
+                _recordWriterTypeName = value == null ? null : value.AssemblyQualifiedName;
+            }
+        }
 
         /// <summary>
         /// Creates a clone of the current object.
@@ -42,6 +62,16 @@ namespace Tkl.Jumbo.Jet
         public TaskDfsOutput Clone()
         {
             return (TaskDfsOutput)MemberwiseClone();
+        }
+
+        /// <summary>
+        /// Gets the output path for the specified task number.
+        /// </summary>
+        /// <param name="taskNumber">The task number.</param>
+        /// <returns>The output path.</returns>
+        public string GetPath(int taskNumber)
+        {
+            return string.Format(System.Globalization.CultureInfo.InvariantCulture, PathFormat, taskNumber);
         }
 
         #region ICloneable Members

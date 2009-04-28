@@ -19,8 +19,8 @@ namespace Tkl.Jumbo.Jet.Channels
 
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(FileOutputChannel));
 
-        private readonly string[] _fileNames;
-        private string _partitionerType;
+        private readonly List<string> _fileNames = new List<string>();
+        private Type _partitionerType;
         private TaskExecutionUtility _taskExecution;
         private CompressionType _compressionType;
         private IEnumerable<IRecordWriter> _writers;
@@ -36,13 +36,54 @@ namespace Tkl.Jumbo.Jet.Channels
             _taskExecution = taskExecution;
 
             ChannelConfiguration channelConfig = taskExecution.OutputChannelConfiguration;
-            _fileNames = (from outputTaskId in channelConfig.OutputTasks
-                          select Path.Combine(taskExecution.Configuration.LocalJobDirectory, CreateChannelFileName(taskExecution.Configuration.TaskConfiguration.TaskID, outputTaskId))).ToArray();
-            if( _fileNames.Length == 0 )
+            string inputTaskId = taskExecution.Configuration.TaskId.ToString();
+            string localJobDirectory = taskExecution.Configuration.LocalJobDirectory;
+            if( channelConfig.Connectivity == ChannelConnectivity.Full )
+            {
+                foreach( string outputStageId in channelConfig.OutputStages )
+                {
+                    StageConfiguration outputStage = taskExecution.Configuration.JobConfiguration.GetStage(outputStageId);
+                    if( taskExecution.Configuration.TaskId.ParentTaskId == null )
+                    {
+                        for( int x = 1; x <= outputStage.TaskCount; ++x )
+                        {
+                            _fileNames.Add(Path.Combine(localJobDirectory, CreateChannelFileName(inputTaskId, TaskId.CreateTaskIdString(outputStageId, x))));
+                        }
+                    }
+                    else
+                    {
+                        string inputStageId = _taskExecution.Configuration.TaskId.CompoundStageId;
+                        int inputStageIndex = Array.IndexOf(channelConfig.InputStages, inputStageId);
+                        int outputTaskNumber = 0;
+                        for( int x = 0; x < inputStageIndex; ++x )
+                        {
+                            IList<StageConfiguration> inputStages = _taskExecution.Configuration.JobConfiguration.GetPipelinedStages(channelConfig.InputStages[x]);
+
+                            outputTaskNumber += inputStages[inputStages.Count - 1].TaskCount;
+                        }
+
+                        _fileNames.Add(Path.Combine(localJobDirectory, CreateChannelFileName(inputTaskId, TaskId.CreateTaskIdString(outputStageId, outputTaskNumber + taskExecution.Configuration.TaskId.TaskNumber))));
+                    }
+                }
+            }
+            else
+            {
+                if( channelConfig.OutputStages.Length > 0 )
+                {
+                    if( channelConfig.OutputStages.Length > 1 )
+                        throw new NotSupportedException("Point-to-point channels with more than one output stage are not supported.");
+                    string outputStageId = channelConfig.OutputStages[0];
+
+                    int outputTaskNumber = GetOutputTaskNumber(channelConfig);
+
+                    _fileNames.Add(Path.Combine(localJobDirectory, CreateChannelFileName(inputTaskId, TaskId.CreateTaskIdString(outputStageId, outputTaskNumber))));
+                }
+            }
+            if( _fileNames.Count == 0 )
             {
                 // This is allowed for debugging and testing purposes so you don't have to have an output task.
                 _log.Warn("The file channel has no output tasks; writing channel output to a dummy file.");
-                _fileNames = new[] { Path.Combine(taskExecution.Configuration.LocalJobDirectory, CreateChannelFileName(taskExecution.Configuration.TaskConfiguration.TaskID, "DummyTask")) };
+                _fileNames.Add(Path.Combine(localJobDirectory, CreateChannelFileName(inputTaskId, "DummyTask")));
             }
             _partitionerType = channelConfig.PartitionerType;
             _compressionType = _taskExecution.Configuration.JobConfiguration.GetTypedSetting(CompressionTypeSetting, _taskExecution.JetClient.Configuration.FileChannel.CompressionType);
@@ -60,7 +101,7 @@ namespace Tkl.Jumbo.Jet.Channels
 
                     ++x;
                 }
-                System.Diagnostics.Debug.Assert(x == _fileNames.Length);
+                System.Diagnostics.Debug.Assert(x == _fileNames.Count);
             }
         }
 
@@ -78,7 +119,7 @@ namespace Tkl.Jumbo.Jet.Channels
         /// <returns>A <see cref="RecordWriter{T}"/> for the channel.</returns>
         public RecordWriter<T> CreateRecordWriter<T>() where T : IWritable, new()
         {
-            if( _fileNames.Length == 1 )
+            if( _fileNames.Count == 1 )
             {
                 RecordWriter<T> result = new BinaryRecordWriter<T>(File.Create(_fileNames[0]).CreateCompressor(_compressionType));
                 _writers = new[] { result };
@@ -86,7 +127,7 @@ namespace Tkl.Jumbo.Jet.Channels
             }
             else
             {
-                IPartitioner<T> partitioner = (IPartitioner<T>)JetActivator.CreateInstance(Type.GetType(_partitionerType, true), _taskExecution);
+                IPartitioner<T> partitioner = (IPartitioner<T>)JetActivator.CreateInstance(_partitionerType, _taskExecution);
                 var writers = from file in _fileNames
                               select (RecordWriter<T>)new BinaryRecordWriter<T>(File.Create(file).CreateCompressor(_compressionType));
                 _writers = writers.Cast<IRecordWriter>();
@@ -95,5 +136,30 @@ namespace Tkl.Jumbo.Jet.Channels
         }
 
         #endregion
+
+        private int GetOutputTaskNumber(ChannelConfiguration channelConfig)
+        {
+            // If there are multiple input stages, we need to check which one we are and adjust the output task number according to the
+            // number of tasks in the preceding input stages.
+            string inputStageId = _taskExecution.Configuration.TaskId.CompoundStageId;
+            int inputStageIndex = Array.IndexOf(channelConfig.InputStages, inputStageId);
+
+            int outputTaskNumber = 0;
+            IList<StageConfiguration> stages;
+            for( int x = 0; x < inputStageIndex; ++x )
+            {
+                outputTaskNumber += _taskExecution.Configuration.JobConfiguration.GetTotalTaskCount(channelConfig.InputStages[x]);
+            }
+
+            stages = _taskExecution.Configuration.JobConfiguration.GetPipelinedStages(inputStageId);
+            TaskId current = _taskExecution.Configuration.TaskId;
+            outputTaskNumber += current.TaskNumber;
+            for( int x = stages.Count - 2; x >= 0; --x )
+            {
+                current = new TaskId(current.ParentTaskId);
+                outputTaskNumber += (current.TaskNumber - 1) * JobConfiguration.GetTotalTaskCount(stages, x);
+            }
+            return outputTaskNumber;
+        }
     }
 }

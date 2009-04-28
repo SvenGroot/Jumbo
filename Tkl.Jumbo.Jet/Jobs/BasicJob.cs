@@ -146,6 +146,7 @@ namespace Tkl.Jumbo.Jet.Jobs
             assemblies.Remove(typeof(BasicJob).Assembly); // Don't include Tkl.Jumbo.Jet assembly
             assemblies.Remove(typeof(RecordReader<>).Assembly); // Don't include Tkl.Jumbo assembly
 
+            StageConfiguration firstStage;
             JobConfiguration config = new JobConfiguration(assemblies.ToArray());
             if( InputPath != null )
             {
@@ -153,9 +154,9 @@ namespace Tkl.Jumbo.Jet.Jobs
 
                 // Add the input stage; if it's a one stage job without sorting, also set output.
                 if( SecondStageTaskCount == 0 && !SortFirstStageOutput )
-                    config.AddInputStage(FirstStageName, input, FirstStageTaskType, InputReaderType, OutputPath, OutputWriterType);
+                    firstStage = config.AddInputStage(FirstStageName, input, FirstStageTaskType, InputReaderType, OutputPath, OutputWriterType);
                 else
-                    config.AddInputStage(FirstStageName, input, FirstStageTaskType, InputReaderType);
+                    firstStage = config.AddInputStage(FirstStageName, input, FirstStageTaskType, InputReaderType);
             }
             else
             {
@@ -163,9 +164,9 @@ namespace Tkl.Jumbo.Jet.Jobs
                     throw new InvalidOperationException("First stage has no tasks.");
                 // Add the first stage, which doesn't have any input; if it's a one stage job without sorting, also set output.
                 if( SecondStageTaskCount == 0 && !SortFirstStageOutput )
-                    config.AddStage(FirstStageName, null, FirstStageTaskType, FirstStageTaskCount, ChannelType.File, null, OutputPath, OutputWriterType);
+                    firstStage = config.AddStage(FirstStageName, null, FirstStageTaskType, FirstStageTaskCount, ChannelType.File, ChannelConnectivity.Full, null, OutputPath, OutputWriterType);
                 else
-                    config.AddStage(FirstStageName, null, FirstStageTaskType, FirstStageTaskCount, ChannelType.File, null, null, null);
+                    firstStage = config.AddStage(FirstStageName, null, FirstStageTaskType, FirstStageTaskCount, ChannelType.File, ChannelConnectivity.Full, null, null, null);
             }
 
             if( SortFirstStageOutput )
@@ -173,20 +174,17 @@ namespace Tkl.Jumbo.Jet.Jobs
                 Type interfaceType = FirstStageTaskType.FindGenericInterfaceType(typeof(ITask<,>));
                 Type outputType = interfaceType.GetGenericArguments()[1];
                 // Add sort stage, pipelined to first stage.
-                config.AddPointToPointStage("SortStage", FirstStageName, typeof(SortTask<>).MakeGenericType(outputType), ChannelType.Pipeline, PartitionerType, null, null);
+                StageConfiguration sortStage = config.AddStage("SortStage", new[] { firstStage }, typeof(SortTask<>).MakeGenericType(outputType), SecondStageTaskCount, ChannelType.Pipeline, ChannelConnectivity.Full, PartitionerType, null, null);
                 // Add merge stage; this stage outputs if there is no second stage.
-                config.AddStage("MergeStage", new[] { "SortStage" }, typeof(MergeSortTask<>).MakeGenericType(outputType), 1, ChannelType.File, null, SecondStageTaskType == null ? OutputPath : null, OutputWriterType);
+                StageConfiguration mergeStage = config.AddStage("MergeStage", new[] { sortStage }, typeof(MergeSortTask<>).MakeGenericType(outputType), SecondStageTaskCount, ChannelType.File, ChannelConnectivity.Full, null, SecondStageTaskType == null ? OutputPath : null, OutputWriterType);
                 // Add second stage if necessary, pipelined to merge stage.
                 if( SecondStageTaskType != null )
-                    config.AddPointToPointStage(SecondStageName, "MergeStage", SecondStageTaskType, ChannelType.Pipeline, null, OutputPath, OutputWriterType);
-                // Split the first stage output based on the number of second stage tasks, if necessary.
-                if( SecondStageTaskCount > 1 )
-                    config.SplitStageOutput(new[] { FirstStageName }, SecondStageTaskCount);
+                    config.AddStage(SecondStageName, new[] { mergeStage }, SecondStageTaskType, 1, ChannelType.Pipeline, ChannelConnectivity.PointToPoint, null, OutputPath, OutputWriterType);
             }
             else if( SecondStageTaskCount > 0 )
             {
                 // Add second stage.
-                config.AddStage(SecondStageName, new[] { FirstStageName }, SecondStageTaskType, SecondStageTaskCount, ChannelType.File, PartitionerType, OutputPath, OutputWriterType);
+                config.AddStage(SecondStageName, new[] { firstStage }, SecondStageTaskType, SecondStageTaskCount, ChannelType.File, ChannelConnectivity.Full, PartitionerType, OutputPath, OutputWriterType);
             }
 
             JetClient jetClient = new JetClient(JetConfiguration);

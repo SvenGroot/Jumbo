@@ -53,7 +53,11 @@ namespace Tkl.Jumbo.Jet.Samples
             DfsClient dfsClient = new DfsClient(DfsConfiguration);
             dfsClient.NameServer.CreateDirectory(partitionFileDirectory);
 
-            RangePartitioner.CreatePartitionFile(dfsClient, partitionFileName, (from task in jobConfiguration.Tasks where task.DfsInput != null select task.DfsInput).ToArray(), SecondStageTaskCount, SampleSize);
+            var dfsInputs = from stage in jobConfiguration.Stages
+                            where stage.DfsInputs != null
+                            from input in stage.DfsInputs
+                            select input;
+            RangePartitioner.CreatePartitionFile(dfsClient, partitionFileName, dfsInputs.ToArray(), SecondStageTaskCount, SampleSize);
 
             jobConfiguration.AddSetting("partitionFile", partitionFileName);
         }

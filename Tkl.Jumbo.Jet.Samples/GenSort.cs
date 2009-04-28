@@ -58,18 +58,19 @@ namespace Tkl.Jumbo.Jet.Samples
         protected override void OnJobCreated(Job job, JobConfiguration jobConfiguration)
         {
             base.OnJobCreated(job, jobConfiguration);
-            ulong countPerTask = _recordCount / (ulong)jobConfiguration.Tasks.Count;
-            ulong remainder = _recordCount % (ulong)jobConfiguration.Tasks.Count;
-            _log.InfoFormat("Generating {0} records with {1} tasks, {2} records per task, remainder {3}.", _recordCount, jobConfiguration.Tasks.Count, countPerTask, remainder);
+            StageConfiguration stage = jobConfiguration.GetStage("GenSortTask");
+            ulong countPerTask = _recordCount / (ulong)stage.TaskCount;
+            ulong remainder = _recordCount % (ulong)stage.TaskCount;
+            _log.InfoFormat("Generating {0} records with {1} tasks, {2} records per task, remainder {3}.", _recordCount, stage.TaskCount, countPerTask, remainder);
 
-            for( int x = 0; x < jobConfiguration.Tasks.Count; ++x )
+            for( int x = 0; x < stage.TaskCount; ++x )
             {
-                TaskConfiguration task = jobConfiguration.Tasks[x];
-                task.AddTypedSetting("startRecord", _startRecord + (ulong)x * countPerTask);
-                if( x == jobConfiguration.Tasks.Count - 1 )
-                    task.AddTypedSetting("count", countPerTask + remainder);
+                string taskId = TaskId.CreateTaskIdString(stage.StageId, x + 1);
+                stage.AddTypedSetting(taskId + "_startRecord", _startRecord + (ulong)x * countPerTask);
+                if( x == stage.TaskCount )
+                    stage.AddTypedSetting(taskId + "_count", countPerTask + remainder);
                 else
-                    task.AddTypedSetting("count", countPerTask);
+                    stage.AddTypedSetting(taskId + "_count", countPerTask);
             }
         }
     }

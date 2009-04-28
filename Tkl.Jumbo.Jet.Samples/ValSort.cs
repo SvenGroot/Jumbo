@@ -65,13 +65,13 @@ namespace Tkl.Jumbo.Jet.Samples
             JobConfiguration job = new JobConfiguration(typeof(ValSortTask).Assembly);
 
             FileSystemEntry input = GetInputFileSystemEntry(dfsClient, _inputPath);
-            job.AddInputStage("ValSortStage", input, typeof(ValSortTask), typeof(GenSortRecordReader));
+            StageConfiguration valSortStage = job.AddInputStage("ValSortStage", input, typeof(ValSortTask), typeof(GenSortRecordReader));
 
             // Sort the records by input ID, this ensures that the combiner task gets the records in order of file and block so it can easily compre the first and last records
             // of consecutive files.
-            job.AddStage("SortStage", new[] { "ValSortStage" }, typeof(SortTask<ValSortRecord>), 1, ChannelType.File, null, null, null);
-            IList<TaskConfiguration> combinerStage = job.AddPointToPointStage("CombinerStage", "SortStage", typeof(ValSortCombinerTask), ChannelType.Pipeline, null, _outputPath, typeof(TextRecordWriter<StringWritable>));
-            _outputFile = combinerStage[0].DfsOutput.Path;
+            StageConfiguration sortStage = job.AddStage("SortStage", new[] { valSortStage }, typeof(SortTask<ValSortRecord>), 1, ChannelType.File, ChannelConnectivity.Full, null, null, null);
+            StageConfiguration combinerStage = job.AddStage("CombinerStage", new[] { sortStage }, typeof(ValSortCombinerTask), 1, ChannelType.Pipeline, ChannelConnectivity.PointToPoint, null, _outputPath, typeof(TextRecordWriter<StringWritable>));
+            _outputFile = combinerStage.DfsOutput.GetPath(1);
 
             JetClient jetClient = new JetClient(JetConfiguration);
             return jetClient.RunJob(job, typeof(ValSortTask).Assembly.Location).JobID;

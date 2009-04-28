@@ -53,19 +53,6 @@
     <Compile Include="..\Version.cs">
       <Link>Properties\Version.cs</Link>
     </Compile>
-    <Compile Include="GraySort\ByteArrayWritable.cs" />
-    <Compile Include="GraySort\GenSort.cs" />
-    <Compile Include="GraySort\GenSortTask.cs" />
-    <Compile Include="GraySort\Random128.cs" />
-    <Compile Include="GraySort\RangePartitioner.cs" />
-    <Compile Include="GraySort\GenSortRecord.cs" />
-    <Compile Include="GraySort\GraySortJob.cs" />
-    <Compile Include="GraySort\GenSortRecordReader.cs" />
-    <Compile Include="GraySort\GenSortRecordWriter.cs" />
-    <Compile Include="GraySort\UInt128.cs" />
-    <Compile Include="GraySort\ValSortCombinerTask.cs" />
-    <Compile Include="GraySort\ValSortRecord.cs" />
-    <Compile Include="GraySort\ValSortTask.cs" />
     <Compile Include="LineCounter.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

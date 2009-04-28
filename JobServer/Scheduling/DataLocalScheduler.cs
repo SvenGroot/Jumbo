@@ -48,7 +48,7 @@ namespace JobServerApplication.Scheduling
                 if( task.Server == null )
                 {
                     IEnumerable<TaskServerInfo> eligibleServers;
-                    if( task.Task.DfsInput != null && localServers )
+                    if( task.Stage.DfsInputs != null && task.Stage.DfsInputs.Count > 0 && localServers )
                     {
                         eligibleServers = (from address in dfsClient.NameServer.GetDataServersForBlock(task.GetBlockId(dfsClient))
                                            select FindLocalTaskServer(servers, address));
@@ -68,7 +68,7 @@ namespace JobServerApplication.Scheduling
                         server.AssignTask(job, task);
                         if( !newServers.Contains(server) )
                             newServers.Add(server);
-                        _log.InfoFormat("Task {0} has been assigned to server {1}{2}.", task.GlobalID, server.Address, task.Task.DfsInput == null ? "" : (localServers ? " (data local)" : " (NOT data local)"));
+                        _log.InfoFormat("Task {0} has been assigned to server {1}{2}.", task.GlobalID, server.Address, (task.Stage.DfsInputs == null || task.Stage.DfsInputs.Count == 0) ? "" : (localServers ? " (data local)" : " (NOT data local)"));
                         --capacity;
                         if( capacity == 0 )
                             break;

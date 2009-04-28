@@ -50,7 +50,7 @@ namespace Tkl.Jumbo.Test.Jet
             System.IO.Directory.CreateDirectory(path);
             // This depends on the fact that TaskExecutionUtility will not use the JetClient and DfsClient unless a DfsInput or DfsOutput is used. Since we will never
             // call GetInputReader that won't happen.
-            using( TaskExecutionUtility taskExecution = new TaskExecutionUtility(new JetClient(), new FakeUmbilical(), Guid.NewGuid(), config, "Task001", new DfsClient(), path, "/foo", 1) )
+            using( TaskExecutionUtility taskExecution = new TaskExecutionUtility(new JetClient(), new FakeUmbilical(), Guid.NewGuid(), config, new TaskId("Task-001"), new DfsClient(), path, "/foo", 1) )
             {
                 RecordWriter<Int32Writable> output = taskExecution.GetOutputWriter<Int32Writable>(); // this will call PipelineOutputChannel.CreateRecordWriter
                 IPushTask<StringWritable, Int32Writable> task = (IPushTask<StringWritable, Int32Writable>)taskExecution.GetTaskInstance<StringWritable, Int32Writable>();
@@ -62,7 +62,7 @@ namespace Tkl.Jumbo.Test.Jet
             
             // If this file contains the correct value is means that the first stage task wrote output to the pipeline channel, which invoked the second stage task which
             // wrote to the file, thus proving that pipelining works.
-            using( System.IO.FileStream stream = System.IO.File.OpenRead(System.IO.Path.Combine(path, "OutputTask001_DummyTask.output")) )
+            using( System.IO.FileStream stream = System.IO.File.OpenRead(System.IO.Path.Combine(path, "Task-001.OutputTask-001_DummyTask.output")) )
             using( BinaryRecordReader<Int32Writable> reader = new BinaryRecordReader<Int32Writable>(stream) )
             {
                 Int32Writable record;
@@ -79,18 +79,17 @@ namespace Tkl.Jumbo.Test.Jet
             Directory dir = new Directory(null, "root", DateTime.UtcNow);
             File file = new File(dir, "myfile", DateTime.UtcNow);
             file.Blocks.Add(Guid.NewGuid());
-            config.AddInputStage("Task", file, typeof(LineCounterPushTask), typeof(LineRecordReader));
-            config.AddStage("OutputTask", new[] { "Task" }, typeof(LineAdderPushTask), 1, ChannelType.Pipeline, null, null, null);
+            StageConfiguration stage = config.AddInputStage("Task", file, typeof(LineCounterPushTask), typeof(LineRecordReader));
+            stage = config.AddPointToPointStage("OutputTask", stage, typeof(LineAdderPushTask), ChannelType.Pipeline, null, null);
 
             // add a file channel with no outputs to collect the output in a dummy file.
             config.Channels.Add(new ChannelConfiguration()
             {
                 ChannelType = ChannelType.File,
-                InputTasks = new[] { "OutputTask001" },
-                OutputTasks = new string[] { },
-                PartitionerType = typeof(HashPartitioner<Int32Writable>).AssemblyQualifiedName,
+                InputStages = new[] { "Task.OutputTask" },
+                OutputStages = new string[] { },
+                PartitionerType = typeof(HashPartitioner<Int32Writable>),
             });
-            config.RebuildLookupData();
 
             return config;
         }

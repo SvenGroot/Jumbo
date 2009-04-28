@@ -106,7 +106,6 @@ namespace JobServerApplication
                     using( DfsInputStream stream = _dfsClient.OpenFile(configFile) )
                     {
                         config = JobConfiguration.LoadXml(stream);
-                        config.RebuildLookupData();
                     }
                 }
                 catch( Exception ex )
@@ -115,33 +114,15 @@ namespace JobServerApplication
                     throw;
                 }
 
-                List<TaskConfiguration> nonSchedulingTasks = null;
-                foreach( TaskConfiguration task in config.Tasks )
+                foreach( StageConfiguration stage in config.Stages )
                 {
-                    TaskInfo taskInfo;
-                    if( !config.IsPipelinedTask(task.TaskID) )
+                    for( int x = 1; x <= stage.TaskCount; ++x )
                     {
-                        taskInfo = new TaskInfo(jobInfo, task);
-                        jobInfo.SchedulingTasks.Add(task.TaskID, taskInfo);
-                        jobInfo.Tasks.Add(task.TaskID, taskInfo);
-                    }
-                    else
-                    {
-                        if( nonSchedulingTasks == null )
-                            nonSchedulingTasks = new List<TaskConfiguration>();
-                        nonSchedulingTasks.Add(task);
-                    }
-                }
-
-                if( nonSchedulingTasks != null )
-                {
-                    foreach( TaskConfiguration task in nonSchedulingTasks )
-                    {
-                        Tkl.Jumbo.Jet.Channels.ChannelConfiguration inputChannel = config.GetInputChannelForTask(task.TaskID);
-                        if( inputChannel.InputTasks.Length != 1 )
-                            throw new InvalidOperationException("Pipeline channel must have a single input.");
-                        TaskInfo inputTask = jobInfo.Tasks[inputChannel.InputTasks[0]];
-                        jobInfo.Tasks.Add(task.TaskID, new TaskInfo(inputTask, task));
+                        TaskInfo taskInfo;
+                        taskInfo = new TaskInfo(jobInfo, stage, x);
+                        jobInfo.SchedulingTasks.Add(taskInfo.TaskId.ToString(), taskInfo);
+                        jobInfo.Tasks.Add(taskInfo.TaskId.ToString(), taskInfo);
+                        CreateChildTasks(jobInfo, taskInfo, stage);
                     }
                 }
 
@@ -214,7 +195,7 @@ namespace JobServerApplication
             else
             {
                 TaskInfo task = job.Tasks[waitTasks[waitResult].TaskId];
-                return new CompletedTask() { JobId = jobId, TaskId = task.Task.TaskID, TaskServer = task.Server.Address, TaskServerFileServerPort = task.Server.FileServerPort };
+                return new CompletedTask() { JobId = jobId, TaskId = task.TaskId.ToString(), TaskServer = task.Server.Address, TaskServerFileServerPort = task.Server.FileServerPort };
             }
         }
 
@@ -349,7 +330,7 @@ namespace JobServerApplication
                             if( responses == null )
                                 responses = new List<JetHeartbeatResponse>();
                             ++task.Attempts;
-                            responses.Add(new RunTaskJetHeartbeatResponse(task.Job.Job, task.Task.TaskID, task.Attempts));
+                            responses.Add(new RunTaskJetHeartbeatResponse(task.Job.Job, task.TaskId.ToString(), task.Attempts));
                             task.State = TaskState.Running;
                             task.StartTimeUtc = DateTime.UtcNow;
                         }
@@ -587,6 +568,22 @@ namespace JobServerApplication
                     StartTime = job.StartTimeUtc,
                     EndTime = job.EndTimeUtc
                 };
+            }
+        }
+
+        private void CreateChildTasks(JobInfo jobInfo, TaskInfo owner, StageConfiguration stage)
+        {
+            if( stage.ChildStages != null )
+            {
+                foreach( StageConfiguration childStage in stage.ChildStages )
+                {
+                    for( int x = 1; x <= childStage.TaskCount; ++x )
+                    {
+                        TaskInfo taskInfo = new TaskInfo(owner, childStage, x);
+                        jobInfo.Tasks.Add(taskInfo.TaskId.ToString(), taskInfo);
+                        CreateChildTasks(jobInfo, taskInfo, childStage);
+                    }
+                }
             }
         }
     

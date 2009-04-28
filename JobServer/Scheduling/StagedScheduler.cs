@@ -76,7 +76,7 @@ namespace JobServerApplication.Scheduling
                             newServers.Add(server);
                         if( !localServers )
                             ++job.NonDataLocal;
-                        _log.InfoFormat("Task {0} has been assigned to server {1}{2}.", task.GlobalID, server.Address, task.Task.DfsInput == null ? "" : (localServers ? " (data local)" : " (NOT data local)"));
+                        _log.InfoFormat("Task {0} has been assigned to server {1}{2}.", task.GlobalID, server.Address, (task.Stage.DfsInputs == null || task.Stage.DfsInputs.Count == 0) ? "" : (localServers ? " (data local)" : " (NOT data local)"));
                         --capacity;
                     }
                     else if( localServers )
