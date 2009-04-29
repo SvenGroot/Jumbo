@@ -1,7 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 
 namespace Tkl.Jumbo
 {
@@ -11,7 +9,7 @@ namespace Tkl.Jumbo
     /// <typeparam name="T">The type of elements in the priority queue.</typeparam>
     /// <remarks>
     /// <para>
-    ///   The items must be immutable as long as they are in the <see cref="PriorityQueue{T}"/>. The only exception is the front
+    ///   The items must be immutable as long as they are in the <see cref="PriorityQueue{T}"/>. The only exception is the first
     ///   item, which you may modify if you call <see cref="AdjustFirstItem"/> immediately afterward.
     /// </para>
     /// </remarks>
@@ -418,12 +416,15 @@ namespace Tkl.Jumbo
         ///   The <see cref="PriorityQueue{T}"/> is not modified. 
         /// </para>
         /// <para>
-        ///   This method is an O(<em>n</em>) operation, where <em>n</em> is <see cref="Count"/>.
+        ///   This method is an O(<em>n</em> log <em>n</em>) operation, where <em>n</em> is <see cref="Count"/>.
         /// </para>
         /// </remarks>
         public T[] ToArray()
         {
-            return _heap.ToArray();
+            T[] result = _heap.ToArray();
+            // We want to return the elements in the same order in which they are enumerated, which is sorted order, so we simply sort.
+            Array.Sort(result, Comparer);
+            return result;
         }
 
         /// <summary>
@@ -434,11 +435,10 @@ namespace Tkl.Jumbo
         /// <param name="arrayIndex">The zero-based index in <paramref name="array"/> at which copying begins.</param>
         /// <remarks>
         /// <note>
-        ///   The order in which the elements are copied to the array is not guaranteed. The element with the lowest value
-        ///   will be the first element, but otherwise the elements will be in no particular order.
+        ///   The elements are copied to the <see cref="Array"/> in the same order in which the enumerator iterates through the <see cref="PriorityQueue{T}"/>.
         /// </note>
         /// <para>
-        ///   This method is an O(<em>n</em>) operation, where <em>n</em> is <see cref="Count"/>.
+        ///   This method is an O(<em>n</em> log <em>n</em>) operation, where <em>n</em> is <see cref="Count"/>.
         /// </para>
         /// </remarks>
         /// <exception cref="ArgumentNullException"><paramref name="array"/> is <see langword="null"/>.</exception>
@@ -450,6 +450,8 @@ namespace Tkl.Jumbo
         public void CopyTo(T[] array, int arrayIndex)
         {
             _heap.CopyTo(array, arrayIndex);
+            // We want to return the elements in the same order in which they are enumerated, which is sorted order, so we simply sort.
+            Array.Sort(array, arrayIndex, _heap.Count, Comparer);
         }
 
         private void UpHeap()
@@ -492,17 +494,26 @@ namespace Tkl.Jumbo
         /// </summary>
         /// <returns>An enumerator that iterates through the values in the <see cref="PriorityQueue{T}"/>.</returns>
         /// <remarks>
-        /// <note>
-        ///   The order in which the elements are enumerated is not guaranteed. The element with the lowest value
-        ///   will be the first element, but otherwise the elements will be in no particular order.
-        /// </note>
         /// <para>
-        ///   This method is an O(1) operation.
+        ///   The elements of the <see cref="PriorityQueue{T}"/> will be enumerated in the same order as if you
+        ///   had called <see cref="Dequeue"/> until the <see cref="PriorityQueue{T}"/> was empty. I.e. the
+        ///   elements are enumerated from lowest to highest value, in sorted order.
+        /// </para>
+        /// <para>
+        ///   The contents of the <see cref="PriorityQueue{T}"/> are not modified by enumerating.
+        /// </para>
+        /// <para>
+        ///   This method is an O(<em>n</em> log <em>n</em>) operation, where <em>n</em> is <see cref="Count"/>.
         /// </para>
         /// </remarks>
         public IEnumerator<T> GetEnumerator()
         {
-            return _heap.GetEnumerator();
+            // We want to enumerate in the order you would get if calling Dequeue until the queue is empty.
+            // A simple way to achieve that is to simple sort the heap, and to return an iterator over
+            // the sorted copy.
+            List<T> heapCopy = new List<T>(_heap);
+            heapCopy.Sort(Comparer);
+            return heapCopy.GetEnumerator();
         }
 
         #endregion
@@ -511,7 +522,7 @@ namespace Tkl.Jumbo
 
         System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator()
         {
-            return ((System.Collections.IEnumerable)_heap).GetEnumerator();
+            return GetEnumerator();
         }
 
         #endregion
