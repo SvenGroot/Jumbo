@@ -66,24 +66,10 @@ namespace DataServerApplication
 
             _log.Info("Data server main loop starting.");
 
-            bool retry = true;
-            do
-            {
-                try
-                {
-                    BlockSize = _nameServerClient.BlockSize;
-                    retry = false;
-                }
-                catch( SocketException ex )
-                {
-                    _log.Error(string.Format("An error occurred contacting the name server. Retrying in {0}.", _heartbeatInterval), ex);
-                    Thread.Sleep(_heartbeatInterval);
-                }
-            } while( _running && retry );
+            RpcHelper.TryRemotingCall(() => BlockSize = _nameServerClient.BlockSize, _heartbeatInterval, -1);
 
             if( _running )
             {
-
                 if( System.Net.Sockets.Socket.OSSupportsIPv6 )
                 {
                     _blockServer = new BlockServer(this, System.Net.IPAddress.IPv6Any, _port);
@@ -129,6 +115,7 @@ namespace DataServerApplication
                 _blockServerIPv4 = null;
             }
             _running = false;
+            RpcHelper.AbortRetries();
             lock( _blocksToReplicate )
             {
                 Monitor.Pulse(_blocksToReplicate);
@@ -217,21 +204,8 @@ namespace DataServerApplication
                     _pendingHeartbeatData.Clear();
                 }
             }
-            bool retry = true;
             HeartbeatResponse[] response = null;
-            do
-            {
-                try
-                {
-                    response = _nameServer.Heartbeat(LocalAddress, data);
-                    retry = false;
-                }
-                catch( SocketException ex )
-                {
-                    _log.Error(string.Format("An error occurred contacting the name server. Retrying in {0}.", _heartbeatInterval), ex);
-                    Thread.Sleep(_heartbeatInterval);
-                }
-            } while( _running && retry );
+            RpcHelper.TryRemotingCall(() => response = _nameServer.Heartbeat(LocalAddress, data), _heartbeatInterval, -1);
             if( response != null )
                 ProcessResponses(response);
         }

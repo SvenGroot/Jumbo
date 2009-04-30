@@ -7,6 +7,7 @@ using System.Runtime.Remoting.Channels;
 using System.Runtime.Remoting.Channels.Tcp;
 using System.Collections;
 using System.Runtime.Remoting;
+using System.Threading;
 
 namespace Tkl.Jumbo
 {
@@ -15,8 +16,11 @@ namespace Tkl.Jumbo
     /// </summary>
     public static class RpcHelper
     {
+        private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(RpcHelper));
+
         private static bool _clientChannelsRegistered;
         private static Dictionary<int, List<IChannel>> _serverChannels;
+        private static volatile bool _abortRetries;
 
         /// <summary>
         /// Registers the client channel
@@ -95,6 +99,70 @@ namespace Tkl.Jumbo
 
             if( (from t in RemotingConfiguration.GetRegisteredWellKnownServiceTypes() where t.ObjectUri == objectUri select t).Count() == 0 )
                 RemotingConfiguration.RegisterWellKnownServiceType(type, objectUri, WellKnownObjectMode.Singleton);
+        }
+
+        /// <summary>
+        /// Tries to execute a remoting calls, and retries it if a network failure occurs.
+        /// </summary>
+        /// <param name="remotingAction">The <see cref="Action"/> that performs the remoting call.</param>
+        /// <param name="retryInterval">The amount of time to wait, in milliseconds, before retrying after a failure.</param>
+        /// <param name="maxRetries">The maximum amount of times to retry, or -1 to retry indefinitely.</param>
+        public static void TryRemotingCall(Action remotingAction, int retryInterval, int maxRetries)
+        {
+            if( remotingAction == null )
+                throw new ArgumentNullException("remotingAction");
+            if( retryInterval <= 0 )
+                throw new ArgumentOutOfRangeException("retryInterval", "The retry interval must be greater than zero.");
+
+            bool retry = true;
+            do
+            {
+                try
+                {
+                    remotingAction();
+                    retry = false;
+                }
+                catch( System.Runtime.Remoting.RemotingException ex )
+                {
+                    if( !_abortRetries && (maxRetries == -1 || maxRetries > 0) )
+                    {
+                        _log.Error(string.Format("An error occurred performing a remoting operation. Retrying in {0}.", retryInterval), ex);
+                        --maxRetries;
+                        Thread.Sleep(retryInterval);
+                    }
+                    else
+                    {
+                        _log.Error("An error occurred performing a remoting operation.", ex);
+                        throw;
+                    }
+                }
+                catch( System.Net.Sockets.SocketException ex )
+                {
+                    if( !_abortRetries && (maxRetries == -1 || maxRetries > 0) )
+                    {
+                        _log.Error(string.Format("An error occurred performing a remoting operation. Retrying in {0}.", retryInterval), ex);
+                        --maxRetries;
+                        Thread.Sleep(retryInterval);
+                    }
+                    else
+                    {
+                        _log.Error("An error occurred performing a remoting operation.", ex);
+                        throw;
+                    }
+                }
+            } while( retry );
+        }
+
+        /// <summary>
+        /// Aborts any retry attempts done by <see cref="TryRemotingCall"/>.
+        /// </summary>
+        /// <remarks>
+        /// All future calls to <see cref="TryRemotingCall"/> will not do any more retries, so only use this
+        /// function when you are shutting down.
+        /// </remarks>
+        public static void AbortRetries()
+        {
+            _abortRetries = true;
         }
 
         private static void RegisterChannel(string bindTo, int port, string name, List<IChannel> channels)

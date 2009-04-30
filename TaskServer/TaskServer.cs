@@ -269,6 +269,7 @@ namespace TaskServerApplication
             if( _fileServerIPv4 != null )
                 _fileServerIPv4.Stop();
             _running = false;
+            RpcHelper.AbortRetries();
             _log.InfoFormat("-----Task server is shutting down-----");
         }
 
@@ -283,7 +284,11 @@ namespace TaskServerApplication
                     _pendingHeartbeatData.Clear();
                 }
             }
-            JetHeartbeatResponse[] responses = _jobServer.Heartbeat(LocalAddress, data, waitForTasks ? _heartbeatInterval : 0);
+
+            JetHeartbeatResponse[] responses = null;
+
+            RpcHelper.TryRemotingCall(() => responses = _jobServer.Heartbeat(LocalAddress, data, waitForTasks ? _heartbeatInterval : 0), _heartbeatInterval, -1);
+
             if( responses != null )
                 ProcessResponses(responses);
         }
