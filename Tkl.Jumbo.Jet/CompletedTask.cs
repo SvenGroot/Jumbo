@@ -28,7 +28,7 @@ namespace Tkl.Jumbo.Jet
         {
             get
             {
-                return Job.CreateFullTaskID(JobId, TaskId);
+                return Job.CreateFullTaskId(JobId, TaskId);
             }
         }
 

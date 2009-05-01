@@ -14,16 +14,16 @@ namespace Tkl.Jumbo.Jet
         /// <summary>
         /// Initializes a new instance of the <see cref="CleanupJobJetHeartbeatResponse"/> class.
         /// </summary>
-        /// <param name="jobID">The job ID.</param>
-        public CleanupJobJetHeartbeatResponse(Guid jobID)
+        /// <param name="jobId">The job ID.</param>
+        public CleanupJobJetHeartbeatResponse(Guid jobId)
             : base(TaskServerHeartbeatCommand.CleanupJob)
         {
-            JobID = jobID;
+            JobId = jobId;
         }
 
         /// <summary>
         /// Gets the job ID of the job whose data to clean up.
         /// </summary>
-        public Guid JobID { get; private set; }
+        public Guid JobId { get; private set; }
     }
 }

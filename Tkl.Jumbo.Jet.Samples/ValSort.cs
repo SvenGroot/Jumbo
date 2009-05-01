@@ -74,7 +74,7 @@ namespace Tkl.Jumbo.Jet.Samples
             _outputFile = combinerStage.DfsOutput.GetPath(1);
 
             JetClient jetClient = new JetClient(JetConfiguration);
-            return jetClient.RunJob(job, typeof(ValSortTask).Assembly.Location).JobID;
+            return jetClient.RunJob(job, typeof(ValSortTask).Assembly.Location).JobId;
         }
 
         /// <summary>

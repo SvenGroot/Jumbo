@@ -212,27 +212,27 @@ namespace JobServerApplication
             JetMetrics result = new JetMetrics();
             lock( _jobs )
             {
-                result.RunningJobs = _jobs.Keys.ToArray();
+                result.RunningJobs.AddRange(_jobs.Keys);
             }
             lock( _finishedJobs )
             {
-                result.FinishedJobs = (from job in _finishedJobs
-                                       where job.Value.State == JobState.Finished
-                                       select job.Key).ToArray();
-                result.FailedJobs = (from job in _finishedJobs
-                                     where job.Value.State == JobState.Failed
-                                     select job.Key).ToArray();
+                result.FinishedJobs.AddRange(from job in _finishedJobs
+                                             where job.Value.State == JobState.Finished
+                                             select job.Key);
+                result.FailedJobs.AddRange(from job in _finishedJobs
+                                           where job.Value.State == JobState.Failed
+                                           select job.Key);
             }
             lock( _taskServers )
             {
-                result.TaskServers = (from server in _taskServers.Values
-                                      select new TaskServerMetrics()
-                                      {
-                                          Address = server.Address,
-                                          LastContactUtc = server.LastContactUtc,
-                                          MaxTasks = server.MaxTasks,
-                                          MaxNonInputTasks = server.MaxNonInputTasks
-                                      }).ToArray();
+                result.TaskServers.AddRange(from server in _taskServers.Values
+                                            select new TaskServerMetrics()
+                                            {
+                                                Address = server.Address,
+                                                LastContactUtc = server.LastContactUtc,
+                                                MaxTasks = server.MaxTasks,
+                                                MaxNonInputTasks = server.MaxNonInputTasks
+                                            });
                 result.Capacity = (from server in _taskServers.Values
                                    select server.MaxTasks).Sum();
                 result.NonInputTaskCapacity = (from server in _taskServers.Values
@@ -364,15 +364,15 @@ namespace JobServerApplication
                             server.AssignedTasks.Remove(task);
                             server.AssignedNonInputTasks.Remove(task);
                         }
-                        _log.InfoFormat("Sending cleanup command for job {{{0}}} to server {1}.", job.Job.JobID, server.Address);
+                        _log.InfoFormat("Sending cleanup command for job {{{0}}} to server {1}.", job.Job.JobId, server.Address);
                         if( responses == null )
                             responses = new List<JetHeartbeatResponse>();
-                        responses.Add(new CleanupJobJetHeartbeatResponse(job.Job.JobID));
+                        responses.Add(new CleanupJobJetHeartbeatResponse(job.Job.JobId));
                         job.TaskServers.Remove(server.Address);
                     }
                     if( job.TaskServers.Count == 0 )
                     {
-                        _log.InfoFormat("Job {{{0}}} cleanup complete.", job.Job.JobID);
+                        _log.InfoFormat("Job {{{0}}} cleanup complete.", job.Job.JobId);
                         _jobsNeedingCleanup.RemoveAt(x);
                         --x;
                     }
@@ -424,7 +424,7 @@ namespace JobServerApplication
                     TaskInfo task = job.Tasks[data.TaskID];
                     task.Progress = data.Progress;
                     if( data.Status == TaskAttemptStatus.Running )
-                        _log.InfoFormat("Task {0} reported progress: {1}%", Job.CreateFullTaskID(data.JobID, data.TaskID), (int)(task.Progress * 100));
+                        _log.InfoFormat("Task {0} reported progress: {1}%", Job.CreateFullTaskId(data.JobID, data.TaskID), (int)(task.Progress * 100));
 
                     if( data.Status > TaskAttemptStatus.Running )
                     {
@@ -438,12 +438,12 @@ namespace JobServerApplication
                             task.EndTimeUtc = DateTime.UtcNow;
                             task.State = TaskState.Finished;
                             task.TaskCompletedEvent.Set();
-                            _log.InfoFormat("Task {0} completed successfully.", Job.CreateFullTaskID(data.JobID, data.TaskID));
+                            _log.InfoFormat("Task {0} completed successfully.", Job.CreateFullTaskId(data.JobID, data.TaskID));
                             ++job.FinishedTasks;
                             break;
                         case TaskAttemptStatus.Error:
                             task.State = TaskState.Error;
-                            _log.WarnFormat("Task {0} encountered an error.", Job.CreateFullTaskID(data.JobID, data.TaskID));
+                            _log.WarnFormat("Task {0} encountered an error.", Job.CreateFullTaskId(data.JobID, data.TaskID));
                             TaskStatus failedAttempt = task.ToTaskStatus();
                             failedAttempt.EndTime = DateTime.UtcNow;
                             job.FailedTaskAttempts.Add(failedAttempt);
@@ -456,7 +456,7 @@ namespace JobServerApplication
                             }
                             else
                             {
-                                _log.ErrorFormat("Task {0} failed more than {1} times; aborting the job.", Job.CreateFullTaskID(data.JobID, data.TaskID), Configuration.JobServer.MaxTaskAttempts);
+                                _log.ErrorFormat("Task {0} failed more than {1} times; aborting the job.", Job.CreateFullTaskId(data.JobID, data.TaskID), Configuration.JobServer.MaxTaskAttempts);
                                 job.State = JobState.Failed;
                             }
                             ++job.Errors;
@@ -482,7 +482,7 @@ namespace JobServerApplication
 
                             _jobs.Remove(data.JobID);
                             lock( _finishedJobs )
-                                _finishedJobs.Add(job.Job.JobID, job);
+                                _finishedJobs.Add(job.Job.JobId, job);
                             jobFinished = true;
                             job.EndTimeUtc = DateTime.UtcNow;
                             job.JobCompletedEvent.Set();
@@ -553,12 +553,9 @@ namespace JobServerApplication
                 if( !jobs.TryGetValue(jobId, out job) )
                     return null;
 
-                return new JobStatus()
+                JobStatus result = new JobStatus()
                 {
                     JobId = jobId,
-                    Tasks = (from task in job.SchedulingTasks.Values
-                             select task.ToTaskStatus()).ToArray(),
-                    FailedTaskAttempts = job.FailedTaskAttempts.ToArray(),
                     RunningTaskCount = (from task in job.SchedulingTasks.Values
                                         where task.State == TaskState.Running
                                         select task).Count(),
@@ -568,6 +565,10 @@ namespace JobServerApplication
                     StartTime = job.StartTimeUtc,
                     EndTime = job.EndTimeUtc
                 };
+                result.Tasks.AddRange(from task in job.SchedulingTasks.Values
+                             select task.ToTaskStatus());
+                result.FailedTaskAttempts.AddRange(job.FailedTaskAttempts);
+                return result;
             }
         }
 

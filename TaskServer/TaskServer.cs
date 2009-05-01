@@ -100,14 +100,14 @@ namespace TaskServerApplication
         {
             if( taskID == null )
                 throw new ArgumentNullException("taskID");
-            string fullTaskID = Job.CreateFullTaskID(jobID, taskID);
+            string fullTaskID = Job.CreateFullTaskId(jobID, taskID);
             _log.DebugFormat("ReportCompletion, fullTaskID = \"{0}\"", fullTaskID);
             _taskRunner.ReportCompletion(fullTaskID);
         }
 
         public void ReportProgress(Guid jobId, string taskId, float progress)
         {
-            _log.InfoFormat("Task {0} progress: {1}%", Job.CreateFullTaskID(jobId, taskId), (int)(progress * 100));
+            _log.InfoFormat("Task {0} progress: {1}%", Job.CreateFullTaskId(jobId, taskId), (int)(progress * 100));
             NotifyTaskStatusChanged(jobId, taskId, TaskAttemptStatus.Running, progress);
         }
 
@@ -307,15 +307,15 @@ namespace TaskServerApplication
                     break;
                 case TaskServerHeartbeatCommand.RunTask:
                     RunTaskJetHeartbeatResponse runResponse = (RunTaskJetHeartbeatResponse)response;
-                    _log.InfoFormat("Received run task command for task {{{0}}}_{1}, attempt {2}.", runResponse.Job.JobID, runResponse.TaskID, runResponse.Attempt);
+                    _log.InfoFormat("Received run task command for task {{{0}}}_{1}, attempt {2}.", runResponse.Job.JobId, runResponse.TaskID, runResponse.Attempt);
                     _taskRunner.AddTask(runResponse);
                     break;
                 case TaskServerHeartbeatCommand.CleanupJob:
                     CleanupJobJetHeartbeatResponse cleanupResponse = (CleanupJobJetHeartbeatResponse)response;
-                    _log.InfoFormat("Received cleanup job command for job {{{0}}}.", cleanupResponse.JobID);
-                    _taskRunner.CleanupJobTasks(cleanupResponse.JobID);
+                    _log.InfoFormat("Received cleanup job command for job {{{0}}}.", cleanupResponse.JobId);
+                    _taskRunner.CleanupJobTasks(cleanupResponse.JobId);
                     // Do file clean up asynchronously since it could take a long time.
-                    ThreadPool.QueueUserWorkItem((state) => CleanupJobFiles((Guid)state), cleanupResponse.JobID);
+                    ThreadPool.QueueUserWorkItem((state) => CleanupJobFiles((Guid)state), cleanupResponse.JobId);
                     break;
                 }
             }

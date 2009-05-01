@@ -28,7 +28,7 @@ namespace TaskServerApplication
                 JobID = jobID;
                 TaskID = taskID;
                 Attempt = attempt;
-                FullTaskID = Job.CreateFullTaskID(jobID, taskID.ToString());
+                FullTaskID = Job.CreateFullTaskId(jobID, taskID.ToString());
                 JobDirectory = jobDirectory;
                 DfsJobDirectory = dfsJobDirectory;
                 _taskServer = taskServer;
@@ -292,8 +292,8 @@ namespace TaskServerApplication
 
         private void RunTask(RunTaskJetHeartbeatResponse task)
         {
-            _log.InfoFormat("Running task {{{0}}}_{1}.", task.Job.JobID, task.TaskID);
-            string jobDirectory = _taskServer.GetJobDirectory(task.Job.JobID);
+            _log.InfoFormat("Running task {{{0}}}_{1}.", task.Job.JobId, task.TaskID);
+            string jobDirectory = _taskServer.GetJobDirectory(task.Job.JobId);
             JobConfiguration config;
             if( !IO.Directory.Exists(jobDirectory) )
             {
@@ -304,16 +304,16 @@ namespace TaskServerApplication
                 _taskServer.Configuration.ToXml(IO.Path.Combine(configPath, "jet.config"));
                 _taskServer.DfsConfiguration.ToXml(IO.Path.Combine(configPath, "dfs.config"));
                 config = JobConfiguration.LoadXml(IO.Path.Combine(jobDirectory, Job.JobConfigFileName));
-                _jobConfigurations.Add(task.Job.JobID, config);
+                _jobConfigurations.Add(task.Job.JobId, config);
             }
             else
-                config = _jobConfigurations[task.Job.JobID];
+                config = _jobConfigurations[task.Job.JobId];
             TaskId taskId = new TaskId(task.TaskID);
             StageConfiguration stageConfig = config.GetStage(taskId.StageId);
             RunningTask runningTask;
             lock( _runningTasks )
             {
-                runningTask = new RunningTask(task.Job.JobID, jobDirectory, taskId, task.Attempt, task.Job.Path, stageConfig, _taskServer);
+                runningTask = new RunningTask(task.Job.JobId, jobDirectory, taskId, task.Attempt, task.Job.Path, stageConfig, _taskServer);
                 runningTask.ProcessExited += new EventHandler(RunningTask_ProcessExited);
                 _runningTasks.Add(runningTask.FullTaskID, runningTask);
             }

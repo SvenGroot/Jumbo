@@ -20,24 +20,24 @@ namespace Tkl.Jumbo.Jet
         /// <summary>
         /// Begins execution of a job.
         /// </summary>
-        /// <param name="jobID">The ID of the job to run.</param>
-        void RunJob(Guid jobID);
+        /// <param name="jobId">The ID of the job to run.</param>
+        void RunJob(Guid jobId);
 
         /// <summary>
         /// Waits until the specified job completes.
         /// </summary>
-        /// <param name="jobID">The ID of the job to wait for.</param>
+        /// <param name="jobId">The ID of the job to wait for.</param>
         /// <param name="timeout">The maximum amount of time to wait.</param>
         /// <returns><see langword="true"/> if the job completed; <see langword="false"/> if the timeout expired.</returns>
-        bool WaitForJobCompletion(Guid jobID, int timeout);
+        bool WaitForJobCompletion(Guid jobId, int timeout);
 
         /// <summary>
         /// Gets the address of the task server that is running the specified task.
         /// </summary>
-        /// <param name="jobID">The ID of the job containing the task.</param>
-        /// <param name="taskID">The ID of the task.</param>
+        /// <param name="jobId">The ID of the job containing the task.</param>
+        /// <param name="taskId">The ID of the task.</param>
         /// <returns>The <see cref="ServerAddress"/> for the task server that is running the task.</returns>
-        ServerAddress GetTaskServerForTask(Guid jobID, string taskID);
+        ServerAddress GetTaskServerForTask(Guid jobId, string taskId);
 
         /// <summary>
         /// Waits until any of the specified tasks complete.
@@ -60,6 +60,7 @@ namespace Tkl.Jumbo.Jet
         /// Gets current metrics for the distributed execution engine.
         /// </summary>
         /// <returns>An object holding the metrics for the job server.</returns>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1024:UsePropertiesWhereAppropriate")]
         JetMetrics GetMetrics();
 
         /// <summary>

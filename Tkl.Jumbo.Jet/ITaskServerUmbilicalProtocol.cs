@@ -13,9 +13,9 @@ namespace Tkl.Jumbo.Jet
         /// <summary>
         /// Reports successful task completion to the task server.
         /// </summary>
-        /// <param name="jobID">The job ID of the job containing the task.</param>
-        /// <param name="taskID">The task ID.</param>
-        void ReportCompletion(Guid jobID, string taskID);
+        /// <param name="jobId">The job ID of the job containing the task.</param>
+        /// <param name="taskId">The task ID.</param>
+        void ReportCompletion(Guid jobId, string taskId);
 
         /// <summary>
         /// Reports progression of a task.

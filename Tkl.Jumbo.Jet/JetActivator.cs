@@ -64,7 +64,7 @@ namespace Tkl.Jumbo.Jet
         /// <summary>
         /// Applies the specified configuration to the specified cobject.
         /// </summary>
-        /// <param name="obj">The object to configure.</param>
+        /// <param name="target">The object to configure.</param>
         /// <param name="dfsConfiguration">The configuration used to access the distributed file system.</param>
         /// <param name="jetConfiguration">The configuration used to access Jet.</param>
         /// <param name="taskAttemptConfiguration">The configuration for the task attempt.</param>
@@ -73,16 +73,16 @@ namespace Tkl.Jumbo.Jet
         ///   This function checks if the object implements <see cref="IConfigurable"/> and if so, applies the configuration to it.
         /// </para>
         /// </remarks>
-        public static void ApplyConfiguration(object obj, DfsConfiguration dfsConfiguration, JetConfiguration jetConfiguration, TaskAttemptConfiguration taskAttemptConfiguration)
+        public static void ApplyConfiguration(object target, DfsConfiguration dfsConfiguration, JetConfiguration jetConfiguration, TaskAttemptConfiguration taskAttemptConfiguration)
         {
-            if( obj == null )
-                throw new ArgumentNullException("obj");
+            if( target == null )
+                throw new ArgumentNullException("target");
 
-            IConfigurable configurable = obj as IConfigurable;
+            IConfigurable configurable = target as IConfigurable;
             if( configurable != null )
             {
                 if( _log.IsDebugEnabled )
-                    _log.DebugFormat("Applying configuration to configurable object of type {0}.", obj.GetType().AssemblyQualifiedName);
+                    _log.DebugFormat("Applying configuration to configurable object of type {0}.", target.GetType().AssemblyQualifiedName);
                 configurable.DfsConfiguration = dfsConfiguration;
                 configurable.JetConfiguration = jetConfiguration;
                 configurable.TaskAttemptConfiguration = taskAttemptConfiguration;

@@ -19,9 +19,9 @@ namespace Tkl.Jumbo.Jet
         /// <summary>
         /// Gets the current status of a task.
         /// </summary>
-        /// <param name="fullTaskID">The full ID of the task.</param>
+        /// <param name="fullTaskId">The full ID of the task.</param>
         /// <returns>The status of the task.</returns>
-        TaskAttemptStatus GetTaskStatus(string fullTaskID);
+        TaskAttemptStatus GetTaskStatus(string fullTaskId);
 
         /// <summary>
         /// Gets the local directory where output files for a particular task are stored if that task uses a file output channel.

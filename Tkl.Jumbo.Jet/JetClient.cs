@@ -15,6 +15,7 @@ namespace Tkl.Jumbo.Jet
         private const string _taskServerUrlFormat = "tcp://{0}:{1}/TaskServer";
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(JetClient));
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1810:InitializeReferenceTypeStaticFieldsInline")]
         static JetClient()
         {
             RpcHelper.RegisterClientChannel();
@@ -170,7 +171,7 @@ namespace Tkl.Jumbo.Jet
                 throw new ArgumentNullException("config");
 
             Job job = JobServer.CreateJob();
-            _log.InfoFormat("Created job {{{0}}}", job.JobID);
+            _log.InfoFormat("Created job {{{0}}}", job.JobId);
             RunJob(job, config, files);
             return job;
         }
@@ -205,7 +206,7 @@ namespace Tkl.Jumbo.Jet
                 throw new ArgumentNullException("dfsClient");
 
             Job job = JobServer.CreateJob();
-            _log.InfoFormat("Created job {{{0}}}", job.JobID);
+            _log.InfoFormat("Created job {{{0}}}", job.JobId);
             RunJob(job, config, dfsClient, files);
             return job;
         }
@@ -240,8 +241,8 @@ namespace Tkl.Jumbo.Jet
                 }
             }
 
-            _log.InfoFormat("Running job {0}.", job.JobID);
-            JobServer.RunJob(job.JobID);
+            _log.InfoFormat("Running job {0}.", job.JobId);
+            JobServer.RunJob(job.JobId);
         }
         
         private static T CreateJobServerClientInternal<T>(string hostName, int port)

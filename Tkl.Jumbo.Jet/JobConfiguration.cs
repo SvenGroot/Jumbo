@@ -8,6 +8,7 @@ using Tkl.Jumbo.Dfs;
 using Tkl.Jumbo.IO;
 using Tkl.Jumbo.Jet.Channels;
 using System.Reflection;
+using System.Collections.ObjectModel;
 
 namespace Tkl.Jumbo.Jet
 {
@@ -47,28 +48,28 @@ namespace Tkl.Jumbo.Jet
         /// <param name="assemblyFileNames">The file names of the assemblies containing the task types for this class.</param>
         public JobConfiguration(params string[] assemblyFileNames)
         {
-            Stages = new List<StageConfiguration>();
-            Channels = new List<ChannelConfiguration>();
-            AssemblyFileNames = assemblyFileNames == null ? new List<string>() : assemblyFileNames.ToList();
+            Stages = new Collection<StageConfiguration>();
+            Channels = new Collection<ChannelConfiguration>();
+            AssemblyFileNames = assemblyFileNames == null ? new Collection<string>() : new Collection<string>(assemblyFileNames.ToList());
         }
 
         /// <summary>
-        /// Gets or sets the file name of the assembly holding the task classes.
+        /// Gets the file name of the assembly holding the task classes.
         /// </summary>
-        public List<string> AssemblyFileNames { get; set; }
+        public Collection<string> AssemblyFileNames { get; set; }
 
         /// <summary>
-        /// Gets or sets a list of stages.
+        /// Gets a list of stages.
         /// </summary>
-        public List<StageConfiguration> Stages { get; set; }
+        public Collection<StageConfiguration> Stages { get; set; }
 
         /// <summary>
-        /// Gets or sets a list of communication channels between the tasks.
+        /// Gets a list of communication channels between the tasks.
         /// </summary>
-        public List<Channels.ChannelConfiguration> Channels { get; set; }
+        public Collection<Channels.ChannelConfiguration> Channels { get; set; }
 
         /// <summary>
-        /// Gets or sets a list of settings that can be accessed by the tasks in this job.
+        /// Gets a list of settings that can be accessed by the tasks in this job.
         /// </summary>
         public SettingsDictionary JobSettings { get; set; }
 
@@ -295,11 +296,11 @@ namespace Tkl.Jumbo.Jet
                 Type partitionerInterfaceType = FindGenericInterfaceType(partitionerType, typeof(IPartitioner<>));
                 Type partitionedType = partitionerInterfaceType.GetGenericArguments()[0];
                 if( partitionedType != inputType )
-                    throw new ArgumentException(string.Format("The partitioner type {0} cannot partition objects of type {1}.", partitionerType, inputType), "partitionerType");
+                    throw new ArgumentException(string.Format(System.Globalization.CultureInfo.CurrentCulture, "The partitioner type {0} cannot partition objects of type {1}.", partitionerType, inputType), "partitionerType");
             }
         }
 
-        private StageConfiguration CreateStage(string stageId, Type taskType, int taskCount, string outputPath, Type recordWriterType, IEnumerable<File> inputs, Type recordReaderType)
+        private static StageConfiguration CreateStage(string stageId, Type taskType, int taskCount, string outputPath, Type recordWriterType, IEnumerable<File> inputs, Type recordReaderType)
         {
             StageConfiguration stage = new StageConfiguration()
             {
@@ -470,7 +471,7 @@ namespace Tkl.Jumbo.Jet
             if( stageId.Length == 0 )
                 throw new ArgumentException("Stage name cannot be empty.", "stageId");
             if( inputFiles == null )
-                throw new ArgumentNullException("inputFile");
+                throw new ArgumentNullException("inputFiles");
             if( inputFiles.Count() == 0 )
                 throw new ArgumentException("You must specify at least one input file.");
             if( taskType == null )
@@ -485,7 +486,7 @@ namespace Tkl.Jumbo.Jet
             Type recordReaderBaseType = FindGenericBaseType(recordReaderType, typeof(RecordReader<>));
             Type recordType = recordReaderBaseType.GetGenericArguments()[0];
             if( inputType != recordType )
-                throw new ArgumentException(string.Format("The specified record reader type {0} is not identical to the specified task type's input type {1}.", recordType, inputType));
+                throw new ArgumentException(string.Format(System.Globalization.CultureInfo.CurrentCulture, "The specified record reader type {0} is not identical to the specified task type's input type {1}.", recordType, inputType));
 
             ValidateOutputType(outputPath, recordWriterType, taskInterfaceType);
 
@@ -500,7 +501,7 @@ namespace Tkl.Jumbo.Jet
             foreach( StageConfiguration stage in inputStages )
             {
                 if( stage.DfsOutput != null || GetOutputChannelForStage(stage.StageId) != null )
-                    throw new ArgumentException(string.Format("Input stage {0} already has an output channel or DFS output.", stage.StageId), "inputStages");
+                    throw new ArgumentException(string.Format(System.Globalization.CultureInfo.CurrentCulture, "Input stage {0} already has an output channel or DFS output.", stage.StageId), "inputStages");
                 Type inputTaskType = stage.TaskType;
                 // We skip the check if the task type isn't stored.
                 if( inputTaskType != null )
@@ -508,7 +509,7 @@ namespace Tkl.Jumbo.Jet
                     Type inputTaskInterfaceType = inputTaskType.FindGenericInterfaceType(typeof(ITask<,>));
                     Type inputTaskOutputType = inputTaskInterfaceType.GetGenericArguments()[1];
                     if( inputTaskOutputType != inputType )
-                        throw new ArgumentException(string.Format("Input stage {0} has output type {1} instead of the required type {2}.", stage.StageId, inputTaskOutputType, inputType), "inputStages");
+                        throw new ArgumentException(string.Format(System.Globalization.CultureInfo.CurrentCulture, "Input stage {0} has output type {1} instead of the required type {2}.", stage.StageId, inputTaskOutputType, inputType), "inputStages");
                 }
             }
         }
@@ -522,7 +523,7 @@ namespace Tkl.Jumbo.Jet
                 Type recordWriterBaseType = FindGenericBaseType(recordWriterType, typeof(RecordWriter<>));
                 Type recordType = recordWriterBaseType.GetGenericArguments()[0];
                 if( outputType != recordType )
-                    throw new ArgumentException(string.Format("The specified record type {0} is not identical to the specified task type's output type {1}.", recordType, outputType));
+                    throw new ArgumentException(string.Format(System.Globalization.CultureInfo.CurrentCulture, "The specified record type {0} is not identical to the specified task type's output type {1}.", recordType, outputType));
             }
         }
 
@@ -537,7 +538,7 @@ namespace Tkl.Jumbo.Jet
                 if( i.IsGenericType && i.GetGenericTypeDefinition() == interfaceType )
                     return i;
             }
-            throw new ArgumentException(string.Format("Type {0} does not implement interface {1}.", type, interfaceType));
+            throw new ArgumentException(string.Format(System.Globalization.CultureInfo.CurrentCulture, "Type {0} does not implement interface {1}.", type, interfaceType));
         }
 
         private static Type FindGenericBaseType(Type type, Type baseType)
@@ -549,7 +550,7 @@ namespace Tkl.Jumbo.Jet
                     return current;
                 current = current.BaseType;
             }
-            throw new ArgumentException(string.Format("Type {0} does not inherit from {1}.", type, baseType));
+            throw new ArgumentException(string.Format(System.Globalization.CultureInfo.CurrentCulture, "Type {0} does not inherit from {1}.", type, baseType));
         }
 
         /// <summary>

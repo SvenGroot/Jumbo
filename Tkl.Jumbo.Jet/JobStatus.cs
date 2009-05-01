@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Xml.Linq;
 using System.Xml.Serialization;
+using System.Collections.ObjectModel;
 
 namespace Tkl.Jumbo.Jet
 {
@@ -13,6 +14,9 @@ namespace Tkl.Jumbo.Jet
     [Serializable]
     public class JobStatus
     {
+        private Collection<TaskStatus> _tasks = new Collection<TaskStatus>();
+        private Collection<TaskStatus> _failedTaskAttempts = new Collection<TaskStatus>();
+
         internal const string DatePattern = "yyyy'-'MM'-'dd' 'HH':'mm':'ss'.'fff'Z'";
 
         /// <summary>
@@ -21,21 +25,29 @@ namespace Tkl.Jumbo.Jet
         public Guid JobId { get; set; }
 
         /// <summary>
-        /// Gets or sets the tasks of this job.
+        /// Gets the tasks of this job.
         /// </summary>
-        public TaskStatus[] Tasks { get; set; }
+        public Collection<TaskStatus> Tasks
+        {
+            get { return _tasks; }
+            set { _tasks = value; }
+        }
 
         /// <summary>
-        /// Gets or sets the task attempts that failed.
+        /// Gets the task attempts that failed.
         /// </summary>
-        public TaskStatus[] FailedTaskAttempts { get; set; }
+        public Collection<TaskStatus> FailedTaskAttempts
+        {
+            get { return _failedTaskAttempts; }
+            set { _failedTaskAttempts = value; }
+        }
 
         /// <summary>
         /// Gets or sets the total number of tasks in the 
         /// </summary>
         public int TaskCount
         {
-            get { return Tasks.Length; }
+            get { return Tasks.Count; }
         }
 
         /// <summary>
@@ -85,7 +97,7 @@ namespace Tkl.Jumbo.Jet
         {
             get
             {
-                return FailedTaskAttempts == null ? 0 : FailedTaskAttempts.Length;
+                return FailedTaskAttempts == null ? 0 : FailedTaskAttempts.Count;
             }
         }
 
@@ -167,12 +179,12 @@ namespace Tkl.Jumbo.Jet
                 FinishedTaskCount = (int)jobInfo.Attribute("finishedTasks"),
                 NonDataLocalTaskCount = (int)jobInfo.Attribute("nonDataLocalTasks"),
             };
-            jobStatus.Tasks = (from task in job.Element("Tasks").Elements("Task")
-                               select TaskStatus.FromXml(task, jobStatus)).ToArray();
+            jobStatus.Tasks.AddRange(from task in job.Element("Tasks").Elements("Task")
+                                     select TaskStatus.FromXml(task, jobStatus));
             if( job.Element("FailedtaskAttempts") != null )
             {
-                jobStatus.FailedTaskAttempts = (from task in job.Element("FailedTaskAttempts").Elements("Task")
-                                                select TaskStatus.FromXml(task, jobStatus)).ToArray();
+                jobStatus.FailedTaskAttempts.AddRange(from task in job.Element("FailedTaskAttempts").Elements("Task")
+                                                      select TaskStatus.FromXml(task, jobStatus));
             }
             return jobStatus;
 

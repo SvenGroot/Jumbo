@@ -7,9 +7,9 @@ using System.IO;
 namespace Tkl.Jumbo
 {
     /// <summary>
-    /// Provides extension methods.
+    /// Provides extension methods for <see cref="Stream"/>
     /// </summary>
-    public static class Extensions
+    public static class StreamExtensions
     {
         /// <summary>
         /// Copies one stream to another.

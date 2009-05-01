@@ -164,7 +164,7 @@ namespace Tkl.Jumbo.Test.Jet
             JetClient target = new JetClient(TestJetCluster.CreateClientConfig());
             Job job = target.RunJob(config, dfsClient, typeof(StringConversionTask).Assembly.Location);
 
-            bool complete = target.JobServer.WaitForJobCompletion(job.JobID, Timeout.Infinite);
+            bool complete = target.JobServer.WaitForJobCompletion(job.JobId, Timeout.Infinite);
             Assert.IsTrue(complete);
         }
     }

@@ -15,13 +15,13 @@ public partial class _Default : System.Web.UI.Page
     {
         JetClient client = new JetClient();
         JetMetrics metrics = client.JobServer.GetMetrics();
-        RunningJobsColumn.InnerText = metrics.RunningJobs.Length.ToString();
-        FinishedJobsColumn.InnerText = metrics.FinishedJobs.Length.ToString();
-        FailedJobsColumn.InnerText = metrics.FailedJobs.Length.ToString();
+        RunningJobsColumn.InnerText = metrics.RunningJobs.Count.ToString();
+        FinishedJobsColumn.InnerText = metrics.FinishedJobs.Count.ToString();
+        FailedJobsColumn.InnerText = metrics.FailedJobs.Count.ToString();
         CapacityColumn.InnerText = metrics.Capacity.ToString();
         NonInputTaskCapacityColumn.InnerText = metrics.NonInputTaskCapacity.ToString();
         SchedulerColumn.InnerText = metrics.Scheduler;
-        TaskServersColumn.InnerText = metrics.TaskServers.Length.ToString();
+        TaskServersColumn.InnerText = metrics.TaskServers.Count.ToString();
 
         foreach( TaskServerMetrics server in metrics.TaskServers )
         {

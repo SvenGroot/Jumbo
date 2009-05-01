@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.IO;
+using System.Collections.ObjectModel;
 
 namespace Tkl.Jumbo.Jet
 {
@@ -12,25 +13,42 @@ namespace Tkl.Jumbo.Jet
     [Serializable]
     public class JetMetrics
     {
+        private readonly Collection<Guid> _runningJobs = new Collection<Guid>();
+        private readonly Collection<Guid> _finishedJobs = new Collection<Guid>();
+        private readonly Collection<Guid> _failedJobs = new Collection<Guid>();
+        private readonly Collection<TaskServerMetrics> _taskServers = new Collection<TaskServerMetrics>();
+
         /// <summary>
         /// Gets or sets the IDs of the running jobs.
         /// </summary>
-        public Guid[] RunningJobs { get; set; }
+        public Collection<Guid> RunningJobs
+        {
+            get { return _runningJobs; }
+        }
 
         /// <summary>
         /// Gets or sets the IDs of jobs that have successfully finished.
         /// </summary>
-        public Guid[] FinishedJobs { get; set; }
+        public Collection<Guid> FinishedJobs
+        {
+            get { return _finishedJobs; }
+        }
 
         /// <summary>
         /// Gets or sets the IDs of jobs that have failed.
         /// </summary>
-        public Guid[] FailedJobs { get; set; }
+        public Collection<Guid> FailedJobs
+        {
+            get { return _failedJobs; }
+        }
 
         /// <summary>
         /// Gets or sets a list of task servers registered with the system.
         /// </summary>
-        public TaskServerMetrics[] TaskServers { get; set; }
+        public Collection<TaskServerMetrics> TaskServers
+        {
+            get { return _taskServers; }
+        }
 
         /// <summary>
         /// Gets or sets the total input task capacity.
@@ -53,16 +71,16 @@ namespace Tkl.Jumbo.Jet
         /// <param name="writer">The <see cref="TextWriter"/> to print the metrics to.</param>
         public void PrintMetrics(TextWriter writer)
         {
-            writer.WriteLine("Running jobs: {0}", RunningJobs.Length);
+            writer.WriteLine("Running jobs: {0}", RunningJobs.Count);
             PrintList(writer, RunningJobs);
-            writer.WriteLine("Finished jobs: {0}", FinishedJobs.Length);
+            writer.WriteLine("Finished jobs: {0}", FinishedJobs.Count);
             PrintList(writer, FinishedJobs);
-            writer.WriteLine("Failed jobs: {0}", FailedJobs.Length);
+            writer.WriteLine("Failed jobs: {0}", FailedJobs.Count);
             PrintList(writer, FailedJobs);
             writer.WriteLine("Capacity: {0}", Capacity);
             writer.WriteLine("Non-input task capacity: {0}", NonInputTaskCapacity);
             writer.WriteLine("Scheduler: {0}", Scheduler);
-            writer.WriteLine("Task servers: {0}", TaskServers.Length);
+            writer.WriteLine("Task servers: {0}", TaskServers.Count);
             PrintList(writer, TaskServers);
         }
 

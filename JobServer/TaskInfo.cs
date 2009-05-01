@@ -96,7 +96,7 @@ namespace JobServerApplication
         {
             get
             {
-                return string.Format("{{{0}}}_{1}", Job.Job.JobID, TaskId);
+                return string.Format("{{{0}}}_{1}", Job.Job.JobId, TaskId);
             }
         }
 

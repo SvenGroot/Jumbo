@@ -189,13 +189,13 @@ namespace Tkl.Jumbo.Jet.Jobs
 
             JetClient jetClient = new JetClient(JetConfiguration);
             Job job = jetClient.JobServer.CreateJob();
-            _log.InfoFormat("Created job {{{0}}}", job.JobID);
+            _log.InfoFormat("Created job {{{0}}}", job.JobId);
 
             OnJobCreated(job, config);
 
             jetClient.RunJob(job, config, dfsClient, (from assembly in assemblies select assembly.Location).ToArray());
 
-            return job.JobID;            
+            return job.JobId;            
         }
 
         /// <summary>

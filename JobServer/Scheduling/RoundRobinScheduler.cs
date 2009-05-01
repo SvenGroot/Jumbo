@@ -42,7 +42,7 @@ namespace JobServerApplication.Scheduling
                 }
             }
             if( outOfSlots )
-                _log.InfoFormat("Job {{{0}}}: not all task could be immediately scheduled, there are {1} tasks left.", job.Job.JobID, job.UnscheduledTasks);
+                _log.InfoFormat("Job {{{0}}}: not all task could be immediately scheduled, there are {1} tasks left.", job.Job.JobId, job.UnscheduledTasks);
             return newServers;
         }
 

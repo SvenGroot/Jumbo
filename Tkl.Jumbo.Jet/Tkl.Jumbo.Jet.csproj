@@ -34,6 +34,7 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <DocumentationFile>bin\Release\Tkl.Jumbo.Jet.XML</DocumentationFile>
+    <RunCodeAnalysis>true</RunCodeAnalysis>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="log4net, Version=1.2.10.0, Culture=neutral, PublicKeyToken=1b44e1d426115821, processorArchitecture=MSIL">
@@ -73,6 +74,7 @@
     <Compile Include="CompletedTask.cs" />
     <Compile Include="Configurable.cs" />
     <Compile Include="FileChannelConfigurationElement.cs" />
+    <Compile Include="GlobalSuppressions.cs" />
     <Compile Include="IConfigurable.cs" />
     <Compile Include="IMergeTask.cs" />
     <Compile Include="IPullTask.cs" />
@@ -138,6 +140,9 @@
       <Project>{17C7CE1A-4F9F-4173-8BA8-9C26A4F644C6}</Project>
       <Name>Tkl.Jumbo</Name>
     </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <CodeAnalysisDictionary Include="CodeAnalysisDictionary.xml" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

@@ -113,7 +113,6 @@ namespace Tkl.Jumbo.Test.Jet
 
             JobConfiguration config = new JobConfiguration(typeof(MultiplierTask).Assembly);
             config.AddInputStage("MultiplyStage", dfsClient.NameServer.GetFileInfo("/settingsinput"), typeof(MultiplierTask), typeof(LineRecordReader), outputPath, typeof(BinaryRecordWriter<Int32Writable>));
-            config.JobSettings = new SettingsDictionary();
             int factor = new Random().Next(2, 100);
             config.JobSettings.Add("factor", factor.ToString());
 
@@ -144,7 +143,7 @@ namespace Tkl.Jumbo.Test.Jet
             JetClient target = new JetClient(TestJetCluster.CreateClientConfig());
             Job job = target.RunJob(config, dfsClient, typeof(StringConversionTask).Assembly.Location);
 
-            bool complete = target.JobServer.WaitForJobCompletion(job.JobID, Timeout.Infinite);
+            bool complete = target.JobServer.WaitForJobCompletion(job.JobId, Timeout.Infinite);
             Assert.IsTrue(complete);
         }
 
@@ -195,7 +194,7 @@ namespace Tkl.Jumbo.Test.Jet
             JetClient target = new JetClient(TestJetCluster.CreateClientConfig());
             Job job = target.RunJob(config, dfsClient, typeof(LineCounterTask).Assembly.Location);
 
-            bool complete = target.JobServer.WaitForJobCompletion(job.JobID, Timeout.Infinite);
+            bool complete = target.JobServer.WaitForJobCompletion(job.JobId, Timeout.Infinite);
             Assert.IsTrue(complete);
 
             string outputFileName = DfsPath.Combine(outputPath, "OutputTask001");

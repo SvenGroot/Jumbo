@@ -30,20 +30,20 @@ namespace Tkl.Jumbo.Jet
         /// <summary>
         /// Initializes a new insatnce of the <see cref="Job"/> class with the specified ID and path.
         /// </summary>
-        /// <param name="jobID">The unique identifier of this job.</param>
+        /// <param name="jobId">The unique identifier of this job.</param>
         /// <param name="path">The path on the distributed file system where files related to the job are stored.</param>
-        public Job(Guid jobID, string path)
+        public Job(Guid jobId, string path)
         {
             if( path == null )
                 throw new ArgumentNullException("path");
-            JobID = jobID;
+            JobId = jobId;
             Path = path;
         }
 
         /// <summary>
         /// Gets the unique identifier of this job.
         /// </summary>
-        public Guid JobID { get; private set; }
+        public Guid JobId { get; private set; }
 
         /// <summary>
         /// Gets the path on the distributed file system where files related to the job are stored.
@@ -61,12 +61,12 @@ namespace Tkl.Jumbo.Jet
         /// <summary>
         /// Creates the full task id for the specified task.
         /// </summary>
-        /// <param name="jobID">The job ID.</param>
-        /// <param name="taskID">The task ID.</param>
+        /// <param name="jobId">The job ID.</param>
+        /// <param name="taskId">The task ID.</param>
         /// <returns>The full task ID of the form "{jobID}_taskID".</returns>
-        public static string CreateFullTaskID(Guid jobID, string taskID)
+        public static string CreateFullTaskId(Guid jobId, string taskId)
         {
-            return string.Format(System.Globalization.CultureInfo.InvariantCulture, "{{{0}}}_{1}", jobID, taskID);
+            return string.Format(System.Globalization.CultureInfo.InvariantCulture, "{{{0}}}_{1}", jobId, taskId);
         }
     }
 }
