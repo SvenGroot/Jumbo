@@ -19,7 +19,7 @@ namespace Tkl.Jumbo.Dfs
             : base(DataServerHeartbeatCommand.ReplicateBlock)
         {
             if( blockAssignment == null )
-                throw new ArgumentNullException("blockAssigment");
+                throw new ArgumentNullException("blockAssignment");
 
             BlockAssignment = blockAssignment;
         }

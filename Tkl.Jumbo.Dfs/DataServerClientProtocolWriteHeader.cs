@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Collections.ObjectModel;
 
 namespace Tkl.Jumbo.Dfs
 {
@@ -11,12 +12,18 @@ namespace Tkl.Jumbo.Dfs
     [Serializable]
     public class DataServerClientProtocolWriteHeader : DataServerClientProtocolHeader 
     {
+        private readonly ReadOnlyCollection<ServerAddress> _dataServers;
+
         /// <summary>
         /// Initializes a new instance of the <see cref="DataServerClientProtocolWriteHeader"/> class.
         /// </summary>
-        public DataServerClientProtocolWriteHeader()
+        /// <param name="dataServers">The list of data servers that this block should be written to.</param>
+        public DataServerClientProtocolWriteHeader(IEnumerable<ServerAddress> dataServers)
             : base(DataServerCommand.WriteBlock)
         {
+            if( dataServers == null )
+                throw new ArgumentNullException("dataServers");
+            _dataServers = new List<ServerAddress>(dataServers).AsReadOnly();
         }
 
         /// <summary>
@@ -26,6 +33,9 @@ namespace Tkl.Jumbo.Dfs
         /// The first server in the list should be the data server this header is sent to. The server
         /// will forward the block to the next server in the list.
         /// </remarks>
-        public ServerAddress[] DataServers { get; set; }
+        public ReadOnlyCollection<ServerAddress> DataServers
+        {
+            get { return _dataServers; }
+        }
     }
 }

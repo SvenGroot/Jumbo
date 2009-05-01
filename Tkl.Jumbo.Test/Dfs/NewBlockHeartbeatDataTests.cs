@@ -14,7 +14,7 @@ namespace Tkl.Jumbo.Test.Dfs
         public void TestConstructor()
         {
             NewBlockHeartbeatData target = new NewBlockHeartbeatData();
-            Assert.AreEqual(Guid.Empty, target.BlockID);
+            Assert.AreEqual(Guid.Empty, target.BlockId);
             Assert.AreEqual(0, target.Size);
         }
 
@@ -23,8 +23,8 @@ namespace Tkl.Jumbo.Test.Dfs
         {
             NewBlockHeartbeatData target = new NewBlockHeartbeatData();
             Guid expected = Guid.NewGuid();
-            target.BlockID = expected;
-            Assert.AreEqual(expected, target.BlockID);
+            target.BlockId = expected;
+            Assert.AreEqual(expected, target.BlockId);
         }
 
         [Test]

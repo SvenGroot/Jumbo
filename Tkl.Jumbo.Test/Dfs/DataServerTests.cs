@@ -80,7 +80,7 @@ namespace Tkl.Jumbo.Test.Dfs
             using( BinaryReader reader = new BinaryReader(stream) )
             {
                 DataServerClientProtocolReadHeader header = new DataServerClientProtocolReadHeader();
-                header.BlockID = blockID;
+                header.BlockId = blockID;
                 header.Offset = 0;
                 header.Size = (int)dataStream.Length;
                 BinaryFormatter formatter = new BinaryFormatter();

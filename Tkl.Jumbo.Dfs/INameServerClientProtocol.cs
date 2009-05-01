@@ -47,9 +47,9 @@ namespace Tkl.Jumbo.Dfs
         /// <summary>
         /// Moves the specified file or directory.
         /// </summary>
-        /// <param name="from">The path of the file or directory to move.</param>
-        /// <param name="to">The path to move the entry to.</param>
-        void Move(string from, string to);
+        /// <param name="source">The path of the file or directory to move.</param>
+        /// <param name="destination">The path to move the entry to.</param>
+        void Move(string source, string destination);
 
         /// <summary>
         /// Gets information about a file.
@@ -90,9 +90,9 @@ namespace Tkl.Jumbo.Dfs
         /// <summary>
         /// Gets the list of data servers that have the specified block.
         /// </summary>
-        /// <param name="blockID">The <see cref="Guid"/> identifying the block.</param>
+        /// <param name="blockId">The <see cref="Guid"/> identifying the block.</param>
         /// <returns>A list of <see cref="ServerAddress"/> objects that give the addresses of the servers that have this block.</returns>
-        ServerAddress[] GetDataServersForBlock(Guid blockID);
+        ServerAddress[] GetDataServersForBlock(Guid blockId);
 
         /// <summary>
         /// Waits until safe mode is off or the time out expires.
@@ -105,6 +105,7 @@ namespace Tkl.Jumbo.Dfs
         /// Gets current metrics for the distributed file system.
         /// </summary>
         /// <returns>An object holding the metrics for the name server.</returns>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1024:UsePropertiesWhereAppropriate")]
         DfsMetrics GetMetrics();
 
         /// <summary>

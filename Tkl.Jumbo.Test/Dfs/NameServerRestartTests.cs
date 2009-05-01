@@ -58,7 +58,7 @@ namespace Tkl.Jumbo.Test.Dfs
                 Assert.AreEqual(1, metrics.TotalBlockCount);
                 Assert.AreEqual(0, metrics.PendingBlockCount);
                 Assert.AreEqual(0, metrics.UnderReplicatedBlockCount);
-                Assert.AreEqual(1, metrics.DataServers.Length);
+                Assert.AreEqual(1, metrics.DataServers.Count);
             }
             finally
             {

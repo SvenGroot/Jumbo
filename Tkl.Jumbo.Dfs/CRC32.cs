@@ -66,7 +66,7 @@ namespace Tkl.Jumbo.Dfs
 	/// </summary>
 	public sealed class Crc32
 	{
-		readonly static uint CrcSeed = 0xFFFFFFFF;
+		private const uint CrcSeed = 0xFFFFFFFF;
 		
 		readonly static uint[] CrcTable = new uint[] {
 			0x00000000, 0x77073096, 0xEE0E612C, 0x990951BA, 0x076DC419,
@@ -122,12 +122,7 @@ namespace Tkl.Jumbo.Dfs
 			0x5D681B02, 0x2A6F2B94, 0xB40BBE37, 0xC30C8EA1, 0x5A05DF1B,
 			0x2D02EF8D
 		};
-		
-		internal static uint ComputeCrc32(uint oldCrc, byte value)
-		{
-			return (uint)(Crc32.CrcTable[(oldCrc ^ value) & 0xFF] ^ (oldCrc >> 8));
-		}
-		
+				
 		/// <summary>
 		/// The crc data checksum so far.
 		/// </summary>

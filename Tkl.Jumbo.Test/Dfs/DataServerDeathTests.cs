@@ -55,7 +55,7 @@ namespace Tkl.Jumbo.Test.Dfs
             _nameServer.RemoveDataServer(address);
             metrics = _nameServer.GetMetrics();
             Assert.Greater(metrics.UnderReplicatedBlockCount, 0);
-            Assert.AreEqual(_dataServers - 1, metrics.DataServers.Length);
+            Assert.AreEqual(_dataServers - 1, metrics.DataServers.Count);
             Utilities.TraceLineAndFlush(string.Format("Waiting for re-replication of {0} blocks.", metrics.UnderReplicatedBlockCount));
             for( int x = 0; x < 10; ++x )
             {

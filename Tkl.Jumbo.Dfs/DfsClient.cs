@@ -203,7 +203,7 @@ namespace Tkl.Jumbo.Dfs
             if( dir != null )
             {
                 string fileName = System.IO.Path.GetFileName(localPath);
-                if( !dfsPath.EndsWith(DfsPath.DirectorySeparator.ToString()) )
+                if( !dfsPath.EndsWith(DfsPath.DirectorySeparator.ToString(), StringComparison.Ordinal) )
                     dfsPath += DfsPath.DirectorySeparator;
                 dfsPath += fileName;
             }

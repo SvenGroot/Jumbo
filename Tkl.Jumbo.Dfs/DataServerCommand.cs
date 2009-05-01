@@ -8,7 +8,7 @@ namespace Tkl.Jumbo.Dfs
     /// <summary>
     /// The function the data server should perform for a client.
     /// </summary>
-    public enum DataServerCommand : byte
+    public enum DataServerCommand
     {
         /// <summary>
         /// The client wants to read a block from the data server.

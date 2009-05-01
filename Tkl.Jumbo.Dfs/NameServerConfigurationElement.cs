@@ -62,7 +62,8 @@ namespace Tkl.Jumbo.Dfs
         /// <see langword="true"/> if the server should listen on both IPv6 and IPv4; <see langword="false"/>
         /// if the server should listen only on IPv6 if it's available, and otherwise on IPv4.
         /// </value>
-        [ConfigurationProperty("listenIPv4AndIPv6", DefaultValue = true, IsRequired = false, IsKey = false)]
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Naming", "CA1709:IdentifiersShouldBeCasedCorrectly", MessageId = "Pv"),
+        ConfigurationProperty("listenIPv4AndIPv6", DefaultValue = true, IsRequired = false, IsKey = false)]
         public bool ListenIPv4AndIPv6
         {
             get { return (bool)this["listenIPv4AndIPv6"]; }

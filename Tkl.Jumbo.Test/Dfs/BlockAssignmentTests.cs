@@ -13,27 +13,11 @@ namespace Tkl.Jumbo.Test.Dfs
         [Test]
         public void TestConstructor()
         {
-            BlockAssignment target = new BlockAssignment();
-            Assert.AreEqual(Guid.Empty, target.BlockID);
-            Assert.IsNull(target.DataServers);
-        }
-
-        [Test]
-        public void TestBlockID()
-        {
-            BlockAssignment target = new BlockAssignment();
-            Guid expected = Guid.NewGuid();
-            target.BlockID = expected;
-            Assert.AreEqual(expected, target.BlockID);
-        }
-
-        [Test]
-        public void TestDataServers()
-        {
-            BlockAssignment target = new BlockAssignment();
-            List<ServerAddress> expected = new List<ServerAddress>();
-            target.DataServers = expected;
-            Assert.AreEqual(expected, target.DataServers);
+            Guid blockId = Guid.NewGuid();
+            List<ServerAddress> servers = new List<ServerAddress>(new[] { new ServerAddress("foo", 1000), new ServerAddress("bar", 1001) });
+            BlockAssignment target = new BlockAssignment(blockId, servers);
+            Assert.AreEqual(blockId, target.BlockId);
+            Assert.IsTrue(Utilities.CompareList(servers, target.DataServers));
         }
     }
 }

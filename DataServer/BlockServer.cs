@@ -76,7 +76,7 @@ namespace DataServerApplication
 
         private void ReceiveBlock(NetworkStream stream, DataServerClientProtocolWriteHeader header)
         {
-            _log.InfoFormat("Block write command received for block {0}", header.BlockID);
+            _log.InfoFormat("Block write command received for block {0}", header.BlockId);
             int blockSize = 0;
             //DataServerClientProtocolResult forwardResult;
 
@@ -86,25 +86,25 @@ namespace DataServerApplication
                 BlockSender forwarder = null;
                 try
                 {
-                    if( header.DataServers.Length == 0 || !header.DataServers[0].Equals(_dataServer.LocalAddress) )
+                    if( header.DataServers.Count == 0 || !header.DataServers[0].Equals(_dataServer.LocalAddress) )
                     {
                         _log.ErrorFormat("This server was not the first server in the list of remaining servers for the block.");
                         clientWriter.WriteResult(DataServerClientProtocolResult.Error);
                         return;
                     }
-                    using( FileStream blockFile = _dataServer.AddNewBlock(header.BlockID) )
+                    using( FileStream blockFile = _dataServer.AddNewBlock(header.BlockId) )
                     using( BinaryWriter fileWriter = new BinaryWriter(blockFile) )
                     {
-                        if( header.DataServers.Length > 1 )
+                        if( header.DataServers.Count > 1 )
                         {
-                            ServerAddress[] forwardServers = new ServerAddress[header.DataServers.Length - 1];
-                            Array.Copy(header.DataServers, 1, forwardServers, 0, forwardServers.Length);
-                            forwarder = new BlockSender(header.BlockID, forwardServers);
-                            _log.InfoFormat("Connected to {0} to forward block {1}.", header.DataServers[1], header.BlockID);
+                            var forwardServers = header.DataServers.Skip(1);
+                                                 
+                            forwarder = new BlockSender(header.BlockId, forwardServers);
+                            _log.InfoFormat("Connected to {0} to forward block {1}.", header.DataServers[1], header.BlockId);
                         }
                         else
                         {
-                            _log.DebugFormat("This is the last server in the list for block {0}.", header.BlockID);
+                            _log.DebugFormat("This is the last server in the list for block {0}.", header.BlockId);
                         }
                         clientWriter.WriteResult(DataServerClientProtocolResult.Ok);
 
@@ -127,9 +127,9 @@ namespace DataServerApplication
                         }
                     }
 
-                    _dataServer.CompleteBlock(header.BlockID, blockSize);
+                    _dataServer.CompleteBlock(header.BlockId, blockSize);
                     clientWriter.WriteResult(DataServerClientProtocolResult.Ok);
-                    _log.InfoFormat("Writing block {0} complete.", header.BlockID);
+                    _log.InfoFormat("Writing block {0} complete.", header.BlockId);
                 }
                 catch( Exception )
                 {
@@ -147,7 +147,7 @@ namespace DataServerApplication
                     if( forwarder != null )
                         forwarder.Dispose();
 
-                    _dataServer.RemoveBlockIfPending(header.BlockID);
+                    _dataServer.RemoveBlockIfPending(header.BlockId);
                 }
             }
         }
@@ -199,7 +199,7 @@ namespace DataServerApplication
                 if( forwarder.LastException != null )
                     _log.Error(string.Format("An error occurred forwarding block to server {0}.", header.DataServers[1]), forwarder.LastException);
                 else
-                    _log.ErrorFormat("The next data server {0} encountered an error writing a packet of block {1}.", header.DataServers[1], header.BlockID);
+                    _log.ErrorFormat("The next data server {0} encountered an error writing a packet of block {1}.", header.DataServers[1], header.BlockId);
                 return false;
             }
             return true;
@@ -207,7 +207,7 @@ namespace DataServerApplication
 
         private void SendBlock(NetworkStream stream, DataServerClientProtocolReadHeader header)
         {
-            _log.InfoFormat("Block read command received: block {0}, offset {1}, size {2}.", header.BlockID, header.Offset, header.Size);
+            _log.InfoFormat("Block read command received: block {0}, offset {1}, size {2}.", header.BlockId, header.Offset, header.Size);
             int packetOffset = header.Offset / Packet.PacketSize;
             int offset = packetOffset * Packet.PacketSize; // Round down to the nearest packet.
             // File offset has to take CRCs into account.
@@ -220,7 +220,7 @@ namespace DataServerApplication
             try
             {
                 _log.Debug("Open block file.");
-                using( FileStream blockFile = _dataServer.OpenBlock(header.BlockID) )
+                using( FileStream blockFile = _dataServer.OpenBlock(header.BlockId) )
                 using( BinaryReader reader = new BinaryReader(blockFile) )
                 using( Tkl.Jumbo.IO.WriteBufferedStream bufferedStream = new Tkl.Jumbo.IO.WriteBufferedStream(stream) )
                 using( BinaryWriter writer = new BinaryWriter(bufferedStream) )
@@ -290,7 +290,7 @@ namespace DataServerApplication
 
             }
 
-            _log.InfoFormat("Finished sending block {0}", header.BlockID);
+            _log.InfoFormat("Finished sending block {0}", header.BlockId);
         }
 
         private void SendLogFile(NetworkStream stream, DataServerClientProtocolGetLogFileContentsHeader header)

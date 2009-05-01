@@ -14,7 +14,7 @@ namespace Tkl.Jumbo.Dfs
     /// and one other thread will be using the <see cref="WriteItem"/> property
     /// and the <see cref="NotifyWrite"/> method.
     /// </remarks>
-    class PacketBuffer
+    sealed class PacketBuffer : IDisposable
     {
         private readonly Packet[] _buffer;
         private readonly int _bufferSize;
@@ -99,5 +99,22 @@ namespace Tkl.Jumbo.Dfs
             _bufferWritePos = 0;
             _cancelled = false;
         }
+
+        #region IDisposable Members
+
+        /// <summary>
+        /// Releases the resources used by the class.
+        /// </summary>
+        public void Dispose()
+        {
+            _cancelled = true;
+            _bufferWriteEvent.Set();
+            _bufferReadEvent.Set();
+
+            ((IDisposable)_bufferReadEvent).Dispose();
+            ((IDisposable)_bufferWriteEvent).Dispose();
+        }
+
+        #endregion
     }
 }

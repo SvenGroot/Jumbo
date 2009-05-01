@@ -188,7 +188,7 @@ namespace Tkl.Jumbo.Test.Dfs
             Assert.AreEqual("file", result.Name);
             Assert.AreEqual(path, result.FullPath);
             Assert.AreEqual(1, result.Blocks.Count);
-            Assert.AreEqual(block.BlockID, result.Blocks[0]);
+            Assert.AreEqual(block.BlockId, result.Blocks[0]);
             Assert.AreEqual(10000, result.Size);
             Assert.IsTrue(result.IsOpenForWriting);
 
@@ -198,7 +198,7 @@ namespace Tkl.Jumbo.Test.Dfs
             Assert.AreEqual("file", result.Name);
             Assert.AreEqual(path, result.FullPath);
             Assert.AreEqual(1, result.Blocks.Count);
-            Assert.AreEqual(block.BlockID, result.Blocks[0]);
+            Assert.AreEqual(block.BlockId, result.Blocks[0]);
             Assert.AreEqual(10000, result.Size);
             Assert.IsFalse(result.IsOpenForWriting);
         }
@@ -445,7 +445,7 @@ namespace Tkl.Jumbo.Test.Dfs
             }
 
             BlockAssignment block2 = target.AppendBlock(path);
-            Assert.AreNotEqual(block.BlockID, block2.BlockID);
+            Assert.AreNotEqual(block.BlockId, block2.BlockId);
             Assert.AreEqual(1, block.DataServers.Count);
             Assert.AreEqual(Dns.GetHostName(), block.DataServers[0].HostName);
             Assert.AreEqual(10001, block.DataServers[0].Port);
@@ -460,11 +460,11 @@ namespace Tkl.Jumbo.Test.Dfs
             target.CloseFile(path);
             Tkl.Jumbo.Dfs.File file = target.GetFileInfo(path);
             Assert.AreEqual(2, file.Blocks.Count);
-            Assert.AreEqual(block.BlockID, file.Blocks[0]);
-            Assert.AreEqual(block2.BlockID, file.Blocks[1]);
+            Assert.AreEqual(block.BlockId, file.Blocks[0]);
+            Assert.AreEqual(block2.BlockId, file.Blocks[1]);
             Assert.AreEqual(target.BlockSize + 10000, file.Size);
 
-            ServerAddress[] servers = target.GetDataServersForBlock(block2.BlockID);
+            ServerAddress[] servers = target.GetDataServersForBlock(block2.BlockId);
             Assert.AreEqual(1, servers.Length);
             Assert.AreEqual(new ServerAddress(Dns.GetHostName(), 10001), servers[0]);
         }
@@ -492,7 +492,7 @@ namespace Tkl.Jumbo.Test.Dfs
         {
             INameServerClientProtocol target = _nameServer;
             DfsMetrics metrics = _nameServer.GetMetrics();
-            Assert.AreEqual(1, metrics.DataServers.Length);
+            Assert.AreEqual(1, metrics.DataServers.Count);
             Assert.AreEqual(new ServerAddress(Dns.GetHostName(), 10001), metrics.DataServers[0].Address);
             Assert.AreEqual(0, metrics.PendingBlockCount);
             Assert.AreEqual(0, metrics.UnderReplicatedBlockCount);

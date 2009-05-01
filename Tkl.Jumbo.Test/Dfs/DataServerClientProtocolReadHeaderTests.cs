@@ -15,7 +15,7 @@ namespace Tkl.Jumbo.Test.Dfs
         {
             DataServerClientProtocolReadHeader target = new DataServerClientProtocolReadHeader();
             Assert.AreEqual(DataServerCommand.ReadBlock, target.Command);
-            Assert.AreEqual(Guid.Empty, target.BlockID);
+            Assert.AreEqual(Guid.Empty, target.BlockId);
             Assert.AreEqual(0, target.Offset);
             Assert.AreEqual(0, target.Size);
         }

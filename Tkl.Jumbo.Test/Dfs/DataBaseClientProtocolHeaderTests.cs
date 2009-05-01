@@ -23,10 +23,10 @@ namespace Tkl.Jumbo.Test.Dfs
         {
             DataServerClientProtocolHeader target = new Header(DataServerCommand.WriteBlock);
             Assert.AreEqual(DataServerCommand.WriteBlock, target.Command);
-            Assert.AreEqual(Guid.Empty, target.BlockID);
+            Assert.AreEqual(Guid.Empty, target.BlockId);
             target = new Header(DataServerCommand.ReadBlock);
             Assert.AreEqual(DataServerCommand.ReadBlock, target.Command);
-            Assert.AreEqual(Guid.Empty, target.BlockID);
+            Assert.AreEqual(Guid.Empty, target.BlockId);
         }
 
         [Test]
@@ -34,8 +34,8 @@ namespace Tkl.Jumbo.Test.Dfs
         {
             DataServerClientProtocolHeader target = new Header(DataServerCommand.ReadBlock);
             Guid expected = Guid.NewGuid();
-            target.BlockID = expected;
-            Assert.AreEqual(expected, target.BlockID);
+            target.BlockId = expected;
+            Assert.AreEqual(expected, target.BlockId);
         }
     }
 }

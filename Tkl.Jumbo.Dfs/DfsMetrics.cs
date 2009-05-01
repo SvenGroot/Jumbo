@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.IO;
+using System.Collections.ObjectModel;
 
 namespace Tkl.Jumbo.Dfs
 {
@@ -12,6 +13,8 @@ namespace Tkl.Jumbo.Dfs
     [Serializable]
     public class DfsMetrics
     {
+        private readonly Collection<DataServerMetrics> _dataServers = new Collection<DataServerMetrics>();
+
         /// <summary>
         /// Gets or sets the total size of all files.
         /// </summary>
@@ -39,7 +42,10 @@ namespace Tkl.Jumbo.Dfs
         /// <summary>
         /// Gets or sets a list of all data servers registered with the system.
         /// </summary>
-        public DataServerMetrics[] DataServers { get; set; }
+        public Collection<DataServerMetrics> DataServers
+        {
+            get { return _dataServers; }
+        }
 
         /// <summary>
         /// Prints the metrics.
@@ -51,7 +57,7 @@ namespace Tkl.Jumbo.Dfs
             writer.WriteLine("Blocks:           {0} (excl. pending blocks)", TotalBlockCount);
             writer.WriteLine("Under-replicated: {0}", UnderReplicatedBlockCount);
             writer.WriteLine("Pending blocks:   {0}", PendingBlockCount);
-            writer.WriteLine("Data servers:     {0}", DataServers.Length);
+            writer.WriteLine("Data servers:     {0}", DataServers.Count);
             foreach( ServerMetrics server in DataServers )
                 writer.WriteLine("  {0}", server);
         }

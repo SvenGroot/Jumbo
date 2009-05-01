@@ -10,6 +10,7 @@ using System.Threading;
 using System.Net;
 using System.Diagnostics;
 using Tkl.Jumbo.Dfs;
+using System.Collections.ObjectModel;
 
 namespace Tkl.Jumbo.Test.Dfs
 {
@@ -47,7 +48,7 @@ namespace Tkl.Jumbo.Test.Dfs
 
             public Guid ReceivedBlockID { get; private set; }
             public DataServerCommand ReceivedCommand { get; private set; }
-            public ServerAddress[] ReceivedDataServers { get; private set; }
+            public ReadOnlyCollection<ServerAddress> ReceivedDataServers { get; private set; }
             public List<Packet> ReceivedPackets { get; private set; }
             public DataServerClientProtocolResult LastResult { get; private set; }
             public int ReceivedOffset { get; private set; }
@@ -80,7 +81,7 @@ namespace Tkl.Jumbo.Test.Dfs
                         {
                             BinaryFormatter formatter = new BinaryFormatter();
                             DataServerClientProtocolWriteHeader header = (DataServerClientProtocolWriteHeader)formatter.Deserialize(stream);
-                            ReceivedBlockID = header.BlockID;
+                            ReceivedBlockID = header.BlockId;
                             ReceivedCommand = header.Command;
                             ReceivedDataServers = header.DataServers;
                             writer.Write((int)DataServerClientProtocolResult.Ok);
@@ -181,9 +182,7 @@ namespace Tkl.Jumbo.Test.Dfs
             BlockSenderServer server = new BlockSenderServer();
             Trace.WriteLine("Block sender created.");
             Guid blockID = Guid.NewGuid();
-            BlockAssignment assignment = new BlockAssignment();
-            assignment.BlockID = blockID;
-            assignment.DataServers = new ServerAddress[] { new ServerAddress("localhost", 15000) }.ToList();
+            BlockAssignment assignment = new BlockAssignment(blockID, new ServerAddress[] { new ServerAddress("localhost", 15000) });
             using( BlockSender target = new BlockSender(assignment) )
             {
                 DoTestBlockSender(blockID, server, target);
@@ -260,7 +259,7 @@ namespace Tkl.Jumbo.Test.Dfs
             Assert.IsNull(sender.LastException);
             Assert.AreEqual(blockID, server.ReceivedBlockID);
             Assert.AreEqual(DataServerCommand.WriteBlock, server.ReceivedCommand);
-            Assert.AreEqual(1, server.ReceivedDataServers.Length);
+            Assert.AreEqual(1, server.ReceivedDataServers.Count);
             Assert.AreEqual(new ServerAddress("localhost", 15000), server.ReceivedDataServers[0]);
             Assert.IsFalse(server.HasErrors);
             //Assert.AreEqual(31, sender.ReceivedConfirmations); // number of packets plus one for the header

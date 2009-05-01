@@ -111,24 +111,24 @@ namespace Tkl.Jumbo.Dfs
         /// </summary>
         /// <param name="sourceOffset">The offset in the packet to start copying the data from.</param>
         /// <param name="buffer">The buffer to copy the data to.</param>
-        /// <param name="destOffset">The offset in <paramref name="buffer"/> to start writing the data to.</param>
+        /// <param name="destinationOffset">The offset in <paramref name="buffer"/> to start writing the data to.</param>
         /// <param name="count">The maximum number of bytes to copy into the buffer.</param>
         /// <returns>The actual number of bytes written into the buffer.</returns>
-        public int CopyTo(int sourceOffset, byte[] buffer, int destOffset, int count)
+        public int CopyTo(int sourceOffset, byte[] buffer, int destinationOffset, int count)
         {
             if( buffer == null )
                 throw new ArgumentNullException("buffer");
             if( sourceOffset < 0 || sourceOffset >= Size )
                 throw new ArgumentOutOfRangeException("sourceOffset");
-            if( destOffset < 0 )
-                throw new ArgumentOutOfRangeException("destOffset");
+            if( destinationOffset < 0 )
+                throw new ArgumentOutOfRangeException("destinationOffset");
             if( count < 0 )
                 throw new ArgumentOutOfRangeException("count");
-            if( destOffset + count > buffer.Length )
+            if( destinationOffset + count > buffer.Length )
                 throw new ArgumentException("The combined value of destOffset and count is larger than the buffer size.");
 
             count = Math.Min(count, Size - sourceOffset);
-            Array.Copy(_data, sourceOffset, buffer, destOffset, count);
+            Array.Copy(_data, sourceOffset, buffer, destinationOffset, count);
             return count;
         }
 
@@ -136,17 +136,17 @@ namespace Tkl.Jumbo.Dfs
         /// Reads packet data from a <see cref="BinaryReader"/>.
         /// </summary>
         /// <param name="reader">The <see cref="BinaryReader"/> to read the packe data from.</param>
-        /// <param name="checkSumOnly"><see langword="true"/> if the data source contains only the checksum before the
+        /// <param name="checksumOnly"><see langword="true"/> if the data source contains only the checksum before the
         /// packet data; <see langword="false"/> if it contains the checksum, packet size and last packet flag.</param>
         /// <param name="verifyChecksum"><see langword="true"/> to verify the checksum read from the data source against
         /// the actual checksum of the data; <see langword="false"/> to skip verifying the checksum.</param>
-        public void Read(BinaryReader reader, bool checkSumOnly, bool verifyChecksum)
+        public void Read(BinaryReader reader, bool checksumOnly, bool verifyChecksum)
         {
             if( reader == null )
                 throw new ArgumentNullException("reader");
 
             uint expectedChecksum = reader.ReadUInt32();
-            if( checkSumOnly )
+            if( checksumOnly )
             {
                 // Determine the size from the stream length.
                 Size = (int)Math.Min(reader.BaseStream.Length - reader.BaseStream.Position, PacketSize);
@@ -182,15 +182,15 @@ namespace Tkl.Jumbo.Dfs
         /// Writes the packet to the specified <see cref="BinaryWriter"/>.
         /// </summary>
         /// <param name="writer">The <see cref="BinaryWriter"/> to write the packet to.</param>
-        /// <param name="checkSumOnly"><see langword="true"/> to write only the checksum before the
+        /// <param name="checksumOnly"><see langword="true"/> to write only the checksum before the
         /// packet data; <see langword="false"/> to write the checksum, packet size and last packet flag.</param>
-        public void Write(BinaryWriter writer, bool checkSumOnly)
+        public void Write(BinaryWriter writer, bool checksumOnly)
         {
             if( writer == null )
                 throw new ArgumentNullException("writer");
 
             writer.Write((uint)Checksum);
-            if( !checkSumOnly )
+            if( !checksumOnly )
             {
                 writer.Write(Size);
                 writer.Write(IsLastPacket ? 1 : 0); // Writing an int, not a boolean, to keep it word-aligned.

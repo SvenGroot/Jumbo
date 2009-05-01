@@ -170,7 +170,7 @@ namespace DataServerApplication
                 System.IO.File.Move(Path.Combine(_temporaryBlockStorageDirectory, blockID.ToString()), GetBlockFileName(blockID));
                 _blocks.Add(blockID);
             }
-            NewBlockHeartbeatData data = new NewBlockHeartbeatData() { BlockID = blockID, Size = size };
+            NewBlockHeartbeatData data = new NewBlockHeartbeatData() { BlockId = blockID, Size = size };
             GetDiskUsage(data);
             AddDataForNextHeartbeat(data);
             // We send the heartbeat immediately so the client knows that when the server comes back to him, the name server
@@ -225,7 +225,7 @@ namespace DataServerApplication
                 BlockReportHeartbeatData data;
                 lock( _blocks )
                 {
-                    data = new BlockReportHeartbeatData() { Blocks = _blocks.ToArray() };
+                    data = new BlockReportHeartbeatData(_blocks);
                     GetDiskUsage(data);
                 }
                 AddDataForNextHeartbeat(data);
@@ -341,16 +341,16 @@ namespace DataServerApplication
 
                     lock( _blocks )
                     {
-                        if( !_blocks.Contains(response.BlockAssignment.BlockID) )
+                        if( !_blocks.Contains(response.BlockAssignment.BlockId) )
                         {
-                            _log.WarnFormat("Received a command to replicate an unknown block with ID {0}.", response.BlockAssignment.BlockID);
+                            _log.WarnFormat("Received a command to replicate an unknown block with ID {0}.", response.BlockAssignment.BlockId);
                             return;
                         }
                     }
-                    _log.InfoFormat("Replicating block {0} to {1} data servers; first is {2}.", response.BlockAssignment.BlockID, response.BlockAssignment.DataServers.Count, response.BlockAssignment.DataServers[0]);
+                    _log.InfoFormat("Replicating block {0} to {1} data servers; first is {2}.", response.BlockAssignment.BlockId, response.BlockAssignment.DataServers.Count, response.BlockAssignment.DataServers[0]);
                     Packet packet = new Packet();
                     using( BlockSender sender = new BlockSender(response.BlockAssignment) )
-                    using( FileStream file = System.IO.File.OpenRead(GetBlockFileName(response.BlockAssignment.BlockID)) )
+                    using( FileStream file = System.IO.File.OpenRead(GetBlockFileName(response.BlockAssignment.BlockId)) )
                     using( BinaryReader reader = new BinaryReader(file) )
                     {
                         do
@@ -361,7 +361,7 @@ namespace DataServerApplication
                         sender.WaitUntilSendFinished();
                         sender.ThrowIfErrorOccurred();
                     }
-                    _log.InfoFormat("Finished replicating block {0}.", response.BlockAssignment.BlockID);
+                    _log.InfoFormat("Finished replicating block {0}.", response.BlockAssignment.BlockId);
                 }
                 catch( Exception ex )
                 {

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Collections.ObjectModel;
 
 namespace Tkl.Jumbo.Dfs
 {
@@ -11,9 +12,25 @@ namespace Tkl.Jumbo.Dfs
     [Serializable]
     public class BlockReportHeartbeatData : StatusHeartbeatData
     {
+        private readonly ReadOnlyCollection<Guid> _blocks;
+
         /// <summary>
-        /// Gets or sets the the block IDs of the blocks that this data server has.
+        /// Initializes a new instance of the <see cref="BlockReportHeartbeatData"/> class.
         /// </summary>
-        public Guid[] Blocks { get; set; }
+        /// <param name="blocks">The list of blocks that this data server has.</param>
+        public BlockReportHeartbeatData(IEnumerable<Guid> blocks)
+        {
+            if( blocks == null )
+                throw new ArgumentNullException("blocks");
+            _blocks = new List<Guid>(blocks).AsReadOnly();
+        }
+
+        /// <summary>
+        /// Gets the the block IDs of the blocks that this data server has.
+        /// </summary>
+        public ReadOnlyCollection<Guid> Blocks
+        {
+            get { return _blocks; }
+        }
     }
 }

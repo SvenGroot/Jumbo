@@ -15,7 +15,7 @@ namespace Tkl.Jumbo.Dfs
         /// <summary>
         /// Gets or sets the <see cref="Guid"/> identifying the block.
         /// </summary>
-        public Guid BlockID { get; set; }
+        public Guid BlockId { get; set; }
         /// <summary>
         /// Gets or sets the size in bytes of the block.
         /// </summary>

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Collections.ObjectModel;
 
 namespace Tkl.Jumbo.Dfs
 {
@@ -11,14 +12,33 @@ namespace Tkl.Jumbo.Dfs
     [Serializable]
     public class BlockAssignment
     {
-        /// <summary>
-        /// Gets or sets the unique identifier of this block.
-        /// </summary>
-        public Guid BlockID { get; set; }
+        private readonly ReadOnlyCollection<ServerAddress> _dataServers;
 
         /// <summary>
-        /// Gets or sets the data servers that have this block.
+        /// Initializes a new instance of the <see cref="BlockAssignment"/> class.
         /// </summary>
-        public List<ServerAddress> DataServers { get; set; }
+        /// <param name="blockId">The ID of the block.</param>
+        /// <param name="dataServers">The list of data servers that have this block.</param>
+        public BlockAssignment(Guid blockId, IEnumerable<ServerAddress> dataServers)
+        {
+            if( dataServers == null )
+                throw new ArgumentNullException("dataServers");
+
+            BlockId = blockId;
+            _dataServers = new List<ServerAddress>(dataServers).AsReadOnly();
+        }
+
+        /// <summary>
+        /// Gets the unique identifier of this block.
+        /// </summary>
+        public Guid BlockId { get; private set; }
+
+        /// <summary>
+        /// Gets the data servers that have this block.
+        /// </summary>
+        public ReadOnlyCollection<ServerAddress> DataServers
+        {
+            get { return _dataServers; }
+        }
     }
 }

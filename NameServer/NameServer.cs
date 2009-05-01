@@ -12,6 +12,7 @@ using System.Runtime.Remoting;
 using System.Diagnostics;
 using Tkl.Jumbo;
 using System.Threading;
+using System.Collections.ObjectModel;
 
 namespace NameServerApplication
 {
@@ -361,15 +362,17 @@ namespace NameServerApplication
             }
             lock( _dataServers )
             {
-                metrics.DataServers = (from server in _dataServers.Values
-                                       select new DataServerMetrics()
-                                       {
-                                           Address = server.Address,
-                                           LastContactUtc = server.LastContactUtc,
-                                           BlockCount = server.Blocks.Count,
-                                           DiskSpaceFree = server.DiskSpaceFree,
-                                           DiskSpaceUsed = server.DiskSpaceUsed
-                                       }).ToArray();
+                foreach( DataServerInfo server in _dataServers.Values )
+                {
+                    metrics.DataServers.Add(new DataServerMetrics()
+                    {
+                        Address = server.Address,
+                        LastContactUtc = server.LastContactUtc,
+                        BlockCount = server.Blocks.Count,
+                        DiskSpaceFree = server.DiskSpaceFree,
+                        DiskSpaceUsed = server.DiskSpaceUsed
+                    });
+                }
             }
             metrics.TotalSize = _fileSystem.TotalSize;
             return metrics;
@@ -557,11 +560,11 @@ namespace NameServerApplication
 
         private HeartbeatResponse ProcessNewBlock(DataServerInfo dataServer, NewBlockHeartbeatData newBlock)
         {
-            _log.InfoFormat("Data server {2} reports it has received block {0} of size {1}.", newBlock.BlockID, newBlock.Size, dataServer.Address);
+            _log.InfoFormat("Data server {2} reports it has received block {0} of size {1}.", newBlock.BlockId, newBlock.Size, dataServer.Address);
 
-            if( dataServer.Blocks.Contains(newBlock.BlockID) )
+            if( dataServer.Blocks.Contains(newBlock.BlockId) )
             {
-                _log.WarnFormat("Data server {0} already had block {1}.", dataServer.Address, newBlock.BlockID);
+                _log.WarnFormat("Data server {0} already had block {1}.", dataServer.Address, newBlock.BlockId);
                 return null;
             }
 
@@ -570,12 +573,12 @@ namespace NameServerApplication
             PendingBlock pendingBlock;
             lock( _pendingBlocks )
             {
-                if( _pendingBlocks.TryGetValue(newBlock.BlockID, out pendingBlock) )
+                if( _pendingBlocks.TryGetValue(newBlock.BlockId, out pendingBlock) )
                 {
                     // TODO: Should there be some kind of check whether the data server reporting this was actually
                     // one of the assigned servers?
                     pendingBlock.Block.DataServers.Add(dataServer);
-                    dataServer.Blocks.Add(newBlock.BlockID);
+                    dataServer.Blocks.Add(newBlock.BlockId);
                     if( pendingBlock.IncrementCommit() >= _replicationFactor )
                     {
                         commitBlock = true;
@@ -586,8 +589,8 @@ namespace NameServerApplication
             if( commitBlock )
             {
                 // CommitBlock will also call back into NameServer to commit the block on this side.
-                _log.InfoFormat("Pending block {0} is now fully replicated and is being committed.", newBlock.BlockID);
-                _fileSystem.CommitBlock(pendingBlock.Block.File.FullPath, newBlock.BlockID, newBlock.Size);
+                _log.InfoFormat("Pending block {0} is now fully replicated and is being committed.", newBlock.BlockId);
+                _fileSystem.CommitBlock(pendingBlock.Block.File.FullPath, newBlock.BlockId, newBlock.Size);
             }
             else if( pendingBlock == null )
             {
@@ -596,20 +599,20 @@ namespace NameServerApplication
                     lock( _underReplicatedBlocks )
                     {
                         BlockInfo block;
-                        if( _underReplicatedBlocks.TryGetValue(newBlock.BlockID, out block) )
+                        if( _underReplicatedBlocks.TryGetValue(newBlock.BlockId, out block) )
                         {
-                            dataServer.Blocks.Add(newBlock.BlockID);
+                            dataServer.Blocks.Add(newBlock.BlockId);
                             block.DataServers.Add(dataServer);
                             if( block.DataServers.Count >= _replicationFactor )
                             {
-                                _log.InfoFormat("Block {0} is now fully replicated.", newBlock.BlockID);
-                                _underReplicatedBlocks.Remove(newBlock.BlockID);
+                                _log.InfoFormat("Block {0} is now fully replicated.", newBlock.BlockId);
+                                _underReplicatedBlocks.Remove(newBlock.BlockId);
                             }
                         }
                         else
                         {
-                            _log.WarnFormat("Block {0} is not pending and not underreplicated.", newBlock.BlockID);
-                            response = new DeleteBlocksHeartbeatResponse(new Guid[] { newBlock.BlockID });
+                            _log.WarnFormat("Block {0} is not pending and not underreplicated.", newBlock.BlockId);
+                            response = new DeleteBlocksHeartbeatResponse(new Guid[] { newBlock.BlockId });
                         }
                     }
                 }
@@ -763,7 +766,7 @@ namespace NameServerApplication
                     _log.InfoFormat("Assigned data server for block {0}: {1}", blockId, address);
             }
 
-            return new BlockAssignment() { BlockID = blockId, DataServers = dataServers };
+            return new BlockAssignment(blockId, dataServers);
         }
 
         private void ReassignBlock(Guid blockId, BlockInfo block)

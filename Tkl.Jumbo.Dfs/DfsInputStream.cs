@@ -23,7 +23,7 @@ namespace Tkl.Jumbo.Dfs
         private readonly File _file;
         private long _position;
         private const int _bufferSize = 10;
-        private PacketBuffer _packetBuffer = new PacketBuffer(_bufferSize);
+        private readonly PacketBuffer _packetBuffer = new PacketBuffer(_bufferSize);
         private DataServerClientProtocolResult _lastResult = DataServerClientProtocolResult.Ok;
         private Exception _lastException;
         private Thread _fillBufferThread;
@@ -50,7 +50,7 @@ namespace Tkl.Jumbo.Dfs
             _file = nameServer.GetFileInfo(path);
             // GetFileInfo doesn't throw if the file doesn't exist; we do.
             if( _file == null )
-                throw new FileNotFoundException(string.Format("The file '{0}' does not exist on the distributed file system.", path));
+                throw new FileNotFoundException(string.Format(System.Globalization.CultureInfo.CurrentCulture, "The file '{0}' does not exist on the distributed file system.", path));
             _log.Debug("Retrieving block size.");
             BlockSize = nameServer.BlockSize;
             _log.Debug("DfsInputStream construction complete.");
@@ -300,9 +300,12 @@ namespace Tkl.Jumbo.Dfs
                     _fillBufferThread.Join();
                     _fillBufferThread = null;
                 }
+                if( _packetBuffer != null )
+                    _packetBuffer.Dispose();
             }
         }
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1031:DoNotCatchGeneralExceptionTypes")]
         private void ReadBufferThread()
         {
             Random rnd = new Random();
@@ -334,7 +337,7 @@ namespace Tkl.Jumbo.Dfs
                         }
                         catch( Exception ex )
                         {
-                            _log.Error(string.Format("Error reading block {0} from server {1}", block, server), ex);
+                            _log.Error(string.Format(System.Globalization.CultureInfo.CurrentCulture, "Error reading block {0} from server {1}", block, server), ex);
                             if( servers.Count > 1 )
                             {
                                 // We can retry with a different server.
@@ -364,7 +367,7 @@ namespace Tkl.Jumbo.Dfs
             {
                 _log.Debug("Connection established.");
                 DataServerClientProtocolReadHeader header = new DataServerClientProtocolReadHeader();
-                header.BlockID = block;
+                header.BlockId = block;
                 header.Offset = blockOffset;
                 header.Size = -1;
 

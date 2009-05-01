@@ -99,7 +99,7 @@ namespace Tkl.Jumbo.Dfs
             {
                 string name = newName ?? Name;
                 if( (from child in newParent.Children where child.Name == name select child).Count() > 0 )
-                    throw new ArgumentException(string.Format("The specified new parent already contains an entry with the name \"{0}\".", newName));
+                    throw new ArgumentException(string.Format(System.Globalization.CultureInfo.CurrentCulture, "The specified new parent already contains an entry with the name \"{0}\".", newName));
             }
 
             if( newName != null )

@@ -6,6 +6,10 @@
       <Word>Partitioner</Word>
       <Word>Decompressor</Word>
       <Word>Multi</Word>
+      <Word>Dfs</Word>
+      <Word>Crc</Word>
+      <Word>IPv4</Word>
+      <Word>IPv6</Word>
     </Recognized>
   </Words>
 </Dictionary>

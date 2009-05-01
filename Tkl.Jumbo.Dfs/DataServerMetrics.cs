@@ -32,7 +32,7 @@ namespace Tkl.Jumbo.Dfs
         /// <returns>A string representation of the <see cref="DataServerMetrics"/>.</returns>
         public override string ToString()
         {
-            return string.Format("{0}; {1} blocks; Used: {2:#,0}B; Free: {3:#,0}B", base.ToString(), BlockCount, DiskSpaceUsed, DiskSpaceFree);
+            return string.Format(System.Globalization.CultureInfo.CurrentCulture, "{0}; {1} blocks; Used: {2:#,0}B; Free: {3:#,0}B", base.ToString(), BlockCount, DiskSpaceUsed, DiskSpaceFree);
         }
     }
 }

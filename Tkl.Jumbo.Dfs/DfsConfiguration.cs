@@ -44,6 +44,7 @@ namespace Tkl.Jumbo.Dfs
         /// </summary>
         /// <returns>A <see cref="DfsConfiguration"/> object representing the settings in the application configuration file, or
         /// a default instance if the section was not present in the configuration file.</returns>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1024:UsePropertiesWhereAppropriate")]
         public static DfsConfiguration GetConfiguration()
         {
             DfsConfiguration config = (DfsConfiguration)ConfigurationManager.GetSection("tkl.jumbo.dfs");

@@ -23,7 +23,7 @@ namespace Tkl.Jumbo.Dfs
         private volatile Exception _lastException;
         private Thread _sendPacketsThread;
         private bool _hasLastPacket;
-        private readonly Guid _blockID;
+        private readonly Guid _blockId;
         private readonly ServerAddress[] _dataServers;
         private int _offset;
         private const int _maxQueueSize = Int32.MaxValue;
@@ -38,7 +38,7 @@ namespace Tkl.Jumbo.Dfs
             if( block == null )
                 throw new ArgumentNullException("block");
 
-            _blockID = block.BlockID;
+            _blockId = block.BlockId;
             _dataServers = block.DataServers.ToArray();
             _sendPacketsThread = new Thread(SendPacketsThread) { Name = "SendPackets" };
             _sendPacketsThread.Start();
@@ -55,16 +55,16 @@ namespace Tkl.Jumbo.Dfs
         /// <summary>
         /// Initializes a new instance of the <see cref="BlockSender"/> class for the specified block and data servers.
         /// </summary>
-        /// <param name="blockID">The <see cref="Guid"/> of the block to send.</param>
+        /// <param name="blockId">The <see cref="Guid"/> of the block to send.</param>
         /// <param name="dataServers">The list of data servers that the block should be sent to.</param>
         /// <exception cref="ArgumentNullException"><paramref name="dataServers"/> is <see langword="null" />.</exception>
-        public BlockSender(Guid blockID, ServerAddress[] dataServers)
+        public BlockSender(Guid blockId, IEnumerable<ServerAddress> dataServers)
         {
             if( dataServers == null )
                 throw new ArgumentNullException("dataServers");
 
-            _blockID = blockID;
-            _dataServers = dataServers;
+            _blockId = blockId;
+            _dataServers = dataServers.ToArray();
             _sendPacketsThread = new Thread(SendPacketsThread) { Name = "SendPackets", IsBackground = true };
             _sendPacketsThread.Start();
         }
@@ -227,6 +227,7 @@ namespace Tkl.Jumbo.Dfs
                 throw new DfsException("There was an error sending a packet to the server.", _lastException);
         }
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1031:DoNotCatchGeneralExceptionTypes")]
         private void SendPacketsThread(object data)
         {
             NetworkStream stream = (NetworkStream)data;
@@ -238,7 +239,7 @@ namespace Tkl.Jumbo.Dfs
                 {
                     ServerAddress server = _dataServers[0];
                     disposeClient = true;
-                    _log.DebugFormat("Connecting to data server {0} to write block {1}.", server, _blockID);
+                    _log.DebugFormat("Connecting to data server {0} to write block {1}.", server, _blockId);
                     client = new TcpClient(server.HostName, server.Port);
                     _log.Debug("Connection established.");
                     stream = client.GetStream();
@@ -342,9 +343,8 @@ namespace Tkl.Jumbo.Dfs
             else
             {
                 // Send the header
-                DataServerClientProtocolWriteHeader header = new DataServerClientProtocolWriteHeader();
-                header.BlockID = _blockID;
-                header.DataServers = _dataServers;
+                DataServerClientProtocolWriteHeader header = new DataServerClientProtocolWriteHeader(_dataServers);
+                header.BlockId = _blockId;
                 BinaryFormatter formatter = new BinaryFormatter();
                 formatter.Serialize(stream, header);
                 stream.Flush();
@@ -365,6 +365,8 @@ namespace Tkl.Jumbo.Dfs
                 _disposed = true;
                 if( _sendPacketsThread != null && _sendPacketsThread.IsAlive )
                     _sendPacketsThread.Abort();
+                if( _buffer != null )
+                    _buffer.Dispose();
             }
         }
 

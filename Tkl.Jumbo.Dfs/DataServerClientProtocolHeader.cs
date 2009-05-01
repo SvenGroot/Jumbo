@@ -27,6 +27,6 @@ namespace Tkl.Jumbo.Dfs
         /// <summary>
         /// Gets or sets the block ID to be read or written.
         /// </summary>
-        public Guid BlockID { get; set; }
+        public Guid BlockId { get; set; }
     }
 }
