@@ -80,6 +80,43 @@ namespace Tkl.Jumbo.IO
             return !object.Equals(left, right);
         }
 
+        /// <summary>
+        /// Checks if the first operand sorts before the right operand.
+        /// </summary>
+        /// <param name="left">The left operand of the comparison.</param>
+        /// <param name="right">The right operand of the comparison.</param>
+        /// <returns><see langword="true"/> if <paramref name="left"/> comes earlier in
+        /// the sort order than <paramref name="right"/>; otherwise, <see langword="false"/>.</returns>
+        public static bool operator <(WritableComparable<T> left, WritableComparable<T> right)
+        {
+            if( left == null )
+            {
+                if( right == null )
+                    return false;
+                else
+                    return true;
+            }
+            else
+                return left.CompareTo(right) < 0;
+        }
+
+        /// <summary>
+        /// Checks if the first operand sorts after the right operand.
+        /// </summary>
+        /// <param name="left">The left operand of the comparison.</param>
+        /// <param name="right">The right operand of the comparison.</param>
+        /// <returns><see langword="true"/> if <paramref name="left"/> comes later in
+        /// the sort order than <paramref name="right"/>; otherwise, <see langword="false"/>.</returns>
+        public static bool operator >(WritableComparable<T> left, WritableComparable<T> right)
+        {
+            if( left == null )
+            {
+                return false;
+            }
+            else
+                return left.CompareTo(right) > 0;
+        }
+
         #region IWritable Members
 
         /// <summary>

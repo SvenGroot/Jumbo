@@ -32,6 +32,7 @@ namespace Tkl.Jumbo.IO
         /// </summary>
         /// <param name="value">The string to convert.</param>
         /// <returns>A <see cref="Int32Writable"/> with the specified value.</returns>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2225:OperatorOverloadsHaveNamedAlternates")]
         public static implicit operator Int32Writable(int value)
         {
             return new Int32Writable(value);

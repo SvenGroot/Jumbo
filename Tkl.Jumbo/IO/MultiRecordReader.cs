@@ -30,10 +30,11 @@ namespace Tkl.Jumbo.IO
         /// </summary>
         /// <param name="readers">The readers to read from.</param>
         /// <param name="totalReaderCount">The total number of readers that this reader will use.</param>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1006:DoNotNestGenericTypesInMemberSignatures")]
         public MultiRecordReader(IEnumerable<RecordReader<T>> readers, int totalReaderCount)
         {
             if( totalReaderCount <= 0 )
-                throw new ArgumentOutOfRangeException("totalReaderCount must be larger than zero.");
+                throw new ArgumentOutOfRangeException("totalReaderCount", "totalReaderCount must be larger than zero.");
 
             _totalReaderCount = totalReaderCount;
 
@@ -47,7 +48,7 @@ namespace Tkl.Jumbo.IO
                     _currentReaderNumber = 1;
                 }
                 if( _readers.Count > totalReaderCount )
-                    throw new ArgumentOutOfRangeException("totalReaderCount is smaller than the initial reader count.");
+                    throw new ArgumentOutOfRangeException("totalReaderCount", "totalReaderCount is smaller than the initial reader count.");
                 _receivedReaderCount = _readers.Count;
             }
         }
@@ -77,22 +78,24 @@ namespace Tkl.Jumbo.IO
         /// <summary>
         /// Reads a record.
         /// </summary>
-        /// <param name="record">Receives the value of the record, or the default value of <typeparamref name="T"/> if it is beyond the end of the stream</param>
         /// <returns><see langword="true"/> if an object was successfully read from the stream; <see langword="false"/> if the end of the stream or stream fragment was reached.</returns>
-        protected override bool ReadRecordInternal(out T record)
+        protected override bool ReadRecordInternal()
         {
-            record = default(T);
             CheckDisposed();
             if( !WaitForReaders() )
                 return false;
 
-            while( !_currentReader.ReadRecord(out record) )
+            while( !_currentReader.ReadRecord() )
             {
                 _currentReader.Dispose();
                 _currentReader = null;
                 if( !WaitForReaders() )
+                {
+                    CurrentRecord = default(T);
                     return false;
+                }
             }
+            CurrentRecord = _currentReader.CurrentRecord;
             return true;
         }
 

@@ -107,10 +107,9 @@ namespace Tkl.Jumbo.Jet.Tasks
                             PreviousMergePassOutput previousOutput = previousMergePassOutputFiles[mergeOutputsProcessed];
                             RecordReader<T> reader = new BinaryRecordReader<T>(previousOutput.File, TaskAttemptConfiguration.AllowRecordReuse, JetConfiguration.FileChannel.DeleteIntermediateFiles, JetConfiguration.FileChannel.MergeTaskReadBufferSize, input.CompressionType, previousOutput.UncompressedSize);
                             previousMergePassOutputs.Add(reader);
-                            T item;
-                            if( reader.ReadRecord(out item) )
+                            if( reader.ReadRecord() )
                             {
-                                queue.Enqueue(new MergeInput() { Value = item, Reader = reader });
+                                queue.Enqueue(new MergeInput() { Value = reader.CurrentRecord, Reader = reader });
                             }
                             ++mergeOutputsProcessed;
                         }
@@ -164,10 +163,9 @@ namespace Tkl.Jumbo.Jet.Tasks
             {
                 MergeInput front = queue.Peek();
                 writer.WriteRecord(front.Value);
-                T nextItem;
-                if( front.Reader.ReadRecord(out nextItem) )
+                if( front.Reader.ReadRecord() )
                 {
-                    front.Value = nextItem;
+                    front.Value = front.Reader.CurrentRecord;
                     queue.AdjustFirstItem();
                 }
                 else
@@ -183,10 +181,9 @@ namespace Tkl.Jumbo.Jet.Tasks
             for( int x = start; x < end; ++x )
             {
                 RecordReader<T> reader = input[x];
-                T item;
-                if( reader.ReadRecord(out item) )
+                if( reader.ReadRecord() )
                 {
-                    yield return new MergeInput() { Reader = reader, Value = item };
+                    yield return new MergeInput() { Reader = reader, Value = reader.CurrentRecord };
                 }
             }
         }

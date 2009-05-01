@@ -10,7 +10,7 @@ namespace Tkl.Jumbo
     /// <summary>
     /// Provides compression functionality for streams.
     /// </summary>
-    public static class Compression
+    public static class CompressionUtility
     {
         #region Nested types
 
@@ -18,7 +18,7 @@ namespace Tkl.Jumbo
         /// Adds support for getting compressed and uncompressed size to <see cref="GZipStream"/>, needed because
         /// the file channel uses that to compute metrics and progress.
         /// </summary>
-        private class GZipCompressionStream : GZipStream, ICompressionStream
+        private class GZipCompressionStream : GZipStream, ICompressor
         {
             private long _bytesWritten;
             private long _bytesRead;
@@ -102,7 +102,7 @@ namespace Tkl.Jumbo
 
         #endregion
 
-        private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(Compression));
+        private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(CompressionUtility));
 
         /// <summary>
         /// Creates a compressor for the specified stream.

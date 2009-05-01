@@ -72,7 +72,7 @@ namespace Tkl.Jumbo
 
         #endregion
 
-        private void AddHostNameToMessage(IMessage msg)
+        private static void AddHostNameToMessage(IMessage msg)
         {
             LogicalCallContext context = (LogicalCallContext)msg.Properties["__CallContext"];
             context.SetData("HostName", System.Net.Dns.GetHostName());

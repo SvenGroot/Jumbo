@@ -14,6 +14,7 @@ namespace Tkl.Jumbo
     /// </para>
     /// </remarks>
     /// <threadsafety static="true" instance="false" />
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Naming", "CA1711:IdentifiersShouldNotHaveIncorrectSuffix"), System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Naming", "CA1710:IdentifiersShouldHaveCorrectSuffix")]
     public sealed class PriorityQueue<T> : IEnumerable<T>, System.Collections.ICollection
     {
         private readonly List<T> _heap; // List that stores the binary heap tree.

@@ -27,7 +27,7 @@ namespace Tkl.Jumbo
         /// <returns>A string representation of the current <see cref="ServerMetrics"/>.</returns>
         public override string ToString()
         {
-            return string.Format("{0}; Last contact: {1:0.0}s ago", Address, (DateTime.UtcNow - LastContactUtc).TotalSeconds);
+            return string.Format(System.Globalization.CultureInfo.CurrentCulture, "{0}; Last contact: {1:0.0}s ago", Address, (DateTime.UtcNow - LastContactUtc).TotalSeconds);
         }
     }
 }

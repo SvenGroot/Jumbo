@@ -43,7 +43,7 @@ namespace Tkl.Jumbo
         /// <param name="port">The port on which to listen.</param>
         /// <param name="listenIPv4AndIPv6">When IPv6 is available, <see langword="true"/> to listen on IPv4 as well as 
         /// IPv6; <see langword="false"/> to listen on IPv6 only. When IPv6 is not available, this parameter has no effect.</param>
-        [MethodImpl(MethodImplOptions.Synchronized)]
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Naming", "CA1709:IdentifiersShouldBeCasedCorrectly", MessageId = "Pv"), MethodImpl(MethodImplOptions.Synchronized)]
         public static void RegisterServerChannels(int port, bool listenIPv4AndIPv6)
         {
             if( _serverChannels == null )
@@ -90,6 +90,7 @@ namespace Tkl.Jumbo
         /// </summary>
         /// <param name="type">The type of the object to register.</param>
         /// <param name="objectUri">The uri at which the object will be accessible.</param>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1054:UriParametersShouldNotBeStrings", MessageId = "1#")]
         public static void RegisterService(Type type, string objectUri)
         {
             if( type == null )
@@ -126,7 +127,7 @@ namespace Tkl.Jumbo
                 {
                     if( !_abortRetries && (maxRetries == -1 || maxRetries > 0) )
                     {
-                        _log.Error(string.Format("An error occurred performing a remoting operation. Retrying in {0}.", retryInterval), ex);
+                        _log.Error(string.Format(System.Globalization.CultureInfo.InvariantCulture, "An error occurred performing a remoting operation. Retrying in {0}.", retryInterval), ex);
                         --maxRetries;
                         Thread.Sleep(retryInterval);
                     }
@@ -140,7 +141,7 @@ namespace Tkl.Jumbo
                 {
                     if( !_abortRetries && (maxRetries == -1 || maxRetries > 0) )
                     {
-                        _log.Error(string.Format("An error occurred performing a remoting operation. Retrying in {0}.", retryInterval), ex);
+                        _log.Error(string.Format(System.Globalization.CultureInfo.InvariantCulture, "An error occurred performing a remoting operation. Retrying in {0}.", retryInterval), ex);
                         --maxRetries;
                         Thread.Sleep(retryInterval);
                     }

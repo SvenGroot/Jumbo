@@ -130,10 +130,9 @@ namespace Tkl.Jumbo.Test.Jet
             using( DfsInputStream stream = dfsClient.OpenFile(outputFileName) )
             using( BinaryRecordReader<Int32Writable> reader = new BinaryRecordReader<Int32Writable>(stream) )
             {
-                Int32Writable record;
-                while( reader.ReadRecord(out record) )
+                while( reader.ReadRecord() )
                 {
-                    actual.Add(record.Value);
+                    actual.Add(reader.CurrentRecord.Value);
                 }
             }
 

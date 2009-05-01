@@ -53,37 +53,39 @@ namespace Tkl.Jumbo.IO
         }
 
         /// <summary>
+        /// Gets the current record.
+        /// </summary>
+        public T CurrentRecord { get; protected set; }
+
+        /// <summary>
         /// Reads a record.
         /// </summary>
-        /// <param name="record">Receives the value of the record, or the default value of <typeparamref name="T"/> if it is beyond the end of the stream</param>
         /// <returns><see langword="true"/> if an object was successfully read from the stream; <see langword="false"/> if the end of the stream or stream fragment was reached.</returns>
-        public bool ReadRecord(out T record)
+        public bool ReadRecord()
         {
-            bool result = ReadRecordInternal(out record);
+            bool result = ReadRecordInternal();
             if( result )
                 ++_recordsRead;
             return result;
         }
 
         /// <summary>
-        /// Reads a record.
+        /// Enumerates over all the records.
         /// </summary>
-        /// <param name="record">Receives the value of the record, or the default value of <typeparamref name="T"/> if it is beyond the end of the stream</param>
-        /// <returns><see langword="true"/> if an object was successfully read from the stream; <see langword="false"/> if the end of the stream or stream fragment was reached.</returns>
-        protected abstract bool ReadRecordInternal(out T record);
-
-        /// <summary>
-        /// Enumerates all records.
-        /// </summary>
-        /// <returns>An <see cref="IEnumerable{T}"/> that can be used to enumerate the records.</returns>
+        /// <returns>An implementation of <see cref="IEnumerable{T}"/> that enumerates over the records.</returns>
         public IEnumerable<T> EnumerateRecords()
         {
-            T record;
-            while( ReadRecord(out record) )
+            while( ReadRecord() )
             {
-                yield return record;
+                yield return CurrentRecord;
             }
         }
+
+        /// <summary>
+        /// Reads a record.
+        /// </summary>
+        /// <returns><see langword="true"/> if an object was successfully read from the stream; <see langword="false"/> if the end of the stream or stream fragment was reached.</returns>
+        protected abstract bool ReadRecordInternal();
 
         /// <summary>
         /// Cleans up all resources associated with this <see cref="RecordReader{T}"/>.
@@ -106,5 +108,6 @@ namespace Tkl.Jumbo.IO
         }
 
         #endregion
+
     }
 }

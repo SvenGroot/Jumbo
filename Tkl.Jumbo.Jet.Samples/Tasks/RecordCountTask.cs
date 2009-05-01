@@ -27,8 +27,7 @@ namespace Tkl.Jumbo.Jet.Samples.Tasks
         {
             _log.Info("Beginning count");
             int records = 0;
-            TInput record;
-            while( input.ReadRecord(out record) )
+            while( input.ReadRecord() )
             {
                 ++records;
             }

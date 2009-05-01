@@ -57,15 +57,14 @@ namespace Tkl.Jumbo.Jet.Samples.IO
         /// <summary>
         /// Reads a record.
         /// </summary>
-        /// <param name="record">Receives the value of the record, or <see langword="null"/> if it is beyond the end of the stream or stream fragment.</param>
         /// <returns><see langword="true"/> if an object was successfully read from the stream; <see langword="false"/> if the end of the stream or stream fragment was reached.</returns>
-        protected override bool ReadRecordInternal(out GenSortRecord record)
+        protected override bool ReadRecordInternal()
         {
             CheckDisposed();
 
             if( _position >= _end )
             {
-                record = null;
+                CurrentRecord = null;
                 return false;
             }
 
@@ -74,7 +73,7 @@ namespace Tkl.Jumbo.Jet.Samples.IO
             if( bytesRead != GenSortRecord.RecordSize )
                 throw new InvalidOperationException("Invalid input file format");
 
-            record = result;
+            CurrentRecord = result;
 
             _position += GenSortRecord.RecordSize;
             return true;

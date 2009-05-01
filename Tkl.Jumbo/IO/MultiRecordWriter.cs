@@ -20,6 +20,7 @@ namespace Tkl.Jumbo.IO
         /// </summary>
         /// <param name="writers">The writers to write the values to.</param>
         /// <param name="partitioner">The partitioner used to decide which writer to use for each value.</param>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1006:DoNotNestGenericTypesInMemberSignatures")]
         public MultiRecordWriter(IEnumerable<RecordWriter<T>> writers, IPartitioner<T> partitioner)
         {
             if( writers == null )
@@ -42,6 +43,7 @@ namespace Tkl.Jumbo.IO
         ///   Writing directly to any of these writers breaks the partitioning.
         /// </note>
         /// </remarks>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1006:DoNotNestGenericTypesInMemberSignatures")]
         public IEnumerable<RecordWriter<T>> Writers
         {
             get { return _writers; }

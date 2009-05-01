@@ -12,6 +12,8 @@ namespace Tkl.Jumbo.IO
     /// </summary>
     public class LineRecordReader : StreamRecordReader<StringWritable>
     {
+        #region Nested types
+
         // Unfortunately we cannot use StreamReader because with the buffering it does we cannot
         // accurately tell if we've passed beyond the end of the split.
         private class LineReader
@@ -98,6 +100,8 @@ namespace Tkl.Jumbo.IO
             }
         }
 
+        #endregion
+
         private const int _bufferSize = 4096;
         private LineReader _reader;
         private long _position;
@@ -133,25 +137,26 @@ namespace Tkl.Jumbo.IO
                 --_end;
             if( offset != 0 )
             {
-                StringWritable record;
-                ReadRecord(out record);
+                ReadRecord();
+                CurrentRecord = null;
             }
         }
 
         /// <summary>
         /// Reads a record.
         /// </summary>
-        /// <param name="record">Receives the value of the record, or <see langword="null"/> if it is beyond the end of the stream</param>
         /// <returns><see langword="true"/> if an object was successfully read from the stream; <see langword="false"/> if the end of the stream or stream fragment was reached.</returns>
-        protected override bool ReadRecordInternal(out StringWritable record)
+        protected override bool ReadRecordInternal()
         {
             CheckDisposed();
 
-            record = null;
             if( _position > _end )
+            {
+                CurrentRecord = null;
                 return false;
+            }
             int bytesProcessed;
-            record = _reader.ReadLine(out bytesProcessed);
+            CurrentRecord = _reader.ReadLine(out bytesProcessed);
             _position += bytesProcessed;
             return true;
         }

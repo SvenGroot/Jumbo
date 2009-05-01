@@ -8,7 +8,7 @@ namespace Tkl.Jumbo
     /// <summary>
     /// Interface for streams that compress data.
     /// </summary>
-    public interface ICompressionStream
+    public interface ICompressor
     {
         /// <summary>
         /// When compressing, gets the number of compressed bytes written.

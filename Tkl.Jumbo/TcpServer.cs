@@ -25,7 +25,7 @@ namespace Tkl.Jumbo
         /// </summary>
         /// <param name="localAddress">The local IP address that the server should bind to.</param>
         /// <param name="port">The port to listen on.</param>
-        public TcpServer(IPAddress localAddress, int port)
+        protected TcpServer(IPAddress localAddress, int port)
         {
             if( localAddress == null )
                 throw new ArgumentNullException("localAddress");
@@ -35,7 +35,7 @@ namespace Tkl.Jumbo
         /// <summary>
         /// Gets the underlying <see cref="EndPoint"/> for the current <see cref="TcpServer"/>.
         /// </summary>
-        public EndPoint LocalEndPoint
+        public EndPoint LocalEndpoint
         {
             get { return _listener.LocalEndpoint; }
         }

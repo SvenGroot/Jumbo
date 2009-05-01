@@ -77,21 +77,23 @@ namespace Tkl.Jumbo.IO
         /// Reads a record.
         /// </summary>
         /// <returns>The record, or the default value of <typeparamref name="T"/> if it is beyond the end of the stream.</returns>
-        protected override bool ReadRecordInternal(out T record)
+        protected override bool ReadRecordInternal()
         {
             CheckDisposed();
 
             if( Stream.Position == Stream.Length )
             {
-                record = default(T);
+                CurrentRecord = default(T);
                 Dispose(); // This will delete the file if necessary.
                 return false;
             }
+            T record;
             if( _allowRecordReuse )
                 record = _record;
             else
                 record = new T();
             record.Read(_reader);
+            CurrentRecord = record;
             return true;
         }
 
@@ -123,11 +125,11 @@ namespace Tkl.Jumbo.IO
                 }
                 catch( IOException ex )
                 {
-                    _log.Error(string.Format("Failed to delete file {0}.", _fileName), ex);
+                    _log.Error(string.Format(System.Globalization.CultureInfo.InvariantCulture, "Failed to delete file {0}.", _fileName), ex);
                 }
                 catch( UnauthorizedAccessException ex )
                 {
-                    _log.Error(string.Format("Failed to delete file {0}.", _fileName), ex);
+                    _log.Error(string.Format(System.Globalization.CultureInfo.InvariantCulture, "Failed to delete file {0}.", _fileName), ex);
                 }
             }
         }

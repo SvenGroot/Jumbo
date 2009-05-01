@@ -65,9 +65,8 @@ namespace Tkl.Jumbo.Test.Jet
             using( System.IO.FileStream stream = System.IO.File.OpenRead(System.IO.Path.Combine(path, "Task-001.OutputTask-001_DummyTask.output")) )
             using( BinaryRecordReader<Int32Writable> reader = new BinaryRecordReader<Int32Writable>(stream) )
             {
-                Int32Writable record;
-                Assert.IsTrue(reader.ReadRecord(out record));
-                Assert.AreEqual(2, record.Value);
+                Assert.IsTrue(reader.ReadRecord());
+                Assert.AreEqual(2, reader.CurrentRecord.Value);
             }
         }
 

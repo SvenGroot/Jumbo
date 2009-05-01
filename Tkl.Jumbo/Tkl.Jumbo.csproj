@@ -33,6 +33,7 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <DocumentationFile>bin\Release\Tkl.Jumbo.XML</DocumentationFile>
+    <RunCodeAnalysis>true</RunCodeAnalysis>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="log4net, Version=1.2.10.0, Culture=neutral, PublicKeyToken=1b44e1d426115821, processorArchitecture=MSIL">
@@ -53,11 +54,12 @@
     </Compile>
     <Compile Include="ClientChannelSink.cs" />
     <Compile Include="ClientChannelSinkProvider.cs" />
-    <Compile Include="Compression.cs" />
+    <Compile Include="CompressionUtility.cs" />
     <Compile Include="CompressionType.cs" />
     <Compile Include="DriveSpaceInfo.cs" />
     <Compile Include="Extensions.cs" />
-    <Compile Include="ICompressionStream.cs" />
+    <Compile Include="GlobalSuppressions.cs" />
+    <Compile Include="ICompressor.cs" />
     <Compile Include="IO\BinaryRecordReader.cs" />
     <Compile Include="IO\BinaryRecordWriter.cs" />
     <Compile Include="IO\EnumerableRecordReader.cs" />
@@ -96,6 +98,11 @@
   <ItemGroup>
     <None Include="jumbo.snk" />
     <None Include="Tkl.Jumbo.build" />
+  </ItemGroup>
+  <ItemGroup>
+    <CodeAnalysisDictionary Include="..\CodeAnalysisDictionary.xml">
+      <Link>CodeAnalysisDictionary.xml</Link>
+    </CodeAnalysisDictionary>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

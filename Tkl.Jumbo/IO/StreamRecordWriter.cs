@@ -45,7 +45,7 @@ namespace Tkl.Jumbo.IO
         {
             get
             {
-                ICompressionStream compressionStream = Stream as ICompressionStream;
+                ICompressor compressionStream = Stream as ICompressor;
                 if( compressionStream == null )
                     return 0;
                 else

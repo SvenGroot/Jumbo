@@ -17,8 +17,7 @@ namespace Tkl.Jumbo.Test.Tasks
         {
             _log.Info("Running");
             int lines = 0;
-            StringWritable line;
-            while( input.ReadRecord(out line) )
+            while( input.ReadRecord() )
             {
                 ++lines;
             }

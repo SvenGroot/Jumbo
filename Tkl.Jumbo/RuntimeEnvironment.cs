@@ -73,7 +73,7 @@ namespace Tkl.Jumbo
                     if( !string.IsNullOrEmpty(profileOptions) )
                         profileOptions += ",";
 
-                    startInfo.Arguments = string.Format("--profile=default:{0}file={1} {2}", profileOptions, profileOutputFile, startInfo.Arguments);
+                    startInfo.Arguments = string.Format(System.Globalization.CultureInfo.InvariantCulture, "--profile=default:{0}file={1} {2}", profileOptions, profileOutputFile, startInfo.Arguments);
                 }
                 startInfo.FileName = "mono";
             }

@@ -44,7 +44,7 @@ namespace Tkl.Jumbo
                     return i;
             }
             if( throwOnNotFound )
-                throw new ArgumentException(string.Format("Type {0} does not implement interface {1}.", type, interfaceType));
+                throw new ArgumentException(string.Format(System.Globalization.CultureInfo.CurrentCulture, "Type {0} does not implement interface {1}.", type, interfaceType));
             else
                 return null;
         }
