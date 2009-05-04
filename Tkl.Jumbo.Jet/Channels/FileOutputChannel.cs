@@ -15,6 +15,7 @@ namespace Tkl.Jumbo.Jet.Channels
         /// <summary>
         /// The name of the setting in <see cref="JobConfiguration.JobSettings"/> that overrides the global compression setting.
         /// </summary>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Naming", "CA1702:CompoundWordsShouldBeCasedCorrectly", MessageId = "TypeSetting")]
         public const string CompressionTypeSetting = "FileChannel.CompressionType";
 
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(FileOutputChannel));
@@ -53,7 +54,7 @@ namespace Tkl.Jumbo.Jet.Channels
                     else
                     {
                         string inputStageId = _taskExecution.Configuration.TaskId.CompoundStageId;
-                        int inputStageIndex = Array.IndexOf(channelConfig.InputStages, inputStageId);
+                        int inputStageIndex = channelConfig.InputStages.IndexOf(inputStageId);
                         int outputTaskNumber = 0;
                         for( int x = 0; x < inputStageIndex; ++x )
                         {
@@ -68,9 +69,9 @@ namespace Tkl.Jumbo.Jet.Channels
             }
             else
             {
-                if( channelConfig.OutputStages.Length > 0 )
+                if( channelConfig.OutputStages.Count > 0 )
                 {
-                    if( channelConfig.OutputStages.Length > 1 )
+                    if( channelConfig.OutputStages.Count > 1 )
                         throw new NotSupportedException("Point-to-point channels with more than one output stage are not supported.");
                     string outputStageId = channelConfig.OutputStages[0];
 
@@ -107,7 +108,7 @@ namespace Tkl.Jumbo.Jet.Channels
 
         internal static string CreateChannelFileName(string inputTaskID, string outputTaskID)
         {
-            return string.Format("{0}_{1}.output", inputTaskID, outputTaskID);
+            return string.Format(System.Globalization.CultureInfo.InvariantCulture, "{0}_{1}.output", inputTaskID, outputTaskID);
         }
 
         #region IOutputChannel members
@@ -117,6 +118,7 @@ namespace Tkl.Jumbo.Jet.Channels
         /// </summary>
         /// <typeparam name="T">The type of the records.</typeparam>
         /// <returns>A <see cref="RecordWriter{T}"/> for the channel.</returns>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1004:GenericMethodsShouldProvideTypeParameter")]
         public RecordWriter<T> CreateRecordWriter<T>() where T : IWritable, new()
         {
             if( _fileNames.Count == 1 )
@@ -142,7 +144,7 @@ namespace Tkl.Jumbo.Jet.Channels
             // If there are multiple input stages, we need to check which one we are and adjust the output task number according to the
             // number of tasks in the preceding input stages.
             string inputStageId = _taskExecution.Configuration.TaskId.CompoundStageId;
-            int inputStageIndex = Array.IndexOf(channelConfig.InputStages, inputStageId);
+            int inputStageIndex = channelConfig.InputStages.IndexOf(inputStageId);
 
             int outputTaskNumber = 0;
             IList<StageConfiguration> stages;

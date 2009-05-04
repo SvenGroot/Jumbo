@@ -29,7 +29,7 @@ namespace Tkl.Jumbo.Jet
             if( jobConfiguration == null )
                 throw new ArgumentNullException("jobConfiguration");
             if( stageConfiguration == null )
-                throw new ArgumentNullException("taskConfiguration");
+                throw new ArgumentNullException("stageConfiguration");
             if( localJobDirectory == null )
                 throw new ArgumentNullException("localJobDirectory");
             if( dfsJobDirectory == null )

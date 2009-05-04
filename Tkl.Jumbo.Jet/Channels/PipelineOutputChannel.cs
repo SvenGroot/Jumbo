@@ -88,9 +88,10 @@ namespace Tkl.Jumbo.Jet.Channels
         /// </summary>
         /// <typeparam name="T">The type of record.</typeparam>
         /// <returns>A record writer for the channel.</returns>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1004:GenericMethodsShouldProvideTypeParameter")]
         public Tkl.Jumbo.IO.RecordWriter<T> CreateRecordWriter<T>() where T : Tkl.Jumbo.IO.IWritable, new()
         {
-            List<StageConfiguration> childStages = _taskExecution.Configuration.StageConfiguration.ChildStages;
+            IList<StageConfiguration> childStages = _taskExecution.Configuration.StageConfiguration.ChildStages;
             if( childStages.Count == 1 && childStages[0].TaskCount == 1 )
                 return CreateRecordWriter<T>(_taskExecution.CreateAssociatedTask(childStages[0], 1));
             else

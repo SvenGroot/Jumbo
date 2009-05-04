@@ -19,6 +19,7 @@ namespace Tkl.Jumbo.Jet.Channels
         /// <remarks>
         /// If the task has more than one input, the record reader will combine all inputs, usually by serializing them.
         /// </remarks>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1004:GenericMethodsShouldProvideTypeParameter")]
         RecordReader<T> CreateRecordReader<T>() where T : IWritable, new();
 
         /// <summary>
@@ -34,6 +35,7 @@ namespace Tkl.Jumbo.Jet.Channels
         ///   This method is used to create the input for a <see cref="IMergeTask{TInput,TOutput}"/>.
         /// </para>
         /// </remarks>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1004:GenericMethodsShouldProvideTypeParameter")]
         MergeTaskInput<T> CreateMergeTaskInput<T>() where T : IWritable, new();
     }
 }

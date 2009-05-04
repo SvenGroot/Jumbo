@@ -23,8 +23,15 @@ namespace Tkl.Jumbo
                 throw new ArgumentNullException("target");
             if( collection == null )
                 throw new ArgumentNullException("collection");
-            foreach( T item in collection )
-                target.Add(item);
+
+            ExtendedCollection<T> extendedCollection = target as ExtendedCollection<T>;
+            if( extendedCollection != null )
+                extendedCollection.AddRange(collection);
+            else
+            {
+                foreach( T item in collection )
+                    target.Add(item);
+            }
         }
     }
 }

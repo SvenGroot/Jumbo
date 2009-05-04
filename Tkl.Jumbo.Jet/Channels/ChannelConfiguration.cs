@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Xml.Serialization;
 using Tkl.Jumbo.Dfs;
+using System.Collections.ObjectModel;
 
 namespace Tkl.Jumbo.Jet.Channels
 {
@@ -15,6 +16,8 @@ namespace Tkl.Jumbo.Jet.Channels
     {
         private string _partitionerTypeName;
         private Type _partitionerType;
+        private readonly ExtendedCollection<string> _inputStages = new ExtendedCollection<string>();
+        private readonly ExtendedCollection<string> _outputStages = new ExtendedCollection<string>();
 
         /// <summary>
         /// Gets or sets the type of the channel.
@@ -26,13 +29,19 @@ namespace Tkl.Jumbo.Jet.Channels
         /// Gets or sets the IDs of the stages whose tasks write to the channel.
         /// </summary>
         [XmlArrayItem("Stage")]
-        public string[] InputStages { get; set; }
+        public Collection<string> InputStages
+        {
+            get { return _inputStages; }
+        }
 
         /// <summary>
         /// Gets or sets the IDs of the stages whose tasks that read from the channel.
         /// </summary>
         [XmlArrayItem("Stage")]
-        public string[] OutputStages { get; set; }
+        public Collection<string> OutputStages
+        {
+            get { return _outputStages; }
+        }
 
         /// <summary>
         /// Gets or sets a value that indicates whether the file channel should always use TCP downloads.

@@ -16,7 +16,7 @@ namespace Tkl.Jumbo.Jet
         /// <summary>
         /// Gets or sets the ID of this task.
         /// </summary>
-        public string TaskID { get; set; }
+        public string TaskId { get; set; }
 
         /// <summary>
         /// Gets or sets the current state of the task.
@@ -75,7 +75,7 @@ namespace Tkl.Jumbo.Jet
         public XElement ToXml()
         {
             return new XElement("Task",
-                new XAttribute("id", TaskID),
+                new XAttribute("id", TaskId),
                 new XAttribute("state", State.ToString()),
                 new XAttribute("server", TaskServer.ToString()),
                 new XAttribute("attempts", Attempts.ToString(System.Globalization.CultureInfo.InvariantCulture)),
@@ -102,7 +102,7 @@ namespace Tkl.Jumbo.Jet
 
             TaskStatus status = new TaskStatus()
             {
-                TaskID = task.Attribute("id").Value,
+                TaskId = task.Attribute("id").Value,
                 State = (TaskState)Enum.Parse(typeof(TaskState), task.Attribute("state").Value),
                 TaskServer = new ServerAddress(task.Attribute("server").Value),
                 Attempts = (int)task.Attribute("attempts"),

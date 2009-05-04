@@ -162,7 +162,7 @@ namespace Tkl.Jumbo.Jet
             if( parts.Length != 2 )
                 throw new FormatException("Task ID doesn't have the format StageId-Number.");
             StageId = parts[0];
-            TaskNumber = Convert.ToInt32(parts[1]);
+            TaskNumber = Convert.ToInt32(parts[1], System.Globalization.CultureInfo.InvariantCulture);
         }
 
         private void BuildCompoundStageId(StringBuilder result)

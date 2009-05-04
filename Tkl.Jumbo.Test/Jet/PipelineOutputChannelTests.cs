@@ -82,13 +82,13 @@ namespace Tkl.Jumbo.Test.Jet
             stage = config.AddPointToPointStage("OutputTask", stage, typeof(LineAdderPushTask), ChannelType.Pipeline, null, null);
 
             // add a file channel with no outputs to collect the output in a dummy file.
-            config.Channels.Add(new ChannelConfiguration()
+            ChannelConfiguration channel = new ChannelConfiguration()
             {
                 ChannelType = ChannelType.File,
-                InputStages = new[] { "Task.OutputTask" },
-                OutputStages = new string[] { },
                 PartitionerType = typeof(HashPartitioner<Int32Writable>),
-            });
+            };
+            channel.InputStages.Add("Task.OutputTask");
+            config.Channels.Add(channel);
 
             return config;
         }

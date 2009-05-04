@@ -13,7 +13,7 @@ namespace Tkl.Jumbo.Jet
     /// Provides input for a merge task.
     /// </summary>
     /// <typeparam name="T">The type of record the merge task will read.</typeparam>
-    public sealed class MergeTaskInput<T> : IDisposable, IRecordReader, IEnumerable<RecordReader<T>>
+    public sealed class MergeTaskInput<T> : IDisposable, IRecordReader
         where T : IWritable, new()
     {
         #region Nested types
@@ -277,35 +277,6 @@ namespace Tkl.Jumbo.Jet
                     _disposed = true;
                 }
             }
-        }
-
-        #endregion
-
-        #region IEnumerable<RecordReader<T>> Members
-
-        /// <summary>
-        /// Returns an enumerator for this object.
-        /// </summary>
-        /// <returns>An enumerator for this object.</returns>
-        public IEnumerator<RecordReader<T>> GetEnumerator()
-        {
-            CheckDisposed();
-            if( Count < TotalInputCount )
-                throw new InvalidOperationException("Cannot enumerate until all inputs are available.");
-
-            foreach( Input input in _inputs )
-            {
-                yield return input.Reader;
-            }
-        }
-
-        #endregion
-
-        #region IEnumerable Members
-
-        System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator()
-        {
-            return GetEnumerator();
         }
 
         #endregion

@@ -13,10 +13,10 @@ namespace Tkl.Jumbo.Jet
     [Serializable]
     public class JetMetrics
     {
-        private readonly Collection<Guid> _runningJobs = new Collection<Guid>();
-        private readonly Collection<Guid> _finishedJobs = new Collection<Guid>();
-        private readonly Collection<Guid> _failedJobs = new Collection<Guid>();
-        private readonly Collection<TaskServerMetrics> _taskServers = new Collection<TaskServerMetrics>();
+        private readonly ExtendedCollection<Guid> _runningJobs = new ExtendedCollection<Guid>();
+        private readonly ExtendedCollection<Guid> _finishedJobs = new ExtendedCollection<Guid>();
+        private readonly ExtendedCollection<Guid> _failedJobs = new ExtendedCollection<Guid>();
+        private readonly ExtendedCollection<TaskServerMetrics> _taskServers = new ExtendedCollection<TaskServerMetrics>();
 
         /// <summary>
         /// Gets or sets the IDs of the running jobs.

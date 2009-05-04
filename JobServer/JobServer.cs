@@ -416,15 +416,15 @@ namespace JobServerApplication
                 bool jobFinished = false;
                 lock( _jobs )
                 {
-                    if( !_jobs.TryGetValue(data.JobID, out job) )
+                    if( !_jobs.TryGetValue(data.JobId, out job) )
                     {
-                        _log.WarnFormat("Data server {0} reported status for unknown job {1} (this may be the aftermath of a failed job).", server.Address, data.JobID);
+                        _log.WarnFormat("Data server {0} reported status for unknown job {1} (this may be the aftermath of a failed job).", server.Address, data.JobId);
                         return;
                     }
-                    TaskInfo task = job.Tasks[data.TaskID];
+                    TaskInfo task = job.Tasks[data.TaskId];
                     task.Progress = data.Progress;
                     if( data.Status == TaskAttemptStatus.Running )
-                        _log.InfoFormat("Task {0} reported progress: {1}%", Job.CreateFullTaskId(data.JobID, data.TaskID), (int)(task.Progress * 100));
+                        _log.InfoFormat("Task {0} reported progress: {1}%", Job.CreateFullTaskId(data.JobId, data.TaskId), (int)(task.Progress * 100));
 
                     if( data.Status > TaskAttemptStatus.Running )
                     {
@@ -438,12 +438,12 @@ namespace JobServerApplication
                             task.EndTimeUtc = DateTime.UtcNow;
                             task.State = TaskState.Finished;
                             task.TaskCompletedEvent.Set();
-                            _log.InfoFormat("Task {0} completed successfully.", Job.CreateFullTaskId(data.JobID, data.TaskID));
+                            _log.InfoFormat("Task {0} completed successfully.", Job.CreateFullTaskId(data.JobId, data.TaskId));
                             ++job.FinishedTasks;
                             break;
                         case TaskAttemptStatus.Error:
                             task.State = TaskState.Error;
-                            _log.WarnFormat("Task {0} encountered an error.", Job.CreateFullTaskId(data.JobID, data.TaskID));
+                            _log.WarnFormat("Task {0} encountered an error.", Job.CreateFullTaskId(data.JobId, data.TaskId));
                             TaskStatus failedAttempt = task.ToTaskStatus();
                             failedAttempt.EndTime = DateTime.UtcNow;
                             job.FailedTaskAttempts.Add(failedAttempt);
@@ -456,7 +456,7 @@ namespace JobServerApplication
                             }
                             else
                             {
-                                _log.ErrorFormat("Task {0} failed more than {1} times; aborting the job.", Job.CreateFullTaskId(data.JobID, data.TaskID), Configuration.JobServer.MaxTaskAttempts);
+                                _log.ErrorFormat("Task {0} failed more than {1} times; aborting the job.", Job.CreateFullTaskId(data.JobId, data.TaskId), Configuration.JobServer.MaxTaskAttempts);
                                 job.State = JobState.Failed;
                             }
                             ++job.Errors;
@@ -467,12 +467,12 @@ namespace JobServerApplication
                         {
                             if( job.State != JobState.Failed )
                             {
-                                _log.InfoFormat("Job {0}: all tasks in the job have finished.", data.JobID);
+                                _log.InfoFormat("Job {0}: all tasks in the job have finished.", data.JobId);
                                 job.State = JobState.Finished;
                             }
                             else
                             {
-                                _log.ErrorFormat("Job {0} failed.", data.JobID);
+                                _log.ErrorFormat("Job {0} failed.", data.JobId);
                                 foreach( TaskInfo jobTask in job.Tasks.Values )
                                 {
                                     if( jobTask.State <= TaskState.Running )
@@ -480,7 +480,7 @@ namespace JobServerApplication
                                 }
                             }
 
-                            _jobs.Remove(data.JobID);
+                            _jobs.Remove(data.JobId);
                             lock( _finishedJobs )
                                 _finishedJobs.Add(job.Job.JobId, job);
                             jobFinished = true;

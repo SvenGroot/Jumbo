@@ -64,8 +64,8 @@ public partial class job : System.Web.UI.Page
 
     private static HtmlTableRow CreateTaskTableRow(JobStatus job, TaskStatus task, bool useErrorEndTime, bool includeProgress)
     {
-        HtmlTableRow row = new HtmlTableRow() { ID = "TaskStatusRow_" + task.TaskID };
-        row.Cells.Add(new HtmlTableCell() { InnerText = task.TaskID });
+        HtmlTableRow row = new HtmlTableRow() { ID = "TaskStatusRow_" + task.TaskId };
+        row.Cells.Add(new HtmlTableCell() { InnerText = task.TaskId });
         row.Cells.Add(new HtmlTableCell() { InnerText = task.State.ToString() });
         row.Cells.Add(new HtmlTableCell() { InnerText = task.TaskServer == null ? "" : task.TaskServer.ToString() });
         row.Cells.Add(new HtmlTableCell() { InnerText = task.Attempts.ToString() });
@@ -85,7 +85,7 @@ public partial class job : System.Web.UI.Page
             }
             if( includeProgress )
                 row.Cells.Add(new HtmlTableCell() { InnerText = ((int)(task.Progress * 100)).ToString("0'%'") });
-            row.Cells.Add(new HtmlTableCell() { InnerHtml = string.Format("<a href=\"logfile.aspx?taskServer={0}&amp;port={1}&amp;job={2}&amp;task={3}&amp;attempt={4}\">View</a>", task.TaskServer.HostName, task.TaskServer.Port, job.JobId, task.TaskID, task.Attempts) });
+            row.Cells.Add(new HtmlTableCell() { InnerHtml = string.Format("<a href=\"logfile.aspx?taskServer={0}&amp;port={1}&amp;job={2}&amp;task={3}&amp;attempt={4}\">View</a>", task.TaskServer.HostName, task.TaskServer.Port, job.JobId, task.TaskId, task.Attempts) });
         }
         else
         {

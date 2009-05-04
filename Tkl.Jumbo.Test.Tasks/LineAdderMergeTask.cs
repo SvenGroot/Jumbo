@@ -18,8 +18,9 @@ namespace Tkl.Jumbo.Test.Tasks
             input.WaitForAllInputs(Timeout.Infinite);
             output.WriteRecord(input.Count);
             int lines = 0;
-            foreach( RecordReader<Int32Writable> reader in input )
+            for( int x = 0; x < input.Count; ++x )
             {
+                RecordReader<Int32Writable> reader = input[x];
                 foreach( Int32Writable record in reader.EnumerateRecords() )
                 {
                     lines += record.Value;

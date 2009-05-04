@@ -48,11 +48,14 @@ namespace Tkl.Jumbo.Jet.Jobs
         /// <summary>
         /// Sets the argument value.
         /// </summary>
-        /// <param name="obj">The object whose argument should be set.</param>
-        public void ApplyValue(object obj)
+        /// <param name="target">The object whose argument should be set.</param>
+        public void ApplyValue(object target)
         {
+            if( target == null )
+                throw new ArgumentNullException("target");
+
             if( Value != null )
-                _property.SetValue(obj, Value, null);
+                _property.SetValue(target, Value, null);
         }
 
         private static string GetArgumentName(PropertyInfo property)

@@ -27,7 +27,7 @@ namespace Tkl.Jumbo.Jet
         /// <returns>A string representation of the current <see cref="TaskServerMetrics"/>.</returns>
         public override string ToString()
         {
-            return string.Format("{0}; max tasks: {1}", base.ToString(), MaxTasks);
+            return string.Format(System.Globalization.CultureInfo.CurrentCulture, "{0}; max tasks: {1}", base.ToString(), MaxTasks);
         }
     }
 }

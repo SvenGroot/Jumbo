@@ -96,6 +96,7 @@ namespace Tkl.Jumbo.Jet
         /// <remarks>
         /// This is done as an extension because XML serialization doesn't like it if this method is on the actual class.
         /// </remarks>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1004:GenericMethodsShouldProvideTypeParameter")]
         public static RecordReader<T> CreateRecordReader<T>(this TaskDfsInput input, DfsClient dfsClient, TaskExecutionUtility taskExecution)
             where T : IWritable, new()
         {

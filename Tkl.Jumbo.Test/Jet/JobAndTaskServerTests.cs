@@ -114,7 +114,7 @@ namespace Tkl.Jumbo.Test.Jet
             JobConfiguration config = new JobConfiguration(typeof(MultiplierTask).Assembly);
             config.AddInputStage("MultiplyStage", dfsClient.NameServer.GetFileInfo("/settingsinput"), typeof(MultiplierTask), typeof(LineRecordReader), outputPath, typeof(BinaryRecordWriter<Int32Writable>));
             int factor = new Random().Next(2, 100);
-            config.JobSettings.Add("factor", factor.ToString());
+            config.AddTypedSetting("factor", factor);
 
             RunJob(dfsClient, config);
 

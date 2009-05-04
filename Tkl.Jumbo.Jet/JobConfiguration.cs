@@ -24,6 +24,9 @@ namespace Tkl.Jumbo.Jet
         /// </summary>
         public const string XmlNamespace = "http://www.tkl.iis.u-tokyo.ac.jp/schema/Jumbo/JobConfiguration";
         private static readonly XmlSerializer _serializer = new XmlSerializer(typeof(JobConfiguration));
+        private readonly ExtendedCollection<string> _assemblyFileNames = new ExtendedCollection<string>();
+        private readonly ExtendedCollection<StageConfiguration> _stages = new ExtendedCollection<StageConfiguration>();
+        private readonly ExtendedCollection<ChannelConfiguration> _channels = new ExtendedCollection<ChannelConfiguration>();
 
         /// <summary>
         /// Initializes a new instance of the <see cref="JobConfiguration"/> class.
@@ -48,29 +51,38 @@ namespace Tkl.Jumbo.Jet
         /// <param name="assemblyFileNames">The file names of the assemblies containing the task types for this class.</param>
         public JobConfiguration(params string[] assemblyFileNames)
         {
-            Stages = new Collection<StageConfiguration>();
-            Channels = new Collection<ChannelConfiguration>();
-            AssemblyFileNames = assemblyFileNames == null ? new Collection<string>() : new Collection<string>(assemblyFileNames.ToList());
+            if (assemblyFileNames != null)
+                _assemblyFileNames.AddRange(assemblyFileNames);
         }
 
         /// <summary>
         /// Gets the file name of the assembly holding the task classes.
         /// </summary>
-        public Collection<string> AssemblyFileNames { get; set; }
+        public Collection<string> AssemblyFileNames
+        {
+            get { return _assemblyFileNames; }
+        }
 
         /// <summary>
         /// Gets a list of stages.
-        /// </summary>
-        public Collection<StageConfiguration> Stages { get; set; }
+        /// </summary>  
+        public Collection<StageConfiguration> Stages
+        {
+            get { return _stages; }
+        }
 
         /// <summary>
         /// Gets a list of communication channels between the tasks.
         /// </summary>
-        public Collection<Channels.ChannelConfiguration> Channels { get; set; }
+        public Collection<ChannelConfiguration> Channels
+        {
+            get { return _channels; }
+        }
 
         /// <summary>
         /// Gets a list of settings that can be accessed by the tasks in this job.
         /// </summary>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2227:CollectionPropertiesShouldBeReadOnly")]
         public SettingsDictionary JobSettings { get; set; }
 
         /// <summary>
@@ -201,12 +213,12 @@ namespace Tkl.Jumbo.Jet
 
                     ChannelConfiguration channel = new ChannelConfiguration()
                     {
-                        InputStages = (from s in inputStages select s.CompoundStageId).ToArray(),
-                        OutputStages = new[] { stageId },
                         ChannelType = channelType,
                         PartitionerType = partitionerType ?? typeof(HashPartitioner<>).MakeGenericType(inputType),
                         Connectivity = connectivity
                     };
+                    channel.InputStages.AddRange(from s in inputStages select s.CompoundStageId);
+                    channel.OutputStages.Add(stageId);
                     Channels.Add(channel);
                 }
                 Stages.Add(stage);
@@ -280,8 +292,6 @@ namespace Tkl.Jumbo.Jet
         private static void AddChildStage(Type partitionerType, Type inputType, StageConfiguration stage, StageConfiguration parentStage)
         {
             stage.ParentStage = parentStage;
-            if( parentStage.ChildStages == null )
-                parentStage.ChildStages = new List<StageConfiguration>();
             parentStage.ChildStages.Add(stage);
             if( parentStage.ChildStagePartitionerType != null && partitionerType != null && parentStage.ChildStagePartitionerType != partitionerType )
                 throw new ArgumentException("The partitioner type for the pipeline output channel of the specified task is already specified.");
@@ -315,7 +325,6 @@ namespace Tkl.Jumbo.Jet
             };
             if( inputs != null )
             {
-                stage.DfsInputs = new List<TaskDfsInput>();
                 foreach( File file in inputs )
                 {
                     for( int block = 0; block < file.Blocks.Count; ++block )

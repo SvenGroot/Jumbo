@@ -39,10 +39,12 @@ namespace Tkl.Jumbo.Jet.Tasks
         /// The name of the setting in <see cref="StageConfiguration.StageSettings"/> that specified the maximum number
         /// of files to merge in one pass.
         /// </summary>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1000:DoNotDeclareStaticMembersOnGenericTypes")]
         public const string MaxMergeInputsSetting = "MergeSortTask.MaxMergeTasks";
         /// <summary>
         /// The default maximum number of files to merge in one pass.
         /// </summary>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1000:DoNotDeclareStaticMembersOnGenericTypes")]
         public const int DefaultMaxMergeInputs = 100;
 
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(MergeSortTask<T>));

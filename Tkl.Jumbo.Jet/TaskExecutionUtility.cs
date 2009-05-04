@@ -142,9 +142,9 @@ namespace Tkl.Jumbo.Jet
                     ChannelType = ChannelType.Pipeline,
                     Connectivity = ChannelConnectivity.Full,
                     PartitionerType = Configuration.StageConfiguration.ChildStagePartitionerType,
-                    InputStages = new[] { Configuration.StageConfiguration.StageId },
-                    OutputStages = (from stage in Configuration.StageConfiguration.ChildStages select stage.StageId).ToArray()
                 };
+                OutputChannelConfiguration.InputStages.Add(Configuration.StageConfiguration.StageId);
+                OutputChannelConfiguration.OutputStages.AddRange(from stage in Configuration.StageConfiguration.ChildStages select stage.StageId);
             }
 
             _log.DebugFormat("Loading type {0}.", Configuration.StageConfiguration.TaskTypeName);
@@ -256,6 +256,7 @@ namespace Tkl.Jumbo.Jet
         /// </summary>
         /// <typeparam name="T">The type of records for the task's output</typeparam>
         /// <returns>A <see cref="RecordWriter{T}"/> that writes to the task's output channel or DFS output.</returns>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1004:GenericMethodsShouldProvideTypeParameter")]
         public RecordWriter<T> GetOutputWriter<T>()
             where T : IWritable, new()
         {
@@ -273,6 +274,7 @@ namespace Tkl.Jumbo.Jet
         /// <remarks>
         /// You should call <see cref="GetInputReader{T}"/> or <see cref="GetMergeTaskInput{T}"/>, never both on the same instance.
         /// </remarks>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1004:GenericMethodsShouldProvideTypeParameter")]
         public RecordReader<T> GetInputReader<T>()
             where T : IWritable, new()
         {
@@ -293,6 +295,7 @@ namespace Tkl.Jumbo.Jet
         /// <remarks>
         /// You should call <see cref="GetInputReader{T}"/> or <see cref="GetMergeTaskInput{T}"/>, never both on the same instance.
         /// </remarks>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1004:GenericMethodsShouldProvideTypeParameter")]
         public MergeTaskInput<T> GetMergeTaskInput<T>()
             where T : IWritable, new()
         {
@@ -326,6 +329,7 @@ namespace Tkl.Jumbo.Jet
         /// <typeparam name="TInput">The input record type of the task.</typeparam>
         /// <typeparam name="TOutput">The output record type of the task.</typeparam>
         /// <returns>An instance of <see cref="TaskType"/>.</returns>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1004:GenericMethodsShouldProvideTypeParameter")]
         public ITask<TInput, TOutput> GetTaskInstance<TInput, TOutput>()
             where TInput : IWritable, new()
             where TOutput : IWritable, new()
@@ -500,7 +504,7 @@ namespace Tkl.Jumbo.Jet
             }
             else if( OutputChannel != null )
             {
-                _log.DebugFormat("Creating output channel record writer.");
+                _log.Debug("Creating output channel record writer.");
                 return OutputChannel.CreateRecordWriter<T>();
             }
             else

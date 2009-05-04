@@ -40,10 +40,10 @@ public class jobinfo : IHttpHandler
                 if( task.State >= TaskState.Finished )
                 {
                     ITaskServerClientProtocol taskServer = JetClient.CreateTaskServerClient(task.TaskServer);
-                    string log = taskServer.GetTaskLogFileContents(jobId, task.TaskID, task.Attempts, Int32.MaxValue);
+                    string log = taskServer.GetTaskLogFileContents(jobId, task.TaskId, task.Attempts, Int32.MaxValue);
                     if( log != null )
                     {
-                        stream.PutNextEntry(new ZipEntry(string.Format("{0}_{1}.log", task.TaskID, task.Attempts)));
+                        stream.PutNextEntry(new ZipEntry(string.Format("{0}_{1}.log", task.TaskId, task.Attempts)));
                         byte[] logBytes = System.Text.Encoding.UTF8.GetBytes(log);
                         stream.Write(logBytes, 0, logBytes.Length);
                     }

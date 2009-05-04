@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Xml.Serialization;
+using System.Collections.ObjectModel;
 
 namespace Tkl.Jumbo.Jet
 {
@@ -19,6 +20,8 @@ namespace Tkl.Jumbo.Jet
         private string _childStagePartitionerTypeName;
         private Type _childStagePartitionerType;
         private int _taskCount;
+        private readonly ExtendedCollection<TaskDfsInput> _dfsInputs = new ExtendedCollection<TaskDfsInput>();
+        private readonly ExtendedCollection<StageConfiguration> _childStages = new ExtendedCollection<StageConfiguration>();
 
         /// <summary>
         /// Gets or sets the unique identifier for the stage.
@@ -96,12 +99,18 @@ namespace Tkl.Jumbo.Jet
         /// If this property is not <see langword="null"/>, then the stage will have as many tasks as there are inputs, and
         /// the <see cref="TaskCount"/> property will be ignored.
         /// </remarks>
-        public List<TaskDfsInput> DfsInputs { get; set; }
+        public Collection<TaskDfsInput> DfsInputs
+        {
+            get { return _dfsInputs; }
+        }
 
         /// <summary>
         /// Gets or sets a list of child stages that will be connected to this stage's tasks via a <see cref="Channels.PipelineOutputChannel"/>.
         /// </summary>
-        public List<StageConfiguration> ChildStages { get; set; }
+        public Collection<StageConfiguration> ChildStages
+        {
+            get { return _childStages; }
+        }
 
         /// <summary>
         /// Gets or sets the name of the type of the partitioner to use to partitioner elements amount the child stages' tasks.
@@ -139,6 +148,7 @@ namespace Tkl.Jumbo.Jet
         /// <summary>
         /// Gets or sets a list of settings that are specific to this task.
         /// </summary>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2227:CollectionPropertiesShouldBeReadOnly")]
         public SettingsDictionary StageSettings { get; set; }
 
         /// <summary>

@@ -48,19 +48,19 @@ namespace Tkl.Jumbo.Jet.Jobs
                 if( ArgumentType.IsEnum )
                     return Enum.Parse(ArgumentType, argument);
                 else
-                    return Convert.ChangeType(argument, ArgumentType);
+                    return Convert.ChangeType(argument, ArgumentType, System.Globalization.CultureInfo.InvariantCulture);
             }
             catch( InvalidCastException ex )
             {
-                throw new InvalidCastException(string.Format("Could not convert the value of argument {0} to type {1}.", Name, ArgumentType.FullName), ex);
+                throw new InvalidCastException(string.Format(System.Globalization.CultureInfo.CurrentCulture, "Could not convert the value of argument {0} to type {1}.", Name, ArgumentType.FullName), ex);
             }
             catch( FormatException ex )
             {
-                throw new InvalidCastException(string.Format("Could not convert the value of argument {0} to type {1}.", Name, ArgumentType.FullName), ex);
+                throw new InvalidCastException(string.Format(System.Globalization.CultureInfo.CurrentCulture, "Could not convert the value of argument {0} to type {1}.", Name, ArgumentType.FullName), ex);
             }
             catch( ArgumentException ex )
             {
-                throw new InvalidCastException(string.Format("Could not convert the value of argument {0} to type {1}.", Name, ArgumentType.FullName), ex);
+                throw new InvalidCastException(string.Format(System.Globalization.CultureInfo.CurrentCulture, "Could not convert the value of argument {0} to type {1}.", Name, ArgumentType.FullName), ex);
             }
         }
     }

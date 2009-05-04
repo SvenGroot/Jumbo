@@ -55,6 +55,7 @@
     <Compile Include="ClientChannelSink.cs" />
     <Compile Include="ClientChannelSinkProvider.cs" />
     <Compile Include="CollectionExtensions.cs" />
+    <Compile Include="ExtendedCollection.cs" />
     <Compile Include="CompressionUtility.cs" />
     <Compile Include="CompressionType.cs" />
     <Compile Include="DriveSpaceInfo.cs" />

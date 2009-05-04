@@ -292,7 +292,7 @@ namespace TaskServerApplication
 
         private void RunTask(RunTaskJetHeartbeatResponse task)
         {
-            _log.InfoFormat("Running task {{{0}}}_{1}.", task.Job.JobId, task.TaskID);
+            _log.InfoFormat("Running task {{{0}}}_{1}.", task.Job.JobId, task.TaskId);
             string jobDirectory = _taskServer.GetJobDirectory(task.Job.JobId);
             JobConfiguration config;
             if( !IO.Directory.Exists(jobDirectory) )
@@ -308,7 +308,7 @@ namespace TaskServerApplication
             }
             else
                 config = _jobConfigurations[task.Job.JobId];
-            TaskId taskId = new TaskId(task.TaskID);
+            TaskId taskId = new TaskId(task.TaskId);
             StageConfiguration stageConfig = config.GetStage(taskId.StageId);
             RunningTask runningTask;
             lock( _runningTasks )

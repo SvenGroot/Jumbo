@@ -14,8 +14,8 @@ namespace Tkl.Jumbo.Jet
     [Serializable]
     public class JobStatus
     {
-        private Collection<TaskStatus> _tasks = new Collection<TaskStatus>();
-        private Collection<TaskStatus> _failedTaskAttempts = new Collection<TaskStatus>();
+        private ExtendedCollection<TaskStatus> _tasks = new ExtendedCollection<TaskStatus>();
+        private ExtendedCollection<TaskStatus> _failedTaskAttempts = new ExtendedCollection<TaskStatus>();
 
         internal const string DatePattern = "yyyy'-'MM'-'dd' 'HH':'mm':'ss'.'fff'Z'";
 
@@ -30,7 +30,6 @@ namespace Tkl.Jumbo.Jet
         public Collection<TaskStatus> Tasks
         {
             get { return _tasks; }
-            set { _tasks = value; }
         }
 
         /// <summary>
@@ -39,7 +38,6 @@ namespace Tkl.Jumbo.Jet
         public Collection<TaskStatus> FailedTaskAttempts
         {
             get { return _failedTaskAttempts; }
-            set { _failedTaskAttempts = value; }
         }
 
         /// <summary>

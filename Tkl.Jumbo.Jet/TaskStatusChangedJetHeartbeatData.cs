@@ -14,17 +14,17 @@ namespace Tkl.Jumbo.Jet
         /// <summary>
         /// Initializes a new instance of the <see cref="TaskStatusChangedJetHeartbeatData"/> class.
         /// </summary>
-        /// <param name="jobID">The job ID.</param>
-        /// <param name="taskID">The task ID.</param>
+        /// <param name="jobId">The job ID.</param>
+        /// <param name="taskId">The task ID.</param>
         /// <param name="status">The new status.</param>
         /// <param name="progress">The progress of the task.</param>
-        public TaskStatusChangedJetHeartbeatData(Guid jobID, string taskID, TaskAttemptStatus status, float progress)
+        public TaskStatusChangedJetHeartbeatData(Guid jobId, string taskId, TaskAttemptStatus status, float progress)
         {
-            if( taskID == null )
-                throw new ArgumentNullException("taskID");
+            if( taskId == null )
+                throw new ArgumentNullException("taskId");
 
-            JobID = jobID;
-            TaskID = taskID;
+            JobId = jobId;
+            TaskId = taskId;
             Status = status;
             Progress = progress;
         }
@@ -32,12 +32,12 @@ namespace Tkl.Jumbo.Jet
         /// <summary>
         /// Gets the ID of the job containing the task.
         /// </summary>
-        public Guid JobID { get; private set; }
+        public Guid JobId { get; private set; }
 
         /// <summary>
         /// Gets the ID of the task whose status has changed.
         /// </summary>
-        public string TaskID { get; private set; }
+        public string TaskId { get; private set; }
 
         /// <summary>
         /// Gets the new status of the task.

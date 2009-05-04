@@ -13,7 +13,8 @@
     <TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <SignAssembly>true</SignAssembly>
-    <AssemblyOriginatorKeyFile>jumbo.snk</AssemblyOriginatorKeyFile>
+    <AssemblyOriginatorKeyFile>
+    </AssemblyOriginatorKeyFile>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -67,7 +68,6 @@
     </None>
     <None Include="App.config" />
     <None Include="JetShell.build" />
-    <None Include="jumbo.snk" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Tkl.Jumbo.Dfs\Tkl.Jumbo.Dfs.csproj">

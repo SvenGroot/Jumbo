@@ -61,7 +61,7 @@ namespace Tkl.Jumbo.Jet.Channels
                 {
                     IList<StageConfiguration> stages = taskExecution.Configuration.JobConfiguration.GetPipelinedStages(inputStageId);
                     if( stages == null )
-                        throw new ArgumentException(string.Format("Input stage ID {0} could not be found.", inputStageId));
+                        throw new ArgumentException(string.Format(System.Globalization.CultureInfo.CurrentCulture, "Input stage ID {0} could not be found.", inputStageId));
                     GetInputTaskIdsFull(stages, 0, null);
                 }
                 break;
@@ -104,6 +104,7 @@ namespace Tkl.Jumbo.Jet.Channels
         /// <remarks>
         /// This function will create a <see cref="MultiRecordReader{T}"/> that serializes the data from all the different input tasks.
         /// </remarks>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1004:GenericMethodsShouldProvideTypeParameter")]
         public RecordReader<T> CreateRecordReader<T>() where T : IWritable, new()
         {
             if( _inputPollThread != null )
@@ -125,6 +126,7 @@ namespace Tkl.Jumbo.Jet.Channels
         /// </summary>
         /// <typeparam name="T">The type of the records.</typeparam>
         /// <returns>A <see cref="MergeTaskInput{T}"/> that provides access to a list of <see cref="RecordReader{T}"/> instances.</returns>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1004:GenericMethodsShouldProvideTypeParameter")]
         public MergeTaskInput<T> CreateMergeTaskInput<T>()
             where T : IWritable, new()
         {
@@ -304,7 +306,7 @@ namespace Tkl.Jumbo.Jet.Channels
                     memoryStream = _memoryStorage.AddStreamIfSpaceAvailable((int)uncompressedSize);
                     if( memoryStream == null )
                     {
-                        targetFile = Path.Combine(_jobDirectory, string.Format("{0}_{1}.input", task.TaskId, outputTaskId));
+                        targetFile = Path.Combine(_jobDirectory, string.Format(System.Globalization.CultureInfo.InvariantCulture, "{0}_{1}.input", task.TaskId, outputTaskId));
                         using( FileStream fileStream = File.Create(targetFile) )
                         {
                             stream.CopySize(fileStream, size);
@@ -324,7 +326,7 @@ namespace Tkl.Jumbo.Jet.Channels
                     return targetFile;
                 }
                 else
-                    throw new Exception(); // TODO: Recover from this.
+                    throw new InvalidOperationException(); // TODO: Recover from this.
             }
         }
 

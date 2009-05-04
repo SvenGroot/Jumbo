@@ -181,7 +181,7 @@ namespace Tkl.Jumbo.Test.Jet
             Assert.AreEqual(stage, target.Stages[2]);
 
             Assert.AreEqual("SecondStage", stage.StageId);
-            Assert.IsNull(stage.DfsInputs);
+            Assert.AreEqual(0, stage.DfsInputs.Count);
             if( useOutput )
             {
                 Assert.IsNotNull(stage.DfsOutput);
@@ -222,7 +222,7 @@ namespace Tkl.Jumbo.Test.Jet
             Assert.AreEqual(stage, target.Stages[1]);
 
             Assert.AreEqual("SecondStage", stage.StageId);
-            Assert.IsNull(stage.DfsInputs);
+            Assert.AreEqual(0, stage.DfsInputs.Count);
             if( useOutput )
             {
                 Assert.IsNotNull(stage.DfsOutput);

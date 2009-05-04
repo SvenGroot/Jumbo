@@ -193,7 +193,7 @@ namespace Tkl.Jumbo.Jet.Jobs
             int arg;
             StringBuilder logMessage = new StringBuilder("Creating job runner for job ");
             logMessage.Append(Name);
-            for( arg = 0; arg < args.Length && args[arg].StartsWith("-"); ++arg )
+            for( arg = 0; arg < args.Length && args[arg].StartsWith("-", StringComparison.Ordinal); ++arg )
             {
                 string argumentName = args[arg].Substring(1);
                 JobRunnerNamedArgument argument;
@@ -207,7 +207,7 @@ namespace Tkl.Jumbo.Jet.Jobs
                         if( arg < args.Length )
                             argument.Value = argument.ConvertToArgumentType(args[arg]);
                         else
-                            throw new ArgumentException(string.Format("Argument {0} has no value.", argument.Name));
+                            throw new ArgumentException(string.Format(System.Globalization.CultureInfo.CurrentCulture, "Argument {0} has no value.", argument.Name));
                     }
 
                     logMessage.Append(", ");
@@ -227,7 +227,7 @@ namespace Tkl.Jumbo.Jet.Jobs
             {
                 if( x + arg < args.Length )
                 {
-                    if( args[x + arg].StartsWith("-") )
+                    if( args[x + arg].StartsWith("-", StringComparison.Ordinal) )
                         throw new ArgumentException("You cannot use a named argument after a positional argument.");
                     typedArguments[x] = _arguments[x].ConvertToArgumentType(args[x + arg]);
                 }

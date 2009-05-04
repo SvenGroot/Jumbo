@@ -116,7 +116,7 @@ namespace JobServerApplication
         {
             return new TaskStatus()
             {
-                TaskID = TaskId.ToString(),
+                TaskId = TaskId.ToString(),
                 State = State,
                 TaskServer = Server == null ? null : Server.Address,
                 Attempts = Attempts,

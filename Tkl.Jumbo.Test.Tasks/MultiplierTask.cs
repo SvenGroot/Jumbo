@@ -13,7 +13,7 @@ namespace Tkl.Jumbo.Test.Tasks
 
         public void Run(RecordReader<StringWritable> input, RecordWriter<Int32Writable> output)
         {
-            int factor = Convert.ToInt32(TaskAttemptConfiguration.JobConfiguration.JobSettings["factor"]);
+            int factor = TaskAttemptConfiguration.JobConfiguration.GetTypedSetting("factor", 0);
 
             foreach( StringWritable record in input.EnumerateRecords() )
             {
