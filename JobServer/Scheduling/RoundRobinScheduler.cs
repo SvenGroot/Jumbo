@@ -19,19 +19,19 @@ namespace JobServerApplication.Scheduling
             List<TaskServerInfo> newServers = new List<TaskServerInfo>();
             int taskIndex = 0;
             bool outOfSlots = false;
-            while( !outOfSlots && taskIndex < job.SchedulingTasks.Count )
+            while( !outOfSlots && taskIndex < job.SchedulingTasksById.Count )
             {
                 outOfSlots = true;
                 foreach( var item in taskServers )
                 {
-                    while( taskIndex < job.SchedulingTasks.Count && job.SchedulingTasks.Values[taskIndex].State != TaskState.Created )
+                    while( taskIndex < job.SchedulingTasksById.Count && job.SchedulingTasks[taskIndex].State != TaskState.Created )
                         ++taskIndex;
-                    if( taskIndex == job.SchedulingTasks.Count )
+                    if( taskIndex == job.SchedulingTasksById.Count )
                         break;
                     TaskServerInfo taskServer = item.Value;
                     if( taskServer.AvailableTasks > 0 )
                     {
-                        TaskInfo task = job.SchedulingTasks.Values[taskIndex];
+                        TaskInfo task = job.SchedulingTasks[taskIndex];
                         taskServer.AssignTask(job, task);
                         if( !newServers.Contains(taskServer) )
                             newServers.Add(taskServer);

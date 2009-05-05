@@ -120,13 +120,15 @@ namespace JobServerApplication
                     {
                         TaskInfo taskInfo;
                         taskInfo = new TaskInfo(jobInfo, stage, x);
-                        jobInfo.SchedulingTasks.Add(taskInfo.TaskId.ToString(), taskInfo);
+                        jobInfo.SchedulingTasksById.Add(taskInfo.TaskId.ToString(), taskInfo);
+                        jobInfo.SchedulingTasks.Add(taskInfo);
                         jobInfo.Tasks.Add(taskInfo.TaskId.ToString(), taskInfo);
                         CreateChildTasks(jobInfo, taskInfo, stage);
                     }
                 }
 
-                jobInfo.UnscheduledTasks = jobInfo.SchedulingTasks.Count;
+                jobInfo.SchedulingTasks.Sort((t1, t2) => StringComparer.Ordinal.Compare(t1.TaskId.ToString(), t2.TaskId.ToString()));
+                jobInfo.UnscheduledTasks = jobInfo.SchedulingTasksById.Count;
 
                 ScheduleTasks(jobInfo);
 
@@ -421,7 +423,7 @@ namespace JobServerApplication
                         _log.WarnFormat("Data server {0} reported status for unknown job {1} (this may be the aftermath of a failed job).", server.Address, data.JobId);
                         return;
                     }
-                    TaskInfo task = job.Tasks[data.TaskId];
+                    TaskInfo task = job.SchedulingTasksById[data.TaskId];
                     task.Progress = data.Progress;
                     if( data.Status == TaskAttemptStatus.Running )
                         _log.InfoFormat("Task {0} reported progress: {1}%", Job.CreateFullTaskId(data.JobId, data.TaskId), (int)(task.Progress * 100));
@@ -463,7 +465,7 @@ namespace JobServerApplication
                             break;
                         }
 
-                        if( job.FinishedTasks == job.SchedulingTasks.Count || job.State == JobState.Failed )
+                        if( job.FinishedTasks == job.SchedulingTasksById.Count || job.State == JobState.Failed )
                         {
                             if( job.State != JobState.Failed )
                             {
@@ -556,7 +558,7 @@ namespace JobServerApplication
                 JobStatus result = new JobStatus()
                 {
                     JobId = jobId,
-                    RunningTaskCount = (from task in job.SchedulingTasks.Values
+                    RunningTaskCount = (from task in job.SchedulingTasksById.Values
                                         where task.State == TaskState.Running
                                         select task).Count(),
                     UnscheduledTaskCount = job.UnscheduledTasks,
@@ -565,7 +567,7 @@ namespace JobServerApplication
                     StartTime = job.StartTimeUtc,
                     EndTime = job.EndTimeUtc
                 };
-                result.Tasks.AddRange(from task in job.SchedulingTasks.Values
+                result.Tasks.AddRange(from task in job.SchedulingTasksById.Values
                              select task.ToTaskStatus());
                 result.FailedTaskAttempts.AddRange(job.FailedTaskAttempts);
                 return result;

@@ -19,8 +19,9 @@ namespace JobServerApplication
 
     class JobInfo
     {
-        private readonly SortedList<string, TaskInfo> _tasks = new SortedList<string, TaskInfo>();
-        private readonly SortedList<string, TaskInfo> _schedulingTasks = new SortedList<string, TaskInfo>();
+        private readonly Dictionary<string, TaskInfo> _tasks = new Dictionary<string, TaskInfo>();
+        private readonly Dictionary<string, TaskInfo> _schedulingTasksById = new Dictionary<string, TaskInfo>();
+        private readonly List<TaskInfo> _schedulingTasks = new List<TaskInfo>();
         private readonly HashSet<ServerAddress> _taskServers = new HashSet<ServerAddress>();
         private readonly ManualResetEvent _jobCompletedEvent = new ManualResetEvent(false);
         private Guid[] _inputBlocks;
@@ -41,11 +42,15 @@ namespace JobServerApplication
         public int NonDataLocal { get; set; }
         public DateTime StartTimeUtc { get; set; }
         public DateTime EndTimeUtc { get; set; }
-        public SortedList<string, TaskInfo> Tasks
+        public Dictionary<string, TaskInfo> Tasks
         {
             get { return _tasks; }
         }
-        public SortedList<string, TaskInfo> SchedulingTasks
+        public Dictionary<string, TaskInfo> SchedulingTasksById
+        {
+            get { return _schedulingTasksById; }
+        }
+        public List<TaskInfo> SchedulingTasks
         {
             get { return _schedulingTasks; }
         }
@@ -83,14 +88,14 @@ namespace JobServerApplication
 
         public IEnumerable<TaskInfo> GetDfsInputTasks()
         {
-            return from task in SchedulingTasks.Values
+            return from task in SchedulingTasksById.Values
                    where task.Stage.DfsInputs != null && task.Stage.DfsInputs.Count > 0
                    select task;
         }
 
         public IEnumerable<TaskInfo> GetNonInputSchedulingTasks()
         {
-            return from task in SchedulingTasks.Values
+            return from task in SchedulingTasksById.Values
                    where task.Stage.DfsInputs == null || task.Stage.DfsInputs.Count == 0
                    select task;
         }

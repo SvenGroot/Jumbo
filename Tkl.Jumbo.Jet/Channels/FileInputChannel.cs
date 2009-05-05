@@ -21,7 +21,7 @@ namespace Tkl.Jumbo.Jet.Channels
         /// </summary>
         public const string MemoryStorageSizeSetting = "FileChannel.MemoryStorageSize";
 
-        private const int _pollingInterval = 10000;
+        private const int _pollingInterval = 30000;
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(FileInputChannel));
 
         private string _jobDirectory;
