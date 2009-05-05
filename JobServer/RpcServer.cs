@@ -40,7 +40,7 @@ namespace JobServerApplication
             return JobServer.Instance.GetTaskServerForTask(jobID, taskID);
         }
 
-        public CompletedTask WaitForTaskCompletion(Guid jobId, string[] tasks, int timeout)
+        public CompletedTask[] WaitForTaskCompletion(Guid jobId, string[] tasks, int timeout)
         {
             return JobServer.Instance.WaitForTaskCompletion(jobId, tasks, timeout);
         }

@@ -157,48 +157,56 @@ namespace JobServerApplication
             }
         }
 
-        public CompletedTask WaitForTaskCompletion(Guid jobId, string[] tasks, int timeout)
+        public CompletedTask[] WaitForTaskCompletion(Guid jobId, string[] taskIds, int timeout)
         {
-            if( tasks == null )
+            if( taskIds == null )
                 throw new ArgumentNullException("tasks");
-            if( tasks.Length == 0 )
+            if( taskIds.Length == 0 )
                 throw new ArgumentException("You must specify at least one task.", "tasks");
 
             JobInfo job = GetRunningOrFinishedJob(jobId);
+
+            // Retrieve the tasks the server is interested in.
+            var tasks = (from taskId in taskIds
+                         let task = job.Tasks[taskId]
+                         select task).ToList();
+
+            List<TaskInfo> waitTasks;
+
             // Because of the 64 handle limit in WaitHandle.WaitAny we prefer to wait on tasks that are
             // running or finished already.
-            var waitTasks = (from taskId in tasks
-                             let task = job.Tasks[taskId]
+            if( taskIds.Length > 64 )
+            {
+                waitTasks = (from task in tasks
                              where task.State == TaskState.Running || task.State == TaskState.Finished
                              orderby task.State descending
-                             select new { TaskId = taskId, TaskCompletedEvent = task.TaskCompletedEvent }).ToArray();
+                             select task).Take(64).ToList();
 
-            // If none of the requested tasks are running yet, we wait on all tasks.
-            if( waitTasks.Length == 0 )
-            {
-                waitTasks = (from taskId in tasks
-                             let task = job.Tasks[taskId]
-                             select new { TaskId = taskId, TaskCompletedEvent = task.TaskCompletedEvent }).ToArray();
+                if( waitTasks.Count == 0 )
+                    waitTasks = tasks.Take(64).ToList();
             }
+            else
+                waitTasks = tasks;
 
-            // Of course, even the number of running tasks can be more than 64
-            if( waitTasks.Length > 64 )
-            {
-                waitTasks = waitTasks.Take(64).ToArray();
-            }
 
             var events = (from task in waitTasks
                           select task.TaskCompletedEvent).ToArray();
 
-            int waitResult = WaitHandle.WaitAny(events, timeout, false);
+            bool waitResult = WaitHandle.WaitAll(events, timeout, false);
 
-            if( waitResult == WaitHandle.WaitTimeout )
-                return null;
+            IEnumerable<TaskInfo> finishedTasks;
+            if( waitResult && tasks.Count == waitTasks.Count )
+            {
+                finishedTasks = waitTasks;
+            }
             else
             {
-                TaskInfo task = job.Tasks[waitTasks[waitResult].TaskId];
-                return new CompletedTask() { JobId = jobId, TaskId = task.TaskId.ToString(), TaskServer = task.Server.Address, TaskServerFileServerPort = task.Server.FileServerPort };
+                finishedTasks = from task in tasks
+                                where task.State == TaskState.Finished
+                                select task;
             }
+            return (from task in finishedTasks
+                    select new CompletedTask() { JobId = jobId, TaskId = task.TaskId.ToString(), TaskServer = task.Server.Address, TaskServerFileServerPort = task.Server.FileServerPort }).ToArray();
         }
 
         public JobStatus GetJobStatus(Guid jobId)

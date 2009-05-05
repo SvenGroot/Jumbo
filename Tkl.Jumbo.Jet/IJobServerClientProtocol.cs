@@ -47,7 +47,7 @@ namespace Tkl.Jumbo.Jet
         /// <param name="timeout">The maximum amount of time to wait, in milliseconds.</param>
         /// <returns>A <see cref="CompletedTask"/> instance indicating which of the tasks completed, or <see langword="null"/>
         /// if the timeout expired.</returns>
-        CompletedTask WaitForTaskCompletion(Guid jobId, string[] tasks, int timeout);
+        CompletedTask[] WaitForTaskCompletion(Guid jobId, string[] tasks, int timeout);
 
         /// <summary>
         /// Gets the current status for the specified job.

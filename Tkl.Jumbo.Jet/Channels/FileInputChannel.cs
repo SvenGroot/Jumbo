@@ -21,13 +21,14 @@ namespace Tkl.Jumbo.Jet.Channels
         /// </summary>
         public const string MemoryStorageSizeSetting = "FileChannel.MemoryStorageSize";
 
-        private const int _pollingInterval = 30000;
+        private const int _pollingInterval = 5000;
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(FileInputChannel));
 
         private string _jobDirectory;
         private ChannelConfiguration _channelConfig;
         private Guid _jobID;
         private Thread _inputPollThread;
+        private Thread _downloadThread;
         private IJobServerClientProtocol _jobServer;
         private TaskId _outputTaskId;
         private bool _isReady;
@@ -37,6 +38,8 @@ namespace Tkl.Jumbo.Jet.Channels
         private FileChannelMemoryStorageManager _memoryStorage;
         private CompressionType _compressionType;
         private readonly List<string> _inputTaskIds = new List<string>();
+        private readonly List<CompletedTask> _completedTasks = new List<CompletedTask>();
+        private volatile bool _allInputTasksCompleted;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="FileInputChannel"/>.
@@ -112,9 +115,12 @@ namespace Tkl.Jumbo.Jet.Channels
 
             _log.InfoFormat("Creating MultiRecordReader for {0} inputs, allow record reuse = {1}, buffer size = {2}.", _inputTaskIds.Count, _taskExecution.AllowRecordReuse, _taskExecution.JetClient.Configuration.FileChannel.ReadBufferSize);
             MultiRecordReader<T> reader = new MultiRecordReader<T>(null, _inputTaskIds.Count);
-            _inputPollThread = new Thread(() => InputPollThread<T>(reader, null));
+            _inputPollThread = new Thread(InputPollThread);
             _inputPollThread.Name = "FileInputChannelPolling";
             _inputPollThread.Start();
+            _downloadThread = new Thread(() => DownloadThread<T>(reader, null));
+            _downloadThread.Name = "FileInputChannelDownload";
+            _downloadThread.Start();
 
             // Wait until the reader has at least one input.
             _readyEvent.WaitOne();
@@ -140,9 +146,12 @@ namespace Tkl.Jumbo.Jet.Channels
                 BufferSize = _taskExecution.JetClient.Configuration.FileChannel.MergeTaskReadBufferSize,
                 DeleteFiles = _taskExecution.JetClient.Configuration.FileChannel.DeleteIntermediateFiles
             };
-            _inputPollThread = new Thread(() => InputPollThread<T>(null, input));
+            _inputPollThread = new Thread(InputPollThread);
             _inputPollThread.Name = "FileInputChannelPolling";
             _inputPollThread.Start();
+            _downloadThread = new Thread(() => DownloadThread<T>(null, input));
+            _downloadThread.Name = "FileInputChannelDownload";
+            _downloadThread.Start();
 
             // Wait until at least inputs are available.
             _readyEvent.WaitOne();
@@ -180,10 +189,14 @@ namespace Tkl.Jumbo.Jet.Channels
                 }
             }
             _disposed = true;
+            lock( _completedTasks )
+            {
+                // Wake up the download thread so it can exit.
+                Monitor.Pulse(_completedTasks);
+            }
         }
 
-        private void InputPollThread<T>(MultiRecordReader<T> reader, MergeTaskInput<T> mergeTaskInput)
-            where T : IWritable, new()
+        private void InputPollThread()
         {
             try
             {
@@ -194,16 +207,34 @@ namespace Tkl.Jumbo.Jet.Channels
 
                 _log.InfoFormat("Start checking for output file completion of {0} tasks, timeout {1}ms", tasksLeft.Count, _pollingInterval);
 
-                while( tasksLeft.Count > 0 )
+                while( !_disposed && tasksLeft.Count > 0 )
                 {
-                    CompletedTask task = _jobServer.WaitForTaskCompletion(_jobID, tasksLeftArray, _pollingInterval);
-                    if( task != null )
+                    CompletedTask[] completedTasks = _jobServer.WaitForTaskCompletion(_jobID, tasksLeftArray, _pollingInterval);
+                    if( completedTasks != null && completedTasks.Length > 0 )
                     {
-                        DownloadCompletedFile(reader, mergeTaskInput, tasksLeft, task);
+                        completedTasks.Randomize(); // Randomize to prevent all tasks hitting the same server.
+                        lock( _completedTasks )
+                        {
+                            _completedTasks.AddRange(completedTasks);
+                            Monitor.Pulse(_completedTasks);
+                            foreach( CompletedTask task in completedTasks )
+                            {
+                                tasksLeft.Remove(task.TaskId);
+                            }
+                        }
                         tasksLeftArray = tasksLeft.ToArray();
                     }
                 }
-                _log.Info("All files downloaded.");
+                _allInputTasksCompleted = true;
+                lock( _completedTasks )
+                {
+                    // Just making sure the download thread wakes up after this flag is set.
+                    Monitor.Pulse(_completedTasks);
+                }
+                if( _disposed )
+                    _log.Info("Input poll thread aborted because the object was disposed.");
+                else
+                    _log.Info("All files are available.");
             }
             catch( ObjectDisposedException ex )
             {
@@ -214,7 +245,38 @@ namespace Tkl.Jumbo.Jet.Channels
             }
         }
 
-        private void DownloadCompletedFile<T>(MultiRecordReader<T> reader, MergeTaskInput<T> mergeTaskInput, HashSet<string> tasksLeft, CompletedTask task)
+        private void DownloadThread<T>(MultiRecordReader<T> reader, MergeTaskInput<T> mergeTaskInput)
+            where T : IWritable, new()
+        {
+            List<CompletedTask> tasksToProcess = new List<CompletedTask>();
+            while( !(_allInputTasksCompleted || _disposed) )
+            {
+                tasksToProcess.Clear();
+                lock( _completedTasks )
+                {
+                    if( _completedTasks.Count == 0 )
+                        Monitor.Wait(_completedTasks);
+
+                    if( _completedTasks.Count > 0 )
+                    {
+                        tasksToProcess.AddRange(_completedTasks);
+                        _completedTasks.Clear();
+                    }
+                }
+
+                foreach( CompletedTask task in tasksToProcess )
+                {
+                    DownloadCompletedFile(reader, mergeTaskInput, task);
+                }
+            }
+
+            if( _disposed )
+                _log.Info("Download thread aborted because the object was disposed.");
+            else
+                _log.Info("All files are downloaded.");
+        }
+
+        private void DownloadCompletedFile<T>(MultiRecordReader<T> reader, MergeTaskInput<T> mergeTaskInput, CompletedTask task)
             where T : IWritable, new()
         {
             _log.InfoFormat("Task {0} output file is now available.", task.TaskId);
@@ -244,8 +306,6 @@ namespace Tkl.Jumbo.Jet.Channels
                 fileName = DownloadFile(task, _outputTaskId.ToString(), out memoryStream, out uncompressedSize);
                 deleteFile = _taskExecution.JetClient.Configuration.FileChannel.DeleteIntermediateFiles; // Files we've downloaded can be deleted.
             }
-            bool removed = tasksLeft.Remove(task.TaskId);
-            Debug.Assert(removed);
 
             _log.InfoFormat("Creating record reader for task {0}'s output, allowRecordReuse = {1}.", task.TaskId, _taskExecution.AllowRecordReuse);
             if( reader != null )
