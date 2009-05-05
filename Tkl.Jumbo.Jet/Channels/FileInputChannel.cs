@@ -217,10 +217,10 @@ namespace Tkl.Jumbo.Jet.Channels
                         {
                             _completedTasks.AddRange(completedTasks);
                             Monitor.Pulse(_completedTasks);
-                            foreach( CompletedTask task in completedTasks )
-                            {
-                                tasksLeft.Remove(task.TaskId);
-                            }
+                        }
+                        foreach( CompletedTask task in completedTasks )
+                        {
+                            tasksLeft.Remove(task.TaskId);
                         }
                         tasksLeftArray = tasksLeft.ToArray();
                     }

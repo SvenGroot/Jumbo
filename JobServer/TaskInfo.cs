@@ -15,6 +15,7 @@ namespace JobServerApplication
         private TaskServerInfo _server;
         private TaskInfo _owner;
         private List<TaskServerInfo> _badServers;
+        private TaskState _state;
 
         public TaskInfo(JobInfo job, StageConfiguration stage, int taskNumber)
         {
@@ -47,7 +48,17 @@ namespace JobServerApplication
 
         public JobInfo Job { get; private set; }
 
-        public TaskState State { get; set; }
+        public TaskState State
+        {
+            get 
+            {
+                if( _owner == null )
+                    return _state;
+                else
+                    return _owner.State;
+            }
+            set { _state = value; }
+        }
 
         public TaskServerInfo Server 
         {
