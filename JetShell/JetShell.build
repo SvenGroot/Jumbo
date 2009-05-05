@@ -10,7 +10,7 @@
   <target name="build">
     <mkdir dir="nantbin"/>
     <csc output="nantbin/JetShell.exe" target="exe" debug="${debug}" optimize="${not debug}"
-         define="${define}" keyfile="jumbo.snk" rebuild="${rebuild}">
+         define="${define}" rebuild="${rebuild}">
       <references>
         <include name="System.dll"/>
         <include name="System.Configuration.dll"/>
