@@ -249,13 +249,17 @@ namespace Tkl.Jumbo.Jet.Channels
             where T : IWritable, new()
         {
             List<CompletedTask> tasksToProcess = new List<CompletedTask>();
-            while( !(_allInputTasksCompleted || _disposed) )
+            while( !_disposed )
             {
                 tasksToProcess.Clear();
                 lock( _completedTasks )
                 {
                     if( _completedTasks.Count == 0 )
+                    {
+                        if( _allInputTasksCompleted )
+                            break;
                         Monitor.Wait(_completedTasks);
+                    }
 
                     if( _completedTasks.Count > 0 )
                     {
