@@ -179,7 +179,7 @@ namespace Tkl.Jumbo.Jet
             };
             jobStatus.Tasks.AddRange(from task in job.Element("Tasks").Elements("Task")
                                      select TaskStatus.FromXml(task, jobStatus));
-            if( job.Element("FailedtaskAttempts") != null )
+            if( job.Element("FailedTaskAttempts") != null )
             {
                 jobStatus.FailedTaskAttempts.AddRange(from task in job.Element("FailedTaskAttempts").Elements("Task")
                                                       select TaskStatus.FromXml(task, jobStatus));
