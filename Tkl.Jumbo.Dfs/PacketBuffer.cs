@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading;
+using System.Runtime.CompilerServices;
 
 namespace Tkl.Jumbo.Dfs
 {
@@ -23,6 +24,7 @@ namespace Tkl.Jumbo.Dfs
         private readonly AutoResetEvent _bufferReadEvent = new AutoResetEvent(false);
         private readonly AutoResetEvent _bufferWriteEvent = new AutoResetEvent(false);
         private bool _cancelled;
+        private bool _disposed;
 
         public PacketBuffer(int bufferSize)
         {
@@ -105,14 +107,20 @@ namespace Tkl.Jumbo.Dfs
         /// <summary>
         /// Releases the resources used by the class.
         /// </summary>
+        [MethodImpl(MethodImplOptions.Synchronized)]
         public void Dispose()
         {
-            _cancelled = true;
-            _bufferWriteEvent.Set();
-            _bufferReadEvent.Set();
+            if( !_disposed )
+            {
+                _disposed = true;
+                _cancelled = true;
+                _bufferWriteEvent.Set();
+                _bufferReadEvent.Set();
 
-            ((IDisposable)_bufferReadEvent).Dispose();
-            ((IDisposable)_bufferWriteEvent).Dispose();
+                ((IDisposable)_bufferReadEvent).Dispose();
+                ((IDisposable)_bufferWriteEvent).Dispose();
+            }
+            GC.SuppressFinalize(this);
         }
 
         #endregion

@@ -255,23 +255,20 @@ namespace Tkl.Jumbo.Dfs
                     if( WriteHeader(bufferedStream, writer, reader) )
                     {
                         _log.Debug("Header sent and accepted.");
-                        SendPackets(writer, stream, reader);
-
-                        bufferedStream.Flush(); // We need to flush before waiting for the final OK
-
-                        //if( _resultReaderThread != null )
-                        //{
-                        //    // We must wait for the result reader thread to finish; it's using the network connection
-                        //    // so we can't close that.
-                        //    _resultReaderThread.Join();
-                        //}
-                        if( _dataServers == null && _lastResult != DataServerClientProtocolResult.Ok )
-                            writer.Write((int)_lastResult);
-                        else if( _lastResult == DataServerClientProtocolResult.Ok )
+                        if( SendPackets(writer, stream, reader) )
                         {
-                            // If no error has been encountered thus far, we need to wait for the final ok
-                            ReadResult(reader);
+                            bufferedStream.Flush(); // We need to flush before waiting for the final OK
+
+                            if( _dataServers == null && _lastResult != DataServerClientProtocolResult.Ok )
+                                writer.Write((int)_lastResult);
+                            else if( _lastResult == DataServerClientProtocolResult.Ok )
+                            {
+                                // If no error has been encountered thus far, we need to wait for the final ok
+                                ReadResult(reader);
+                            }
                         }
+                        else
+                            _log.Warn("The send packets operation was cancelled.");
                     }
                 }
             }
@@ -282,7 +279,13 @@ namespace Tkl.Jumbo.Dfs
                     _lastException = ex;
                     _lastResult = DataServerClientProtocolResult.Error;
                 }
-                _buffer.Cancel();
+                try
+                {
+                    _buffer.Cancel();
+                }
+                catch( ObjectDisposedException )
+                {
+                }
             }
             finally
             {
@@ -296,15 +299,15 @@ namespace Tkl.Jumbo.Dfs
             }
         }
 
-        private void SendPackets(BinaryWriter writer, NetworkStream stream, BinaryReader reader)
+        private bool SendPackets(BinaryWriter writer, NetworkStream stream, BinaryReader reader)
         {
             // Start sending packets; stop when an error occurs or we've sent the last packet.
             bool lastPacket = false;
             while( !lastPacket && _lastResult == DataServerClientProtocolResult.Ok )
             {
                 Packet packet = _buffer.ReadItem;
-                if( packet == null )
-                    break;
+                if( packet == null ) // _buffer.Cancel() was called.
+                    return false;
                 if( _dataServers == null )
                 {
                     writer.Write((int)DataServerClientProtocolResult.Ok);
@@ -317,6 +320,7 @@ namespace Tkl.Jumbo.Dfs
                 packet.Write(writer, false);
                 lastPacket = packet.IsLastPacket;
             }
+            return true;
         }
 
         private bool ReadResult(BinaryReader reader)
@@ -363,10 +367,11 @@ namespace Tkl.Jumbo.Dfs
             if( !_disposed )
             {
                 _disposed = true;
-                if( _sendPacketsThread != null && _sendPacketsThread.IsAlive )
-                    _sendPacketsThread.Abort();
                 if( _buffer != null )
+                {
+                    _buffer.Cancel();
                     _buffer.Dispose();
+                }
             }
         }
 

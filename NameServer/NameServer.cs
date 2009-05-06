@@ -829,36 +829,47 @@ namespace NameServerApplication
 
         private void RemoveDataServer(DataServerInfo info)
         {
+            bool removed;
             lock( _dataServers )
             {
-                _dataServers.Remove(info.Address);
+                removed = _dataServers.Remove(info.Address);
                 if( _dataServers.Count < _replicationFactor )
                     SafeMode = true;
             }
-            lock( _blocks )
+            // If removed is false, the server was already removed by another thread, so that thread is taking care of the blocks and we don't need to do that.
+            if( removed )
             {
-                lock( _underReplicatedBlocks )
+                lock( _blocks )
                 {
-                    lock( _pendingBlocks )
+                    lock( _underReplicatedBlocks )
                     {
-                        foreach( var blockID in info.Blocks )
+                        lock( _pendingBlocks )
                         {
-                            bool pending = false;
-                            BlockInfo blockInfo;
-                            PendingBlock pendingBlock;
-                            if( _pendingBlocks.TryGetValue(blockID, out pendingBlock) )
+                            foreach( var blockID in info.Blocks )
                             {
-                                blockInfo = pendingBlock.Block;
-                                pending = true;
-                            }
-                            else if( !_blocks.TryGetValue(blockID, out blockInfo) )
-                                Debug.Assert(false); // This shouldn't happen, it means the block handling code has bugs.
-                            bool removed = blockInfo.DataServers.Remove(info);
-                            Debug.Assert(removed);
-                            if( !pending && blockInfo.DataServers.Count < _replicationFactor && !_underReplicatedBlocks.ContainsKey(blockID) )
-                            {
-                                _log.InfoFormat("Block {0} is now under-replicated.", blockID);
-                                _underReplicatedBlocks.Add(blockID, blockInfo);
+                                bool pending = false;
+                                BlockInfo blockInfo;
+                                PendingBlock pendingBlock;
+                                if( _pendingBlocks.TryGetValue(blockID, out pendingBlock) )
+                                {
+                                    blockInfo = pendingBlock.Block;
+                                    pending = true;
+                                }
+                                else if( !_blocks.TryGetValue(blockID, out blockInfo) )
+                                {
+                                    _log.WarnFormat("Block {0} in the block list for server {1} isn't present in either the pending blocks or blocks collection.", blockID, info.Address);
+                                    Debug.Assert(false); // This shouldn't happen, it means the block handling code has bugs.
+                                }
+                                else
+                                {
+                                    bool removed = blockInfo.DataServers.Remove(info);
+                                    Debug.Assert(removed);
+                                    if( !pending && blockInfo.DataServers.Count < _replicationFactor && !_underReplicatedBlocks.ContainsKey(blockID) )
+                                    {
+                                        _log.InfoFormat("Block {0} is now under-replicated.", blockID);
+                                        _underReplicatedBlocks.Add(blockID, blockInfo);
+                                    }
+                                }
                             }
                         }
                     }
@@ -904,12 +915,25 @@ namespace NameServerApplication
         {
             lock( _dataServers )
             {
+                List<DataServerInfo> deadServers = null;
                 foreach( DataServerInfo server in _dataServers.Values )
                 {
                     TimeSpan lastContact = DateTime.UtcNow - server.LastContactUtc;
                     if( lastContact.TotalSeconds > Configuration.NameServer.DataServerTimeout )
                     {
                         _log.WarnFormat("Data server {0} has not reported in {1} seconds and is considered dead.", server.Address, lastContact.TotalSeconds);
+                        if( deadServers == null )
+                            deadServers = new List<DataServerInfo>();
+                        // We can't remove them here because that would break iteration.
+                        deadServers.Add(server);
+                    }
+                }
+
+
+                if( deadServers != null )
+                {
+                    foreach( DataServerInfo server in deadServers )
+                    {
                         RemoveDataServer(server);
                     }
                 }
