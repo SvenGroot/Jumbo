@@ -155,18 +155,25 @@ namespace JobServerApplication.Scheduling
                 if( taskIndex == tasks.Count )
                     break;
                 TaskInfo task = tasks[taskIndex];
-                TaskServerInfo taskServer = (from server in taskServers.Values
-                                             where server.AvailableNonInputTasks > 0
-                                             orderby server.AvailableNonInputTasks descending, rnd.Next()
-                                             select server).FirstOrDefault();
-                if( taskServer != null )
+                var availableServers = from server in taskServers.Values
+                                       where server.AvailableNonInputTasks > 0
+                                       orderby server.AvailableNonInputTasks descending, rnd.Next()
+                                       select server;
+                outOfSlots = availableServers.Count() == 0;
+                if( !outOfSlots )
                 {
-                    taskServer.AssignTask(job, task, false);
-                    if( !newServers.Contains(taskServer) )
-                        newServers.Add(taskServer);
-                    _log.InfoFormat("Task {0} has been assigned to server {1}.", task.GlobalID, taskServer.Address);
-                    outOfSlots = false;
-                    ++taskIndex;
+                    TaskServerInfo taskServer = (from server in availableServers
+                                                 where !task.BadServers.Contains(server)
+                                                 select server).FirstOrDefault();
+                    if( taskServer != null )
+                    {
+                        taskServer.AssignTask(job, task, false);
+                        if( !newServers.Contains(taskServer) )
+                            newServers.Add(taskServer);
+                        _log.InfoFormat("Task {0} has been assigned to server {1}.", task.GlobalID, taskServer.Address);
+                        outOfSlots = false;
+                        ++taskIndex;
+                    }
                 }
             }
             if( outOfSlots && taskIndex < tasks.Count )
