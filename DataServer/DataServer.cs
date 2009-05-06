@@ -31,6 +31,7 @@ namespace DataServerApplication
         private volatile bool _running;
         private readonly Queue<ReplicateBlockHeartbeatResponse> _blocksToReplicate = new Queue<ReplicateBlockHeartbeatResponse>();
         private readonly Thread _replicateBlocksThread;
+        private readonly ManualResetEvent _abortEvent = new ManualResetEvent(false);
 
         public DataServer()
             : this(DfsConfiguration.GetConfiguration())
@@ -308,6 +309,7 @@ namespace DataServerApplication
         {
             DriveSpaceInfo info = new DriveSpaceInfo(_blockStorageDirectory);
             data.DiskSpaceFree = info.AvailableFreeSpace;
+            data.DiskSpaceTotal = info.TotalSize;
             lock( _blocks )
             {
                 foreach( var blockID in _blocks )
@@ -367,6 +369,21 @@ namespace DataServerApplication
                 {
                     _log.Error("Failed to replicate block.", ex);
                 }
+            }
+        }
+
+        private void StatusUpdateThread()
+        {
+            int interval = _config.DataServer.StatusUpdateInterval * 1000;
+            while( _running )
+            {
+                if( _abortEvent.WaitOne(interval, false) )
+                    return;
+
+                StatusHeartbeatData data = new StatusHeartbeatData();
+                GetDiskUsage(data);
+                _log.InfoFormat("Sending updated disk space status to the name server: total = {0}, free = {1}, DFS used = {2}.", data.DiskSpaceTotal, data.DiskSpaceFree, data.DiskSpaceUsed);
+                AddDataForNextHeartbeat(data);
             }
         }
     }

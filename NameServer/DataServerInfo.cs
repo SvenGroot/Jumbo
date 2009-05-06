@@ -34,6 +34,8 @@ namespace NameServerApplication
 
         public long DiskSpaceFree { get; set; }
 
+        public long DiskSpaceTotal { get; set; }
+
         public void AddResponseForNextHeartbeat(HeartbeatResponse response)
         {
             if( response == null )

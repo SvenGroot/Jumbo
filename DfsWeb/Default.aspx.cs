@@ -23,7 +23,7 @@ public partial class _Default : System.Web.UI.Page
         bool safeMode = client.NameServer.SafeMode;
         SafeModeColumn.InnerHtml = string.Format("<a href=\"setsafemode.aspx?safeMode={0}\">{1}</a>", (!safeMode).ToString(), safeMode ? "ON" : "OFF");
 
-        foreach( DataServerMetrics server in metrics.DataServers )
+        foreach( DataServerMetrics server in metrics.DataServers.OrderBy((s) => s.Address) )
         {
             HtmlTableRow row = new HtmlTableRow();
             TimeSpan lastContact = DateTime.UtcNow - server.LastContactUtc;
@@ -35,7 +35,10 @@ public partial class _Default : System.Web.UI.Page
             row.Cells.Add(new HtmlTableCell() { InnerText = server.Address.Port.ToString() });
             row.Cells.Add(new HtmlTableCell() { InnerText = string.Format("{0:0.0}s ago", lastContact.TotalSeconds) });
             row.Cells.Add(new HtmlTableCell() { InnerText = server.BlockCount.ToString() });
-            row.Cells.Add(new HtmlTableCell() { InnerHtml = string.Format("Used: {0} / Free: {1}", FormatSize(server.DiskSpaceUsed), FormatSize(server.DiskSpaceFree)) });
+            HtmlTableCell diskSpaceCell = new HtmlTableCell() { InnerHtml = string.Format("Total: {0} / Used: {1} / Free: {2}", FormatSize(server.DiskSpaceTotal), FormatSize(server.DiskSpaceUsed), FormatSize(server.DiskSpaceFree)) };
+            if( server.DiskSpaceFree < DfsConfiguration.GetConfiguration().NameServer.DataServerFreeSpaceThreshold )
+                diskSpaceCell.Style.Add(HtmlTextWriterStyle.BackgroundColor, "yellow");
+            row.Cells.Add(diskSpaceCell);
             row.Cells.Add(new HtmlTableCell() { InnerHtml = string.Format("<a href=\"logfile.aspx?dataServer={0}&amp;port={1}\">View</a>", Server.HtmlEncode(server.Address.HostName), server.Address.Port) });
             row.Cells.Add(new HtmlTableCell() { InnerHtml = string.Format("<a href=\"blocklist.aspx?dataServer={0}&amp;port={1}\">View</a>", Server.HtmlEncode(server.Address.HostName), server.Address.Port) });
             DataServerTable.Rows.Add(row);

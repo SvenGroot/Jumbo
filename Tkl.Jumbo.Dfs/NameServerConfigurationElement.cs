@@ -93,5 +93,16 @@ namespace Tkl.Jumbo.Dfs
             get { return (int)this["dataServerTimeout"]; }
             set { this["dataServerTimeout"] = value; }
         }
+
+        /// <summary>
+        /// Gets or sets the minimum amount of space, in bytes, that a data server must have available in order to be eligible
+        /// for new blocks. The default value is 1GB.
+        /// </summary>
+        [ConfigurationProperty("dataServerFreeSpaceThreshold", DefaultValue = 0x40000000L, IsRequired = false, IsKey = false)]
+        public long DataServerFreeSpaceThreshold
+        {
+            get { return (long)this["dataServerFreeSpaceThreshold"]; }
+            set { this["dataServerFreeSpaceThreshold"] = value; }
+        }
     }
 }

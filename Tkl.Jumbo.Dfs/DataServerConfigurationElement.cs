@@ -44,5 +44,20 @@ namespace Tkl.Jumbo.Dfs
             get { return (bool)this["listenIPv4AndIPv6"]; }
             set { this["listenIPv4AndIPv6"] = value; }
         }
+
+        /// <summary>
+        /// Gets or sets the interval, in seconds, at which the data server should send status updates
+        /// (including disk space reports) to the name server.
+        /// </summary>
+        /// <remarks>
+        /// Disk space status updates are always sent after blocks are received or deleted, regardless
+        /// of this value.
+        /// </remarks>
+        [ConfigurationProperty("statusUpdateInterval", DefaultValue = 60, IsRequired = false, IsKey = false)]
+        public int StatusUpdateInterval
+        {
+            get { return (int)this["statusUpdateInterval"]; }
+            set { this["statusUpdateInterval"] = value; }
+        }
     }
 }

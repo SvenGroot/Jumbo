@@ -370,7 +370,8 @@ namespace NameServerApplication
                         LastContactUtc = server.LastContactUtc,
                         BlockCount = server.Blocks.Count,
                         DiskSpaceFree = server.DiskSpaceFree,
-                        DiskSpaceUsed = server.DiskSpaceUsed
+                        DiskSpaceUsed = server.DiskSpaceUsed,
+                        DiskSpaceTotal = server.DiskSpaceTotal
                     });
                 }
             }
@@ -537,9 +538,10 @@ namespace NameServerApplication
             StatusHeartbeatData status = data as StatusHeartbeatData;
             if( status != null )
             {
-                _log.InfoFormat("Data server {0} status: {1}B used, {2}B free.", dataServer.Address, status.DiskSpaceUsed, status.DiskSpaceFree);
+                _log.InfoFormat("Data server {0} status: {1}B used, {2}B free, {3}B total.", dataServer.Address, status.DiskSpaceUsed, status.DiskSpaceFree, status.DiskSpaceTotal);
                 dataServer.DiskSpaceFree = status.DiskSpaceFree;
                 dataServer.DiskSpaceUsed = status.DiskSpaceUsed;
+                dataServer.DiskSpaceTotal = status.DiskSpaceTotal;
                 // Don't return; some of the other heartbeat types inherit from StatusHeartbeatData
             }
 
@@ -708,17 +710,18 @@ namespace NameServerApplication
             // TODO: Better selection policy.
             List<DataServerInfo> unassignedDataServers;
             int serversNeeded;
+            long freeSpaceThreshold = Configuration.NameServer.DataServerFreeSpaceThreshold;
             lock( _dataServers )
             {
-                // This function is also used to find new data servers to send an
+                // This function is also used to find new data servers to send an under-replicated block, which is why we need to check server.Blocks.
                 unassignedDataServers = (from server in _dataServers.Values
-                                         where server.HasReportedBlocks && !server.Blocks.Contains(blockId)
+                                         where server.HasReportedBlocks && !server.Blocks.Contains(blockId) && server.DiskSpaceFree >= freeSpaceThreshold
                                          select server).ToList();
                 serversNeeded = _replicationFactor - (from server in _dataServers.Values where server.Blocks.Contains(blockId) select server).Count();
             }
 
             if( unassignedDataServers.Count < serversNeeded )
-                throw new DfsException("Insufficient data servers to replicate new block.");
+                throw new DfsException("Insufficient data servers to replicate new block. This can also happen in some servers are low on disk space.");
 
             List<ServerAddress> dataServers = new List<ServerAddress>(serversNeeded);
 
@@ -862,7 +865,7 @@ namespace NameServerApplication
                                 }
                                 else
                                 {
-                                    bool removed = blockInfo.DataServers.Remove(info);
+                                    removed = blockInfo.DataServers.Remove(info);
                                     Debug.Assert(removed);
                                     if( !pending && blockInfo.DataServers.Count < _replicationFactor && !_underReplicatedBlocks.ContainsKey(blockID) )
                                     {

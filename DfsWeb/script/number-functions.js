@@ -1,6 +1,8 @@
 /*
  * Copyright (C) 2006 Baron Schwartz <baron at sequent dot org>
  *
+ * 2009-05-06: Fixed 1.9x getting rounded to 1.1 instead of 2.0 (Sven Groot)
+ *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU Lesser General Public License as published by the
  * Free Software Foundation, version 2.1.
@@ -202,7 +204,13 @@ Number.prototype.round = function(decimals) {
         var m = this.toFixed(decimals + 1).match(
             new RegExp("(-?\\d*)\.(\\d{" + decimals + "})(\\d)\\d*$"));
         if (m && m.length) {
-            return new Number(m[1] + "." + String.leftPad(Math.round(m[2] + "." + m[3]), decimals, "0"));
+            var leadingNumber = new Number(m[1]);
+            var decimalNumber = Math.round(m[2] + "." + m[3]);
+            while (decimalNumber >= Math.pow(10, decimals)) {
+                ++leadingNumber;
+                decimalNumber -= Math.pow(10, decimals);
+            }
+            return new Number(leadingNumber + "." + String.leftPad(decimalNumber, decimals, "0"));
         }
     }
     return this;

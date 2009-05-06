@@ -9,7 +9,7 @@ namespace Tkl.Jumbo
     /// Represents the host name and port number of a data server or task server.
     /// </summary>
     [Serializable]
-    public class ServerAddress
+    public class ServerAddress : IComparable<ServerAddress>
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="ServerAddress"/> class.
@@ -92,5 +92,26 @@ namespace Tkl.Jumbo
         {
             return HostName.GetHashCode() ^ Port;
         }
+
+        #region IComparable<ServerAddress> Members
+
+        /// <summary>
+        /// Compares the current instance with another object of the same type and returns an integer that 
+        /// indicates whether the current instance precedes, follows, or occurs in the same position in the 
+        /// sort order as the other object. 
+        /// </summary>
+        /// <param name="other">An object to compare with this instance.</param>
+        /// <returns>A 32-bit signed integer that indicates the relative order of the objects being compared.</returns>
+        public int CompareTo(ServerAddress other)
+        {
+            if( other == null )
+                return 1;
+            int result = StringComparer.Ordinal.Compare(HostName, other.HostName);
+            if( result == 0 )
+                result = Port - other.Port;
+            return result;
+        }
+
+        #endregion
     }
 }

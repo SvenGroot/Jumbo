@@ -20,5 +20,10 @@ namespace Tkl.Jumbo.Dfs
         /// Gets or sets the amount of free space on the disk holding the blocks.
         /// </summary>
         public long DiskSpaceFree { get; set; }
+
+        /// <summary>
+        /// Gets or sets the total size of the disk(s) holding the servers blocks.
+        /// </summary>
+        public long DiskSpaceTotal { get; set; }
     }
 }

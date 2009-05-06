@@ -23,7 +23,7 @@ public partial class _Default : System.Web.UI.Page
         SchedulerColumn.InnerText = metrics.Scheduler;
         TaskServersColumn.InnerText = metrics.TaskServers.Count.ToString();
 
-        foreach( TaskServerMetrics server in metrics.TaskServers )
+        foreach( TaskServerMetrics server in metrics.TaskServers.OrderBy(s => s.Address) )
         {
             HtmlTableRow row = new HtmlTableRow();
             TimeSpan lastContact = DateTime.UtcNow - server.LastContactUtc;
