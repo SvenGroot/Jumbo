@@ -14,7 +14,7 @@ namespace Tkl.Jumbo.Jet.Jobs
         /// <summary>
         /// Gets or sets a value that indicates whether the output directory should be deleted, if it exists, before the job is executed.
         /// </summary>
-        [NamedArgument("d", Description = "Delete the output directory before running the task, if it exists.")]
+        [NamedArgument("d", Description = "Delete the output directory before running the job, if it exists.")]
         public bool DeleteOutputBeforeRun { get; set; }
 
         /// <summary>

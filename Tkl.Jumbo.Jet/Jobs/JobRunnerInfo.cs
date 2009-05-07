@@ -102,7 +102,9 @@ namespace Tkl.Jumbo.Jet.Jobs
             if( usagePrefix == null )
                 throw new ArgumentNullException("usagePrefix");
 
-            StringBuilder usage = new StringBuilder(usagePrefix);
+            StringBuilder usage = new StringBuilder();
+            usage.Append(usagePrefix);
+            usage.Append(Name);
             foreach( JobRunnerNamedArgument argument in _namedArguments.Values )
             {
                 usage.Append(" [-");
@@ -137,6 +139,10 @@ namespace Tkl.Jumbo.Jet.Jobs
             }
 
             usage = new StringBuilder(usage.ToString().GetLines(maxLineLength, 3));
+            if( !string.IsNullOrEmpty(Description) )
+            {
+                usage.Insert(0, Description.GetLines(Console.WindowWidth - 1, 0) + Environment.NewLine);
+            }
 
             foreach( JobRunnerPositionalArgument argument in _arguments )
             {
