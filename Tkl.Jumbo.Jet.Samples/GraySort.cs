@@ -27,7 +27,9 @@ namespace Tkl.Jumbo.Jet.Samples
         /// <param name="inputPath">The input file or directory containing the data to be sorted.</param>
         /// <param name="outputPath">The output directory where the sorted data will be written.</param>
         /// <param name="mergeTasks">The number of merge tasks to use.</param>
-        public GraySort(string inputPath, string outputPath, [OptionalArgument(1)] int mergeTasks)
+        public GraySort([Description("The input file or directory on the Jumbo DFS containing the data to be sorted.")] string inputPath,
+                        [Description("The output directory on the Jumbo DFS where the sorted data will be written.")] string outputPath,
+                        [Description("The number of merge tasks to use."), OptionalArgument(1)] int mergeTasks)
             : base(inputPath, outputPath, mergeTasks, typeof(EmptyTask<GenSortRecord>), "InputStage", null, null, typeof(GenSortRecordReader), typeof(GenSortRecordWriter), typeof(RangePartitioner), true)
         {
             SampleSize = 10000;

@@ -61,6 +61,7 @@
   <ItemGroup>
     <None Include="..\dfs.config">
       <Link>dfs.config</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Include="..\jet.config">
       <Link>jet.config</Link>

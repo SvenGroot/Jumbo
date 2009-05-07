@@ -15,7 +15,8 @@ namespace Tkl.Jumbo.Jet.Jobs
         /// </summary>
         /// <param name="name">The name of the argument.</param>
         /// <param name="argumentType">The type of the argument</param>
-        protected JobRunnerArgument(string name, Type argumentType)
+        /// <param name="description">The description of the argument, or <see langword="null"/> if the argument has no description.</param>
+        protected JobRunnerArgument(string name, Type argumentType, string description)
         {
             if( name == null )
                 throw new ArgumentNullException("name");
@@ -24,6 +25,7 @@ namespace Tkl.Jumbo.Jet.Jobs
 
             Name = name;
             ArgumentType = argumentType;
+            Description = description;
         }
 
         /// <summary>
@@ -35,6 +37,11 @@ namespace Tkl.Jumbo.Jet.Jobs
         /// Gets the type of the argument.
         /// </summary>
         public Type ArgumentType { get; private set; }
+
+        /// <summary>
+        /// Gets the description of the argument.
+        /// </summary>
+        public string Description { get; private set; }
 
         /// <summary>
         /// Converts the specified string to the argument type.

@@ -52,7 +52,10 @@ namespace Tkl.Jumbo.Jet.Jobs
                     hasOptionalAttribute = true;
                     _minimumArgumentCount = x;
                 }
-                _arguments[x] = new JobRunnerPositionalArgument(parameter.Name, parameter.ParameterType, optionalAttribute != null, optionalAttribute == null ? null : optionalAttribute.DefaultValue);
+
+                DescriptionAttribute descriptionAttribute = (DescriptionAttribute)Attribute.GetCustomAttribute(parameter, typeof(DescriptionAttribute));
+
+                _arguments[x] = new JobRunnerPositionalArgument(parameter.Name, parameter.ParameterType, optionalAttribute != null, optionalAttribute == null ? null : optionalAttribute.DefaultValue, descriptionAttribute == null ? null : descriptionAttribute.Description);
             }
             if( !hasOptionalAttribute )
                 _minimumArgumentCount = _arguments.Length;
@@ -91,52 +94,66 @@ namespace Tkl.Jumbo.Jet.Jobs
         /// <summary>
         /// Gets a string describing the command line usage of the job runner.
         /// </summary>
-        public string Usage
+        /// <param name="usagePrefix">A string to prepend to the first line of the usage (e.g. the executable name).</param>
+        /// <param name="maxLineLength">The maximum line length of lines in the usage.</param>
+        /// <returns>A string describing the command line usage of the job runner.</returns>
+        public string GetUsage(string usagePrefix, int maxLineLength)
         {
-            get
+            if( usagePrefix == null )
+                throw new ArgumentNullException("usagePrefix");
+
+            StringBuilder usage = new StringBuilder(usagePrefix);
+            foreach( JobRunnerNamedArgument argument in _namedArguments.Values )
             {
-                StringBuilder usage = new StringBuilder(Name);
-                foreach( JobRunnerNamedArgument argument in _namedArguments.Values )
+                usage.Append(" [-");
+                usage.Append(argument.Name);
+                if( argument.ArgumentType != typeof(bool) )
                 {
-                    usage.Append(" [-");
-                    usage.Append(argument.Name);
-                    if( argument.ArgumentType != typeof(bool) )
+                    usage.Append(" ");
+                    usage.Append(argument.PropertyName);
+                }
+                usage.Append("]");
+            }
+
+            foreach( JobRunnerPositionalArgument argument in _arguments )
+            {
+                usage.Append(" ");
+                if( argument.IsOptional )
+                    usage.Append("[");
+                else
+                    usage.Append("<");
+                usage.Append(argument.Name);
+                if( argument.IsOptional )
+                {
+                    if( argument.DefaultValue != null )
                     {
-                        usage.Append(" ");
-                        usage.Append(argument.PropertyName);
+                        usage.Append("=");
+                        usage.Append(argument.DefaultValue);
                     }
                     usage.Append("]");
                 }
-                foreach( JobRunnerPositionalArgument argument in _arguments )
-                {
-                    usage.Append(" ");
-                    if( argument.IsOptional )
-                        usage.Append("[");
-                    else
-                        usage.Append("<");
-                    usage.Append(argument.Name);
-                    if( argument.IsOptional)
-                    {
-                        if( argument.DefaultValue != null )
-                        {
-                            usage.Append("=");
-                            usage.Append(argument.DefaultValue);
-                        }
-                        usage.Append("]");
-                    }
-                    else
-                        usage.Append(">");
-                }
-
-                foreach( JobRunnerNamedArgument argument in _namedArguments.Values )
-                {
-                    usage.AppendLine();
-                    usage.AppendLine();
-                    usage.AppendFormat("{0,6} : {1}", "-" + argument.Name, argument.Description);
-                }
-
-                return usage.ToString();
+                else
+                    usage.Append(">");
             }
+
+            usage = new StringBuilder(usage.ToString().GetLines(maxLineLength, 3));
+
+            foreach( JobRunnerPositionalArgument argument in _arguments )
+            {
+                if( !string.IsNullOrEmpty(argument.Description) )
+                {
+                    usage.AppendLine();
+                    usage.Append(string.Format("{0,13} : {1}", argument.Name, argument.Description).GetLines(maxLineLength, 16));
+                }
+            }
+
+            foreach( JobRunnerNamedArgument argument in _namedArguments.Values )
+            {
+                usage.AppendLine();
+                usage.Append(string.Format("{0,13} : {1}", "-" + argument.Name, argument.Description).GetLines(maxLineLength, 16));
+            }
+
+            return usage.ToString();
         }
 
         /// <summary>

@@ -18,19 +18,13 @@ namespace Tkl.Jumbo.Jet.Jobs
         /// </summary>
         /// <param name="property">The property holding the named argument's value.</param>
         public JobRunnerNamedArgument(PropertyInfo property)
-            : base(GetArgumentName(property), property.PropertyType)
+            : base(GetArgumentName(property), property.PropertyType, GetDescription(property))
         {
             NamedArgumentAttribute attribute = (NamedArgumentAttribute)Attribute.GetCustomAttribute(property, typeof(NamedArgumentAttribute));
             if( attribute == null )
                 throw new ArgumentException("Specified property is not a named argument.", "property");
-            Description = attribute.Description;
             _property = property;
         }
-
-        /// <summary>
-        /// Gets the description of the argument.
-        /// </summary>
-        public string Description { get; private set; }
 
         /// <summary>
         /// Gets the property name of the argument.
@@ -67,6 +61,17 @@ namespace Tkl.Jumbo.Jet.Jobs
             if( attribute == null )
                 throw new ArgumentException("Specified property is not a named argument.", "property");
             return attribute.ArgumentName;
+        }
+
+        private static string GetDescription(PropertyInfo property)
+        {
+            if( property == null )
+                throw new ArgumentNullException("property");
+
+            NamedArgumentAttribute attribute = (NamedArgumentAttribute)Attribute.GetCustomAttribute(property, typeof(NamedArgumentAttribute));
+            if( attribute == null )
+                throw new ArgumentException("Specified property is not a named argument.", "property");
+            return attribute.Description;
         }
     }
 }

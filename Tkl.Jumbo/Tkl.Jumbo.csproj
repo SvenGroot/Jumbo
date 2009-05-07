@@ -95,6 +95,7 @@
     <Compile Include="ServerChannelSinkProvider.cs" />
     <Compile Include="ServerContext.cs" />
     <Compile Include="ServerMetrics.cs" />
+    <Compile Include="StringExtensions.cs" />
     <Compile Include="TcpServer.cs" />
     <Compile Include="TypeExtensions.cs" />
   </ItemGroup>

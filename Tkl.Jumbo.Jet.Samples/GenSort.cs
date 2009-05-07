@@ -37,14 +37,17 @@ namespace Tkl.Jumbo.Jet.Samples
         /// <param name="recordCount">The amount of records to generate.</param>
         /// <param name="taskCount">The amount of generator tasks to use.</param>
         /// <param name="startRecord">The record number to start at.</param>
-        public GenSort(string outputPath, ulong recordCount, int taskCount, [OptionalArgument(0UL)] ulong startRecord)
+        public GenSort([Description("The output directory on the Jumbo DFS where the generated data will be written.")] string outputPath,
+                       [Description("The number of records to generate.")] ulong recordCount,
+                       [Description("The number of tasks to use to generate the data.")] int taskCount,
+                       [Description("The record number to start at."), OptionalArgument(0UL)] ulong startRecord)
             : base(null, outputPath, 0, typeof(GenSortTask), null, null, null, null, typeof(GenSortRecordWriter), null, false)
         {
             if( recordCount < 1 )
                 throw new ArgumentOutOfRangeException("recordCount", "You must generate at least one record.");
             if( taskCount < 1 )
                 throw new ArgumentOutOfRangeException("taskCount", "You must use at least one generator task.");
-                
+
             FirstStageTaskCount = taskCount;
             _recordCount = recordCount;
             _startRecord = startRecord;

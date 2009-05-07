@@ -39,7 +39,8 @@ namespace Tkl.Jumbo.Jet.Samples
         /// </summary>
         /// <param name="inputPath">The input file or directory for the job.</param>
         /// <param name="outputPath">The output directory for the job.</param>
-        public ValSort(string inputPath, string outputPath)
+        public ValSort([Description("The input file or directory on the Jumbo DFS containing the data to validate.")] string inputPath, 
+                       [Description("The output directory on the Jumbo DFS where the results of the validation will be written.")] string outputPath)
         {
             if( inputPath == null )
                 throw new ArgumentNullException("inputPath");

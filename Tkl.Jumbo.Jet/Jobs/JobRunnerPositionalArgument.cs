@@ -17,8 +17,9 @@ namespace Tkl.Jumbo.Jet.Jobs
         /// <param name="argumentType">The type of the argument</param>
         /// <param name="optional"><see langword="true"/> if the argument is optional; otherwise, <see langword="false"/>.</param>
         /// <param name="defaultValue">The default value if the argument is optional, ignored otherwise.</param>
-        public JobRunnerPositionalArgument(string name, Type argumentType, bool optional, object defaultValue)
-            : base(name, argumentType)
+        /// <param name="description">A description for the argument, or <see langword="null"/> if the argument has no description.</param>
+        public JobRunnerPositionalArgument(string name, Type argumentType, bool optional, object defaultValue, string description)
+            : base(name, argumentType, description)
         {
             if( optional )
             {

@@ -1,12 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
-using System.Text;
-using Tkl.Jumbo.Jet;
 using System.Net.Sockets;
 using System.Reflection;
+using System.Text;
+using Tkl.Jumbo;
+using Tkl.Jumbo.Jet;
 using Tkl.Jumbo.Jet.Jobs;
-using System.IO;
 
 namespace JetShell
 {
@@ -72,6 +73,8 @@ namespace JetShell
                 Assembly assembly = Assembly.LoadFrom(assemblyFileName);
                 if( args.Length == 2 )
                 {
+                    Console.WriteLine("Usage: JetShell.exe job <assemblyName> <jobName> [job arguments...]");
+                    Console.WriteLine();
                     PrintAssemblyJobList(assembly);
                 }
                 else
@@ -80,7 +83,7 @@ namespace JetShell
                     JobRunnerInfo jobRunnerInfo = JobRunnerInfo.GetJobRunner(assembly, jobName);
                     if( jobRunnerInfo == null )
                     {
-                        Console.WriteLine("Job {0} does not exist in the assembly {1}.", jobName, assemblyFileName);
+                        Console.WriteLine(string.Format("Job {0} does not exist in the assembly {1}.", jobName, Path.GetFileName(assemblyFileName)).GetLines(Console.WindowWidth - 1, 0));
                         PrintAssemblyJobList(assembly);
                     }
                     else
@@ -91,7 +94,8 @@ namespace JetShell
                         IJobRunner jobRunner = jobRunnerInfo.CreateInstance(remainingArgs);
                         if( jobRunner == null )
                         {
-                            Console.WriteLine("Usage: JetShell.exe job {0} {1}", assemblyFileName, jobRunnerInfo.Usage);
+                            string baseUsage = string.Format("Usage: JetShell.exe job {0} ", Path.GetFileName(assemblyFileName));
+                            Console.WriteLine(jobRunnerInfo.GetUsage(baseUsage, Console.WindowWidth - 1));
                         }
                         else
                         {
@@ -125,11 +129,11 @@ namespace JetShell
         private static void PrintAssemblyJobList(Assembly assembly)
         {
             JobRunnerInfo[] jobs = JobRunnerInfo.GetJobRunners(assembly);
-            Console.WriteLine("The specified assembly defines the following jobs:");
+            Console.Write(string.Format("The assembly {0} defines the following jobs:", assembly.GetName().Name).GetLines(Console.WindowWidth - 1, 0));
             Console.WriteLine();
             foreach( JobRunnerInfo job in jobs )
             {
-                Console.WriteLine("{0}: {1}", job.Name, job.Description);
+                Console.Write(string.Format("{0,13} : {1}", job.Name, job.Description).GetLines(Console.WindowWidth - 1, 16));
                 Console.WriteLine();
             }
         }
