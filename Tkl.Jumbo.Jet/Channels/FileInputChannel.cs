@@ -212,6 +212,7 @@ namespace Tkl.Jumbo.Jet.Channels
                     CompletedTask[] completedTasks = _jobServer.WaitForTaskCompletion(_jobID, tasksLeftArray, _pollingInterval);
                     if( completedTasks != null && completedTasks.Length > 0 )
                     {
+                        _log.InfoFormat("Received {0} new completed tasks.", completedTasks.Length);
                         completedTasks.Randomize(); // Randomize to prevent all tasks hitting the same server.
                         lock( _completedTasks )
                         {

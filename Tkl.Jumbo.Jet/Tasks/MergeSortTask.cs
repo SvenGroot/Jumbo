@@ -95,6 +95,7 @@ namespace Tkl.Jumbo.Jet.Tasks
                 try
                 {
                     // Wait until we have enough inputs for another merge pass.
+                    _log.InfoFormat("Waiting for {0} inputs to become available.", processed + maxMergeInputs);
                     input.WaitForInputs(processed + maxMergeInputs, Timeout.Infinite);
 
                     // Create the merge queue from the new inputs.
@@ -135,6 +136,8 @@ namespace Tkl.Jumbo.Jet.Tasks
                     }
 
                     MergeQueue(queue, writer);
+
+                    _log.InfoFormat("Pass {0} complete", pass);
 
                     if( currentOutput != null )
                         currentOutput.UncompressedSize = writer.BytesWritten;
