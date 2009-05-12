@@ -283,7 +283,7 @@ namespace Tkl.Jumbo.Jet.Channels
                     if( remainingTasks.Count == tasksToProcess.Count )
                     {
                         int interval = _downloadRetryInterval + rnd.Next(_downloadRetryIntervalRandomization);
-                        _log.InfoFormat("Couldn't download any files, will retry after {0}ms.", interval;
+                        _log.InfoFormat("Couldn't download any files, will retry after {0}ms.", interval);
                         Thread.Sleep(interval); // If we couldn't download any of the files, we will wait a bit
                     }
                     tasksToProcess.Clear();
