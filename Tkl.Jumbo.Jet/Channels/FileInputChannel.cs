@@ -383,7 +383,7 @@ namespace Tkl.Jumbo.Jet.Channels
             string fileToDownload = FileOutputChannel.CreateChannelFileName(task.TaskId, outputTaskId);
 
             int port = task.TaskServerFileServerPort;
-            _log.InfoFormat("Attempting to downloading file {0} from server {1}:{2}.", fileToDownload, task.TaskServer.HostName, port);
+            _log.InfoFormat("Attempting to download file {0} from server {1}:{2}.", fileToDownload, task.TaskServer.HostName, port);
             using( TcpClient client = new TcpClient(task.TaskServer.HostName, port) )
             using( NetworkStream stream = client.GetStream() )
             using( BinaryWriter writer = new BinaryWriter(stream) )
@@ -392,7 +392,7 @@ namespace Tkl.Jumbo.Jet.Channels
                 int connectionAccepted = reader.ReadInt32();
                 if( connectionAccepted == 0 )
                 {
-                    _log.InfoFormat("Server {1}:{2} rejected our download attempt because it is busy.", task.TaskServer.HostName, port);
+                    _log.InfoFormat("Server {0}:{1} rejected our download attempt because it is busy.", task.TaskServer.HostName, port);
                     fileName = null;
                     memoryStream = null;
                     uncompressedSize = 0;
