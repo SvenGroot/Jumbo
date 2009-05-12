@@ -79,7 +79,7 @@ namespace Tkl.Jumbo.Jet
         /// Gets or sets the maximum number of simultaneous connections allowed to the file channel channel TCP server.
         /// </summary>
         [ConfigurationProperty("fileServerMaxConnections", DefaultValue = 10, IsRequired = false, IsKey = false)]
-        [IntegerValidator(MinValue = 1)]
+        [IntegerValidator(MinValue = 1, MaxValue=Int32.MaxValue, ExcludeRange=false)]
         public int FileServerMaxConnections
         {
             get { return (int)this["fileServerMaxConnections"]; }
