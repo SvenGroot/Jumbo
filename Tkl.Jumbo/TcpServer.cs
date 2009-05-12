@@ -19,6 +19,42 @@ namespace Tkl.Jumbo
         private TcpListener[] _listeners;
         private volatile bool _running;
         private Thread[] _listenerThreads;
+        private readonly int _maxConnections;
+        private int _connections;
+        private static readonly byte[] _connectionAccepted = new byte[] { 0, 0, 0, 1 };
+        private static readonly byte[] _connectionRejected = new byte[] { 0, 0, 0, 0 };
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="TcpServer"/> class with the specified local address, port, and maximum number of connections.
+        /// </summary>
+        /// <param name="localAddresses">The local IP address that the server should bind to.</param>
+        /// <param name="port">The port to listen on.</param>
+        /// <param name="maxConnections">The maximum number of simultaneous connections that the server will allow, or zero to have no maximum.</param>
+        /// <remarks>
+        /// <para>
+        ///   If <paramref name="maxConnections"/> is larger than zero, the <see cref="TcpServer"/> class will maintain a count of
+        ///   connected clients on all specified end points. If a client tries to connect when the count is equal to <paramref name="maxConnections"/>,
+        ///   the connection will be refused.
+        /// </para>
+        /// <para>
+        ///   If <paramref name="maxConnections"/> is larger than zero, the <see cref="TcpServer"/> will send a 4-byte value (to keep the remaining data
+        ///   word-aligned) that is zero to indicate the connection was rejected, or non-zero to indicate it was accepted. When <paramref name="maxConnections"/>
+        ///   is zero, this value is not sent.
+        /// </para>
+        /// </remarks>
+        protected TcpServer(IPAddress[] localAddresses, int port, int maxConnections)
+        {
+            if( localAddresses == null )
+                throw new ArgumentNullException("localAddresses");
+            if( localAddresses.Length == 0 )
+                throw new ArgumentException("You must specify at least one address to listen on.", "localAddresses");
+            if( maxConnections < 0 )
+                throw new ArgumentOutOfRangeException("maxConnections", "The maximum number of connections must be zero or more.");
+
+            _listeners = (from address in localAddresses
+                          select new TcpListener(address, port)).ToArray();
+            _maxConnections = maxConnections;
+        }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="TcpServer"/> class with the specified local address and port.
@@ -26,14 +62,8 @@ namespace Tkl.Jumbo
         /// <param name="localAddresses">The local IP address that the server should bind to.</param>
         /// <param name="port">The port to listen on.</param>
         protected TcpServer(IPAddress[] localAddresses, int port)
+            : this(localAddresses, port, 0)
         {
-            if( localAddresses == null )
-                throw new ArgumentNullException("localAddresses");
-            if( localAddresses.Length == 0 )
-                throw new ArgumentException("You must specify at least one address to listen on.", "localAddresses");
-
-            _listeners = (from address in localAddresses
-                          select new TcpListener(address, port)).ToArray();
         }
 
         /// <summary>
@@ -101,6 +131,23 @@ namespace Tkl.Jumbo
                 // if there was already a connection in the queue, thus blocking the server until that connection was
                 // handled. So I switch to manually creating threads.
                 TcpClient client = listener.AcceptTcpClient();
+                if( _maxConnections != 0 )
+                {
+                    int currentValue;
+                    do
+                    {
+                        currentValue = _connections;
+                        if( currentValue >= _maxConnections )
+                        {
+                            client.Client.Send(_connectionRejected);
+                            client.Close();
+                            return;
+                        }
+                    } while( currentValue != Interlocked.CompareExchange(ref _connections, currentValue + 1, currentValue) );
+
+                    // If _maxConnections > 0, we need to send a value to indicate we accepted the connection.
+                    client.Client.Send(_connectionAccepted);
+                }
                 Thread handlerThread = new Thread(ConnectionHandlerThread);
                 handlerThread.IsBackground = true;
                 handlerThread.Start(client);
@@ -138,6 +185,11 @@ namespace Tkl.Jumbo
                 // Only ignore when shutting down.
                 if( _running )
                     throw;
+            }
+            finally
+            {
+                if( _maxConnections != 0 )
+                    Interlocked.Decrement(ref _connections);
             }
         }
     }

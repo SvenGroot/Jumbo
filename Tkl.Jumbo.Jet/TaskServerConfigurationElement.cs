@@ -76,6 +76,17 @@ namespace Tkl.Jumbo.Jet
         }
 
         /// <summary>
+        /// Gets or sets the maximum number of simultaneous connections allowed to the file channel channel TCP server.
+        /// </summary>
+        [ConfigurationProperty("fileServerMaxConnections", DefaultValue = 10, IsRequired = false, IsKey = false)]
+        [IntegerValidator(MinValue = 1)]
+        public int FileServerMaxConnections
+        {
+            get { return (int)this["fileServerMaxConnections"]; }
+            set { this["fileServerMaxConnections"] = value; }
+        }
+
+        /// <summary>
         /// Gets or sets the number of milliseconds to wait between creating TaskHost processes.
         /// </summary>
         [ConfigurationProperty("processCreationDelay", DefaultValue = 0, IsRequired = false, IsKey = false)]

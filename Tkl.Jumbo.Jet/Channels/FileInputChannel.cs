@@ -22,6 +22,8 @@ namespace Tkl.Jumbo.Jet.Channels
         public const string MemoryStorageSizeSetting = "FileChannel.MemoryStorageSize";
 
         private const int _pollingInterval = 5000;
+        private const int _downloadRetryInterval = 1000;
+        private const int _downloadRetryIntervalRandomization = 2000;
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(FileInputChannel));
 
         private string _jobDirectory;
@@ -250,9 +252,10 @@ namespace Tkl.Jumbo.Jet.Channels
             where T : IWritable, new()
         {
             List<CompletedTask> tasksToProcess = new List<CompletedTask>();
+            List<CompletedTask> remainingTasks = new List<CompletedTask>();
+            Random rnd = new Random();
             while( !_disposed )
             {
-                tasksToProcess.Clear();
                 lock( _completedTasks )
                 {
                     if( _completedTasks.Count == 0 )
@@ -269,9 +272,32 @@ namespace Tkl.Jumbo.Jet.Channels
                     }
                 }
 
-                foreach( CompletedTask task in tasksToProcess )
+                while( tasksToProcess.Count > 0 )
                 {
-                    DownloadCompletedFile(reader, mergeTaskInput, task);
+                    remainingTasks.Clear();
+                    foreach( CompletedTask task in tasksToProcess )
+                    {
+                        if( !DownloadCompletedFile(reader, mergeTaskInput, task) )
+                            remainingTasks.Add(task);
+                    }
+                    if( remainingTasks.Count == tasksToProcess.Count )
+                    {
+                        Thread.Sleep(_downloadRetryInterval + rnd.Next(_downloadRetryIntervalRandomization)); // If we couldn't download any of the files, we will wait a bit
+                    }
+                    tasksToProcess.Clear();
+                    if( remainingTasks.Count > 0 )
+                    {
+                        tasksToProcess.AddRange(remainingTasks);
+                        // Also add newly arrived tasks to the list, to improve the chances of the next iteration doing work.
+                        lock( _completedTasks )
+                        {
+                            if( _completedTasks.Count > 0 )
+                            {
+                                tasksToProcess.AddRange(_completedTasks);
+                                _completedTasks.Clear();
+                            }
+                        }
+                    }
                 }
             }
 
@@ -281,7 +307,7 @@ namespace Tkl.Jumbo.Jet.Channels
                 _log.Info("All files are downloaded.");
         }
 
-        private void DownloadCompletedFile<T>(MultiRecordReader<T> reader, MergeTaskInput<T> mergeTaskInput, CompletedTask task)
+        private bool DownloadCompletedFile<T>(MultiRecordReader<T> reader, MergeTaskInput<T> mergeTaskInput, CompletedTask task)
             where T : IWritable, new()
         {
             _log.InfoFormat("Task {0} output file is now available.", task.TaskId);
@@ -308,7 +334,8 @@ namespace Tkl.Jumbo.Jet.Channels
             }
             else
             {
-                fileName = DownloadFile(task, _outputTaskId.ToString(), out memoryStream, out uncompressedSize);
+                if( !DownloadFile(task, _outputTaskId.ToString(), out fileName, out memoryStream, out uncompressedSize) )
+                    return false; // We couldn't download because the server is busy
                 deleteFile = _taskExecution.JetClient.Configuration.FileChannel.DeleteIntermediateFiles; // Files we've downloaded can be deleted.
             }
 
@@ -347,19 +374,32 @@ namespace Tkl.Jumbo.Jet.Channels
                 _isReady = true;
                 _readyEvent.Set();
             }
+
+            return true;
         }
 
-        private string DownloadFile(CompletedTask task, string outputTaskId, out Stream memoryStream, out long uncompressedSize)
+        private bool DownloadFile(CompletedTask task, string outputTaskId, out string fileName, out Stream memoryStream, out long uncompressedSize)
         {
             string fileToDownload = FileOutputChannel.CreateChannelFileName(task.TaskId, outputTaskId);
 
             int port = task.TaskServerFileServerPort;
-            _log.InfoFormat("Downloading file {0} from server {1}:{2}.", fileToDownload, task.TaskServer.HostName, port);
+            _log.InfoFormat("Attempting to downloading file {0} from server {1}:{2}.", fileToDownload, task.TaskServer.HostName, port);
             using( TcpClient client = new TcpClient(task.TaskServer.HostName, port) )
             using( NetworkStream stream = client.GetStream() )
             using( BinaryWriter writer = new BinaryWriter(stream) )
             using( BinaryReader reader = new BinaryReader(stream) )
             {
+                int connectionAccepted = reader.ReadInt32();
+                if( connectionAccepted == 0 )
+                {
+                    _log.InfoFormat("Server {1}:{2} rejected our download attempt because it is busy.", task.TaskServer.HostName, port);
+                    fileName = null;
+                    memoryStream = null;
+                    uncompressedSize = 0;
+                    return false;
+                }
+
+                _log.InfoFormat("Downloading file {0} from server {1}:{2}.", fileToDownload, task.TaskServer.HostName, port);
                 writer.Write(_jobID.ToByteArray());
                 writer.Write(fileToDownload);
 
@@ -388,7 +428,8 @@ namespace Tkl.Jumbo.Jet.Channels
                         _log.InfoFormat("Download complete, file stored in memory.", targetFile);
                     }
                     NetworkBytesRead += size;
-                    return targetFile;
+                    fileName = targetFile;
+                    return true;
                 }
                 else
                     throw new InvalidOperationException(); // TODO: Recover from this.

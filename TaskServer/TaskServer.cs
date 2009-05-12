@@ -250,7 +250,8 @@ namespace TaskServerApplication
             {
                 addresses = new[] { IPAddress.IPv6Any };
             }
-            _fileServer = new FileChannelServer(this, addresses, Configuration.TaskServer.FileServerPort);
+
+            _fileServer = new FileChannelServer(this, addresses, Configuration.TaskServer.FileServerPort, Configuration.TaskServer.FileServerMaxConnections);
             _fileServer.Start();
 
             while( _running )
