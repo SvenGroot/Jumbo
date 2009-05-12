@@ -26,8 +26,8 @@ namespace TaskServerApplication
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(FileChannelServer));
         private TaskServer _taskServer;
 
-        public FileChannelServer(TaskServer taskServer, IPAddress localAddress, int port)
-            : base(localAddress, port)
+        public FileChannelServer(TaskServer taskServer, IPAddress[] localAddresses, int port)
+            : base(localAddresses, port)
         {
             if( taskServer == null )
                 throw new ArgumentNullException("taskServer");

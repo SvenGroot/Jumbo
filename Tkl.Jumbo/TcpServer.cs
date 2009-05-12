@@ -16,28 +16,24 @@ namespace Tkl.Jumbo
     {
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(TcpServer));
 
-        private TcpListener _listener;
+        private TcpListener[] _listeners;
         private volatile bool _running;
-        private Thread _listenerThread;
+        private Thread[] _listenerThreads;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="TcpServer"/> class with the specified local address and port.
         /// </summary>
-        /// <param name="localAddress">The local IP address that the server should bind to.</param>
+        /// <param name="localAddresses">The local IP address that the server should bind to.</param>
         /// <param name="port">The port to listen on.</param>
-        protected TcpServer(IPAddress localAddress, int port)
+        protected TcpServer(IPAddress[] localAddresses, int port)
         {
-            if( localAddress == null )
-                throw new ArgumentNullException("localAddress");
-            _listener = new TcpListener(localAddress, port);
-        }
+            if( localAddresses == null )
+                throw new ArgumentNullException("localAddresses");
+            if( localAddresses.Length == 0 )
+                throw new ArgumentException("You must specify at least one address to listen on.", "localAddresses");
 
-        /// <summary>
-        /// Gets the underlying <see cref="EndPoint"/> for the current <see cref="TcpServer"/>.
-        /// </summary>
-        public EndPoint LocalEndpoint
-        {
-            get { return _listener.LocalEndpoint; }
+            _listeners = (from address in localAddresses
+                          select new TcpListener(address, port)).ToArray();
         }
 
         /// <summary>
@@ -49,12 +45,15 @@ namespace Tkl.Jumbo
         [MethodImpl(MethodImplOptions.Synchronized)]
         public void Start()
         {
-            if( _listenerThread == null )
+            if( _listenerThreads == null )
             {
-                _listenerThread = new Thread(new ThreadStart(Run));
-                _listenerThread.Name = "TcpServer";
-                _listenerThread.IsBackground = true;
-                _listenerThread.Start();
+                _listenerThreads = new Thread[_listeners.Length];
+                for( int x = 0; x < _listeners.Length; ++x )
+                {
+                    Thread listenerThread = new Thread(Run) { Name = "TcpServer_" + _listeners[x].LocalEndpoint.ToString(), IsBackground = true };
+                    _listenerThreads[x] = listenerThread;
+                    listenerThread.Start(_listeners[x]);
+                }
             }
         }
 
@@ -64,12 +63,12 @@ namespace Tkl.Jumbo
         [MethodImpl(MethodImplOptions.Synchronized)]
         public void Stop()
         {
-            if( _listenerThread != null )
+            if( _listenerThreads != null )
             {
                 _running = false;
-                _listener.Stop();
-                _listenerThread.Join();
-                _listenerThread = null;
+                foreach( TcpListener listener in _listeners )
+                    listener.Stop();
+                _listenerThreads = null;
             }
         }
 
@@ -80,38 +79,43 @@ namespace Tkl.Jumbo
         /// connected to the server.</param>
         protected abstract void HandleConnection(TcpClient client);
 
-        private void Run()
+        private void Run(object parameter)
         {
+            TcpListener listener = (TcpListener)parameter;
+
             _running = true;
-            _listener.Start(Int32.MaxValue);
-            _log.InfoFormat("TCP server started on address {0}.", _listener.LocalEndpoint);
+            listener.Start(Int32.MaxValue);
+            _log.InfoFormat("TCP server started on address {0}.", listener.LocalEndpoint);
 
             while( _running )
             {
-                WaitForConnections();
+                WaitForConnections(listener);
             }
         }
         
-        private void WaitForConnections()
+        private void WaitForConnections(TcpListener listener)
         {
             try
             {
                 // I discovered that using BeginAcceptTcpClient would call the callback immediately on the current thread
                 // if there was already a connection in the queue, thus blocking the server until that connection was
                 // handled. So I switch to manually creating threads.
-                TcpClient client = _listener.AcceptTcpClient();
+                TcpClient client = listener.AcceptTcpClient();
                 Thread handlerThread = new Thread(ConnectionHandlerThread);
-                handlerThread.Name = "TcpServerConnectionHandlerThread";
                 handlerThread.IsBackground = true;
                 handlerThread.Start(client);
             }
             catch( SocketException ex )
             {
-                _log.Error("An error occurred accepting a client connection.", ex);
+                // Don't log errors when shutting down.
+                if( _running )
+                    _log.Error("An error occurred accepting a client connection.", ex);
             }
             catch( ObjectDisposedException )
             {
-                // Aborting; ignore.
+                // Only ignore when shutting down.
+                if( _running )
+                    throw;
             }
         }
 
@@ -127,11 +131,13 @@ namespace Tkl.Jumbo
             }
             catch( SocketException ex )
             {
-                _log.Error("An error occurred accepting a client connection.", ex);
+                _log.Error("An error occurred handling a client connection.", ex);
             }
             catch( ObjectDisposedException )
             {
-                // Aborting; ignore.
+                // Only ignore when shutting down.
+                if( _running )
+                    throw;
             }
         }
     }

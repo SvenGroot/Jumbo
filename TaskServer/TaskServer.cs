@@ -24,7 +24,6 @@ namespace TaskServerApplication
         private TaskRunner _taskRunner;
         private static object _startupLock = new object();
         private FileChannelServer _fileServer;
-        private FileChannelServer _fileServerIPv4;
         private readonly Dictionary<Guid, Dictionary<string, long>> _uncompressedTemporaryFileSizes = new Dictionary<Guid, Dictionary<string, long>>();
 
         private TaskServer()
@@ -239,21 +238,20 @@ namespace TaskServerApplication
 
             AddDataForNextHeartbeat(new StatusJetHeartbeatData() { MaxTasks = Configuration.TaskServer.MaxTasks, MaxNonInputTasks = Configuration.TaskServer.MaxNonInputTasks, FileServerPort = Configuration.TaskServer.FileServerPort });
 
+            IPAddress[] addresses;
             if( System.Net.Sockets.Socket.OSSupportsIPv6 )
             {
-                _fileServer = new FileChannelServer(this, System.Net.IPAddress.IPv6Any, Configuration.TaskServer.FileServerPort);
-                _fileServer.Start();
-                if( Configuration.TaskServer.ListenIPv4AndIPv6 )
-                {
-                    _fileServerIPv4 = new FileChannelServer(this, System.Net.IPAddress.Any, Configuration.TaskServer.FileServerPort);
-                    _fileServerIPv4.Start();
-                }
+                if (Configuration.TaskServer.ListenIPv4AndIPv6)
+                    addresses = new[] { IPAddress.IPv6Any, IPAddress.Any };
+                else
+                    addresses = new[] { IPAddress.IPv6Any };
             }
             else
             {
-                _fileServer = new FileChannelServer(this, System.Net.IPAddress.Any, Configuration.TaskServer.FileServerPort);
-                _fileServer.Start();
+                addresses = new[] { IPAddress.IPv6Any };
             }
+            _fileServer = new FileChannelServer(this, addresses, Configuration.TaskServer.FileServerPort);
+            _fileServer.Start();
 
             while( _running )
             {
@@ -266,8 +264,6 @@ namespace TaskServerApplication
             _taskRunner.Stop();
             if( _fileServer != null )
                 _fileServer.Stop();
-            if( _fileServerIPv4 != null )
-                _fileServerIPv4.Stop();
             _running = false;
             RpcHelper.AbortRetries();
             _log.InfoFormat("-----Task server is shutting down-----");

@@ -22,12 +22,12 @@ namespace DataServerApplication
 
         private DataServer _dataServer;
 
-        public BlockServer(DataServer dataServer, IPAddress bindAddress, int port)
-            : base(bindAddress, port)
+        public BlockServer(DataServer dataServer, IPAddress[] localAddresses, int port)
+            : base(localAddresses, port)
         {
             if( dataServer == null )
                 throw new ArgumentNullException("dataServer");
-            _log.InfoFormat("Starting block server on {0}", bindAddress);
+            _log.InfoFormat("Starting block server on {0}", localAddresses);
 
             _dataServer = dataServer;
         }

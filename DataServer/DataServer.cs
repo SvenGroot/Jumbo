@@ -8,6 +8,7 @@ using System.Configuration;
 using System.IO;
 using Tkl.Jumbo;
 using System.Net.Sockets;
+using System.Net;
 
 namespace DataServerApplication
 {
@@ -27,7 +28,6 @@ namespace DataServerApplication
         private List<Guid> _blocks = new List<Guid>();
         private List<Guid> _pendingBlocks = new List<Guid>();
         private BlockServer _blockServer; // listens for TCP connections.
-        private BlockServer _blockServerIPv4;
         private volatile bool _running;
         private readonly Queue<ReplicateBlockHeartbeatResponse> _blocksToReplicate = new Queue<ReplicateBlockHeartbeatResponse>();
         private readonly Thread _replicateBlocksThread;
@@ -71,21 +71,20 @@ namespace DataServerApplication
 
             if( _running )
             {
+                IPAddress[] addresses;
                 if( System.Net.Sockets.Socket.OSSupportsIPv6 )
                 {
-                    _blockServer = new BlockServer(this, System.Net.IPAddress.IPv6Any, _port);
-                    _blockServer.Start();
-                    if( _config.DataServer.ListenIPv4AndIPv6 )
-                    {
-                        _blockServerIPv4 = new BlockServer(this, System.Net.IPAddress.Any, _port);
-                        _blockServerIPv4.Start();
-                    }
+                    if (_config.DataServer.ListenIPv4AndIPv6)
+                        addresses = new[] { IPAddress.IPv6Any, IPAddress.Any };
+                    else
+                        addresses = new[] { IPAddress.IPv6Any };
                 }
                 else
                 {
-                    _blockServer = new BlockServer(this, System.Net.IPAddress.Any, _port);
-                    _blockServer.Start();
+                    addresses = new[] { IPAddress.IPv6Any };
                 }
+                _blockServer = new BlockServer(this, addresses, _config.DataServer.Port);
+                _blockServer.Start();
 
                 _replicateBlocksThread.Start();
 
@@ -109,11 +108,6 @@ namespace DataServerApplication
             {
                 _blockServer.Stop();
                 _blockServer = null;
-            }
-            if( _blockServerIPv4 != null )
-            {
-                _blockServerIPv4.Stop();
-                _blockServerIPv4 = null;
             }
             _running = false;
             RpcHelper.AbortRetries();
