@@ -125,6 +125,7 @@
     <Compile Include="TaskStatusChangedJetHeartbeatData.cs" />
     <Compile Include="Tasks\EmptyTask.cs" />
     <Compile Include="Tasks\MergeSortTask.cs" />
+    <Compile Include="Tasks\MergeSortTaskConstants.cs" />
     <Compile Include="Tasks\SortTask.cs" />
   </ItemGroup>
   <ItemGroup>

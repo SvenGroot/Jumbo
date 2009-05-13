@@ -222,7 +222,7 @@ namespace JobServerApplication
             JetMetrics result = new JetMetrics();
             lock( _jobs )
             {
-                result.RunningJobs.AddRange(_jobs.Keys);
+                result.RunningJobs.AddRange(from job in _jobs.Values where job.State == JobState.Running select job.Job.JobId);
             }
             lock( _finishedJobs )
             {
@@ -561,6 +561,9 @@ namespace JobServerApplication
             {
                 JobInfo job;
                 if( !jobs.TryGetValue(jobId, out job) )
+                    return null;
+
+                if( job.State < JobState.Running )
                     return null;
 
                 JobStatus result = new JobStatus()

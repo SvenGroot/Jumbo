@@ -648,8 +648,8 @@ namespace Tkl.Jumbo.Jet
                             return false;
                     }
                 }
+                return true;
             }
-            return false;
         }
     }
 }

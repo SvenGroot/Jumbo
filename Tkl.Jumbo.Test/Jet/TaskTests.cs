@@ -94,7 +94,7 @@ namespace Tkl.Jumbo.Test.Jet
 
             MergeSortTask<Int32Writable> target = new MergeSortTask<Int32Writable>();
             StageConfiguration stageConfig = new StageConfiguration();
-            stageConfig.AddTypedSetting(MergeSortTask<Int32Writable>.MaxMergeInputsSetting, maxMergeInputs);
+            stageConfig.AddTypedSetting(MergeSortTaskConstants.MaxMergeInputsSetting, maxMergeInputs);
             stageConfig.StageId = "Merge";
             target.TaskAttemptConfiguration = new TaskAttemptConfiguration(Guid.Empty, new JobConfiguration(), new TaskId(stageConfig.StageId, 1), stageConfig, Utilities.TestOutputPath, "", 1, null);
             target.JetConfiguration = new JetConfiguration();

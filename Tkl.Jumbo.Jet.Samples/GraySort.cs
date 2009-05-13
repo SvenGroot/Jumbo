@@ -38,8 +38,14 @@ namespace Tkl.Jumbo.Jet.Samples
         /// <summary>
         /// Gets or sets the sample size used to determine the partitioner's split points.
         /// </summary>
-        [NamedArgument("s", Description = "The number of records to sample in order to determine the partitioner's split points.")]
+        [NamedArgument("s", Description = "The number of records to sample in order to determine the partitioner's split points. The default is 10000.")]
         public int SampleSize { get; set; }
+
+        /// <summary>
+        /// Gets or sets the maximum number of merge inputs for a single merge pass.
+        /// </summary>
+        [NamedArgument("m", Description = "The maximum number of inputs for a single merge pass. If unspecified, Jumbo Jet's default value will be used.")]
+        public int MaxMergeInputs { get; set; }
 
         /// <summary>
         /// Overrides <see cref="BasicJob.OnJobCreated"/>.
@@ -62,6 +68,8 @@ namespace Tkl.Jumbo.Jet.Samples
             RangePartitioner.CreatePartitionFile(dfsClient, partitionFileName, dfsInputs.ToArray(), SecondStageTaskCount, SampleSize);
 
             jobConfiguration.AddSetting("partitionFile", partitionFileName);
+            if( MaxMergeInputs > 0 )
+                jobConfiguration.AddTypedSetting(MergeSortTaskConstants.MaxMergeInputsSetting, MaxMergeInputs);
         }
     }
 }

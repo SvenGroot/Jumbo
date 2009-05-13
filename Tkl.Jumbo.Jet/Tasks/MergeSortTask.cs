@@ -35,18 +35,6 @@ namespace Tkl.Jumbo.Jet.Tasks
 
         #endregion
 
-        /// <summary>
-        /// The name of the setting in <see cref="StageConfiguration.StageSettings"/> that specified the maximum number
-        /// of files to merge in one pass.
-        /// </summary>
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1000:DoNotDeclareStaticMembersOnGenericTypes")]
-        public const string MaxMergeInputsSetting = "MergeSortTask.MaxMergeTasks";
-        /// <summary>
-        /// The default maximum number of files to merge in one pass.
-        /// </summary>
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1000:DoNotDeclareStaticMembersOnGenericTypes")]
-        public const int DefaultMaxMergeInputs = 100;
-
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(MergeSortTask<T>));
 
         private class MergeInput
@@ -74,9 +62,9 @@ namespace Tkl.Jumbo.Jet.Tasks
         /// <param name="output">A <see cref="RecordWriter{T}"/> to which the task's output should be written.</param>
         public void Run(MergeTaskInput<T> input, RecordWriter<T> output)
         {
-            int maxMergeInputs = TaskAttemptConfiguration.StageConfiguration.GetTypedSetting(MaxMergeInputsSetting, 0);
+            int maxMergeInputs = TaskAttemptConfiguration.StageConfiguration.GetTypedSetting(MergeSortTaskConstants.MaxMergeInputsSetting, 0);
             if( maxMergeInputs == 0 )
-                maxMergeInputs = TaskAttemptConfiguration.JobConfiguration.GetTypedSetting(MaxMergeInputsSetting, DefaultMaxMergeInputs);
+                maxMergeInputs = TaskAttemptConfiguration.JobConfiguration.GetTypedSetting(MergeSortTaskConstants.MaxMergeInputsSetting, MergeSortTaskConstants.DefaultMaxMergeInputs);
 
             if( maxMergeInputs <= 0 )
                 throw new InvalidOperationException("maxMergeInputs must be larger than zero.");
