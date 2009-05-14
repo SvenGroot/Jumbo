@@ -208,6 +208,39 @@ namespace TaskServerApplication
             return null;
         }
 
+        public byte[] GetCompressedTaskLogFiles(Guid jobId)
+        {
+            _log.DebugFormat("GetCompressedTaskLogFiles; jobId = {{0}}", jobId);
+            string jobDirectory = GetJobDirectory(jobId);
+            if( System.IO.Directory.Exists(jobDirectory) )
+            {
+                string[] logFiles = System.IO.Directory.GetFiles(jobDirectory, "*.log");
+                if( logFiles.Length > 0 )
+                {
+                    using( MemoryStream outputStream = new MemoryStream() )
+                    using( ICSharpCode.SharpZipLib.Zip.ZipOutputStream zipStream = new ICSharpCode.SharpZipLib.Zip.ZipOutputStream(outputStream) )
+                    {
+                        zipStream.SetLevel(9);
+
+                        foreach( string logFile in logFiles )
+                        {
+                            zipStream.PutNextEntry(new ICSharpCode.SharpZipLib.Zip.ZipEntry(System.IO.Path.GetFileName(logFile)));
+                            using( System.IO.FileStream stream = System.IO.File.Open(logFile, System.IO.FileMode.Open, System.IO.FileAccess.Read, System.IO.FileShare.ReadWrite) )
+                            {
+                                stream.CopyTo(zipStream);
+                            }
+                        }
+
+                        zipStream.Finish();
+
+                        return outputStream.ToArray();
+                    }
+                }
+            }
+
+            return null;
+        }
+
         public string GetTaskProfileOutput(Guid jobId, string taskId, int attempt)
         {
             _log.DebugFormat("GetTaskProfileOutput; jobId = {{{0}}}, taskId = \"{1}\", attempt = {2}", jobId, taskId, attempt);

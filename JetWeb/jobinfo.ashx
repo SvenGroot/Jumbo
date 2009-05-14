@@ -4,14 +4,70 @@ using System;
 using System.Web;
 using System.Xml;
 using System.IO;
+using System.Linq;
+using System.Threading;
 using ICSharpCode.SharpZipLib.Zip;
+using Tkl.Jumbo;
 using Tkl.Jumbo.Jet;
 using Tkl.Jumbo.Dfs;
 
 public class jobinfo : IHttpHandler
 {
-    private const string _datePattern = "yyyy'-'MM'-'dd' 'HH':'mm':'ss'.'fff'Z'";
+    private sealed class AsynchronousLogFileDownload : IDisposable
+    {
+        private readonly ManualResetEvent _completedEvent = new ManualResetEvent(false);
+        private readonly ZipOutputStream _zipStream;
+        private readonly Guid _jobId;
+        private readonly ServerAddress _server;
+        private bool _disposed;
 
+        public AsynchronousLogFileDownload(ServerAddress server, ZipOutputStream zipStream, Guid jobId)
+        {
+            _server = server;
+            _zipStream = zipStream;
+            _jobId = jobId;
+            
+            Run();
+        }
+        
+        public ManualResetEvent CompletedEvent
+        {
+            get { return _completedEvent; }
+        }
+
+        public void Run()
+        {
+            ThreadPool.QueueUserWorkItem(DownloadLogFiles);
+        }
+
+        private void DownloadLogFiles(object state)
+        {
+            ITaskServerClientProtocol taskServer = JetClient.CreateTaskServerClient(_server);
+            byte[] logBytes = taskServer.GetCompressedTaskLogFiles(_jobId);
+            lock( _zipStream )
+            {
+                _zipStream.PutNextEntry(new ZipEntry(string.Format(System.Globalization.CultureInfo.InvariantCulture, "{0}-{1}.zip", _server.HostName, _server.Port)));
+                _zipStream.Write(logBytes, 0, logBytes.Length);
+            }
+
+            CompletedEvent.Set();
+        }
+
+        #region IDisposable Members
+
+        public void Dispose()
+        {
+            if( !_disposed )
+            {
+                _disposed = true;
+                ((IDisposable)_completedEvent).Dispose();
+            }
+            GC.SuppressFinalize(this);
+        }
+
+        #endregion
+    }
+    
     public void ProcessRequest(HttpContext context)
     {
         Guid jobId = new Guid(context.Request.QueryString["id"]);
@@ -33,22 +89,19 @@ public class jobinfo : IHttpHandler
                 }
                 xmlStream.WriteTo(stream);
             }
-            
 
-            foreach( TaskStatus task in job.Tasks )
+            var servers = (from task in job.Tasks
+                           select task.TaskServer).Distinct();
+
+            var downloads = (from server in servers
+                             select new AsynchronousLogFileDownload(server, stream, jobId)).ToList();
+
+            foreach( var download in downloads )
             {
-                if( task.State >= TaskState.Finished )
-                {
-                    ITaskServerClientProtocol taskServer = JetClient.CreateTaskServerClient(task.TaskServer);
-                    string log = taskServer.GetTaskLogFileContents(jobId, task.TaskId, task.Attempts, Int32.MaxValue);
-                    if( log != null )
-                    {
-                        stream.PutNextEntry(new ZipEntry(string.Format("{0}_{1}.log", task.TaskId, task.Attempts)));
-                        byte[] logBytes = System.Text.Encoding.UTF8.GetBytes(log);
-                        stream.Write(logBytes, 0, logBytes.Length);
-                    }
-                }
+                download.CompletedEvent.WaitOne();
+                download.Dispose();
             }
+            
         }
     }
 

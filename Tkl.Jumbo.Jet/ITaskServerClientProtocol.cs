@@ -49,6 +49,14 @@ namespace Tkl.Jumbo.Jet
         string GetTaskLogFileContents(Guid jobId, string taskId, int attempt, int maxSize);
 
         /// <summary>
+        /// Gets the contents of the diagnostic log files for all tasks of the specified job that this server has run,
+        /// compressed into a zip file.
+        /// </summary>
+        /// <param name="jobId">The job ID.</param>
+        /// <returns>A byte array containing the zip file data.</returns>
+        byte[] GetCompressedTaskLogFiles(Guid jobId);
+
+        /// <summary>
         /// Gets the profile output for the specified task.
         /// </summary>
         /// <param name="jobId">The job ID.</param>

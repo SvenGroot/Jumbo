@@ -54,6 +54,11 @@ namespace TaskServerApplication
             return TaskServer.Instance.GetLogFileContents(maxSize);
         }
 
+        public byte[] GetCompressedTaskLogFiles(Guid jobId)
+        {
+            return TaskServer.Instance.GetCompressedTaskLogFiles(jobId);
+        }
+
         public string GetTaskLogFileContents(Guid jobId, string taskId, int attempt, int maxSize)
         {
             return TaskServer.Instance.GetTaskLogFileContents(jobId, taskId, attempt, maxSize);
