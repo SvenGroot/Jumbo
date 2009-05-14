@@ -10,7 +10,8 @@ namespace NameServerApplication
     class DataServerInfo
     {
         private readonly List<HeartbeatResponse> _pendingResponses = new List<HeartbeatResponse>();
-        private readonly List<Guid> _blocks = new List<Guid>();
+        private readonly HashSet<Guid> _blocks = new HashSet<Guid>();
+        private readonly HashSet<Guid> _pendingBlocks = new HashSet<Guid>();
 
         public DataServerInfo(string hostName, int port)
         {
@@ -26,7 +27,9 @@ namespace NameServerApplication
 
         public bool HasReportedBlocks { get; set; }
 
-        public List<Guid> Blocks { get { return _blocks; } }
+        public HashSet<Guid> Blocks { get { return _blocks; } }
+
+        public HashSet<Guid> PendingBlocks { get { return _pendingBlocks; } }
 
         public DateTime LastContactUtc { get; set; }
 

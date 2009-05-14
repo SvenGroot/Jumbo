@@ -118,8 +118,8 @@ namespace Tkl.Jumbo.Test.Dfs
                                 writer.Write((int)DataServerClientProtocolResult.Error);
                                 writer.Flush();
                                 Thread.Sleep(2000);
-                                return;
-                                //waitingForClosed = true;
+                                //return;
+                                waitingForClosed = true;
                             }
                             if( _mode == TestMode.CloseConnection && ReceivedPackets.Count >= 5 )
                             {

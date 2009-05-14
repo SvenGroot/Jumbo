@@ -141,6 +141,11 @@ namespace NameServerApplication
                     _pendingBlocks.Remove(pendingBlock.Value);
                     MarkForDataServerDeletion(pendingBlock.Value, info.Block);
                 }
+                lock( _dataServers )
+                {
+                    foreach( DataServerInfo server in _dataServers.Values )
+                        server.PendingBlocks.Remove(pendingBlock.Value);
+                }
             }
             if( file.Blocks.Count > 0 )
             {
@@ -166,6 +171,11 @@ namespace NameServerApplication
             {
                 _pendingBlocks.Remove(blockID);
             }
+            lock( _dataServers )
+            {
+                foreach( DataServerInfo server in _dataServers.Values )
+                    server.PendingBlocks.Remove(blockID);
+            }
         }
 
         public void CommitBlock(Guid blockID)
@@ -177,6 +187,8 @@ namespace NameServerApplication
                     PendingBlock pendingBlock;
                     if( _pendingBlocks.TryGetValue(blockID, out pendingBlock) )
                     {
+                        // No need to remove the block from the data servers PendingBlocks list, because that has already been done when the data servers sent
+                        // a new block heartbeat.
                         _pendingBlocks.Remove(blockID);
                         _blocks.Add(blockID, pendingBlock.Block);
                         // This can happen during log file replay or if a server crashed between commits.
@@ -581,6 +593,7 @@ namespace NameServerApplication
                     // one of the assigned servers?
                     pendingBlock.Block.DataServers.Add(dataServer);
                     dataServer.Blocks.Add(newBlock.BlockId);
+                    dataServer.PendingBlocks.Remove(newBlock.BlockId);
                     if( pendingBlock.IncrementCommit() >= _replicationFactor )
                     {
                         commitBlock = true;
@@ -711,6 +724,7 @@ namespace NameServerApplication
             List<DataServerInfo> unassignedDataServers;
             int serversNeeded;
             long freeSpaceThreshold = Configuration.NameServer.DataServerFreeSpaceThreshold;
+            List<ServerAddress> dataServers;
             lock( _dataServers )
             {
                 // This function is also used to find new data servers to send an under-replicated block, which is why we need to check server.Blocks.
@@ -718,48 +732,64 @@ namespace NameServerApplication
                                          where server.HasReportedBlocks && !server.Blocks.Contains(blockId) && server.DiskSpaceFree >= freeSpaceThreshold
                                          select server).ToList();
                 serversNeeded = _replicationFactor - (from server in _dataServers.Values where server.Blocks.Contains(blockId) select server).Count();
-            }
 
-            if( unassignedDataServers.Count < serversNeeded )
-                throw new DfsException("Insufficient data servers to replicate new block. This can also happen in some servers are low on disk space.");
 
-            List<ServerAddress> dataServers = new List<ServerAddress>(serversNeeded);
+                if( unassignedDataServers.Count < serversNeeded )
+                    throw new DfsException("Insufficient data servers to replicate new block. This can also happen if some servers are low on disk space.");
 
-            // Check if any data servers are running on the client's own system.
-            if( ServerContext.Current != null )
-            {
-                string clientHostName = ServerContext.Current.ClientHostName;
-                var localServers = (from server in unassignedDataServers
-                                    where server.Address.HostName == clientHostName
-                                    select server).ToArray();
+                dataServers = new List<ServerAddress>(serversNeeded);
 
-                if( localServers.Length > 0 )
+                // Check if any data servers are running on the client's own system.
+                if( ServerContext.Current != null )
                 {
-                    if( localServers.Length == 1 )
+                    string clientHostName = ServerContext.Current.ClientHostName;
+                    var localServers = (from server in unassignedDataServers
+                                        where server.Address.HostName == clientHostName
+                                        select server).ToArray();
+
+                    if( localServers.Length > 0 )
                     {
-                        dataServers.Add(localServers[0].Address);
-                        unassignedDataServers.Remove(localServers[0]);
-                    }
-                    else
-                    {
-                        lock( _random )
+                        if( localServers.Length == 1 )
                         {
-                            int server = _random.Next(localServers.Length);
-                            dataServers.Add(localServers[server].Address);
-                            unassignedDataServers.Remove(localServers[server]);
+                            dataServers.Add(localServers[0].Address);
+                            unassignedDataServers.Remove(localServers[0]);
+                            localServers[0].PendingBlocks.Add(blockId);
+                        }
+                        else
+                        {
+                            // We will order the servers so that those with the smallest number of pending blocks are up front, and
+                            // if multiple servers have the same number of pending blocks they are ordered at random.
+                            lock( _random )
+                            {
+                                var server = (from s in localServers
+                                              orderby s.PendingBlocks.Count ascending, _random.Next() ascending
+                                              select s).First();
+
+                                dataServers.Add(server.Address);
+                                server.PendingBlocks.Add(blockId);
+                                unassignedDataServers.Remove(server);
+                            }
+                        }
+                        --serversNeeded;
+                    }
+                }
+
+                if( serversNeeded > 0 )
+                {
+                    lock( _random )
+                    {
+                        // We will order the servers so that those with the smallest number of pending blocks are up front, and
+                        // if multiple servers have the same number of pending blocks they are ordered at random.
+                        var randomizedServers = (from server in unassignedDataServers
+                                                 orderby server.PendingBlocks.Count ascending, _random.Next() ascending
+                                                 select server).Take(serversNeeded);
+
+                        foreach( DataServerInfo server in randomizedServers )
+                        {
+                            dataServers.Add(server.Address);
+                            server.PendingBlocks.Add(blockId);
                         }
                     }
-                    --serversNeeded;
-                }
-            }
-
-            lock( _random )
-            {
-                for( int x = 0; x < serversNeeded; ++x )
-                {
-                    int server = _random.Next(unassignedDataServers.Count);
-                    dataServers.Add(unassignedDataServers[server].Address);
-                    unassignedDataServers.RemoveAt(server);
                 }
             }
 
@@ -811,7 +841,7 @@ namespace NameServerApplication
         {
             int dataServerCount;
             lock( _dataServers )
-                dataServerCount = _dataServers.Count;
+                dataServerCount = (from server in _dataServers.Values where server.HasReportedBlocks select server).Count();
             int blockCount;
             lock( _underReplicatedBlocks )
                 blockCount = _underReplicatedBlocks.Count;

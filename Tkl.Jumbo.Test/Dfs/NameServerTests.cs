@@ -21,7 +21,7 @@ namespace Tkl.Jumbo.Test.Dfs
         [TestFixtureSetUp]
         public void Setup()
         {
-            _cluster = new TestDfsCluster(1, 1, _blockSize);
+            _cluster = new TestDfsCluster(2, 1, _blockSize);
             Utilities.TraceLineAndFlush("Starting cluster.");
             DfsConfiguration config = TestDfsCluster.CreateClientConfig();
             _nameServer = DfsClient.CreateNameServerClient(config);
@@ -168,7 +168,7 @@ namespace Tkl.Jumbo.Test.Dfs
             BlockAssignment block = target.CreateFile(path);
             Assert.AreEqual(1, block.DataServers.Count);
             Assert.AreEqual(Dns.GetHostName(), block.DataServers[0].HostName);
-            Assert.AreEqual(10001, block.DataServers[0].Port);
+            //Assert.AreEqual(10001, block.DataServers[0].Port);
             Tkl.Jumbo.Dfs.File result = target.GetFileInfo(path);
             Assert.IsTrue((result.DateCreated - DateTime.UtcNow).TotalSeconds < 1);
             Assert.AreEqual("file", result.Name);
@@ -446,9 +446,9 @@ namespace Tkl.Jumbo.Test.Dfs
 
             BlockAssignment block2 = target.AppendBlock(path);
             Assert.AreNotEqual(block.BlockId, block2.BlockId);
-            Assert.AreEqual(1, block.DataServers.Count);
-            Assert.AreEqual(Dns.GetHostName(), block.DataServers[0].HostName);
-            Assert.AreEqual(10001, block.DataServers[0].Port);
+            Assert.AreEqual(1, block2.DataServers.Count);
+            Assert.AreEqual(Dns.GetHostName(), block2.DataServers[0].HostName);
+            Assert.IsTrue(block2.DataServers[0].Port == 10001 || block2.DataServers[0].Port == 10002);
 
             using( BlockSender sender = new BlockSender(block2) )
             {
@@ -465,8 +465,46 @@ namespace Tkl.Jumbo.Test.Dfs
             Assert.AreEqual(target.BlockSize + 10000, file.Size);
 
             ServerAddress[] servers = target.GetDataServersForBlock(block2.BlockId);
-            Assert.AreEqual(1, servers.Length);
-            Assert.AreEqual(new ServerAddress(Dns.GetHostName(), 10001), servers[0]);
+            Assert.IsTrue(Utilities.CompareList(block2.DataServers, servers));
+        }
+
+        [Test]
+        public void AppendBlockMultipleWritersTest()
+        {
+            INameServerClientProtocol target = _nameServer;
+            // Because the blocks could get different data servers at random, we do it a couple of times to reduce the
+            // chances fo passing this test by accident.
+            for( int x = 0; x < 20; ++x )
+            {
+                target.CreateDirectory("/appendblockmultiplewriters");
+                string path1 = "/appendblockmultiplewriters/file1";
+                string path2 = "/appendblockmultiplewriters/file2";
+                BlockAssignment block1 = target.CreateFile(path1);
+                BlockAssignment block2 = target.CreateFile(path2);
+
+                Assert.AreNotEqual(block1.BlockId, block2.BlockId);
+                // Because the name server load balances based on pending blocks, and there is exactly one pending block in the system,
+                // these should never be equal.
+                Assert.AreNotEqual(block1.DataServers[0], block2.DataServers[0]);
+
+                using( BlockSender sender = new BlockSender(block1) )
+                {
+                    sender.AddPacket(Utilities.GenerateData(10000), 10000, true);
+                    sender.WaitUntilSendFinished();
+                    sender.ThrowIfErrorOccurred();
+                }
+
+                using( BlockSender sender = new BlockSender(block2) )
+                {
+                    sender.AddPacket(Utilities.GenerateData(10000), 10000, true);
+                    sender.WaitUntilSendFinished();
+                    sender.ThrowIfErrorOccurred();
+                }
+
+                target.CloseFile(path1);
+                target.CloseFile(path2);
+                target.Delete("/appendblockmultiplewriters", true);
+            }
         }
 
         [Test]
@@ -492,8 +530,8 @@ namespace Tkl.Jumbo.Test.Dfs
         {
             INameServerClientProtocol target = _nameServer;
             DfsMetrics metrics = _nameServer.GetMetrics();
-            Assert.AreEqual(1, metrics.DataServers.Count);
-            Assert.AreEqual(new ServerAddress(Dns.GetHostName(), 10001), metrics.DataServers[0].Address);
+            Assert.AreEqual(2, metrics.DataServers.Count);
+            //Assert.AreEqual(new ServerAddress(Dns.GetHostName(), 10001), metrics.DataServers[0].Address);
             Assert.AreEqual(0, metrics.PendingBlockCount);
             Assert.AreEqual(0, metrics.UnderReplicatedBlockCount);
             int initialBlockCount = metrics.TotalBlockCount;
