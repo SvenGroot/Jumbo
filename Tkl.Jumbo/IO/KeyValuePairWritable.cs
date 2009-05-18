@@ -12,7 +12,7 @@ namespace Tkl.Jumbo.IO
     /// </summary>
     /// <typeparam name="TKey">The type of the key.</typeparam>
     /// <typeparam name="TValue">The type of the value.</typeparam>
-    public class KeyValuePairWritable<TKey, TValue> : IWritable, IComparable<KeyValuePairWritable<TKey, TValue>>, IEquatable<KeyValuePairWritable<TKey, TValue>>
+    public sealed class KeyValuePairWritable<TKey, TValue> : IWritable, IComparable<KeyValuePairWritable<TKey, TValue>>, IEquatable<KeyValuePairWritable<TKey, TValue>>
         where TKey : IWritable, IComparable<TKey>, new()
         where TValue : IWritable, new()
     {

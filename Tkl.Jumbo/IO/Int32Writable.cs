@@ -9,7 +9,7 @@ namespace Tkl.Jumbo.IO
     /// <summary>
     /// An implementation of <see cref="IWritable"/> for integers.
     /// </summary>
-    public class Int32Writable : WritableComparable<int>, IComparable<Int32Writable>, ICloneable
+    public sealed class Int32Writable : WritableComparable<int>, IComparable<Int32Writable>, ICloneable
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="Int32Writable"/> class.

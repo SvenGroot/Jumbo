@@ -9,7 +9,7 @@ namespace Tkl.Jumbo.IO
     /// <summary>
     /// An implementation of <see cref="IWritable"/> for strings.
     /// </summary>
-    public class StringWritable : WritableComparable<string>, IComparable<StringWritable>, ICloneable
+    public sealed class StringWritable : WritableComparable<string>, IComparable<StringWritable>, ICloneable
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="StringWritable"/> class.
