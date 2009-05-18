@@ -9,7 +9,7 @@ namespace Tkl.Jumbo.IO
     /// <summary>
     /// An implementation of <see cref="IWritable"/> for strings.
     /// </summary>
-    public class StringWritable : WritableComparable<string>, IComparable<StringWritable>
+    public class StringWritable : WritableComparable<string>, IComparable<StringWritable>, ICloneable
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="StringWritable"/> class.
@@ -80,6 +80,15 @@ namespace Tkl.Jumbo.IO
         public int CompareTo(StringWritable other)
         {
             return CompareTo((WritableComparable<string>)other);
+        }
+
+        #endregion
+
+        #region ICloneable Members
+
+        object ICloneable.Clone()
+        {
+            return new StringWritable(Value);
         }
 
         #endregion

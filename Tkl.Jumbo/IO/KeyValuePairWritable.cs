@@ -88,12 +88,13 @@ namespace Tkl.Jumbo.IO
         /// <param name="reader">The <see cref="BinaryReader"/> to deserialize the object from.</param>
         public void Read(System.IO.BinaryReader reader)
         {
-            // NOTE: If this is changed to reuse the Key and Value instances, AccumulatorTask needs to be changed too.
             if( reader == null )
                 throw new ArgumentNullException("reader");
-            Key = new TKey();
+            if( Key == null )
+                Key = new TKey();
             Key.Read(reader);
-            Value = new TValue();
+            if( Value == null )
+                Value = new TValue();
             Value.Read(reader);
         }
 

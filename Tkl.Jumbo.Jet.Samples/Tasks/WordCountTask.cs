@@ -30,14 +30,13 @@ namespace Tkl.Jumbo.Jet.Samples.Tasks
         /// <param name="output">A <see cref="RecordWriter{T}"/> to which the task's output should be written.</param>
         public void Run(RecordReader<StringWritable> input, RecordWriter<KeyValuePairWritable<StringWritable, Int32Writable>> output)
         {
-            KeyValuePairWritable<StringWritable, Int32Writable> record = new KeyValuePairWritable<StringWritable,Int32Writable>();
+            KeyValuePairWritable<StringWritable, Int32Writable> record = new KeyValuePairWritable<StringWritable,Int32Writable>(new StringWritable(), new Int32Writable(1));
             foreach( var line in input.EnumerateRecords() )
             {
                 string[] words = line.Value.Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
                 foreach( string word in words )
                 {
-                    record.Key = word;
-                    record.Value = 1;
+                    record.Key.Value = word;
                     output.WriteRecord(record);
                 }
             }
