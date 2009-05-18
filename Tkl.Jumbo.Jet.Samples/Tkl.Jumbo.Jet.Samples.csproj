@@ -74,7 +74,7 @@
     <Compile Include="Tasks\ValSortCombinerTask.cs" />
     <Compile Include="IO\ValSortRecord.cs" />
     <Compile Include="Tasks\ValSortTask.cs" />
-    <Compile Include="Tasks\WordCountCombinerTask.cs" />
+    <Compile Include="Tasks\WordCountAccumulatorTask.cs" />
     <Compile Include="Tasks\WordCountTask.cs" />
     <Compile Include="ValSort.cs" />
     <Compile Include="WordCount.cs" />

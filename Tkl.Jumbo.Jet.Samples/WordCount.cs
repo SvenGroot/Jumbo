@@ -14,7 +14,7 @@ namespace Tkl.Jumbo.Jet.Samples
     /// Job runner for word count.
     /// </summary>
     [Description("Counts the number of occurrences of each word in the input file or files.")]
-    public sealed class WordCount : BasicJob
+    public sealed class WordCount : AccumulatorJob
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="WordCount"/> class.
@@ -25,7 +25,7 @@ namespace Tkl.Jumbo.Jet.Samples
         public WordCount([Description("The input file or directory on the Jumbo DFS containing the text to perform the word count on.")] string inputPath, 
                          [Description("The output directory on the Jumbo DFS where the results of the word count will be written.")] string outputPath, 
                          [Description("The number of combiner tasks to use. Defaults to 1."), OptionalArgument(1)] int combinerTasks)
-            : base(inputPath, outputPath, combinerTasks, typeof(WordCountTask), null, typeof(WordCountCombinerTask), null, typeof(LineRecordReader), typeof(TextRecordWriter<KeyValuePairWritable<StringWritable, Int32Writable>>), null, false)
+            : base(inputPath, outputPath, combinerTasks, typeof(WordCountTask), null, typeof(WordCountAccumulatorTask), null, typeof(LineRecordReader), typeof(TextRecordWriter<KeyValuePairWritable<StringWritable, Int32Writable>>), null)
         {
             if( inputPath == null )
                 throw new ArgumentNullException("inputPath");

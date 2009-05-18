@@ -456,8 +456,14 @@ namespace Tkl.Jumbo.Jet.Channels
             }
             else
             {
+                TaskId taskId;
                 // This is the last child stage in a compound stage; we're connecting to one task only.
-                TaskId taskId = new TaskId(baseTaskId, stage.StageId, _outputTaskId.TaskNumber);
+                // If the stage has only one task, then we assume partitioning hasn't been done yet and every task in this stage
+                // connects to that one task. Otherwise, every task connects to the matching task in the input stage.
+                if( stage.TaskCount == 1 )
+                    taskId = new TaskId(baseTaskId, stage.StageId, 1);
+                else
+                    taskId = new TaskId(baseTaskId, stage.StageId, _outputTaskId.TaskNumber);
                 _inputTaskIds.Add(taskId.ToString());
             }
         }

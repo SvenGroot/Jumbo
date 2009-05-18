@@ -21,8 +21,6 @@ namespace Tkl.Jumbo.Jet.Samples.Tasks
 
         #endregion
 
-        private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(WordCountTask));
-
         #region IPullTask<StringWritable,KeyValuePairWritable<StringWritable,Int32Writable>> Members
 
         /// <summary>
@@ -32,30 +30,16 @@ namespace Tkl.Jumbo.Jet.Samples.Tasks
         /// <param name="output">A <see cref="RecordWriter{T}"/> to which the task's output should be written.</param>
         public void Run(RecordReader<StringWritable> input, RecordWriter<KeyValuePairWritable<StringWritable, Int32Writable>> output)
         {
-            _log.Info("Beginning count.");
-            Dictionary<string, Counter> wordCount = new Dictionary<string, Counter>();
+            KeyValuePairWritable<StringWritable, Int32Writable> record = new KeyValuePairWritable<StringWritable,Int32Writable>();
             foreach( var line in input.EnumerateRecords() )
             {
                 string[] words = line.Value.Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
                 foreach( string word in words )
                 {
-                    Counter count;
-                    if( wordCount.TryGetValue(word, out count) )
-                        ++count.Count;
-                    else
-                        wordCount.Add(word, new Counter());
+                    record.Key = word;
+                    record.Value = 1;
+                    output.WriteRecord(record);
                 }
-            }
-            _log.InfoFormat("Counted {0} distinct words", wordCount.Count);
-
-            _log.Info("Writing results to record writer.");
-            KeyValuePairWritable<StringWritable, Int32Writable> record = new KeyValuePairWritable<StringWritable, Int32Writable>();
-            record.Value = new KeyValuePair<StringWritable, Int32Writable>(new StringWritable(), new Int32Writable());
-            foreach( var item in wordCount )
-            {
-                record.Value.Key.Value = item.Key;
-                record.Value.Value.Value = item.Value.Count;
-                output.WriteRecord(record);
             }
         }
 

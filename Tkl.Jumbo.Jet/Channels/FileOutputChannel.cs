@@ -44,7 +44,7 @@ namespace Tkl.Jumbo.Jet.Channels
                 foreach( string outputStageId in channelConfig.OutputStages )
                 {
                     StageConfiguration outputStage = taskExecution.Configuration.JobConfiguration.GetStage(outputStageId);
-                    if( taskExecution.Configuration.TaskId.ParentTaskId == null )
+                    if( taskExecution.Configuration.TaskId.ParentTaskId == null || taskExecution.Configuration.StageConfiguration.TaskCount == 1 )
                     {
                         for( int x = 1; x <= outputStage.TaskCount; ++x )
                         {

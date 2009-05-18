@@ -94,6 +94,7 @@
     <Compile Include="JobConfiguration.cs" />
     <Compile Include="JobServerConfigurationElement.cs" />
     <Compile Include="JobStatus.cs" />
+    <Compile Include="Jobs\AccumulatorJob.cs" />
     <Compile Include="Jobs\BaseJobRunner.cs" />
     <Compile Include="Jobs\BasicJob.cs" />
     <Compile Include="Jobs\IJobRunner.cs" />
@@ -123,6 +124,7 @@
     <Compile Include="TaskAttemptStatus.cs" />
     <Compile Include="TaskStatus.cs" />
     <Compile Include="TaskStatusChangedJetHeartbeatData.cs" />
+    <Compile Include="Tasks\AccumulatorTask.cs" />
     <Compile Include="Tasks\EmptyTask.cs" />
     <Compile Include="Tasks\MergeSortTask.cs" />
     <Compile Include="Tasks\MergeSortTaskConstants.cs" />
