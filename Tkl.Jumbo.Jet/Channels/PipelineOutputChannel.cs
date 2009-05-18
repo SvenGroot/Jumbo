@@ -19,11 +19,11 @@ namespace Tkl.Jumbo.Jet.Channels
     ///   associated input channel for this channel type.
     /// </para>
     /// </remarks>
-    public class PipelineOutputChannel : IOutputChannel
+    public sealed class PipelineOutputChannel : IOutputChannel
     {
         #region Nested types
 
-        private class PipelineRecordWriter<TRecord, TPipelinedTaskOutput> : RecordWriter<TRecord>
+        private sealed class PipelineRecordWriter<TRecord, TPipelinedTaskOutput> : RecordWriter<TRecord>
             where TRecord : IWritable, new()
             where TPipelinedTaskOutput : IWritable, new()
         {

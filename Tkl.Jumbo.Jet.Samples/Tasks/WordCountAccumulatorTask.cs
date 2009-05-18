@@ -11,7 +11,7 @@ namespace Tkl.Jumbo.Jet.Samples.Tasks
     /// Accumulates the output of one or more <see cref="WordCountTask"/> instances.
     /// </summary>
     [AllowRecordReuse]
-    public class WordCountAccumulatorTask : AccumulatorTask<StringWritable, Int32Writable>
+    public sealed class WordCountAccumulatorTask : AccumulatorTask<StringWritable, Int32Writable>
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="WordCountAccumulatorTask"/>.
