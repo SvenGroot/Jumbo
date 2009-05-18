@@ -59,6 +59,7 @@
     <Compile Include="CompressionUtility.cs" />
     <Compile Include="CompressionType.cs" />
     <Compile Include="DriveSpaceInfo.cs" />
+    <Compile Include="IO\UTF8StringWritable.cs" />
     <Compile Include="ListExtensions.cs" />
     <Compile Include="StreamExtensions.cs" />
     <Compile Include="GlobalSuppressions.cs" />

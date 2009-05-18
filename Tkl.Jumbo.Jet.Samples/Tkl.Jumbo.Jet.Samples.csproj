@@ -62,6 +62,7 @@
     <Compile Include="IO\GenSortRecord.cs" />
     <Compile Include="IO\GenSortRecordReader.cs" />
     <Compile Include="IO\GenSortRecordWriter.cs" />
+    <Compile Include="IO\WordRecordReader.cs" />
     <Compile Include="OldWordCount.cs" />
     <Compile Include="Tasks\GenSortTask.cs" />
     <Compile Include="Tasks\GenSortGenerator.cs" />

@@ -7,6 +7,7 @@ using System.ComponentModel;
 using Tkl.Jumbo.Dfs;
 using Tkl.Jumbo.Jet.Samples.Tasks;
 using Tkl.Jumbo.IO;
+using Tkl.Jumbo.Jet.Samples.IO;
 
 namespace Tkl.Jumbo.Jet.Samples
 {
@@ -25,7 +26,7 @@ namespace Tkl.Jumbo.Jet.Samples
         public WordCount([Description("The input file or directory on the Jumbo DFS containing the text to perform the word count on.")] string inputPath, 
                          [Description("The output directory on the Jumbo DFS where the results of the word count will be written.")] string outputPath, 
                          [Description("The number of combiner tasks to use. Defaults to 1."), OptionalArgument(1)] int combinerTasks)
-            : base(inputPath, outputPath, combinerTasks, typeof(WordCountTask), null, typeof(WordCountAccumulatorTask), null, typeof(LineRecordReader), typeof(TextRecordWriter<KeyValuePairWritable<StringWritable, Int32Writable>>), null)
+            : base(inputPath, outputPath, combinerTasks, typeof(WordCountTask), null, typeof(WordCountAccumulatorTask), null, typeof(WordRecordReader), typeof(TextRecordWriter<KeyValuePairWritable<UTF8StringWritable, Int32Writable>>), null)
         {
             if( inputPath == null )
                 throw new ArgumentNullException("inputPath");
