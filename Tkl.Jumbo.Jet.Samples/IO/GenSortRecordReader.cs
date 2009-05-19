@@ -21,7 +21,7 @@ namespace Tkl.Jumbo.Jet.Samples.IO
         /// </summary>
         /// <param name="stream">The <see cref="Stream"/> to read from.</param>
         public GenSortRecordReader(Stream stream)
-            : this(stream, 0, stream.Length)
+            : this(stream, 0, stream.Length, false)
         {
         }
 
@@ -31,6 +31,8 @@ namespace Tkl.Jumbo.Jet.Samples.IO
         /// <param name="stream">The <see cref="Stream"/> to read from.</param>
         /// <param name="offset">The offset, in bytes, at which to start reading in the stream.</param>
         /// <param name="size">The number of bytes to read from the stream.</param>
+        /// <param name="allowRecordReuse"><see langword="true"/> if the record reader may re-use the same <see cref="StringWritable"/> instance for every
+        /// record; <see langword="false"/> if it must create a new instance for every record.</param>
         /// <remarks>
         /// <para>
         ///   If <paramref name="offset"/> is not on a record boundary, the reader will seek ahead to the start of the next record.
@@ -41,7 +43,7 @@ namespace Tkl.Jumbo.Jet.Samples.IO
         ///   read more than <paramref name="size"/> bytes.
         /// </para>
         /// </remarks>
-        public GenSortRecordReader(Stream stream, long offset, long size)
+        public GenSortRecordReader(Stream stream, long offset, long size, bool allowRecordReuse)
             : base(stream, offset, size)
         {
             _position = offset;
@@ -52,6 +54,9 @@ namespace Tkl.Jumbo.Jet.Samples.IO
             if( rem != 0 )
                 Stream.Position += GenSortRecord.RecordSize - rem;
             _position = Stream.Position;
+
+            // Because this reader is only used for GraySort and ValSort, neither of which allow record reuse on the input,
+            // we ignore the allowRecordReuse parameter and don't reuse records.
         }
 
         /// <summary>
@@ -71,7 +76,10 @@ namespace Tkl.Jumbo.Jet.Samples.IO
             GenSortRecord result = new GenSortRecord();
             int bytesRead = Stream.Read(result.RecordBuffer, 0, GenSortRecord.RecordSize);
             if( bytesRead != GenSortRecord.RecordSize )
+            {
+                CurrentRecord = null;
                 throw new InvalidOperationException("Invalid input file format");
+            }
 
             CurrentRecord = result;
 

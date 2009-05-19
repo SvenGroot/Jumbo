@@ -12,7 +12,7 @@ namespace Tkl.Jumbo.IO
     /// </summary>
     /// <typeparam name="TKey">The type of the key.</typeparam>
     /// <typeparam name="TValue">The type of the value.</typeparam>
-    public sealed class KeyValuePairWritable<TKey, TValue> : IWritable, IComparable<KeyValuePairWritable<TKey, TValue>>, IEquatable<KeyValuePairWritable<TKey, TValue>>
+    public sealed class KeyValuePairWritable<TKey, TValue> : IWritable, IComparable<KeyValuePairWritable<TKey, TValue>>, IEquatable<KeyValuePairWritable<TKey, TValue>>, ICloneable
         where TKey : IWritable, IComparable<TKey>, new()
         where TValue : IWritable, new()
     {
@@ -143,6 +143,20 @@ namespace Tkl.Jumbo.IO
                 return false;
 
             return object.Equals(Key, other.Key) && object.Equals(Value, other.Value);
+        }
+
+        #endregion
+
+        #region ICloneable Members
+
+        object ICloneable.Clone()
+        {
+            KeyValuePairWritable<TKey, TValue> clone = new KeyValuePairWritable<TKey, TValue>();
+            if( Key != null )
+                clone.Key = (TKey)((ICloneable)Key).Clone();
+            if( Value != null )
+                clone.Value = (TValue)((ICloneable)Value).Clone();
+            return clone;
         }
 
         #endregion

@@ -46,6 +46,26 @@ namespace Tkl.Jumbo.Jet
         /// <summary>
         /// Gets or sets the type of <see cref="Tkl.Jumbo.IO.RecordReader{T}"/> to use to read the file.
         /// </summary>
+        /// <remarks>
+        /// <para>
+        ///   Record readers must inherit from <see cref="Tkl.Jumbo.IO.RecordReader{T}"/>.
+        /// </para>
+        /// <para>
+        ///   A record reader can be used for a <see cref="TaskDfsInput"/> if it provides
+        ///   a constructor that takes arguments to specify a <see cref="System.IO.Stream"/> to read
+        ///   from, an <see cref="Int64"/> specifying the offset to start reading in the stream,
+        ///   an <see cref="Int64"/> specifying the number of bytes to read from the stream,
+        ///   and a <see cref="Boolean"/> that indicates whether record reuse is allowed.
+        /// </para>
+        /// <para>
+        ///   In addition, record readers for a <see cref="TaskDfsInput"/> must be able
+        ///   to find the start of the next record from the specified offset. They are
+        ///   allowed to read more than the specified number of bytes if the end of the
+        ///   region is not on a record boundary. If record reader A reads offset X
+        ///   and size Y, and record reader B reads from offset X + Y, the implementation
+        ///   must take care that no records are read by both readers.
+        /// </para>
+        /// </remarks>
         [XmlIgnore]
         public Type RecordReaderType
         {
@@ -111,7 +131,7 @@ namespace Tkl.Jumbo.Jet
             offset = blockSize * (long)input.Block;
             size = Math.Min(blockSize, dfsClient.NameServer.GetFileInfo(input.Path).Size - offset);
             DfsInputStream inputStream = dfsClient.OpenFile(input.Path);
-            return (RecordReader<T>)JetActivator.CreateInstance(recordReaderType, taskExecution, inputStream, offset, size);
+            return (RecordReader<T>)JetActivator.CreateInstance(recordReaderType, taskExecution, inputStream, offset, size, taskExecution.AllowRecordReuse);
         }
     }
 }

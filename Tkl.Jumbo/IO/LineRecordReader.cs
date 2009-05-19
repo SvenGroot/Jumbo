@@ -106,13 +106,14 @@ namespace Tkl.Jumbo.IO
         private LineReader _reader;
         private long _position;
         private long _end;
+        private bool _allowRecordReuse;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="StreamRecordReader{T}"/> class with the specified stream.
         /// </summary>
         /// <param name="stream">The stream to read from.</param>
         public LineRecordReader(Stream stream)
-            : this(stream, 0, stream.Length)
+            : this(stream, 0, stream.Length, false)
         {
         }
 
@@ -122,17 +123,20 @@ namespace Tkl.Jumbo.IO
         /// <param name="stream">The stream to read from.</param>
         /// <param name="offset">The position in the stream to start reading.</param>
         /// <param name="size">The number of bytes to read from the stream.</param>
+        /// <param name="allowRecordReuse"><see langword="true"/> if the record reader may re-use the same <see cref="StringWritable"/> instance for every
+        /// record; <see langword="false"/> if it must create a new instance for every record.</param>
         /// <remarks>
         /// The reader will read a whole number of records until the start of the next record falls
         /// after <paramref name="offset"/> + <paramref name="size"/>. Because of this, the reader can
         /// read more than <paramref name="size"/> bytes.
         /// </remarks>
-        public LineRecordReader(Stream stream, long offset, long size)
+        public LineRecordReader(Stream stream, long offset, long size, bool allowRecordReuse)
             : base(stream, offset, size)
         {
             _reader = new LineReader(stream, _bufferSize);
             _position = offset;
             _end = offset + size;
+            _allowRecordReuse = allowRecordReuse;
             if( _end == stream.Length )
                 --_end;
             if( offset != 0 )
@@ -156,7 +160,9 @@ namespace Tkl.Jumbo.IO
                 return false;
             }
             int bytesProcessed;
-            CurrentRecord = _reader.ReadLine(out bytesProcessed);
+            if( !_allowRecordReuse || CurrentRecord == null )
+                CurrentRecord = new StringWritable();
+            CurrentRecord.Value = _reader.ReadLine(out bytesProcessed);
             _position += bytesProcessed;
             return true;
         }

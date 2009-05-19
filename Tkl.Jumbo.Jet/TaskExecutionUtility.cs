@@ -75,7 +75,6 @@ namespace Tkl.Jumbo.Jet
         private bool _finished;
         private bool _isAssociatedTask;
         private readonly ManualResetEvent _finishedEvent = new ManualResetEvent(false);
-        private bool? _allowRecordReuse;
         private string _dfsOutputTempPath;
         private string _dfsOutputPath;
 
@@ -240,9 +239,7 @@ namespace Tkl.Jumbo.Jet
         {
             get
             {
-                if( _allowRecordReuse == null )
-                    _allowRecordReuse = CheckAllowRecordReuse(Configuration.StageConfiguration);
-                return _allowRecordReuse.Value;
+                return Configuration.StageConfiguration.AllowRecordReuse;
             }
         }
 
@@ -631,25 +628,6 @@ namespace Tkl.Jumbo.Jet
                 _finishedEvent.WaitOne(_progressInterval, false);
             }
             _log.Info("Progress thread has finished.");
-        }
-
-        private bool CheckAllowRecordReuse(StageConfiguration stage)
-        {
-            AllowRecordReuseAttribute allowRecordReuse = (AllowRecordReuseAttribute)Attribute.GetCustomAttribute(stage.TaskType, typeof(AllowRecordReuseAttribute));
-            if( allowRecordReuse == null )
-                return false;
-            else
-            {
-                if( allowRecordReuse.PassThrough && stage.ChildStages != null )
-                {
-                    foreach( StageConfiguration childStage in stage.ChildStages )
-                    {
-                        if( !CheckAllowRecordReuse(childStage) )
-                            return false;
-                    }
-                }
-                return true;
-            }
         }
     }
 }

@@ -105,7 +105,7 @@ namespace Tkl.Jumbo.Jet.Samples.IO
         /// </summary>
         /// <param name="stream">The stream to read from.</param>
         public WordRecordReader(Stream stream)
-            : this(stream, 0, stream.Length)
+            : this(stream, 0, stream.Length, true)
         {
         }
 
@@ -119,6 +119,8 @@ namespace Tkl.Jumbo.Jet.Samples.IO
         /// reading.</param>
         /// <param name="size">The number of bytes to read from the
         /// stream.</param>
+        /// <param name="allowRecordReuse"><see langword="true"/> if the record reader may re-use the same <see cref="StringWritable"/> instance for every
+        /// record; <see langword="false"/> if it must create a new instance for every record.</param>
         /// <remarks>
         /// The reader will read a whole number of records until the
         /// start of the next record falls
@@ -126,13 +128,15 @@ namespace Tkl.Jumbo.Jet.Samples.IO
         /// name="size"/>. Because of this, the reader can
         /// read more than <paramref name="size"/> bytes.
         /// </remarks>
-        public WordRecordReader(Stream stream, long offset, long size)
+        public WordRecordReader(Stream stream, long offset, long size, bool allowRecordReuse)
             : base(stream, offset, size)
         {
             _reader = new WordReader(stream, _bufferSize);
             _word = _reader.Word;
             _position = offset;
             _end = offset + size;
+            if( !allowRecordReuse )
+                throw new NotSupportedException("This reader can only be used for tasks that allow record reuse.");
             if( _end == stream.Length )
                 --_end;
             if( offset != 0 )
@@ -144,9 +148,6 @@ namespace Tkl.Jumbo.Jet.Samples.IO
         /// <summary>
         /// Reads a record.
         /// </summary>
-        /// <param name="record">Receives the value of the record, or
-        /// <see langword="null"/> if it is beyond the end of the
-        /// stream</param>
         /// <returns><see langword="true"/> if an object was
         /// successfully read from the stream; <see langword="false"/>
         /// if the end of the stream or stream fragment was

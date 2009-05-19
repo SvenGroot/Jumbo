@@ -20,6 +20,8 @@ namespace Tkl.Jumbo.Jet
         private string _childStagePartitionerTypeName;
         private Type _childStagePartitionerType;
         private int _taskCount;
+        private bool? _allowRecordReuse;
+        private bool? _allowOutputRecordReuse;
         private readonly ExtendedCollection<TaskDfsInput> _dfsInputs = new ExtendedCollection<TaskDfsInput>();
         private readonly ExtendedCollection<StageConfiguration> _childStages = new ExtendedCollection<StageConfiguration>();
 
@@ -155,6 +157,84 @@ namespace Tkl.Jumbo.Jet
         /// Gets or sets the output to the distributed file system for this stage.
         /// </summary>
         public TaskDfsOutput DfsOutput { get; set; }
+
+        /// <summary>
+        /// Gets a value that indicates whether the task type allows reusing the same object instance for every record.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        ///   If this property is <see langword="true"/>, it means that the record reader (or if this stage is a child stage,
+        ///   the parent stage) that provides the input records for this stage can reuse the same object instance for every record.
+        /// </para>
+        /// <para>
+        ///   This property will return <see langword="true"/> if the <see cref="AllowRecordReuseAttribute"/> is defined on the <see cref="TaskType"/>.
+        ///   If the <see cref="AllowRecordReuseAttribute.PassThrough"/> property is <see langword="true"/>, then this property will return <see langword="true"/>
+        ///   only if the <see cref="AllowOutputRecordReuse"/> property is <see langword="true" />.
+        /// </para>
+        /// <para>
+        ///   This property should only be queried on a completed <see cref="StageConfiguration"/>, because the result gets cached and will not be updated
+        ///   when <see cref="TaskType"/> or one of the child stages changes.
+        /// </para>
+        /// </remarks>
+        [XmlIgnore]
+        public bool AllowRecordReuse
+        {
+            get
+            {
+                if( _allowRecordReuse == null )
+                {
+                    AllowRecordReuseAttribute attribute = (AllowRecordReuseAttribute)Attribute.GetCustomAttribute(TaskType, typeof(AllowRecordReuseAttribute));
+                    if( attribute == null )
+                        _allowRecordReuse = false;
+                    else if( attribute.PassThrough )
+                        _allowRecordReuse = AllowOutputRecordReuse;
+                    else
+                        _allowRecordReuse = true;
+                }
+                return _allowRecordReuse.Value;
+            }
+        }
+
+        /// <summary>
+        /// Gets a value that indicates whether the tasks of this stage may re-use the same object instance when they
+        /// write records to the output.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        ///   This property will return <see langword="true"/> if this stage has no child stages, or if the <see cref="AllowRecordReuse"/>
+        ///   property is <see langword="true"/> for all child stages.
+        /// </para>
+        /// <para>
+        ///   If you write a task type that may be used in multiple types of jobs, and you are not certain what the job configuration
+        ///   the task type is used in will look like, you should check this property to see if you can re-use the same object instance
+        ///   for the record passed to every call to <see cref="Tkl.Jumbo.IO.RecordWriter{T}.WriteRecord"/>. If this property is <see langword="false"/>, you must create
+        ///   a new instance every time.
+        /// </para>
+        /// <para>
+        ///   This property should only be queried on a completed <see cref="StageConfiguration"/>, because the result gets cached and will not be updated
+        ///   when one of the child stages changes.
+        /// </para>
+        /// </remarks>
+        [XmlIgnore]
+        public bool AllowOutputRecordReuse
+        {
+            get
+            {
+                if( _allowOutputRecordReuse == null )
+                {
+                    _allowOutputRecordReuse = true;
+                    foreach( StageConfiguration childStage in ChildStages )
+                    {
+                        if( !childStage.AllowRecordReuse )
+                        {
+                            _allowOutputRecordReuse = false;
+                            break;
+                        }
+                    }
+                }
+                return _allowOutputRecordReuse.Value;
+            }
+        }
 
         [XmlIgnore]
         internal StageConfiguration ParentStage { get; set; }
