@@ -42,6 +42,18 @@ namespace Tkl.Jumbo.IO
         }
 
         /// <summary>
+        /// Gets the number of bytes written to the stream.
+        /// </summary>
+        public override long BytesWritten
+        {
+            get
+            {
+                _writer.Flush();
+                return base.BytesWritten;
+            }
+        }
+
+        /// <summary>
         /// Writes the specified record to the stream.
         /// </summary>
         /// <param name="record">The record to write.</param>

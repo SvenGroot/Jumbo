@@ -47,6 +47,13 @@ namespace JetShell
                         Console.WriteLine("Invalid operation:");
                         Console.WriteLine(ex.Message);
                     }
+                    catch( TargetInvocationException ex )
+                    {
+                        if( ex.InnerException == null )
+                            Console.WriteLine(ex.Message);
+                        else
+                            Console.WriteLine(ex.InnerException.Message);
+                    }
                     catch( Exception ex )
                     {
                         Console.WriteLine(ex.Message);
