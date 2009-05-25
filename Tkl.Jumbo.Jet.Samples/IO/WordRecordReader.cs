@@ -141,7 +141,7 @@ namespace Tkl.Jumbo.Jet.Samples.IO
                 --_end;
             if( offset != 0 )
             {
-                ReadRecord();
+                ReadRecordInternal(false);
             }
         }
 
@@ -154,6 +154,11 @@ namespace Tkl.Jumbo.Jet.Samples.IO
         /// reached.</returns>
         protected override bool ReadRecordInternal()
         {
+            return ReadRecordInternal(true);
+        }
+
+        private bool ReadRecordInternal(bool skipEmpty)
+        {
             do
             {
                 if( _position > _end )
@@ -164,7 +169,7 @@ namespace Tkl.Jumbo.Jet.Samples.IO
                 int bytesProcessed;
                 _reader.ReadWord(out bytesProcessed);
                 _position += bytesProcessed;
-            } while( _word.ByteLength == 0 );
+            } while( skipEmpty && _word.ByteLength == 0 );
             CurrentRecord = _word;
             return true;
         }
