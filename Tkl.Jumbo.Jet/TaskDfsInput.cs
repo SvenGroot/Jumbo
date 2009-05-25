@@ -131,7 +131,7 @@ namespace Tkl.Jumbo.Jet
             offset = blockSize * (long)input.Block;
             size = Math.Min(blockSize, dfsClient.NameServer.GetFileInfo(input.Path).Size - offset);
             DfsInputStream inputStream = dfsClient.OpenFile(input.Path);
-            return (RecordReader<T>)JetActivator.CreateInstance(recordReaderType, taskExecution, inputStream, offset, size, taskExecution.AllowRecordReuse);
+            return (RecordReader<T>)JetActivator.CreateInstance(recordReaderType, taskExecution, inputStream, offset, size, taskExecution == null ? false : taskExecution.AllowRecordReuse);
         }
     }
 }
