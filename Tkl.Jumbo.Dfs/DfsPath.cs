@@ -54,5 +54,28 @@ namespace Tkl.Jumbo.Dfs
             result += path2;
             return result;
         }
+
+        /// <summary>
+        /// Returns the file name and extension of the specified path string.
+        /// </summary>
+        /// <param name="path">The path string from which to obtain the file name and extension.</param>
+        /// <returns>The file name and extension of the specified path string.</returns>
+        public static string GetFileName(string path)
+        {
+            if( path != null )
+            {
+                int length = path.Length;
+                int current = length;
+                while( --current >= 0 )
+                {
+                    char ch = path[current];
+                    if( ch == DirectorySeparator )
+                    {
+                        return path.Substring(current + 1, (length - current) - 1);
+                    }
+                }
+            }
+            return path;
+        }
     }
 }

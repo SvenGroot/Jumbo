@@ -176,6 +176,17 @@ namespace Tkl.Jumbo.Dfs
         /// <param name="dfsPath">The path of the file on the DFS to write the data to.</param>
         public void UploadStream(System.IO.Stream stream, string dfsPath)
         {
+            UploadStream(stream, dfsPath, null);
+        }
+
+        /// <summary>
+        /// Uploads the contents of the specified stream to the Distributed File System.
+        /// </summary>
+        /// <param name="stream">The stream with the data to upload.</param>
+        /// <param name="dfsPath">The path of the file on the DFS to write the data to.</param>
+        /// <param name="progressCallback">The <see cref="ProgressCallback"/> that will be called to report progress of the operation. May be <see langword="null"/>.</param>
+        public void UploadStream(System.IO.Stream stream, string dfsPath, ProgressCallback progressCallback)
+        {
             if( dfsPath == null )
                 throw new ArgumentNullException("dfsPath");
             if( stream == null )
@@ -183,7 +194,7 @@ namespace Tkl.Jumbo.Dfs
 
             using( DfsOutputStream outputStream = new DfsOutputStream(NameServer, dfsPath) )
             {
-                CopyStream(stream, outputStream);
+                CopyStream(dfsPath, stream, outputStream, progressCallback);
             }
         }
 
@@ -194,6 +205,18 @@ namespace Tkl.Jumbo.Dfs
         /// <param name="dfsPath">The path on the DFS to store the file. If this is the name of an existing directory, the file
         /// will be stored in that directory.</param>
         public void UploadFile(string localPath, string dfsPath)
+        {
+            UploadFile(localPath, dfsPath, null);
+        }
+
+        /// <summary>
+        /// Uploads a file to the Distributed File System.
+        /// </summary>
+        /// <param name="localPath">The path of the file to upload.</param>
+        /// <param name="dfsPath">The path on the DFS to store the file. If this is the name of an existing directory, the file
+        /// will be stored in that directory.</param>
+        /// <param name="progressCallback">The <see cref="ProgressCallback"/> that will be called to report progress of the operation. May be <see langword="null"/>.</param>
+        public void UploadFile(string localPath, string dfsPath, ProgressCallback progressCallback)
         {
             if( dfsPath == null )
                 throw new ArgumentNullException("dfsPath");
@@ -209,7 +232,46 @@ namespace Tkl.Jumbo.Dfs
             }
             using( System.IO.FileStream inputStream = System.IO.File.OpenRead(localPath) )
             {
-                UploadStream(inputStream, dfsPath);
+                UploadStream(inputStream, dfsPath, progressCallback);
+            }
+        }
+
+        /// <summary>
+        /// Uploads the files in the specified directory to the DFS.
+        /// </summary>
+        /// <param name="localPath">The path of the directory on the local file system containing the files to upload.</param>
+        /// <param name="dfsPath">The path of the directory on the DFS where the files should be stored. This path must not
+        /// refer to an existing directory.</param>
+        public void UploadDirectory(string localPath, string dfsPath)
+        {
+            UploadDirectory(localPath, dfsPath, null);
+        }
+
+        /// <summary>
+        /// Uploads the files in the specified directory to the DFS.
+        /// </summary>
+        /// <param name="localPath">The path of the directory on the local file system containing the files to upload.</param>
+        /// <param name="dfsPath">The path of the directory on the DFS where the files should be stored. This path must not
+        /// refer to an existing directory.</param>
+        /// <param name="progressCallback">The <see cref="ProgressCallback"/> that will be called to report progress of the operation. May be <see langword="null"/>.</param>
+        public void UploadDirectory(string localPath, string dfsPath, ProgressCallback progressCallback)
+        {
+            if( localPath == null )
+                throw new ArgumentNullException("localPath");
+            if( dfsPath == null )
+                throw new ArgumentNullException("dfsPath");
+
+            string[] files = System.IO.Directory.GetFiles(localPath);
+
+            Directory directory = NameServer.GetDirectoryInfo(dfsPath);
+            if( directory != null )
+                throw new ArgumentException(string.Format("Directory {0} already exists on the DFS.", dfsPath), "dfsPath");
+            NameServer.CreateDirectory(dfsPath);
+
+            foreach( string file in files )
+            {
+                string targetFile = DfsPath.Combine(dfsPath, System.IO.Path.GetFileName(file));
+                UploadFile(file, targetFile, progressCallback);
             }
         }
 
@@ -220,13 +282,24 @@ namespace Tkl.Jumbo.Dfs
         /// <param name="stream">The stream to save the file to.</param>
         public void DownloadStream(string dfsPath, System.IO.Stream stream)
         {
+            DownloadStream(dfsPath, stream, null);
+        }
+
+        /// <summary>
+        /// Downloads the specified file from the DFS, saving it to the specified stream.
+        /// </summary>
+        /// <param name="dfsPath">The path of the file on the DFS to download.</param>
+        /// <param name="stream">The stream to save the file to.</param>
+        /// <param name="progressCallback">The <see cref="ProgressCallback"/> that will be called to report progress of the operation. May be <see langword="null"/>.</param>
+        public void DownloadStream(string dfsPath, System.IO.Stream stream, ProgressCallback progressCallback)
+        {
             if( dfsPath == null )
                 throw new ArgumentNullException("dfsPath");
             if( stream == null )
                 throw new ArgumentNullException("stream");
             using( DfsInputStream inputStream = new DfsInputStream(NameServer, dfsPath) )
             {
-                CopyStream(inputStream, stream);
+                CopyStream(dfsPath, inputStream, stream, progressCallback);
             }
         }
 
@@ -237,6 +310,18 @@ namespace Tkl.Jumbo.Dfs
         /// <param name="localPath">The path of the file on the local file system to save the file to. If this is the
         /// name of an existing directory, the file will be downloaded to that directory.</param>
         public void DownloadFile(string dfsPath, string localPath)
+        {
+            DownloadFile(dfsPath, localPath, null);
+        }
+
+        /// <summary>
+        /// Downloads the specified file from the DFS to the specified local file.
+        /// </summary>
+        /// <param name="dfsPath">The path of the file on the DFS to download.</param>
+        /// <param name="localPath">The path of the file on the local file system to save the file to. If this is the
+        /// name of an existing directory, the file will be downloaded to that directory.</param>
+        /// <param name="progressCallback">The <see cref="ProgressCallback"/> that will be called to report progress of the operation. May be <see langword="null"/>.</param>
+        public void DownloadFile(string dfsPath, string localPath, ProgressCallback progressCallback)
         {
             if( dfsPath == null )
                 throw new ArgumentNullException("dfsPath");
@@ -254,7 +339,7 @@ namespace Tkl.Jumbo.Dfs
             }
             using( System.IO.FileStream stream = System.IO.File.Create(localPath) )
             {
-                DownloadStream(dfsPath, stream);
+                DownloadStream(dfsPath, stream, progressCallback);
             }
         }
 
@@ -268,6 +353,21 @@ namespace Tkl.Jumbo.Dfs
         /// specified directory.
         /// </remarks>
         public void DownloadDirectory(string dfsPath, string localPath)
+        {
+            DownloadDirectory(dfsPath, localPath, null);
+        }
+        
+        /// <summary>
+        /// Downloads the files in the specified directory on the distributed file system.
+        /// </summary>
+        /// <param name="dfsPath">The directory on the distributed file system to download.</param>
+        /// <param name="localPath">The local directory to store the files.</param>
+        /// <remarks>
+        /// This function is not recursive; it will only download the files that are direct children of the
+        /// specified directory.
+        /// </remarks>
+        /// <param name="progressCallback">The <see cref="ProgressCallback"/> that will be called to report progress of the operation. May be <see langword="null"/>.</param>
+        public void DownloadDirectory(string dfsPath, string localPath, ProgressCallback progressCallback)
         {
             if( dfsPath == null )
                 throw new ArgumentNullException("dfsPath");
@@ -283,7 +383,7 @@ namespace Tkl.Jumbo.Dfs
                 if( file != null )
                 {
                     string localFile = System.IO.Path.Combine(localPath, file.Name);
-                    DownloadFile(file.FullPath, localFile);
+                    DownloadFile(file.FullPath, localFile, progressCallback);
                 }
             }
         }
@@ -314,20 +414,27 @@ namespace Tkl.Jumbo.Dfs
             return (T)Activator.GetObject(typeof(T), url);
         }
 
-        private static void CopyStream(System.IO.Stream inputStream, System.IO.Stream outputStream)
+        private static void CopyStream(string fileName, System.IO.Stream inputStream, System.IO.Stream outputStream, ProgressCallback progressCallback)
         {
-            byte[] buffer = new byte[_bufferSize];
+            byte[] buffer = new byte[4096];
             int bytesRead;
             int prevPercentage = -1;
+            float length = inputStream.Length;
+            if( progressCallback != null )
+                progressCallback(fileName, 0, 0L);
             while( (bytesRead = inputStream.Read(buffer, 0, buffer.Length)) != 0 )
             {
-                int percentage = (int)((inputStream.Position / (float)inputStream.Length) * 100);
+                int percentage = (int)((inputStream.Position / length) * 100);
                 if( percentage > prevPercentage )
                 {
                     prevPercentage = percentage;
+                    if( progressCallback != null )
+                        progressCallback(fileName, percentage, inputStream.Position);
                 }
                 outputStream.Write(buffer, 0, bytesRead);
             }
+            if( progressCallback != null )
+                progressCallback(fileName, 100, inputStream.Length);
         }
     }
 }
