@@ -154,15 +154,18 @@ namespace Tkl.Jumbo.Jet.Samples.IO
         /// reached.</returns>
         protected override bool ReadRecordInternal()
         {
-            if( _position > _end )
+            do
             {
-                CurrentRecord = null;
-                return false;
-            }
-            int bytesProcessed;
-            _reader.ReadWord(out bytesProcessed);
+                if( _position > _end )
+                {
+                    CurrentRecord = null;
+                    return false;
+                }
+                int bytesProcessed;
+                _reader.ReadWord(out bytesProcessed);
+                _position += bytesProcessed;
+            } while( _word.ByteLength == 0 );
             CurrentRecord = _word;
-            _position += bytesProcessed;
             return true;
         }
     }
