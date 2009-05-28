@@ -7,6 +7,7 @@ namespace NameServerApplication
 {
     enum FileSystemMutation
     {
+        Invalid,
         CreateDirectory,
         CreateFile,
         AppendBlock,
