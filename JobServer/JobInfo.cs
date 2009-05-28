@@ -25,7 +25,7 @@ namespace JobServerApplication
         private readonly HashSet<ServerAddress> _taskServers = new HashSet<ServerAddress>();
         private readonly ManualResetEvent _jobCompletedEvent = new ManualResetEvent(false);
         private Guid[] _inputBlocks;
-        private readonly Dictionary<string, File> _files = new Dictionary<string, File>();
+        private readonly Dictionary<string, DfsFile> _files = new Dictionary<string, DfsFile>();
         private List<TaskStatus> _failedTaskAttempts;
 
         public JobInfo(Job job)
@@ -100,10 +100,10 @@ namespace JobServerApplication
                    select task;
         }
 
-        public File GetFileInfo(DfsClient dfsClient, string path)
+        public DfsFile GetFileInfo(DfsClient dfsClient, string path)
         {
             // This method will only be called with _jobs locked, so no need to do any further locking
-            File file;
+            DfsFile file;
             if( !_files.TryGetValue(path, out file) )
             {
                 file = dfsClient.NameServer.GetFileInfo(path);

@@ -60,7 +60,7 @@ namespace Tkl.Jumbo.Test.Dfs
                     Assert.AreEqual(size, output.Position);
                 }
 
-                Tkl.Jumbo.Dfs.File file = _nameServer.GetFileInfo("/TestStreams.dat");
+                Tkl.Jumbo.Dfs.DfsFile file = _nameServer.GetFileInfo("/TestStreams.dat");
                 Assert.AreEqual(1, file.Blocks.Count);
                 Assert.AreEqual(size, file.Size);
                 ServerAddress[] servers = _nameServer.GetDataServersForBlock(file.Blocks[0]);

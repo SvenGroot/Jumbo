@@ -130,15 +130,15 @@ namespace Tkl.Jumbo.Jet
         {
             if( inputFileOrDirectory == null )
                 throw new ArgumentNullException("inputFileOrDirectory");
-            IEnumerable<File> files;
-            File file = inputFileOrDirectory as File;
+            IEnumerable<DfsFile> files;
+            DfsFile file = inputFileOrDirectory as DfsFile;
             if( file != null )
                 files = new[] { file };
             else
             {
-                Directory directory = (Directory)inputFileOrDirectory;
+                DfsDirectory directory = (DfsDirectory)inputFileOrDirectory;
                 files = (from item in directory.Children
-                         let f = item as File
+                         let f = item as DfsFile
                          where f != null
                          select f);
             }
@@ -310,7 +310,7 @@ namespace Tkl.Jumbo.Jet
             }
         }
 
-        private static StageConfiguration CreateStage(string stageId, Type taskType, int taskCount, string outputPath, Type recordWriterType, IEnumerable<File> inputs, Type recordReaderType)
+        private static StageConfiguration CreateStage(string stageId, Type taskType, int taskCount, string outputPath, Type recordWriterType, IEnumerable<DfsFile> inputs, Type recordReaderType)
         {
             StageConfiguration stage = new StageConfiguration()
             {
@@ -325,7 +325,7 @@ namespace Tkl.Jumbo.Jet
             };
             if( inputs != null )
             {
-                foreach( File file in inputs )
+                foreach( DfsFile file in inputs )
                 {
                     for( int block = 0; block < file.Blocks.Count; ++block )
                     {
@@ -473,7 +473,7 @@ namespace Tkl.Jumbo.Jet
             }
         }
 
-        private StageConfiguration AddInputStage(string stageId, IEnumerable<File> inputFiles, Type taskType, Type recordReaderType, string outputPath, Type recordWriterType)
+        private StageConfiguration AddInputStage(string stageId, IEnumerable<DfsFile> inputFiles, Type taskType, Type recordReaderType, string outputPath, Type recordWriterType)
         {
             if( stageId == null )
                 throw new ArgumentNullException("stageId");

@@ -14,17 +14,17 @@ namespace Tkl.Jumbo.Dfs
     /// so modifying any of the properties will not have any effect on the actual file system.
     /// </remarks>
     [Serializable]
-    public class File : FileSystemEntry 
+    public class DfsFile : FileSystemEntry 
     {
         private readonly List<Guid> _blocks = new List<Guid>();
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="File"/> class.
+        /// Initializes a new instance of the <see cref="DfsFile"/> class.
         /// </summary>
         /// <param name="parent">The parent of the file. May be <see langword="null" />.</param>
         /// <param name="name">The name of the file.</param>
         /// <param name="dateCreated">The date the file was created.</param>
-        public File(Directory parent, string name, DateTime dateCreated)
+        public DfsFile(DfsDirectory parent, string name, DateTime dateCreated)
             : base(parent, name, dateCreated)
         {
         }

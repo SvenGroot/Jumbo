@@ -20,7 +20,7 @@ namespace Tkl.Jumbo.Dfs
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(DfsInputStream));
 
         private readonly INameServerClientProtocol _nameServer;
-        private readonly File _file;
+        private readonly DfsFile _file;
         private long _position;
         private const int _bufferSize = 10;
         private readonly PacketBuffer _packetBuffer = new PacketBuffer(_bufferSize);

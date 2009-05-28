@@ -75,8 +75,8 @@ namespace Tkl.Jumbo.Test.Jet
             JobConfiguration config = new JobConfiguration(System.IO.Path.GetFileName(typeof(LineCounterTask).Assembly.Location));
 
             // We're just feeding it fake file information to create the job config, it doesn't matter since we'll fake the input during the test.
-            Directory dir = new Directory(null, "root", DateTime.UtcNow);
-            File file = new File(dir, "myfile", DateTime.UtcNow);
+            DfsDirectory dir = new DfsDirectory(null, "root", DateTime.UtcNow);
+            DfsFile file = new DfsFile(dir, "myfile", DateTime.UtcNow);
             file.Blocks.Add(Guid.NewGuid());
             StageConfiguration stage = config.AddInputStage("Task", file, typeof(LineCounterPushTask), typeof(LineRecordReader));
             stage = config.AddPointToPointStage("OutputTask", stage, typeof(LineAdderPushTask), ChannelType.Pipeline, null, null);

@@ -99,13 +99,13 @@ namespace Tkl.Jumbo.Jet.Samples.Tasks
         {
             DfsClient client = new DfsClient(DfsConfiguration);
             string dictionaryDirectoryName = TaskAttemptConfiguration.JobConfiguration.GetSetting(DictionaryDirectorySetting, null);
-            Directory dictionaryDirectory = client.NameServer.GetDirectoryInfo(dictionaryDirectoryName);
+            DfsDirectory dictionaryDirectory = client.NameServer.GetDirectoryInfo(dictionaryDirectoryName);
             List<WordInfo> words = new List<WordInfo>();
 
             Encoding encoding = Encoding.GetEncoding("iso-8859-1");
             foreach( FileSystemEntry child in dictionaryDirectory.Children )
             {
-                File file = child as File;
+                DfsFile file = child as DfsFile;
                 if( file != null )
                 {
                     using( DfsInputStream stream = client.OpenFile(file.FullPath) )

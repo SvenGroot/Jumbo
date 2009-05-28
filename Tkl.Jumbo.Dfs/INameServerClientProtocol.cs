@@ -22,10 +22,10 @@ namespace Tkl.Jumbo.Dfs
         /// Gets information about a directory in the file system.
         /// </summary>
         /// <param name="path">The full path of the directory.</param>
-        /// <returns>A <see cref="Directory"/> object representing the directory.</returns>
+        /// <returns>A <see cref="DfsDirectory"/> object representing the directory.</returns>
         /// <exception cref="ArgumentNullException"><paramref name="path"/> is <see langword="null" />.</exception>
         /// <exception cref="ArgumentException"><paramref name="path"/> is not an absolute path, contains an empty component, or contains a file name.</exception>
-        Directory GetDirectoryInfo(string path);
+        DfsDirectory GetDirectoryInfo(string path);
 
         /// <summary>
         /// Creates a new file in the specified directory.
@@ -55,11 +55,11 @@ namespace Tkl.Jumbo.Dfs
         /// Gets information about a file.
         /// </summary>
         /// <param name="path">The full path of the file.</param>
-        /// <returns>A <see cref="File"/> object referring to the file.</returns>
+        /// <returns>A <see cref="DfsFile"/> object referring to the file.</returns>
         /// <exception cref="ArgumentNullException"><paramref name="path"/> is <see langword="null" />.</exception>
         /// <exception cref="ArgumentException"><paramref name="path"/> is not an absolute path, contains an empty component, or contains a file name.</exception>
         /// <exception cref="System.IO.DirectoryNotFoundException">One of the parent directories in the path specified in <paramref name="path"/> does not exist.</exception>
-        File GetFileInfo(string path);
+        DfsFile GetFileInfo(string path);
 
         /// <summary>
         /// Gets information about a file or directory.

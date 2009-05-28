@@ -188,7 +188,7 @@ namespace Tkl.Jumbo.Test.Jet
                 break;
             }
 
-            Tkl.Jumbo.Dfs.File file = dfsClient.NameServer.GetFileInfo(_fileName);
+            Tkl.Jumbo.Dfs.DfsFile file = dfsClient.NameServer.GetFileInfo(_fileName);
             JobConfiguration config = CreateConfiguration(dfsClient, file, outputPath, forceFileDownload, counterTask, adderTask, channelType);
 
             JetClient target = new JetClient(TestJetCluster.CreateClientConfig());
@@ -212,7 +212,7 @@ namespace Tkl.Jumbo.Test.Jet
             Console.WriteLine(config);
         }
 
-        private static JobConfiguration CreateConfiguration(DfsClient dfsClient, Tkl.Jumbo.Dfs.File file, string outputPath, bool forceFileDownload, Type counterTask, Type adderTask, ChannelType channelType)
+        private static JobConfiguration CreateConfiguration(DfsClient dfsClient, Tkl.Jumbo.Dfs.DfsFile file, string outputPath, bool forceFileDownload, Type counterTask, Type adderTask, ChannelType channelType)
         {
 
             JobConfiguration config = new JobConfiguration(System.IO.Path.GetFileName(typeof(LineCounterTask).Assembly.Location));

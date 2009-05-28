@@ -12,7 +12,7 @@ namespace Tkl.Jumbo.Test.Dfs
     {
         private class FileSystemEntryDerived : FileSystemEntry
         {
-            public FileSystemEntryDerived(Directory parent, string name, DateTime dateCreated)
+            public FileSystemEntryDerived(DfsDirectory parent, string name, DateTime dateCreated)
                 : base(parent, name, dateCreated)
             {
             }
@@ -33,7 +33,7 @@ namespace Tkl.Jumbo.Test.Dfs
         {
             DateTime date = DateTime.UtcNow;
             string name = "test";
-            Directory parent = new Directory(null, string.Empty, DateTime.Now);
+            DfsDirectory parent = new DfsDirectory(null, string.Empty, DateTime.Now);
             FileSystemEntryDerived target = new FileSystemEntryDerived(parent, name, date);
             Assert.AreEqual(date, target.DateCreated);
             Assert.AreEqual(name, target.Name);
@@ -52,7 +52,7 @@ namespace Tkl.Jumbo.Test.Dfs
         [Test]
         public void TestShallowClone()
         {
-            Directory parent = new Directory(null, string.Empty, DateTime.Now);
+            DfsDirectory parent = new DfsDirectory(null, string.Empty, DateTime.Now);
             FileSystemEntry target = new FileSystemEntryDerived(parent, "test", DateTime.UtcNow);
             FileSystemEntry clone = target.ShallowClone();
             Assert.AreNotSame(target, clone);

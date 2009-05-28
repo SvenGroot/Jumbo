@@ -44,10 +44,10 @@ namespace Tkl.Jumbo.Test.Dfs
                 nameServer = DfsClient.CreateNameServerClient(TestDfsCluster.CreateClientConfig());
                 nameServer.WaitForSafeModeOff(Timeout.Infinite);
                 Assert.IsNull(nameServer.GetDirectoryInfo("/test1"));
-                Tkl.Jumbo.Dfs.Directory dir = nameServer.GetDirectoryInfo("/test2");
+                Tkl.Jumbo.Dfs.DfsDirectory dir = nameServer.GetDirectoryInfo("/test2");
                 Assert.IsNotNull(dir);
                 Assert.AreEqual(1, dir.Children.Count);
-                Tkl.Jumbo.Dfs.File file = nameServer.GetFileInfo("/test2/foo.dat");
+                Tkl.Jumbo.Dfs.DfsFile file = nameServer.GetFileInfo("/test2/foo.dat");
                 Assert.IsNotNull(file);
                 Assert.AreEqual(size, file.Size);
                 Assert.AreEqual(1, file.Blocks.Count);

@@ -71,7 +71,7 @@ namespace DfsShell
             else
             {
                 string path = args.Length == 2 ? args[1] : "/";
-                Directory dir = client.NameServer.GetDirectoryInfo(path);
+                DfsDirectory dir = client.NameServer.GetDirectoryInfo(path);
                 if( dir == null )
                     Console.WriteLine("Directory not found.");
                 else
@@ -91,6 +91,7 @@ namespace DfsShell
                     Console.WriteLine("Local path {0} does not exist.", localPath);
                 else
                 {
+
                     try
                     {
                         bool isDirectory = IO.Directory.Exists(localPath);
@@ -101,7 +102,7 @@ namespace DfsShell
                         }
                         else
                         {
-                            Directory dir = client.NameServer.GetDirectoryInfo(dfsPath);
+                            DfsDirectory dir = client.NameServer.GetDirectoryInfo(dfsPath);
                             if( dir != null )
                             {
                                 string fileName = IO.Path.GetFileName(args[1]);
@@ -151,7 +152,7 @@ namespace DfsShell
 
                 try
                 {
-                    if( entry is File )
+                    if( entry is DfsFile )
                     {
                         if( IO.Directory.Exists(localPath) )
                         {
@@ -224,7 +225,7 @@ namespace DfsShell
             else
             {
                 string path = args[1];
-                File file = client.NameServer.GetFileInfo(path);
+                DfsFile file = client.NameServer.GetFileInfo(path);
                 if( file == null )
                     Console.WriteLine("File not found.");
                 else

@@ -13,8 +13,8 @@ namespace Tkl.Jumbo.Test.Dfs
         [Test]
         public void TestConstructor()
         {
-            Directory parent = new Directory(null, "", DateTime.UtcNow);
-            File target = new File(parent, "test", DateTime.UtcNow);
+            DfsDirectory parent = new DfsDirectory(null, "", DateTime.UtcNow);
+            DfsFile target = new DfsFile(parent, "test", DateTime.UtcNow);
             Assert.IsNotNull(target.Blocks);
             Assert.AreEqual(0, target.Blocks.Count);
             Assert.IsFalse(target.IsOpenForWriting);
@@ -24,8 +24,8 @@ namespace Tkl.Jumbo.Test.Dfs
         [Test]
         public void TestIsOpenForWriting()
         {
-            Directory parent = new Directory(null, "", DateTime.UtcNow);
-            File target = new File(parent, "test", DateTime.UtcNow);
+            DfsDirectory parent = new DfsDirectory(null, "", DateTime.UtcNow);
+            DfsFile target = new DfsFile(parent, "test", DateTime.UtcNow);
             bool expected = true;
             target.IsOpenForWriting = expected;
             Assert.AreEqual(expected, target.IsOpenForWriting);
@@ -34,8 +34,8 @@ namespace Tkl.Jumbo.Test.Dfs
         [Test]
         public void TestSize()
         {
-            Directory parent = new Directory(null, "", DateTime.UtcNow);
-            File target = new File(parent, "test", DateTime.UtcNow);
+            DfsDirectory parent = new DfsDirectory(null, "", DateTime.UtcNow);
+            DfsFile target = new DfsFile(parent, "test", DateTime.UtcNow);
             long expected = 0x1234567891234;
             target.Size = expected;
             Assert.AreEqual(expected, target.Size);

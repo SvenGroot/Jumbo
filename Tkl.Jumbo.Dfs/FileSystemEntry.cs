@@ -30,7 +30,7 @@ namespace Tkl.Jumbo.Dfs
         /// <param name="dateCreated">The date the new entry was created.</param>
         /// <exception cref="ArgumentNullException"><paramref name="name"/> is <see langword="null" />.</exception>
         /// <exception cref="ArgumentException"><paramref name="name"/> contains the / character.</exception>
-        protected FileSystemEntry(Directory parent, string name, DateTime dateCreated)
+        protected FileSystemEntry(DfsDirectory parent, string name, DateTime dateCreated)
         {
             if( name == null )
                 throw new ArgumentNullException("name");
@@ -60,7 +60,7 @@ namespace Tkl.Jumbo.Dfs
         /// <summary>
         /// Gets the parent directory of the file system entry. This will be <see langword="null"/> on objects created by <see cref="ShallowClone" />.
         /// </summary>
-        private Directory Parent { get; set; }
+        private DfsDirectory Parent { get; set; }
 
         /// <summary>
         /// Gets the absolute path of the file system entry.
@@ -87,7 +87,7 @@ namespace Tkl.Jumbo.Dfs
         /// </summary>
         /// <param name="newParent">The new parent of the entry.</param>
         /// <param name="newName">The new name of the entry. Can be <see langword="null"/>.</param>
-        public void MoveTo(Directory newParent, string newName)
+        public void MoveTo(DfsDirectory newParent, string newName)
         {
             if( newParent == null )
                 throw new ArgumentNullException("newParent");

@@ -77,7 +77,7 @@ namespace Tkl.Jumbo.Jet.Jobs
             }
             else
             {
-                Directory outputDir = dfsClient.NameServer.GetDirectoryInfo(outputPath);
+                DfsDirectory outputDir = dfsClient.NameServer.GetDirectoryInfo(outputPath);
                 if( outputDir != null )
                     throw new ArgumentException("The specified output path already exists on the DFS.", "outputPath");
             }

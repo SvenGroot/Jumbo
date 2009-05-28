@@ -8,13 +8,13 @@ namespace NameServerApplication
 {
     class BlockInfo
     {
-        public BlockInfo(File file)
+        public BlockInfo(DfsFile file)
         {
             File = file;
             DataServers = new List<DataServerInfo>();
         }
 
         public List<DataServerInfo> DataServers { get; private set; }
-        public File File { get; private set; }
+        public DfsFile File { get; private set; }
     }
 }

@@ -8,12 +8,12 @@ namespace NameServerApplication
 {
     class PendingFile
     {
-        public PendingFile(File file)
+        public PendingFile(DfsFile file)
         {
             File = file;
         }
 
-        public File File { get; private set; }
+        public DfsFile File { get; private set; }
         public Guid? PendingBlock { get; set; }
     }
 }

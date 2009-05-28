@@ -122,7 +122,7 @@ namespace NameServerApplication
             get { return _fileSystem; }
         }
 
-        public void NotifyNewBlock(File file, Guid blockId)
+        public void NotifyNewBlock(DfsFile file, Guid blockId)
         {
             // Called by FileSystem when a pending block is added to a file (AppendBlock)
             lock( _pendingBlocks )
@@ -131,7 +131,7 @@ namespace NameServerApplication
             }
         }
 
-        public void RemoveFileBlocks(Tkl.Jumbo.Dfs.File file, Guid? pendingBlock)
+        public void RemoveFileBlocks(Tkl.Jumbo.Dfs.DfsFile file, Guid? pendingBlock)
         {
             if( pendingBlock != null )
             {
@@ -257,7 +257,7 @@ namespace NameServerApplication
             _fileSystem.CreateDirectory(path);
         }
 
-        public Directory GetDirectoryInfo(string path)
+        public DfsDirectory GetDirectoryInfo(string path)
         {
             _log.Debug("GetDirectoryInfo called");
             return _fileSystem.GetDirectoryInfo(path);
@@ -295,7 +295,7 @@ namespace NameServerApplication
             _fileSystem.Move(from, to);
         }
 
-        public File GetFileInfo(string path)
+        public DfsFile GetFileInfo(string path)
         {
             _log.Debug("GetFileInfo called");
             return _fileSystem.GetFileInfo(path);

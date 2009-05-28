@@ -18,19 +18,19 @@ public class FileSystemEntryInfo
         Name = entry.Name;
         DateCreated = entry.DateCreated;
         FullPath = entry.FullPath;
-        File file = entry as File;
+        DfsFile file = entry as DfsFile;
         if( file != null )
         {
             Size = file.Size;
         }
         else
         {
-            Directory dir = (Directory)entry;
+            DfsDirectory dir = (DfsDirectory)entry;
             IsDirectory = true;
             if( includeChildren )
             {
                 Children = (from child in dir.Children
-                            orderby child.GetType() != typeof(Directory), child.Name
+                            orderby child.GetType() != typeof(DfsDirectory), child.Name
                             select new FileSystemEntryInfo(child, false)).ToArray();
             }
         }

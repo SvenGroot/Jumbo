@@ -222,7 +222,7 @@ namespace Tkl.Jumbo.Dfs
                 throw new ArgumentNullException("dfsPath");
             if( localPath == null )
                 throw new ArgumentNullException("localPath");
-            Directory dir = NameServer.GetDirectoryInfo(dfsPath);
+            DfsDirectory dir = NameServer.GetDirectoryInfo(dfsPath);
             if( dir != null )
             {
                 string fileName = System.IO.Path.GetFileName(localPath);
@@ -263,7 +263,7 @@ namespace Tkl.Jumbo.Dfs
 
             string[] files = System.IO.Directory.GetFiles(localPath);
 
-            Directory directory = NameServer.GetDirectoryInfo(dfsPath);
+            DfsDirectory directory = NameServer.GetDirectoryInfo(dfsPath);
             if( directory != null )
                 throw new ArgumentException(string.Format("Directory {0} already exists on the DFS.", dfsPath), "dfsPath");
             NameServer.CreateDirectory(dfsPath);
@@ -374,12 +374,12 @@ namespace Tkl.Jumbo.Dfs
             if( localPath == null )
                 throw new ArgumentNullException("localPath");
 
-            Directory dir = NameServer.GetDirectoryInfo(dfsPath);
+            DfsDirectory dir = NameServer.GetDirectoryInfo(dfsPath);
             if( dir == null )
                 throw new DfsException("The specified directory does not exist.");
             foreach( FileSystemEntry entry in dir.Children )
             {
-                File file = entry as File;
+                DfsFile file = entry as DfsFile;
                 if( file != null )
                 {
                     string localFile = System.IO.Path.Combine(localPath, file.Name);

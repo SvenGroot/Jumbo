@@ -17,7 +17,7 @@ namespace NameServerApplication
             NameServer.Instance.CreateDirectory(path);
         }
 
-        public Directory GetDirectoryInfo(string path)
+        public DfsDirectory GetDirectoryInfo(string path)
         {
             return NameServer.Instance.GetDirectoryInfo(path);
         }
@@ -37,7 +37,7 @@ namespace NameServerApplication
             NameServer.Instance.Move(from, to);
         }
 
-        public File GetFileInfo(string path)
+        public DfsFile GetFileInfo(string path)
         {
             return NameServer.Instance.GetFileInfo(path);
         }

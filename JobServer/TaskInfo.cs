@@ -119,7 +119,7 @@ namespace JobServerApplication
         public Guid GetBlockId(DfsClient dfsClient)
         {
             TaskDfsInput input = Stage.DfsInputs[TaskId.TaskNumber - 1];
-            Tkl.Jumbo.Dfs.File file = Job.GetFileInfo(dfsClient, input.Path);
+            Tkl.Jumbo.Dfs.DfsFile file = Job.GetFileInfo(dfsClient, input.Path);
             return file.Blocks[input.Block];
         }
 

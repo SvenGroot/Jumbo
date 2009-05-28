@@ -13,7 +13,7 @@ namespace Tkl.Jumbo.Test.Dfs
         [Test]
         public void TestConstructor()
         {
-            Directory target = new Directory(null, "", DateTime.UtcNow);
+            DfsDirectory target = new DfsDirectory(null, "", DateTime.UtcNow);
             Assert.IsNotNull(target.Children);
             Assert.AreEqual(0, target.Children.Count);
         }
@@ -21,31 +21,31 @@ namespace Tkl.Jumbo.Test.Dfs
         [Test]
         public void TestChildren()
         {
-            Directory target = CreateDirectoryStructure();
+            DfsDirectory target = CreateDirectoryStructure();
             Assert.AreEqual(1, target.Children.Count);
             Assert.AreEqual("child1", target.Children[0].Name);
             Assert.AreEqual("/child1", target.Children[0].FullPath);
-            Assert.AreEqual(2, ((Directory)target.Children[0]).Children.Count);
-            Assert.AreEqual("child2", ((Directory)target.Children[0]).Children[0].Name);
-            Assert.AreEqual("/child1/child2", ((Directory)target.Children[0]).Children[0].FullPath);
-            Assert.AreEqual("child3", ((Directory)target.Children[0]).Children[1].Name);
-            Assert.AreEqual("/child1/child3", ((Directory)target.Children[0]).Children[1].FullPath);
-            Assert.AreEqual(1, ((Directory)((Directory)target.Children[0]).Children[0]).Children.Count);
-            Assert.AreEqual("child4", ((Directory)((Directory)target.Children[0]).Children[0]).Children[0].Name);
-            Assert.AreEqual("/child1/child2/child4", ((Directory)((Directory)target.Children[0]).Children[0]).Children[0].FullPath);
-            Assert.AreEqual(typeof(File), ((Directory)((Directory)target.Children[0]).Children[0]).Children[0].GetType());
-            Assert.AreEqual(1, ((Directory)((Directory)target.Children[0]).Children[1]).Children.Count);
-            Assert.AreEqual("child5", ((Directory)((Directory)target.Children[0]).Children[1]).Children[0].Name);
-            Assert.AreEqual("/child1/child3/child5", ((Directory)((Directory)target.Children[0]).Children[1]).Children[0].FullPath);
-            Assert.AreEqual(typeof(Directory), ((Directory)((Directory)target.Children[0]).Children[1]).Children[0].GetType());
+            Assert.AreEqual(2, ((DfsDirectory)target.Children[0]).Children.Count);
+            Assert.AreEqual("child2", ((DfsDirectory)target.Children[0]).Children[0].Name);
+            Assert.AreEqual("/child1/child2", ((DfsDirectory)target.Children[0]).Children[0].FullPath);
+            Assert.AreEqual("child3", ((DfsDirectory)target.Children[0]).Children[1].Name);
+            Assert.AreEqual("/child1/child3", ((DfsDirectory)target.Children[0]).Children[1].FullPath);
+            Assert.AreEqual(1, ((DfsDirectory)((DfsDirectory)target.Children[0]).Children[0]).Children.Count);
+            Assert.AreEqual("child4", ((DfsDirectory)((DfsDirectory)target.Children[0]).Children[0]).Children[0].Name);
+            Assert.AreEqual("/child1/child2/child4", ((DfsDirectory)((DfsDirectory)target.Children[0]).Children[0]).Children[0].FullPath);
+            Assert.AreEqual(typeof(DfsFile), ((DfsDirectory)((DfsDirectory)target.Children[0]).Children[0]).Children[0].GetType());
+            Assert.AreEqual(1, ((DfsDirectory)((DfsDirectory)target.Children[0]).Children[1]).Children.Count);
+            Assert.AreEqual("child5", ((DfsDirectory)((DfsDirectory)target.Children[0]).Children[1]).Children[0].Name);
+            Assert.AreEqual("/child1/child3/child5", ((DfsDirectory)((DfsDirectory)target.Children[0]).Children[1]).Children[0].FullPath);
+            Assert.AreEqual(typeof(DfsDirectory), ((DfsDirectory)((DfsDirectory)target.Children[0]).Children[1]).Children[0].GetType());
         }
 
         [Test]
         public void TestShallowClone()
         {
-            Directory target = CreateDirectoryStructure();
-            Directory child1 = (Directory)target.Children[0];
-            Directory clone = (Directory)child1.ShallowClone();
+            DfsDirectory target = CreateDirectoryStructure();
+            DfsDirectory child1 = (DfsDirectory)target.Children[0];
+            DfsDirectory clone = (DfsDirectory)child1.ShallowClone();
             Assert.AreNotSame(child1, clone);
             Assert.AreEqual("child1", clone.Name);
             Assert.AreEqual("/child1", clone.FullPath);
@@ -57,12 +57,12 @@ namespace Tkl.Jumbo.Test.Dfs
             Assert.AreEqual("/child1/child2", clone.Children[0].FullPath);
             Assert.AreEqual("/child1/child3", clone.Children[1].FullPath);
             // Check the level below the children wasn't cloned.
-            Assert.AreEqual(0, ((Directory)clone.Children[0]).Children.Count);
-            Assert.AreEqual(0, ((Directory)clone.Children[1]).Children.Count);
+            Assert.AreEqual(0, ((DfsDirectory)clone.Children[0]).Children.Count);
+            Assert.AreEqual(0, ((DfsDirectory)clone.Children[1]).Children.Count);
 
         }
 
-        private Directory CreateDirectoryStructure()
+        private DfsDirectory CreateDirectoryStructure()
         {
             /* Create directory structure
              * /
@@ -72,12 +72,12 @@ namespace Tkl.Jumbo.Test.Dfs
              * /child1/child3
              * /child1/child3/child5
              */
-            Directory root = new Directory(null, "", DateTime.UtcNow);
-            Directory child1 = new Directory(root, "child1", DateTime.UtcNow);
-            Directory child2 = new Directory(child1, "child2", DateTime.UtcNow);
-            Directory child3 = new Directory(child1, "child3", DateTime.UtcNow);
-            new File(child2, "child4", DateTime.UtcNow);
-            new Directory(child3, "child5", DateTime.UtcNow);
+            DfsDirectory root = new DfsDirectory(null, "", DateTime.UtcNow);
+            DfsDirectory child1 = new DfsDirectory(root, "child1", DateTime.UtcNow);
+            DfsDirectory child2 = new DfsDirectory(child1, "child2", DateTime.UtcNow);
+            DfsDirectory child3 = new DfsDirectory(child1, "child3", DateTime.UtcNow);
+            new DfsFile(child2, "child4", DateTime.UtcNow);
+            new DfsDirectory(child3, "child5", DateTime.UtcNow);
             return root;
         }
     }

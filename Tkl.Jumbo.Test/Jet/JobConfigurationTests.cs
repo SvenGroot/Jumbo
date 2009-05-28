@@ -57,7 +57,7 @@ namespace Tkl.Jumbo.Test.Jet
         public void TestAddInputStage()
         {
             JobConfiguration target = new JobConfiguration(typeof(Tasks.LineCounterTask).Assembly);
-            File file = CreateFakeTestFile("test");
+            DfsFile file = CreateFakeTestFile("test");
 
             StageConfiguration stage = target.AddInputStage("InputStage", file, typeof(Tasks.LineCounterTask), typeof(LineRecordReader));
 
@@ -109,7 +109,7 @@ namespace Tkl.Jumbo.Test.Jet
         public void TestGetStage()
         {
             JobConfiguration target = new JobConfiguration(typeof(Tasks.LineCounterTask).Assembly);
-            File file = CreateFakeTestFile("test1");
+            DfsFile file = CreateFakeTestFile("test1");
 
             StageConfiguration expected = target.AddInputStage("InputStage", file, typeof(Tasks.LineCounterTask), typeof(LineRecordReader));
 
@@ -125,8 +125,8 @@ namespace Tkl.Jumbo.Test.Jet
         public void TestGetInputChannelForStage()
         {
             JobConfiguration target = new JobConfiguration(typeof(Tasks.LineCounterTask).Assembly);
-            File file1 = CreateFakeTestFile("test1");
-            File file2 = CreateFakeTestFile("test2");
+            DfsFile file1 = CreateFakeTestFile("test1");
+            DfsFile file2 = CreateFakeTestFile("test2");
 
             StageConfiguration inputStage1 = target.AddInputStage("InputStage1", file1, typeof(Tasks.LineCounterTask), typeof(LineRecordReader));
             StageConfiguration inputStage2 = target.AddInputStage("InputStage2", file2, typeof(Tasks.LineCounterTask), typeof(LineRecordReader));
@@ -146,8 +146,8 @@ namespace Tkl.Jumbo.Test.Jet
         public void TestGetOutputChannelForStage()
         {
             JobConfiguration target = new JobConfiguration(typeof(Tasks.LineCounterTask).Assembly);
-            File file1 = CreateFakeTestFile("test1");
-            File file2 = CreateFakeTestFile("test2");
+            DfsFile file1 = CreateFakeTestFile("test1");
+            DfsFile file2 = CreateFakeTestFile("test2");
 
             StageConfiguration inputStage1 = target.AddInputStage("InputStage1", file1, typeof(Tasks.LineCounterTask), typeof(LineRecordReader));
             StageConfiguration inputStage2 = target.AddInputStage("InputStage2", file2, typeof(Tasks.LineCounterTask), typeof(LineRecordReader));
@@ -166,8 +166,8 @@ namespace Tkl.Jumbo.Test.Jet
         private void TestAddStage(bool useOutput)
         {
             JobConfiguration target = new JobConfiguration(typeof(Tasks.LineCounterTask).Assembly);
-            File file1 = CreateFakeTestFile("test1");
-            File file2 = CreateFakeTestFile("test2");
+            DfsFile file1 = CreateFakeTestFile("test1");
+            DfsFile file2 = CreateFakeTestFile("test2");
 
             StageConfiguration inputStage1 = target.AddInputStage("InputStage1", file1, typeof(Tasks.LineCounterTask), typeof(LineRecordReader));
             StageConfiguration inputStage2 = target.AddInputStage("InputStage2", file2, typeof(Tasks.LineCounterTask), typeof(LineRecordReader));
@@ -209,7 +209,7 @@ namespace Tkl.Jumbo.Test.Jet
         private void TestAddPointToPointStage(bool useOutput)
         {
             JobConfiguration target = new JobConfiguration(typeof(Tasks.LineCounterTask).Assembly);
-            File file = CreateFakeTestFile("test1");
+            DfsFile file = CreateFakeTestFile("test1");
 
             StageConfiguration inputStage = target.AddInputStage("InputStage", file, typeof(Tasks.LineCounterTask), typeof(LineRecordReader));
 
@@ -246,10 +246,10 @@ namespace Tkl.Jumbo.Test.Jet
             Assert.IsTrue(Utilities.CompareList(new[] { stage.StageId }, channel.OutputStages));
         }
 
-        private static File CreateFakeTestFile(string name)
+        private static DfsFile CreateFakeTestFile(string name)
         {
-            Directory dir = new Directory(null, "root", DateTime.UtcNow);
-            File file = new File(dir, name, DateTime.UtcNow);
+            DfsDirectory dir = new DfsDirectory(null, "root", DateTime.UtcNow);
+            DfsFile file = new DfsFile(dir, name, DateTime.UtcNow);
             file.Blocks.Add(Guid.NewGuid());
             file.Blocks.Add(Guid.NewGuid());
             file.Blocks.Add(Guid.NewGuid());

@@ -13,7 +13,7 @@ namespace NameServerApplication
     public class FileSystem
     {
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(FileSystem));
-        private Directory _root = new Directory(null, string.Empty, DateTime.UtcNow);
+        private DfsDirectory _root = new DfsDirectory(null, string.Empty, DateTime.UtcNow);
         private EditLog _editLog;
         private NameServer _nameServer;
         private Dictionary<string, PendingFile> _pendingFiles = new Dictionary<string, PendingFile>();
@@ -70,20 +70,20 @@ namespace NameServerApplication
         /// Creates a new directory in the file system.
         /// </summary>
         /// <param name="path">The full path of the new directory.</param>
-        /// <returns>A <see cref="Directory"/> object representing the newly created directory.</returns>
+        /// <returns>A <see cref="DfsDirectory"/> object representing the newly created directory.</returns>
         /// <remarks>
         /// <para>
         ///   If the directory already existed, no changes are made and the existing directory is returned.
         /// </para>
         /// <para>
-        ///   The returned <see cref="Directory"/> object is a shallow copy and cannot be used to modify the internal
+        ///   The returned <see cref="DfsDirectory"/> object is a shallow copy and cannot be used to modify the internal
         ///   state of the file system. It contains information only about the direct children of the directory, not any
         ///   further descendants.
         /// </para>
         /// </remarks>
         /// <exception cref="ArgumentNullException"><paramref name="path"/> is <see langword="null" />.</exception>
         /// <exception cref="ArgumentException"><paramref name="path"/> is not an absolute path, contains an empty component, or contains a file name.</exception>
-        public Directory CreateDirectory(string path)
+        public DfsDirectory CreateDirectory(string path)
         {
             return CreateDirectory(path, DateTime.UtcNow);
         }
@@ -92,26 +92,26 @@ namespace NameServerApplication
         /// Creates a new directory in the file system.
         /// </summary>
         /// <param name="path">The full path of the new directory.</param>
-        /// <returns>A <see cref="Directory"/> object representing the newly created directory.</returns>
+        /// <returns>A <see cref="DfsDirectory"/> object representing the newly created directory.</returns>
         /// <remarks>
         /// <para>
         ///   If the directory already existed, no changes are made and the existing directory is returned.
         /// </para>
         /// <para>
-        ///   The returned <see cref="Directory"/> object is a shallow copy and cannot be used to modify the internal
+        ///   The returned <see cref="DfsDirectory"/> object is a shallow copy and cannot be used to modify the internal
         ///   state of the file system. It contains information only about the direct children of the directory, not any
         ///   further descendants.
         /// </para>
         /// </remarks>
         /// <exception cref="ArgumentNullException"><paramref name="path"/> is <see langword="null" />.</exception>
         /// <exception cref="ArgumentException"><paramref name="path"/> is not an absolute path, contains an empty component, or contains a file name.</exception>
-        public Directory CreateDirectory(string path, DateTime dateCreated)
+        public DfsDirectory CreateDirectory(string path, DateTime dateCreated)
         {
             _log.DebugFormat("CreateDirectory: path = \"{0}\"", path);
 
-            Directory result = GetDirectoryInternal(path, true, dateCreated);
+            DfsDirectory result = GetDirectoryInternal(path, true, dateCreated);
             if( result != null )
-                result = (Directory)result.ShallowClone();
+                result = (DfsDirectory)result.ShallowClone();
             return result;
         }
 
@@ -119,21 +119,21 @@ namespace NameServerApplication
         /// Gets information about a directory in the file system.
         /// </summary>
         /// <param name="path">The full path of the directory.</param>
-        /// <returns>A <see cref="Directory"/> object representing the directory.</returns>
+        /// <returns>A <see cref="DfsDirectory"/> object representing the directory.</returns>
         /// <remarks>
-        ///   The returned <see cref="Directory"/> object is a shallow copy and cannot be used to modify the internal
+        ///   The returned <see cref="DfsDirectory"/> object is a shallow copy and cannot be used to modify the internal
         ///   state of the file system. It contains information only about the direct children of the directory, not any
         ///   further descendants.
         /// </remarks>
         /// <exception cref="ArgumentNullException"><paramref name="path"/> is <see langword="null" />.</exception>
         /// <exception cref="ArgumentException"><paramref name="path"/> is not an absolute path, contains an empty component, or contains a file name.</exception>
-        public Directory GetDirectoryInfo(string path)
+        public DfsDirectory GetDirectoryInfo(string path)
         {
             _log.DebugFormat("GetDirectory: path = \"{0}\"", path);
 
-            Directory result = GetDirectoryInternal(path, false, DateTime.Now);
+            DfsDirectory result = GetDirectoryInternal(path, false, DateTime.Now);
             if( result != null )
-                result = (Directory)result.ShallowClone();
+                result = (DfsDirectory)result.ShallowClone();
             return result;
         }
 
@@ -168,7 +168,7 @@ namespace NameServerApplication
             lock( _root )
             {
                 string name;
-                Directory parent;
+                DfsDirectory parent;
                 FileSystemEntry entry;
                 FindEntry(path, out name, out parent, out entry);
                 if( entry != null )
@@ -199,27 +199,27 @@ namespace NameServerApplication
         /// Gets information about a file.
         /// </summary>
         /// <param name="path">The full path of the file.</param>
-        /// <returns>A <see cref="File"/> object referring to the file.</returns>
+        /// <returns>A <see cref="DfsFile"/> object referring to the file.</returns>
         /// <remarks>
-        ///   The returned <see cref="File"/> object is a shallow copy and cannot be used to modify the internal
+        ///   The returned <see cref="DfsFile"/> object is a shallow copy and cannot be used to modify the internal
         ///   state of the file system.
         /// </remarks>
         /// <exception cref="ArgumentNullException"><paramref name="path"/> is <see langword="null" />.</exception>
         /// <exception cref="ArgumentException"><paramref name="path"/> is not an absolute path, contains an empty component, or contains a file name.</exception>
         /// <exception cref="System.IO.DirectoryNotFoundException">One of the parent directories in the path specified in <paramref name="path"/> does not exist.</exception>
-        public File GetFileInfo(string path)
+        public DfsFile GetFileInfo(string path)
         {
             if( path == null )
                 throw new ArgumentNullException("name");
 
             _log.DebugFormat("GetFileInfo: path = \"{0}\"", path);
 
-            File result = null;
+            DfsFile result = null;
             lock( _root )
             {
                 result = GetFileInfoInternal(path);
                 if( result != null )
-                    result = (File)result.ShallowClone();
+                    result = (DfsFile)result.ShallowClone();
             }
             _log.Debug("GetFileInfo complete.");
             return result;
@@ -248,7 +248,7 @@ namespace NameServerApplication
             lock( _root )
             {
                 string name;
-                Directory parent;
+                DfsDirectory parent;
                 FindEntry(path, out name, out parent, out result);
                 if( result != null )
                     result = result.ShallowClone();
@@ -382,7 +382,7 @@ namespace NameServerApplication
         {
             _log.DebugFormat("Delete: path = \"{0}\", recursive = {1}", path, recursive);
             string name;
-            Directory parent;
+            DfsDirectory parent;
             FileSystemEntry entry;
             // The entire operation must be locked, otherwise it opens up the possibility of someone else deleting
             // the file.
@@ -400,10 +400,10 @@ namespace NameServerApplication
                 if( entry == null )
                     return false;
 
-                Directory dir = entry as Directory;
+                DfsDirectory dir = entry as DfsDirectory;
                 if( dir != null && dir.Children.Count > 0 && !recursive )
                     throw new InvalidOperationException("The specified directory is not empty.");
-                File file = entry as File;
+                DfsFile file = entry as DfsFile;
                 if( file != null && file.IsOpenForWriting )
                     throw new InvalidOperationException("The specified file is open for writing.");
 
@@ -423,7 +423,7 @@ namespace NameServerApplication
             {
                 string fromName;
                 FileSystemEntry fromEntry;
-                Directory fromParent;
+                DfsDirectory fromParent;
                 FindEntry(from, out fromName, out fromParent, out fromEntry);
 
                 if( fromEntry == null )
@@ -431,12 +431,12 @@ namespace NameServerApplication
 
                 string toName;
                 FileSystemEntry toEntry;
-                Directory toParent;
+                DfsDirectory toParent;
                 FindEntry(to, out toName, out toParent, out toEntry);
-                if( toEntry is Directory )
+                if( toEntry is DfsDirectory )
                 {
                     toName = null;
-                    toParent = (Directory)toEntry;
+                    toParent = (DfsDirectory)toEntry;
                 }
                 else if( toEntry != null )
                     throw new ArgumentException(string.Format("The path \"{0}\" is an existing file."));
@@ -467,39 +467,26 @@ namespace NameServerApplication
             NameServer.NotifyNewBlock(file.File, blockID);
         }
 
-        //private void AppendBlock(File file, Guid blockID, bool checkReplication)
-        //{
-        //    if( !file.IsOpenForWriting )
-        //        throw new InvalidOperationException(string.Format("The file '{0}' is not open for writing.", file.FullPath));
-
-        //    if( checkReplication )
-        //        NameServer.CheckBlockReplication(file.Blocks);
-
-        //    _editLog.LogAppendBlock(file.FullPath, DateTime.UtcNow, blockID);
-        //    file.Blocks.Add(blockID);
-        //    NameServer.NotifyNewBlock(file, blockID);
-        //}
-
-        private File GetFileInfoInternal(string path)
+        private DfsFile GetFileInfoInternal(string path)
         {
             string name;
-            Directory parent;
-            File result;
+            DfsDirectory parent;
+            DfsFile result;
             FindFile(path, out name, out parent, out result);
             return result;
         }
 
-        private void FindFile(string path, out string name, out Directory parent, out File file)
+        private void FindFile(string path, out string name, out DfsDirectory parent, out DfsFile file)
         {
             FileSystemEntry entry;
             FindEntry(path, out name, out parent, out entry);
-            file = entry as File;
+            file = entry as DfsFile;
         }
 
         /// <summary>
         /// Note: This function must be called with _root already locked.
         /// </summary>
-        private void FindEntry(string path, out string name, out Directory parent, out FileSystemEntry file)
+        private void FindEntry(string path, out string name, out DfsDirectory parent, out FileSystemEntry file)
         {
             string directory;
 
@@ -514,7 +501,7 @@ namespace NameServerApplication
             file = FindEntry(parent, name);
         }
         
-        private FileSystemEntry FindEntry(Directory parent, string name)
+        private FileSystemEntry FindEntry(DfsDirectory parent, string name)
         {
             return (from child in parent.Children
                     where child.Name == name
@@ -532,7 +519,7 @@ namespace NameServerApplication
                 directory = "/";
         }
 
-        private Directory GetDirectoryInternal(string path, bool create, DateTime creationDate)
+        private DfsDirectory GetDirectoryInternal(string path, bool create, DateTime creationDate)
         {
             if( path == null )
                 throw new ArgumentNullException("path");
@@ -551,7 +538,7 @@ namespace NameServerApplication
                 if( (from c in components where c.Length == 0 select c).Count() > 1 )
                     throw new ArgumentException("Path contains an empty components.", "path");
 
-                Directory currentDirectory = _root;
+                DfsDirectory currentDirectory = _root;
                 for( int x = 1; x < components.Length; ++x )
                 {
                     string component = components[x];
@@ -567,7 +554,7 @@ namespace NameServerApplication
                     }
                     else
                     {
-                        currentDirectory = entry as Directory;
+                        currentDirectory = entry as DfsDirectory;
                         // There is no need to rollback changes here since no changes can have been made yet if this happens.
                         if( currentDirectory == null )
                             throw new ArgumentException("Path contains a file name.", "path");
@@ -577,18 +564,18 @@ namespace NameServerApplication
             }
         }
 
-        private Directory CreateDirectory(Directory parent, string name, DateTime dateCreated)
+        private DfsDirectory CreateDirectory(DfsDirectory parent, string name, DateTime dateCreated)
         {
             _log.InfoFormat("Creating directory \"{0}\" inside \"{1}\"", name, parent.FullPath);
             _editLog.LogCreateDirectory(AppendPath(parent.FullPath, name), dateCreated);
-            return new Directory(parent, name, dateCreated);
+            return new DfsDirectory(parent, name, dateCreated);
         }
 
-        private PendingFile CreateFile(Directory parent, string name, DateTime dateCreated)
+        private PendingFile CreateFile(DfsDirectory parent, string name, DateTime dateCreated)
         {
             _log.InfoFormat("Creating file \"{0}\" inside \"{1}\"", name, parent.FullPath);
             _editLog.LogCreateFile(AppendPath(parent.FullPath, name), dateCreated);
-            PendingFile result = new PendingFile(new File(parent, name, dateCreated) { IsOpenForWriting = true });
+            PendingFile result = new PendingFile(new DfsFile(parent, name, dateCreated) { IsOpenForWriting = true });
             lock( _pendingFiles )
             {
                 _pendingFiles.Add(result.File.FullPath, result);
@@ -596,12 +583,12 @@ namespace NameServerApplication
             return result;
         }
 
-        private void DeleteInternal(Directory parent, FileSystemEntry entry, bool recursive)
+        private void DeleteInternal(DfsDirectory parent, FileSystemEntry entry, bool recursive)
         {
             _log.InfoFormat("Deleting file system entry \"{0}\"", entry.FullPath);
             _editLog.LogDelete(entry.FullPath, recursive);
             parent.Children.Remove(entry);
-            File file = entry as File;
+            DfsFile file = entry as DfsFile;
             if( file != null )
             {
                 DeleteFile(file);
@@ -609,11 +596,11 @@ namespace NameServerApplication
             else if( recursive )
             {
                 // We've already established the entry is not a File, so it has to be a Directory
-                DeleteFilesRecursive((Directory)entry);
+                DeleteFilesRecursive((DfsDirectory)entry);
             }
         }
 
-        private void Move(FileSystemEntry entry, Directory newParent, string newName)
+        private void Move(FileSystemEntry entry, DfsDirectory newParent, string newName)
         {
             string to = DfsPath.Combine(newParent.FullPath, newName ?? entry.Name);
             _log.InfoFormat("Moving file system entry \"{0}\" to \"{1}\".", entry.FullPath, to);
@@ -622,19 +609,19 @@ namespace NameServerApplication
         }
 
 
-        private void DeleteFilesRecursive(Directory dir)
+        private void DeleteFilesRecursive(DfsDirectory dir)
         {
             foreach( FileSystemEntry entry in dir.Children )
             {
-                Directory childDir = entry as Directory;
+                DfsDirectory childDir = entry as DfsDirectory;
                 if( childDir != null )
                     DeleteFilesRecursive(childDir);
                 else
-                    DeleteFile((File)entry);
+                    DeleteFile((DfsFile)entry);
             }
         }
 
-        private void DeleteFile(File file)
+        private void DeleteFile(DfsFile file)
         {
             _log.InfoFormat("Deleting blocks associated with file {0}.", file.FullPath);
             Guid? pendingBlock = null;
