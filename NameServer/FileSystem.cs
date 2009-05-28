@@ -13,10 +13,10 @@ namespace NameServerApplication
     public class FileSystem
     {
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(FileSystem));
-        private DfsDirectory _root = new DfsDirectory(null, string.Empty, DateTime.UtcNow);
-        private EditLog _editLog;
-        private NameServer _nameServer;
-        private Dictionary<string, PendingFile> _pendingFiles = new Dictionary<string, PendingFile>();
+        private readonly DfsDirectory _root = new DfsDirectory(null, string.Empty, DateTime.UtcNow);
+        private readonly EditLog _editLog;
+        private readonly NameServer _nameServer;
+        private readonly Dictionary<string, PendingFile> _pendingFiles = new Dictionary<string, PendingFile>();
         private long _totalSize;
 
         /// <summary>
@@ -43,15 +43,10 @@ namespace NameServerApplication
                 _log.Info("Replaying log file.");
                 _editLog.ReplayLog(this);
                 _log.Info("Replaying log file finished.");
-                // TODO: Once leases are in place, we might not want to close pending files, the lease owner could still
-                // be around.
                 var pendingFiles = _pendingFiles.Keys.ToArray(); // make a copy
                 foreach( var file in pendingFiles )
                 {
-                    // TODO: I'm not sure this is the right thing to do since there's no obvious way for the users to tell
-                    // that a file is incomplete. Perhaps we should rename or move it instead.
-                    _log.WarnFormat("!!! File {0} was not committed before previous data server shutdown.", file);
-                    CloseFile(file, true); // discard uncommitted blocks.
+                    _log.WarnFormat("File {0} was not committed before previous name server shutdown and is still open.", file);
                 }
             }
         }
@@ -403,9 +398,6 @@ namespace NameServerApplication
                 DfsDirectory dir = entry as DfsDirectory;
                 if( dir != null && dir.Children.Count > 0 && !recursive )
                     throw new InvalidOperationException("The specified directory is not empty.");
-                DfsFile file = entry as DfsFile;
-                if( file != null && file.IsOpenForWriting )
-                    throw new InvalidOperationException("The specified file is open for writing.");
 
                 DeleteInternal(parent, entry, recursive);
                 return true;

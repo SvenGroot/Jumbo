@@ -601,5 +601,26 @@ namespace Tkl.Jumbo.Test.Dfs
             Assert.AreEqual("file3", file.Name);
             Assert.AreEqual("/move/dir2/dir1/file3", file.FullPath);
         }
+
+        [Test]
+        public void TestDeletePendingFile()
+        {
+            const string fileName = "/deletependingfile";
+            using( DfsOutputStream stream = new DfsOutputStream(_nameServer, fileName) )
+            {
+                Utilities.GenerateData(stream, 1000);
+                _nameServer.Delete(fileName, false);
+                bool hasException = false;
+                try
+                {
+                    stream.Close();
+                }
+                catch( InvalidOperationException )
+                {
+                    hasException = true;
+                }
+                Assert.IsTrue(hasException);
+            }
+        }
     }
 }

@@ -36,18 +36,32 @@ namespace Tkl.Jumbo.Test.Dfs
                     input.Position = 0;
                     Utilities.CopyStream(input, output);
                 }
-                nameServer = null;
-                cluster.Shutdown();
-                cluster = null;
-                Thread.Sleep(1000);
-                cluster = new TestDfsCluster(1, 1, null, false);
-                nameServer = DfsClient.CreateNameServerClient(TestDfsCluster.CreateClientConfig());
-                nameServer.WaitForSafeModeOff(Timeout.Infinite);
+
+                DfsFile file;
+                using( DfsOutputStream output = new DfsOutputStream(nameServer, "/test2/pending.dat") )
+                {
+                    nameServer = null;
+                    cluster.Shutdown();
+                    cluster = null;
+                    Thread.Sleep(1000);
+                    cluster = new TestDfsCluster(1, 1, null, false);
+                    nameServer = DfsClient.CreateNameServerClient(TestDfsCluster.CreateClientConfig());
+                    nameServer.WaitForSafeModeOff(Timeout.Infinite);
+
+                    file = nameServer.GetFileInfo("/test2/pending.dat");
+                    Assert.IsTrue(file.IsOpenForWriting);
+
+                    // The reason this works even though the data server is also restarted is because we didn't start writing before,
+                    // so the stream hadn't connected to the data server yet.
+                    Utilities.GenerateData(output, size);
+                }
+                file = nameServer.GetFileInfo("/test2/pending.dat");
+                Assert.IsFalse(file.IsOpenForWriting);
                 Assert.IsNull(nameServer.GetDirectoryInfo("/test1"));
                 Tkl.Jumbo.Dfs.DfsDirectory dir = nameServer.GetDirectoryInfo("/test2");
                 Assert.IsNotNull(dir);
-                Assert.AreEqual(1, dir.Children.Count);
-                Tkl.Jumbo.Dfs.DfsFile file = nameServer.GetFileInfo("/test2/foo.dat");
+                Assert.AreEqual(2, dir.Children.Count);
+                file = nameServer.GetFileInfo("/test2/foo.dat");
                 Assert.IsNotNull(file);
                 Assert.AreEqual(size, file.Size);
                 Assert.AreEqual(1, file.Blocks.Count);
