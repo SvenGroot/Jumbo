@@ -10,10 +10,10 @@ namespace NameServerApplication
     /// <summary>
     /// Manages the file system namespace.
     /// </summary>
-    public class FileSystem
+    public sealed class FileSystem : IDisposable
     {
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(FileSystem));
-        private readonly DfsDirectory _root = new DfsDirectory(null, string.Empty, DateTime.UtcNow);
+        private DfsDirectory _root;
         private readonly EditLog _editLog;
         private readonly NameServer _nameServer;
         private readonly Dictionary<string, PendingFile> _pendingFiles = new Dictionary<string, PendingFile>();
@@ -37,18 +37,17 @@ namespace NameServerApplication
                 throw new ArgumentNullException("nameServer");
             _nameServer = nameServer;
             _log.Info("++++ FileSystem created.");
-            _editLog = new EditLog(replayLog, nameServer.Configuration.NameServer.EditLogDirectory);
+            _editLog = new EditLog(nameServer.Configuration.NameServer.EditLogDirectory);
+            _editLog.InitializeFileSystem(replayLog, this);
             if( replayLog )
             {
-                _log.Info("Replaying log file.");
-                _editLog.ReplayLog(this);
-                _log.Info("Replaying log file finished.");
-                var pendingFiles = _pendingFiles.Keys.ToArray(); // make a copy
-                foreach( var file in pendingFiles )
+                foreach( var file in _pendingFiles.Keys )
                 {
                     _log.WarnFormat("File {0} was not committed before previous name server shutdown and is still open.", file);
                 }
             }
+            if( _root == null )
+                throw new DfsException("The root directory was not created. This usually indicates a corrupt file system image or log file.");
         }
 
         public long TotalSize
@@ -106,7 +105,12 @@ namespace NameServerApplication
 
             DfsDirectory result = GetDirectoryInternal(path, true, dateCreated);
             if( result != null )
-                result = (DfsDirectory)result.ShallowClone();
+            {
+                lock( _root )
+                {
+                    result = (DfsDirectory)result.ShallowClone();
+                }
+            }
             return result;
         }
 
@@ -128,7 +132,12 @@ namespace NameServerApplication
 
             DfsDirectory result = GetDirectoryInternal(path, false, DateTime.Now);
             if( result != null )
-                result = (DfsDirectory)result.ShallowClone();
+            {
+                lock( _root )
+                {
+                    result = (DfsDirectory)result.ShallowClone();
+                }
+            }
             return result;
         }
 
@@ -503,6 +512,18 @@ namespace NameServerApplication
             if( !path.StartsWith("/") )
                 throw new ArgumentException("Path is not an absolute path.", "path");
 
+            if( _root == null )
+            {
+                if( path == "/" && create )
+                {
+                    _root = new DfsDirectory(null, "", creationDate);
+                    _editLog.LogCreateDirectory(path, creationDate);
+                    return _root;
+                }
+                else
+                    throw new DfsException("The DFS root directory does not exist. This usually means the file system image or log file is corrupt.");
+            }
+
             string[] components = path.Split(DfsPath.DirectorySeparator);
 
             lock( _root )
@@ -620,5 +641,14 @@ namespace NameServerApplication
         {
             return DfsPath.Combine(parent, child);
         }
+
+        #region IDisposable Members
+
+        public void Dispose()
+        {
+            _editLog.Dispose();
+        }
+
+        #endregion
     }
 }

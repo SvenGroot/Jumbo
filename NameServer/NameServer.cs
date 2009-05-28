@@ -541,6 +541,8 @@ namespace NameServerApplication
             _dataServerMonitorThread.Abort();
             _dataServerMonitorEvent.Set();
             _dataServerMonitorThread.Join();
+
+            _fileSystem.Dispose();
         }
 
         private HeartbeatResponse ProcessHeartbeat(HeartbeatData data, DataServerInfo dataServer)

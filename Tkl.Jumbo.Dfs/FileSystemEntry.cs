@@ -35,7 +35,7 @@ namespace Tkl.Jumbo.Dfs
             if( name == null )
                 throw new ArgumentNullException("name");
             if( name.Contains(DfsPath.DirectorySeparator) )
-                throw new ArgumentException("Empty file or directory names are not allowed.", "name");
+                throw new ArgumentException("File or directory name cannot contain directory separator.", "name");
 
             Name = name;
             DateCreated = dateCreated;

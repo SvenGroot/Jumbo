@@ -22,6 +22,7 @@ namespace Tkl.Jumbo.Test.Dfs
                 cluster = new TestDfsCluster(1, 1);
                 INameServerClientProtocol nameServer = DfsClient.CreateNameServerClient(TestDfsCluster.CreateClientConfig());
                 nameServer.WaitForSafeModeOff(Timeout.Infinite);
+                DateTime rootCreatedDate = nameServer.GetDirectoryInfo("/").DateCreated;
                 nameServer.CreateDirectory("/test1");
                 nameServer.CreateDirectory("/test2");
                 nameServer.CreateDirectory("/test1/test2");
@@ -48,6 +49,8 @@ namespace Tkl.Jumbo.Test.Dfs
                     cluster = new TestDfsCluster(1, 1, null, false);
                     nameServer = DfsClient.CreateNameServerClient(TestDfsCluster.CreateClientConfig());
                     nameServer.WaitForSafeModeOff(Timeout.Infinite);
+
+                    Assert.AreEqual(rootCreatedDate, nameServer.GetDirectoryInfo("/").DateCreated);
 
                     file = nameServer.GetFileInfo("/test2/pending.dat");
                     Assert.IsTrue(file.IsOpenForWriting);

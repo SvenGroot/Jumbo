@@ -4,13 +4,14 @@ using System.Linq;
 using System.Text;
 using System.IO;
 using Tkl.Jumbo.IO;
+using Tkl.Jumbo.Dfs;
 
 namespace NameServerApplication
 {
     /// <summary>
     /// Represents an edit log file for the file system.
     /// </summary>
-    class EditLog
+    sealed class EditLog : IDisposable
     {
         #region Nested types
 
@@ -223,20 +224,36 @@ namespace NameServerApplication
         private readonly object _logFileLock = new object();
         private bool _loggingEnabled = true;
         private readonly string _logFilePath;
+        private FileStream _logFileStream;
+        private BinaryWriter _logFileWriter;
+        private const int _fileSystemFormatVersion = 2;
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="EditLog"/> class.
-        /// </summary>
-        /// <param name="appendLog"><see cref="true"/> to continue an existing log file; <see cref="false"/> to create a new one.</param>
-        public EditLog(bool appendLog, string logFileDirectory)
+        public EditLog(string logFileDirectory)
         {
             if( logFileDirectory == null )
                 logFileDirectory = string.Empty;
             if( logFileDirectory.Length > 0 )
                 System.IO.Directory.CreateDirectory(logFileDirectory);
             _logFilePath = Path.Combine(logFileDirectory, "EditLog");
-            if( !appendLog )
-                System.IO.File.Delete(_logFilePath);
+        }
+
+        public void InitializeFileSystem(bool replayLog, FileSystem fileSystem)
+        {
+            if( replayLog && File.Exists(_logFilePath) )
+            {
+                _log.Info("Replaying log file.");
+                ReplayLog(fileSystem);
+                _log.Info("Replaying log file finished.");
+                _logFileStream = File.Open(_logFilePath, FileMode.Append, FileAccess.Write, FileShare.None);
+                _logFileWriter = new BinaryWriter(_logFileStream);
+            }
+            else
+            {
+                _logFileStream = File.Open(_logFilePath, FileMode.Create, FileAccess.Write, FileShare.None);
+                _logFileWriter = new BinaryWriter(_logFileStream);
+                _logFileWriter.Write(_fileSystemFormatVersion);
+                fileSystem.CreateDirectory("/", DateTime.UtcNow);
+            }
         }
 
         public void LogCreateDirectory(string path, DateTime date)
@@ -297,55 +314,62 @@ namespace NameServerApplication
             LogMutation(new MoveEditLogEntry(DateTime.UtcNow, from, to));
         }
 
-        /// <summary>
-        /// Replays the log file.
-        /// </summary>
-        public void ReplayLog(FileSystem fileSystem)
+        #region IDisposable Members
+
+        public void Dispose()
+        {
+            ((IDisposable)_logFileWriter).Dispose();
+            _logFileStream.Dispose();
+        }
+
+        #endregion
+
+        private void ReplayLog(FileSystem fileSystem)
         {
             try
             {
                 _loggingEnabled = false;
-                if( File.Exists(_logFilePath) )
+                using( FileStream stream = File.OpenRead(_logFilePath) )
+                using( BinaryReader reader = new BinaryReader(stream) )
                 {
-                    using( FileStream stream = File.OpenRead(_logFilePath) )
-                    using( BinaryReader reader = new BinaryReader(stream) )
+                    int version = reader.ReadInt32();
+                    if( version != _fileSystemFormatVersion )
+                        throw new NotSupportedException("The log file uses an unsupported file system version.");
+                    
+                    long length = stream.Length;
+                    while( stream.Position < length )
                     {
-                        // TODO: Get the actual root creation time from somewhere.
-                        long length = stream.Length;
-                        while( stream.Position < length )
+                        FileSystemMutation mutation = (FileSystemMutation)reader.ReadInt32();
+                        switch( mutation )
                         {
-                            FileSystemMutation mutation = (FileSystemMutation)reader.ReadInt32();
-                            switch( mutation )
-                            {
-                            case FileSystemMutation.CreateDirectory:
-                                CreateDirectoryEditLogEntry createDirectoryEntry = EditLogEntry.Load<CreateDirectoryEditLogEntry>(reader);
-                                fileSystem.CreateDirectory(createDirectoryEntry.Path, createDirectoryEntry.Date);
-                                break;
-                            case FileSystemMutation.CreateFile:
-                                CreateFileEditLogEntry createFileEntry = EditLogEntry.Load<CreateFileEditLogEntry>(reader);
-                                fileSystem.CreateFile(createFileEntry.Path, createFileEntry.Date, false);
-                                break;
-                            case FileSystemMutation.AppendBlock:
-                                AppendBlockEditLogEntry appendBlockEntry = EditLogEntry.Load<AppendBlockEditLogEntry>(reader);
-                                fileSystem.AppendBlock(appendBlockEntry.Path, appendBlockEntry.BlockId, false);
-                                break;
-                            case FileSystemMutation.CommitBlock:
-                                CommitBlockEditLogEntry commitBlockEntry = EditLogEntry.Load<CommitBlockEditLogEntry>(reader);
-                                fileSystem.CommitBlock(commitBlockEntry.Path, commitBlockEntry.BlockId, commitBlockEntry.Size);
-                                break;
-                            case FileSystemMutation.CommitFile:
-                                CommitFileEditLogEntry commitFileEntry = EditLogEntry.Load<CommitFileEditLogEntry>(reader);
-                                fileSystem.CloseFile(commitFileEntry.Path);
-                                break;
-                            case FileSystemMutation.Delete:
-                                DeleteEditLogEntry deleteEntry = EditLogEntry.Load<DeleteEditLogEntry>(reader);
-                                fileSystem.Delete(deleteEntry.Path, deleteEntry.IsRecursive);
-                                break;
-                            case FileSystemMutation.Move:
-                                MoveEditLogEntry moveEntry = EditLogEntry.Load<MoveEditLogEntry>(reader);
-                                fileSystem.Move(moveEntry.Path, moveEntry.TargetPath);
-                                break;
-                            }
+                        case FileSystemMutation.CreateDirectory:
+                            CreateDirectoryEditLogEntry createDirectoryEntry = EditLogEntry.Load<CreateDirectoryEditLogEntry>(reader);
+                            fileSystem.CreateDirectory(createDirectoryEntry.Path, createDirectoryEntry.Date);
+                            break;
+                        case FileSystemMutation.CreateFile:
+                            CreateFileEditLogEntry createFileEntry = EditLogEntry.Load<CreateFileEditLogEntry>(reader);
+                            fileSystem.CreateFile(createFileEntry.Path, createFileEntry.Date, false);
+                            break;
+                        case FileSystemMutation.AppendBlock:
+                            AppendBlockEditLogEntry appendBlockEntry = EditLogEntry.Load<AppendBlockEditLogEntry>(reader);
+                            fileSystem.AppendBlock(appendBlockEntry.Path, appendBlockEntry.BlockId, false);
+                            break;
+                        case FileSystemMutation.CommitBlock:
+                            CommitBlockEditLogEntry commitBlockEntry = EditLogEntry.Load<CommitBlockEditLogEntry>(reader);
+                            fileSystem.CommitBlock(commitBlockEntry.Path, commitBlockEntry.BlockId, commitBlockEntry.Size);
+                            break;
+                        case FileSystemMutation.CommitFile:
+                            CommitFileEditLogEntry commitFileEntry = EditLogEntry.Load<CommitFileEditLogEntry>(reader);
+                            fileSystem.CloseFile(commitFileEntry.Path);
+                            break;
+                        case FileSystemMutation.Delete:
+                            DeleteEditLogEntry deleteEntry = EditLogEntry.Load<DeleteEditLogEntry>(reader);
+                            fileSystem.Delete(deleteEntry.Path, deleteEntry.IsRecursive);
+                            break;
+                        case FileSystemMutation.Move:
+                            MoveEditLogEntry moveEntry = EditLogEntry.Load<MoveEditLogEntry>(reader);
+                            fileSystem.Move(moveEntry.Path, moveEntry.TargetPath);
+                            break;
                         }
                     }
                 }
@@ -369,11 +393,8 @@ namespace NameServerApplication
                 {
                     lock( _logFileLock )
                     {
-                        using( FileStream stream = new FileStream(_logFilePath, FileMode.Append, FileAccess.Write, FileShare.Read) )
-                        using( BinaryWriter writer = new BinaryWriter(stream) )
-                        {
-                            entry.Write(writer);
-                        }
+                        entry.Write(_logFileWriter);
+                        _logFileWriter.Flush();
                     }
                 }
                 catch( IOException ex )
