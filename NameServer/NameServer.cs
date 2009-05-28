@@ -55,8 +55,6 @@ namespace NameServerApplication
             _replicationFactor = config.NameServer.ReplicationFactor;
             _blockSize = config.NameServer.BlockSize;
             _fileSystem = new FileSystem(this, replayLog);
-            // TODO: Once leases are in place, we probably shouldn't clear the _pendingBlocks collection.
-            _pendingBlocks.Clear();
 
             _dataServerMonitorThread = new Thread(DataServerMonitorThread)
             {

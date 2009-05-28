@@ -38,6 +38,7 @@ namespace Tkl.Jumbo.Test.Dfs
                 }
 
                 DfsFile file;
+                DfsMetrics metrics;
                 using( DfsOutputStream output = new DfsOutputStream(nameServer, "/test2/pending.dat") )
                 {
                     nameServer = null;
@@ -51,12 +52,17 @@ namespace Tkl.Jumbo.Test.Dfs
                     file = nameServer.GetFileInfo("/test2/pending.dat");
                     Assert.IsTrue(file.IsOpenForWriting);
 
+                    metrics = nameServer.GetMetrics();
+                    Assert.AreEqual(1, metrics.PendingBlockCount);
+
                     // The reason this works even though the data server is also restarted is because we didn't start writing before,
                     // so the stream hadn't connected to the data server yet.
                     Utilities.GenerateData(output, size);
                 }
                 file = nameServer.GetFileInfo("/test2/pending.dat");
                 Assert.IsFalse(file.IsOpenForWriting);
+                Assert.AreEqual(size, file.Size);
+                Assert.AreEqual(1, file.Blocks.Count);
                 Assert.IsNull(nameServer.GetDirectoryInfo("/test1"));
                 Tkl.Jumbo.Dfs.DfsDirectory dir = nameServer.GetDirectoryInfo("/test2");
                 Assert.IsNotNull(dir);
@@ -67,9 +73,9 @@ namespace Tkl.Jumbo.Test.Dfs
                 Assert.AreEqual(1, file.Blocks.Count);
                 Assert.IsNull(nameServer.GetDirectoryInfo("/test2/test1"));
                 Assert.IsNotNull(nameServer.GetDirectoryInfo("/test3"));
-                DfsMetrics metrics = nameServer.GetMetrics();
-                Assert.AreEqual(size, metrics.TotalSize);
-                Assert.AreEqual(1, metrics.TotalBlockCount);
+                metrics = nameServer.GetMetrics();
+                Assert.AreEqual(size * 2, metrics.TotalSize);
+                Assert.AreEqual(2, metrics.TotalBlockCount);
                 Assert.AreEqual(0, metrics.PendingBlockCount);
                 Assert.AreEqual(0, metrics.UnderReplicatedBlockCount);
                 Assert.AreEqual(1, metrics.DataServers.Count);
