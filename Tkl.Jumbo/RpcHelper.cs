@@ -142,7 +142,8 @@ namespace Tkl.Jumbo
                     if( !_abortRetries && (maxRetries == -1 || maxRetries > 0) )
                     {
                         _log.Error(string.Format(System.Globalization.CultureInfo.InvariantCulture, "An error occurred performing a remoting operation. Retrying in {0}.", retryInterval), ex);
-                        --maxRetries;
+                        if( maxRetries > 0 )
+                            --maxRetries;
                         Thread.Sleep(retryInterval);
                     }
                     else
