@@ -10,34 +10,24 @@ namespace NameServerApplication
     /// <summary>
     /// Manages the file system namespace.
     /// </summary>
-    public sealed class FileSystem : IDisposable
+    sealed class FileSystem : IDisposable
     {
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(FileSystem));
         private DfsDirectory _root;
         private readonly EditLog _editLog;
-        private readonly NameServer _nameServer;
         private readonly Dictionary<string, PendingFile> _pendingFiles = new Dictionary<string, PendingFile>();
         private long _totalSize;
+        private readonly DfsConfiguration _configuration;
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="FileSystem"/> class.
-        /// </summary>
-        public FileSystem(NameServer nameServer)
-            : this(nameServer, false)
-        {
-        }
+        public event EventHandler<FileDeletedEventArgs> FileDeleted;
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="FileSystem"/> class.
-        /// </summary>
-        /// <param name="replayLog"><see langword="true"/> to initialize the file system from an existing log file; <see langword="false" />  to create a new file system.</param>
-        public FileSystem(NameServer nameServer, bool replayLog)
+        public FileSystem(DfsConfiguration configuration, bool replayLog)
         {
-            if( nameServer == null )
-                throw new ArgumentNullException("nameServer");
-            _nameServer = nameServer;
+            if( configuration == null )
+                throw new ArgumentNullException("configuration");
+            _configuration = configuration;
             _log.Info("++++ FileSystem created.");
-            _editLog = new EditLog(nameServer.Configuration.NameServer.EditLogDirectory);
+            _editLog = new EditLog(configuration.NameServer.EditLogDirectory);
             _editLog.InitializeFileSystem(replayLog, this);
             if( replayLog )
             {
@@ -53,11 +43,6 @@ namespace NameServerApplication
         public long TotalSize
         {
             get { return _totalSize; }
-        }
-
-        public NameServer NameServer
-        {
-            get { return _nameServer; }
         }
 
         /// <summary>
@@ -149,9 +134,9 @@ namespace NameServerApplication
         /// <exception cref="ArgumentNullException"><paramref name="directory"/> is <see langword="null" />, or <paramref name="name"/> is <see langword="null"/> or an empty string..</exception>
         /// <exception cref="ArgumentException"><paramref name="directory"/> is not an absolute path, contains an empty component, contains a file name, or <paramref name="name"/> refers to an existing file or directory.</exception>
         /// <exception cref="DirectoryNotFoundException"><paramref name="directory"/> does not exist.</exception>
-        public Guid CreateFile(string path)
+        public BlockInfo CreateFile(string path)
         {
-            return CreateFile(path, DateTime.UtcNow, true).Value;
+            return CreateFile(path, DateTime.UtcNow, true);
         }
 
         /// <summary>
@@ -162,7 +147,7 @@ namespace NameServerApplication
         /// <exception cref="ArgumentNullException"><paramref name="directory"/> is <see langword="null" />, or <paramref name="name"/> is <see langword="null"/> or an empty string..</exception>
         /// <exception cref="ArgumentException"><paramref name="directory"/> is not an absolute path, contains an empty component, contains a file name, or <paramref name="name"/> refers to an existing file or directory.</exception>
         /// <exception cref="DirectoryNotFoundException"><paramref name="directory"/> does not exist.</exception>
-        public Guid? CreateFile(string path, DateTime dateCreated, bool appendBlock)
+        public BlockInfo CreateFile(string path, DateTime dateCreated, bool appendBlock)
         {
             if( path == null )
                 throw new ArgumentNullException("path");
@@ -184,8 +169,8 @@ namespace NameServerApplication
                     if( appendBlock )
                     {
                         Guid blockID = NewBlockID();
-                        AppendBlock(file, blockID, true);
-                        return blockID;
+                        AppendBlock(file, blockID);
+                        return new BlockInfo(blockID, file.File);
                     }
                     else
                         return null;
@@ -260,29 +245,14 @@ namespace NameServerApplication
             return result;
         }
 
-        /// <summary>
-        /// Appends a block to an existing file.
-        /// </summary>
-        /// <param name="path">The path of the file to append the block to.</param>
-        /// <returns>The block ID of the the new block.</returns>
-        /// <remarks>
-        /// The file must be open for writing.
-        /// </remarks>
-        public Guid AppendBlock(string path)
+        public BlockInfo AppendBlock(string path)
         {
             _log.DebugFormat("AppendBlock: path = \"{0}\"", path);
             Guid blockID = NewBlockID();
-            AppendBlock(path, blockID, true);
-            return blockID;
+            return AppendBlock(path, blockID);
         }
 
-        /// <summary>
-        /// Appens the specified block to a file. This function is meant for log file replaying.
-        /// </summary>
-        /// <param name="path">The path of the file to append the block to.</param>
-        /// <param name="blockID">The ID of the block to append.</param>
-        /// <param name="checkReplication"><see langword="true"/> to check all existing blocks for replication before appending the new block; <see langword="false"/> to skip the replication check.</param>
-        public void AppendBlock(string path, Guid blockID, bool checkReplication)
+        public BlockInfo AppendBlock(string path, Guid blockID)
         {
             // checkReplication is provided so we can skip that while replaying the log file.
 
@@ -292,7 +262,8 @@ namespace NameServerApplication
                 if( !(_pendingFiles.TryGetValue(path, out file) && file.File.IsOpenForWriting) )
                     throw new InvalidOperationException(string.Format("The file '{0}' does not exist or is not open for writing.", path));
 
-                AppendBlock(file, blockID, checkReplication);
+                AppendBlock(file, blockID);
+                return new BlockInfo(blockID, file.File);
             }
         }
 
@@ -328,17 +299,18 @@ namespace NameServerApplication
                     }
                 }
             }
-            _nameServer.CommitBlock(blockID);
         }
 
         /// <summary>
         /// Closes a file that is open for writing.
         /// </summary>
         /// <param name="path">The path of the file to close.</param>
-        public void CloseFile(string path)
+        /// <returns>The block ID of the pending block of the file, if it had one.</returns>
+        public Guid? CloseFile(string path)
         {
             // TODO: Once we have leases and stuff, only the client holding the file open may do this.
             _log.DebugFormat("CloseFile: path = \"{0}\"", path);
+            Guid? pendingBlock = null;
             lock( _root )
             {
                 PendingFile file;
@@ -347,7 +319,7 @@ namespace NameServerApplication
 
                 if( file.PendingBlock != null )
                 {
-                    _nameServer.DiscardBlock(file.PendingBlock.Value);
+                    pendingBlock = file.PendingBlock;
                     file.PendingBlock = null;
                 }
 
@@ -359,6 +331,7 @@ namespace NameServerApplication
                     _pendingFiles.Remove(path);
                 }
             }
+            return pendingBlock;
         }
 
         /// <summary>
@@ -431,26 +404,57 @@ namespace NameServerApplication
             }
         }
 
+        public void GetBlocks(IDictionary<Guid, BlockInfo> blocks, IDictionary<Guid, PendingBlock> pendingBlocks)
+        {
+            lock( _root )
+            {
+                GetBlocks(_root, blocks);
+            }
+            lock( _pendingFiles )
+            {
+                foreach( PendingFile file in _pendingFiles.Values )
+                {
+                    if( file.PendingBlock != null )
+                        pendingBlocks.Add(file.PendingBlock.Value, new PendingBlock(new BlockInfo(file.PendingBlock.Value, file.File)));
+                }
+            }
+        }
+
+        private void GetBlocks(DfsDirectory directory, IDictionary<Guid, BlockInfo> blocks)
+        {
+            foreach( FileSystemEntry child in directory.Children )
+            {
+                DfsFile file = child as DfsFile;
+                if( file != null )
+                {
+                    foreach( Guid blockId in file.Blocks )
+                    {
+                        blocks.Add(blockId, new BlockInfo(blockId, file));
+                    }
+                }
+                else
+                {
+                    GetBlocks((DfsDirectory)child, blocks);
+                }
+            }
+        }
+
         private Guid NewBlockID()
         {
             return Guid.NewGuid();
         }
 
-        private void AppendBlock(PendingFile file, Guid blockID, bool checkReplication)
+        private void AppendBlock(PendingFile file, Guid blockID)
         {
             if( file.PendingBlock != null )
                 throw new InvalidOperationException("Cannot add a block to a file with a pending block.");
 
-            if( file.File.Size % NameServer.BlockSize != 0 )
+            if( file.File.Size % _configuration.NameServer.BlockSize != 0 )
                 throw new InvalidOperationException("The final block of the file is smaller than the maximum block size, therefore the file can no longer be extended.");
-
-            if( checkReplication )
-                NameServer.CheckBlockReplication(file.File.Blocks);
 
             _log.InfoFormat("Appending new block {0} to file {1}", blockID, file.File.FullPath);
             _editLog.LogAppendBlock(file.File.FullPath, DateTime.UtcNow, blockID);
             file.PendingBlock = blockID;
-            NameServer.NotifyNewBlock(file.File, blockID);
         }
 
         private DfsFile GetFileInfoInternal(string path)
@@ -634,12 +638,19 @@ namespace NameServerApplication
                 }
             }
             _totalSize -= file.Size; // inside _root lock so safe.
-            _nameServer.RemoveFileBlocks(file, pendingBlock);
+            OnFileDeleted(new FileDeletedEventArgs(file, pendingBlock));
         }
 
         private string AppendPath(string parent, string child)
         {
             return DfsPath.Combine(parent, child);
+        }
+
+        private void OnFileDeleted(FileDeletedEventArgs e)
+        {
+            EventHandler<FileDeletedEventArgs> handler = FileDeleted;
+            if( handler != null )
+                handler(this, e);
         }
 
         #region IDisposable Members

@@ -54,7 +54,13 @@ namespace NameServerApplication
             Configuration = config;
             _replicationFactor = config.NameServer.ReplicationFactor;
             _blockSize = config.NameServer.BlockSize;
-            _fileSystem = new FileSystem(this, replayLog);
+            _fileSystem = new FileSystem(config, replayLog);
+            _fileSystem.FileDeleted += new EventHandler<FileDeletedEventArgs>(_fileSystem_FileDeleted);
+            _fileSystem.GetBlocks(_blocks, _pendingBlocks);
+            foreach( BlockInfo block in _blocks.Values )
+            {
+                _underReplicatedBlocks.Add(block.BlockId, block);
+            }
 
             _dataServerMonitorThread = new Thread(DataServerMonitorThread)
             {
@@ -115,55 +121,8 @@ namespace NameServerApplication
             }
         }
 
-        public FileSystem FileSystem
-        {
-            get { return _fileSystem; }
-        }
 
-        public void NotifyNewBlock(DfsFile file, Guid blockId)
-        {
-            // Called by FileSystem when a pending block is added to a file (AppendBlock)
-            lock( _pendingBlocks )
-            {
-                _pendingBlocks.Add(blockId, new PendingBlock(new BlockInfo(file)));
-            }
-        }
-
-        public void RemoveFileBlocks(Tkl.Jumbo.Dfs.DfsFile file, Guid? pendingBlock)
-        {
-            if( pendingBlock != null )
-            {
-                lock( _pendingBlocks )
-                {
-                    PendingBlock info = _pendingBlocks[pendingBlock.Value];
-                    _pendingBlocks.Remove(pendingBlock.Value);
-                    MarkForDataServerDeletion(pendingBlock.Value, info.Block);
-                }
-                lock( _dataServers )
-                {
-                    foreach( DataServerInfo server in _dataServers.Values )
-                        server.PendingBlocks.Remove(pendingBlock.Value);
-                }
-            }
-            if( file.Blocks.Count > 0 )
-            {
-                lock( _blocks )
-                {
-                    lock( _underReplicatedBlocks )
-                    {
-                        foreach( var block in file.Blocks )
-                        {
-                            BlockInfo info = _blocks[block];
-                            _blocks.Remove(block);
-                            _underReplicatedBlocks.Remove(block);
-                            MarkForDataServerDeletion(block, info);
-                        }
-                    }
-                }
-            }
-        }
-
-        public void DiscardBlock(Guid blockID)
+        private void DiscardBlock(Guid blockID)
         {
             lock( _pendingBlocks )
             {
@@ -176,7 +135,7 @@ namespace NameServerApplication
             }
         }
 
-        public void CommitBlock(Guid blockID)
+        private void CommitBlock(Guid blockID)
         {
             lock( _blocks )
             {
@@ -266,10 +225,14 @@ namespace NameServerApplication
         {
             _log.Debug("CreateFile called");
             CheckSafeMode();
-            Guid guid = _fileSystem.CreateFile(path);
+            BlockInfo block = _fileSystem.CreateFile(path);
             try
             {
-                return AssignBlockToDataServers(guid);
+                lock( _pendingBlocks )
+                {
+                    _pendingBlocks.Add(block.BlockId, new PendingBlock(block));
+                } 
+                return AssignBlockToDataServers(block.BlockId);
             }
             catch( Exception )
             {
@@ -312,16 +275,22 @@ namespace NameServerApplication
             if( _dataServers.Count < _replicationFactor )
                 throw new InvalidOperationException("Insufficient data servers.");
 
-            Guid blockId = _fileSystem.AppendBlock(path);
+            BlockInfo block = _fileSystem.AppendBlock(path);
+            lock( _pendingBlocks )
+            {
+                _pendingBlocks.Add(block.BlockId, new PendingBlock(block));
+            }
 
-            return AssignBlockToDataServers(blockId);
+            return AssignBlockToDataServers(block.BlockId);
         }
 
         public void CloseFile(string path)
         {
             _log.Debug("CloseFile called");
             CheckSafeMode();
-            _fileSystem.CloseFile(path);
+            Guid? pendingBlock = _fileSystem.CloseFile(path);
+            if( pendingBlock != null )
+                DiscardBlock(pendingBlock.Value);
         }
 
         public ServerAddress[] GetDataServersForBlock(Guid blockID)
@@ -536,6 +505,50 @@ namespace NameServerApplication
 
         #endregion
 
+        void _fileSystem_FileDeleted(object sender, FileDeletedEventArgs e)
+        {
+            if( e.PendingBlock != null )
+            {
+                lock( _pendingBlocks )
+                {
+                    PendingBlock info;
+                    if( _pendingBlocks.TryGetValue(e.PendingBlock.Value, out info) )
+                    {
+                        _pendingBlocks.Remove(e.PendingBlock.Value);
+                        MarkForDataServerDeletion(e.PendingBlock.Value, info.Block);
+                    }
+                    else
+                        _log.Warn("File system attempted to delete a file with unknown pending block.");
+                }
+                lock( _dataServers )
+                {
+                    foreach( DataServerInfo server in _dataServers.Values )
+                        server.PendingBlocks.Remove(e.PendingBlock.Value);
+                }
+            }
+            if( e.File.Blocks.Count > 0 )
+            {
+                lock( _blocks )
+                {
+                    lock( _underReplicatedBlocks )
+                    {
+                        foreach( var block in e.File.Blocks )
+                        {
+                            BlockInfo info;
+                            if( _blocks.TryGetValue(block, out info) )
+                            {
+                                _blocks.Remove(block);
+                                _underReplicatedBlocks.Remove(block);
+                                MarkForDataServerDeletion(block, info);
+                            }
+                            else
+                                _log.Warn("File system attempted to delete a file with unknown blocks.");
+                        }
+                    }
+                }
+            }
+        }
+
         private void ShutdownInternal()
         {
             _dataServerMonitorThread.Abort();
@@ -603,9 +616,9 @@ namespace NameServerApplication
             }
             if( commitBlock )
             {
-                // CommitBlock will also call back into NameServer to commit the block on this side.
                 _log.InfoFormat("Pending block {0} is now fully replicated and is being committed.", newBlock.BlockId);
                 _fileSystem.CommitBlock(pendingBlock.Block.File.FullPath, newBlock.BlockId, newBlock.Size);
+                CommitBlock(newBlock.BlockId);
             }
             else if( pendingBlock == null )
             {

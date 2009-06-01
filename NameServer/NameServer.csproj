@@ -53,6 +53,7 @@
     <Compile Include="BlockInfo.cs" />
     <Compile Include="DataServerInfo.cs" />
     <Compile Include="EditLog.cs" />
+    <Compile Include="FileDeletedEventArgs.cs" />
     <Compile Include="FileSystem.cs" />
     <Compile Include="FileSystemMutation.cs" />
     <Compile Include="NameServer.cs" />

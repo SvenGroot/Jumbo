@@ -352,7 +352,7 @@ namespace NameServerApplication
                             break;
                         case FileSystemMutation.AppendBlock:
                             AppendBlockEditLogEntry appendBlockEntry = EditLogEntry.Load<AppendBlockEditLogEntry>(reader);
-                            fileSystem.AppendBlock(appendBlockEntry.Path, appendBlockEntry.BlockId, false);
+                            fileSystem.AppendBlock(appendBlockEntry.Path, appendBlockEntry.BlockId);
                             break;
                         case FileSystemMutation.CommitBlock:
                             CommitBlockEditLogEntry commitBlockEntry = EditLogEntry.Load<CommitBlockEditLogEntry>(reader);
