@@ -220,13 +220,15 @@ namespace NameServerApplication
 
         #endregion
 
+        private const string _logFileName = "EditLog";
+        private const string _newLogFileName = "EditLog.new";
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(EditLog));
         private readonly object _logFileLock = new object();
         private bool _loggingEnabled = true;
-        private readonly string _logFilePath;
+        private readonly string _logFileDirectory;
+        private string _logFilePath;
         private FileStream _logFileStream;
         private BinaryWriter _logFileWriter;
-        private const int _fileSystemFormatVersion = 2;
 
         public EditLog(string logFileDirectory)
         {
@@ -234,24 +236,44 @@ namespace NameServerApplication
                 logFileDirectory = string.Empty;
             if( logFileDirectory.Length > 0 )
                 System.IO.Directory.CreateDirectory(logFileDirectory);
-            _logFilePath = Path.Combine(logFileDirectory, "EditLog");
+            _logFileDirectory = logFileDirectory;
+            _logFilePath = Path.Combine(logFileDirectory, _logFileName);
         }
 
-        public void InitializeFileSystem(bool replayLog, FileSystem fileSystem)
+        public bool IsUsingNewLogFile
+        {
+            get { return _logFilePath == Path.Combine(_logFileDirectory, _newLogFileName); }
+        }
+
+        public void InitializeFileSystem(bool replayLog, bool readOnly, FileSystem fileSystem)
         {
             if( replayLog && File.Exists(_logFilePath) )
             {
                 _log.Info("Replaying log file.");
                 ReplayLog(fileSystem);
+                // A read only file system is used to create a checkpoint, and doesn't need to read the new log file.
+                if( !readOnly )
+                {
+                    string newLogFilePath = Path.Combine(_logFileDirectory, _newLogFileName);
+                    // We don't need to check for this if _logFilePath doesn't exist; if _logFilePath doesn't exist and newLogFilePath does,
+                    // it means that there's also a temp image file which the name server will catch while restarting.
+                    if( File.Exists(newLogFilePath) )
+                    {
+                        _logFilePath = newLogFilePath;
+                        _log.Info("Replaying new log file.");
+                        ReplayLog(fileSystem);
+                    }
+                }
                 _log.Info("Replaying log file finished.");
-                _logFileStream = File.Open(_logFilePath, FileMode.Append, FileAccess.Write, FileShare.None);
-                _logFileWriter = new BinaryWriter(_logFileStream);
+                _loggingEnabled = !readOnly;
+                if( !readOnly )
+                    OpenExistingLogFile();
             }
             else
             {
-                _logFileStream = File.Open(_logFilePath, FileMode.Create, FileAccess.Write, FileShare.None);
-                _logFileWriter = new BinaryWriter(_logFileStream);
-                _logFileWriter.Write(_fileSystemFormatVersion);
+                if( !readOnly )
+                    InitializeLogFile();
+                _loggingEnabled = !readOnly;
                 fileSystem.CreateDirectory("/", DateTime.UtcNow);
             }
         }
@@ -314,12 +336,50 @@ namespace NameServerApplication
             LogMutation(new MoveEditLogEntry(DateTime.UtcNow, from, to));
         }
 
+        public void SwitchToNewLogFile()
+        {
+            lock( _logFileLock )
+            {
+                string newLogFileName = Path.Combine(_logFileDirectory, _newLogFileName);
+                if( _logFilePath == newLogFileName )
+                    _log.Warn("The edit log was already using the new log file.");
+                else
+                {
+                    _log.Info("Switching to new edit log file.");
+                    CloseLogFile();
+                    _logFilePath = newLogFileName;
+                    InitializeLogFile();
+                }
+            }
+        }
+
+        public void DiscardOldLogFile()
+        {
+            lock( _logFileLock )
+            {
+                string newLogFileName = Path.Combine(_logFileDirectory, _newLogFileName);
+                string logFileName = Path.Combine(_logFileDirectory, _logFileName);
+                if( _logFilePath != newLogFileName )
+                    _log.Warn("No old edit log file to discard; no action taken.");
+                else
+                {
+                    _log.Info("Discarding old edit log file, and renaming new log file.");
+                    CloseLogFile();
+
+                    File.Delete(logFileName);
+                    File.Move(newLogFileName, logFileName);
+
+                    _logFilePath = logFileName;
+                    OpenExistingLogFile();
+                }
+            }
+        }
+
         #region IDisposable Members
 
         public void Dispose()
         {
-            ((IDisposable)_logFileWriter).Dispose();
-            _logFileStream.Dispose();
+            CloseLogFile();
         }
 
         #endregion
@@ -333,7 +393,7 @@ namespace NameServerApplication
                 using( BinaryReader reader = new BinaryReader(stream) )
                 {
                     int version = reader.ReadInt32();
-                    if( version != _fileSystemFormatVersion )
+                    if( version != FileSystem.FileSystemFormatVersion )
                         throw new NotSupportedException("The log file uses an unsupported file system version.");
                     
                     long length = stream.Length;
@@ -403,6 +463,30 @@ namespace NameServerApplication
                     throw;
                 }
             }
+        }
+
+        private void InitializeLogFile()
+        {
+            _log.InfoFormat("Initializing new edit log file at '{0}'.", _logFilePath);
+            _logFileStream = File.Open(_logFilePath, FileMode.Create, FileAccess.Write, FileShare.None);
+            _logFileWriter = new BinaryWriter(_logFileStream);
+            _logFileWriter.Write(FileSystem.FileSystemFormatVersion);
+            _logFileWriter.Flush();
+        }
+
+        private void OpenExistingLogFile()
+        {
+            _log.InfoFormat("Opening existing edit log file '{0}' for writing.", _logFilePath);
+            _logFileStream = File.Open(_logFilePath, FileMode.Append, FileAccess.Write, FileShare.None);
+            _logFileWriter = new BinaryWriter(_logFileStream);
+        }
+
+        private void CloseLogFile()
+        {
+            if( _logFileWriter != null )
+                ((IDisposable)_logFileWriter).Dispose();
+            if( _logFileStream != null )
+                _logFileStream.Dispose();
         }
     }
 }

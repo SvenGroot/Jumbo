@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.IO;
 
 namespace Tkl.Jumbo.Dfs
 {
@@ -121,6 +122,52 @@ namespace Tkl.Jumbo.Dfs
         {
             return Clone(2);
         }
+
+        /// <summary>
+        /// Saves this <see cref="FileSystemEntry"/> to a file system image.
+        /// </summary>
+        /// <param name="writer">A <see cref="BinaryWriter"/> used to write to the file system image.</param>
+        public virtual void SaveToFileSystemImage(BinaryWriter writer)
+        {
+            if( writer == null )
+                throw new ArgumentNullException("writer");
+            writer.Write(GetType().FullName);
+            writer.Write(Name);
+            writer.Write(DateCreated.Ticks);
+        }
+
+        /// <summary>
+        /// Loads a <see cref="FileSystemEntry"/> from the file system image.
+        /// </summary>
+        /// <param name="reader">The <see cref="BinaryReader"/> used to read the file system image.</param>
+        /// <param name="parent">The parent directory of the new <see cref="FileSystemEntry"/>.</param>
+        /// <param name="notifyFileSizeCallback">A function that should be called to notify the caller of the size of deserialized files.</param>
+        /// <returns>An instance of <see cref="DfsFile"/> or <see cref="DfsDirectory"/> representing the file system entry.</returns>
+        public static FileSystemEntry LoadFromFileSystemImage(BinaryReader reader, DfsDirectory parent, Action<long> notifyFileSizeCallback)
+        {
+            if( reader == null )
+                throw new ArgumentNullException("reader");
+            string className = reader.ReadString();
+            string name = reader.ReadString();
+            DateTime dateCreated = new DateTime(reader.ReadInt64(), DateTimeKind.Utc);
+            FileSystemEntry entry;
+            if( className == typeof(DfsFile).FullName )
+                entry = new DfsFile(parent, name, dateCreated);
+            else if( className == typeof(DfsDirectory).FullName )
+                entry = new DfsDirectory(parent, name, dateCreated);
+            else
+                throw new DfsException("Invalid file system image.");
+            entry.LoadFromFileSystemImage(reader, notifyFileSizeCallback);
+
+            return entry;
+        }
+
+        /// <summary>
+        /// When implemented in a derived class, reads information about the <see cref="FileSystemEntry"/> from the file system image.
+        /// </summary>
+        /// <param name="reader">The <see cref="BinaryReader"/> used to read the file system image.</param>
+        /// <param name="notifyFileSizeCallback">A function that should be called to notify the caller of the size of deserialized files.</param>
+        protected abstract void LoadFromFileSystemImage(BinaryReader reader, Action<long> notifyFileSizeCallback);
 
         /// <summary>
         /// Creates a clone of the current entry.

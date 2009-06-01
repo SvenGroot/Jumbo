@@ -16,6 +16,10 @@ namespace Tkl.Jumbo.Test.Dfs
                 : base(parent, name, dateCreated)
             {
             }
+
+            protected override void LoadFromFileSystemImage(System.IO.BinaryReader reader, Action<long> notifyFileSizeCallback)
+            {
+            }
         }
 
         [Test]

@@ -61,6 +61,35 @@ namespace Tkl.Jumbo.Dfs
         }
 
         /// <summary>
+        /// Saves this <see cref="FileSystemEntry"/> to a file system image.
+        /// </summary>
+        /// <param name="writer">A <see cref="BinaryWriter"/> used to write to the file system image.</param>
+        public override void SaveToFileSystemImage(BinaryWriter writer)
+        {
+            base.SaveToFileSystemImage(writer);
+            writer.Write(Children.Count);
+            foreach( FileSystemEntry entry in Children )
+                entry.SaveToFileSystemImage(writer);
+        }
+
+        /// <summary>
+        /// Reads information about the <see cref="DfsDirectory"/> from the file system image.
+        /// </summary>
+        /// <param name="reader">The <see cref="BinaryReader"/> used to read the file system image.</param>
+        /// <param name="notifyFileSizeCallback">A function that should be called to notify the caller of the size of deserialized files.</param>
+        protected override void LoadFromFileSystemImage(BinaryReader reader, Action<long> notifyFileSizeCallback)
+        {
+            int childCount = reader.ReadInt32();
+            _children.Clear();
+            _children.Capacity = childCount;
+            for( int x = 0; x < childCount; ++x )
+            {
+                // The FileSystemEntry constructor adds it to the Children collection, no need to do that here.
+                FileSystemEntry.LoadFromFileSystemImage(reader, this, notifyFileSizeCallback);
+            }
+        }
+
+        /// <summary>
         /// Creates a clone of the current entry.
         /// </summary>
         /// <param name="levels">The number of levels in the file system hierarchy to clone.</param>

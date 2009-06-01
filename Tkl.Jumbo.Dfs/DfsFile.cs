@@ -55,6 +55,20 @@ namespace Tkl.Jumbo.Dfs
         public long Size { get; set; }
 
         /// <summary>
+        /// Saves this <see cref="FileSystemEntry"/> to a file system image.
+        /// </summary>
+        /// <param name="writer">A <see cref="System.IO.BinaryWriter"/> used to write to the file system image.</param>
+        public override void SaveToFileSystemImage(System.IO.BinaryWriter writer)
+        {
+            base.SaveToFileSystemImage(writer);
+            writer.Write(Size);
+            writer.Write(IsOpenForWriting);
+            writer.Write(Blocks.Count);
+            foreach( Guid block in Blocks )
+                writer.Write(block.ToByteArray());
+        }
+
+        /// <summary>
         /// Gets a string representation of this file.
         /// </summary>
         /// <returns>A string representation of this file.</returns>
@@ -75,6 +89,27 @@ namespace Tkl.Jumbo.Dfs
             writer.WriteLine("Blocks:           {0}", Blocks.Count);
             foreach( Guid block in Blocks )
                 writer.WriteLine("{{{0}}}", block);
+        }
+
+        /// <summary>
+        /// Reads information about the <see cref="DfsFile"/> from the file system image.
+        /// </summary>
+        /// <param name="reader">The <see cref="System.IO.BinaryReader"/> used to read the file system image.</param>
+        /// <param name="notifyFileSizeCallback">A function that should be called to notify the caller of the size of deserialized files.</param>
+        protected override void LoadFromFileSystemImage(System.IO.BinaryReader reader, Action<long> notifyFileSizeCallback)
+        {
+            Size = reader.ReadInt64();
+            IsOpenForWriting = reader.ReadBoolean();
+            int blockCount = reader.ReadInt32();
+            _blocks.Clear();
+            _blocks.Capacity = blockCount;
+            for( int x = 0; x < blockCount; ++x )
+            {
+                _blocks.Add(new Guid(reader.ReadBytes(16)));
+            }
+
+            if( notifyFileSizeCallback != null )
+                notifyFileSizeCallback(Size);
         }
     }
 }

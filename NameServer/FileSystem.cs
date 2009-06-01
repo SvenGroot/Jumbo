@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using Tkl.Jumbo.Dfs;
 using System.Runtime.Remoting.Messaging;
+using System.IO;
 
 namespace NameServerApplication
 {
@@ -12,6 +13,8 @@ namespace NameServerApplication
     /// </summary>
     sealed class FileSystem : IDisposable
     {
+        public const string _fileSystemImageFileName = "FileSystem";
+        public const string _fileSystemTempImageFileName = "FileSystem.tmp";
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(FileSystem));
         private DfsDirectory _root;
         private readonly EditLog _editLog;
@@ -19,16 +22,34 @@ namespace NameServerApplication
         private long _totalSize;
         private readonly DfsConfiguration _configuration;
 
+        public const int FileSystemFormatVersion = 2;
+
         public event EventHandler<FileDeletedEventArgs> FileDeleted;
 
         public FileSystem(DfsConfiguration configuration, bool replayLog)
+            : this(configuration, replayLog, false)
+        {
+        }
+
+        public FileSystem(DfsConfiguration configuration, bool replayLog, bool readOnly)
         {
             if( configuration == null )
                 throw new ArgumentNullException("configuration");
             _configuration = configuration;
             _log.Info("++++ FileSystem created.");
+            // TODO: Automatic recovery from this.
+            if( File.Exists(Path.Combine(configuration.NameServer.EditLogDirectory, _fileSystemTempImageFileName)) )
+                throw new DfsException("The nameserver was previously interruped while making a checkpoint; please resolve the situation and restart.");
+            string imageFile = Path.Combine(configuration.NameServer.EditLogDirectory, _fileSystemImageFileName);
+            if( File.Exists(imageFile) )
+                LoadFromFileSystemImage(imageFile);
             _editLog = new EditLog(configuration.NameServer.EditLogDirectory);
-            _editLog.InitializeFileSystem(replayLog, this);
+            _editLog.InitializeFileSystem(replayLog, readOnly, this);
+            if( _editLog.IsUsingNewLogFile )
+            {
+                _log.Warn("The name server was previously interrupted while making a checkpoint; finishing checkpoint generation now.");
+                SaveToFileSystemImage();
+            }
             if( replayLog )
             {
                 foreach( var file in _pendingFiles.Keys )
@@ -404,22 +425,98 @@ namespace NameServerApplication
             }
         }
 
+        public void SaveToFileSystemImage()
+        {
+            _log.Info("Creating file system image.");
+            string tempFileName = Path.Combine(_configuration.NameServer.EditLogDirectory, _fileSystemTempImageFileName);
+            _editLog.SwitchToNewLogFile();
+            using( FileSystem tempFileSystem = new FileSystem(_configuration, true, true) )
+            {
+                tempFileSystem.SaveToFileSystemImage(tempFileName);
+            }
+
+            // The last thing we do is rename the temp image; while the temp image file exists, the name server will not start
+            // alerting the user something is wrong and they can correct it.
+            // TODO: Automatic recovery.
+            string fileName = Path.Combine(_configuration.NameServer.EditLogDirectory, _fileSystemImageFileName);
+            if( File.Exists(fileName) )
+                File.Delete(fileName);
+            _editLog.DiscardOldLogFile();
+            File.Move(tempFileName, fileName);
+            _log.Info("File system image creation complete.");
+        }
+
         public void GetBlocks(IDictionary<Guid, BlockInfo> blocks, IDictionary<Guid, PendingBlock> pendingBlocks)
         {
             lock( _root )
             {
                 GetBlocks(_root, blocks);
-            }
-            lock( _pendingFiles )
-            {
-                foreach( PendingFile file in _pendingFiles.Values )
+                lock( _pendingFiles )
                 {
-                    if( file.PendingBlock != null )
-                        pendingBlocks.Add(file.PendingBlock.Value, new PendingBlock(new BlockInfo(file.PendingBlock.Value, file.File)));
+                    foreach( PendingFile file in _pendingFiles.Values )
+                    {
+                        if( file.PendingBlock != null )
+                            pendingBlocks.Add(file.PendingBlock.Value, new PendingBlock(new BlockInfo(file.PendingBlock.Value, file.File)));
+                    }
                 }
             }
         }
 
+        private void SaveToFileSystemImage(string fileName)
+        {
+            using( FileStream stream = File.Create(fileName) )
+            using( BinaryWriter writer = new BinaryWriter(stream) )
+            {
+                writer.Write(FileSystemFormatVersion);
+                lock( _root )
+                {
+                    _root.SaveToFileSystemImage(writer);
+                    lock( _pendingFiles )
+                    {
+                        writer.Write(_pendingFiles.Count);
+                        foreach( PendingFile file in _pendingFiles.Values )
+                            file.SaveToFileSystemImage(writer);
+                    }
+                }
+            }
+        }
+
+        private void LoadFromFileSystemImage(string fileName)
+        {
+            _log.InfoFormat("Loading file system image from '{0}'.", fileName);
+            using( FileStream stream = File.OpenRead(fileName) )
+            using( BinaryReader reader = new BinaryReader(stream) )
+            {
+                int version = reader.ReadInt32();
+                if( version != FileSystemFormatVersion )
+                    throw new NotSupportedException("The file system image uses an unsupported file system version.");
+
+                _root = (DfsDirectory)FileSystemEntry.LoadFromFileSystemImage(reader, null, NotifyFileSizeCallback);
+                _pendingFiles.Clear();
+                int pendingFileCount = reader.ReadInt32();
+                for( int x = 0; x < pendingFileCount; ++x )
+                {
+                    string path = reader.ReadString();
+                    bool hasPendingBlock = reader.ReadBoolean();
+                    Guid? pendingBlock = null;
+                    if( hasPendingBlock )
+                        pendingBlock = new Guid(reader.ReadBytes(16));
+                    DfsFile file = GetFileInfoInternal(path);
+                    if( file == null )
+                        throw new DfsException("Invalid file system image.");
+                    PendingFile pendingFile = new PendingFile(file);
+                    pendingFile.PendingBlock = pendingBlock;
+                    _pendingFiles.Add(file.FullPath, pendingFile);
+                }
+            }
+            _log.InfoFormat("File system loaded.");
+        }
+
+        private void NotifyFileSizeCallback(long size)
+        {
+            _totalSize += size;
+        }
+        
         private void GetBlocks(DfsDirectory directory, IDictionary<Guid, BlockInfo> blocks)
         {
             foreach( FileSystemEntry child in directory.Children )

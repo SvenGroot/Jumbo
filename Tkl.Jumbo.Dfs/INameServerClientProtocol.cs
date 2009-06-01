@@ -152,6 +152,11 @@ namespace Tkl.Jumbo.Dfs
         void RemoveDataServer(ServerAddress dataServer);
 
         /// <summary>
+        /// Immediately creates a checkpoint of the file system namespace.
+        /// </summary>
+        void CreateCheckpoint();
+
+        /// <summary>
         /// Gets or sets a value that indicates whether safe mode is on or off.
         /// </summary>
         /// <remarks>

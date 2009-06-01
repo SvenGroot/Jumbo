@@ -23,6 +23,8 @@ namespace NameServerApplication
     {
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(NameServer));
 
+        private const int _checkpointInterval = 3600000; // 1 hour
+
         private readonly int _replicationFactor;
         private readonly int _blockSize;
         private Random _random = new Random();
@@ -36,6 +38,7 @@ namespace NameServerApplication
         private readonly AutoResetEvent _dataServerMonitorEvent = new AutoResetEvent(false);
         private bool _safeMode = true;
         private System.Threading.ManualResetEvent _safeModeEvent = new System.Threading.ManualResetEvent(false);
+        private readonly Timer _checkpointTimer;
 
         private NameServer()
             : this(true)
@@ -68,6 +71,7 @@ namespace NameServerApplication
                 IsBackground = true,
             };
             _dataServerMonitorThread.Start();
+            _checkpointTimer = new Timer(CreateCheckpointTimerCallback, null, _checkpointInterval, _checkpointInterval);
         }
 
         public static NameServer Instance { get; private set; }
@@ -434,6 +438,12 @@ namespace NameServerApplication
             }
         }
 
+        public void CreateCheckpoint()
+        {
+            _log.Debug("CreateCheckpoint");
+            _fileSystem.SaveToFileSystemImage();
+        }
+
         #endregion
 
         #region INameServerHeartbeatProtocol Members
@@ -551,6 +561,12 @@ namespace NameServerApplication
 
         private void ShutdownInternal()
         {
+            using( ManualResetEvent evt = new ManualResetEvent(false) )
+            {
+                _checkpointTimer.Dispose(evt);
+                evt.WaitOne();
+            }
+
             _dataServerMonitorThread.Abort();
             _dataServerMonitorEvent.Set();
             _dataServerMonitorThread.Join();
@@ -984,6 +1000,11 @@ namespace NameServerApplication
                     }
                 }
             }
+        }
+
+        private void CreateCheckpointTimerCallback(object state)
+        {
+            CreateCheckpoint();
         }
     }
 }

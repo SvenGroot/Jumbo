@@ -103,6 +103,11 @@ namespace NameServerApplication
             NameServer.Instance.RemoveDataServer(dataServer);
         }
 
+        public void CreateCheckpoint()
+        {
+            NameServer.Instance.CreateCheckpoint();
+        }
+
         #endregion
 
         #region INameServerHeartbeatProtocol Members
