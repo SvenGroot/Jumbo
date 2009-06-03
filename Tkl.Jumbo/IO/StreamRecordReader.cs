@@ -38,6 +38,23 @@ namespace Tkl.Jumbo.IO
         /// read more than <paramref name="size"/> bytes.
         /// </remarks>
         protected StreamRecordReader(Stream stream, long offset, long size)
+            : this(stream, offset, size, true)
+        {
+        }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="StreamRecordReader{T}"/> class with the specified stream.
+        /// </summary>
+        /// <param name="stream">The stream to read from.</param>
+        /// <param name="offset">The position in the stream to start reading.</param>
+        /// <param name="size">The number of bytes to read from the stream.</param>
+        /// <param name="seekToOffset"><see langword="true"/> to seek the stream to <paramref name="offset"/>; <see langword="false"/> to leave the stream at the current position.</param>
+        /// <remarks>
+        /// The reader will read a whole number of records until the start of the next record falls
+        /// after <paramref name="offset"/> + <paramref name="size"/>. Because of this, the reader can
+        /// read more than <paramref name="size"/> bytes.
+        /// </remarks>
+        protected StreamRecordReader(Stream stream, long offset, long size, bool seekToOffset)
         {
             if( stream == null )
                 throw new ArgumentNullException("stream");
@@ -49,7 +66,7 @@ namespace Tkl.Jumbo.IO
                 throw new ArgumentException("Offset + size is beyond the end of the stream.");
 
             Stream = stream;
-            if( offset != 0 ) // to prevent NotSupportedException on streams that can't seek.
+            if( seekToOffset && offset != 0 ) // to prevent NotSupportedException on streams that can't seek.
                 Stream.Position = offset;
             Offset = offset;
             Size = size;

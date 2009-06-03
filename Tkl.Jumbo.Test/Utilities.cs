@@ -68,6 +68,23 @@ namespace Tkl.Jumbo.Test
             return lines + 1;
         }
 
+        public static List<string> GenerateTextData(int length, int count)
+        {
+            List<string> result = new List<string>(count);
+            StringBuilder sb = new StringBuilder(length);
+            Random rnd = new Random();
+            for( int x = 0; x < count; ++x )
+            {
+                sb.Length = 0;
+                for( int l = 0; l < length; ++l )
+                {
+                    sb.Append((char)rnd.Next('a', 'z'));
+                }
+                result.Add(sb.ToString());
+            }
+            return result;
+        }
+
         public static byte[] GenerateData(int size)
         {
             Random rnd = new Random();
