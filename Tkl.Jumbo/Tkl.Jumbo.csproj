@@ -64,6 +64,8 @@
     <Compile Include="IO\RecordFileReader.cs" />
     <Compile Include="IO\RecordFileWriter.cs" />
     <Compile Include="IO\UTF8StringWritable.cs" />
+    <Compile Include="IO\Writable.cs" />
+    <Compile Include="IO\WritableUtility.cs" />
     <Compile Include="ListExtensions.cs" />
     <Compile Include="StreamExtensions.cs" />
     <Compile Include="GlobalSuppressions.cs" />

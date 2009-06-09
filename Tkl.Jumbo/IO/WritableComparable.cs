@@ -8,7 +8,7 @@ using System.IO;
 namespace Tkl.Jumbo.IO
 {
     /// <summary>
-    /// Abstract base class for classes implementing IWritable.
+    /// Abstract base class for classes implementing <see cref="IWritable"/> that encapsulate a simple existing comparable type.
     /// </summary>
     /// <typeparam name="T">The underlying type of the writable.</typeparam>
     public abstract class WritableComparable<T> : IWritable, IComparable<WritableComparable<T>>, IComparable, IEquatable<WritableComparable<T>>

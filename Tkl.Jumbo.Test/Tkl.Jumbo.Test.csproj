@@ -86,6 +86,7 @@
     <Compile Include="Dfs\TestSetup.cs" />
     <Compile Include="RecordFileTests.cs" />
     <Compile Include="Utilities.cs" />
+    <Compile Include="WritableUtilityTests.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\DataServer\DataServer.csproj">
