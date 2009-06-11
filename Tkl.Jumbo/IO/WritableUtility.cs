@@ -55,9 +55,47 @@ namespace Tkl.Jumbo.IO
                     {
                         generator.Emit(OpCodes.Ldarg_0); // Load the object.
                         generator.Emit(OpCodes.Callvirt, getMethod); // Get the property value.
-                        Label? endLabel = WriteCheckForNullIfReferenceType(generator, writeBooleanMethod, property, false);
+                        Label? endLabel = WriteCheckForNullIfReferenceType(generator, writeBooleanMethod, property, false, null);
                         generator.Emit(OpCodes.Ldarg_1); // load the writer.
                         generator.Emit(OpCodes.Callvirt, typeof(IWritable).GetMethod("Write", new[] { typeof(BinaryWriter) }));
+                        if( endLabel != null )
+                        {
+                            generator.MarkLabel(endLabel.Value);
+                        }
+                    }
+                    else if( property.PropertyType == typeof(DateTime) )
+                    {
+                        // For DateTimes we need to write the DateTimeKind and the ticks.
+                        LocalBuilder dateLocal = generator.DeclareLocal(typeof(DateTime));
+                        generator.Emit(OpCodes.Ldarg_0); // put the object on the stack.
+                        generator.Emit(OpCodes.Callvirt, property.GetGetMethod()); // Get the property value
+                        generator.Emit(OpCodes.Stloc_S, dateLocal); // Store the date in a local
+                        generator.Emit(OpCodes.Ldarg_1); // put the writer on the stack
+                        generator.Emit(OpCodes.Ldloca_S, dateLocal); // put the address of the date on the stack (has to be the address for a property call to work)
+                        generator.Emit(OpCodes.Call, typeof(DateTime).GetProperty("Kind").GetGetMethod()); // Get the DateTimeKind.
+                        generator.Emit(OpCodes.Conv_U1); // Convert to a byte.
+                        generator.Emit(OpCodes.Callvirt, typeof(BinaryWriter).GetMethod("Write", new[] { typeof(byte) })); // Write the DateTimeKind to the stream.
+                        generator.Emit(OpCodes.Ldarg_1); // put the writer on the stack
+                        generator.Emit(OpCodes.Ldarg_1); // put the writer on the stack
+                        generator.Emit(OpCodes.Ldloca_S, dateLocal); // put the address of the date on the stack (has to be the address for a property call to work)
+                        generator.Emit(OpCodes.Call, typeof(DateTime).GetProperty("Ticks").GetGetMethod()); // Get the Ticks.
+                        generator.Emit(OpCodes.Callvirt, typeof(BinaryWriter).GetMethod("Write", new[] { typeof(long) })); // write the ticks.
+                    }
+                    else if( property.PropertyType == typeof(byte[]) )
+                    {
+                        // We need to store the size and the data of the byte array.
+                        LocalBuilder byteArrayLocal = generator.DeclareLocal(typeof(byte[]));
+                        generator.Emit(OpCodes.Ldarg_0); // put the object on the stack
+                        generator.Emit(OpCodes.Callvirt, property.GetGetMethod()); // Get the property value.
+                        generator.Emit(OpCodes.Stloc_S, byteArrayLocal); // store it in a local.
+                        Label? endLabel = WriteCheckForNullIfReferenceType(generator, writeBooleanMethod, property, false, byteArrayLocal);
+                        generator.Emit(OpCodes.Ldarg_1); // put the writer on the stack.
+                        generator.Emit(OpCodes.Ldloc_S, byteArrayLocal); // put the byte array on the stack.
+                        generator.Emit(OpCodes.Call, typeof(byte[]).GetProperty("Length").GetGetMethod()); // Get the length of the array.
+                        generator.Emit(OpCodes.Call, typeof(WritableUtility).GetMethod("Write7BitEncodedInt", BindingFlags.Static | BindingFlags.Public, null, new[] { typeof(BinaryWriter), typeof(int) }, null)); // Write length as compressed int.
+                        generator.Emit(OpCodes.Ldarg_1); // put the writer on the stack.
+                        generator.Emit(OpCodes.Ldloc_S, byteArrayLocal); // put the byte array on the stack.
+                        generator.Emit(OpCodes.Callvirt, typeof(BinaryWriter).GetMethod("Write", new[] { typeof(byte[]) })); // Write the array data.
                         if( endLabel != null )
                         {
                             generator.MarkLabel(endLabel.Value);
@@ -68,11 +106,10 @@ namespace Tkl.Jumbo.IO
                         MethodInfo writeMethod = typeof(BinaryWriter).GetMethod("Write", new[] { property.PropertyType });
                         if( writeMethod != null )
                         {
-                            // TODO: Maybe special case byte array.
                             generator.Emit(OpCodes.Ldarg_1);
                             generator.Emit(OpCodes.Ldarg_0);
                             generator.Emit(OpCodes.Callvirt, getMethod);
-                            Label? endLabel = WriteCheckForNullIfReferenceType(generator, writeBooleanMethod, property, true);
+                            Label? endLabel = WriteCheckForNullIfReferenceType(generator, writeBooleanMethod, property, true, null);
                             generator.Emit(OpCodes.Callvirt, writeMethod);
                             if( endLabel != null )
                             {
@@ -81,7 +118,7 @@ namespace Tkl.Jumbo.IO
                         }
                         else
                         {
-                            throw new NotSupportedException(string.Format("Cannot generate an IWritable.Write implementation for type {0} because property {1} has unsupported type {2}.", typeof(T), property, property.PropertyType));
+                            throw new NotSupportedException(string.Format("Cannot generate an IWritable.Write implementation for type {0} because property {1} has unsupported type {2}.", typeof(T), property.Name, property.PropertyType));
                         }
                     }
                 }
@@ -134,7 +171,7 @@ namespace Tkl.Jumbo.IO
                         // False means that the value is true and was not written.
                         generator.Emit(OpCodes.Ldarg_0); // Load the object.
                         generator.Emit(OpCodes.Ldnull);
-                        generator.Emit(OpCodes.Callvirt, property.GetSetMethod());
+                        generator.Emit(OpCodes.Callvirt, property.GetSetMethod(true));
                         generator.Emit(OpCodes.Br_S, endLabel.Value);
                         generator.MarkLabel(nonNullLabel);
                     }
@@ -153,20 +190,42 @@ namespace Tkl.Jumbo.IO
                         generator.Emit(OpCodes.Stloc, local); // store it.
                         generator.Emit(OpCodes.Ldarg_0); // load the object.
                         generator.Emit(OpCodes.Ldloc, local); // load the new property object.
-                        generator.Emit(OpCodes.Callvirt, property.GetSetMethod()); // set the property value.
+                        generator.Emit(OpCodes.Callvirt, property.GetSetMethod(true)); // set the property value.
                         generator.MarkLabel(nonNullLabel);
                         generator.Emit(OpCodes.Ldloc, local); // load tjhe property value.
                         generator.Emit(OpCodes.Ldarg_1); // load the reader.
                         generator.Emit(OpCodes.Callvirt, typeof(IWritable).GetMethod("Read", new[] { typeof(BinaryReader) })); // Read the property from the reader.
                     }
+                    else if( property.PropertyType == typeof(DateTime) )
+                    {
+                        LocalBuilder kindLocal = generator.DeclareLocal(typeof(DateTimeKind));
+                        generator.Emit(OpCodes.Ldarg_0); // put the object ont the stack.
+                        generator.Emit(OpCodes.Ldarg_1); // put the reader on the stack.
+                        generator.Emit(OpCodes.Callvirt, typeof(BinaryReader).GetMethod("ReadByte")); // read the DateTimeKind
+                        generator.Emit(OpCodes.Conv_I4); // convert to int.
+                        generator.Emit(OpCodes.Stloc_S, kindLocal); // store it.
+                        generator.Emit(OpCodes.Ldarg_1); // put the reader on the stack.
+                        generator.Emit(OpCodes.Callvirt, typeof(BinaryReader).GetMethod("ReadInt64")); // read the Ticks.
+                        generator.Emit(OpCodes.Ldloc_S, kindLocal); // put the DateTimeKind on the stack.
+                        generator.Emit(OpCodes.Newobj, typeof(DateTime).GetConstructor(new[] { typeof(long), typeof(DateTimeKind) })); // Create the DateTime instance.
+                        generator.Emit(OpCodes.Callvirt, property.GetSetMethod(true)); // Set the DateTime as the property value.
+                    }
+                    else if( property.PropertyType == typeof(byte[]) )
+                    {
+                        generator.Emit(OpCodes.Ldarg_0); // put the object on the stack.
+                        generator.Emit(OpCodes.Ldarg_1); // put the reader on the stack.
+                        generator.Emit(OpCodes.Ldarg_1); // put the reader on the stack (yes, twice).
+                        generator.Emit(OpCodes.Call, typeof(WritableUtility).GetMethod("Read7BitEncodedInt", BindingFlags.Static | BindingFlags.Public, null, new[] { typeof(BinaryReader) }, null)); // read the length
+                        generator.Emit(OpCodes.Callvirt, typeof(BinaryReader).GetMethod("ReadBytes", new[] { typeof(int) })); // read the byte array
+                        generator.Emit(OpCodes.Callvirt, property.GetSetMethod(true)); // set the byte array as the property value.
+                    }
                     else
                     {
-                        // TODO: Maye a special case for byte arrays.
                         MethodInfo readMethod = _readMethods[property.PropertyType];
                         generator.Emit(OpCodes.Ldarg_0); // load the object.
                         generator.Emit(OpCodes.Ldarg_1); // load the reader.
                         generator.Emit(OpCodes.Callvirt, readMethod);
-                        generator.Emit(OpCodes.Callvirt, property.GetSetMethod());
+                        generator.Emit(OpCodes.Callvirt, property.GetSetMethod(true));
                     }
 
                     if( endLabel != null )
@@ -195,14 +254,17 @@ namespace Tkl.Jumbo.IO
             generator.MarkLabel(label);
         }
 
-        private static Label? WriteCheckForNullIfReferenceType(ILGenerator generator, MethodInfo writeBooleanMethod, PropertyInfo property, bool writerIsOnStack)
+        private static Label? WriteCheckForNullIfReferenceType(ILGenerator generator, MethodInfo writeBooleanMethod, PropertyInfo property, bool writerIsOnStack, LocalBuilder local)
         {
             Label? endLabel = null;
             if( !property.PropertyType.IsValueType )
             {
-                LocalBuilder local = generator.DeclareLocal(property.PropertyType);
-                generator.Emit(OpCodes.Stloc, local);
-                generator.Emit(OpCodes.Ldloc, local);
+                if( local == null )
+                {
+                    local = generator.DeclareLocal(property.PropertyType);
+                    generator.Emit(OpCodes.Stloc_S, local);
+                    generator.Emit(OpCodes.Ldloc_S, local);
+                }
                 Label notNullLabel = generator.DefineLabel();
                 endLabel = generator.DefineLabel();
                 generator.Emit(OpCodes.Brtrue_S, notNullLabel);
@@ -236,6 +298,50 @@ namespace Tkl.Jumbo.IO
                     result.Add(method.ReturnType, method);
                 }
             }
+            return result;
+        }
+
+        /// <summary>
+        /// Writes a 32-bit integer in a compressed format.
+        /// </summary>
+        /// <param name="writer">The <see cref="BinaryWriter"/> to write the value to.</param>
+        /// <param name="value">The 32-bit integer to be written.</param>
+        public static void Write7BitEncodedInt(BinaryWriter writer, int value)
+        {
+            if( writer == null )
+                throw new ArgumentNullException("writer");
+            uint uintValue = (uint)value; // this helps support negative numbers, not really needed but anyway.
+            while( uintValue >= 0x80 )
+            {
+                writer.Write((byte)(uintValue | 0x80));
+                uintValue = uintValue >> 7;
+            }
+            writer.Write((byte)uintValue);
+        }
+
+        /// <summary>
+        /// Reads in a 32-bit integer in compressed format.
+        /// </summary>
+        /// <param name="reader">The <see cref="BinaryReader"/> to read the value from.</param>
+        /// <returns>A 32-bit integer in compressed format. </returns>
+        public static int Read7BitEncodedInt(BinaryReader reader)
+        {
+            if( reader == null )
+                throw new ArgumentNullException("reader");
+            byte currentByte;
+            int result = 0;
+            int bits = 0;
+            do
+            {
+                if( bits == 35 )
+                {
+                    throw new FormatException("Invalid 7-bit encoded int.");
+                }
+                currentByte = reader.ReadByte();
+                result |= (currentByte & 0x7f) << bits;
+                bits += 7;
+            }
+            while( (currentByte & 0x80) != 0 );
             return result;
         }
     }

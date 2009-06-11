@@ -13,12 +13,23 @@ namespace Tkl.Jumbo.Test
     {
         class TestClass
         {
+            public TestClass()
+            {
+            }
+
+            public TestClass(int n)
+            {
+                IntProperty = n;
+            }
+
             public string StringProperty { get; set; }
             public string AnotherStringProperty { get; set; }
-            public int IntProperty { get; set; }
+            public int IntProperty { get; private set; }
             public bool BooleanProperty { get; set; }
             public Int32Writable WritableProperty { get; set; }
             public Int32Writable AnotherWritableProperty { get; set; }
+            public DateTime DateProperty { get; set; }
+            public byte[] ByteArrayProperty { get; set; }
         }
 
         [Test]
@@ -27,14 +38,15 @@ namespace Tkl.Jumbo.Test
             Action<TestClass, BinaryWriter> writeMethod = WritableUtility.CreateSerializer<TestClass>();
             Action<TestClass, BinaryReader> readMethod = WritableUtility.CreateDeserializer<TestClass>();
 
-            TestClass expected = new TestClass()
+            TestClass expected = new TestClass(42)
             {
                 StringProperty = "Hello",
                 AnotherStringProperty = null,
-                IntProperty = 42,
                 BooleanProperty = true,
                 WritableProperty = 47,
-                AnotherWritableProperty = null
+                AnotherWritableProperty = null,
+                DateProperty = DateTime.UtcNow,
+                ByteArrayProperty = new byte[] { 1, 2, 3, 4 }
             };
             byte[] data;
             using( MemoryStream stream = new MemoryStream() )
@@ -61,6 +73,8 @@ namespace Tkl.Jumbo.Test
             Assert.AreEqual(expected.BooleanProperty, actual.BooleanProperty);
             Assert.AreEqual(expected.WritableProperty, actual.WritableProperty);
             Assert.AreEqual(expected.AnotherWritableProperty, actual.AnotherWritableProperty);
+            Assert.AreEqual(expected.DateProperty, actual.DateProperty);
+            Assert.IsTrue(Utilities.CompareList(expected.ByteArrayProperty, actual.ByteArrayProperty));
         }
     }
 }
