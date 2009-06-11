@@ -313,7 +313,7 @@ namespace Tkl.Jumbo.IO
         /// <param name="reader">The <see cref="System.IO.BinaryReader"/> to deserialize the object from.</param>
         public void Read(System.IO.BinaryReader reader)
         {
-            int length = reader.ReadInt32();
+            int length = WritableUtility.Read7BitEncodedInt(reader);
             Set(reader.ReadBytes(length));
         }
 
@@ -323,7 +323,7 @@ namespace Tkl.Jumbo.IO
         /// <param name="writer">The <see cref="System.IO.BinaryWriter"/> to serialize the object to.</param>
         public void Write(System.IO.BinaryWriter writer)
         {
-            writer.Write(_byteLength);
+            WritableUtility.Write7BitEncodedInt(writer, _byteLength);
             writer.Write(_utf8Bytes, 0, _byteLength);
         }
 

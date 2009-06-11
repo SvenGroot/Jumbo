@@ -60,9 +60,11 @@
     <Compile Include="GenSort.cs" />
     <Compile Include="GenWords.cs" />
     <Compile Include="GraySort.cs" />
+    <Compile Include="DbGen.cs" />
     <Compile Include="IO\GenSortRecord.cs" />
     <Compile Include="IO\GenSortRecordReader.cs" />
     <Compile Include="IO\GenSortRecordWriter.cs" />
+    <Compile Include="IO\LineItem.cs" />
     <Compile Include="IO\WordRecordReader.cs" />
     <Compile Include="OldWordCount.cs" />
     <Compile Include="Tasks\GenSortTask.cs" />
@@ -77,6 +79,7 @@
     <Compile Include="Tasks\OldWordCountTask.cs" />
     <Compile Include="Tasks\RecordCountCombinerTask.cs" />
     <Compile Include="Tasks\RecordCountTask.cs" />
+    <Compile Include="Tasks\TpcHTableGenTask.cs" />
     <Compile Include="Tasks\ValSortCombinerTask.cs" />
     <Compile Include="IO\ValSortRecord.cs" />
     <Compile Include="Tasks\ValSortTask.cs" />

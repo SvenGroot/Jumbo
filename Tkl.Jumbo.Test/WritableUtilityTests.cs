@@ -11,6 +11,31 @@ namespace Tkl.Jumbo.Test
     [TestFixture]
     public class WritableUtilityTests
     {
+        struct ValueTypeWritable : IWritable
+        {
+            private long _value;
+
+            public long Value
+            {
+                get { return _value; }
+                set { _value = value; }
+            }
+
+            #region IWritable Members
+
+            public void Write(BinaryWriter writer)
+            {
+                writer.Write(Value);
+            }
+
+            public void Read(BinaryReader reader)
+            {
+                _value = reader.ReadInt64();
+            }
+
+            #endregion
+        }
+
         class TestClass
         {
             public TestClass()
@@ -30,6 +55,7 @@ namespace Tkl.Jumbo.Test
             public Int32Writable AnotherWritableProperty { get; set; }
             public DateTime DateProperty { get; set; }
             public byte[] ByteArrayProperty { get; set; }
+            public ValueTypeWritable ValueTypeWritableProperty { get; set; }
         }
 
         [Test]
@@ -46,7 +72,8 @@ namespace Tkl.Jumbo.Test
                 WritableProperty = 47,
                 AnotherWritableProperty = null,
                 DateProperty = DateTime.UtcNow,
-                ByteArrayProperty = new byte[] { 1, 2, 3, 4 }
+                ByteArrayProperty = new byte[] { 1, 2, 3, 4 },
+                ValueTypeWritableProperty = new ValueTypeWritable() { Value = 1000 }
             };
             byte[] data;
             using( MemoryStream stream = new MemoryStream() )
@@ -75,6 +102,7 @@ namespace Tkl.Jumbo.Test
             Assert.AreEqual(expected.AnotherWritableProperty, actual.AnotherWritableProperty);
             Assert.AreEqual(expected.DateProperty, actual.DateProperty);
             Assert.IsTrue(Utilities.CompareList(expected.ByteArrayProperty, actual.ByteArrayProperty));
+            Assert.AreEqual(expected.ValueTypeWritableProperty.Value, actual.ValueTypeWritableProperty.Value);
         }
     }
 }
