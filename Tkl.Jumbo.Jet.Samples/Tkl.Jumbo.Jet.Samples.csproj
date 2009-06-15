@@ -65,6 +65,8 @@
     <Compile Include="IO\GenSortRecordReader.cs" />
     <Compile Include="IO\GenSortRecordWriter.cs" />
     <Compile Include="IO\LineItem.cs" />
+    <Compile Include="IO\PricingSummaryKey.cs" />
+    <Compile Include="IO\PricingSummaryValue.cs" />
     <Compile Include="IO\WordRecordReader.cs" />
     <Compile Include="OldWordCount.cs" />
     <Compile Include="Tasks\GenSortTask.cs" />
@@ -77,6 +79,8 @@
     <Compile Include="Tasks\GenWordsTask.cs" />
     <Compile Include="Tasks\OldWordCountCombinerTask.cs" />
     <Compile Include="Tasks\OldWordCountTask.cs" />
+    <Compile Include="Tasks\PricingSummaryTask.cs" />
+    <Compile Include="Tasks\PricingSummaryAccumulatorTask.cs" />
     <Compile Include="Tasks\RecordCountCombinerTask.cs" />
     <Compile Include="Tasks\RecordCountTask.cs" />
     <Compile Include="Tasks\TpcHTableGenTask.cs" />
@@ -85,6 +89,7 @@
     <Compile Include="Tasks\ValSortTask.cs" />
     <Compile Include="Tasks\WordCountAccumulatorTask.cs" />
     <Compile Include="Tasks\WordCountTask.cs" />
+    <Compile Include="TpcHQuery1.cs" />
     <Compile Include="ValSort.cs" />
     <Compile Include="WordCount.cs" />
   </ItemGroup>
