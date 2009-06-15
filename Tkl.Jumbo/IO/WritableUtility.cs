@@ -76,7 +76,6 @@ namespace Tkl.Jumbo.IO
                         generator.Emit(OpCodes.Conv_U1); // Convert to a byte.
                         generator.Emit(OpCodes.Callvirt, typeof(BinaryWriter).GetMethod("Write", new[] { typeof(byte) })); // Write the DateTimeKind to the stream.
                         generator.Emit(OpCodes.Ldarg_1); // put the writer on the stack
-                        generator.Emit(OpCodes.Ldarg_1); // put the writer on the stack
                         generator.Emit(OpCodes.Ldloca_S, dateLocal); // put the address of the date on the stack (has to be the address for a property call to work)
                         generator.Emit(OpCodes.Call, typeof(DateTime).GetProperty("Ticks").GetGetMethod()); // Get the Ticks.
                         generator.Emit(OpCodes.Callvirt, typeof(BinaryWriter).GetMethod("Write", new[] { typeof(long) })); // write the ticks.
@@ -85,12 +84,12 @@ namespace Tkl.Jumbo.IO
                     {
                         // We need to store the size and the data of the byte array.
                         LocalBuilder byteArrayLocal = generator.DeclareLocal(typeof(byte[]));
+                        generator.Emit(OpCodes.Ldarg_1); // put the writer on the stack.
                         generator.Emit(OpCodes.Ldarg_0); // put the object on the stack
                         generator.Emit(OpCodes.Callvirt, property.GetGetMethod()); // Get the property value.
                         generator.Emit(OpCodes.Stloc_S, byteArrayLocal); // store it in a local.
-                        Label? endLabel = WriteCheckForNullIfReferenceType(generator, writeBooleanMethod, property, false, byteArrayLocal);
-                        generator.Emit(OpCodes.Ldarg_1); // put the writer on the stack.
-                        generator.Emit(OpCodes.Ldloc_S, byteArrayLocal); // put the byte array on the stack.
+                        generator.Emit(OpCodes.Ldloc_S, byteArrayLocal); // load the property value
+                        Label? endLabel = WriteCheckForNullIfReferenceType(generator, writeBooleanMethod, property, true, byteArrayLocal);
                         generator.Emit(OpCodes.Call, typeof(byte[]).GetProperty("Length").GetGetMethod()); // Get the length of the array.
                         generator.Emit(OpCodes.Call, typeof(WritableUtility).GetMethod("Write7BitEncodedInt", BindingFlags.Static | BindingFlags.Public, null, new[] { typeof(BinaryWriter), typeof(int) }, null)); // Write length as compressed int.
                         generator.Emit(OpCodes.Ldarg_1); // put the writer on the stack.
@@ -125,8 +124,8 @@ namespace Tkl.Jumbo.IO
             }
             generator.Emit(OpCodes.Ret);
 
-            serializer.DefineParameter(0, ParameterAttributes.In, "obj");
-            serializer.DefineParameter(1, ParameterAttributes.In, "writer");
+            serializer.DefineParameter(1, ParameterAttributes.In, "obj");
+            serializer.DefineParameter(2, ParameterAttributes.In, "writer");
 
             return (Action<T, BinaryWriter>)serializer.CreateDelegate(typeof(Action<T, BinaryWriter>));
         }
@@ -237,8 +236,8 @@ namespace Tkl.Jumbo.IO
 
             generator.Emit(OpCodes.Ret);
 
-            deserializer.DefineParameter(0, ParameterAttributes.In | ParameterAttributes.Out, "obj");
-            deserializer.DefineParameter(1, ParameterAttributes.In, "reader");
+            deserializer.DefineParameter(1, ParameterAttributes.In | ParameterAttributes.Out, "obj");
+            deserializer.DefineParameter(2, ParameterAttributes.In, "reader");
 
             return (Action<T, BinaryReader>)deserializer.CreateDelegate(typeof(Action<T, BinaryReader>));
         }
