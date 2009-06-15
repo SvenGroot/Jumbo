@@ -39,6 +39,8 @@ namespace Tkl.Jumbo.Jet.Samples.Tasks
             string dbGenPath = Path.Combine(TaskAttemptConfiguration.LocalJobDirectory, dbGenFileName);
             int scaleFactor = TaskAttemptConfiguration.JobConfiguration.GetTypedSetting(ScaleFactorSetting, 1);
 
+            RuntimeEnvironment.MarkFileAsExecutable(dbGenPath); // This is required for Unix.
+
             // TODO: other tables.
             _log.InfoFormat("Generating segment {0} out of a total of {1}; using scale factor {2}.", TaskAttemptConfiguration.TaskId.TaskNumber, TaskAttemptConfiguration.StageConfiguration.TaskCount, scaleFactor);
             string arguments = string.Format(System.Globalization.CultureInfo.InvariantCulture, "-D -T L -C {0} -S {1}", TaskAttemptConfiguration.StageConfiguration.TaskCount, TaskAttemptConfiguration.TaskId.TaskNumber);

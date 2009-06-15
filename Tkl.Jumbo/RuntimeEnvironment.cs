@@ -12,6 +12,7 @@ namespace Tkl.Jumbo
     /// </summary>
     public static class RuntimeEnvironment
     {
+        private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(RuntimeEnvironment));
         private static readonly Type _monoRuntime = typeof(object).Assembly.GetType("Mono.Runtime");
 
         /// <summary>
@@ -96,6 +97,48 @@ namespace Tkl.Jumbo
                     log.InfoFormat("{0} Version: {1}", entry.GetName().Name, entry.GetName().Version);
                 log.InfoFormat("   OS Version: {0}", Environment.OSVersion);
                 log.InfoFormat("  CLR Version: {0} ({1} bit runtime)", Description, IntPtr.Size * 8);
+            }
+        }
+
+        /// <summary>
+        /// Sets a file's permissions to indicate it's executable.
+        /// </summary>
+        /// <param name="fileName">The file whose permissions to change.</param>
+        /// <remarks>
+        /// <para>
+        ///   On Unix platforms, this method will change the file permissions of the specified file
+        ///   to include the user execute bit.
+        /// </para>
+        /// <para>
+        ///   On Windows, this method does nothing.
+        /// </para>
+        /// </remarks>
+        public static void MarkFileAsExecutable(string fileName)
+        {
+            if( fileName == null )
+                throw new ArgumentNullException("fileName");
+
+            if( RuntimeType == RuntimeEnvironmentType.Mono && Environment.OSVersion.Platform == PlatformID.Unix )
+            {
+                const string unixFileInfoTypeName = "Mono.Unix.UnixFileInfo, Mono.Posix, Version=2.0.0.0, Culture=neutral, PublicKeyToken=0738eb9f132ed756";
+
+                Type unixFileInfoType = Type.GetType(unixFileInfoTypeName);
+                PropertyInfo fileAccessPermissionsProperty = unixFileInfoType.GetProperty("FileAccessPermissions");
+                object unixFile = Activator.CreateInstance(unixFileInfoType, fileName);
+
+                object mode = fileAccessPermissionsProperty.GetValue(unixFile, null);
+                Type fileAccessPermissionsType = mode.GetType();
+                int oldMode = Convert.ToInt32(mode);
+                int executeBit = Convert.ToInt32(fileAccessPermissionsType.GetField("UserExecute").GetValue(null));
+                int newMode = oldMode | executeBit;
+
+                if( newMode != oldMode )
+                {
+                    object newModeValue = Enum.ToObject(fileAccessPermissionsType, newMode);
+                    _log.DebugFormat("Changing file permissions for file '{0}' from {1} to {2}.", fileName, mode, newModeValue);
+
+                    fileAccessPermissionsProperty.SetValue(unixFile, newModeValue, null);
+                }
             }
         }
     }
