@@ -59,13 +59,22 @@ namespace Tkl.Jumbo.IO
             Value = reader.ReadString();
         }
 
+		public override bool Equals(object obj)
+		{
+		  StringWritable other = obj as StringWritable;
+		  if( other == null )
+			return false;
+		  else
+			return string.Equals(Value, other.Value, StringComparison.Ordinal);
+		}
+
         /// <summary>
         /// Returns a string representation of this <see cref="StringWritable"/>.
         /// </summary>
         /// <returns>A string representation of this <see cref="StringWritable"/>.</returns>
         public override string ToString()
         {
-            return Value == null ? "" : Value.ToString();
+            return Value == null ? "" : Value;
         }
 
         #region IComparable<StringWritable> Members
