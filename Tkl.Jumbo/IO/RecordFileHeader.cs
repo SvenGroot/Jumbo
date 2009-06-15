@@ -64,8 +64,10 @@ namespace Tkl.Jumbo.IO
         /// <summary>
         /// Initializes a new instance of the <see cref="RecordFileHeader"/> class using the latest version and specified record type.
         /// </summary>
-        /// <param name="recordType"></param>
-        public RecordFileHeader(Type recordType)
+        /// <param name="recordType">The type of the records.</param>
+        /// <param name="useStrongName"><see langword="true"/> to use the strong name of the assembly (if it has one) in the header; <see langword="false"/>
+        /// to use the simple name.</param>
+        public RecordFileHeader(Type recordType, bool useStrongName)
         {
             if( recordType == null )
                 throw new ArgumentNullException("recordType");
@@ -74,7 +76,10 @@ namespace Tkl.Jumbo.IO
                 throw new ArgumentException("The specified type does not implement Tkl.Jumbo.IO.IWritable.", "recordType");
 
             Version = RecordFile.CurrentVersion;
-            RecordTypeName = recordType.AssemblyQualifiedName;
+            if( useStrongName )
+                RecordTypeName = recordType.AssemblyQualifiedName;
+            else
+                RecordTypeName = string.Format(System.Globalization.CultureInfo.InvariantCulture, "{0}, {1}", recordType.FullName, recordType.Assembly.GetName().Name);
             _recordType = recordType;
             RecordMarker = GenerateRecordMarker();
         }

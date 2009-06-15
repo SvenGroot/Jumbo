@@ -9,7 +9,7 @@ namespace Tkl.Jumbo.Jet.Samples.IO
     /// <summary>
     /// Represents a record from the LINEITEM table of the TPC-H benchmark.
     /// </summary>
-    public sealed class LineItem : Writable<LineItem>
+    public sealed class LineItem : Writable<LineItem>, IEquatable<LineItem>
     {
         /// <summary>
         /// L_ORDERKEY, identifier
@@ -108,7 +108,7 @@ namespace Tkl.Jumbo.Jet.Samples.IO
             PartKey = Convert.ToInt32(fields[1], System.Globalization.CultureInfo.InvariantCulture);
             SuppKey = Convert.ToInt32(fields[2], System.Globalization.CultureInfo.InvariantCulture);
             LineNumber = Convert.ToInt32(fields[3], System.Globalization.CultureInfo.InvariantCulture);
-            Quantity = (long)(Convert.ToDecimal(fields[4], System.Globalization.CultureInfo.InvariantCulture) * 100);
+            Quantity = (long)(Convert.ToDecimal(fields[4], System.Globalization.CultureInfo.InvariantCulture));
             ExtendedPrice = (long)(Convert.ToDecimal(fields[5], System.Globalization.CultureInfo.InvariantCulture) * 100);
             Discount = (long)(Convert.ToDecimal(fields[6], System.Globalization.CultureInfo.InvariantCulture) * 100);
             Tax = (long)(Convert.ToDecimal(fields[7], System.Globalization.CultureInfo.InvariantCulture) * 100);
@@ -130,5 +130,45 @@ namespace Tkl.Jumbo.Jet.Samples.IO
             else
                 Comment.Set(fields[15]);
         }
+
+        /// <summary>
+        /// Tests this <see cref="LineItem"/> for equality with the specified object.
+        /// </summary>
+        /// <param name="obj">The <see cref="Object"/> to test for equality.</param>
+        /// <returns><see langword="true"/> if this instance is equal to <paramref name="obj"/>; otherwise, <see langword="false"/>.</returns>
+        public override bool Equals(object obj)
+        {
+            return Equals(obj as LineItem);
+        }
+
+        /// <summary>
+        /// Overrides <see cref="object.GetHashCode"/>.
+        /// </summary>
+        /// <returns></returns>
+        public override int GetHashCode()
+        {
+            return base.GetHashCode();
+        }
+
+        #region IEquatable<LineItem> Members
+
+        /// <summary>
+        /// Tests this <see cref="LineItem"/> for equality with the specified <see cref="LineItem"/>.
+        /// </summary>
+        /// <param name="other">The <see cref="LineItem"/> to test for equality.</param>
+        /// <returns><see langword="true"/> if this instance is equal to <paramref name="other"/>; otherwise, <see langword="false"/>.</returns>
+        public bool Equals(LineItem other)
+        {
+            if( other == null )
+                return false;
+
+            return OrderKey == other.OrderKey && PartKey == other.PartKey && SuppKey == other.SuppKey && LineNumber == other.LineNumber &&
+                Quantity == other.Quantity && ExtendedPrice == other.ExtendedPrice && Discount == other.Discount && Tax == other.Tax &&
+                ReturnFlag == other.ReturnFlag && LineStatus == other.LineStatus && ShipDate == other.ShipDate && CommitDate == other.CommitDate &&
+                ReceiptDate == other.ReceiptDate && object.Equals(ShipInstruct, other.ShipInstruct) && object.Equals(ShipMode, other.ShipMode) &&
+                object.Equals(Comment, other.Comment);
+        }
+
+        #endregion
     }
 }

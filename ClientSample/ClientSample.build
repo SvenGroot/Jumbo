@@ -20,6 +20,7 @@
         <include name="../Tkl.Jumbo/nantbin/Tkl.Jumbo.dll"/>
         <include name="../Tkl.Jumbo.Dfs/nantbin/Tkl.Jumbo.Dfs.dll"/>
         <include name="../Tkl.Jumbo.Jet/nantbin/Tkl.Jumbo.Jet.dll"/>
+        <include name="../Tkl.Jumbo.Jet.Samples/nantbin/Tkl.Jumbo.Jet.Samples.dll" />
       </references>
       <sources>
         <include name="Properties/AssemblyInfo.cs"/>
@@ -35,6 +36,7 @@
         <include name="../Tkl.Jumbo/nantbin/*.*"/>
         <include name="../Tkl.Jumbo.Dfs/nantbin/*.*"/>
         <include name="../Tkl.Jumbo.Jet/nantbin/*.*"/>
+        <include name="../Tkl.Jumbo.Jet.Samples/nantbin/*.*"/>
         <include name="../dfs.config"/>
         <include name="../jet.config"/>
       </fileset>

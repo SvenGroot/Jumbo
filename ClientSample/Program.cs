@@ -14,6 +14,7 @@ using System.Xml.Serialization;
 using System.Threading;
 using Tkl.Jumbo.IO;
 using Tkl.Jumbo.Jet.Channels;
+using Tkl.Jumbo.Jet.Samples.IO;
 
 namespace ClientSample
 {
@@ -26,28 +27,22 @@ namespace ClientSample
 
             if( args.Length < 2 )
             {
-                Console.WriteLine("Usage: ClientSample.exe <task> <inputpath> [aggregate task count] [outputpath]");
+                Console.WriteLine("Usage: ClientSample.exe <task> <inputpath> [other arguments]");
                 return;
             }
 
             string task = args[0];
             string input = null;
-            int aggregateTaskCount = 0;
-            string output = null;
-            if( args[0] != "gensort" )
-            {
-                input = args[1];
-                aggregateTaskCount = args.Length >= 3 ? Convert.ToInt32(args[2]) : 1;
-                output = args.Length >= 4 ? args[3] : "/output";
-            }
+            input = args[1];
 
-            DfsClient dfsClient = new DfsClient();
-            JetClient jetClient = new JetClient();
             switch( task )
             {
             case "readtest":
                 ReadTest(input);
                 return;
+            case "checktpch":
+                CheckTpcH(input, args[2]);
+                break;
             default:
                 Console.WriteLine("Unknown task.");
                 return;
@@ -71,6 +66,47 @@ namespace ClientSample
             }
             sw.Stop();
             Console.WriteLine("Reading file complete: {0}.", sw.ElapsedMilliseconds / 1000.0f);
+        }
+
+        private static void CheckTpcH(string path, string referencePath)
+        {
+            DfsClient client = new DfsClient();
+            LineItem referenceLineItem = new LineItem();
+
+            DfsDirectory directory = client.NameServer.GetDirectoryInfo(path);
+            var files = from child in directory.Children
+                        let file = child as DfsFile
+                        where file != null && file.Name.StartsWith("LineItem")
+                        orderby file.Name
+                        select file;
+
+            int record = 0;
+            using( StreamReader reader = File.OpenText(Path.Combine(referencePath, "lineitem.tbl")) )
+            {
+                foreach( DfsFile file in files )
+                {
+                    using( DfsInputStream dfsStream = client.OpenFile(file.FullPath) )
+                    using( RecordFileReader<LineItem> recordReader = new RecordFileReader<LineItem>(dfsStream, 0, dfsStream.Length, true) )
+                    {
+                        foreach( LineItem item in recordReader.EnumerateRecords() )
+                        {
+                            ++record;
+                            referenceLineItem.FromString(reader.ReadLine());
+                            if( !item.Equals(referenceLineItem) )
+                            {
+                                Console.WriteLine();
+                                Console.WriteLine("Record {0} is not a correct (DFS file: {1}, record {2}).", record, file.Name, recordReader.RecordsRead);
+                                Console.ReadKey();
+                                return;
+                            }
+                            if( record % 1000 == 0 )
+                                Console.Write("\r{0}", record);
+                        }
+                    }
+                }
+            }
+            Console.WriteLine();
+            Console.WriteLine("Total records: {0}", record);
         }
     }
 }

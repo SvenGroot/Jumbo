@@ -38,6 +38,15 @@ namespace Tkl.Jumbo.IO
         }
 
         /// <summary>
+        /// Serves as a hash function for a particular type. 
+        /// </summary>
+        /// <returns>A hash code for the current <see cref="StringWritable"/>.</returns>
+        public override int GetHashCode()
+        {
+            return Value == null ? 0 : Value.GetHashCode();
+        }
+
+        /// <summary>
         /// Writes the object to the specified writer.
         /// </summary>
         /// <param name="writer">The <see cref="BinaryWriter"/> to serialize the object to.</param>
@@ -59,14 +68,20 @@ namespace Tkl.Jumbo.IO
             Value = reader.ReadString();
         }
 
-		public override bool Equals(object obj)
-		{
-		  StringWritable other = obj as StringWritable;
-		  if( other == null )
-			return false;
-		  else
-			return string.Equals(Value, other.Value, StringComparison.Ordinal);
-		}
+        /// <summary>
+        /// Determines whether the specified <see cref="Object"/> is equal to the current <see cref="StringWritable"/>.
+        /// </summary>
+        /// <param name="obj">The <see cref="Object"/> to compare with the current <see cref="StringWritable"/>.</param>
+        /// <returns><see langword="true"/> if the specified <see cref="Object"/> is equal to the current 
+        /// <see cref="StringWritable"/>; otherwise, <see langword="false"/>.</returns>
+        public override bool Equals(object obj)
+        {
+            StringWritable other = obj as StringWritable;
+            if( other == null )
+                return false;
+            else
+                return string.Equals(Value, other.Value, StringComparison.Ordinal);
+        }
 
         /// <summary>
         /// Returns a string representation of this <see cref="StringWritable"/>.

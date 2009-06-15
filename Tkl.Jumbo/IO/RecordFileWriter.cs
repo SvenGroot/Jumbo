@@ -30,7 +30,7 @@ namespace Tkl.Jumbo.IO
             : base(stream)
         {
             _writer = new BinaryWriter(stream);
-            _header = new RecordFileHeader(typeof(T));
+            _header = new RecordFileHeader(typeof(T), false); // TODO: Make the value of useStrongName configurable.
 
             ((IWritable)_header).Write(_writer);
             _lastRecordMarkerPosition = stream.Position - RecordFile.RecordMarkerSize;
