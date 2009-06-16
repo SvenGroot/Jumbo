@@ -9,7 +9,7 @@ namespace Tkl.Jumbo.Jet.Samples.IO
     /// <summary>
     /// Represents the group by clause fields of the output of TPC-H query 1.
     /// </summary>
-    public class PricingSummaryKey : Writable<PricingSummaryKey>, IComparable<PricingSummaryKey>, IEquatable<PricingSummaryKey>
+    public class PricingSummaryKey : Writable<PricingSummaryKey>, IComparable<PricingSummaryKey>, IEquatable<PricingSummaryKey>, ICloneable
     {
         /// <summary>
         /// L_RETURNFLAG, fixed text, size 1
@@ -81,6 +81,15 @@ namespace Tkl.Jumbo.Jet.Samples.IO
             if( other == null )
                 return false;
             return ReturnFlag == other.ReturnFlag && LineStatus == other.LineStatus;
+        }
+
+        #endregion
+
+        #region ICloneable Members
+
+        object ICloneable.Clone()
+        {
+            return MemberwiseClone();
         }
 
         #endregion

@@ -9,7 +9,7 @@ namespace Tkl.Jumbo.Jet.Samples.IO
     /// <summary>
     /// Represents the value of the TPC-H query 1 output.
     /// </summary>
-    public class PricingSummaryValue : Writable<PricingSummaryValue>
+    public class PricingSummaryValue : Writable<PricingSummaryValue>, ICloneable
     {
         /// <summary>
         /// sum_qty, sum(l_quantity)
@@ -24,12 +24,12 @@ namespace Tkl.Jumbo.Jet.Samples.IO
         /// <summary>
         /// sum_disc_price, sum(l_extenddprice*(1-l_discount))
         /// </summary>
-        public long SumDiscountPrice { get; set; }
+        public decimal SumDiscountPrice { get; set; }
 
         /// <summary>
         /// sum_charge, sum(l_extendedprice*(1-l_discount)*(1_l_tax))
         /// </summary>
-        public long SumCharge { get; set; }
+        public decimal SumCharge { get; set; }
 
         /// <summary>
         /// No corresponding field; kept to calculate avg_discount.
@@ -45,7 +45,7 @@ namespace Tkl.Jumbo.Jet.Samples.IO
             {
                 // Although l_quantity is technically a decimal it's not stored with the multiplication factor,
                 // that's why we need to multiply it here.
-                return (SumQuantity * 100) / OrderCount;
+                return (long)Math.Round((SumQuantity * 100) / (float)OrderCount);
             }
         }
 
@@ -56,7 +56,7 @@ namespace Tkl.Jumbo.Jet.Samples.IO
         {
             get
             {
-                return SumBasePrice / OrderCount;
+                return (long)Math.Round(SumBasePrice / (float)OrderCount);
             }
         }
 
@@ -67,7 +67,7 @@ namespace Tkl.Jumbo.Jet.Samples.IO
         {
             get
             {
-                return SumDiscount / OrderCount;
+                return (long)Math.Round(SumDiscount / (float)OrderCount);
             }
         }
 
@@ -82,7 +82,16 @@ namespace Tkl.Jumbo.Jet.Samples.IO
         /// <returns></returns>
         public override string ToString()
         {
-            return string.Format(System.Globalization.CultureInfo.InvariantCulture, "{{sum_qty={0}, sum_base_price={1}, sum_disc_price={2}, sum_charge={3}, avg_qty={4}, avg_price={5}, avg_disc={6}, count_order={7}}}", SumQuantity, SumBasePrice, SumDiscountPrice, SumCharge, AverageQuantity, AveragePrice, AverageDiscount, OrderCount);
+            return string.Format(System.Globalization.CultureInfo.InvariantCulture, "{{sum_qty={0}, sum_base_price={1}, sum_disc_price={2}, sum_charge={3}, avg_qty={4}, avg_price={5}, avg_disc={6}, count_order={7}}}", SumQuantity, SumBasePrice, (long)Math.Round(SumDiscountPrice), (long)Math.Round(SumCharge), AverageQuantity, AveragePrice, AverageDiscount, OrderCount);
         }
+
+        #region ICloneable Members
+
+        object ICloneable.Clone()
+        {
+            return MemberwiseClone();
+        }
+
+        #endregion
     }
 }

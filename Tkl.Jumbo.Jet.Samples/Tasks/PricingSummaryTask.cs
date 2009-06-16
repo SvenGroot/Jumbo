@@ -39,9 +39,9 @@ namespace Tkl.Jumbo.Jet.Samples.Tasks
                     record.Key.LineStatus = item.LineStatus;
                     record.Value.SumQuantity = item.Quantity;
                     record.Value.SumBasePrice = item.ExtendedPrice;
-                    double discountPrice = item.ExtendedPrice * ((100 - item.Discount) / 100.0d);
-                    record.Value.SumDiscountPrice = (long)discountPrice;
-                    record.Value.SumCharge = (long)(discountPrice * ((100 + item.Tax) / 100.0d));
+                    decimal discountPrice = item.ExtendedPrice * ((100 - item.Discount) / 100.0m);
+                    record.Value.SumDiscountPrice = discountPrice;
+                    record.Value.SumCharge = discountPrice * ((100 + item.Tax) / 100.0m);
                     record.Value.SumDiscount = item.Discount;
                     record.Value.OrderCount = 1;
                     output.WriteRecord(record);

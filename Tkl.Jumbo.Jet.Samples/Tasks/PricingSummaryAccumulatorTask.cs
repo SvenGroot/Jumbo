@@ -10,6 +10,7 @@ namespace Tkl.Jumbo.Jet.Samples.Tasks
     /// <summary>
     /// Accumulator task for TPC-H query 1, the pricing summary.
     /// </summary>
+    [AllowRecordReuse]
     public class PricingSummaryAccumulatorTask : AccumulatorTask<PricingSummaryKey, PricingSummaryValue>
     {
         /// <summary>
