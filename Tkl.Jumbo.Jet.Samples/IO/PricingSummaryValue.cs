@@ -11,6 +11,8 @@ namespace Tkl.Jumbo.Jet.Samples.IO
     /// </summary>
     public class PricingSummaryValue : Writable<PricingSummaryValue>, ICloneable
     {
+	  public PricingSummaryValue() { }
+
         /// <summary>
         /// sum_qty, sum(l_quantity)
         /// </summary>

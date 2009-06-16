@@ -314,7 +314,14 @@ namespace Tkl.Jumbo.IO
         public void Read(System.IO.BinaryReader reader)
         {
             int length = WritableUtility.Read7BitEncodedInt(reader);
-            Set(reader.ReadBytes(length));
+			if( length <= Capacity )
+			{
+			  if( reader.Read(_utf8Bytes, 0, length) != length )
+				throw new FormatException("Invalid UTF8StringWritable detected in stream.");
+			  _byteLength = length;
+			}
+			else
+			  Set(reader.ReadBytes(length));
         }
 
         /// <summary>

@@ -11,6 +11,8 @@ namespace Tkl.Jumbo.Jet.Samples.IO
     /// </summary>
     public class PricingSummaryKey : Writable<PricingSummaryKey>, IComparable<PricingSummaryKey>, IEquatable<PricingSummaryKey>, ICloneable
     {
+	  public PricingSummaryKey() { } 
+
         /// <summary>
         /// L_RETURNFLAG, fixed text, size 1
         /// </summary>

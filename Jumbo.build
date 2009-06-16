@@ -96,7 +96,7 @@
       </fileset>
     </copy>
   </target>
-  <target name="ClientSample" depends="Tkl.Jumbo.Dfs,Tkl.Jumbo.Jet,Tkl.Jumbo,Version.cs">
+  <target name="ClientSample" depends="Tkl.Jumbo.Dfs,Tkl.Jumbo.Jet,Tkl.Jumbo.Jet.Samples,Tkl.Jumbo,Version.cs">
     <mkdir dir="nantbin"/>
     <nant buildfile="ClientSample/ClientSample.build" />
     <copy todir="nantbin">
