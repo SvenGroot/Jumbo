@@ -265,7 +265,7 @@ namespace Tkl.Jumbo.Dfs
 
             DfsDirectory directory = NameServer.GetDirectoryInfo(dfsPath);
             if( directory != null )
-                throw new ArgumentException(string.Format("Directory {0} already exists on the DFS.", dfsPath), "dfsPath");
+                throw new ArgumentException(string.Format(System.Globalization.CultureInfo.CurrentCulture, "Directory {0} already exists on the DFS.", dfsPath), "dfsPath");
             NameServer.CreateDirectory(dfsPath);
 
             foreach( string file in files )

@@ -93,6 +93,50 @@ namespace Tkl.Jumbo
             return HostName.GetHashCode() ^ Port;
         }
 
+        /// <summary>
+        /// Determines whether two specified <see cref="ServerAddress"/> objects have the same value.
+        /// </summary>
+        /// <param name="left">A <see cref="ServerAddress"/> or <see langword="null"/>.</param>
+        /// <param name="right">A <see cref="ServerAddress"/> or <see langword="null"/>.</param>
+        /// <returns><see langword="true"/> if the value of <paramref name="left"/> is equal to <paramref name="right"/>; otherwise, <see langword="false"/>.</returns>
+        public static bool operator ==(ServerAddress left, ServerAddress right)
+        {
+            return object.Equals(left, right);
+        }
+
+        /// <summary>
+        /// Determines whether two specified <see cref="ServerAddress"/> objects have different values.
+        /// </summary>
+        /// <param name="left">A <see cref="ServerAddress"/> or <see langword="null"/>.</param>
+        /// <param name="right">A <see cref="ServerAddress"/> or <see langword="null"/>.</param>
+        /// <returns><see langword="true"/> if the value of <paramref name="left"/> is different from <paramref name="right"/>; otherwise, <see langword="false"/>.</returns>
+        public static bool operator !=(ServerAddress left, ServerAddress right)
+        {
+            return !object.Equals(left, right);
+        }
+
+        /// <summary>
+        /// Determines whether one specified <see cref="ServerAddress"/> is less than another specified <see cref="ServerAddress"/>
+        /// </summary>
+        /// <param name="left">A <see cref="ServerAddress"/> or <see langword="null"/>.</param>
+        /// <param name="right">A <see cref="ServerAddress"/> or <see langword="null"/>.</param>
+        /// <returns><see langword="true"/> if <paramref name="left"/> is less than <paramref name="right"/>; otherwise, <see langword="false"/>.</returns>
+        public static bool operator <(ServerAddress left, ServerAddress right)
+        {
+            return Comparer<ServerAddress>.Default.Compare(left, right) < 0;
+        }
+
+        /// <summary>
+        /// Determines whether one specified <see cref="ServerAddress"/> is greater than another specified <see cref="ServerAddress"/>
+        /// </summary>
+        /// <param name="left">A <see cref="ServerAddress"/> or <see langword="null"/>.</param>
+        /// <param name="right">A <see cref="ServerAddress"/> or <see langword="null"/>.</param>
+        /// <returns><see langword="true"/> if <paramref name="left"/> is greater than <paramref name="right"/>; otherwise, <see langword="false"/>.</returns>
+        public static bool operator >(ServerAddress left, ServerAddress right)
+        {
+            return Comparer<ServerAddress>.Default.Compare(left, right) > 0;
+        }
+
         #region IComparable<ServerAddress> Members
 
         /// <summary>

@@ -13,7 +13,7 @@ namespace Tkl.Jumbo.IO
     /// Because this object is mutable you must take care when using it scenarios where immutability is expected, e.g. as a key
     /// in a <see cref="Dictionary{TKey,TValue}"/>.
     /// </remarks>
-    public class UTF8StringWritable : IWritable, IEquatable<UTF8StringWritable>, IComparable<UTF8StringWritable>, IComparable, ICloneable
+    public class Utf8StringWritable : IWritable, IEquatable<Utf8StringWritable>, IComparable<Utf8StringWritable>, IComparable, ICloneable
     {
         private static readonly Encoding _encoding = Encoding.UTF8;
         private static readonly byte[] _emptyArray = new byte[0];
@@ -21,47 +21,47 @@ namespace Tkl.Jumbo.IO
         private int _byteLength;
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="UTF8StringWritable"/> class.
+        /// Initializes a new instance of the <see cref="Utf8StringWritable"/> class.
         /// </summary>
-        public UTF8StringWritable()
+        public Utf8StringWritable()
         {
             _utf8Bytes = _emptyArray;
         }
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="UTF8StringWritable"/> class using the specified string.
+        /// Initializes a new instance of the <see cref="Utf8StringWritable"/> class using the specified string.
         /// </summary>
         /// <param name="value">The <see cref="String"/> to set the value to. May be <see langword="null"/>.</param>
-        public UTF8StringWritable(string value)
+        public Utf8StringWritable(string value)
         {
             Set(value);
         }
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="UTF8StringWritable"/> class using the specified utf-8 byte array.
+        /// Initializes a new instance of the <see cref="Utf8StringWritable"/> class using the specified utf-8 byte array.
         /// </summary>
         /// <param name="value">A byte array containing a utf-8 encoded string.</param>
-        public UTF8StringWritable(byte[] value)
+        public Utf8StringWritable(byte[] value)
         {
             Set(value);
         }
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="UTF8StringWritable"/> class using the specified utf-8 byte array, index and count.
+        /// Initializes a new instance of the <see cref="Utf8StringWritable"/> class using the specified utf-8 byte array, index and count.
         /// </summary>
         /// <param name="value">A byte array containing a utf-8 encoded string.</param>
         /// <param name="index">The index in <paramref name="value"/> to start copying.</param>
         /// <param name="count">The number of bytes from <paramref name="value"/> to copy.</param>
-        public UTF8StringWritable(byte[] value, int index, int count)
+        public Utf8StringWritable(byte[] value, int index, int count)
         {
-            Set(value, 0, count);
+            Set(value, index, count);
         }
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="UTF8StringWritable"/> class that is a copy of the specified <see cref="UTF8StringWritable"/>.
+        /// Initializes a new instance of the <see cref="Utf8StringWritable"/> class that is a copy of the specified <see cref="Utf8StringWritable"/>.
         /// </summary>
-        /// <param name="value">The <see cref="UTF8StringWritable"/> to copy.</param>
-        public UTF8StringWritable(UTF8StringWritable value)
+        /// <param name="value">The <see cref="Utf8StringWritable"/> to copy.</param>
+        public Utf8StringWritable(Utf8StringWritable value)
         {
             Set(value);
         }
@@ -75,7 +75,7 @@ namespace Tkl.Jumbo.IO
             set
             {
                 if( value < 0 )
-                    throw new ArgumentOutOfRangeException("Length less than zero.");
+                    throw new ArgumentOutOfRangeException("value", "Length less than zero.");
                 if( value > _byteLength )
                     throw new ArgumentException("Cannot increase string length.");
                 _byteLength = value;
@@ -91,7 +91,7 @@ namespace Tkl.Jumbo.IO
             set
             {
                 if( value < _byteLength )
-                    throw new ArgumentOutOfRangeException("New capacity is too small");
+                    throw new ArgumentOutOfRangeException("value", "New capacity is too small");
                 int capacity = GetCapacityNeeded(value);
                 byte[] newArray = new byte[capacity];
                 Array.Copy(_utf8Bytes, newArray, _byteLength);
@@ -111,7 +111,7 @@ namespace Tkl.Jumbo.IO
         }
 
         /// <summary>
-        /// Sets the value of this <see cref="UTF8StringWritable"/> to the specified <see cref="String"/>.
+        /// Sets the value of this <see cref="Utf8StringWritable"/> to the specified <see cref="String"/>.
         /// </summary>
         /// <param name="value">The <see cref="String"/> to set the value to. May be <see langword="null"/>.</param>
         public void Set(string value)
@@ -130,7 +130,7 @@ namespace Tkl.Jumbo.IO
         }
 
         /// <summary>
-        /// Sets the value of this <see cref="UTF8StringWritable"/> to the specified byte array.
+        /// Sets the value of this <see cref="Utf8StringWritable"/> to the specified byte array.
         /// </summary>
         /// <param name="value">A byte array containing a utf-8 encoded string.</param>
         public void Set(byte[] value)
@@ -141,7 +141,7 @@ namespace Tkl.Jumbo.IO
         }
 
         /// <summary>
-        /// Sets the value of this <see cref="UTF8StringWritable"/> to the specified region of the specified byte array.
+        /// Sets the value of this <see cref="Utf8StringWritable"/> to the specified region of the specified byte array.
         /// </summary>
         /// <param name="value">A byte array containing a utf-8 encoded string.</param>
         /// <param name="index">The index in <paramref name="value"/> to start copying.</param>
@@ -156,10 +156,10 @@ namespace Tkl.Jumbo.IO
         }
 
         /// <summary>
-        /// Sets the value of this <see cref="UTF8StringWritable"/> to the value of the specified <see cref="UTF8StringWritable"/>.
+        /// Sets the value of this <see cref="Utf8StringWritable"/> to the value of the specified <see cref="Utf8StringWritable"/>.
         /// </summary>
-        /// <param name="value">The <see cref="UTF8StringWritable"/> to copy.</param>
-        public void Set(UTF8StringWritable value)
+        /// <param name="value">The <see cref="Utf8StringWritable"/> to copy.</param>
+        public void Set(Utf8StringWritable value)
         {
             if( value == null )
                 throw new ArgumentNullException("value");
@@ -198,18 +198,18 @@ namespace Tkl.Jumbo.IO
         }
 
         /// <summary>
-        /// Gets a string representation of the current <see cref="UTF8StringWritable"/>.
+        /// Gets a string representation of the current <see cref="Utf8StringWritable"/>.
         /// </summary>
-        /// <returns>A string representation of the current <see cref="UTF8StringWritable"/>.</returns>
+        /// <returns>A string representation of the current <see cref="Utf8StringWritable"/>.</returns>
         public override string ToString()
         {
             return _encoding.GetString(_utf8Bytes, 0, _byteLength);
         }
 
         /// <summary>
-        /// Gets a hash code for this <see cref="UTF8StringWritable"/>.
+        /// Gets a hash code for this <see cref="Utf8StringWritable"/>.
         /// </summary>
-        /// <returns>A 32-bit hash code for this <see cref="UTF8StringWritable"/>.</returns>
+        /// <returns>A 32-bit hash code for this <see cref="Utf8StringWritable"/>.</returns>
         public override int GetHashCode()
         {
             int hash = 1;
@@ -219,33 +219,67 @@ namespace Tkl.Jumbo.IO
         }
 
         /// <summary>
-        /// Tests this <see cref="UTF8StringWritable"/> for equality with the specified object.
+        /// Tests this <see cref="Utf8StringWritable"/> for equality with the specified object.
         /// </summary>
         /// <param name="obj">The <see cref="Object"/> to test for equality.</param>
         /// <returns><see langword="true"/> if this instance is equal to <paramref name="obj"/>; otherwise, <see langword="false"/>.</returns>
         public override bool Equals(object obj)
         {
-            return Equals(obj as UTF8StringWritable);
+            return Equals(obj as Utf8StringWritable);
         }
-
-        private int GetCapacityNeeded(int size)
-        {
-            // Round to multiple of 4
-            unchecked
-            {
-                return (size & (int)0xFFFFFFFC) + 4;
-            }
-        }
-
-
-        #region IEquatable<UTF8StringWritable> Members
 
         /// <summary>
-        /// Tests this <see cref="UTF8StringWritable"/> for equality with the specified <see cref="UTF8StringWritable"/>.
+        /// Determines whether two specified <see cref="Utf8StringWritable"/> objects have the same value.
         /// </summary>
-        /// <param name="other">The <see cref="UTF8StringWritable"/> to test for equality.</param>
+        /// <param name="left">A <see cref="Utf8StringWritable"/> or <see langword="null"/>.</param>
+        /// <param name="right">A <see cref="Utf8StringWritable"/> or <see langword="null"/>.</param>
+        /// <returns><see langword="true"/> if the value of <paramref name="left"/> is equal to <paramref name="right"/>; otherwise, <see langword="false"/>.</returns>
+        public static bool operator ==(Utf8StringWritable left, Utf8StringWritable right)
+        {
+            return object.Equals(left, right);
+        }
+
+        /// <summary>
+        /// Determines whether two specified <see cref="Utf8StringWritable"/> objects have different values.
+        /// </summary>
+        /// <param name="left">A <see cref="Utf8StringWritable"/> or <see langword="null"/>.</param>
+        /// <param name="right">A <see cref="Utf8StringWritable"/> or <see langword="null"/>.</param>
+        /// <returns><see langword="true"/> if the value of <paramref name="left"/> is different from <paramref name="right"/>; otherwise, <see langword="false"/>.</returns>
+        public static bool operator !=(Utf8StringWritable left, Utf8StringWritable right)
+        {
+            return !object.Equals(left, right);
+        }
+
+        /// <summary>
+        /// Determines whether one specified <see cref="Utf8StringWritable"/> is less than another specified <see cref="Utf8StringWritable"/>
+        /// </summary>
+        /// <param name="left">A <see cref="Utf8StringWritable"/> or <see langword="null"/>.</param>
+        /// <param name="right">A <see cref="Utf8StringWritable"/> or <see langword="null"/>.</param>
+        /// <returns><see langword="true"/> if <paramref name="left"/> is less than <paramref name="right"/>; otherwise, <see langword="false"/>.</returns>
+        public static bool operator <(Utf8StringWritable left, Utf8StringWritable right)
+        {
+            return Comparer<Utf8StringWritable>.Default.Compare(left, right) < 0;
+        }
+
+        /// <summary>
+        /// Determines whether one specified <see cref="Utf8StringWritable"/> is greater than another specified <see cref="Utf8StringWritable"/>
+        /// </summary>
+        /// <param name="left">A <see cref="Utf8StringWritable"/> or <see langword="null"/>.</param>
+        /// <param name="right">A <see cref="Utf8StringWritable"/> or <see langword="null"/>.</param>
+        /// <returns><see langword="true"/> if <paramref name="left"/> is greater than <paramref name="right"/>; otherwise, <see langword="false"/>.</returns>
+        public static bool operator >(Utf8StringWritable left, Utf8StringWritable right)
+        {
+            return Comparer<Utf8StringWritable>.Default.Compare(left, right) > 0;
+        }
+
+        #region IEquatable<Utf8StringWritable> Members
+
+        /// <summary>
+        /// Tests this <see cref="Utf8StringWritable"/> for equality with the specified <see cref="Utf8StringWritable"/>.
+        /// </summary>
+        /// <param name="other">The <see cref="Utf8StringWritable"/> to test for equality.</param>
         /// <returns><see langword="true"/> if this instance is equal to <paramref name="obj"/>; otherwise, <see langword="false"/>.</returns>
-        public bool Equals(UTF8StringWritable other)
+        public bool Equals(Utf8StringWritable other)
         {
             if( other == null || other._byteLength != _byteLength )
                 return false;
@@ -260,7 +294,7 @@ namespace Tkl.Jumbo.IO
 
         #endregion
 
-        #region IComparable<UTF8StringWritable> Members
+        #region IComparable<Utf8StringWritable> Members
 
         /// <summary>
         /// Compares the current instance with another object of the same type and returns an integer that 
@@ -269,7 +303,7 @@ namespace Tkl.Jumbo.IO
         /// </summary>
         /// <param name="other">An object to compare with this instance.</param>
         /// <returns>A 32-bit signed integer that indicates the relative order of the objects being compared.</returns>
-        public int CompareTo(UTF8StringWritable other)
+        public int CompareTo(Utf8StringWritable other)
         {
             if( other == null )
                 return 1;
@@ -300,7 +334,7 @@ namespace Tkl.Jumbo.IO
         /// <returns>A 32-bit signed integer that indicates the relative order of the objects being compared.</returns>
         public int CompareTo(object obj)
         {
-            return CompareTo(obj as UTF8StringWritable);
+            return CompareTo(obj as Utf8StringWritable);
         }
 
         #endregion
@@ -313,11 +347,11 @@ namespace Tkl.Jumbo.IO
         /// <param name="reader">The <see cref="System.IO.BinaryReader"/> to deserialize the object from.</param>
         public void Read(System.IO.BinaryReader reader)
         {
-            int length = WritableUtility.Read7BitEncodedInt(reader);
+            int length = WritableUtility.Read7BitEncodedInt32(reader);
 			if( length <= Capacity )
 			{
 			  if( reader.Read(_utf8Bytes, 0, length) != length )
-				throw new FormatException("Invalid UTF8StringWritable detected in stream.");
+				throw new FormatException("Invalid Utf8StringWritable detected in stream.");
 			  _byteLength = length;
 			}
 			else
@@ -330,7 +364,7 @@ namespace Tkl.Jumbo.IO
         /// <param name="writer">The <see cref="System.IO.BinaryWriter"/> to serialize the object to.</param>
         public void Write(System.IO.BinaryWriter writer)
         {
-            WritableUtility.Write7BitEncodedInt(writer, _byteLength);
+            WritableUtility.Write7BitEncodedInt32(writer, _byteLength);
             writer.Write(_utf8Bytes, 0, _byteLength);
         }
 
@@ -338,11 +372,24 @@ namespace Tkl.Jumbo.IO
 
         #region ICloneable Members
 
-        object ICloneable.Clone()
+        /// <summary>
+        /// Creates a clone of the current <see cref="Utf8StringWritable"/>.
+        /// </summary>
+        /// <returns>A new <see cref="Utf8StringWritable"/> with the same value as the current instance.</returns>
+        public object Clone()
         {
-            return new UTF8StringWritable(this);
+            return new Utf8StringWritable(this);
         }
 
         #endregion
+
+        private static int GetCapacityNeeded(int size)
+        {
+            // Round to multiple of 4
+            unchecked
+            {
+                return (size & (int)0xFFFFFFFC) + 4;
+            }
+        }
     }
 }

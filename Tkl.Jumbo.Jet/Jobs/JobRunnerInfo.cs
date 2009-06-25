@@ -149,14 +149,14 @@ namespace Tkl.Jumbo.Jet.Jobs
                 if( !string.IsNullOrEmpty(argument.Description) )
                 {
                     usage.AppendLine();
-                    usage.Append(string.Format("{0,13} : {1}", argument.Name, argument.Description).GetLines(maxLineLength, 16));
+                    usage.Append(string.Format(System.Globalization.CultureInfo.CurrentCulture, "{0,13} : {1}", argument.Name, argument.Description).GetLines(maxLineLength, 16));
                 }
             }
 
             foreach( JobRunnerNamedArgument argument in _namedArguments.Values )
             {
                 usage.AppendLine();
-                usage.Append(string.Format("{0,13} : {1}", "-" + argument.Name, argument.Description).GetLines(maxLineLength, 16));
+                usage.Append(string.Format(System.Globalization.CultureInfo.CurrentCulture, "{0,13} : {1}", "-" + argument.Name, argument.Description).GetLines(maxLineLength, 16));
             }
 
             return usage.ToString();

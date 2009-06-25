@@ -128,8 +128,8 @@ namespace Tkl.Jumbo
 
                 object mode = fileAccessPermissionsProperty.GetValue(unixFile, null);
                 Type fileAccessPermissionsType = mode.GetType();
-                int oldMode = Convert.ToInt32(mode);
-                int executeBit = Convert.ToInt32(fileAccessPermissionsType.GetField("UserExecute").GetValue(null));
+                int oldMode = Convert.ToInt32(mode, System.Globalization.CultureInfo.InvariantCulture);
+                int executeBit = Convert.ToInt32(fileAccessPermissionsType.GetField("UserExecute").GetValue(null), System.Globalization.CultureInfo.InvariantCulture);
                 int newMode = oldMode | executeBit;
 
                 if( newMode != oldMode )

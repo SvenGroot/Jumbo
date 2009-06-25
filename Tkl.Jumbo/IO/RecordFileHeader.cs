@@ -49,7 +49,7 @@ namespace Tkl.Jumbo.IO
     ///   a record marker, or 0 to indicate a record.
     /// </para>
     /// </remarks>
-    public class RecordFileHeader : IWritable
+    public sealed class RecordFileHeader : IWritable
     {
         private static readonly byte[] _headerStart = new[] { (byte)'R', (byte)'E', (byte)'C', RecordFile.CurrentVersion };
         private Type _recordType;

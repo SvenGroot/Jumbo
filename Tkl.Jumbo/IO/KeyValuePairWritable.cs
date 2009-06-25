@@ -66,6 +66,50 @@ namespace Tkl.Jumbo.IO
             return Key == null ? 0 : Key.GetHashCode();
         }
 
+        /// <summary>
+        /// Determines whether two specified <see cref="KeyValuePairWritable{TKey, TValue}"/> objects have the same value.
+        /// </summary>
+        /// <param name="left">A <see cref="KeyValuePairWritable{TKey, TValue}"/> or <see langword="null"/>.</param>
+        /// <param name="right">A <see cref="KeyValuePairWritable{TKey, TValue}"/> or <see langword="null"/>.</param>
+        /// <returns><see langword="true"/> if the value of <paramref name="left"/> is equal to <paramref name="right"/>; otherwise, <see langword="false"/>.</returns>
+        public static bool operator ==(KeyValuePairWritable<TKey, TValue> left, KeyValuePairWritable<TKey, TValue> right)
+        {
+            return object.Equals(left, right);
+        }
+
+        /// <summary>
+        /// Determines whether two specified <see cref="KeyValuePairWritable{TKey, TValue}"/> objects have different values.
+        /// </summary>
+        /// <param name="left">A <see cref="KeyValuePairWritable{TKey, TValue}"/> or <see langword="null"/>.</param>
+        /// <param name="right">A <see cref="KeyValuePairWritable{TKey, TValue}"/> or <see langword="null"/>.</param>
+        /// <returns><see langword="true"/> if the value of <paramref name="left"/> is different from <paramref name="right"/>; otherwise, <see langword="false"/>.</returns>
+        public static bool operator !=(KeyValuePairWritable<TKey, TValue> left, KeyValuePairWritable<TKey, TValue> right)
+        {
+            return !object.Equals(left, right);
+        }
+
+        /// <summary>
+        /// Determines whether one specified <see cref="KeyValuePairWritable{TKey, TValue}"/> is less than another specified <see cref="KeyValuePairWritable{TKey, TValue}"/>
+        /// </summary>
+        /// <param name="left">A <see cref="KeyValuePairWritable{TKey, TValue}"/> or <see langword="null"/>.</param>
+        /// <param name="right">A <see cref="KeyValuePairWritable{TKey, TValue}"/> or <see langword="null"/>.</param>
+        /// <returns><see langword="true"/> if <paramref name="left"/> is less than <paramref name="right"/>; otherwise, <see langword="false"/>.</returns>
+        public static bool operator <(KeyValuePairWritable<TKey, TValue> left, KeyValuePairWritable<TKey, TValue> right)
+        {
+            return Comparer<KeyValuePairWritable<TKey, TValue>>.Default.Compare(left, right) < 0;
+        }
+
+        /// <summary>
+        /// Determines whether one specified <see cref="KeyValuePairWritable{TKey, TValue}"/> is greater than another specified <see cref="KeyValuePairWritable{TKey, TValue}"/>
+        /// </summary>
+        /// <param name="left">A <see cref="KeyValuePairWritable{TKey, TValue}"/> or <see langword="null"/>.</param>
+        /// <param name="right">A <see cref="KeyValuePairWritable{TKey, TValue}"/> or <see langword="null"/>.</param>
+        /// <returns><see langword="true"/> if <paramref name="left"/> is greater than <paramref name="right"/>; otherwise, <see langword="false"/>.</returns>
+        public static bool operator >(KeyValuePairWritable<TKey, TValue> left, KeyValuePairWritable<TKey, TValue> right)
+        {
+            return Comparer<KeyValuePairWritable<TKey, TValue>>.Default.Compare(left, right) > 0;
+        }
+
         #region IWritable Members
 
         /// <summary>

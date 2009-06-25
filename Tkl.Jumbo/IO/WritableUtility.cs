@@ -33,6 +33,7 @@ namespace Tkl.Jumbo.IO
         ///   that indicates whether it's <see langword="null"/> or not.
         /// </para>
         /// </remarks>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1004:GenericMethodsShouldProvideTypeParameter")]
         public static Action<T, BinaryWriter> CreateSerializer<T>()
         {
             Type type = typeof(T);
@@ -117,7 +118,7 @@ namespace Tkl.Jumbo.IO
                         }
                         else
                         {
-                            throw new NotSupportedException(string.Format("Cannot generate an IWritable.Write implementation for type {0} because property {1} has unsupported type {2}.", typeof(T), property.Name, property.PropertyType));
+                            throw new NotSupportedException(string.Format(System.Globalization.CultureInfo.CurrentCulture, "Cannot generate an IWritable.Write implementation for type {0} because property {1} has unsupported type {2}.", typeof(T), property.Name, property.PropertyType));
                         }
                     }
                 }
@@ -141,6 +142,7 @@ namespace Tkl.Jumbo.IO
         ///   The function returned should only be used to deserialize data created by a function returned by <see cref="CreateSerializer{T}"/>.
         /// </para>
         /// </remarks>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1004:GenericMethodsShouldProvideTypeParameter")]
         public static Action<T, BinaryReader> CreateDeserializer<T>()
         {
             Type type = typeof(T);
@@ -292,7 +294,7 @@ namespace Tkl.Jumbo.IO
             MethodInfo[] methods = typeof(BinaryReader).GetMethods(BindingFlags.Instance | BindingFlags.Public);
             foreach( MethodInfo method in methods )
             {
-                if( method.Name.StartsWith("Read") && method.Name.Length > 4 && method.GetParameters().Length == 0 )
+                if( method.Name.StartsWith("Read", StringComparison.Ordinal) && method.Name.Length > 4 && method.GetParameters().Length == 0 )
                 {
                     result.Add(method.ReturnType, method);
                 }
@@ -305,7 +307,7 @@ namespace Tkl.Jumbo.IO
         /// </summary>
         /// <param name="writer">The <see cref="BinaryWriter"/> to write the value to.</param>
         /// <param name="value">The 32-bit integer to be written.</param>
-        public static void Write7BitEncodedInt(BinaryWriter writer, int value)
+        public static void Write7BitEncodedInt32(BinaryWriter writer, int value)
         {
             if( writer == null )
                 throw new ArgumentNullException("writer");
@@ -323,7 +325,7 @@ namespace Tkl.Jumbo.IO
         /// </summary>
         /// <param name="reader">The <see cref="BinaryReader"/> to read the value from.</param>
         /// <returns>A 32-bit integer in compressed format. </returns>
-        public static int Read7BitEncodedInt(BinaryReader reader)
+        public static int Read7BitEncodedInt32(BinaryReader reader)
         {
             if( reader == null )
                 throw new ArgumentNullException("reader");

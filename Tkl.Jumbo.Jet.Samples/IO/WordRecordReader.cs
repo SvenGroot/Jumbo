@@ -11,7 +11,7 @@ namespace Tkl.Jumbo.Jet.Samples.IO
     /// Reads records from a stream using line breaks as the record
     /// boundary.
     /// </summary>
-    public class WordRecordReader : StreamRecordReader<UTF8StringWritable>
+    public class WordRecordReader : StreamRecordReader<Utf8StringWritable>
     {
         // Unfortunately we cannot use StreamReader because with the
         // buffering it does we cannot
@@ -23,7 +23,7 @@ namespace Tkl.Jumbo.Jet.Samples.IO
             private char[] _charBuffer;
             private int _bufferPos;
             private int _bufferLength;
-            private readonly UTF8StringWritable _word = new UTF8StringWritable();
+            private readonly Utf8StringWritable _word = new Utf8StringWritable();
 
             public WordReader(Stream stream, int bufferSize)
             {
@@ -32,7 +32,7 @@ namespace Tkl.Jumbo.Jet.Samples.IO
                 _charBuffer = new char[Encoding.UTF8.GetMaxCharCount(bufferSize) + 1];
             }
 
-            public UTF8StringWritable Word
+            public Utf8StringWritable Word
             {
                 get { return _word; }
             }
@@ -93,7 +93,7 @@ namespace Tkl.Jumbo.Jet.Samples.IO
 
         private const int _bufferSize = 4096;
         private WordReader _reader;
-        private UTF8StringWritable _word;
+        private Utf8StringWritable _word;
         private long _position;
         private long _end;
         private StringWritable _record = new StringWritable();

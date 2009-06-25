@@ -10,6 +10,7 @@
       <Word>Crc</Word>
       <Word>IPv4</Word>
       <Word>IPv6</Word>
+      <Word>Deserializer</Word>
     </Recognized>
   </Words>
 </Dictionary>
