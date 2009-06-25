@@ -11,7 +11,10 @@ namespace Tkl.Jumbo.Jet.Samples.IO
     /// </summary>
     public class PricingSummaryKey : Writable<PricingSummaryKey>, IComparable<PricingSummaryKey>, IEquatable<PricingSummaryKey>, ICloneable
     {
-	  public PricingSummaryKey() { } 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="PricingSummaryKey"/> class.
+        /// </summary>
+	    public PricingSummaryKey() { } 
 
         /// <summary>
         /// L_RETURNFLAG, fixed text, size 1

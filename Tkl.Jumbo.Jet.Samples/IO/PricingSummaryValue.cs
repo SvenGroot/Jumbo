@@ -11,7 +11,10 @@ namespace Tkl.Jumbo.Jet.Samples.IO
     /// </summary>
     public class PricingSummaryValue : Writable<PricingSummaryValue>, ICloneable
     {
-	  public PricingSummaryValue() { }
+        /// <summary>
+        /// Initializes a new instance of the <see cref="PricingSummaryValue"/> class.
+        /// </summary>
+	    public PricingSummaryValue() { }
 
         /// <summary>
         /// sum_qty, sum(l_quantity)

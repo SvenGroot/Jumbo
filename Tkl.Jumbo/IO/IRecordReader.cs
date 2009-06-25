@@ -29,5 +29,21 @@ namespace Tkl.Jumbo.IO
         /// Gets the progress for the task, between 0 and 1.
         /// </summary>
         float Progress { get; }
+
+        /// <summary>
+        /// Gets the current record.
+        /// </summary>
+        object CurrentRecord { get; }
+
+        /// <summary>
+        /// Gets or sets the an informational string indicating the source of the records.
+        /// </summary>
+        string SourceName { get; set;  }
+
+        /// <summary>
+        /// Reads a record.
+        /// </summary>
+        /// <returns><see langword="true"/> if an object was successfully read from the stream; <see langword="false"/> if the end of the stream or stream fragment was reached.</returns>
+        bool ReadRecord();
     }
 }

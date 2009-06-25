@@ -280,5 +280,31 @@ namespace Tkl.Jumbo.Jet
         }
 
         #endregion
+
+        #region IRecordReader Members
+
+        object IRecordReader.CurrentRecord
+        {
+            get { throw new NotImplementedException(); }
+        }
+
+        string IRecordReader.SourceName
+        {
+            get
+            {
+                throw new NotImplementedException();
+            }
+            set
+            {
+                throw new NotImplementedException();
+            }
+        }
+
+        bool IRecordReader.ReadRecord()
+        {
+            throw new NotImplementedException();
+        }
+
+        #endregion
     }
 }

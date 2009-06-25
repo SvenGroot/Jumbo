@@ -28,8 +28,6 @@ namespace Tkl.Jumbo.Dfs
         private Exception _lastException;
         private Thread _fillBufferThread;
         private bool _disposed;
-        //private readonly Stopwatch _readTime = null;new Stopwatch();
-	    private int _totalReads;
         private Packet _currentPacket;
 
         /// <summary>
@@ -171,8 +169,6 @@ namespace Tkl.Jumbo.Dfs
             if( offset + count > buffer.Length )
                 throw new ArgumentException("The sum of offset and count is greater than the buffer length.");
 
-            //_readTime.Start();
-
             if( _fillBufferThread == null )
             {
                 // We don't start the thread in the constructor because that'd be a waste if you immediately seek after that.
@@ -217,8 +213,6 @@ namespace Tkl.Jumbo.Dfs
 
                 Debug.Assert(sizeRemaining == 0);
             }
-            //_readTime.Stop();
-            //++_totalReads;
             return count;
         }
 

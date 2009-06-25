@@ -109,5 +109,13 @@ namespace Tkl.Jumbo.IO
 
         #endregion
 
+        #region Explicit IRecordReader Members
+
+        object IRecordReader.CurrentRecord
+        {
+            get { return CurrentRecord; }
+        }
+
+        #endregion
     }
 }

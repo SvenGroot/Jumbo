@@ -116,7 +116,7 @@ namespace Tkl.Jumbo.Jet.Channels
                 throw new InvalidOperationException("A record reader for this channel was already created.");
 
             _log.InfoFormat("Creating MultiRecordReader for {0} inputs, allow record reuse = {1}, buffer size = {2}.", _inputTaskIds.Count, _taskExecution.AllowRecordReuse, _taskExecution.JetClient.Configuration.FileChannel.ReadBufferSize);
-            MultiRecordReader<T> reader = new MultiRecordReader<T>(null, _inputTaskIds.Count);
+            MultiRecordReader<T> reader = new MultiRecordReader<T>(_inputTaskIds.Count, _taskExecution.AllowRecordReuse, _taskExecution.JetClient.Configuration.FileChannel.DeleteIntermediateFiles, _taskExecution.JetClient.Configuration.FileChannel.ReadBufferSize, _compressionType);
             _inputPollThread = new Thread(InputPollThread);
             _inputPollThread.Name = "FileInputChannelPolling";
             _inputPollThread.Start();
@@ -354,7 +354,7 @@ namespace Tkl.Jumbo.Jet.Channels
                     taskReader = new BinaryRecordReader<T>(fileName, _taskExecution.AllowRecordReuse, deleteFile, _taskExecution.JetClient.Configuration.FileChannel.ReadBufferSize, _compressionType, uncompressedSize);
                 }
                 taskReader.SourceName = task.TaskId;
-                reader.AddReader(taskReader);
+                reader.AddInput(taskReader);
             }
             else
             {
