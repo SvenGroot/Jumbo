@@ -63,6 +63,7 @@
     <Compile Include="AssemblyResolver.cs" />
     <Compile Include="Channels\ChannelConfiguration.cs" />
     <Compile Include="Channels\ChannelConnectivity.cs" />
+    <Compile Include="Channels\ChannelInputConfiguration.cs" />
     <Compile Include="Channels\ChannelType.cs" />
     <Compile Include="Channels\FileChannelMemoryStorageManager.cs" />
     <Compile Include="Channels\FileInputChannel.cs" />
@@ -76,7 +77,6 @@
     <Compile Include="FileChannelConfigurationElement.cs" />
     <Compile Include="GlobalSuppressions.cs" />
     <Compile Include="IConfigurable.cs" />
-    <Compile Include="IMergeTask.cs" />
     <Compile Include="IPullTask.cs" />
     <Compile Include="IPushTask.cs" />
     <Compile Include="ITaskServerClientProtocol.cs" />
@@ -104,7 +104,7 @@
     <Compile Include="Jobs\JobRunnerPositionalArgument.cs" />
     <Compile Include="Jobs\NamedArgumentAttribute.cs" />
     <Compile Include="Jobs\OptionalArgumentAttribute.cs" />
-    <Compile Include="MergeTaskInput.cs" />
+    <Compile Include="MergeRecordReader.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="RunTaskJetHeartbeatResponse.cs" />
     <Compile Include="ServerShutdownException.cs" />
@@ -126,8 +126,7 @@
     <Compile Include="TaskStatusChangedJetHeartbeatData.cs" />
     <Compile Include="Tasks\AccumulatorTask.cs" />
     <Compile Include="Tasks\EmptyTask.cs" />
-    <Compile Include="Tasks\MergeSortTask.cs" />
-    <Compile Include="Tasks\MergeSortTaskConstants.cs" />
+    <Compile Include="MergeRecordReaderConstants.cs" />
     <Compile Include="Tasks\SortTask.cs" />
   </ItemGroup>
   <ItemGroup>

@@ -86,8 +86,9 @@ namespace Tkl.Jumbo.Test.Jet
             {
                 ChannelType = ChannelType.File,
                 PartitionerType = typeof(HashPartitioner<Int32Writable>),
+                Input = new ChannelInputConfiguration() { MultiInputRecordReaderType = typeof(MultiRecordReader<Int32Writable>) }
             };
-            channel.InputStages.Add("Task.OutputTask");
+            channel.Input.InputStages.Add("Task.OutputTask");
             config.Channels.Add(channel);
 
             return config;

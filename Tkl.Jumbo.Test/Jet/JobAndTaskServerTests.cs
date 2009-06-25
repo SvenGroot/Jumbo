@@ -22,7 +22,6 @@ namespace Tkl.Jumbo.Test.Jet
         {
             Pull,
             Push,
-            Merge
         }
 
         private TestJetCluster _cluster;
@@ -73,12 +72,6 @@ namespace Tkl.Jumbo.Test.Jet
         }
 
         [Test]
-        public void TestJobExecutionMergeTask()
-        {
-            RunJob(false, "/joboutput5", TaskKind.Merge, ChannelType.File);
-        }
-
-        [Test]
         public void TestJobExecutionSort()
         {
             const int recordCount = 2500000;
@@ -92,8 +85,8 @@ namespace Tkl.Jumbo.Test.Jet
 
             JobConfiguration config = new JobConfiguration(typeof(StringConversionTask).Assembly);
             StageConfiguration conversionStage = config.AddInputStage("ConversionStage", dfsClient.NameServer.GetFileInfo("/sortinput"), typeof(StringConversionTask), typeof(LineRecordReader));
-            StageConfiguration sortStage = config.AddStage("SortStage", new[] { conversionStage }, typeof(SortTask<Int32Writable>), 1, ChannelType.Pipeline, ChannelConnectivity.PointToPoint, null, null, null);
-            config.AddStage("MergeStage", new[] { sortStage }, typeof(MergeSortTask<Int32Writable>), 1, ChannelType.File, ChannelConnectivity.Full, null, outputPath, typeof(BinaryRecordWriter<Int32Writable>));
+            StageConfiguration sortStage = config.AddStage("SortStage", new[] { conversionStage }, typeof(SortTask<Int32Writable>), 1, ChannelType.Pipeline, ChannelConnectivity.PointToPoint, null, null, null, null);
+            config.AddStage("MergeStage", new[] { sortStage }, typeof(EmptyTask<Int32Writable>), 1, ChannelType.File, ChannelConnectivity.Full, typeof(MergeRecordReader<Int32Writable>), null, outputPath, typeof(BinaryRecordWriter<Int32Writable>));
 
             RunJob(dfsClient, config);
 
@@ -182,10 +175,6 @@ namespace Tkl.Jumbo.Test.Jet
                 counterTask = typeof(LineCounterPushTask);
                 adderTask = typeof(LineAdderPushTask);
                 break;
-            case TaskKind.Merge:
-                counterTask = typeof(LineCounterTask);
-                adderTask = typeof(LineAdderMergeTask);
-                break;
             }
 
             Tkl.Jumbo.Dfs.DfsFile file = dfsClient.NameServer.GetFileInfo(_fileName);
@@ -202,10 +191,6 @@ namespace Tkl.Jumbo.Test.Jet
             using( DfsInputStream stream = dfsClient.OpenFile(outputFileName) )
             using( StreamReader reader = new StreamReader(stream) )
             {
-                // The test merge task writes the number of inputs it received to the file.
-                if( taskKind == TaskKind.Merge )
-                    Assert.AreEqual(file.Blocks.Count, Convert.ToInt32(reader.ReadLine()));
-
                 Assert.AreEqual(_lines, Convert.ToInt32(reader.ReadLine()));
             }
 
@@ -223,7 +208,7 @@ namespace Tkl.Jumbo.Test.Jet
                 // Pipeline channel cannot merge so we will add another stage in between.
                 stage = config.AddPointToPointStage("IntermediateTask", stage, adderTask, ChannelType.Pipeline, null, null);
             }
-            config.AddStage("OutputTask", new[] { stage }, adderTask, 1, ChannelType.File, ChannelConnectivity.Full, null, outputPath, typeof(TextRecordWriter<Int32Writable>));
+            config.AddStage("OutputTask", new[] { stage }, adderTask, 1, ChannelType.File, ChannelConnectivity.Full, null, null, outputPath, typeof(TextRecordWriter<Int32Writable>));
             config.Channels[0].ForceFileDownload = forceFileDownload;
 
             return config;

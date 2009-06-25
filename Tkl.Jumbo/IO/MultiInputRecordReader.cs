@@ -138,6 +138,22 @@ namespace Tkl.Jumbo.IO
         public CompressionType CompressionType { get; private set; }
 
         /// <summary>
+        /// Gets the combined progress of the record readers.
+        /// </summary>
+        public override float Progress
+        {
+            get
+            {
+                lock( _inputs )
+                {
+                    return (from input in _inputs
+                            where input.IsReaderCreated
+                            select input.Reader.Progress).Sum() / (float)TotalInputCount;
+                }
+            }
+        }
+
+        /// <summary>
         /// Gets the current number of inputs that have been added to the <see cref="MultiInputRecordReader{T}"/>.
         /// </summary>
         public int CurrentInputCount
@@ -152,10 +168,18 @@ namespace Tkl.Jumbo.IO
         }
 
         /// <summary>
+        /// Gets a value that indicates whether the object has been disposed.
+        /// </summary>
+        protected bool IsDisposed
+        {
+            get { return _disposed; }
+        }
+
+        /// <summary>
         /// Adds the specified record reader to the inputs to be read by this record reader.
         /// </summary>
         /// <param name="reader">The record reader to read from.</param>
-        public void AddInput(IRecordReader reader)
+        public virtual void AddInput(IRecordReader reader)
         {
             if( reader == null )
                 throw new ArgumentNullException("reader");

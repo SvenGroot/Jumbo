@@ -54,11 +54,11 @@ namespace Tkl.Jumbo.Jet.Channels
                     else
                     {
                         string inputStageId = _taskExecution.Configuration.TaskId.CompoundStageId;
-                        int inputStageIndex = channelConfig.InputStages.IndexOf(inputStageId);
+                        int inputStageIndex = channelConfig.Input.InputStages.IndexOf(inputStageId);
                         int outputTaskNumber = 0;
                         for( int x = 0; x < inputStageIndex; ++x )
                         {
-                            IList<StageConfiguration> inputStages = _taskExecution.Configuration.JobConfiguration.GetPipelinedStages(channelConfig.InputStages[x]);
+                            IList<StageConfiguration> inputStages = _taskExecution.Configuration.JobConfiguration.GetPipelinedStages(channelConfig.Input.InputStages[x]);
 
                             outputTaskNumber += inputStages[inputStages.Count - 1].TaskCount;
                         }
@@ -144,13 +144,13 @@ namespace Tkl.Jumbo.Jet.Channels
             // If there are multiple input stages, we need to check which one we are and adjust the output task number according to the
             // number of tasks in the preceding input stages.
             string inputStageId = _taskExecution.Configuration.TaskId.CompoundStageId;
-            int inputStageIndex = channelConfig.InputStages.IndexOf(inputStageId);
+            int inputStageIndex = channelConfig.Input.InputStages.IndexOf(inputStageId);
 
             int outputTaskNumber = 0;
             IList<StageConfiguration> stages;
             for( int x = 0; x < inputStageIndex; ++x )
             {
-                outputTaskNumber += _taskExecution.Configuration.JobConfiguration.GetTotalTaskCount(channelConfig.InputStages[x]);
+                outputTaskNumber += _taskExecution.Configuration.JobConfiguration.GetTotalTaskCount(channelConfig.Input.InputStages[x]);
             }
 
             stages = _taskExecution.Configuration.JobConfiguration.GetPipelinedStages(inputStageId);

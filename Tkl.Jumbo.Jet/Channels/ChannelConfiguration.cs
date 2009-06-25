@@ -16,7 +16,6 @@ namespace Tkl.Jumbo.Jet.Channels
     {
         private string _partitionerTypeName;
         private Type _partitionerType;
-        private readonly ExtendedCollection<string> _inputStages = new ExtendedCollection<string>();
         private readonly ExtendedCollection<string> _outputStages = new ExtendedCollection<string>();
 
         /// <summary>
@@ -26,16 +25,12 @@ namespace Tkl.Jumbo.Jet.Channels
         public ChannelType ChannelType { get; set; }
 
         /// <summary>
-        /// Gets or sets the IDs of the stages whose tasks write to the channel.
+        /// Gets or sets the channel input.
         /// </summary>
-        [XmlArrayItem("Stage")]
-        public Collection<string> InputStages
-        {
-            get { return _inputStages; }
-        }
-
+        public ChannelInputConfiguration Input { get; set; }
+        
         /// <summary>
-        /// Gets or sets the IDs of the stages whose tasks that read from the channel.
+        /// Gets the list of IDs of the stages whose tasks that read from the channel.
         /// </summary>
         [XmlArrayItem("Stage")]
         public Collection<string> OutputStages

@@ -154,6 +154,8 @@ namespace Tkl.Jumbo.Jet
         /// <param name="taskCount">The number of tasks to create in this stage.</param>
         /// <param name="channelType">One of the <see cref="ChannelType"/> files indicating the type of channel to use between the the input stages and the new stage.</param>
         /// <param name="connectivity">The type of connectivity to use. Ignored if <paramref name="channelType"/> is <see cref="ChannelType.Pipeline"/>.</param>
+        /// <param name="multiInputRecordReaderType">The type of the multi input record reader to use by the output tasks if there are multiple input tasks, or
+        /// <see langword="null"/> to use the default <see cref="MultiRecordReader{T}"/>. This type must derive from <see cref="MultiInputRecordReader{T}"/>.</param>
         /// <param name="partitionerType">The type of the partitioner to use, or <see langword="null"/> to use the default <see cref="HashPartitioner{T}"/>. This type must implement <see cref="IPartitioner{T}"/>.</param>
         /// <param name="outputPath">The name of a DFS directory to write the stage's output files to, or <see langword="null"/> to indicate this stage does not write to the DFS.</param>
         /// <param name="recordWriterType">The type of the record writer to use when writing to the output files; this parameter is ignored if <paramref name="outputPath"/> is <see langword="null" />.</param>
@@ -164,7 +166,7 @@ namespace Tkl.Jumbo.Jet
         ///   object created using the <see cref="LoadXml(string)"/> method.
         /// </note>
         /// </remarks>
-        public StageConfiguration AddStage(string stageId, IEnumerable<StageConfiguration> inputStages, Type taskType, int taskCount, ChannelType channelType, ChannelConnectivity connectivity, Type partitionerType, string outputPath, Type recordWriterType)
+        public StageConfiguration AddStage(string stageId, IEnumerable<StageConfiguration> inputStages, Type taskType, int taskCount, ChannelType channelType, ChannelConnectivity connectivity, Type multiInputRecordReaderType, Type partitionerType, string outputPath, Type recordWriterType)
         {
             if( stageId == null )
                 throw new ArgumentNullException("stageId");
@@ -215,9 +217,10 @@ namespace Tkl.Jumbo.Jet
                     {
                         ChannelType = channelType,
                         PartitionerType = partitionerType ?? typeof(HashPartitioner<>).MakeGenericType(inputType),
-                        Connectivity = connectivity
+                        Connectivity = connectivity,
+                        Input = new ChannelInputConfiguration() { MultiInputRecordReaderType = multiInputRecordReaderType ?? typeof(MultiRecordReader<>).MakeGenericType(inputType) }
                     };
-                    channel.InputStages.AddRange(from s in inputStages select s.CompoundStageId);
+                    channel.Input.InputStages.AddRange(from s in inputStages select s.CompoundStageId);
                     channel.OutputStages.Add(stageId);
                     Channels.Add(channel);
                 }
@@ -240,7 +243,7 @@ namespace Tkl.Jumbo.Jet
         {
             if( inputStage == null )
                 throw new ArgumentNullException("inputStage");
-            return AddStage(stageId, new[] { inputStage }, taskType, channelType == ChannelType.Pipeline ? 1 : inputStage.TaskCount, channelType, ChannelConnectivity.PointToPoint, null, outputPath, recordWriterType);
+            return AddStage(stageId, new[] { inputStage }, taskType, channelType == ChannelType.Pipeline ? 1 : inputStage.TaskCount, channelType, ChannelConnectivity.PointToPoint, null, null, outputPath, recordWriterType);
         }
 
         private static void ValidateChannelConnectivityConstraints(IEnumerable<StageConfiguration> inputStages, ChannelConnectivity connectivity, StageConfiguration stage)
@@ -307,6 +310,17 @@ namespace Tkl.Jumbo.Jet
                 Type partitionedType = partitionerInterfaceType.GetGenericArguments()[0];
                 if( partitionedType != inputType )
                     throw new ArgumentException(string.Format(System.Globalization.CultureInfo.CurrentCulture, "The partitioner type {0} cannot partition objects of type {1}.", partitionerType, inputType), "partitionerType");
+            }
+        }
+
+        private static void ValidateMultiInputRecordReaderType(Type multiInputRecordReaderType, Type inputType)
+        {
+            if( multiInputRecordReaderType != null )
+            {
+                Type baseType = FindGenericBaseType(multiInputRecordReaderType, typeof(MultiInputRecordReader<>));
+                Type recordType = baseType.GetGenericArguments()[0];
+                if( recordType != inputType )
+                    throw new ArgumentException(string.Format(System.Globalization.CultureInfo.CurrentCulture, "The specified multi input record reader type {0} doesn't return objects of type {1}.", multiInputRecordReaderType, inputType), "multiInputRecordReaderType");
             }
         }
 
@@ -429,7 +443,7 @@ namespace Tkl.Jumbo.Jet
         public Channels.ChannelConfiguration GetOutputChannelForStage(string stageId)
         {
             return (from channel in Channels
-                    where channel.InputStages != null && channel.InputStages.Contains(stageId)
+                    where channel.Input != null && channel.Input.InputStages.Contains(stageId)
                     select channel).SingleOrDefault();
         }
 

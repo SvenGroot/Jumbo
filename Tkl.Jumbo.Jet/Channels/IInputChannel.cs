@@ -21,21 +21,5 @@ namespace Tkl.Jumbo.Jet.Channels
         /// </remarks>
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1004:GenericMethodsShouldProvideTypeParameter")]
         RecordReader<T> CreateRecordReader<T>() where T : IWritable, new();
-
-        /// <summary>
-        /// Creates a separate <see cref="RecordReader{T}"/> for each input task of the channel.
-        /// </summary>
-        /// <typeparam name="T">The type of the records.</typeparam>
-        /// <returns>A <see cref="MergeTaskInput{T}"/> that provides access to a list of <see cref="RecordReader{T}"/> instances.</returns>
-        /// <remarks>
-        /// <para>
-        ///   Implementers should use the <see cref="RecordReader{T}.SourceName"/> property to indicate which task each reader reads from.
-        /// </para>
-        /// <para>
-        ///   This method is used to create the input for a <see cref="IMergeTask{TInput,TOutput}"/>.
-        /// </para>
-        /// </remarks>
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1004:GenericMethodsShouldProvideTypeParameter")]
-        MergeTaskInput<T> CreateMergeTaskInput<T>() where T : IWritable, new();
     }
 }

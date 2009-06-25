@@ -49,7 +49,7 @@ namespace Tkl.Jumbo.Test.Jet
             JobConfiguration config = new JobConfiguration(typeof(StringConversionTask).Assembly);
             StageConfiguration conversionStage = config.AddInputStage("ConversionStage", dfsClient.NameServer.GetFileInfo(_fileName), typeof(StringConversionTask), typeof(LineRecordReader));
             StageConfiguration sortStage = config.AddPointToPointStage("SortStage", conversionStage, typeof(SortTask<Int32Writable>), ChannelType.Pipeline, null, null);
-            config.AddStage("MergeStage", new[] { sortStage }, typeof(MergeSortTask<Int32Writable>), 1, ChannelType.File, ChannelConnectivity.Full, null, outputPath, typeof(BinaryRecordWriter<Int32Writable>));
+            config.AddStage("MergeStage", new[] { sortStage }, typeof(EmptyTask<Int32Writable>), 1, ChannelType.File, ChannelConnectivity.Full, typeof(MergeRecordReader<Int32Writable>), null, outputPath, typeof(BinaryRecordWriter<Int32Writable>));
 
             RunJob(dfsClient, config);
 
@@ -68,7 +68,7 @@ namespace Tkl.Jumbo.Test.Jet
 
             JobConfiguration config = new JobConfiguration(typeof(StringConversionTask).Assembly);
             StageConfiguration conversionStage = config.AddInputStage("ConversionStage", dfsClient.NameServer.GetFileInfo(_fileName), typeof(StringConversionTask), typeof(LineRecordReader));
-            config.AddStage("SortStage", new[] { conversionStage }, typeof(SortTask<Int32Writable>), 1, ChannelType.File, ChannelConnectivity.Full, null, outputPath, typeof(BinaryRecordWriter<Int32Writable>));
+            config.AddStage("SortStage", new[] { conversionStage }, typeof(SortTask<Int32Writable>), 1, ChannelType.File, ChannelConnectivity.Full, null, null, outputPath, typeof(BinaryRecordWriter<Int32Writable>));
 
             RunJob(dfsClient, config);
 
@@ -87,7 +87,7 @@ namespace Tkl.Jumbo.Test.Jet
 
             JobConfiguration config = new JobConfiguration(typeof(StringConversionTask).Assembly);
             StageConfiguration conversionStage = config.AddInputStage("ConversionStage", dfsClient.NameServer.GetFileInfo(_fileName), typeof(StringConversionTask), typeof(LineRecordReader));
-            config.AddStage("SortStage", new[] { conversionStage }, typeof(SortTask<Int32Writable>), 1, ChannelType.File, ChannelConnectivity.Full, null, outputPath, typeof(BinaryRecordWriter<Int32Writable>));
+            config.AddStage("SortStage", new[] { conversionStage }, typeof(SortTask<Int32Writable>), 1, ChannelType.File, ChannelConnectivity.Full, null, null, outputPath, typeof(BinaryRecordWriter<Int32Writable>));
             foreach( ChannelConfiguration channel in config.Channels )
             {
                 if( channel.ChannelType == ChannelType.File )
@@ -111,7 +111,7 @@ namespace Tkl.Jumbo.Test.Jet
 
             JobConfiguration config = new JobConfiguration(typeof(StringConversionTask).Assembly);
             StageConfiguration conversionStage = config.AddInputStage("ConversionStage", dfsClient.NameServer.GetFileInfo(_fileName), typeof(StringConversionTask), typeof(LineRecordReader));
-            config.AddStage("SortStage", new[] { conversionStage }, typeof(SortTask<Int32Writable>), 1, ChannelType.File, ChannelConnectivity.Full, null, outputPath, typeof(BinaryRecordWriter<Int32Writable>));
+            config.AddStage("SortStage", new[] { conversionStage }, typeof(SortTask<Int32Writable>), 1, ChannelType.File, ChannelConnectivity.Full, null, null, outputPath, typeof(BinaryRecordWriter<Int32Writable>));
             config.AddTypedSetting(FileInputChannel.MemoryStorageSizeSetting, 0L);
             foreach( ChannelConfiguration channel in config.Channels )
             {

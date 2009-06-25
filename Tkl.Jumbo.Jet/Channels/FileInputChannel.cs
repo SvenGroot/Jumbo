@@ -62,7 +62,7 @@ namespace Tkl.Jumbo.Jet.Channels
             switch( _channelConfig.Connectivity )
             {
             case ChannelConnectivity.Full:
-                foreach( string inputStageId in _channelConfig.InputStages )
+                foreach( string inputStageId in _channelConfig.Input.InputStages )
                 {
                     IList<StageConfiguration> stages = taskExecution.Configuration.JobConfiguration.GetPipelinedStages(inputStageId);
                     if( stages == null )
@@ -116,48 +116,18 @@ namespace Tkl.Jumbo.Jet.Channels
                 throw new InvalidOperationException("A record reader for this channel was already created.");
 
             _log.InfoFormat("Creating MultiRecordReader for {0} inputs, allow record reuse = {1}, buffer size = {2}.", _inputTaskIds.Count, _taskExecution.AllowRecordReuse, _taskExecution.JetClient.Configuration.FileChannel.ReadBufferSize);
-            MultiRecordReader<T> reader = new MultiRecordReader<T>(_inputTaskIds.Count, _taskExecution.AllowRecordReuse, _taskExecution.JetClient.Configuration.FileChannel.DeleteIntermediateFiles, _taskExecution.JetClient.Configuration.FileChannel.ReadBufferSize, _compressionType);
+            int bufferSize = _channelConfig.Input.MultiInputRecordReaderType == typeof(MergeRecordReader<T>) ? _taskExecution.JetClient.Configuration.FileChannel.MergeTaskReadBufferSize : _taskExecution.JetClient.Configuration.FileChannel.ReadBufferSize;
+            MultiInputRecordReader<T> reader = (MultiInputRecordReader<T>)JetActivator.CreateInstance(_channelConfig.Input.MultiInputRecordReaderType, _taskExecution, _inputTaskIds.Count, _taskExecution.AllowRecordReuse, _taskExecution.JetClient.Configuration.FileChannel.DeleteIntermediateFiles, bufferSize, _compressionType);
             _inputPollThread = new Thread(InputPollThread);
             _inputPollThread.Name = "FileInputChannelPolling";
             _inputPollThread.Start();
-            _downloadThread = new Thread(() => DownloadThread<T>(reader, null));
+            _downloadThread = new Thread(() => DownloadThread<T>(reader));
             _downloadThread.Name = "FileInputChannelDownload";
             _downloadThread.Start();
 
             // Wait until the reader has at least one input.
             _readyEvent.WaitOne();
             return reader;
-        }
-
-        /// <summary>
-        /// Creates a separate <see cref="RecordReader{T}"/> for each input task of the channel.
-        /// </summary>
-        /// <typeparam name="T">The type of the records.</typeparam>
-        /// <returns>A <see cref="MergeTaskInput{T}"/> that provides access to a list of <see cref="RecordReader{T}"/> instances.</returns>
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1004:GenericMethodsShouldProvideTypeParameter")]
-        public MergeTaskInput<T> CreateMergeTaskInput<T>()
-            where T : IWritable, new()
-        {
-            if( _inputPollThread != null )
-                throw new InvalidOperationException("A record reader for this channel was already created.");
-
-            _log.InfoFormat("Creating merge task input for {0} inputs, allow record reuse = {1}, buffer size = {2}.", _inputTaskIds.Count, _taskExecution.AllowRecordReuse, _taskExecution.JetClient.Configuration.FileChannel.MergeTaskReadBufferSize);
-            MergeTaskInput<T> input = new MergeTaskInput<T>(_inputTaskIds.Count, _compressionType)
-            { 
-                AllowRecordReuse = _taskExecution.AllowRecordReuse,
-                BufferSize = _taskExecution.JetClient.Configuration.FileChannel.MergeTaskReadBufferSize,
-                DeleteFiles = _taskExecution.JetClient.Configuration.FileChannel.DeleteIntermediateFiles
-            };
-            _inputPollThread = new Thread(InputPollThread);
-            _inputPollThread.Name = "FileInputChannelPolling";
-            _inputPollThread.Start();
-            _downloadThread = new Thread(() => DownloadThread<T>(null, input));
-            _downloadThread.Name = "FileInputChannelDownload";
-            _downloadThread.Start();
-
-            // Wait until at least inputs are available.
-            _readyEvent.WaitOne();
-            return input;
         }
 
         #endregion
@@ -248,7 +218,7 @@ namespace Tkl.Jumbo.Jet.Channels
             }
         }
 
-        private void DownloadThread<T>(MultiRecordReader<T> reader, MergeTaskInput<T> mergeTaskInput)
+        private void DownloadThread<T>(MultiInputRecordReader<T> reader)
             where T : IWritable, new()
         {
             List<CompletedTask> tasksToProcess = new List<CompletedTask>();
@@ -277,7 +247,7 @@ namespace Tkl.Jumbo.Jet.Channels
                     remainingTasks.Clear();
                     foreach( CompletedTask task in tasksToProcess )
                     {
-                        if( !DownloadCompletedFile(reader, mergeTaskInput, task) )
+                        if( !DownloadCompletedFile(reader, task) )
                             remainingTasks.Add(task);
                     }
                     if( remainingTasks.Count == tasksToProcess.Count )
@@ -309,7 +279,7 @@ namespace Tkl.Jumbo.Jet.Channels
                 _log.Info("All files are downloaded.");
         }
 
-        private bool DownloadCompletedFile<T>(MultiRecordReader<T> reader, MergeTaskInput<T> mergeTaskInput, CompletedTask task)
+        private bool DownloadCompletedFile<T>(MultiInputRecordReader<T> reader, CompletedTask task)
             where T : IWritable, new()
         {
             _log.InfoFormat("Task {0} output file is now available.", task.TaskId);
@@ -342,31 +312,17 @@ namespace Tkl.Jumbo.Jet.Channels
             }
 
             _log.InfoFormat("Creating record reader for task {0}'s output, allowRecordReuse = {1}.", task.TaskId, _taskExecution.AllowRecordReuse);
-            if( reader != null )
+            RecordReader<T> taskReader;
+            if( fileName == null )
             {
-                RecordReader<T> taskReader;
-                if( fileName == null )
-                {
-                    taskReader = new BinaryRecordReader<T>(memoryStream, _taskExecution.AllowRecordReuse);
-                }
-                else
-                {
-                    taskReader = new BinaryRecordReader<T>(fileName, _taskExecution.AllowRecordReuse, deleteFile, _taskExecution.JetClient.Configuration.FileChannel.ReadBufferSize, _compressionType, uncompressedSize);
-                }
-                taskReader.SourceName = task.TaskId;
-                reader.AddInput(taskReader);
+                taskReader = new BinaryRecordReader<T>(memoryStream, _taskExecution.AllowRecordReuse);
             }
             else
             {
-                if( fileName == null )
-                {
-                    RecordReader<T> taskReader = new BinaryRecordReader<T>(memoryStream, _taskExecution.AllowRecordReuse);
-                    taskReader.SourceName = task.TaskId;
-                    mergeTaskInput.AddInput(taskReader);
-                }
-                else
-                    mergeTaskInput.AddInput(fileName, task.TaskId, uncompressedSize);
+                taskReader = new BinaryRecordReader<T>(fileName, _taskExecution.AllowRecordReuse, deleteFile, _taskExecution.JetClient.Configuration.FileChannel.ReadBufferSize, _compressionType, uncompressedSize);
             }
+            taskReader.SourceName = task.TaskId;
+            reader.AddInput(taskReader);
 
             if( !_isReady )
             {
@@ -472,7 +428,7 @@ namespace Tkl.Jumbo.Jet.Channels
         {
             int outputTaskNumber = _outputTaskId.TaskNumber;
             IList<StageConfiguration> inputStages = null;
-            foreach( string stageId in _channelConfig.InputStages )
+            foreach( string stageId in _channelConfig.Input.InputStages )
             {
                 IList<StageConfiguration> stages = _taskExecution.Configuration.JobConfiguration.GetPipelinedStages(stageId);
                 int totalTaskCount = JobConfiguration.GetTotalTaskCount(stages, 0);

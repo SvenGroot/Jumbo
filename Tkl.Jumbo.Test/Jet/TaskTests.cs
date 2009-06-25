@@ -48,59 +48,5 @@ namespace Tkl.Jumbo.Test.Jet
             Assert.AreNotSame(records, output.List);
             Assert.IsTrue(Utilities.CompareList(records, output.List));
         }
-
-        [Test]
-        public void TestMergeSortTask()
-        {
-            TestMergeSort(100, CompressionType.None);
-        }
-
-        [Test]
-        public void TestMergeSortTaskMultiplePasses()
-        {
-            TestMergeSort(20, CompressionType.None);
-        }
-
-        [Test]
-        public void TestMergeSortTaskMultiplePassesWithCompression()
-        {
-            TestMergeSort(20, CompressionType.GZip);
-        }
-
-        private static void TestMergeSort(int maxMergeInputs, CompressionType compression)
-        {
-            const int inputCount = 50;
-            const int recordCountMin = 1000;
-            const int recordCountMax = 10000;
-            List<Int32Writable> sortedList = new List<Int32Writable>();
-            MergeTaskInput<Int32Writable> input = new MergeTaskInput<Int32Writable>(inputCount, compression);
-            Random rnd = new Random();
-            for( int x = 0; x < inputCount; ++x )
-            {
-                int recordCount = rnd.Next(recordCountMin, recordCountMax);
-                List<Int32Writable> records = new List<Int32Writable>(recordCount);
-                for( int record = 0; record < recordCount; ++record )
-                {
-                    int value = rnd.Next();
-                    records.Add(value);
-                    sortedList.Add(value);
-                }
-                records.Sort();
-                input.AddInput(new EnumerableRecordReader<Int32Writable>(records));
-            }
-
-            sortedList.Sort();
-            ListRecordWriter<Int32Writable> output = new ListRecordWriter<Int32Writable>();
-
-            MergeSortTask<Int32Writable> target = new MergeSortTask<Int32Writable>();
-            StageConfiguration stageConfig = new StageConfiguration();
-            stageConfig.AddTypedSetting(MergeSortTaskConstants.MaxMergeInputsSetting, maxMergeInputs);
-            stageConfig.StageId = "Merge";
-            target.TaskAttemptConfiguration = new TaskAttemptConfiguration(Guid.Empty, new JobConfiguration(), new TaskId(stageConfig.StageId, 1), stageConfig, Utilities.TestOutputPath, "", 1, null);
-            target.JetConfiguration = new JetConfiguration();
-            target.Run(input, output);
-
-            Assert.IsTrue(Utilities.CompareList(sortedList, output.List));
-        }
     }
 }

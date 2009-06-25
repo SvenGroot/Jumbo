@@ -54,7 +54,6 @@
     <Compile Include="..\Version.cs">
       <Link>Properties\Version.cs</Link>
     </Compile>
-    <Compile Include="LineAdderMergeTask.cs" />
     <Compile Include="LineAdderPushTask.cs" />
     <Compile Include="LineAdderTask.cs" />
     <Compile Include="LineCounterPushTask.cs" />

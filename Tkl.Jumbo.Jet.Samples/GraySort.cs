@@ -69,7 +69,7 @@ namespace Tkl.Jumbo.Jet.Samples
 
             jobConfiguration.AddSetting("partitionFile", partitionFileName);
             if( MaxMergeInputs > 0 )
-                jobConfiguration.AddTypedSetting(MergeSortTaskConstants.MaxMergeInputsSetting, MaxMergeInputs);
+                jobConfiguration.AddTypedSetting(MergeRecordReaderConstants.MaxMergeInputsSetting, MaxMergeInputs);
         }
     }
 }

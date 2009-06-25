@@ -65,7 +65,6 @@ namespace Tkl.Jumbo.Jet
         private IOutputChannel _outputChannel;
         private DfsOutputStream _outputStream;
         private IRecordReader _inputReader;
-        private IRecordReader _mergeTaskInput;
         private IRecordWriter _outputWriter;
         private Thread _progressThread;
         private bool _disposed;
@@ -142,7 +141,8 @@ namespace Tkl.Jumbo.Jet
                     Connectivity = ChannelConnectivity.Full,
                     PartitionerType = Configuration.StageConfiguration.ChildStagePartitionerType,
                 };
-                OutputChannelConfiguration.InputStages.Add(Configuration.StageConfiguration.StageId);
+                OutputChannelConfiguration.Input = new ChannelInputConfiguration();
+                OutputChannelConfiguration.Input.InputStages.Add(Configuration.StageConfiguration.StageId);
                 OutputChannelConfiguration.OutputStages.AddRange(from stage in Configuration.StageConfiguration.ChildStages select stage.StageId);
             }
 
@@ -268,9 +268,6 @@ namespace Tkl.Jumbo.Jet
         /// </summary>
         /// <typeparam name="T">The type of records for the task's input.</typeparam>
         /// <returns>A <see cref="RecordReader{T}"/> that reads from the task's input channel or DFS input.</returns>
-        /// <remarks>
-        /// You should call <see cref="GetInputReader{T}"/> or <see cref="GetMergeTaskInput{T}"/>, never both on the same instance.
-        /// </remarks>
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1004:GenericMethodsShouldProvideTypeParameter")]
         public RecordReader<T> GetInputReader<T>()
             where T : IWritable, new()
@@ -282,27 +279,6 @@ namespace Tkl.Jumbo.Jet
                 StartProgressThread();
             }
             return (RecordReader<T>)_inputReader;
-        }
-
-        /// <summary>
-        /// Gets a separate record reader for each input task.
-        /// </summary>
-        /// <typeparam name="T">The type of records for the task's input.</typeparam>
-        /// <returns>A list of <see cref="RecordReader{T}"/> instances that read from the task's input channel or DFS input.</returns>
-        /// <remarks>
-        /// You should call <see cref="GetInputReader{T}"/> or <see cref="GetMergeTaskInput{T}"/>, never both on the same instance.
-        /// </remarks>
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1004:GenericMethodsShouldProvideTypeParameter")]
-        public MergeTaskInput<T> GetMergeTaskInput<T>()
-            where T : IWritable, new()
-        {
-            CheckDisposed();
-            if( _mergeTaskInput == null )
-            {
-                _mergeTaskInput = CreateMergeTaskInput<T>();
-                StartProgressThread();
-            }
-            return (MergeTaskInput<T>)_mergeTaskInput;
         }
 
         /// <summary>
@@ -427,8 +403,6 @@ namespace Tkl.Jumbo.Jet
                     {
                         ((IDisposable)_inputReader).Dispose();
                     }
-                    if( _mergeTaskInput != null )
-                        ((IDisposable)_mergeTaskInput).Dispose();
                     IDisposable inputChannelDisposable = _inputChannel as IDisposable;
                     if( inputChannelDisposable != null )
                         inputChannelDisposable.Dispose();
@@ -526,26 +500,6 @@ namespace Tkl.Jumbo.Jet
                 return null;
         }
 
-        private MergeTaskInput<T> CreateMergeTaskInput<T>()
-            where T : IWritable, new()
-        {
-            if( Configuration.StageConfiguration.DfsInputs != null && Configuration.StageConfiguration.DfsInputs.Count > 0 )
-            {
-                TaskDfsInput input = Configuration.StageConfiguration.DfsInputs[Configuration.TaskId.TaskNumber];
-                _log.DebugFormat("Creating record reader of type {0}", input.RecordReaderTypeName);
-                MergeTaskInput<T> result = new MergeTaskInput<T>(1, CompressionType.None);
-                result.AddInput(input.CreateRecordReader<T>(DfsClient, this));
-                return result;
-            }
-            else if( InputChannel != null )
-            {
-                _log.Debug("Creating input channel merge task input.");
-                return InputChannel.CreateMergeTaskInput<T>();
-            }
-            else
-                return null;
-        }
-
         private void CalculateMetrics(TaskMetrics metrics)
         {
             // We don't count pipeline input or output.
@@ -554,15 +508,11 @@ namespace Tkl.Jumbo.Jet
             {
                 if( _inputReader != null )
                     metrics.RecordsRead += _inputReader.RecordsRead;
-                if( _mergeTaskInput != null )
-                    metrics.RecordsRead += _mergeTaskInput.RecordsRead;
 
                 if( Configuration.StageConfiguration.DfsInputs != null && Configuration.StageConfiguration.DfsInputs.Count > 0 )
                 {
                     if( _inputReader != null )
                         metrics.DfsBytesRead += _inputReader.BytesRead;
-                    if( _mergeTaskInput != null )
-                        metrics.DfsBytesRead += _mergeTaskInput.BytesRead;
                 }
                 else
                 {
@@ -610,8 +560,6 @@ namespace Tkl.Jumbo.Jet
                 float progress = 0;
                 if( _inputReader != null )
                     progress = _inputReader.Progress;
-                else if( _mergeTaskInput != null )
-                    progress = _mergeTaskInput.Progress;
                 if( progress != previousProgress )
                 {
                     try

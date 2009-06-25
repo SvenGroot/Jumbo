@@ -3,12 +3,12 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-namespace Tkl.Jumbo.Jet.Tasks
+namespace Tkl.Jumbo.Jet
 {
     /// <summary>
-    /// Contains constants for use by <see cref="MergeSortTask{T}"/>.
+    /// Contains constants for use by <see cref="MergeRecordReader{T}"/>.
     /// </summary>
-    public static class MergeSortTaskConstants
+    public static class MergeRecordReaderConstants
     {
         /// <summary>
         /// The name of the setting in <see cref="StageConfiguration.StageSettings"/> that specified the maximum number

@@ -131,52 +131,38 @@ namespace TaskHost
             RecordWriter<TOutput> output = taskExecution.GetOutputWriter<TOutput>();
             Stopwatch taskStopwatch = new Stopwatch();
 
-            IMergeTask<TInput, TOutput> mergeTask = task as IMergeTask<TInput, TOutput>;
-            if( mergeTask != null )
-            {
-                // Lifetime is managed by the TaskExecutionUtility class, no need to put them in a using block.
-                MergeTaskInput<TInput> input = taskExecution.GetMergeTaskInput<TInput>();
 
-                _log.Info("Running merge task.");
+            IPullTask<TInput, TOutput> pullTask = task as IPullTask<TInput, TOutput>;
+
+            // Lifetime is managed by the TaskExecutionUtility class, no need to put them in a using block.
+            RecordReader<TInput> input = taskExecution.GetInputReader<TInput>();
+
+            if( pullTask != null )
+            {
+                _log.Info("Running pull task.");
                 taskStopwatch.Start();
-                mergeTask.Run(input, output);
+                pullTask.Run(input, output);
                 taskStopwatch.Stop();
-                _log.InfoFormat("Task finished execution, execution time: {0}s", taskStopwatch.Elapsed.TotalSeconds);
             }
             else
             {
-                IPullTask<TInput, TOutput> pullTask = task as IPullTask<TInput, TOutput>;
-
-                // Lifetime is managed by the TaskExecutionUtility class, no need to put them in a using block.
-                RecordReader<TInput> input = taskExecution.GetInputReader<TInput>();
-
-                if( pullTask != null )
+                _log.Info("Running push task.");
+                IPushTask<TInput, TOutput> pushTask = (IPushTask<TInput, TOutput>)task;
+                taskStopwatch.Start();
+                foreach( TInput record in input.EnumerateRecords() )
                 {
-                    _log.Info("Running pull task.");
-                    taskStopwatch.Start();
-                    pullTask.Run(input, output);
-                    taskStopwatch.Stop();
+                    pushTask.ProcessRecord(record, output);
                 }
-                else
-                {
-                    _log.Info("Running push task.");
-                    IPushTask<TInput, TOutput> pushTask = (IPushTask<TInput, TOutput>)task;
-                    taskStopwatch.Start();
-                    foreach( TInput record in input.EnumerateRecords() )
-                    {
-                        pushTask.ProcessRecord(record, output);
-                    }
-                    // Finish is called by taskExecution.FinishTask below.
-                    taskStopwatch.Stop();
-                }
-                TimeSpan timeWaiting;
-                MultiRecordReader<TInput> multiReader = input as MultiRecordReader<TInput>;
-                if( multiReader != null )
-                    timeWaiting = multiReader.TimeWaiting;
-                else
-                    timeWaiting = TimeSpan.Zero;
-                _log.InfoFormat("Task finished execution, execution time: {0}s; time spent waiting for input: {1}s.", taskStopwatch.Elapsed.TotalSeconds, timeWaiting.TotalSeconds);
+                // Finish is called by taskExecution.FinishTask below.
+                taskStopwatch.Stop();
             }
+            TimeSpan timeWaiting;
+            MultiRecordReader<TInput> multiReader = input as MultiRecordReader<TInput>;
+            if( multiReader != null )
+                timeWaiting = multiReader.TimeWaiting;
+            else
+                timeWaiting = TimeSpan.Zero;
+            _log.InfoFormat("Task finished execution, execution time: {0}s; time spent waiting for input: {1}s.", taskStopwatch.Elapsed.TotalSeconds, timeWaiting.TotalSeconds);
 
             taskExecution.FinishTask();
 
