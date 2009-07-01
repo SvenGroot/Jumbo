@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Xml.Serialization;
 using System.Collections.ObjectModel;
+using Tkl.Jumbo.Jet.Channels;
 
 namespace Tkl.Jumbo.Jet
 {
@@ -12,7 +13,7 @@ namespace Tkl.Jumbo.Jet
     /// but on different inputs.
     /// </summary>
     [XmlType("Stage", Namespace=JobConfiguration.XmlNamespace)]
-    public class StageConfiguration
+    public class StageConfiguration : ObjectWithParent<StageConfiguration>
     {
         private string _stageId;
         private string _taskTypeName;
@@ -23,7 +24,15 @@ namespace Tkl.Jumbo.Jet
         private bool? _allowRecordReuse;
         private bool? _allowOutputRecordReuse;
         private readonly ExtendedCollection<TaskDfsInput> _dfsInputs = new ExtendedCollection<TaskDfsInput>();
-        private readonly ExtendedCollection<StageConfiguration> _childStages = new ExtendedCollection<StageConfiguration>();
+        private readonly ChildCollection<StageConfiguration, StageConfiguration> _childStages;
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="StageConfiguration"/> class.
+        /// </summary>
+        public StageConfiguration()
+        {
+            _childStages = new ChildCollection<StageConfiguration, StageConfiguration>(this);
+        }
 
         /// <summary>
         /// Gets or sets the unique identifier for the stage.
@@ -159,6 +168,11 @@ namespace Tkl.Jumbo.Jet
         public TaskDfsOutput DfsOutput { get; set; }
 
         /// <summary>
+        /// Gets or sets the output channel configuration for this stage.
+        /// </summary>
+        public ChannelConfiguration OutputChannel { get; set; }
+
+        /// <summary>
         /// Gets a value that indicates whether the task type allows reusing the same object instance for every record.
         /// </summary>
         /// <remarks>
@@ -236,18 +250,33 @@ namespace Tkl.Jumbo.Jet
             }
         }
 
+        /// <summary>
+        /// Gets the compound stage ID.
+        /// </summary>
         [XmlIgnore]
-        internal StageConfiguration ParentStage { get; set; }
-
-        [XmlIgnore]
-        internal string CompoundStageId
+        public string CompoundStageId
         {
             get
             {
-                if( ParentStage == null )
+                if( Parent == null )
                     return StageId;
                 else
-                    return ParentStage.CompoundStageId + TaskId.ChildStageSeparator + StageId;
+                    return Parent.CompoundStageId + TaskId.ChildStageSeparator + StageId;
+            }
+        }
+
+        /// <summary>
+        /// Gets the total number of tasks that will be created for this stage, which is the product of this stage's task count and the total task count of the parent stage.
+        /// </summary>
+        [XmlIgnore]
+        public int TotalTaskCount
+        {
+            get
+            {
+                if( Parent == null )
+                    return TaskCount;
+                else
+                    return Parent.TotalTaskCount * TaskCount;
             }
         }
 

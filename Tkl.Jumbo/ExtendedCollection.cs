@@ -7,7 +7,7 @@ using System.Collections.ObjectModel;
 namespace Tkl.Jumbo
 {
     /// <summary>
-    /// Provides extension methods for <see cref="Collection{T}"/>.
+    /// Provides additional functionality for <see cref="Collection{T}"/>.
     /// </summary>
     [Serializable]
     public class ExtendedCollection<T> : Collection<T>

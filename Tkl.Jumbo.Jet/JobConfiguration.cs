@@ -72,14 +72,6 @@ namespace Tkl.Jumbo.Jet
         }
 
         /// <summary>
-        /// Gets a list of communication channels between the tasks.
-        /// </summary>
-        public Collection<ChannelConfiguration> Channels
-        {
-            get { return _channels; }
-        }
-
-        /// <summary>
         /// Gets a list of settings that can be accessed by the tasks in this job.
         /// </summary>
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2227:CollectionPropertiesShouldBeReadOnly")]
@@ -218,11 +210,13 @@ namespace Tkl.Jumbo.Jet
                         ChannelType = channelType,
                         PartitionerType = partitionerType ?? typeof(HashPartitioner<>).MakeGenericType(inputType),
                         Connectivity = connectivity,
-                        Input = new ChannelInputConfiguration() { MultiInputRecordReaderType = multiInputRecordReaderType ?? typeof(MultiRecordReader<>).MakeGenericType(inputType) }
+                        MultiInputRecordReaderType = multiInputRecordReaderType ?? typeof(MultiRecordReader<>).MakeGenericType(inputType),
+                        OutputStage = stageId,
                     };
-                    channel.Input.InputStages.AddRange(from s in inputStages select s.CompoundStageId);
-                    channel.OutputStages.Add(stageId);
-                    Channels.Add(channel);
+                    foreach( StageConfiguration inputStage in inputStages )
+                    {
+                        inputStage.OutputChannel = channel;
+                    }
                 }
                 Stages.Add(stage);
             }
@@ -255,11 +249,11 @@ namespace Tkl.Jumbo.Jet
                 foreach( StageConfiguration inputStage in inputStages )
                 {
                     int inputStageTaskCount = inputStage.TaskCount;
-                    StageConfiguration current = inputStage.ParentStage;
+                    StageConfiguration current = inputStage.Parent;
                     while( current != null )
                     {
                         inputStageTaskCount *= current.TaskCount;
-                        current = inputStage.ParentStage;
+                        current = inputStage.Parent;
                     }
                     inputTaskCount += inputStageTaskCount;
                 }
@@ -276,11 +270,11 @@ namespace Tkl.Jumbo.Jet
                         first = false;
                     else
                     {
-                        if( inputTaskCount == -1 && inputStage.ParentStage != null || inputTaskCount != -1 && inputStage.ParentStage == null )
+                        if( inputTaskCount == -1 && inputStage.Parent != null || inputTaskCount != -1 && inputStage.Parent == null )
                             throw new ArgumentException("All inputs of a fully connected channel must be either child stages, or non-compound stages; you cannot mix them.");
                     }
 
-                    if( inputStage.ParentStage != null )
+                    if( inputStage.Parent != null )
                     {
                         if( inputTaskCount == -1 )
                             inputTaskCount = inputStage.TaskCount;
@@ -294,7 +288,6 @@ namespace Tkl.Jumbo.Jet
 
         private static void AddChildStage(Type partitionerType, Type inputType, StageConfiguration stage, StageConfiguration parentStage)
         {
-            stage.ParentStage = parentStage;
             parentStage.ChildStages.Add(stage);
             if( parentStage.ChildStagePartitionerType != null && partitionerType != null && parentStage.ChildStagePartitionerType != partitionerType )
                 throw new ArgumentException("The partitioner type for the pipeline output channel of the specified task is already specified.");
@@ -438,26 +431,46 @@ namespace Tkl.Jumbo.Jet
         /// <summary>
         /// Gets the output channel configuration for a specific stage.
         /// </summary>
-        /// <param name="stageId">The task ID.</param>
-        /// <returns>The channel configuration.</returns>
-        public Channels.ChannelConfiguration GetOutputChannelForStage(string stageId)
+        /// <param name="stageId">The stage ID. This may not be a compound stage ID.</param>
+        /// <returns>The input stages.</returns>
+        public IEnumerable<StageConfiguration> GetInputStagesForStage(string stageId)
         {
-            return (from channel in Channels
-                    where channel.Input != null && channel.Input.InputStages.Contains(stageId)
-                    select channel).SingleOrDefault();
+            Stack<StageConfiguration> nestedStages = new Stack<StageConfiguration>(Stages);
+            while( nestedStages.Count > 0 )
+            {
+                StageConfiguration stage = nestedStages.Pop();
+                if( stage.ChildStages.Count > 0 )
+                {
+                    foreach( StageConfiguration childStage in stage.ChildStages )
+                    {
+                        nestedStages.Push(childStage);
+                    }
+                }
+                else if( stage.OutputChannel != null && stage.OutputChannel.OutputStage == stageId )
+                    yield return stage;
+            }
         }
 
-
         /// <summary>
-        /// Gets the output channel configuration for a specific stage.
+        /// Gets all channels in the job.
         /// </summary>
-        /// <param name="stageId">The task ID.</param>
-        /// <returns>The channel configuration.</returns>
-        public Channels.ChannelConfiguration GetInputChannelForStage(string stageId)
+        /// <returns>A list of all channels in the jobs.</returns>
+        public IEnumerable<ChannelConfiguration> GetAllChannels()
         {
-            return (from channel in Channels
-                    where channel.OutputStages != null && channel.OutputStages.Contains(stageId) 
-                    select channel).SingleOrDefault();
+            Stack<StageConfiguration> nestedStages = new Stack<StageConfiguration>(Stages);
+            while( nestedStages.Count > 0 )
+            {
+                StageConfiguration stage = nestedStages.Pop();
+                if( stage.ChildStages.Count > 0 )
+                {
+                    foreach( StageConfiguration childStage in stage.ChildStages )
+                    {
+                        nestedStages.Push(childStage);
+                    }
+                }
+                else if( stage.OutputChannel != null )
+                    yield return stage.OutputChannel;
+            }
         }
 
         /// <summary>
@@ -523,7 +536,7 @@ namespace Tkl.Jumbo.Jet
             // Validate channel type
             foreach( StageConfiguration stage in inputStages )
             {
-                if( stage.DfsOutput != null || GetOutputChannelForStage(stage.StageId) != null )
+                if( stage.DfsOutput != null || stage.OutputChannel != null )
                     throw new ArgumentException(string.Format(System.Globalization.CultureInfo.CurrentCulture, "Input stage {0} already has an output channel or DFS output.", stage.StageId), "inputStages");
                 Type inputTaskType = stage.TaskType;
                 // We skip the check if the task type isn't stored.

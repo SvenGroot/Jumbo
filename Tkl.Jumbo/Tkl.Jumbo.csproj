@@ -52,6 +52,7 @@
     <Compile Include="..\Version.cs">
       <Link>Properties\Version.cs</Link>
     </Compile>
+    <Compile Include="ChildCollection.cs" />
     <Compile Include="ClientChannelSink.cs" />
     <Compile Include="ClientChannelSinkProvider.cs" />
     <Compile Include="CollectionExtensions.cs" />
@@ -59,6 +60,7 @@
     <Compile Include="CompressionUtility.cs" />
     <Compile Include="CompressionType.cs" />
     <Compile Include="DriveSpaceInfo.cs" />
+    <Compile Include="ObjectWithParent.cs" />
     <Compile Include="IO\MultiInputRecordReader.cs" />
     <Compile Include="IO\RecordFile.cs" />
     <Compile Include="IO\RecordFileHeader.cs" />

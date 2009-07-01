@@ -36,44 +36,37 @@ namespace Tkl.Jumbo.Jet.Channels
                 throw new ArgumentNullException("taskExecution");
             _taskExecution = taskExecution;
 
-            ChannelConfiguration channelConfig = taskExecution.OutputChannelConfiguration;
+            ChannelConfiguration channelConfig = taskExecution.Configuration.StageConfiguration.OutputChannel;
             string inputTaskId = taskExecution.Configuration.TaskId.ToString();
             string localJobDirectory = taskExecution.Configuration.LocalJobDirectory;
             if( channelConfig.Connectivity == ChannelConnectivity.Full )
             {
-                foreach( string outputStageId in channelConfig.OutputStages )
+                if( channelConfig.OutputStage != null )
                 {
-                    StageConfiguration outputStage = taskExecution.Configuration.JobConfiguration.GetStage(outputStageId);
+                    StageConfiguration outputStage = taskExecution.Configuration.JobConfiguration.GetStage(channelConfig.OutputStage);
                     if( taskExecution.Configuration.TaskId.ParentTaskId == null || taskExecution.Configuration.StageConfiguration.TaskCount == 1 )
                     {
+                        // If this task is not a child of a compound task, or the total number of tasks in the compound comes out to 1 (so there is no partitioning done inside the compound),
+                        // full connectivity means we partition the output into as many pieces as there are output tasks.
                         for( int x = 1; x <= outputStage.TaskCount; ++x )
                         {
-                            _fileNames.Add(Path.Combine(localJobDirectory, CreateChannelFileName(inputTaskId, TaskId.CreateTaskIdString(outputStageId, x))));
+                            _fileNames.Add(Path.Combine(localJobDirectory, CreateChannelFileName(inputTaskId, TaskId.CreateTaskIdString(channelConfig.OutputStage, x))));
                         }
                     }
                     else
                     {
-                        string inputStageId = _taskExecution.Configuration.TaskId.CompoundStageId;
-                        int inputStageIndex = channelConfig.Input.InputStages.IndexOf(inputStageId);
-                        int outputTaskNumber = 0;
-                        for( int x = 0; x < inputStageIndex; ++x )
-                        {
-                            IList<StageConfiguration> inputStages = _taskExecution.Configuration.JobConfiguration.GetPipelinedStages(channelConfig.Input.InputStages[x]);
-
-                            outputTaskNumber += inputStages[inputStages.Count - 1].TaskCount;
-                        }
-
-                        _fileNames.Add(Path.Combine(localJobDirectory, CreateChannelFileName(inputTaskId, TaskId.CreateTaskIdString(outputStageId, outputTaskNumber + taskExecution.Configuration.TaskId.TaskNumber))));
+                        // This task is a child task in a compound, which means partitioning has already been done. It is assumed the task counts are identical (should've been checked at job creation time)
+                        // and this task produces only one file that is meant for the output task with a matching number. If there are multiple input stages for that output task, it is assumed they 
+                        // all produce the same partitions.
+                        _fileNames.Add(Path.Combine(localJobDirectory, CreateChannelFileName(inputTaskId, TaskId.CreateTaskIdString(channelConfig.OutputStage, taskExecution.Configuration.TaskId.TaskNumber))));
                     }
                 }
             }
             else
             {
-                if( channelConfig.OutputStages.Count > 0 )
+                if( channelConfig.OutputStage != null )
                 {
-                    if( channelConfig.OutputStages.Count > 1 )
-                        throw new NotSupportedException("Point-to-point channels with more than one output stage are not supported.");
-                    string outputStageId = channelConfig.OutputStages[0];
+                    string outputStageId = channelConfig.OutputStage;
 
                     int outputTaskNumber = GetOutputTaskNumber(channelConfig);
 
@@ -143,14 +136,15 @@ namespace Tkl.Jumbo.Jet.Channels
         {
             // If there are multiple input stages, we need to check which one we are and adjust the output task number according to the
             // number of tasks in the preceding input stages.
-            string inputStageId = _taskExecution.Configuration.TaskId.CompoundStageId;
-            int inputStageIndex = channelConfig.Input.InputStages.IndexOf(inputStageId);
+            string inputStageId = _taskExecution.Configuration.StageConfiguration.CompoundStageId;
+            List<StageConfiguration> inputStages = _taskExecution.Configuration.JobConfiguration.GetInputStagesForStage(_taskExecution.Configuration.StageConfiguration.OutputChannel.OutputStage).ToList();
+            int inputStageIndex = inputStages.IndexOf(_taskExecution.Configuration.StageConfiguration);
 
             int outputTaskNumber = 0;
             IList<StageConfiguration> stages;
             for( int x = 0; x < inputStageIndex; ++x )
             {
-                outputTaskNumber += _taskExecution.Configuration.JobConfiguration.GetTotalTaskCount(channelConfig.Input.InputStages[x]);
+                outputTaskNumber += inputStages[x].TotalTaskCount;
             }
 
             stages = _taskExecution.Configuration.JobConfiguration.GetPipelinedStages(inputStageId);

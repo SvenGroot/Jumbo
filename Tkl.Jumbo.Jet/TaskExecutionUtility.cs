@@ -9,6 +9,7 @@ using System.Reflection;
 using System.Collections;
 using System.Threading;
 using System.Net.Sockets;
+using System.Collections.ObjectModel;
 
 namespace Tkl.Jumbo.Jet
 {
@@ -76,6 +77,7 @@ namespace Tkl.Jumbo.Jet
         private readonly ManualResetEvent _finishedEvent = new ManualResetEvent(false);
         private string _dfsOutputTempPath;
         private string _dfsOutputPath;
+        private readonly List<StageConfiguration> _inputStages = new List<StageConfiguration>();
 
         /// <summary>
         /// Initializes a new instance of the <see cref="TaskExecutionUtility"/> class.
@@ -98,7 +100,7 @@ namespace Tkl.Jumbo.Jet
             : this(baseTask.JetClient, baseTask.Umbilical, baseTask.Configuration.JobId, baseTask.Configuration.JobConfiguration, childStage, new TaskId(baseTask.Configuration.TaskId, childStage.StageId, childTaskNumber), baseTask.DfsClient, baseTask.Configuration.LocalJobDirectory, baseTask.Configuration.DfsJobDirectory, baseTask.Configuration.Attempt)
         {
             _isAssociatedTask = true;
-            InputChannelConfiguration = baseTask.OutputChannelConfiguration;
+            _inputStages.Add(baseTask.Configuration.StageConfiguration);
         }
 
         private TaskExecutionUtility(JetClient jetClient, ITaskServerUmbilicalProtocol umbilical, Guid jobId, JobConfiguration jobConfiguration, StageConfiguration stageConfiguration, TaskId taskId, DfsClient dfsClient, string localJobDirectory, string dfsJobDirectory, int attempt)
@@ -129,21 +131,14 @@ namespace Tkl.Jumbo.Jet
 
             // if stage configuration is not null this is a child task so we can't set input channel configuration here.
             if( stageConfiguration == null )
-                InputChannelConfiguration = jobConfiguration.GetInputChannelForStage(taskId.StageId);
-
-            if( Configuration.StageConfiguration.ChildStages == null || Configuration.StageConfiguration.ChildStages.Count == 0 )
-                OutputChannelConfiguration = jobConfiguration.GetOutputChannelForStage(taskId.CompoundStageId);
-            else
             {
-                OutputChannelConfiguration = new ChannelConfiguration()
+                _inputStages.AddRange(jobConfiguration.GetInputStagesForStage(taskId.StageId));
+
+                foreach( StageConfiguration stage in _inputStages )
                 {
-                    ChannelType = ChannelType.Pipeline,
-                    Connectivity = ChannelConnectivity.Full,
-                    PartitionerType = Configuration.StageConfiguration.ChildStagePartitionerType,
-                };
-                OutputChannelConfiguration.Input = new ChannelInputConfiguration();
-                OutputChannelConfiguration.Input.InputStages.Add(Configuration.StageConfiguration.StageId);
-                OutputChannelConfiguration.OutputStages.AddRange(from stage in Configuration.StageConfiguration.ChildStages select stage.StageId);
+                    if( stage.OutputChannel.ChannelType != _inputStages[0].OutputChannel.ChannelType )
+                        throw new InvalidOperationException("Not all input channels for this task use the same channel type.");
+                }
             }
 
             _log.DebugFormat("Loading type {0}.", Configuration.StageConfiguration.TaskTypeName);
@@ -173,14 +168,12 @@ namespace Tkl.Jumbo.Jet
         public TaskAttemptConfiguration Configuration { get; private set; }
 
         /// <summary>
-        /// Gets the configuration of the input channel for the task.
+        /// Gets the list of input stages for this task.
         /// </summary>
-        public ChannelConfiguration InputChannelConfiguration { get; private set; }
-
-        /// <summary>
-        /// Gets the configuration of the output channel for the task.
-        /// </summary>
-        public ChannelConfiguration OutputChannelConfiguration { get; private set; }
+        public ReadOnlyCollection<StageConfiguration> InputStages
+        {
+            get { return _inputStages.AsReadOnly(); }
+        }
 
         /// <summary>
         /// Gets the input channel.
@@ -427,10 +420,10 @@ namespace Tkl.Jumbo.Jet
 
         private IInputChannel CreateInputChannel()
         {
-            ChannelConfiguration config = InputChannelConfiguration;
-            if( config != null )
+            if( _inputStages.Count > 0 )
             {
-                switch( config.ChannelType )
+                // We've already verified in the constructor that all channels have the same type.
+                switch( _inputStages[0].OutputChannel.ChannelType )
                 {
                 case ChannelType.File:
                     return new FileInputChannel(this);
@@ -443,17 +436,20 @@ namespace Tkl.Jumbo.Jet
 
         private IOutputChannel CreateOutputChannel()
         {
-            ChannelConfiguration config = OutputChannelConfiguration;
-            if( config != null )
+            if( Configuration.StageConfiguration.ChildStages.Count > 0 )
+                return new PipelineOutputChannel(this);
+            else
             {
-                switch( config.ChannelType )
+                ChannelConfiguration config = Configuration.StageConfiguration.OutputChannel;
+                if( config != null )
                 {
-                case ChannelType.File:
-                    return new FileOutputChannel(this);
-                case ChannelType.Pipeline:
-                    return new PipelineOutputChannel(this);
-                default:
-                    throw new InvalidOperationException("Invalid channel type.");
+                    switch( config.ChannelType )
+                    {
+                    case ChannelType.File:
+                        return new FileOutputChannel(this);
+                    default:
+                        throw new InvalidOperationException("Invalid channel type.");
+                    }
                 }
             }
             return null;
@@ -503,8 +499,7 @@ namespace Tkl.Jumbo.Jet
         private void CalculateMetrics(TaskMetrics metrics)
         {
             // We don't count pipeline input or output.
-            ChannelConfiguration inputChannel = InputChannelConfiguration;
-            if( inputChannel == null || inputChannel.ChannelType != ChannelType.Pipeline )
+            if( _inputStages.Count == 0 || _inputStages[0].OutputChannel != null )
             {
                 if( _inputReader != null )
                     metrics.RecordsRead += _inputReader.RecordsRead;

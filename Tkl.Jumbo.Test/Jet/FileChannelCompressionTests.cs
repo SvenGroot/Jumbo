@@ -88,7 +88,7 @@ namespace Tkl.Jumbo.Test.Jet
             JobConfiguration config = new JobConfiguration(typeof(StringConversionTask).Assembly);
             StageConfiguration conversionStage = config.AddInputStage("ConversionStage", dfsClient.NameServer.GetFileInfo(_fileName), typeof(StringConversionTask), typeof(LineRecordReader));
             config.AddStage("SortStage", new[] { conversionStage }, typeof(SortTask<Int32Writable>), 1, ChannelType.File, ChannelConnectivity.Full, null, null, outputPath, typeof(BinaryRecordWriter<Int32Writable>));
-            foreach( ChannelConfiguration channel in config.Channels )
+            foreach( ChannelConfiguration channel in config.GetAllChannels() )
             {
                 if( channel.ChannelType == ChannelType.File )
                     channel.ForceFileDownload = true;
@@ -113,11 +113,12 @@ namespace Tkl.Jumbo.Test.Jet
             StageConfiguration conversionStage = config.AddInputStage("ConversionStage", dfsClient.NameServer.GetFileInfo(_fileName), typeof(StringConversionTask), typeof(LineRecordReader));
             config.AddStage("SortStage", new[] { conversionStage }, typeof(SortTask<Int32Writable>), 1, ChannelType.File, ChannelConnectivity.Full, null, null, outputPath, typeof(BinaryRecordWriter<Int32Writable>));
             config.AddTypedSetting(FileInputChannel.MemoryStorageSizeSetting, 0L);
-            foreach( ChannelConfiguration channel in config.Channels )
+            foreach( ChannelConfiguration channel in config.GetAllChannels() )
             {
                 if( channel.ChannelType == ChannelType.File )
                     channel.ForceFileDownload = true;
             }
+
 
             RunJob(dfsClient, config);
 

@@ -16,7 +16,8 @@ namespace Tkl.Jumbo.Jet.Channels
     {
         private string _partitionerTypeName;
         private Type _partitionerType;
-        private readonly ExtendedCollection<string> _outputStages = new ExtendedCollection<string>();
+        private string _multiInputRecordReaderTypeName;
+        private Type _multiInputRecordReaderType;
 
         /// <summary>
         /// Gets or sets the type of the channel.
@@ -25,18 +26,42 @@ namespace Tkl.Jumbo.Jet.Channels
         public ChannelType ChannelType { get; set; }
 
         /// <summary>
-        /// Gets or sets the channel input.
+        /// Gets or sets the name of the type of multi input record reader to use to combine the the input readers of this channel.
         /// </summary>
-        public ChannelInputConfiguration Input { get; set; }
+        [XmlAttribute("multiInputRecordReader")]
+        public string MultiInputRecordReaderTypeName
+        {
+            get { return _multiInputRecordReaderTypeName; }
+            set
+            {
+                _multiInputRecordReaderTypeName = value;
+                _multiInputRecordReaderType = null;
+            }
+        }
+
+        /// <summary>
+        /// Gets or sets the type of multi input record reader to use to combine the the input readers of this channel.
+        /// </summary>
+        [XmlIgnore]
+        public Type MultiInputRecordReaderType
+        {
+            get
+            {
+                if( _multiInputRecordReaderType == null && _multiInputRecordReaderTypeName != null )
+                    _multiInputRecordReaderType = Type.GetType(_multiInputRecordReaderTypeName, true);
+                return _multiInputRecordReaderType;
+            }
+            set
+            {
+                _multiInputRecordReaderType = value;
+                _multiInputRecordReaderTypeName = value == null ? null : value.AssemblyQualifiedName;
+            }
+        }        
         
         /// <summary>
-        /// Gets the list of IDs of the stages whose tasks that read from the channel.
+        /// Gets or sets the ID of the stage whose tasks that read from the channel.
         /// </summary>
-        [XmlArrayItem("Stage")]
-        public Collection<string> OutputStages
-        {
-            get { return _outputStages; }
-        }
+        public string OutputStage { get; set; }
 
         /// <summary>
         /// Gets or sets a value that indicates whether the file channel should always use TCP downloads.

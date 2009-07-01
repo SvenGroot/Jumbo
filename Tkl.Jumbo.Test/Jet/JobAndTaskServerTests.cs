@@ -209,7 +209,11 @@ namespace Tkl.Jumbo.Test.Jet
                 stage = config.AddPointToPointStage("IntermediateTask", stage, adderTask, ChannelType.Pipeline, null, null);
             }
             config.AddStage("OutputTask", new[] { stage }, adderTask, 1, ChannelType.File, ChannelConnectivity.Full, null, null, outputPath, typeof(TextRecordWriter<Int32Writable>));
-            config.Channels[0].ForceFileDownload = forceFileDownload;
+            foreach( ChannelConfiguration channel in config.GetAllChannels() )
+            {
+                if( channel.ChannelType == ChannelType.File )
+                    channel.ForceFileDownload = true;
+            }
 
             return config;
         }
