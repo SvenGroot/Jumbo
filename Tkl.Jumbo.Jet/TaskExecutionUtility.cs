@@ -62,7 +62,7 @@ namespace Tkl.Jumbo.Jet
         private const int _progressInterval = 5000;
 
         private List<TaskExecutionUtility> _associatedTasks = new List<TaskExecutionUtility>();
-        private IInputChannel _inputChannel;
+        private ExtendedCollection<IInputChannel> _inputChannels;
         private IOutputChannel _outputChannel;
         private DfsOutputStream _outputStream;
         private IRecordReader _inputReader;
@@ -131,15 +131,7 @@ namespace Tkl.Jumbo.Jet
 
             // if stage configuration is not null this is a child task so we can't set input channel configuration here.
             if( stageConfiguration == null )
-            {
                 _inputStages.AddRange(jobConfiguration.GetInputStagesForStage(taskId.StageId));
-
-                foreach( StageConfiguration stage in _inputStages )
-                {
-                    if( stage.OutputChannel.ChannelType != _inputStages[0].OutputChannel.ChannelType )
-                        throw new InvalidOperationException("Not all input channels for this task use the same channel type.");
-                }
-            }
 
             _log.DebugFormat("Loading type {0}.", Configuration.StageConfiguration.TaskTypeName);
             TaskType = Configuration.StageConfiguration.TaskType;
@@ -178,16 +170,16 @@ namespace Tkl.Jumbo.Jet
         /// <summary>
         /// Gets the input channel.
         /// </summary>
-        public IInputChannel InputChannel
+        public Collection<IInputChannel> InputChannels
         {
             get
             {
                 CheckDisposed();
-                if( _inputChannel == null )
+                if( _inputChannels == null )
                 {
-                    _inputChannel = CreateInputChannel();
+                    _inputChannels = CreateInputChannels();
                 }
-                return _inputChannel;
+                return _inputChannels;
             }
         }
 
@@ -396,9 +388,15 @@ namespace Tkl.Jumbo.Jet
                     {
                         ((IDisposable)_inputReader).Dispose();
                     }
-                    IDisposable inputChannelDisposable = _inputChannel as IDisposable;
-                    if( inputChannelDisposable != null )
-                        inputChannelDisposable.Dispose();
+                    if( _inputChannels != null )
+                    {
+                        foreach( IInputChannel inputChannel in _inputChannels )
+                        {
+                            IDisposable inputChannelDisposable = inputChannel as IDisposable;
+                            if( inputChannelDisposable != null )
+                                inputChannelDisposable.Dispose();
+                        }
+                    }
                     IDisposable outputChannelDisposable = _outputChannel as IDisposable;
                     if( outputChannelDisposable != null )
                         outputChannelDisposable.Dispose();
@@ -418,18 +416,23 @@ namespace Tkl.Jumbo.Jet
                 throw new ObjectDisposedException(typeof(TaskExecutionUtility).FullName);
         }
 
-        private IInputChannel CreateInputChannel()
+        private ExtendedCollection<IInputChannel> CreateInputChannels()
         {
             if( _inputStages.Count > 0 )
             {
-                // We've already verified in the constructor that all channels have the same type.
-                switch( _inputStages[0].OutputChannel.ChannelType )
+                ExtendedCollection<IInputChannel> result = new ExtendedCollection<IInputChannel>();
+                foreach( StageConfiguration inputStage in _inputStages )
                 {
-                case ChannelType.File:
-                    return new FileInputChannel(this);
-                default:
-                    throw new InvalidOperationException("Invalid channel type.");
+                    switch( inputStage.OutputChannel.ChannelType )
+                    {
+                    case ChannelType.File:
+                        result.Add(new FileInputChannel(this, inputStage));
+                        break;
+                    default:
+                        throw new InvalidOperationException("Invalid channel type.");
+                    }
                 }
+                return result;
             }
             return null;
         }
@@ -487,10 +490,23 @@ namespace Tkl.Jumbo.Jet
                 _log.DebugFormat("Creating record reader of type {0}", input.RecordReaderTypeName);
                 return input.CreateRecordReader<T>(DfsClient, this);
             }
-            else if( InputChannel != null )
+            else if( InputChannels != null )
             {
                 _log.Debug("Creating input channel record reader.");
-                return InputChannel.CreateRecordReader<T>();                  
+                if( InputChannels.Count == 1 )
+                    return InputChannels[0].CreateRecordReader<T>();
+                else
+                {
+                    Type multiInputRecordReaderType = Configuration.StageConfiguration.MultiInputRecordReaderType.Type;
+                    int bufferSize = multiInputRecordReaderType == typeof(MergeRecordReader<T>) ? JetClient.Configuration.FileChannel.MergeTaskReadBufferSize : JetClient.Configuration.FileChannel.ReadBufferSize;
+                    CompressionType compressionType = Configuration.JobConfiguration.GetTypedSetting(FileOutputChannel.CompressionTypeSetting, JetClient.Configuration.FileChannel.CompressionType);
+                    MultiInputRecordReader<T> reader = (MultiInputRecordReader<T>)JetActivator.CreateInstance(multiInputRecordReaderType, this, InputChannels.Count, AllowRecordReuse, JetClient.Configuration.FileChannel.DeleteIntermediateFiles, bufferSize, compressionType);
+                    foreach( IInputChannel inputChannel in InputChannels )
+                    {
+                        reader.AddInput(inputChannel.CreateRecordReader<T>());
+                    }
+                    return reader;
+                }
             }
             else
                 return null;
@@ -511,12 +527,15 @@ namespace Tkl.Jumbo.Jet
                 }
                 else
                 {
-                    FileInputChannel fileInputChannel = InputChannel as FileInputChannel;
-                    if( fileInputChannel != null )
+                    foreach( IInputChannel inputChannel in InputChannels )
                     {
-                        metrics.LocalBytesRead += fileInputChannel.LocalBytesRead;
-                        metrics.NetworkBytesRead += fileInputChannel.NetworkBytesRead;
-                        metrics.CompressedLocalBytesRead += fileInputChannel.CompressedLocalBytesRead;
+                        FileInputChannel fileInputChannel = inputChannel as FileInputChannel;
+                        if( fileInputChannel != null )
+                        {
+                            metrics.LocalBytesRead += fileInputChannel.LocalBytesRead;
+                            metrics.NetworkBytesRead += fileInputChannel.NetworkBytesRead;
+                            metrics.CompressedLocalBytesRead += fileInputChannel.CompressedLocalBytesRead;
+                        }
                     }
                 }
             }

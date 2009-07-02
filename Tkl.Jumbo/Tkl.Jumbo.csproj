@@ -60,6 +60,7 @@
     <Compile Include="CompressionUtility.cs" />
     <Compile Include="CompressionType.cs" />
     <Compile Include="DriveSpaceInfo.cs" />
+    <Compile Include="IO\IMultiInputRecordReader.cs" />
     <Compile Include="ObjectWithParent.cs" />
     <Compile Include="IO\MultiInputRecordReader.cs" />
     <Compile Include="IO\RecordFile.cs" />
@@ -108,6 +109,7 @@
     <Compile Include="StringExtensions.cs" />
     <Compile Include="TcpServer.cs" />
     <Compile Include="TypeExtensions.cs" />
+    <Compile Include="TypeReference.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="jumbo.snk" />

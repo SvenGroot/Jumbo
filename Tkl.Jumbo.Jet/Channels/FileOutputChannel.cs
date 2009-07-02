@@ -79,7 +79,7 @@ namespace Tkl.Jumbo.Jet.Channels
                 _log.Warn("The file channel has no output tasks; writing channel output to a dummy file.");
                 _fileNames.Add(Path.Combine(localJobDirectory, CreateChannelFileName(inputTaskId, "DummyTask")));
             }
-            _partitionerType = channelConfig.PartitionerType;
+            _partitionerType = channelConfig.PartitionerType.Type;
             _compressionType = _taskExecution.Configuration.JobConfiguration.GetTypedSetting(CompressionTypeSetting, _taskExecution.JetClient.Configuration.FileChannel.CompressionType);
         }
 

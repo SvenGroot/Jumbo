@@ -173,6 +173,18 @@ namespace Tkl.Jumbo.Jet
         public ChannelConfiguration OutputChannel { get; set; }
 
         /// <summary>
+        /// Gets or sets the type of multi record reader to use when there are multiple channels with this stage as output stage.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        ///   Whereas the <see cref="ChannelConfiguration.MultiInputRecordReaderType"/> property of the <see cref="ChannelConfiguration"/> class is used to specify
+        ///   the multi input record reader to use to combine the output of all the tasks in the channel's input stage, this property is used to indicate
+        ///   how the output of the input stages of this stage should be combined, if there is more than one.
+        /// </para>
+        /// </remarks>
+        public TypeReference MultiInputRecordReaderType { get; set; }
+
+        /// <summary>
         /// Gets a value that indicates whether the task type allows reusing the same object instance for every record.
         /// </summary>
         /// <remarks>

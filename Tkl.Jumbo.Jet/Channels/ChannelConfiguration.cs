@@ -14,11 +14,6 @@ namespace Tkl.Jumbo.Jet.Channels
     [XmlType("Channel", Namespace=JobConfiguration.XmlNamespace)]
     public class ChannelConfiguration
     {
-        private string _partitionerTypeName;
-        private Type _partitionerType;
-        private string _multiInputRecordReaderTypeName;
-        private Type _multiInputRecordReaderType;
-
         /// <summary>
         /// Gets or sets the type of the channel.
         /// </summary>
@@ -26,37 +21,9 @@ namespace Tkl.Jumbo.Jet.Channels
         public ChannelType ChannelType { get; set; }
 
         /// <summary>
-        /// Gets or sets the name of the type of multi input record reader to use to combine the the input readers of this channel.
-        /// </summary>
-        [XmlAttribute("multiInputRecordReader")]
-        public string MultiInputRecordReaderTypeName
-        {
-            get { return _multiInputRecordReaderTypeName; }
-            set
-            {
-                _multiInputRecordReaderTypeName = value;
-                _multiInputRecordReaderType = null;
-            }
-        }
-
-        /// <summary>
         /// Gets or sets the type of multi input record reader to use to combine the the input readers of this channel.
         /// </summary>
-        [XmlIgnore]
-        public Type MultiInputRecordReaderType
-        {
-            get
-            {
-                if( _multiInputRecordReaderType == null && _multiInputRecordReaderTypeName != null )
-                    _multiInputRecordReaderType = Type.GetType(_multiInputRecordReaderTypeName, true);
-                return _multiInputRecordReaderType;
-            }
-            set
-            {
-                _multiInputRecordReaderType = value;
-                _multiInputRecordReaderTypeName = value == null ? null : value.AssemblyQualifiedName;
-            }
-        }        
+        public TypeReference MultiInputRecordReaderType { get; set; }
         
         /// <summary>
         /// Gets or sets the ID of the stage whose tasks that read from the channel.
@@ -79,37 +46,9 @@ namespace Tkl.Jumbo.Jet.Channels
         public bool ForceFileDownload { get; set; }
 
         /// <summary>
-        /// Gets or sets the name of the type of partitioner to use to split the input of the channel amount its outputs.
-        /// </summary>
-        [XmlAttribute("partitioner")]
-        public string PartitionerTypeName
-        {
-            get { return _partitionerTypeName; }
-            set
-            {
-                _partitionerTypeName = value;
-                _partitionerType = null;
-            }
-        }
-
-        /// <summary>
         /// Gets or sets the type of partitioner to use to split the input of the channel amount its outputs.
         /// </summary>
-        [XmlIgnore]
-        public Type PartitionerType
-        {
-            get
-            {
-                if( _partitionerType == null && _partitionerTypeName != null )
-                    _partitionerType = Type.GetType(_partitionerTypeName, true);
-                return _partitionerType;
-            }
-            set
-            {
-                _partitionerType = value;
-                _partitionerTypeName = value == null ? null : value.AssemblyQualifiedName;
-            }
-        }
+        public TypeReference PartitionerType { get; set; }
 
         /// <summary>
         /// Indicates the type of connectivity to use for this channel.

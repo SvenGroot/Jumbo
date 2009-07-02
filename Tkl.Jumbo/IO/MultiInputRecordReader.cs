@@ -24,7 +24,7 @@ namespace Tkl.Jumbo.IO
     ///   more other threads add inputs to it.
     /// </note>
     /// </remarks>
-    public abstract class MultiInputRecordReader<T> : RecordReader<T>
+    public abstract class MultiInputRecordReader<T> : RecordReader<T>, IMultiInputRecordReader
         where T : IWritable, new()
     {
         #region Nested types
