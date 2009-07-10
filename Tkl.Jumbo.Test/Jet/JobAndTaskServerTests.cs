@@ -116,6 +116,78 @@ namespace Tkl.Jumbo.Test.Jet
             CheckOutput(dfsClient, multiplied, DfsPath.Combine(outputPath, "MultiplyStage001"));
         }
 
+        [Test]
+        public void TestJobExecutionJoin()
+        {
+            List<Customer> customers = new List<Customer>();
+            List<Order> orders = new List<Order>();
+
+            Utilities.GenerateJoinData(customers, orders, 30000, 3, 100);
+            customers.Randomize();
+            orders.Randomize();
+
+            DfsClient dfsClient = new DfsClient(Dfs.TestDfsCluster.CreateClientConfig());
+            dfsClient.NameServer.CreateDirectory("/testjoin");
+            using( DfsOutputStream stream = dfsClient.CreateFile("/testjoin/customers") )
+            using( RecordFileWriter<Customer> recordFile = new RecordFileWriter<Customer>(stream) )
+            {
+                foreach( Customer customer in customers )
+                    recordFile.WriteRecord(customer);
+            }
+
+            using( DfsOutputStream stream = dfsClient.CreateFile("/testjoin/orders") )
+            using( RecordFileWriter<Order> recordFile = new RecordFileWriter<Order>(stream) )
+            {
+                foreach( Order order in orders )
+                    recordFile.WriteRecord(order);
+            }
+
+            const int joinTasks = 2;
+            JobConfiguration config = new JobConfiguration(typeof(CustomerOrderJoinRecordReader).Assembly);
+            StageConfiguration customerInput = config.AddInputStage("CustomerInput", dfsClient.NameServer.GetFileInfo("/testjoin/customers"), typeof(EmptyTask<Customer>), typeof(RecordFileReader<Customer>));
+            StageConfiguration customerSort = config.AddStage("CustomerSort", new[] { customerInput }, typeof(SortTask<Customer>), joinTasks, ChannelType.Pipeline, ChannelConnectivity.Full, null, null, null, null);
+            StageConfiguration orderInput = config.AddInputStage("OrderInput", dfsClient.NameServer.GetFileInfo("/testjoin/orders"), typeof(EmptyTask<Order>), typeof(RecordFileReader<Order>));
+            StageConfiguration orderSort = config.AddStage("CustomerSort", new[] { orderInput }, typeof(SortTask<Order>), joinTasks, ChannelType.Pipeline, ChannelConnectivity.Full, null, null, null, null);
+
+            const string outputPath = "/testjoinoutput";
+            dfsClient.NameServer.CreateDirectory(outputPath);
+            StageConfiguration joinStage = config.AddStage("Join", new[] { customerSort }, typeof(EmptyTask<CustomerOrder>), joinTasks, ChannelType.File, ChannelConnectivity.Full, typeof(MergeRecordReader<Customer>), null, outputPath, typeof(RecordFileWriter<CustomerOrder>));
+            ChannelConfiguration channel = new ChannelConfiguration()
+            {
+                ChannelType = ChannelType.File,
+                PartitionerType = typeof(HashPartitioner<Order>),
+                Connectivity = ChannelConnectivity.Full,
+                MultiInputRecordReaderType = typeof(MergeRecordReader<Order>),
+                OutputStage = joinStage.StageId,
+            };
+            orderSort.OutputChannel = channel;
+            joinStage.MultiInputRecordReaderType = typeof(CustomerOrderJoinRecordReader);
+
+            RunJob(dfsClient, config);
+
+            List<CustomerOrder> actual = new List<CustomerOrder>();
+            for( int x = 0; x < joinTasks; ++x )
+            {
+                using( DfsInputStream stream = dfsClient.OpenFile(DfsPath.Combine(outputPath, string.Format("Join{0:000}", x+1))) )
+                using( RecordFileReader<CustomerOrder> reader = new RecordFileReader<CustomerOrder>(stream) )
+                {
+                    while( reader.ReadRecord() )
+                    {
+                        actual.Add(reader.CurrentRecord);
+                    }
+                }
+            }
+
+            List<CustomerOrder> expected = (from customer in customers
+                                            join order in orders on customer.Id equals order.CustomerId
+                                            select new CustomerOrder() { CustomerId = customer.Id, ItemId = order.ItemId, Name = customer.Name, OrderId = order.Id }).ToList();
+            expected.Sort();
+            actual.Sort();
+
+            Assert.IsTrue(Utilities.CompareList(expected, actual));
+
+        }
+
         private static void CheckOutput(DfsClient dfsClient, IList<int> expected, string outputFileName)
         {
             List<int> actual = new List<int>();

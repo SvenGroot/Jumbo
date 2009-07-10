@@ -173,6 +173,7 @@ namespace Tkl.Jumbo.Jet
             ValidateOutputType(outputPath, recordWriterType, taskInterfaceType);
 
             Type inputType = taskInterfaceType.GetGenericArguments()[0];
+            Type inputStageOutputType = null;
 
             ValidatePartitionerType(partitionerType, inputType);
 
@@ -182,7 +183,17 @@ namespace Tkl.Jumbo.Jet
                 if( inputStages.Count() > 1 && channelType == ChannelType.Pipeline )
                     throw new ArgumentException("You cannot use a pipeline channel type with a more than one input.");
 
-                ValidateChannelRecordType(inputType, inputStages);
+                inputStageOutputType = inputStages.First().TaskType.FindGenericInterfaceType(typeof(ITask<,>)).GetGenericArguments()[1];
+
+                if( channelType == ChannelType.Pipeline )
+                    ValidateChannelRecordType(inputType, inputStages); // for pipeline channels the type needs to match the input type.
+                else
+                {
+                    // All the input stages must have the same output type, but because the record reader can change the record type, it is not
+                    // necessary for this to match the input type of the current stage (of course, if it doesn't and the input record reader doesn't
+                    // accept this type of input, all hell will break loose; or the job will fail, whatever)
+                    ValidateChannelRecordType(inputStageOutputType, inputStages);
+                }
             }
 
             StageConfiguration stage = CreateStage(stageId, taskType, taskCount, outputPath, recordWriterType, null, null);
@@ -208,9 +219,9 @@ namespace Tkl.Jumbo.Jet
                     ChannelConfiguration channel = new ChannelConfiguration()
                     {
                         ChannelType = channelType,
-                        PartitionerType = partitionerType ?? typeof(HashPartitioner<>).MakeGenericType(inputType),
+                        PartitionerType = partitionerType ?? typeof(HashPartitioner<>).MakeGenericType(inputStageOutputType),
                         Connectivity = connectivity,
-                        MultiInputRecordReaderType = multiInputRecordReaderType ?? typeof(MultiRecordReader<>).MakeGenericType(inputType),
+                        MultiInputRecordReaderType = multiInputRecordReaderType ?? typeof(MultiRecordReader<>).MakeGenericType(inputStageOutputType),
                         OutputStage = stageId,
                     };
                     foreach( StageConfiguration inputStage in inputStages )
@@ -435,15 +446,15 @@ namespace Tkl.Jumbo.Jet
         /// <returns>The input stages.</returns>
         public IEnumerable<StageConfiguration> GetInputStagesForStage(string stageId)
         {
-            Stack<StageConfiguration> nestedStages = new Stack<StageConfiguration>(Stages);
+            Queue<StageConfiguration> nestedStages = new Queue<StageConfiguration>(Stages);
             while( nestedStages.Count > 0 )
             {
-                StageConfiguration stage = nestedStages.Pop();
+                StageConfiguration stage = nestedStages.Dequeue();
                 if( stage.ChildStages.Count > 0 )
                 {
                     foreach( StageConfiguration childStage in stage.ChildStages )
                     {
-                        nestedStages.Push(childStage);
+                        nestedStages.Enqueue(childStage);
                     }
                 }
                 else if( stage.OutputChannel != null && stage.OutputChannel.OutputStage == stageId )

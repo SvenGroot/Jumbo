@@ -5,6 +5,7 @@ using System.Text;
 using System.IO;
 using System.Diagnostics;
 using Tkl.Jumbo.Dfs;
+using Tkl.Jumbo.Test.Tasks;
 
 namespace Tkl.Jumbo.Test
 {
@@ -172,6 +173,27 @@ namespace Tkl.Jumbo.Test
         {
             Trace.WriteLine(message);
             Trace.Flush();
+        }
+
+        public static void GenerateJoinData(IList<Customer> customers, IList<Order> orders, int customerCount, int perCustomerRecordMax, int ordersPerCustomerMax)
+        {
+            Random rnd = new Random();
+            string[] words = File.ReadAllLines("english-words.10");
+            int orderId = 0;
+
+            for( int x = 1; x <= customerCount; ++x )
+            {
+                int records = rnd.Next(1, perCustomerRecordMax);
+                for( int y = 0; y < records; ++y )
+                {
+                    customers.Add(new Customer() { Id = x, Name = words[rnd.Next(words.Length)] });
+                }
+                int orderCount = rnd.Next(0, ordersPerCustomerMax + 1);
+                for( int y = 0; y < orderCount; ++y )
+                {
+                    orders.Add(new Order() { Id = ++orderId, CustomerId = x, ItemId = rnd.Next(100) });
+                }
+            }
         }
     }
 }

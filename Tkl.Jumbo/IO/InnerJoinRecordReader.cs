@@ -113,7 +113,10 @@ namespace Tkl.Jumbo.IO
                     _tempInnerListIndex = 0;
                     if( _outerHasRecords && Compare(_outer.CurrentRecord, _tempInnerList[0]) == 0 )
                     {
-                        _tempOuterObject = _outer.CurrentRecord;
+                        if( AllowRecordReuse )
+                            _tempOuterObject = (TOuter)((ICloneable)_outer.CurrentRecord).Clone();
+                        else
+                            _tempOuterObject = _outer.CurrentRecord;
                         _outerHasRecords = _outer.ReadRecord();
                     }
                     else

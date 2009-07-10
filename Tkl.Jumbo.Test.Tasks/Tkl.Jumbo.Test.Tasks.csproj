@@ -54,11 +54,15 @@
     <Compile Include="..\Version.cs">
       <Link>Properties\Version.cs</Link>
     </Compile>
+    <Compile Include="Customer.cs" />
+    <Compile Include="CustomerOrder.cs" />
+    <Compile Include="CustomerOrderJoinRecordReader.cs" />
     <Compile Include="LineAdderPushTask.cs" />
     <Compile Include="LineAdderTask.cs" />
     <Compile Include="LineCounterPushTask.cs" />
     <Compile Include="LineCounterTask.cs" />
     <Compile Include="MultiplierTask.cs" />
+    <Compile Include="Order.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="StringConversionTask.cs" />
   </ItemGroup>
