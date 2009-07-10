@@ -72,6 +72,7 @@
     <Compile Include="Dfs\NameServerTests.cs" />
     <Compile Include="Dfs\NewBlockHeartbeatDataTests.cs" />
     <Compile Include="Dfs\PacketTests.cs" />
+    <Compile Include="InnerJoinRecordReaderTests.cs" />
     <Compile Include="Jet\FileChannelCompressionTests.cs" />
     <Compile Include="Jet\JetClientTests.cs" />
     <Compile Include="Jet\JobAndTaskServerTests.cs" />
@@ -129,6 +130,9 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="app.config" />
+    <Content Include="english-words.10">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
     <None Include="jumbo.snk" />
     <None Include="Tkl.Jumbo.Test.build" />
     <None Include="Tkl.Jumbo.Test.nunit" />

@@ -51,7 +51,7 @@ namespace Tkl.Jumbo.Jet
         private MergeInput _currentFront;
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="MultiRecordReader{T}"/> class.
+        /// Initializes a new instance of the <see cref="MergeRecordReader{T}"/> class.
         /// </summary>
         /// <param name="totalInputCount">The total number of input readers that this record reader will have.</param>
         /// <param name="allowRecordReuse"><see langword="true"/> if the record reader may reuse record instances; otherwise, <see langword="false"/>.</param>
