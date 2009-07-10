@@ -20,5 +20,15 @@ namespace Tkl.Jumbo.IO
         /// </summary>
         /// <param name="reader">The record reader to read from.</param>
         void AddInput(IRecordReader reader);
+
+        /// <summary>
+        /// Adds the specified input file to the inputs to be read by this record reader.
+        /// </summary>
+        /// <param name="recordReaderType">The type of the record reader to be created to read the input file. This type be derived from <see cref="RecordReader{T}"/> and have a constructor with the same 
+        /// parameters as <see cref="BinaryRecordReader{T}(string,bool,bool,int,Tkl.Jumbo.CompressionType,long)"/>.</param>
+        /// <param name="fileName">The file to read.</param>
+        /// <param name="sourceName">A name used to identify the source of this input. Can be <see langword="null"/>.</param>
+        /// <param name="uncompressedSize">The size of the file's data after decompression; only needed if <see cref="CompressionType"/> is not <see cref="Tkl.Jumbo.CompressionType.None"/>.</param>
+        void AddInput(Type recordReaderType, string fileName, string sourceName, long uncompressedSize);
     }
 }

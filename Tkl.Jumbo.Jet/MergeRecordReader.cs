@@ -104,20 +104,6 @@ namespace Tkl.Jumbo.Jet
             }
         }
 
-        /// <summary>
-        /// Adds the specified record reader to the inputs to be read by this record reader.
-        /// </summary>
-        /// <param name="reader">The record reader to read from.</param>
-        public override void AddInput(IRecordReader reader)
-        {
-            base.AddInput(reader);
-            if( !_started )
-            {
-                _started = true;
-                _mergeThread.Start();
-            }
-        }
-
         private void MergeThread()
         {
             int maxMergeInputs = TaskAttemptConfiguration.StageConfiguration.GetTypedSetting(MergeRecordReaderConstants.MaxMergeInputsSetting, 0);
@@ -255,6 +241,19 @@ namespace Tkl.Jumbo.Jet
         /// Gets or sets the configuration for the task attempt.
         /// </summary>
         public TaskAttemptConfiguration TaskAttemptConfiguration { get; set; }
+
+        /// <summary>
+        /// Indicates the configuration has been changed. <see cref="JetActivator.ApplyConfiguration"/> calls this method
+        /// after setting the configuration.
+        /// </summary>
+        public void NotifyConfigurationChanged()
+        {
+            if( !_started )
+            {
+                _started = true;
+                _mergeThread.Start();
+            }
+        }
 
         #endregion
     }

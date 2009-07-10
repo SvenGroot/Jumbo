@@ -42,6 +42,8 @@ namespace Tkl.Jumbo.Jet.Channels
         private readonly List<string> _inputTaskIds = new List<string>();
         private readonly List<CompletedTask> _completedTasks = new List<CompletedTask>();
         private volatile bool _allInputTasksCompleted;
+        private readonly Type _inputRecordType;
+        private readonly Type _inputReaderType;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="FileInputChannel"/>.
@@ -61,6 +63,10 @@ namespace Tkl.Jumbo.Jet.Channels
             _taskExecution = taskExecution;
             _compressionType = _taskExecution.Configuration.JobConfiguration.GetTypedSetting(FileOutputChannel.CompressionTypeSetting, _taskExecution.JetClient.Configuration.FileChannel.CompressionType);
             _inputStage = inputStage;
+            // The type of the records in the intermediate files will be the output type of the input stage, which usually matches the input type of the output stage but
+            // in the case of a join it may not.
+            _inputRecordType = inputStage.TaskType.FindGenericInterfaceType(typeof(ITask<,>)).GetGenericArguments()[1];
+            _inputReaderType = typeof(BinaryRecordReader<>).MakeGenericType(_inputRecordType);
 
             switch( _inputStage.OutputChannel.Connectivity )
             {
@@ -104,13 +110,11 @@ namespace Tkl.Jumbo.Jet.Channels
         /// <summary>
         /// Creates a <see cref="RecordReader{T}"/> from which the channel can read its input.
         /// </summary>
-        /// <typeparam name="T">The type of the records.</typeparam>
         /// <returns>A <see cref="RecordReader{T}"/> for the channel.</returns>
         /// <remarks>
         /// This function will create a <see cref="MultiRecordReader{T}"/> that serializes the data from all the different input tasks.
         /// </remarks>
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1004:GenericMethodsShouldProvideTypeParameter")]
-        public RecordReader<T> CreateRecordReader<T>() where T : IWritable, new()
+        public IRecordReader CreateRecordReader()
         {
             if( _inputPollThread != null )
                 throw new InvalidOperationException("A record reader for this channel was already created.");
@@ -119,12 +123,12 @@ namespace Tkl.Jumbo.Jet.Channels
 
             // TODO: Create seperate readers for each input channel, and a global reader for the combined channels (if more than one).
             Type multiInputRecordReaderType = _inputStage.OutputChannel.MultiInputRecordReaderType.Type;
-            int bufferSize = multiInputRecordReaderType == typeof(MergeRecordReader<T>) ? _taskExecution.JetClient.Configuration.FileChannel.MergeTaskReadBufferSize : _taskExecution.JetClient.Configuration.FileChannel.ReadBufferSize;
-            MultiInputRecordReader<T> reader = (MultiInputRecordReader<T>)JetActivator.CreateInstance(multiInputRecordReaderType, _taskExecution, _inputTaskIds.Count, _taskExecution.AllowRecordReuse, _taskExecution.JetClient.Configuration.FileChannel.DeleteIntermediateFiles, bufferSize, _compressionType);
+            int bufferSize = multiInputRecordReaderType.GetGenericTypeDefinition() == typeof(MergeRecordReader<>) ? _taskExecution.JetClient.Configuration.FileChannel.MergeTaskReadBufferSize : _taskExecution.JetClient.Configuration.FileChannel.ReadBufferSize;
+            IMultiInputRecordReader reader = (IMultiInputRecordReader)JetActivator.CreateInstance(multiInputRecordReaderType, _taskExecution, _inputTaskIds.Count, _taskExecution.AllowRecordReuse, _taskExecution.JetClient.Configuration.FileChannel.DeleteIntermediateFiles, bufferSize, _compressionType);
             _inputPollThread = new Thread(InputPollThread);
             _inputPollThread.Name = "FileInputChannelPolling";
             _inputPollThread.Start();
-            _downloadThread = new Thread(() => DownloadThread<T>(reader));
+            _downloadThread = new Thread(() => DownloadThread(reader));
             _downloadThread.Name = "FileInputChannelDownload";
             _downloadThread.Start();
 
@@ -221,8 +225,7 @@ namespace Tkl.Jumbo.Jet.Channels
             }
         }
 
-        private void DownloadThread<T>(MultiInputRecordReader<T> reader)
-            where T : IWritable, new()
+        private void DownloadThread(IMultiInputRecordReader reader)
         {
             List<CompletedTask> tasksToProcess = new List<CompletedTask>();
             List<CompletedTask> remainingTasks = new List<CompletedTask>();
@@ -282,8 +285,7 @@ namespace Tkl.Jumbo.Jet.Channels
                 _log.Info("All files are downloaded.");
         }
 
-        private bool DownloadCompletedFile<T>(MultiInputRecordReader<T> reader, CompletedTask task)
-            where T : IWritable, new()
+        private bool DownloadCompletedFile(IMultiInputRecordReader reader, CompletedTask task)
         {
             _log.InfoFormat("Task {0} output file is now available.", task.TaskId);
             string fileName = null;
@@ -315,17 +317,16 @@ namespace Tkl.Jumbo.Jet.Channels
             }
 
             _log.InfoFormat("Creating record reader for task {0}'s output, allowRecordReuse = {1}.", task.TaskId, _taskExecution.AllowRecordReuse);
-            RecordReader<T> taskReader;
             if( fileName == null )
             {
-                taskReader = new BinaryRecordReader<T>(memoryStream, _taskExecution.AllowRecordReuse);
+                IRecordReader taskReader = (IRecordReader)JetActivator.CreateInstance(_inputReaderType, _taskExecution, memoryStream, _taskExecution.AllowRecordReuse);
+                taskReader.SourceName = task.TaskId;
+                reader.AddInput(taskReader);
             }
             else
             {
-                taskReader = new BinaryRecordReader<T>(fileName, _taskExecution.AllowRecordReuse, deleteFile, _taskExecution.JetClient.Configuration.FileChannel.ReadBufferSize, _compressionType, uncompressedSize);
+                reader.AddInput(_inputReaderType, fileName, task.TaskId, uncompressedSize);
             }
-            taskReader.SourceName = task.TaskId;
-            reader.AddInput(taskReader);
 
             if( !_isReady )
             {

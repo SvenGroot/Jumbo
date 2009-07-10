@@ -86,6 +86,7 @@ namespace Tkl.Jumbo.Jet
                 configurable.DfsConfiguration = dfsConfiguration;
                 configurable.JetConfiguration = jetConfiguration;
                 configurable.TaskAttemptConfiguration = taskAttemptConfiguration;
+                configurable.NotifyConfigurationChanged();
             }
         }
     }

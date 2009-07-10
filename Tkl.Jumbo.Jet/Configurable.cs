@@ -27,6 +27,14 @@ namespace Tkl.Jumbo.Jet
         /// </summary>
         public TaskAttemptConfiguration TaskAttemptConfiguration { get; set; }
 
+        /// <summary>
+        /// Indicates the configuration has been changed. <see cref="JetActivator.ApplyConfiguration"/> calls this method
+        /// after setting the configuration.
+        /// </summary>
+        public virtual void NotifyConfigurationChanged()
+        {
+        }
+
         #endregion
     }
 }

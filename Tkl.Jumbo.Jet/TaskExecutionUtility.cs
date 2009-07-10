@@ -494,7 +494,7 @@ namespace Tkl.Jumbo.Jet
             {
                 _log.Debug("Creating input channel record reader.");
                 if( InputChannels.Count == 1 )
-                    return InputChannels[0].CreateRecordReader<T>();
+                    return (RecordReader<T>)InputChannels[0].CreateRecordReader();
                 else
                 {
                     Type multiInputRecordReaderType = Configuration.StageConfiguration.MultiInputRecordReaderType.Type;
@@ -503,7 +503,7 @@ namespace Tkl.Jumbo.Jet
                     MultiInputRecordReader<T> reader = (MultiInputRecordReader<T>)JetActivator.CreateInstance(multiInputRecordReaderType, this, InputChannels.Count, AllowRecordReuse, JetClient.Configuration.FileChannel.DeleteIntermediateFiles, bufferSize, compressionType);
                     foreach( IInputChannel inputChannel in InputChannels )
                     {
-                        reader.AddInput(inputChannel.CreateRecordReader<T>());
+                        reader.AddInput(inputChannel.CreateRecordReader());
                     }
                     return reader;
                 }

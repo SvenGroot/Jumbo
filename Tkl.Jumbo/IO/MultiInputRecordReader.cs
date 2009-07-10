@@ -179,7 +179,7 @@ namespace Tkl.Jumbo.IO
         /// Adds the specified record reader to the inputs to be read by this record reader.
         /// </summary>
         /// <param name="reader">The record reader to read from.</param>
-        public virtual void AddInput(IRecordReader reader)
+        public void AddInput(IRecordReader reader)
         {
             if( reader == null )
                 throw new ArgumentNullException("reader");
