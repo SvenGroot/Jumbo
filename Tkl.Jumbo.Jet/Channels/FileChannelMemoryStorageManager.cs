@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using Tkl.Jumbo.IO;
 using System.IO;
+using System.Runtime.CompilerServices;
 
 namespace Tkl.Jumbo.Jet.Channels
 {
@@ -40,17 +41,28 @@ namespace Tkl.Jumbo.Jet.Channels
 
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(FileChannelMemoryStorageManager));
 
+        private static FileChannelMemoryStorageManager _instance;
         private readonly long _maxSize;
         private readonly List<NotifyDisposedMemoryStream> _inputs = new List<NotifyDisposedMemoryStream>();
         private long _currentSize;
         private bool _disposed;
 
-        public FileChannelMemoryStorageManager(long maxSize)
+        private FileChannelMemoryStorageManager(long maxSize)
         {
             if( maxSize < 0 )
                 throw new ArgumentOutOfRangeException("maxSize", "Memory storage size must be larger than zero.");
             _maxSize = maxSize;
             _log.InfoFormat("Created memory storage with maximum size {0}.", maxSize);
+        }
+
+        [MethodImpl(MethodImplOptions.Synchronized)]
+        public static FileChannelMemoryStorageManager GetInstance(long maxSize)
+        {
+            if( _instance == null )
+                _instance = new FileChannelMemoryStorageManager(maxSize);
+            else if( _instance._maxSize != maxSize )
+                _log.WarnFormat("A memory storage manager with a different max size ({0}) than the existing manager was requested; using the original size ({1}).", maxSize, _instance._maxSize);
+            return _instance;
         }
 
         public MemoryStream AddStreamIfSpaceAvailable(int size)

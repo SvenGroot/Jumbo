@@ -29,6 +29,7 @@ namespace Tkl.Jumbo.IO
         /// <param name="fileName">The file to read.</param>
         /// <param name="sourceName">A name used to identify the source of this input. Can be <see langword="null"/>.</param>
         /// <param name="uncompressedSize">The size of the file's data after decompression; only needed if <see cref="CompressionType"/> is not <see cref="Tkl.Jumbo.CompressionType.None"/>.</param>
-        void AddInput(Type recordReaderType, string fileName, string sourceName, long uncompressedSize);
+        /// <param name="deleteFile"><see langword="true"/> to delete the file after reading finishes; otherwise, <see langword="false"/>.</param>
+        void AddInput(Type recordReaderType, string fileName, string sourceName, long uncompressedSize, bool deleteFile);
     }
 }

@@ -30,11 +30,10 @@ namespace Tkl.Jumbo.IO
         /// </summary>
         /// <param name="totalInputCount">The total number of input readers that this record reader will have.</param>
         /// <param name="allowRecordReuse"><see langword="true"/> if the record reader may reuse record instances; otherwise, <see langword="false"/>.</param>
-        /// <param name="deleteFiles"><see langword="true"/> if the input files should be deleted; otherwise, <see langword="false"/>.</param>
         /// <param name="bufferSize">The buffer size to use to read input files.</param>
         /// <param name="compressionType">The compression type to us to read input files.</param>
-        public InnerJoinRecordReader(int totalInputCount, bool allowRecordReuse, bool deleteFiles, int bufferSize, CompressionType compressionType)
-            : base(totalInputCount, allowRecordReuse, deleteFiles, bufferSize, compressionType)
+        public InnerJoinRecordReader(int totalInputCount, bool allowRecordReuse, int bufferSize, CompressionType compressionType)
+            : base(totalInputCount, allowRecordReuse, bufferSize, compressionType)
         {
             if( totalInputCount != 2 )
                 throw new ArgumentOutOfRangeException("totalInputCount", "InnerJoinRecordReader must have exactly two input readers.");

@@ -43,7 +43,7 @@ namespace Tkl.Jumbo.Test
             EnumerableRecordReader<Customer> customerReader = new EnumerableRecordReader<Customer>(_customers);
             EnumerableRecordReader<Order> orderReader = new EnumerableRecordReader<Order>(_orders);
 
-            CustomerOrderJoinRecordReader joinReader = new CustomerOrderJoinRecordReader(2, allowRecordReuse, false, 4096, CompressionType.None);
+            CustomerOrderJoinRecordReader joinReader = new CustomerOrderJoinRecordReader(2, allowRecordReuse, 4096, CompressionType.None);
             joinReader.AddInput(customerReader);
             joinReader.AddInput(orderReader);
 

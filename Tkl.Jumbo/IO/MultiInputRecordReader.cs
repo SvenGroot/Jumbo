@@ -17,7 +17,7 @@ namespace Tkl.Jumbo.IO
     ///   need to read records of type <typeparamref name="T"/>.
     /// </para>
     /// <note>
-    ///   While the <see cref="AddInput(IRecordReader)"/>, <see cref="AddInput(Type,string,string,long)"/>, <see cref="WaitForInputs"/> 
+    ///   While the <see cref="AddInput(IRecordReader)"/>, <see cref="AddInput(Type,string,string,long,bool)"/>, <see cref="WaitForInputs"/> 
     ///   and <see cref="GetInputReader"/> methods are thread safe, no other methods of this class are guaranteed to be thread
     ///   safe, and derived classes are not required to make <see cref="RecordReader{T}.ReadRecordInternal"/> thread safe.
     ///   Essentially, you may have only one thread reading from the <see cref="MultiInputRecordReader{T}"/>, while one or
@@ -36,8 +36,9 @@ namespace Tkl.Jumbo.IO
             private readonly long _uncompressedSize;
             private readonly MultiInputRecordReader<T> _input;
             private readonly Type _inputRecordReaderType;
+            private readonly bool _deleteFile;
 
-            public Input(IRecordReader reader, Type inputRecordReaderType, string fileName, string sourceName, MultiInputRecordReader<T> input, long uncompressedSize)
+            public Input(IRecordReader reader, Type inputRecordReaderType, string fileName, string sourceName, MultiInputRecordReader<T> input, long uncompressedSize, bool deleteFile)
             {
                 _reader = reader;
                 FileName = fileName;
@@ -45,6 +46,7 @@ namespace Tkl.Jumbo.IO
                 _sourceName = sourceName;
                 _uncompressedSize = uncompressedSize;
                 _inputRecordReaderType = inputRecordReaderType;
+                _deleteFile = deleteFile;
             }
 
             public string FileName { get; private set; }
@@ -55,7 +57,7 @@ namespace Tkl.Jumbo.IO
                 {
                     if( _reader == null )
                     {
-                        _reader = (IRecordReader)Activator.CreateInstance(_inputRecordReaderType, FileName, _input.AllowRecordReuse, _input.DeleteFiles, _input.BufferSize, _input.CompressionType, _uncompressedSize);
+                        _reader = (IRecordReader)Activator.CreateInstance(_inputRecordReaderType, FileName, _input.AllowRecordReuse, _deleteFile, _input.BufferSize, _input.CompressionType, _uncompressedSize);
                         _reader.SourceName = _sourceName;
                     }
                     return _reader;
@@ -95,10 +97,9 @@ namespace Tkl.Jumbo.IO
         /// </summary>
         /// <param name="totalInputCount">The total number of input readers that this record reader will have.</param>
         /// <param name="allowRecordReuse"><see langword="true"/> if the record reader may reuse record instances; otherwise, <see langword="false"/>.</param>
-        /// <param name="deleteFiles"><see langword="true"/> if the input files should be deleted; otherwise, <see langword="false"/>.</param>
         /// <param name="bufferSize">The buffer size to use to read input files.</param>
         /// <param name="compressionType">The compression type to us to read input files.</param>
-        protected MultiInputRecordReader(int totalInputCount, bool allowRecordReuse, bool deleteFiles, int bufferSize, CompressionType compressionType)
+        protected MultiInputRecordReader(int totalInputCount, bool allowRecordReuse, int bufferSize, CompressionType compressionType)
         {
             if( totalInputCount < 1 )
                 throw new ArgumentOutOfRangeException("totalInputCount", "Multi input record reader must have at least one input.");
@@ -107,7 +108,6 @@ namespace Tkl.Jumbo.IO
 
             TotalInputCount = totalInputCount;
             AllowRecordReuse = allowRecordReuse;
-            DeleteFiles = deleteFiles;
             BufferSize = bufferSize;
             CompressionType = compressionType;
         }
@@ -121,11 +121,6 @@ namespace Tkl.Jumbo.IO
         /// Gets a value that indicates that this record reader is allowed to reuse record instances.
         /// </summary>
         public bool AllowRecordReuse { get; private set; }
-
-        /// <summary>
-        /// Gets a value that indicates whether the input files should be deleted.
-        /// </summary>
-        public bool DeleteFiles { get; private set; }
 
         /// <summary>
         /// Gets the buffer size to use to read input files.
@@ -184,7 +179,7 @@ namespace Tkl.Jumbo.IO
             if( reader == null )
                 throw new ArgumentNullException("reader");
             CheckDisposed();
-            AddInput(new Input(reader, null, null, null, this, -1L));
+            AddInput(new Input(reader, null, null, null, this, -1L, false));
         }
 
         /// <summary>
@@ -195,14 +190,15 @@ namespace Tkl.Jumbo.IO
         /// <param name="fileName">The file to read.</param>
         /// <param name="sourceName">A name used to identify the source of this input. Can be <see langword="null"/>.</param>
         /// <param name="uncompressedSize">The size of the file's data after decompression; only needed if <see cref="CompressionType"/> is not <see cref="Tkl.Jumbo.CompressionType.None"/>.</param>
-        public void AddInput(Type recordReaderType, string fileName, string sourceName, long uncompressedSize)
+        /// <param name="deleteFile"><see langword="true"/> to delete the file after reading finishes; otherwise, <see langword="false"/>.</param>
+        public void AddInput(Type recordReaderType, string fileName, string sourceName, long uncompressedSize, bool deleteFile)
         {
             if( recordReaderType == null )
                 throw new ArgumentNullException("recordReaderType");
             if( fileName == null )
                 throw new ArgumentNullException("fileName");
             CheckDisposed();
-            AddInput(new Input(null, recordReaderType, fileName, sourceName, this, uncompressedSize));
+            AddInput(new Input(null, recordReaderType, fileName, sourceName, this, uncompressedSize, deleteFile));
         }
 
         /// <summary>

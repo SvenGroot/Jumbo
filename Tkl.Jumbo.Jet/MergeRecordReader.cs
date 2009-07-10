@@ -55,11 +55,10 @@ namespace Tkl.Jumbo.Jet
         /// </summary>
         /// <param name="totalInputCount">The total number of input readers that this record reader will have.</param>
         /// <param name="allowRecordReuse"><see langword="true"/> if the record reader may reuse record instances; otherwise, <see langword="false"/>.</param>
-        /// <param name="deleteFiles"><see langword="true"/> if the input files should be deleted; otherwise, <see langword="false"/>.</param>
         /// <param name="bufferSize">The buffer size to use to read input files.</param>
         /// <param name="compressionType">The compression type to us to read input files.</param>
-        public MergeRecordReader(int totalInputCount, bool allowRecordReuse, bool deleteFiles, int bufferSize, CompressionType compressionType)
-            : base(totalInputCount, allowRecordReuse, deleteFiles, bufferSize, compressionType)
+        public MergeRecordReader(int totalInputCount, bool allowRecordReuse, int bufferSize, CompressionType compressionType)
+            : base(totalInputCount, allowRecordReuse, bufferSize, compressionType)
         {
             _mergeThread = new Thread(MergeThread)
             {
@@ -140,7 +139,7 @@ namespace Tkl.Jumbo.Jet
                         while( queue.Count < maxMergeInputs && mergeOutputsProcessed < previousMergePassOutputFiles.Count )
                         {
                             PreviousMergePassOutput previousOutput = previousMergePassOutputFiles[mergeOutputsProcessed];
-                            RecordReader<T> reader = new BinaryRecordReader<T>(previousOutput.File, TaskAttemptConfiguration.AllowRecordReuse, DeleteFiles, BufferSize, CompressionType, previousOutput.UncompressedSize);
+                            RecordReader<T> reader = new BinaryRecordReader<T>(previousOutput.File, TaskAttemptConfiguration.AllowRecordReuse, JetConfiguration.FileChannel.DeleteIntermediateFiles, BufferSize, CompressionType, previousOutput.UncompressedSize);
                             previousMergePassOutputs.Add(reader);
                             if( reader.ReadRecord() )
                             {

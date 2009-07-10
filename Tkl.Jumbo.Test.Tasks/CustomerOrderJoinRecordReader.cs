@@ -8,8 +8,8 @@ namespace Tkl.Jumbo.Test.Tasks
 {
     public sealed class CustomerOrderJoinRecordReader : InnerJoinRecordReader<Customer, Order, CustomerOrder>
     {
-        public CustomerOrderJoinRecordReader(int totalInputCount, bool allowRecordReuse, bool deleteFiles, int bufferSize, CompressionType compressionType)
-            : base(totalInputCount, allowRecordReuse, deleteFiles, bufferSize, compressionType)
+        public CustomerOrderJoinRecordReader(int totalInputCount, bool allowRecordReuse, int bufferSize, CompressionType compressionType)
+            : base(totalInputCount, allowRecordReuse, bufferSize, compressionType)
         {
         }
 

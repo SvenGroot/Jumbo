@@ -500,7 +500,7 @@ namespace Tkl.Jumbo.Jet
                     Type multiInputRecordReaderType = Configuration.StageConfiguration.MultiInputRecordReaderType.Type;
                     int bufferSize = multiInputRecordReaderType == typeof(MergeRecordReader<T>) ? JetClient.Configuration.FileChannel.MergeTaskReadBufferSize : JetClient.Configuration.FileChannel.ReadBufferSize;
                     CompressionType compressionType = Configuration.JobConfiguration.GetTypedSetting(FileOutputChannel.CompressionTypeSetting, JetClient.Configuration.FileChannel.CompressionType);
-                    MultiInputRecordReader<T> reader = (MultiInputRecordReader<T>)JetActivator.CreateInstance(multiInputRecordReaderType, this, InputChannels.Count, AllowRecordReuse, JetClient.Configuration.FileChannel.DeleteIntermediateFiles, bufferSize, compressionType);
+                    MultiInputRecordReader<T> reader = (MultiInputRecordReader<T>)JetActivator.CreateInstance(multiInputRecordReaderType, this, InputChannels.Count, AllowRecordReuse, bufferSize, compressionType);
                     foreach( IInputChannel inputChannel in InputChannels )
                     {
                         reader.AddInput(inputChannel.CreateRecordReader());

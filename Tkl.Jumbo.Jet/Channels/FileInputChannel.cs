@@ -121,10 +121,9 @@ namespace Tkl.Jumbo.Jet.Channels
 
             _log.InfoFormat("Creating MultiRecordReader for {0} inputs, allow record reuse = {1}, buffer size = {2}.", _inputTaskIds.Count, _taskExecution.AllowRecordReuse, _taskExecution.JetClient.Configuration.FileChannel.ReadBufferSize);
 
-            // TODO: Create seperate readers for each input channel, and a global reader for the combined channels (if more than one).
             Type multiInputRecordReaderType = _inputStage.OutputChannel.MultiInputRecordReaderType.Type;
             int bufferSize = multiInputRecordReaderType.GetGenericTypeDefinition() == typeof(MergeRecordReader<>) ? _taskExecution.JetClient.Configuration.FileChannel.MergeTaskReadBufferSize : _taskExecution.JetClient.Configuration.FileChannel.ReadBufferSize;
-            IMultiInputRecordReader reader = (IMultiInputRecordReader)JetActivator.CreateInstance(multiInputRecordReaderType, _taskExecution, _inputTaskIds.Count, _taskExecution.AllowRecordReuse, _taskExecution.JetClient.Configuration.FileChannel.DeleteIntermediateFiles, bufferSize, _compressionType);
+            IMultiInputRecordReader reader = (IMultiInputRecordReader)JetActivator.CreateInstance(multiInputRecordReaderType, _taskExecution, _inputTaskIds.Count, _taskExecution.AllowRecordReuse, bufferSize, _compressionType);
             _inputPollThread = new Thread(InputPollThread);
             _inputPollThread.Name = "FileInputChannelPolling";
             _inputPollThread.Start();
@@ -182,7 +181,7 @@ namespace Tkl.Jumbo.Jet.Channels
                 HashSet<string> tasksLeft = new HashSet<string>(_inputTaskIds);
                 string[] tasksLeftArray = tasksLeft.ToArray();
                 long memoryStorageSize = _taskExecution.Configuration.JobConfiguration.GetTypedSetting(MemoryStorageSizeSetting, _taskExecution.JetClient.Configuration.FileChannel.MemoryStorageSize);
-                _memoryStorage = new FileChannelMemoryStorageManager(memoryStorageSize);
+                _memoryStorage = FileChannelMemoryStorageManager.GetInstance(memoryStorageSize);
 
                 _log.InfoFormat("Start checking for output file completion of {0} tasks, timeout {1}ms", tasksLeft.Count, _pollingInterval);
 
@@ -325,7 +324,7 @@ namespace Tkl.Jumbo.Jet.Channels
             }
             else
             {
-                reader.AddInput(_inputReaderType, fileName, task.TaskId, uncompressedSize);
+                reader.AddInput(_inputReaderType, fileName, task.TaskId, uncompressedSize, deleteFile);
             }
 
             if( !_isReady )

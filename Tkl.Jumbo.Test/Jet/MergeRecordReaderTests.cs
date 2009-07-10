@@ -48,11 +48,13 @@ namespace Tkl.Jumbo.Test.Jet
             const int recordCountMin = 1000;
             const int recordCountMax = 10000;
             List<Int32Writable> sortedList = new List<Int32Writable>();
-            MergeRecordReader<Int32Writable> reader = new MergeRecordReader<Int32Writable>(inputCount, false, true, 4096, compression);
+            MergeRecordReader<Int32Writable> reader = new MergeRecordReader<Int32Writable>(inputCount, false, 4096, compression);
             StageConfiguration stageConfig = new StageConfiguration();
             stageConfig.AddTypedSetting(MergeRecordReaderConstants.MaxMergeInputsSetting, maxMergeInputs);
             stageConfig.StageId = "Merge";
+            reader.JetConfiguration = new JetConfiguration();
             reader.TaskAttemptConfiguration = new TaskAttemptConfiguration(Guid.Empty, new JobConfiguration(), new TaskId(stageConfig.StageId, 1), stageConfig, Utilities.TestOutputPath, "", 1, null);
+            reader.NotifyConfigurationChanged();
             Random rnd = new Random();
             for( int x = 0; x < inputCount; ++x )
             {
