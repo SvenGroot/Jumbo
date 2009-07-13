@@ -16,11 +16,30 @@ namespace Tkl.Jumbo.Jet.Tasks
     ///   may not reuse the <see cref="IWritable"/> instances for the records.
     /// </note>
     /// </remarks>
-    public class SortTask<T> : IPushTask<T, T>
+    public class SortTask<T> : Configurable, IPushTask<T, T>
         where T : IWritable, new()
     {
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(SortTask<T>));
         private List<T> _records = new List<T>();
+        private IComparer<T> _comparer;
+
+        /// <summary>
+        /// Indicates the configuration has been changed. <see cref="JetActivator.ApplyConfiguration"/> calls this method
+        /// after setting the configuration.
+        /// </summary>
+        public override void NotifyConfigurationChanged()
+        {
+            _comparer = null;
+            if( TaskAttemptConfiguration != null )
+            {
+                string comparerTypeName = TaskAttemptConfiguration.StageConfiguration.GetSetting(SortTaskConstants.ComparerSetting, null);
+                if( !string.IsNullOrEmpty(comparerTypeName) )
+                    _comparer = (IComparer<T>)JetActivator.CreateInstance(Type.GetType(comparerTypeName, true), DfsConfiguration, JetConfiguration, TaskAttemptConfiguration);
+            }
+
+            if( _comparer == null )
+                _comparer = Comparer<T>.Default;
+        }
 
         #region IPushTask<TInput,TOutput> Members
 
@@ -38,14 +57,10 @@ namespace Tkl.Jumbo.Jet.Tasks
         /// Method called after the last record was processed.
         /// </summary>
         /// <param name="output">The <see cref="RecordWriter{T}"/> to which the task's output should be written.</param>
-        /// <remarks>
-        /// This enables the task to finish up its processing and write any further records it may have collected during processing.
-        /// </remarks>
         public void Finish(Tkl.Jumbo.IO.RecordWriter<T> output)
         {
             _log.InfoFormat("Sorting {0} records.", _records.Count);
-            // TODO: There should be some way in which the job configuration can specify a comparer to use.
-            _records.Sort();
+            _records.Sort(_comparer);
             _log.Info("Sort complete.");
             foreach( T record in _records )
             {

@@ -68,6 +68,7 @@
     <Compile Include="Channels\FileChannelMemoryStorageManager.cs" />
     <Compile Include="Channels\FileInputChannel.cs" />
     <Compile Include="Channels\FileOutputChannel.cs" />
+    <Compile Include="Channels\IChannelMultiInputRecordReader.cs" />
     <Compile Include="Channels\IInputChannel.cs" />
     <Compile Include="Channels\IOutputChannel.cs" />
     <Compile Include="Channels\PipelineOutputChannel.cs" />
@@ -76,6 +77,8 @@
     <Compile Include="Configurable.cs" />
     <Compile Include="FileChannelConfigurationElement.cs" />
     <Compile Include="GlobalSuppressions.cs" />
+    <Compile Include="HashPartitioner.cs" />
+    <Compile Include="HashPartitionerConstants.cs" />
     <Compile Include="IConfigurable.cs" />
     <Compile Include="IPullTask.cs" />
     <Compile Include="IPushTask.cs" />
@@ -128,6 +131,7 @@
     <Compile Include="Tasks\EmptyTask.cs" />
     <Compile Include="MergeRecordReaderConstants.cs" />
     <Compile Include="Tasks\SortTask.cs" />
+    <Compile Include="Tasks\SortTaskConstants.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="jumbo.snk" />

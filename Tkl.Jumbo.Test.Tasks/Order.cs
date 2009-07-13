@@ -6,7 +6,7 @@ using Tkl.Jumbo.IO;
 
 namespace Tkl.Jumbo.Test.Tasks
 {
-    public class Order : Writable<Order>, IComparable<Order>, ICloneable
+    public class Order : Writable<Order>, ICloneable
     {
         public int Id { get; set; }
         public int CustomerId { get; set; }
@@ -22,8 +22,7 @@ namespace Tkl.Jumbo.Test.Tasks
 
         public override int GetHashCode()
         {
-            // This is again for join purposes.
-            return CustomerId.GetHashCode();
+            return Id.GetHashCode();
         }
 
         #region ICloneable Members
@@ -31,16 +30,6 @@ namespace Tkl.Jumbo.Test.Tasks
         public object Clone()
         {
             return MemberwiseClone();
-        }
-
-        #endregion
-
-        #region IComparable<Order> Members
-
-        public int CompareTo(Order other)
-        {
-            // This is for purposes of the join.
-            return CustomerId - other.CustomerId;
         }
 
         #endregion

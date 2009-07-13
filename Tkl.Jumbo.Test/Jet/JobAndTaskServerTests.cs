@@ -149,6 +149,10 @@ namespace Tkl.Jumbo.Test.Jet
             StageConfiguration orderInput = config.AddInputStage("OrderInput", dfsClient.NameServer.GetFileInfo("/testjoin/orders"), typeof(EmptyTask<Order>), typeof(RecordFileReader<Order>));
             StageConfiguration orderSort = config.AddStage("CustomerSort", new[] { orderInput }, typeof(SortTask<Order>), joinTasks, ChannelType.Pipeline, ChannelConnectivity.Full, null, null, null, null);
 
+            orderInput.AddSetting(HashPartitionerConstants.EqualityComparerSetting, typeof(OrderJoinComparer).AssemblyQualifiedName);
+            orderSort.AddSetting(SortTaskConstants.ComparerSetting, typeof(OrderJoinComparer).AssemblyQualifiedName);
+            orderSort.AddSetting(MergeRecordReaderConstants.ComparerSetting, typeof(OrderJoinComparer).AssemblyQualifiedName);
+
             const string outputPath = "/testjoinoutput";
             dfsClient.NameServer.CreateDirectory(outputPath);
             StageConfiguration joinStage = config.AddStage("Join", new[] { customerSort }, typeof(EmptyTask<CustomerOrder>), joinTasks, ChannelType.File, ChannelConnectivity.Full, typeof(MergeRecordReader<Customer>), null, outputPath, typeof(RecordFileWriter<CustomerOrder>));

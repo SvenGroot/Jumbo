@@ -11,14 +11,20 @@ namespace Tkl.Jumbo.Jet
     public static class MergeRecordReaderConstants
     {
         /// <summary>
-        /// The name of the setting in <see cref="StageConfiguration.StageSettings"/> that specified the maximum number
+        /// The name of the setting in <see cref="StageConfiguration.StageSettings"/> that specifies the maximum number
         /// of files to merge in one pass.
         /// </summary>
-        public const string MaxMergeInputsSetting = "MergeSortTask.MaxMergeTasks";
+        public const string MaxMergeInputsSetting = "MergeRecordReader.MaxMergeTasks";
+
         /// <summary>
         /// The default maximum number of files to merge in one pass.
         /// </summary>
         public const int DefaultMaxMergeInputs = 100;
 
+        /// <summary>
+        /// The name of the setting in <see cref="StageConfiguration.StageSettings"/> that specifies the <see cref="IComparer{T}"/>
+        /// to use. If this setting is not specified, <see cref="Comparer{T}.Default"/> will be used.
+        /// </summary>
+        public const string ComparerSetting = "MergeRecordReader.Comparer";
     }
 }

@@ -119,11 +119,16 @@ namespace Tkl.Jumbo.Jet.Channels
             if( _inputPollThread != null )
                 throw new InvalidOperationException("A record reader for this channel was already created.");
 
-            _log.InfoFormat("Creating MultiRecordReader for {0} inputs, allow record reuse = {1}, buffer size = {2}.", _inputTaskIds.Count, _taskExecution.AllowRecordReuse, _taskExecution.JetClient.Configuration.FileChannel.ReadBufferSize);
+            _log.InfoFormat("Creating MultiRecordReader of for {0} inputs, allow record reuse = {1}, buffer size = {2}.", _inputTaskIds.Count, _taskExecution.AllowRecordReuse, _taskExecution.JetClient.Configuration.FileChannel.ReadBufferSize);
 
             Type multiInputRecordReaderType = _inputStage.OutputChannel.MultiInputRecordReaderType.Type;
             int bufferSize = multiInputRecordReaderType.GetGenericTypeDefinition() == typeof(MergeRecordReader<>) ? _taskExecution.JetClient.Configuration.FileChannel.MergeTaskReadBufferSize : _taskExecution.JetClient.Configuration.FileChannel.ReadBufferSize;
-            IMultiInputRecordReader reader = (IMultiInputRecordReader)JetActivator.CreateInstance(multiInputRecordReaderType, _taskExecution, _inputTaskIds.Count, _taskExecution.AllowRecordReuse, bufferSize, _compressionType);
+            // We're not using JetActivator to create the object because we need to delay calling NotifyConfigurationChanged until after InputStage was set.
+            IMultiInputRecordReader reader = (IMultiInputRecordReader)Activator.CreateInstance(multiInputRecordReaderType, _inputTaskIds.Count, _taskExecution.AllowRecordReuse, bufferSize, _compressionType);
+            IChannelMultiInputRecordReader channelReader = reader as IChannelMultiInputRecordReader;
+            if( channelReader != null )
+                channelReader.InputStage = _inputStage;
+            JetActivator.ApplyConfiguration(reader, _taskExecution.DfsClient.Configuration, _taskExecution.JetClient.Configuration, _taskExecution.Configuration);
             _inputPollThread = new Thread(InputPollThread);
             _inputPollThread.Name = "FileInputChannelPolling";
             _inputPollThread.Start();

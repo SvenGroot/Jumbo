@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Threading;
 using Tkl.Jumbo.IO;
+using Tkl.Jumbo.Jet.Channels;
 
 namespace Tkl.Jumbo.Jet
 {
@@ -11,7 +12,14 @@ namespace Tkl.Jumbo.Jet
     /// Record reader that merges the records from multiple sorted input record readers.
     /// </summary>
     /// <typeparam name="T">The type of the records.</typeparam>
-    public sealed class MergeRecordReader<T> : MultiInputRecordReader<T>, IConfigurable
+    /// <remarks>
+    /// <para>
+    ///   If <see cref="InputStage"/> is not <see langword="null"/>, the <see cref="MergeRecordReader{T}"/> will using the <see cref="Tasks.SortTaskConstants.ComparerSetting"/>
+    ///   on the <see cref="StageConfiguration.StageSettings"/> of the input stage to determine the comparer to use. Otherwise, it will use the 
+    ///   <see cref="MergeRecordReaderConstants.ComparerSetting"/> of the current stage. If neither is specified, <see cref="Comparer{T}.Default"/> will be used.
+    /// </para>
+    /// </remarks>
+    public sealed class MergeRecordReader<T> : MultiInputRecordReader<T>, IConfigurable, IChannelMultiInputRecordReader
         where T : IWritable, new()
     {
         #region Nested types
@@ -30,7 +38,12 @@ namespace Tkl.Jumbo.Jet
 
         private sealed class MergeInputComparer : Comparer<MergeInput>
         {
-            private readonly Comparer<T> _comparer = Comparer<T>.Default;
+            private readonly IComparer<T> _comparer;
+
+            public MergeInputComparer(IComparer<T> comparer)
+            {
+                _comparer = comparer;
+            }
 
             public override int Compare(MergeInput x, MergeInput y)
             {
@@ -113,6 +126,21 @@ namespace Tkl.Jumbo.Jet
                 throw new InvalidOperationException("maxMergeInputs must be larger than zero.");
             _log.InfoFormat("Merging {0} inputs with max {1} inputs per pass.", TotalInputCount, maxMergeInputs);
 
+            IComparer<T> recordComparer;
+
+            string comparerTypeName;
+            if( InputStage == null )
+                comparerTypeName = TaskAttemptConfiguration.StageConfiguration.GetSetting(MergeRecordReaderConstants.ComparerSetting, null);
+            else
+                comparerTypeName = InputStage.GetSetting(Tasks.SortTaskConstants.ComparerSetting, null);
+            
+            if( !string.IsNullOrEmpty(comparerTypeName) )
+                recordComparer = (IComparer<T>)JetActivator.CreateInstance(Type.GetType(comparerTypeName, true), DfsConfiguration, JetConfiguration, TaskAttemptConfiguration);
+            else
+                recordComparer = Comparer<T>.Default;
+
+            MergeInputComparer comparer = new MergeInputComparer(recordComparer);
+
             int processed = 0;
             List<PreviousMergePassOutput> previousMergePassOutputFiles = new List<PreviousMergePassOutput>();
             int pass = 1;
@@ -130,7 +158,7 @@ namespace Tkl.Jumbo.Jet
                     WaitForInputs(processed + maxMergeInputs, Timeout.Infinite);
 
                     // Create the merge queue from the new inputs.
-                    PriorityQueue<MergeInput> queue = new PriorityQueue<MergeInput>(EnumerateInputs(processed, maxMergeInputs), new MergeInputComparer());
+                    PriorityQueue<MergeInput> queue = new PriorityQueue<MergeInput>(EnumerateInputs(processed, maxMergeInputs), comparer);
                     processed += queue.Count;
                     // If the queue size is smaller than the amount of inputs we can merge, and we have previous merge results, we'll add those.
                     if( queue.Count < maxMergeInputs && previousMergePassOutputFiles.Count > 0 )
@@ -253,6 +281,15 @@ namespace Tkl.Jumbo.Jet
                 _mergeThread.Start();
             }
         }
+
+        #endregion
+
+        #region IChannelMultiInputRecordReader Members
+
+        /// <summary>
+        /// Gets or sets the input stage for the channel that this reader is reading from.
+        /// </summary>
+        public StageConfiguration InputStage { get; set; }
 
         #endregion
     }
