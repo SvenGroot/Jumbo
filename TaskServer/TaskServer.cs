@@ -140,6 +140,17 @@ namespace TaskServerApplication
             }
         }
 
+        public void RegisterTcpChannelPort(Guid jobId, string taskId, int port)
+        {
+            if( taskId == null )
+                throw new ArgumentNullException("taskId");
+            if( port <= 0 )
+                throw new ArgumentOutOfRangeException("port", "Port must be greater than zero.");
+
+            string fullTaskId = Job.CreateFullTaskId(jobId, taskId);
+            _log.InfoFormat("Task {0} has is registering TCP channel port {1}.", fullTaskId, port);
+            _taskRunner.RegisterTcpChannelPort(fullTaskId, port);
+        }
 
         #endregion
 

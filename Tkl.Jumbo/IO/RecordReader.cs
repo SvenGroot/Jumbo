@@ -14,6 +14,7 @@ namespace Tkl.Jumbo.IO
         where T : IWritable, new()
     {
         private int _recordsRead;
+        private bool _hasRecords = true;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="RecordReader{T}"/> class.
@@ -58,15 +59,29 @@ namespace Tkl.Jumbo.IO
         public T CurrentRecord { get; protected set; }
 
         /// <summary>
+        /// Gets a value that indicates whether there are records available on the data source that this reader is reading from.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        ///   This is a default implementation for <see cref="IRecordReader.RecordsAvailable"/> that simply always returns <see langword="true"/> until
+        ///   a call to <see cref="ReadRecord"/> has returned <see langword="false"/>.
+        /// </para>
+        /// </remarks>
+        public virtual bool RecordsAvailable
+        {
+            get { return _hasRecords; }
+        }
+
+        /// <summary>
         /// Reads a record.
         /// </summary>
         /// <returns><see langword="true"/> if an object was successfully read from the stream; <see langword="false"/> if the end of the stream or stream fragment was reached.</returns>
         public bool ReadRecord()
         {
-            bool result = ReadRecordInternal();
-            if( result )
+            _hasRecords = ReadRecordInternal();
+            if( _hasRecords )
                 ++_recordsRead;
-            return result;
+            return _hasRecords;
         }
 
         /// <summary>

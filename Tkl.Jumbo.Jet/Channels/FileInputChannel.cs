@@ -14,7 +14,7 @@ namespace Tkl.Jumbo.Jet.Channels
     /// <summary>
     /// Represents the reading end of a file channel.
     /// </summary>
-    public class FileInputChannel : IInputChannel, IDisposable
+    public class FileInputChannel : InputChannel, IDisposable
     {
         /// <summary>
         /// The name of the setting in <see cref="JobConfiguration.JobSettings"/> that overrides the global memory storage size setting.
@@ -35,22 +35,18 @@ namespace Tkl.Jumbo.Jet.Channels
         private bool _isReady;
         private readonly ManualResetEvent _readyEvent = new ManualResetEvent(false);
         private bool _disposed;
-        private readonly TaskExecutionUtility _taskExecution;
-        private readonly StageConfiguration _inputStage;
         private FileChannelMemoryStorageManager _memoryStorage;
-        private CompressionType _compressionType;
-        private readonly List<string> _inputTaskIds = new List<string>();
         private readonly List<CompletedTask> _completedTasks = new List<CompletedTask>();
         private volatile bool _allInputTasksCompleted;
-        private readonly Type _inputRecordType;
         private readonly Type _inputReaderType;
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="FileInputChannel"/>.
+        /// Initializes a new instance of the <see cref="FileInputChannel"/> class.
         /// </summary>
         /// <param name="taskExecution">The task execution utility for the task that this channel is for.</param>
         /// <param name="inputStage">The input stage that this file channel reads from.</param>
         public FileInputChannel(TaskExecutionUtility taskExecution, StageConfiguration inputStage)
+            : base(taskExecution, inputStage)
         {
             if( taskExecution == null )
                 throw new ArgumentNullException("taskExecution");
@@ -60,26 +56,9 @@ namespace Tkl.Jumbo.Jet.Channels
             _jobID = taskExecution.Configuration.JobId;
             _jobServer = taskExecution.JetClient.JobServer;
             _outputTaskId = taskExecution.Configuration.TaskId;
-            _taskExecution = taskExecution;
-            _compressionType = _taskExecution.Configuration.JobConfiguration.GetTypedSetting(FileOutputChannel.CompressionTypeSetting, _taskExecution.JetClient.Configuration.FileChannel.CompressionType);
-            _inputStage = inputStage;
             // The type of the records in the intermediate files will be the output type of the input stage, which usually matches the input type of the output stage but
             // in the case of a join it may not.
-            _inputRecordType = inputStage.TaskType.FindGenericInterfaceType(typeof(ITask<,>)).GetGenericArguments()[1];
-            _inputReaderType = typeof(BinaryRecordReader<>).MakeGenericType(_inputRecordType);
-
-            switch( _inputStage.OutputChannel.Connectivity )
-            {
-            case ChannelConnectivity.Full:
-                IList<StageConfiguration> stages = taskExecution.Configuration.JobConfiguration.GetPipelinedStages(inputStage.CompoundStageId);
-                if( stages == null )
-                    throw new ArgumentException(string.Format(System.Globalization.CultureInfo.CurrentCulture, "Input stage ID {0} could not be found.", inputStage.StageId));
-                GetInputTaskIdsFull(stages, 0, null);
-                break;
-            case ChannelConnectivity.PointToPoint:
-                _inputTaskIds.Add(GetInputTaskIdPointToPoint());
-                break;
-            }
+            _inputReaderType = typeof(BinaryRecordReader<>).MakeGenericType(InputRecordType);
         }
 
         /// <summary>
@@ -105,8 +84,6 @@ namespace Tkl.Jumbo.Jet.Channels
         /// </summary>
         public long NetworkBytesRead { get; private set; }
 
-        #region IInputChannel Members
-
         /// <summary>
         /// Creates a <see cref="RecordReader{T}"/> from which the channel can read its input.
         /// </summary>
@@ -114,21 +91,13 @@ namespace Tkl.Jumbo.Jet.Channels
         /// <remarks>
         /// This function will create a <see cref="MultiRecordReader{T}"/> that serializes the data from all the different input tasks.
         /// </remarks>
-        public IRecordReader CreateRecordReader()
+        public override IRecordReader CreateRecordReader()
         {
             if( _inputPollThread != null )
                 throw new InvalidOperationException("A record reader for this channel was already created.");
 
-            _log.InfoFormat("Creating MultiRecordReader of for {0} inputs, allow record reuse = {1}, buffer size = {2}.", _inputTaskIds.Count, _taskExecution.AllowRecordReuse, _taskExecution.JetClient.Configuration.FileChannel.ReadBufferSize);
+            IMultiInputRecordReader reader = CreateChannelRecordReader();
 
-            Type multiInputRecordReaderType = _inputStage.OutputChannel.MultiInputRecordReaderType.Type;
-            int bufferSize = multiInputRecordReaderType.GetGenericTypeDefinition() == typeof(MergeRecordReader<>) ? _taskExecution.JetClient.Configuration.FileChannel.MergeTaskReadBufferSize : _taskExecution.JetClient.Configuration.FileChannel.ReadBufferSize;
-            // We're not using JetActivator to create the object because we need to delay calling NotifyConfigurationChanged until after InputStage was set.
-            IMultiInputRecordReader reader = (IMultiInputRecordReader)Activator.CreateInstance(multiInputRecordReaderType, _inputTaskIds.Count, _taskExecution.AllowRecordReuse, bufferSize, _compressionType);
-            IChannelMultiInputRecordReader channelReader = reader as IChannelMultiInputRecordReader;
-            if( channelReader != null )
-                channelReader.InputStage = _inputStage;
-            JetActivator.ApplyConfiguration(reader, _taskExecution.DfsClient.Configuration, _taskExecution.JetClient.Configuration, _taskExecution.Configuration);
             _inputPollThread = new Thread(InputPollThread);
             _inputPollThread.Name = "FileInputChannelPolling";
             _inputPollThread.Start();
@@ -140,8 +109,6 @@ namespace Tkl.Jumbo.Jet.Channels
             _readyEvent.WaitOne();
             return reader;
         }
-
-        #endregion
 
         #region IDisposable Members
 
@@ -183,9 +150,9 @@ namespace Tkl.Jumbo.Jet.Channels
         {
             try
             {
-                HashSet<string> tasksLeft = new HashSet<string>(_inputTaskIds);
+                HashSet<string> tasksLeft = new HashSet<string>(InputTaskIds);
                 string[] tasksLeftArray = tasksLeft.ToArray();
-                long memoryStorageSize = _taskExecution.Configuration.JobConfiguration.GetTypedSetting(MemoryStorageSizeSetting, _taskExecution.JetClient.Configuration.FileChannel.MemoryStorageSize);
+                long memoryStorageSize = TaskExecution.Configuration.JobConfiguration.GetTypedSetting(MemoryStorageSizeSetting, TaskExecution.JetClient.Configuration.FileChannel.MemoryStorageSize);
                 _memoryStorage = FileChannelMemoryStorageManager.GetInstance(memoryStorageSize);
 
                 _log.InfoFormat("Start checking for output file completion of {0} tasks, timeout {1}ms", tasksLeft.Count, _pollingInterval);
@@ -296,7 +263,7 @@ namespace Tkl.Jumbo.Jet.Channels
             bool deleteFile;
             Stream memoryStream = null;
             long uncompressedSize = -1L;
-            if( !_inputStage.OutputChannel.ForceFileDownload && task.TaskServer.HostName == Dns.GetHostName() )
+            if( !InputStage.OutputChannel.ForceFileDownload && task.TaskServer.HostName == Dns.GetHostName() )
             {
                 ITaskServerClientProtocol taskServer = JetClient.CreateTaskServerClient(task.TaskServer);
                 string taskOutputDirectory = taskServer.GetOutputFileDirectory(task.JobId, task.TaskId);
@@ -304,7 +271,7 @@ namespace Tkl.Jumbo.Jet.Channels
                 long size = new FileInfo(fileName).Length;
                 _log.InfoFormat("Using local file {0} as input.", fileName);
                 deleteFile = false; // We don't delete output files; if this task fails they might still be needed
-                uncompressedSize = _taskExecution.Umbilical.GetUncompressedTemporaryFileSize(task.JobId, Path.GetFileName(fileName));
+                uncompressedSize = TaskExecution.Umbilical.GetUncompressedTemporaryFileSize(task.JobId, Path.GetFileName(fileName));
                 if( uncompressedSize != -1 )
                 {
                     LocalBytesRead += uncompressedSize;
@@ -317,13 +284,13 @@ namespace Tkl.Jumbo.Jet.Channels
             {
                 if( !DownloadFile(task, _outputTaskId.ToString(), out fileName, out memoryStream, out uncompressedSize) )
                     return false; // We couldn't download because the server is busy
-                deleteFile = _taskExecution.JetClient.Configuration.FileChannel.DeleteIntermediateFiles; // Files we've downloaded can be deleted.
+                deleteFile = TaskExecution.JetClient.Configuration.FileChannel.DeleteIntermediateFiles; // Files we've downloaded can be deleted.
             }
 
-            _log.InfoFormat("Creating record reader for task {0}'s output, allowRecordReuse = {1}.", task.TaskId, _taskExecution.AllowRecordReuse);
+            _log.InfoFormat("Creating record reader for task {0}'s output, allowRecordReuse = {1}.", task.TaskId, TaskExecution.AllowRecordReuse);
             if( fileName == null )
             {
-                IRecordReader taskReader = (IRecordReader)JetActivator.CreateInstance(_inputReaderType, _taskExecution, memoryStream, _taskExecution.AllowRecordReuse);
+                IRecordReader taskReader = (IRecordReader)JetActivator.CreateInstance(_inputReaderType, TaskExecution, memoryStream, TaskExecution.AllowRecordReuse);
                 taskReader.SourceName = task.TaskId;
                 reader.AddInput(taskReader);
             }
@@ -386,7 +353,7 @@ namespace Tkl.Jumbo.Jet.Channels
                     }
                     else
                     {
-                        using( Stream decompressorStream = stream.CreateDecompressor(_compressionType, uncompressedSize) )
+                        using( Stream decompressorStream = stream.CreateDecompressor(CompressionType, uncompressedSize) )
                         {
                             decompressorStream.CopySize(memoryStream, uncompressedSize);
                         }
@@ -402,53 +369,6 @@ namespace Tkl.Jumbo.Jet.Channels
             }
         }
 
-        private void GetInputTaskIdsFull(IList<StageConfiguration> stages, int index, TaskId baseTaskId)
-        {
-            StageConfiguration stage = stages[index];
-            if( stages.Count == 1 || index < stages.Count - 1 )
-            {
-                // Either this is a stage with child stages or the input stage is not a compound stage,
-                // this means we need to connect to all tasks in the stage.
-                for( int x = 1; x <= stage.TaskCount; ++x )
-                {
-                    TaskId taskId = new TaskId(baseTaskId, stage.StageId, x);
-                    if( index == stages.Count - 1 )
-                        _inputTaskIds.Add(taskId.ToString());
-                    else
-                        GetInputTaskIdsFull(stages, index + 1, taskId);
-                }
-            }
-            else
-            {
-                TaskId taskId;
-                // This is the last child stage in a compound stage; we're connecting to one task only.
-                // If the stage has only one task, then we assume partitioning hasn't been done yet and every task in this stage
-                // connects to that one task. Otherwise, every task connects to the matching task in the input stage.
-                if( stage.TaskCount == 1 )
-                    taskId = new TaskId(baseTaskId, stage.StageId, 1);
-                else
-                    taskId = new TaskId(baseTaskId, stage.StageId, _outputTaskId.TaskNumber);
-                _inputTaskIds.Add(taskId.ToString());
-            }
-        }
 
-        private string GetInputTaskIdPointToPoint()
-        {
-            int outputTaskNumber = _outputTaskId.TaskNumber;
-            IList<StageConfiguration> inputStages = _taskExecution.Configuration.JobConfiguration.GetPipelinedStages(_inputStage.CompoundStageId);
-            int totalTaskCount = _inputStage.TotalTaskCount;
-
-            int remainder = outputTaskNumber;
-            TaskId result = null;
-            for( int x = 0; x < inputStages.Count - 1; ++x )
-            {
-                int taskCount = JobConfiguration.GetTotalTaskCount(inputStages, x);
-                int inputTaskNumber = (remainder - 1) / taskCount + 1;
-                result = new TaskId(result, inputStages[x].StageId, inputTaskNumber);
-                remainder = (remainder - 1) % taskCount + 1;
-            }
-
-            return result.ToString();
-        }
     }
 }

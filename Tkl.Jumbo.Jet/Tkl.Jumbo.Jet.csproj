@@ -65,13 +65,16 @@
     <Compile Include="Channels\ChannelConnectivity.cs" />
     <Compile Include="Channels\ChannelInputConfiguration.cs" />
     <Compile Include="Channels\ChannelType.cs" />
+    <Compile Include="Channels\InputChannel.cs" />
     <Compile Include="Channels\FileChannelMemoryStorageManager.cs" />
     <Compile Include="Channels\FileInputChannel.cs" />
     <Compile Include="Channels\FileOutputChannel.cs" />
     <Compile Include="Channels\IChannelMultiInputRecordReader.cs" />
     <Compile Include="Channels\IInputChannel.cs" />
     <Compile Include="Channels\IOutputChannel.cs" />
+    <Compile Include="Channels\NetworkRecordReader.cs" />
     <Compile Include="Channels\PipelineOutputChannel.cs" />
+    <Compile Include="Channels\TcpInputChannel.cs" />
     <Compile Include="CleanupJobJetHeartbeatResponse.cs" />
     <Compile Include="CompletedTask.cs" />
     <Compile Include="Configurable.cs" />

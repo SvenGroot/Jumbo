@@ -16,6 +16,16 @@ namespace Tkl.Jumbo.IO
     public interface IMultiInputRecordReader : IRecordReader
     {
         /// <summary>
+        /// Gets the total number of inputs readers that this record reader will have.
+        /// </summary>
+        int TotalInputCount { get; }
+
+        /// <summary>
+        /// Gets the current number of inputs that have been added to the <see cref="MultiInputRecordReader{T}"/>.
+        /// </summary>
+        int CurrentInputCount { get; }
+
+        /// <summary>
         /// Adds the specified record reader to the inputs to be read by this record reader.
         /// </summary>
         /// <param name="reader">The record reader to read from.</param>

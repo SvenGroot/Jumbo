@@ -149,6 +149,22 @@ namespace Tkl.Jumbo.IO
         }
 
         /// <summary>
+        /// Gets a value that indicates if any reader has data available.
+        /// </summary>
+        public override bool RecordsAvailable
+        {
+            get
+            {
+                lock( _inputs )
+                {
+                    // We treat inputs whose reader hasn't yet been created as if RecordsAvailable is true, as they are read from a file
+                    // so their readers would always return true anyway.
+                    return _inputs.Exists((i) => !i.IsReaderCreated || i.Reader.RecordsAvailable);
+                }
+            }
+        }
+
+        /// <summary>
         /// Gets the current number of inputs that have been added to the <see cref="MultiInputRecordReader{T}"/>.
         /// </summary>
         public int CurrentInputCount

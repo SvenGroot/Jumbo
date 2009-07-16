@@ -40,5 +40,13 @@ namespace Tkl.Jumbo.Jet
         /// <param name="fileName">The name (without path) of the file.</param>
         /// <returns>The uncompressed size of the file, or -1 if unknown.</returns>
         long GetUncompressedTemporaryFileSize(Guid jobId, string fileName);
+
+        /// <summary>
+        /// Registers the port number that the task host is listening on for TCP channel connections.
+        /// </summary>
+        /// <param name="jobId">The job ID of the job containing the task.</param>
+        /// <param name="taskId">The task ID.</param>
+        /// <param name="port">The port number.</param>
+        void RegisterTcpChannelPort(Guid jobId, string taskId, int port);
     }
 }

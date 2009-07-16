@@ -30,6 +30,11 @@ namespace TaskServerApplication
             return TaskServer.Instance.GetUncompressedTemporaryFileSize(jobId, fileName);
         }
 
+        public void RegisterTcpChannelPort(Guid jobId, string taskId, int port)
+        {
+            TaskServer.Instance.RegisterTcpChannelPort(jobId, taskId, port);
+        }
+
         #endregion
 
         #region ITaskServerClientProtocol Members

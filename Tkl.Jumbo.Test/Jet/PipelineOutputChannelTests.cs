@@ -36,6 +36,10 @@ namespace Tkl.Jumbo.Test.Jet
                 return -1;
             }
 
+            public void RegisterTcpChannelPort(Guid jobId, string taskId, int port)
+            {
+            }
+
             #endregion
         }
 

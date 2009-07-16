@@ -51,6 +51,8 @@ namespace TaskServerApplication
 
             public StageConfiguration StageConfiguration { get; private set; }
 
+            public int TcpChannelPort { get; set; }
+
             public void Run(int createProcessDelay)
             {
                 if( Debugger.IsAttached || _taskServer.Configuration.TaskServer.RunTaskHostInAppDomain )
@@ -266,6 +268,18 @@ namespace TaskServerApplication
             {
                 RunningTask task = _runningTasks[fullTaskID];
                 return task.JobDirectory;
+            }
+        }
+
+        public void RegisterTcpChannelPort(string fullTaskId, int port)
+        {
+            if( fullTaskId == null )
+                throw new ArgumentNullException("fullTaskId");
+
+            lock( _runningTasks )
+            {
+                RunningTask task = _runningTasks[fullTaskId];
+                task.TcpChannelPort = port;
             }
         }
 

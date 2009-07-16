@@ -62,6 +62,7 @@
     <Compile Include="DriveSpaceInfo.cs" />
     <Compile Include="IO\IMultiInputRecordReader.cs" />
     <Compile Include="IO\InnerJoinRecordReader.cs" />
+    <Compile Include="IO\RoundRobinMultiInputRecordReader.cs" />
     <Compile Include="ObjectWithParent.cs" />
     <Compile Include="IO\MultiInputRecordReader.cs" />
     <Compile Include="IO\RecordFile.cs" />
