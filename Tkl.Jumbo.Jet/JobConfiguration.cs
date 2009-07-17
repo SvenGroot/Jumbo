@@ -221,7 +221,7 @@ namespace Tkl.Jumbo.Jet
                         ChannelType = channelType,
                         PartitionerType = partitionerType ?? typeof(HashPartitioner<>).MakeGenericType(inputStageOutputType),
                         Connectivity = connectivity,
-                        MultiInputRecordReaderType = multiInputRecordReaderType ?? typeof(MultiRecordReader<>).MakeGenericType(inputStageOutputType),
+                        MultiInputRecordReaderType = multiInputRecordReaderType ?? (channelType == ChannelType.Tcp ? typeof(RoundRobinMultiInputRecordReader<>).MakeGenericType(inputStageOutputType) : typeof(MultiRecordReader<>).MakeGenericType(inputStageOutputType)),
                         OutputStage = stageId,
                     };
                     foreach( StageConfiguration inputStage in inputStages )

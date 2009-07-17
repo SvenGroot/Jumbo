@@ -74,6 +74,11 @@ namespace TaskServerApplication
             return TaskServer.Instance.GetTaskProfileOutput(jobId, taskId, attempt);
         }
 
+        public int GetTcpChannelPort(Guid jobId, string taskId)
+        {
+            return TaskServer.Instance.GetTcpChannelPort(jobId, taskId);
+        }
+
         #endregion
     }
 }

@@ -20,6 +20,8 @@ namespace Tkl.Jumbo.IO
     public sealed class RoundRobinMultiInputRecordReader<T> : MultiInputRecordReader<T>
         where T : IWritable, new()
     {
+        private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(RoundRobinMultiInputRecordReader<T>));
+
         private readonly List<RecordReader<T>> _readers = new List<RecordReader<T>>();
         private int _previousInputsAvailable;
         private int _currentReader = -1;
@@ -76,7 +78,7 @@ namespace Tkl.Jumbo.IO
                             return true;
                     }
                     else
-                        nextReader = (nextReader + 1 % _readers.Count);
+                        nextReader = (nextReader + 1) % _readers.Count;
                 }
 
                 // If we got here, we didn't find any record to return.

@@ -428,6 +428,9 @@ namespace Tkl.Jumbo.Jet
                     case ChannelType.File:
                         result.Add(new FileInputChannel(this, inputStage));
                         break;
+                    case ChannelType.Tcp:
+                        result.Add(new TcpInputChannel(this, inputStage));
+                        break;
                     default:
                         throw new InvalidOperationException("Invalid channel type.");
                     }
@@ -450,6 +453,8 @@ namespace Tkl.Jumbo.Jet
                     {
                     case ChannelType.File:
                         return new FileOutputChannel(this);
+                    case ChannelType.Tcp:
+                        return new TcpOutputChannel(this);
                     default:
                         throw new InvalidOperationException("Invalid channel type.");
                     }
@@ -514,6 +519,8 @@ namespace Tkl.Jumbo.Jet
 
         private void CalculateMetrics(TaskMetrics metrics)
         {
+            // TODO: Metrics for TCP channels.
+
             // We don't count pipeline input or output.
             if( _inputStages.Count == 0 || _inputStages[0].OutputChannel != null )
             {

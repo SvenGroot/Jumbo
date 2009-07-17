@@ -72,6 +72,12 @@ namespace Tkl.Jumbo.Test.Jet
         }
 
         [Test]
+        public void TestJobExecutionTcpChannel()
+        {
+            RunJob(false, "/joboutput5", TaskKind.Pull, ChannelType.Tcp);
+        }
+
+        [Test]
         public void TestJobExecutionSort()
         {
             const int recordCount = 2500000;
@@ -283,8 +289,9 @@ namespace Tkl.Jumbo.Test.Jet
             {
                 // Pipeline channel cannot merge so we will add another stage in between.
                 stage = config.AddPointToPointStage("IntermediateTask", stage, adderTask, ChannelType.Pipeline, null, null);
+                channelType = ChannelType.File;
             }
-            config.AddStage("OutputTask", new[] { stage }, adderTask, 1, ChannelType.File, ChannelConnectivity.Full, null, null, outputPath, typeof(TextRecordWriter<Int32Writable>));
+            config.AddStage("OutputTask", new[] { stage }, adderTask, 1, channelType, ChannelConnectivity.Full, null, null, outputPath, typeof(TextRecordWriter<Int32Writable>));
             foreach( ChannelConfiguration channel in config.GetAllChannels() )
             {
                 if( channel.ChannelType == ChannelType.File )

@@ -283,6 +283,21 @@ namespace TaskServerApplication
             }
         }
 
+        public int GetTcpChannelPort(string fullTaskId)
+        {
+            if( fullTaskId == null )
+                throw new ArgumentNullException("fullTaskId");
+
+            lock( _runningTasks )
+            {
+                RunningTask task;
+                if( _runningTasks.TryGetValue(fullTaskId, out task) )
+                    return task.TcpChannelPort;
+                else
+                    return 0;
+            }
+        }
+
         private void TaskRunnerThread()
         {
             while( _running )

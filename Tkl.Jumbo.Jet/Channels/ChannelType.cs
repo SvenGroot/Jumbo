@@ -22,6 +22,14 @@ namespace Tkl.Jumbo.Jet.Channels
         /// this channel type are treated as a single entity from the scheduler's point of view because they
         /// are executed in the same process.
         /// </remarks>
-        Pipeline
+        Pipeline,
+        /// <summary>
+        /// The input task connects to the output task via TCP.
+        /// </summary>
+        /// <remarks>
+        /// This channel has some limitations: all output tasks of the channel must run simultaneously,
+        /// and the job will fail if a single task fails.
+        /// </remarks>
+        Tcp
     }
 }

@@ -49,6 +49,7 @@ namespace Tkl.Jumbo.Jet.Channels
             {
                 TcpListener listener = new TcpListener(addresses[x], port);
                 _listeners[x] = listener;
+                listener.Start();
                 if( port == 0 )
                     port = ((IPEndPoint)listener.LocalEndpoint).Port;
                 Thread listenerThread = new Thread(ListenerThread) { IsBackground = true, Name = "TcpChannelListenerThread_" + addresses[x].ToString() };
@@ -63,9 +64,8 @@ namespace Tkl.Jumbo.Jet.Channels
         {
             TcpListener listener = (TcpListener)param;
 
-            _log.InfoFormat("Begin listening for {0} inputs on {0}.", _reader.TotalInputCount, listener.LocalEndpoint);
+            _log.InfoFormat("Begin listening for {0} inputs on {1}.", _reader.TotalInputCount, listener.LocalEndpoint);
 
-            listener.Start();
             try
             {
                 while( _running && _reader.CurrentInputCount < _reader.TotalInputCount )

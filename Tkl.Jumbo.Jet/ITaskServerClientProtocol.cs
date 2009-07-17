@@ -65,5 +65,12 @@ namespace Tkl.Jumbo.Jet
         /// <returns>The profile output, or <see langword="null"/> if it doesn't exist.</returns>
         string GetTaskProfileOutput(Guid jobId, string taskId, int attempt);
 
+        /// <summary>
+        /// Gets the TCP server port for the specified task.
+        /// </summary>
+        /// <param name="jobId">The job ID.</param>
+        /// <param name="taskId">The task ID.</param>
+        /// <returns>The port number, or 0 if the task is unknown or hasn't registered a port number yet.</returns>
+        int GetTcpChannelPort(Guid jobId, string taskId);
     }
 }

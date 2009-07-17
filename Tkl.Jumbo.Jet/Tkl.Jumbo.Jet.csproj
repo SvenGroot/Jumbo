@@ -73,8 +73,11 @@
     <Compile Include="Channels\IInputChannel.cs" />
     <Compile Include="Channels\IOutputChannel.cs" />
     <Compile Include="Channels\NetworkRecordReader.cs" />
+    <Compile Include="Channels\NetworkRecordWriter.cs" />
+    <Compile Include="Channels\OutputChannel.cs" />
     <Compile Include="Channels\PipelineOutputChannel.cs" />
     <Compile Include="Channels\TcpInputChannel.cs" />
+    <Compile Include="Channels\TcpOutputChannel.cs" />
     <Compile Include="CleanupJobJetHeartbeatResponse.cs" />
     <Compile Include="CompletedTask.cs" />
     <Compile Include="Configurable.cs" />

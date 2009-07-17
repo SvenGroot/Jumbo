@@ -221,7 +221,7 @@ namespace TaskServerApplication
 
         public byte[] GetCompressedTaskLogFiles(Guid jobId)
         {
-            _log.DebugFormat("GetCompressedTaskLogFiles; jobId = {{0}}", jobId);
+            _log.DebugFormat("GetCompressedTaskLogFiles; jobId = {{{0}}}", jobId);
             string jobDirectory = GetJobDirectory(jobId);
             if( System.IO.Directory.Exists(jobDirectory) )
             {
@@ -266,6 +266,14 @@ namespace TaskServerApplication
                 }
             }
             return null;
+        }
+
+        public int GetTcpChannelPort(Guid jobId, string taskId)
+        {
+            if( taskId == null )
+                throw new ArgumentNullException("taskId");
+            _log.DebugFormat("GetTcpChannelPort; jobId = {{{0}}}, taskId = \"{1}\"", jobId, taskId);
+            return _taskRunner.GetTcpChannelPort(Job.CreateFullTaskId(jobId, taskId));
         }
 
         #endregion
