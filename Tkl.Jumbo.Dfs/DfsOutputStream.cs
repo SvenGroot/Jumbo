@@ -35,7 +35,7 @@ namespace Tkl.Jumbo.Dfs
         /// file system.</param>
         /// <param name="path">The path of the file to write.</param>
         public DfsOutputStream(INameServerClientProtocol nameServer, string path)
-            : this(nameServer, path, 0)
+            : this(nameServer, path, 0, 0)
         {
         }
 
@@ -46,7 +46,8 @@ namespace Tkl.Jumbo.Dfs
         /// file system.</param>
         /// <param name="path">The path of the file to write.</param>
         /// <param name="blockSize">The size of the blocks of the file, or zero to use the file system default block size.</param>
-        public DfsOutputStream(INameServerClientProtocol nameServer, string path, int blockSize)
+        /// <param name="replicationFactor">The number of replicas to create of the file's blocks, or zero to use the file system default replication factor.</param>
+        public DfsOutputStream(INameServerClientProtocol nameServer, string path, int blockSize, int replicationFactor)
         {
             if( nameServer == null )
                 throw new ArgumentNullException("nameServer");
@@ -56,6 +57,8 @@ namespace Tkl.Jumbo.Dfs
                 throw new ArgumentOutOfRangeException("blockSize", "Block size must be zero or greater.");
             if( blockSize % Packet.PacketSize != 0 )
                 throw new ArgumentException("Block size must be a multiple of the packet size.", "blockSize");
+            if( replicationFactor < 0 )
+                throw new ArgumentOutOfRangeException("replicationFactor", "Replication factor must be zero or greater.");
 
             if( blockSize == 0 )
             {
@@ -67,7 +70,7 @@ namespace Tkl.Jumbo.Dfs
             _nameServer = nameServer;
             _path = path;
             _log.DebugFormat("Creating file {0} on name server.", _path);
-            _block = nameServer.CreateFile(path, blockSize);
+            _block = nameServer.CreateFile(path, blockSize, replicationFactor);
             _log.Debug("DfsOutputStream construction complete.");
         }
 

@@ -228,7 +228,7 @@ namespace Tkl.Jumbo.Test.Jet
         private static DfsFile CreateFakeTestFile(string name)
         {
             DfsDirectory dir = new DfsDirectory(null, "root", DateTime.UtcNow);
-            DfsFile file = new DfsFile(dir, name, DateTime.UtcNow, _blockSize);
+            DfsFile file = new DfsFile(dir, name, DateTime.UtcNow, _blockSize, 1);
             file.Blocks.Add(Guid.NewGuid());
             file.Blocks.Add(Guid.NewGuid());
             file.Blocks.Add(Guid.NewGuid());

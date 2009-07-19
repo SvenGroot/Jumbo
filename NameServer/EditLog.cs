@@ -82,24 +82,29 @@ namespace NameServerApplication
             {
             }
 
-            public CreateFileEditLogEntry(DateTime date, string path, int blockSize)
+            public CreateFileEditLogEntry(DateTime date, string path, int blockSize, int replicationFactor)
                 : base(FileSystemMutation.CreateFile, date, path)
             {
                 BlockSize = blockSize;
+                ReplicationFactor = replicationFactor;
             }
 
             public int BlockSize { get; private set; }
+
+            public int ReplicationFactor { get; private set; }
 
             public override void Write(BinaryWriter writer)
             {
                 base.Write(writer);
                 writer.Write(BlockSize);
+                writer.Write(ReplicationFactor);
             }
 
             public override void Read(BinaryReader reader)
             {
                 base.Read(reader);
                 BlockSize = reader.ReadInt32();
+                ReplicationFactor = reader.ReadInt32();
             }
         }
 
@@ -301,12 +306,12 @@ namespace NameServerApplication
             LogMutation(new CreateDirectoryEditLogEntry(date, path));
         }
 
-        public void LogCreateFile(string path, DateTime date, int blockSize)
+        public void LogCreateFile(string path, DateTime date, int blockSize, int replicationFactor)
         {
             if( path == null )
                 throw new ArgumentNullException("path");
 
-            LogMutation(new CreateFileEditLogEntry(date, path, blockSize));
+            LogMutation(new CreateFileEditLogEntry(date, path, blockSize, replicationFactor));
         }
 
         public void LogAppendBlock(string path, DateTime date, Guid blockId)
@@ -423,11 +428,11 @@ namespace NameServerApplication
                             break;
                         case FileSystemMutation.CreateFile:
                             CreateFileEditLogEntry createFileEntry = EditLogEntry.Load<CreateFileEditLogEntry>(reader);
-                            fileSystem.CreateFile(createFileEntry.Path, createFileEntry.Date, createFileEntry.BlockSize, false);
+                            fileSystem.CreateFile(createFileEntry.Path, createFileEntry.Date, createFileEntry.BlockSize, createFileEntry.ReplicationFactor, false);
                             break;
                         case FileSystemMutation.AppendBlock:
                             AppendBlockEditLogEntry appendBlockEntry = EditLogEntry.Load<AppendBlockEditLogEntry>(reader);
-                            fileSystem.AppendBlock(appendBlockEntry.Path, appendBlockEntry.BlockId);
+                            fileSystem.AppendBlock(appendBlockEntry.Path, appendBlockEntry.BlockId, -1);
                             break;
                         case FileSystemMutation.CommitBlock:
                             CommitBlockEditLogEntry commitBlockEntry = EditLogEntry.Load<CommitBlockEditLogEntry>(reader);

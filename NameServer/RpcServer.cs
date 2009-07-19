@@ -22,9 +22,9 @@ namespace NameServerApplication
             return NameServer.Instance.GetDirectoryInfo(path);
         }
 
-        public BlockAssignment CreateFile(string path, int blockSize)
+        public BlockAssignment CreateFile(string path, int blockSize, int replicationFactor)
         {
-            return NameServer.Instance.CreateFile(path, blockSize);
+            return NameServer.Instance.CreateFile(path, blockSize, replicationFactor);
         }
 
         public bool Delete(string path, bool recursive)

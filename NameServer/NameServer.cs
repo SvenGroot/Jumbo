@@ -153,7 +153,7 @@ namespace NameServerApplication
                         _pendingBlocks.Remove(blockID);
                         _blocks.Add(blockID, pendingBlock.Block);
                         // This can happen during log file replay or if a server crashed between commits.
-                        if( pendingBlock.Block.DataServers.Count < _replicationFactor )
+                        if( pendingBlock.Block.DataServers.Count < pendingBlock.Block.File.ReplicationFactor )
                         {
                             lock( _underReplicatedBlocks )
                                 _underReplicatedBlocks.Add(blockID, pendingBlock.Block);
@@ -192,7 +192,7 @@ namespace NameServerApplication
                         lock( _dataServers )
                         {
                             if( _dataServers.Count < _replicationFactor )
-                                throw new InvalidOperationException("Safe mode cannot be disabled if there are insufficient data servers for full replication.");
+                                throw new InvalidOperationException("Safe mode cannot be disabled if there are insufficient data servers for full replication with the default replication factor.");
                         }
                     }
                     _safeMode = value;
@@ -225,18 +225,18 @@ namespace NameServerApplication
         }
 
 
-        public BlockAssignment CreateFile(string path, int blockSize)
+        public BlockAssignment CreateFile(string path, int blockSize, int replicationFactor)
         {
             _log.Debug("CreateFile called");
             CheckSafeMode();
-            BlockInfo block = _fileSystem.CreateFile(path, blockSize == 0 ? BlockSize : blockSize);
+            BlockInfo block = _fileSystem.CreateFile(path, blockSize == 0 ? BlockSize : blockSize, replicationFactor == 0 ? _replicationFactor : replicationFactor);
             try
             {
                 lock( _pendingBlocks )
                 {
                     _pendingBlocks.Add(block.BlockId, new PendingBlock(block));
                 } 
-                return AssignBlockToDataServers(block.BlockId);
+                return AssignBlockToDataServers(block);
             }
             catch( Exception )
             {
@@ -276,16 +276,20 @@ namespace NameServerApplication
         {
             _log.Debug("AppendBlock called");
             CheckSafeMode();
-            if( _dataServers.Count < _replicationFactor )
-                throw new InvalidOperationException("Insufficient data servers.");
 
-            BlockInfo block = _fileSystem.AppendBlock(path);
+            int dataServerCount;
+            lock( _dataServers )
+            {
+                dataServerCount = _dataServers.Count;
+            }
+
+            BlockInfo block = _fileSystem.AppendBlock(path, dataServerCount);
             lock( _pendingBlocks )
             {
                 _pendingBlocks.Add(block.BlockId, new PendingBlock(block));
             }
 
-            return AssignBlockToDataServers(block.BlockId);
+            return AssignBlockToDataServers(block);
         }
 
         public void CloseFile(string path)
@@ -623,7 +627,7 @@ namespace NameServerApplication
                     pendingBlock.Block.DataServers.Add(dataServer);
                     dataServer.Blocks.Add(newBlock.BlockId);
                     dataServer.PendingBlocks.Remove(newBlock.BlockId);
-                    if( pendingBlock.IncrementCommit() >= _replicationFactor )
+                    if( pendingBlock.IncrementCommit() >= pendingBlock.Block.File.ReplicationFactor )
                     {
                         commitBlock = true;
                     }
@@ -647,7 +651,7 @@ namespace NameServerApplication
                         {
                             dataServer.Blocks.Add(newBlock.BlockId);
                             block.DataServers.Add(dataServer);
-                            if( block.DataServers.Count >= _replicationFactor )
+                            if( block.DataServers.Count >= block.File.ReplicationFactor )
                             {
                                 _log.InfoFormat("Block {0} is now fully replicated.", newBlock.BlockId);
                                 _underReplicatedBlocks.Remove(newBlock.BlockId);
@@ -704,7 +708,7 @@ namespace NameServerApplication
                                 _log.DebugFormat("Dataserver {0} has block ID {1}", dataServer.Address, block);
                                 info.DataServers.Add(dataServer);
                                 dataServer.Blocks.Add(block);
-                                if( info.DataServers.Count >= _replicationFactor )
+                                if( info.DataServers.Count >= info.File.ReplicationFactor )
                                 {
                                     lock( _underReplicatedBlocks )
                                     {
@@ -747,9 +751,10 @@ namespace NameServerApplication
             return null;
         }
 
-        private BlockAssignment AssignBlockToDataServers(Guid blockId)
+        private BlockAssignment AssignBlockToDataServers(BlockInfo block)
         {
             // TODO: Better selection policy.
+            Guid blockId = block.BlockId;
             List<DataServerInfo> unassignedDataServers;
             int serversNeeded;
             long freeSpaceThreshold = Configuration.NameServer.DataServerFreeSpaceThreshold;
@@ -760,7 +765,7 @@ namespace NameServerApplication
                 unassignedDataServers = (from server in _dataServers.Values
                                          where server.HasReportedBlocks && !server.Blocks.Contains(blockId) && server.DiskSpaceFree >= freeSpaceThreshold
                                          select server).ToList();
-                serversNeeded = _replicationFactor - (from server in _dataServers.Values where server.Blocks.Contains(blockId) select server).Count();
+                serversNeeded = block.File.ReplicationFactor - (from server in _dataServers.Values where server.Blocks.Contains(blockId) select server).Count();
 
 
                 if( unassignedDataServers.Count < serversNeeded )
@@ -831,17 +836,17 @@ namespace NameServerApplication
             return new BlockAssignment(blockId, dataServers);
         }
 
-        private void ReassignBlock(Guid blockId, BlockInfo block)
+        private void ReassignBlock(BlockInfo block)
         {
             // TODO: This should take topology into account.
-            _log.InfoFormat("Reassigning new servers for underreplicated block {0}.", blockId);
+            _log.InfoFormat("Reassigning new servers for underreplicated block {0}.", block.BlockId);
             if( block.DataServers.Count == 0 )
             {
-                _log.WarnFormat("Cannot reassign block {0} because no data servers have this block.", blockId);
+                _log.WarnFormat("Cannot reassign block {0} because no data servers have this block.", block.BlockId);
             }
             else
             {
-                BlockAssignment assignment = AssignBlockToDataServers(blockId);
+                BlockAssignment assignment = AssignBlockToDataServers(block);
 
                 DataServerInfo source;
                 lock( _random )
@@ -926,7 +931,7 @@ namespace NameServerApplication
                                 {
                                     removed = blockInfo.DataServers.Remove(info);
                                     Debug.Assert(removed);
-                                    if( !pending && blockInfo.DataServers.Count < _replicationFactor && !_underReplicatedBlocks.ContainsKey(blockID) )
+                                    if( !pending && blockInfo.DataServers.Count < blockInfo.File.ReplicationFactor && !_underReplicatedBlocks.ContainsKey(blockID) )
                                     {
                                         _log.InfoFormat("Block {0} is now under-replicated.", blockID);
                                         _underReplicatedBlocks.Add(blockID, blockInfo);
@@ -964,9 +969,9 @@ namespace NameServerApplication
                 {
                     if( _underReplicatedBlocks.Count > 0 )
                     {
-                        foreach( var item in _underReplicatedBlocks )
+                        foreach( var item in _underReplicatedBlocks.Values )
                         {
-                            ReassignBlock(item.Key, item.Value);
+                            ReassignBlock(item);
                         }
                     }
                 }

@@ -56,29 +56,29 @@ namespace Tkl.Jumbo.Test.Dfs
         [Test]
         public void TestStreamsSameBufferSize()
         {
-            TestStreams("/TestStreamSameBufferSize", Packet.PacketSize, 0);
+            TestStreams("/TestStreamSameBufferSize", Packet.PacketSize, 0, 0);
         }
 
         [Test]
         public void TestStreamsDivisibleBufferSize()
         {
-            TestStreams("/TestStreamDivisibleBufferSize", Packet.PacketSize / 16, 0);
+            TestStreams("/TestStreamDivisibleBufferSize", Packet.PacketSize / 16, 0, 0);
         }
 
         [Test]
         public void TestStreamsIndivisibleBufferSize()
         {
             // Use a buffer size that's different to test Write calls that straddle the boundary.
-            TestStreams("/TestStreamIndivisibleBufferSize", Packet.PacketSize / 16 + 100, 0);
+            TestStreams("/TestStreamIndivisibleBufferSize", Packet.PacketSize / 16 + 100, 0, 0);
         }
 
         [Test]
         public void TestStreamsCustomBlockSize()
         {
-            TestStreams("/TestStreamCustomBlockSize", Packet.PacketSize, 16 * 1024 * 1024);
+            TestStreams("/TestStreamCustomBlockSize", Packet.PacketSize, 16 * 1024 * 1024, 0);
         }
 
-        private void TestStreams(string fileName, int bufferSize, int blockSize)
+        private void TestStreams(string fileName, int bufferSize, int blockSize, int replicationFactor)
         {
             const int size = 100000000;
 
@@ -94,7 +94,7 @@ namespace Tkl.Jumbo.Test.Dfs
                 stream.Position = 0;
                 Trace.WriteLine("Uploading file");
                 Trace.Flush();
-                using( DfsOutputStream output = blockSize == 0 ? new DfsOutputStream(_nameServer, fileName) : new DfsOutputStream(_nameServer, fileName, blockSize) )
+                using( DfsOutputStream output = new DfsOutputStream(_nameServer, fileName, blockSize, replicationFactor) )
                 {
                     Utilities.CopyStream(stream, output, bufferSize);
                     Assert.AreEqual(size, output.Length);

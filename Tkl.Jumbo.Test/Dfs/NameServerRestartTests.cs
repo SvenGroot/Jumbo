@@ -39,7 +39,7 @@ namespace Tkl.Jumbo.Test.Dfs
                 }
 
                 const int customBlockSize = 16 * 1024 * 1024;
-                using( DfsOutputStream output = new DfsOutputStream(nameServer, "/test2/foo2.dat", customBlockSize) )
+                using( DfsOutputStream output = new DfsOutputStream(nameServer, "/test2/foo2.dat", customBlockSize, 0) )
                 using( MemoryStream input = new MemoryStream() )
                 {
                     Utilities.GenerateData(input, size);
@@ -76,6 +76,7 @@ namespace Tkl.Jumbo.Test.Dfs
                 Assert.IsFalse(file.IsOpenForWriting);
                 Assert.AreEqual(size, file.Size);
                 Assert.AreEqual(nameServer.BlockSize, file.BlockSize);
+                Assert.AreEqual(1, file.ReplicationFactor);
                 Assert.AreEqual(1, file.Blocks.Count);
                 Assert.IsNull(nameServer.GetDirectoryInfo("/test1"));
                 Tkl.Jumbo.Dfs.DfsDirectory dir = nameServer.GetDirectoryInfo("/test2");
@@ -86,11 +87,13 @@ namespace Tkl.Jumbo.Test.Dfs
                 Assert.AreEqual(size, file.Size);
                 Assert.AreEqual(1, file.Blocks.Count);
                 Assert.AreEqual(nameServer.BlockSize, file.BlockSize);
+                Assert.AreEqual(1, file.ReplicationFactor);
                 file = nameServer.GetFileInfo("/test2/foo2.dat");
                 Assert.IsNotNull(file);
                 Assert.AreEqual(size, file.Size);
                 Assert.AreEqual(2, file.Blocks.Count);
                 Assert.AreEqual(customBlockSize, file.BlockSize);
+                Assert.AreEqual(1, file.ReplicationFactor);
 
                 Assert.IsNull(nameServer.GetDirectoryInfo("/test2/test1"));
                 Assert.IsNotNull(nameServer.GetDirectoryInfo("/test3"));
@@ -134,7 +137,7 @@ namespace Tkl.Jumbo.Test.Dfs
                 }
 
                 const int customBlockSize = 16 * 1024 * 1024;
-                using( DfsOutputStream output = new DfsOutputStream(nameServer, "/test2/foo2.dat", customBlockSize) )
+                using( DfsOutputStream output = new DfsOutputStream(nameServer, "/test2/foo2.dat", customBlockSize, 1) )
                 using( MemoryStream input = new MemoryStream() )
                 {
                     Utilities.GenerateData(input, size);
@@ -170,6 +173,7 @@ namespace Tkl.Jumbo.Test.Dfs
                 Assert.AreEqual(1, file.Blocks.Count);
                 Assert.IsNull(nameServer.GetDirectoryInfo("/test1"));
                 Assert.AreEqual(nameServer.BlockSize, file.BlockSize);
+                Assert.AreEqual(1, file.ReplicationFactor);
                 Tkl.Jumbo.Dfs.DfsDirectory dir = nameServer.GetDirectoryInfo("/test2");
                 Assert.IsNotNull(dir);
                 Assert.AreEqual(3, dir.Children.Count);
@@ -178,11 +182,13 @@ namespace Tkl.Jumbo.Test.Dfs
                 Assert.AreEqual(size, file.Size);
                 Assert.AreEqual(1, file.Blocks.Count);
                 Assert.AreEqual(nameServer.BlockSize, file.BlockSize);
+                Assert.AreEqual(1, file.ReplicationFactor);
                 file = nameServer.GetFileInfo("/test2/foo2.dat");
                 Assert.IsNotNull(file);
                 Assert.AreEqual(size, file.Size);
                 Assert.AreEqual(2, file.Blocks.Count);
                 Assert.AreEqual(customBlockSize, file.BlockSize);
+                Assert.AreEqual(1, file.ReplicationFactor);
                 Assert.IsNull(nameServer.GetDirectoryInfo("/test2/test1"));
                 Assert.IsNotNull(nameServer.GetDirectoryInfo("/test3"));
                 metrics = nameServer.GetMetrics();

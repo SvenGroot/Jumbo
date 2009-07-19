@@ -81,17 +81,18 @@ namespace DfsShell
 
         private static void PutFile(DfsClient client, string[] args)
         {
-            if( args.Length < 3 || args.Length > 4 )
-                Console.WriteLine("Usage: DfsShell put <local path> <dfs path> [block size]");
+            if( args.Length < 3 || args.Length > 5 )
+                Console.WriteLine("Usage: DfsShell put <local path> <dfs path> [block size] [replication factor]");
             else
             {
                 string localPath = args[1];
                 string dfsPath = args[2];
                 int blockSize = 0;
-                if( args.Length == 4 )
-                {
+                if( args.Length >= 4 )
                     blockSize = Convert.ToInt32(args[3]);    
-                }
+                int replicationFactor = 0;
+                if( args.Length == 5 )
+                    replicationFactor = Convert.ToInt32(args[4]);
                 if( !IO.File.Exists(localPath) && !IO.Directory.Exists(localPath) )
                     Console.WriteLine("Local path {0} does not exist.", localPath);
                 else
@@ -103,7 +104,7 @@ namespace DfsShell
                         if( isDirectory )
                         {
                             Console.WriteLine("Copying local directory \"{0}\" to DFS directory \"{1}\"...", localPath, dfsPath);
-                            client.UploadDirectory(localPath, dfsPath, blockSize, PrintProgress);
+                            client.UploadDirectory(localPath, dfsPath, blockSize, replicationFactor, PrintProgress);
                         }
                         else
                         {
@@ -114,7 +115,7 @@ namespace DfsShell
                                 dfsPath = DfsPath.Combine(dfsPath, fileName);
                             }
                             Console.WriteLine("Copying local file \"{0}\" to DFS file \"{1}\"...", localPath, dfsPath);
-                            client.UploadFile(localPath, dfsPath, blockSize, PrintProgress);
+                            client.UploadFile(localPath, dfsPath, blockSize, replicationFactor, PrintProgress);
                         }
                     }
                     catch( UnauthorizedAccessException ex )

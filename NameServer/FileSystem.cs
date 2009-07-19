@@ -25,7 +25,7 @@ namespace NameServerApplication
         /* File system versions:
          * 1: Initial version; no FS image, text format edit log.
          * 2: Binary edit log and support for checkpointing to FS image.
-         * 3: Custom file block sizes.
+         * 3: Custom file block size and replication factor.
          */
         public const int FileSystemFormatVersion = 3;
 
@@ -161,9 +161,9 @@ namespace NameServerApplication
         /// <exception cref="ArgumentNullException"><paramref name="directory"/> is <see langword="null" />, or <paramref name="name"/> is <see langword="null"/> or an empty string..</exception>
         /// <exception cref="ArgumentException"><paramref name="directory"/> is not an absolute path, contains an empty component, contains a file name, or <paramref name="name"/> refers to an existing file or directory.</exception>
         /// <exception cref="DirectoryNotFoundException"><paramref name="directory"/> does not exist.</exception>
-        public BlockInfo CreateFile(string path, int blockSize)
+        public BlockInfo CreateFile(string path, int blockSize, int replicationFactor)
         {
-            return CreateFile(path, DateTime.UtcNow, blockSize, true);
+            return CreateFile(path, DateTime.UtcNow, blockSize, replicationFactor, true);
         }
 
         /// <summary>
@@ -173,11 +173,12 @@ namespace NameServerApplication
         /// <param name="dateCreated">The creation time of the file.</param>
         /// <param name="blockSize">The block size of the file.</param>
         /// <param name="appendBlock"><see langword="true"/> to append a block to the new file; otherwise, <see langword="false"/>.</param>
+        /// <param name="replicationFactor">The number of replicas to create of the file's blocks.</param>
         /// <returns>The block ID of the first block of the new file.</returns>
         /// <exception cref="ArgumentNullException"><paramref name="directory"/> is <see langword="null" />, or <paramref name="name"/> is <see langword="null"/> or an empty string..</exception>
         /// <exception cref="ArgumentException"><paramref name="directory"/> is not an absolute path, contains an empty component, contains a file name, or <paramref name="name"/> refers to an existing file or directory.</exception>
         /// <exception cref="DirectoryNotFoundException"><paramref name="directory"/> does not exist.</exception>
-        public BlockInfo CreateFile(string path, DateTime dateCreated, int blockSize, bool appendBlock)
+        public BlockInfo CreateFile(string path, DateTime dateCreated, int blockSize, int replicationFactor, bool appendBlock)
         {
             if( path == null )
                 throw new ArgumentNullException("path");
@@ -193,7 +194,7 @@ namespace NameServerApplication
                 if( entry != null )
                     throw new ArgumentException("The specified directory already has a file or directory with the specified name.", "name");
                 
-                PendingFile file = CreateFile(parent, name, dateCreated, blockSize);
+                PendingFile file = CreateFile(parent, name, dateCreated, blockSize, replicationFactor);
                 try
                 {
                     if( appendBlock )
@@ -275,14 +276,14 @@ namespace NameServerApplication
             return result;
         }
 
-        public BlockInfo AppendBlock(string path)
+        public BlockInfo AppendBlock(string path, int availableServers)
         {
             _log.DebugFormat("AppendBlock: path = \"{0}\"", path);
             Guid blockID = NewBlockID();
-            return AppendBlock(path, blockID);
+            return AppendBlock(path, blockID, availableServers);
         }
 
-        public BlockInfo AppendBlock(string path, Guid blockID)
+        public BlockInfo AppendBlock(string path, Guid blockID, int availableServers)
         {
             // checkReplication is provided so we can skip that while replaying the log file.
 
@@ -291,6 +292,8 @@ namespace NameServerApplication
                 PendingFile file;
                 if( !(_pendingFiles.TryGetValue(path, out file) && file.File.IsOpenForWriting) )
                     throw new InvalidOperationException(string.Format("The file '{0}' does not exist or is not open for writing.", path));
+                if( availableServers >= 0 && file.File.ReplicationFactor > availableServers )
+                    throw new InvalidOperationException("Insufficient data servers.");
 
                 AppendBlock(file, blockID);
                 return new BlockInfo(blockID, file.File);
@@ -679,16 +682,18 @@ namespace NameServerApplication
             return new DfsDirectory(parent, name, dateCreated);
         }
 
-        private PendingFile CreateFile(DfsDirectory parent, string name, DateTime dateCreated, int blockSize)
+        private PendingFile CreateFile(DfsDirectory parent, string name, DateTime dateCreated, int blockSize, int replicationFactor)
         {
             if( blockSize <= 0 )
                 throw new ArgumentOutOfRangeException("blockSize", "File block size must be larger than zero.");
             if( blockSize % Packet.PacketSize != 0 )
                 throw new ArgumentException("Block size must be a multiple of the packet size.", "blockSize");
+            if( replicationFactor <= 0 )
+                throw new ArgumentOutOfRangeException("replicationFactor", "Replication factor must be larger than zero.");
 
             _log.InfoFormat("Creating file \"{0}\" inside \"{1}\" with block size {2}.", name, parent.FullPath, blockSize);
-            _editLog.LogCreateFile(AppendPath(parent.FullPath, name), dateCreated, blockSize);
-            PendingFile result = new PendingFile(new DfsFile(parent, name, dateCreated, blockSize) { IsOpenForWriting = true });
+            _editLog.LogCreateFile(AppendPath(parent.FullPath, name), dateCreated, blockSize, replicationFactor);
+            PendingFile result = new PendingFile(new DfsFile(parent, name, dateCreated, blockSize, replicationFactor) { IsOpenForWriting = true });
             lock( _pendingFiles )
             {
                 _pendingFiles.Add(result.File.FullPath, result);
