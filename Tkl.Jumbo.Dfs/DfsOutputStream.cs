@@ -35,18 +35,39 @@ namespace Tkl.Jumbo.Dfs
         /// file system.</param>
         /// <param name="path">The path of the file to write.</param>
         public DfsOutputStream(INameServerClientProtocol nameServer, string path)
+            : this(nameServer, path, 0)
+        {
+        }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="DfsOutputStream"/> with the specified name server and file.
+        /// </summary>
+        /// <param name="nameServer">The <see cref="INameServerClientProtocol"/> interface of the name server for the distributed
+        /// file system.</param>
+        /// <param name="path">The path of the file to write.</param>
+        /// <param name="blockSize">The size of the blocks of the file, or zero to use the file system default block size.</param>
+        public DfsOutputStream(INameServerClientProtocol nameServer, string path, int blockSize)
         {
             if( nameServer == null )
                 throw new ArgumentNullException("nameServer");
             if( path == null )
                 throw new ArgumentNullException("path");
+            if( blockSize < 0 )
+                throw new ArgumentOutOfRangeException("blockSize", "Block size must be zero or greater.");
+            if( blockSize % Packet.PacketSize != 0 )
+                throw new ArgumentException("Block size must be a multiple of the packet size.", "blockSize");
 
-            _log.Debug("Getting block size from name server.");
-            BlockSize = nameServer.BlockSize;
+            if( blockSize == 0 )
+            {
+                _log.Debug("Getting block size from name server.");
+                BlockSize = nameServer.BlockSize;
+            }
+            else
+                BlockSize = blockSize;
             _nameServer = nameServer;
             _path = path;
             _log.DebugFormat("Creating file {0} on name server.", _path);
-            _block = nameServer.CreateFile(path);
+            _block = nameServer.CreateFile(path, blockSize);
             _log.Debug("DfsOutputStream construction complete.");
         }
 

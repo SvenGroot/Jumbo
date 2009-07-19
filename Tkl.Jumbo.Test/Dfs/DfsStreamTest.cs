@@ -56,23 +56,29 @@ namespace Tkl.Jumbo.Test.Dfs
         [Test]
         public void TestStreamsSameBufferSize()
         {
-            TestStreams("/TestStreamSameBufferSize", Packet.PacketSize);
+            TestStreams("/TestStreamSameBufferSize", Packet.PacketSize, 0);
         }
 
         [Test]
         public void TestStreamsDivisibleBufferSize()
         {
-            TestStreams("/TestStreamDivisibleBufferSize", Packet.PacketSize / 16);
+            TestStreams("/TestStreamDivisibleBufferSize", Packet.PacketSize / 16, 0);
         }
 
         [Test]
         public void TestStreamsIndivisibleBufferSize()
         {
             // Use a buffer size that's different to test Write calls that straddle the boundary.
-            TestStreams("/TestStreamIndivisibleBufferSize", Packet.PacketSize / 16 + 100);
+            TestStreams("/TestStreamIndivisibleBufferSize", Packet.PacketSize / 16 + 100, 0);
         }
 
-        private void TestStreams(string fileName, int bufferSize)
+        [Test]
+        public void TestStreamsCustomBlockSize()
+        {
+            TestStreams("/TestStreamCustomBlockSize", Packet.PacketSize, 16 * 1024 * 1024);
+        }
+
+        private void TestStreams(string fileName, int bufferSize, int blockSize)
         {
             const int size = 100000000;
 
@@ -88,7 +94,7 @@ namespace Tkl.Jumbo.Test.Dfs
                 stream.Position = 0;
                 Trace.WriteLine("Uploading file");
                 Trace.Flush();
-                using( DfsOutputStream output = new DfsOutputStream(_nameServer, fileName) )
+                using( DfsOutputStream output = blockSize == 0 ? new DfsOutputStream(_nameServer, fileName) : new DfsOutputStream(_nameServer, fileName, blockSize) )
                 {
                     Utilities.CopyStream(stream, output, bufferSize);
                     Assert.AreEqual(size, output.Length);
@@ -100,7 +106,7 @@ namespace Tkl.Jumbo.Test.Dfs
                 stream.Position = 0;
                 using( DfsInputStream input = new DfsInputStream(_nameServer, fileName) )
                 {
-                    Assert.AreEqual(_nameServer.BlockSize, input.BlockSize);
+                    Assert.AreEqual(blockSize == 0 ? _nameServer.BlockSize : blockSize, input.BlockSize);
                     Assert.IsTrue(input.CanRead);
                     Assert.IsTrue(input.CanSeek);
                     Assert.IsFalse(input.CanWrite);

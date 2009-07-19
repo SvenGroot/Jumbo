@@ -225,11 +225,11 @@ namespace NameServerApplication
         }
 
 
-        public BlockAssignment CreateFile(string path)
+        public BlockAssignment CreateFile(string path, int blockSize)
         {
             _log.Debug("CreateFile called");
             CheckSafeMode();
-            BlockInfo block = _fileSystem.CreateFile(path);
+            BlockInfo block = _fileSystem.CreateFile(path, blockSize == 0 ? BlockSize : blockSize);
             try
             {
                 lock( _pendingBlocks )

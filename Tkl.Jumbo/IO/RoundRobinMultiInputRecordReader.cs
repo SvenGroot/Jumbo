@@ -12,7 +12,7 @@ namespace Tkl.Jumbo.IO
     /// <typeparam name="T">The type of the records.</typeparam>
     /// <remarks>
     /// <para>
-    ///   This class does not wait for all inputs to be available. Whatever inputs are available when <see cref="ReadRecord"/>
+    ///   This class does not wait for all inputs to be available. Whatever inputs are available when <see cref="RecordReader{T}.ReadRecord"/>
     ///   is called will be used in the list. Inputs where <see cref="IRecordReader.RecordsAvailable"/> is <see langword="false"/>
     ///   will be skipped.
     /// </para>

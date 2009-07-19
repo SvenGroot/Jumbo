@@ -15,6 +15,8 @@ namespace Tkl.Jumbo.Test.Jet
     [TestFixture]
     public class PipelineOutputChannelTests
     {
+        private const int _blockSize = 16 * 1024 * 1024;
+
         private class FakeUmbilical : ITaskServerUmbilicalProtocol
         {
             #region ITaskServerUmbilicalProtocol Members
@@ -80,7 +82,7 @@ namespace Tkl.Jumbo.Test.Jet
 
             // We're just feeding it fake file information to create the job config, it doesn't matter since we'll fake the input during the test.
             DfsDirectory dir = new DfsDirectory(null, "root", DateTime.UtcNow);
-            DfsFile file = new DfsFile(dir, "myfile", DateTime.UtcNow);
+            DfsFile file = new DfsFile(dir, "myfile", DateTime.UtcNow, _blockSize);
             file.Blocks.Add(Guid.NewGuid());
             StageConfiguration stage = config.AddInputStage("Task", file, typeof(LineCounterPushTask), typeof(LineRecordReader));
             stage = config.AddPointToPointStage("OutputTask", stage, typeof(LineAdderPushTask), ChannelType.Pipeline, null, null);

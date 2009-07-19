@@ -24,9 +24,22 @@ namespace Tkl.Jumbo.Dfs
         /// <param name="parent">The parent of the file. May be <see langword="null" />.</param>
         /// <param name="name">The name of the file.</param>
         /// <param name="dateCreated">The date the file was created.</param>
-        public DfsFile(DfsDirectory parent, string name, DateTime dateCreated)
+        /// <param name="blockSize">The size of the blocks of the file.</param>
+        public DfsFile(DfsDirectory parent, string name, DateTime dateCreated, int blockSize)
             : base(parent, name, dateCreated)
         {
+            if( blockSize <= 0 )
+                throw new ArgumentOutOfRangeException("blockSize", "File block size must be larger than zero.");
+            if( blockSize % Packet.PacketSize != 0 )
+                throw new ArgumentException("Block size must be a multiple of the packet size.", "blockSize");
+
+            BlockSize = blockSize;
+        }
+
+        internal DfsFile(DfsDirectory parent, string name, DateTime dateCreated)
+            : base(parent, name, dateCreated)
+        {
+            // This constructor is used by FileSystemEntry.LoadFromFileSystemImage, which will load the block size from the image later.
         }
 
         /// <summary>
@@ -55,6 +68,19 @@ namespace Tkl.Jumbo.Dfs
         public long Size { get; set; }
 
         /// <summary>
+        /// Gets or sets the size of the blocks of the file.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        ///   Although most files will use the file system's default block size (configured on the name server), it is possible to override the block size on a per-file basis.
+        /// </para>
+        /// <para>
+        ///   The block size is specified when the file create, it cannot be changed afterwards.
+        /// </para>
+        /// </remarks>
+        public int BlockSize { get; private set; }
+
+        /// <summary>
         /// Saves this <see cref="FileSystemEntry"/> to a file system image.
         /// </summary>
         /// <param name="writer">A <see cref="System.IO.BinaryWriter"/> used to write to the file system image.</param>
@@ -63,6 +89,7 @@ namespace Tkl.Jumbo.Dfs
             base.SaveToFileSystemImage(writer);
             writer.Write(Size);
             writer.Write(IsOpenForWriting);
+            writer.Write(BlockSize);
             writer.Write(Blocks.Count);
             foreach( Guid block in Blocks )
                 writer.Write(block.ToByteArray());
@@ -85,6 +112,7 @@ namespace Tkl.Jumbo.Dfs
         {
             writer.WriteLine("Path:             {0}", FullPath);
             writer.WriteLine("Size:             {0:#,0} bytes", Size);
+            writer.WriteLine("Block size:       {0:#,0} bytes", BlockSize);
             writer.WriteLine("Open for writing: {0}", IsOpenForWriting);
             writer.WriteLine("Blocks:           {0}", Blocks.Count);
             foreach( Guid block in Blocks )
@@ -100,6 +128,7 @@ namespace Tkl.Jumbo.Dfs
         {
             Size = reader.ReadInt64();
             IsOpenForWriting = reader.ReadBoolean();
+            BlockSize = reader.ReadInt32();
             int blockCount = reader.ReadInt32();
             _blocks.Clear();
             _blocks.Capacity = blockCount;

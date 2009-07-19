@@ -82,9 +82,24 @@ namespace NameServerApplication
             {
             }
 
-            public CreateFileEditLogEntry(DateTime date, string path)
+            public CreateFileEditLogEntry(DateTime date, string path, int blockSize)
                 : base(FileSystemMutation.CreateFile, date, path)
             {
+                BlockSize = blockSize;
+            }
+
+            public int BlockSize { get; private set; }
+
+            public override void Write(BinaryWriter writer)
+            {
+                base.Write(writer);
+                writer.Write(BlockSize);
+            }
+
+            public override void Read(BinaryReader reader)
+            {
+                base.Read(reader);
+                BlockSize = reader.ReadInt32();
             }
         }
 
@@ -286,12 +301,12 @@ namespace NameServerApplication
             LogMutation(new CreateDirectoryEditLogEntry(date, path));
         }
 
-        public void LogCreateFile(string path, DateTime date)
+        public void LogCreateFile(string path, DateTime date, int blockSize)
         {
             if( path == null )
                 throw new ArgumentNullException("path");
 
-            LogMutation(new CreateFileEditLogEntry(date, path));
+            LogMutation(new CreateFileEditLogEntry(date, path, blockSize));
         }
 
         public void LogAppendBlock(string path, DateTime date, Guid blockId)
@@ -408,7 +423,7 @@ namespace NameServerApplication
                             break;
                         case FileSystemMutation.CreateFile:
                             CreateFileEditLogEntry createFileEntry = EditLogEntry.Load<CreateFileEditLogEntry>(reader);
-                            fileSystem.CreateFile(createFileEntry.Path, createFileEntry.Date, false);
+                            fileSystem.CreateFile(createFileEntry.Path, createFileEntry.Date, createFileEntry.BlockSize, false);
                             break;
                         case FileSystemMutation.AppendBlock:
                             AppendBlockEditLogEntry appendBlockEntry = EditLogEntry.Load<AppendBlockEditLogEntry>(reader);

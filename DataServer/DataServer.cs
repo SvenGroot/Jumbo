@@ -56,8 +56,6 @@ namespace DataServerApplication
             LoadBlocks();
         }
 
-        public long BlockSize { get; private set; }
-
         public ServerAddress LocalAddress { get; private set; }
 
         public void Run()
@@ -66,8 +64,6 @@ namespace DataServerApplication
             LocalAddress = new ServerAddress(System.Net.Dns.GetHostName(), _port);
 
             _log.Info("Data server main loop starting.");
-
-            RpcHelper.TryRemotingCall(() => BlockSize = _nameServerClient.BlockSize, _heartbeatInterval, -1);
 
             if( _running )
             {

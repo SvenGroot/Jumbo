@@ -49,8 +49,7 @@ namespace Tkl.Jumbo.Dfs
             // GetFileInfo doesn't throw if the file doesn't exist; we do.
             if( _file == null )
                 throw new FileNotFoundException(string.Format(System.Globalization.CultureInfo.CurrentCulture, "The file '{0}' does not exist on the distributed file system.", path));
-            _log.Debug("Retrieving block size.");
-            BlockSize = nameServer.BlockSize;
+            BlockSize = _file.BlockSize;
             _log.Debug("DfsInputStream construction complete.");
         }
 

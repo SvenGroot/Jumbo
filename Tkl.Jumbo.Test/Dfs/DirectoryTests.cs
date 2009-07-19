@@ -10,6 +10,8 @@ namespace Tkl.Jumbo.Test.Dfs
     [TestFixture]
     public class DirectoryTests
     {
+        private const int _blockSize = 16 * 1024 * 1024;
+
         [Test]
         public void TestConstructor()
         {
@@ -76,7 +78,7 @@ namespace Tkl.Jumbo.Test.Dfs
             DfsDirectory child1 = new DfsDirectory(root, "child1", DateTime.UtcNow);
             DfsDirectory child2 = new DfsDirectory(child1, "child2", DateTime.UtcNow);
             DfsDirectory child3 = new DfsDirectory(child1, "child3", DateTime.UtcNow);
-            new DfsFile(child2, "child4", DateTime.UtcNow);
+            new DfsFile(child2, "child4", DateTime.UtcNow, _blockSize);
             new DfsDirectory(child3, "child5", DateTime.UtcNow);
             return root;
         }

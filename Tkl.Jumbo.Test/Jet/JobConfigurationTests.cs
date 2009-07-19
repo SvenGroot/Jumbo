@@ -13,6 +13,8 @@ namespace Tkl.Jumbo.Test.Jet
     [TestFixture]
     public class JobConfigurationTests
     {
+        private const int _blockSize = 16 * 1024 * 1024;
+
         [Test]
         public void TestConstructor()
         {
@@ -226,7 +228,7 @@ namespace Tkl.Jumbo.Test.Jet
         private static DfsFile CreateFakeTestFile(string name)
         {
             DfsDirectory dir = new DfsDirectory(null, "root", DateTime.UtcNow);
-            DfsFile file = new DfsFile(dir, name, DateTime.UtcNow);
+            DfsFile file = new DfsFile(dir, name, DateTime.UtcNow, _blockSize);
             file.Blocks.Add(Guid.NewGuid());
             file.Blocks.Add(Guid.NewGuid());
             file.Blocks.Add(Guid.NewGuid());

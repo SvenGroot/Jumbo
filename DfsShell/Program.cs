@@ -81,12 +81,17 @@ namespace DfsShell
 
         private static void PutFile(DfsClient client, string[] args)
         {
-            if( args.Length != 3 )
-                Console.WriteLine("Usage: DfsShell put <local path> <dfs path>");
+            if( args.Length < 3 || args.Length > 4 )
+                Console.WriteLine("Usage: DfsShell put <local path> <dfs path> [block size]");
             else
             {
                 string localPath = args[1];
                 string dfsPath = args[2];
+                int blockSize = 0;
+                if( args.Length == 4 )
+                {
+                    blockSize = Convert.ToInt32(args[3]);    
+                }
                 if( !IO.File.Exists(localPath) && !IO.Directory.Exists(localPath) )
                     Console.WriteLine("Local path {0} does not exist.", localPath);
                 else
@@ -98,7 +103,7 @@ namespace DfsShell
                         if( isDirectory )
                         {
                             Console.WriteLine("Copying local directory \"{0}\" to DFS directory \"{1}\"...", localPath, dfsPath);
-                            client.UploadDirectory(localPath, dfsPath, PrintProgress);
+                            client.UploadDirectory(localPath, dfsPath, blockSize, PrintProgress);
                         }
                         else
                         {
@@ -109,7 +114,7 @@ namespace DfsShell
                                 dfsPath = DfsPath.Combine(dfsPath, fileName);
                             }
                             Console.WriteLine("Copying local file \"{0}\" to DFS file \"{1}\"...", localPath, dfsPath);
-                            client.UploadFile(localPath, dfsPath, PrintProgress);
+                            client.UploadFile(localPath, dfsPath, blockSize, PrintProgress);
                         }
                     }
                     catch( UnauthorizedAccessException ex )

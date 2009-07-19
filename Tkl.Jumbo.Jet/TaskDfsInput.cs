@@ -5,6 +5,7 @@ using System.Text;
 using System.Xml.Serialization;
 using Tkl.Jumbo.IO;
 using Tkl.Jumbo.Dfs;
+using System.IO;
 
 namespace Tkl.Jumbo.Jet
 {
@@ -125,12 +126,12 @@ namespace Tkl.Jumbo.Jet
             if( dfsClient == null )
                 throw new ArgumentNullException("dfsClient");
             Type recordReaderType = input.RecordReaderType;
+            DfsInputStream inputStream = dfsClient.OpenFile(input.Path);
             long offset;
             long size;
-            long blockSize = dfsClient.NameServer.BlockSize;
+            long blockSize = inputStream.BlockSize;
             offset = blockSize * (long)input.Block;
             size = Math.Min(blockSize, dfsClient.NameServer.GetFileInfo(input.Path).Size - offset);
-            DfsInputStream inputStream = dfsClient.OpenFile(input.Path);
             return (RecordReader<T>)JetActivator.CreateInstance(recordReaderType, taskExecution, inputStream, offset, size, taskExecution == null ? false : taskExecution.AllowRecordReuse);
         }
     }

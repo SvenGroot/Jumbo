@@ -38,6 +38,15 @@ namespace Tkl.Jumbo.Test.Dfs
                     Utilities.CopyStream(input, output);
                 }
 
+                const int customBlockSize = 16 * 1024 * 1024;
+                using( DfsOutputStream output = new DfsOutputStream(nameServer, "/test2/foo2.dat", customBlockSize) )
+                using( MemoryStream input = new MemoryStream() )
+                {
+                    Utilities.GenerateData(input, size);
+                    input.Position = 0;
+                    Utilities.CopyStream(input, output);
+                }
+
                 DfsFile file;
                 DfsMetrics metrics;
                 using( DfsOutputStream output = new DfsOutputStream(nameServer, "/test2/pending.dat") )
@@ -66,20 +75,28 @@ namespace Tkl.Jumbo.Test.Dfs
                 file = nameServer.GetFileInfo("/test2/pending.dat");
                 Assert.IsFalse(file.IsOpenForWriting);
                 Assert.AreEqual(size, file.Size);
+                Assert.AreEqual(nameServer.BlockSize, file.BlockSize);
                 Assert.AreEqual(1, file.Blocks.Count);
                 Assert.IsNull(nameServer.GetDirectoryInfo("/test1"));
                 Tkl.Jumbo.Dfs.DfsDirectory dir = nameServer.GetDirectoryInfo("/test2");
                 Assert.IsNotNull(dir);
-                Assert.AreEqual(2, dir.Children.Count);
+                Assert.AreEqual(3, dir.Children.Count);
                 file = nameServer.GetFileInfo("/test2/foo.dat");
                 Assert.IsNotNull(file);
                 Assert.AreEqual(size, file.Size);
                 Assert.AreEqual(1, file.Blocks.Count);
+                Assert.AreEqual(nameServer.BlockSize, file.BlockSize);
+                file = nameServer.GetFileInfo("/test2/foo2.dat");
+                Assert.IsNotNull(file);
+                Assert.AreEqual(size, file.Size);
+                Assert.AreEqual(2, file.Blocks.Count);
+                Assert.AreEqual(customBlockSize, file.BlockSize);
+
                 Assert.IsNull(nameServer.GetDirectoryInfo("/test2/test1"));
                 Assert.IsNotNull(nameServer.GetDirectoryInfo("/test3"));
                 metrics = nameServer.GetMetrics();
-                Assert.AreEqual(size * 2, metrics.TotalSize);
-                Assert.AreEqual(2, metrics.TotalBlockCount);
+                Assert.AreEqual(size * 3, metrics.TotalSize);
+                Assert.AreEqual(4, metrics.TotalBlockCount);
                 Assert.AreEqual(0, metrics.PendingBlockCount);
                 Assert.AreEqual(0, metrics.UnderReplicatedBlockCount);
                 Assert.AreEqual(1, metrics.DataServers.Count);
@@ -116,6 +133,16 @@ namespace Tkl.Jumbo.Test.Dfs
                     Utilities.CopyStream(input, output);
                 }
 
+                const int customBlockSize = 16 * 1024 * 1024;
+                using( DfsOutputStream output = new DfsOutputStream(nameServer, "/test2/foo2.dat", customBlockSize) )
+                using( MemoryStream input = new MemoryStream() )
+                {
+                    Utilities.GenerateData(input, size);
+                    input.Position = 0;
+                    Utilities.CopyStream(input, output);
+                }
+
+
                 DfsFile file;
                 DfsMetrics metrics;
                 using( DfsOutputStream output = new DfsOutputStream(nameServer, "/test2/pending.dat") )
@@ -142,18 +169,25 @@ namespace Tkl.Jumbo.Test.Dfs
                 Assert.AreEqual(size, file.Size);
                 Assert.AreEqual(1, file.Blocks.Count);
                 Assert.IsNull(nameServer.GetDirectoryInfo("/test1"));
+                Assert.AreEqual(nameServer.BlockSize, file.BlockSize);
                 Tkl.Jumbo.Dfs.DfsDirectory dir = nameServer.GetDirectoryInfo("/test2");
                 Assert.IsNotNull(dir);
-                Assert.AreEqual(2, dir.Children.Count);
+                Assert.AreEqual(3, dir.Children.Count);
                 file = nameServer.GetFileInfo("/test2/foo.dat");
                 Assert.IsNotNull(file);
                 Assert.AreEqual(size, file.Size);
                 Assert.AreEqual(1, file.Blocks.Count);
+                Assert.AreEqual(nameServer.BlockSize, file.BlockSize);
+                file = nameServer.GetFileInfo("/test2/foo2.dat");
+                Assert.IsNotNull(file);
+                Assert.AreEqual(size, file.Size);
+                Assert.AreEqual(2, file.Blocks.Count);
+                Assert.AreEqual(customBlockSize, file.BlockSize);
                 Assert.IsNull(nameServer.GetDirectoryInfo("/test2/test1"));
                 Assert.IsNotNull(nameServer.GetDirectoryInfo("/test3"));
                 metrics = nameServer.GetMetrics();
-                Assert.AreEqual(size * 2, metrics.TotalSize);
-                Assert.AreEqual(2, metrics.TotalBlockCount);
+                Assert.AreEqual(size * 3, metrics.TotalSize);
+                Assert.AreEqual(4, metrics.TotalBlockCount);
                 Assert.AreEqual(0, metrics.PendingBlockCount);
                 Assert.AreEqual(0, metrics.UnderReplicatedBlockCount);
                 Assert.AreEqual(1, metrics.DataServers.Count);
