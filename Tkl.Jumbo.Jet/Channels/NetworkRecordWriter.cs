@@ -24,8 +24,8 @@ namespace Tkl.Jumbo.Jet.Channels
 
             _client = client;
             _stream = client.GetStream();
-            _bufferedStream = new WriteBufferedStream(_stream); // TODO: Configurable buffer size.
-            _writer = new BinaryWriter(_bufferedStream);
+            //_bufferedStream = new WriteBufferedStream(_stream); // TODO: Configurable buffer size.
+            _writer = new BinaryWriter(_stream);
             _writer.Write(taskId);
         }
 
