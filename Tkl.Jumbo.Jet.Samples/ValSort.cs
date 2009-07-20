@@ -74,6 +74,8 @@ namespace Tkl.Jumbo.Jet.Samples
             StageConfiguration combinerStage = job.AddStage("CombinerStage", new[] { sortStage }, typeof(ValSortCombinerTask), 1, ChannelType.Pipeline, ChannelConnectivity.PointToPoint, null, null, _outputPath, typeof(TextRecordWriter<StringWritable>));
             _outputFile = combinerStage.DfsOutput.GetPath(1);
 
+            ConfigureDfsOutput(combinerStage);
+
             JetClient jetClient = new JetClient(JetConfiguration);
             return jetClient.RunJob(job, typeof(ValSortTask).Assembly.Location).JobId;
         }

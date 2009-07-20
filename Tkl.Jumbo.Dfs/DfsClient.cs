@@ -418,7 +418,7 @@ namespace Tkl.Jumbo.Dfs
         /// Creates a new file with the specified path on the distributed file system.
         /// </summary>
         /// <param name="path">The path containing the directory and name of the file to create.</param>
-        /// <param name="blockSize">The block size of the new file.</param>
+        /// <param name="blockSize">The block size of the new file, or zero to use the file system default block size.</param>
         /// <param name="replicationFactor">The number of replicas to create of the file's blocks, or zero to use the file system default replication factor.</param>
         /// <returns>A <see cref="DfsOutputStream"/> that can be used to write data to the file.</returns>
         public DfsOutputStream CreateFile(string path, int blockSize, int replicationFactor)

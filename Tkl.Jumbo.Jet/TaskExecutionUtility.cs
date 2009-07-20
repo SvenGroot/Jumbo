@@ -471,8 +471,9 @@ namespace Tkl.Jumbo.Jet
                 string file = DfsPath.Combine(DfsPath.Combine(Configuration.DfsJobDirectory, "temp"), Configuration.TaskAttemptId);
                 _log.DebugFormat("Opening output file {0}", file);
                 _dfsOutputTempPath = file;
-                _dfsOutputPath = Configuration.StageConfiguration.DfsOutput.GetPath(Configuration.TaskId.TaskNumber);
-                _outputStream = DfsClient.CreateFile(file);
+                TaskDfsOutput output = Configuration.StageConfiguration.DfsOutput;
+                _dfsOutputPath = output.GetPath(Configuration.TaskId.TaskNumber);
+                _outputStream = DfsClient.CreateFile(file, output.BlockSize, output.ReplicationFactor);
                 _log.DebugFormat("Creating record writer of type {0}", Configuration.StageConfiguration.DfsOutput.RecordWriterTypeName);
                 Type recordWriterType = Configuration.StageConfiguration.DfsOutput.RecordWriterType;
                 return (RecordWriter<T>)JetActivator.CreateInstance(recordWriterType, this, _outputStream);

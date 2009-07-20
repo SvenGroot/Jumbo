@@ -56,6 +56,18 @@ namespace Tkl.Jumbo.Jet
         }
 
         /// <summary>
+        /// Gets or sets the block size of the output file, or zero to use the file system default block size.
+        /// </summary>
+        [XmlAttribute("blockSize")]
+        public int BlockSize { get; set; }
+
+        /// <summary>
+        /// Gets or sets the replication factor of the output file, or zero to use the file system default replication factor.
+        /// </summary>
+        [XmlAttribute("replicationFactor")]
+        public int ReplicationFactor { get; set; }
+
+        /// <summary>
         /// Creates a clone of the current object.
         /// </summary>
         /// <returns>A clone of the current object.</returns>

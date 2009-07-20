@@ -74,6 +74,8 @@ namespace Tkl.Jumbo.Jet.Samples
             jobConfig.AddSetting(TpcHTableGenTask.DbGenFileNameSetting, Path.GetFileName(_dbGenPath));
             jobConfig.AddTypedSetting(TpcHTableGenTask.ScaleFactorSetting, _scaleFactor);
 
+            ConfigureDfsOutput(lineItemStage);
+
             JetClient jetClient = new JetClient(JetConfiguration);
             Job job = jetClient.RunJob(jobConfig, dfsClient, typeof(TpcHTableGenTask).Assembly.Location, _dbGenPath, distsPath);
             return job.JobId;

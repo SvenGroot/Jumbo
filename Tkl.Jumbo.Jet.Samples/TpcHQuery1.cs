@@ -53,8 +53,10 @@ namespace Tkl.Jumbo.Jet.Samples
             StageConfiguration inputStage = jobConfig.AddInputStage("PricingSummaryTask", input, typeof(PricingSummaryTask), typeof(RecordFileReader<LineItem>));
             StageConfiguration accumulatorPipelineStage = jobConfig.AddPointToPointStage("Accumulator", inputStage, typeof(PricingSummaryAccumulatorTask), Tkl.Jumbo.Jet.Channels.ChannelType.Pipeline, null, null);
             StageConfiguration accumulatorStage = jobConfig.AddStage("PricingSummary", new[] { accumulatorPipelineStage }, typeof(PricingSummaryAccumulatorTask), 1, Tkl.Jumbo.Jet.Channels.ChannelType.File, Tkl.Jumbo.Jet.Channels.ChannelConnectivity.Full, null, null, null, null);
-            jobConfig.AddPointToPointStage("Sort", accumulatorStage, typeof(SortTask<KeyValuePairWritable<PricingSummaryKey, PricingSummaryValue>>), Tkl.Jumbo.Jet.Channels.ChannelType.Pipeline, _outputPath, typeof(TextRecordWriter<KeyValuePairWritable<PricingSummaryKey, PricingSummaryValue>>));
+            StageConfiguration outputStage = jobConfig.AddPointToPointStage("Sort", accumulatorStage, typeof(SortTask<KeyValuePairWritable<PricingSummaryKey, PricingSummaryValue>>), Tkl.Jumbo.Jet.Channels.ChannelType.Pipeline, _outputPath, typeof(TextRecordWriter<KeyValuePairWritable<PricingSummaryKey, PricingSummaryValue>>));
             jobConfig.AddTypedSetting(PricingSummaryTask.DeltaSettingName, _delta);
+
+            ConfigureDfsOutput(outputStage);
 
             return jetClient.RunJob(jobConfig, dfsClient, typeof(PricingSummaryTask).Assembly.Location).JobId;
         }

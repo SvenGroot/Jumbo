@@ -58,6 +58,12 @@ namespace Tkl.Jumbo.Jet.Jobs
         }
 
         /// <summary>
+        /// Gets or sets the channel type to use.
+        /// </summary>
+        [NamedArgument("channel", Description = "The channel type to use (File or Tcp).")]
+        public ChannelType ChannelType { get; set; }
+
+        /// <summary>
         /// Gets the input file or directory for the job.
         /// </summary>
         protected string InputPath { get; private set; }
@@ -118,6 +124,9 @@ namespace Tkl.Jumbo.Jet.Jobs
         /// <returns>The job ID of the newly created job.</returns>
         public override Guid RunJob()
         {
+            if( !(ChannelType == ChannelType.File || ChannelType == ChannelType.Tcp) )
+                throw new InvalidOperationException("You can only use file or TCP channels.");
+
             PromptIfInteractive(true);
 
             DfsClient dfsClient = new DfsClient(DfsConfiguration);
@@ -157,7 +166,8 @@ namespace Tkl.Jumbo.Jet.Jobs
             StageConfiguration accumulatorChildStage = config.AddPointToPointStage("Accumulator", firstStage, AccumulatorTaskType, ChannelType.Pipeline, null, null);
 
             // Add second stage.
-            config.AddStage(AccumulatorStageName, new[] { accumulatorChildStage }, AccumulatorTaskType, AccumulatorTaskCount, ChannelType.File, ChannelConnectivity.Full, null, PartitionerType, OutputPath, OutputWriterType);
+            StageConfiguration outputStage = config.AddStage(AccumulatorStageName, new[] { accumulatorChildStage }, AccumulatorTaskType, AccumulatorTaskCount, ChannelType, ChannelConnectivity.Full, null, PartitionerType, OutputPath, OutputWriterType);
+            ConfigureDfsOutput(outputStage);
 
             JetClient jetClient = new JetClient(JetConfiguration);
             Job job = jetClient.JobServer.CreateJob();
