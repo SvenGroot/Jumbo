@@ -49,7 +49,7 @@ namespace Tkl.Jumbo.Jet.Channels
             foreach( string taskId in OutputTaskIds )
             {
                 TcpClient client = ConnectToOutput(taskId);
-                writers.Add(new NetworkRecordWriter<T>(client, taskId));
+                writers.Add(new NetworkRecordWriter<T>(client, TaskExecution.Configuration.TaskId.ToString()));
             }
 
             return writers;

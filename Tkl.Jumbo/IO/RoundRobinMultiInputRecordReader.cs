@@ -76,6 +76,8 @@ namespace Tkl.Jumbo.IO
                     {
                         if( ReadRecordFromReader(nextReader, reader) )
                             return true;
+                        else if( nextReader >= _readers.Count )
+                            nextReader = _readers.Count - 1;
                     }
                     else
                         nextReader = (nextReader + 1) % _readers.Count;

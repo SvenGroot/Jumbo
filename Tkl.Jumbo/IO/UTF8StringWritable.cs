@@ -350,9 +350,15 @@ namespace Tkl.Jumbo.IO
             int length = WritableUtility.Read7BitEncodedInt32(reader);
 			if( length <= Capacity )
 			{
-			  if( reader.Read(_utf8Bytes, 0, length) != length )
-				throw new FormatException("Invalid Utf8StringWritable detected in stream.");
-			  _byteLength = length;
+                int totalRead = 0;
+                do
+                {
+                    int bytesRead = reader.Read(_utf8Bytes, totalRead, length - totalRead);
+                    if( bytesRead == 0 )
+                        throw new FormatException("Invalid Utf8StringWritable detected in stream.");
+                    totalRead += bytesRead;
+                } while( totalRead < length );
+    			_byteLength = length;
 			}
 			else
 			  Set(reader.ReadBytes(length));

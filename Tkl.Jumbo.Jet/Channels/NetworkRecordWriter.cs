@@ -49,6 +49,7 @@ namespace Tkl.Jumbo.Jet.Channels
                     _disposed = true;
 
                     _writer.Write(false);
+                    _writer.Flush();
 
                     if( disposing )
                     {
