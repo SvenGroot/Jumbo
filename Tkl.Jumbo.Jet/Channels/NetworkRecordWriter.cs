@@ -17,7 +17,7 @@ namespace Tkl.Jumbo.Jet.Channels
         private readonly BinaryWriter _writer;
         private bool _disposed;
 
-        public NetworkRecordWriter(TcpClient client)
+        public NetworkRecordWriter(TcpClient client, string taskId)
         {
             if( client == null )
                 throw new ArgumentNullException("client");
@@ -26,6 +26,7 @@ namespace Tkl.Jumbo.Jet.Channels
             _stream = client.GetStream();
             _bufferedStream = new WriteBufferedStream(_stream); // TODO: Configurable buffer size.
             _writer = new BinaryWriter(_bufferedStream);
+            _writer.Write(taskId);
         }
 
         protected override void WriteRecordInternal(T record)

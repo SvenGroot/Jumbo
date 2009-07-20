@@ -27,6 +27,7 @@ namespace Tkl.Jumbo.Jet.Channels
             _stream = client.GetStream();
             _reader = new BinaryReader(_stream);
             _allowRecordReuse = allowRecordReuse;
+            SourceName = _reader.ReadString();
             if( allowRecordReuse )
                 _record = new T();
         }

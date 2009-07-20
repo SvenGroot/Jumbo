@@ -60,7 +60,8 @@ namespace Tkl.Jumbo.Dfs
             if( fileName == null )
                 throw new ArgumentNullException("fileName");
 
-            using( XmlWriter writer = XmlWriter.Create(fileName) )
+            XmlWriterSettings settings = new XmlWriterSettings() { Indent = true };
+            using( XmlWriter writer = XmlWriter.Create(fileName, settings) )
             {
                 writer.WriteStartDocument();
                 writer.WriteStartElement("tkl.jumbo.dfs");

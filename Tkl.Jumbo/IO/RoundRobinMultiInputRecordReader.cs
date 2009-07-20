@@ -100,18 +100,25 @@ namespace Tkl.Jumbo.IO
 
         private bool ReadRecordFromReader(int index, RecordReader<T> reader)
         {
-            if( reader.ReadRecord() )
+            try
             {
-                _currentReader = index;
-                CurrentRecord = reader.CurrentRecord;
-                return true;
+                if( reader.ReadRecord() )
+                {
+                    _currentReader = index;
+                    CurrentRecord = reader.CurrentRecord;
+                    return true;
+                }
+                else
+                {
+                    _readers.RemoveAt(index);
+                    if( index < _currentReader )
+                        --_currentReader;
+                    return false;
+                }
             }
-            else
+            catch( Exception ex )
             {
-                _readers.RemoveAt(index);
-                if( index < _currentReader )
-                    --_currentReader;
-                return false;
+                throw new ChildReaderException(string.Format(System.Globalization.CultureInfo.CurrentCulture, "Error reading from source {0}.", reader.SourceName), ex);
             }
         }
     }

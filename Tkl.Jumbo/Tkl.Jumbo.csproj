@@ -60,6 +60,7 @@
     <Compile Include="CompressionUtility.cs" />
     <Compile Include="CompressionType.cs" />
     <Compile Include="DriveSpaceInfo.cs" />
+    <Compile Include="IO\ChildReaderException.cs" />
     <Compile Include="IO\IMultiInputRecordReader.cs" />
     <Compile Include="IO\InnerJoinRecordReader.cs" />
     <Compile Include="IO\RoundRobinMultiInputRecordReader.cs" />
