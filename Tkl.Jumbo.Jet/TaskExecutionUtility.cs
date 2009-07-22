@@ -533,7 +533,7 @@ namespace Tkl.Jumbo.Jet
                     if( _inputReader != null )
                         metrics.DfsBytesRead += _inputReader.BytesRead;
                 }
-                else
+                else if( InputChannels != null )
                 {
                     foreach( IInputChannel inputChannel in InputChannels )
                     {
