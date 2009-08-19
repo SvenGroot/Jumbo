@@ -150,7 +150,9 @@ namespace Tkl.Jumbo.IO
         {
             if( value == null )
                 throw new ArgumentNullException("value");
-            _utf8Bytes = new byte[GetCapacityNeeded(count)];
+            int capacityNeeded = GetCapacityNeeded(count);
+            if( _utf8Bytes == null || _utf8Bytes.Length < capacityNeeded )
+                _utf8Bytes = new byte[capacityNeeded];
             Array.Copy(value, index, _utf8Bytes, 0, count);
             _byteLength = count;
         }
