@@ -23,7 +23,7 @@ namespace Tkl.Jumbo.Test.Jet
         [TestFixtureSetUp]
         public void Setup()
         {
-            _cluster = new TestJetCluster(16777216, true, 2, CompressionType.GZip);
+            _cluster = new TestJetCluster(16777216, true, 2, CompressionType.GZip, false);
             DfsClient dfsClient = new DfsClient(Dfs.TestDfsCluster.CreateClientConfig());
             const int recordCount = 2500000;
             _expected = CreateNumberListInputFile(recordCount, _fileName, dfsClient);

@@ -13,7 +13,7 @@ namespace Tkl.Jumbo.Jet.Channels
     {
         private readonly TcpClient _client;
         private readonly NetworkStream _stream;
-        private readonly WriteBufferedStream _bufferedStream;
+        //private readonly WriteBufferedStream _bufferedStream;
         private readonly BinaryWriter _writer;
         private bool _disposed;
 
@@ -55,8 +55,8 @@ namespace Tkl.Jumbo.Jet.Channels
                     {
                         if( _writer != null )
                             ((IDisposable)_writer).Dispose();
-                        if( _bufferedStream != null )
-                            _bufferedStream.Dispose();
+                        //if( _bufferedStream != null )
+                        //    _bufferedStream.Dispose();
                         if( _stream != null )
                             _stream.Dispose();
                         if( _client != null )

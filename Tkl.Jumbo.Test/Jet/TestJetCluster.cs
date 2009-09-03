@@ -23,7 +23,7 @@ namespace Tkl.Jumbo.Test.Jet
 
         private Thread _taskServerThread;
 
-        public TestJetCluster(int? blockSize, bool eraseExistingData, int maxTasks, CompressionType compressionType)
+        public TestJetCluster(int? blockSize, bool eraseExistingData, int maxTasks, CompressionType compressionType, bool multiThreadedTaskFinish)
         {
             // We can't run more than one TaskServer because they are single instance.
             _dfsCluster = new Tkl.Jumbo.Test.Dfs.TestDfsCluster(1, 1, blockSize, eraseExistingData);
@@ -43,6 +43,7 @@ namespace Tkl.Jumbo.Test.Jet
             jetConfig.TaskServer.MaxNonInputTasks = maxTasks;
             jetConfig.TaskServer.FileServerPort = TaskServerFileServerPort;
             jetConfig.FileChannel.CompressionType = compressionType;
+            jetConfig.TaskServer.MultiThreadedTaskFinish = multiThreadedTaskFinish;
             if( Environment.OSVersion.Platform == PlatformID.Unix )
                 jetConfig.TaskServer.ListenIPv4AndIPv6 = false;
             DfsConfiguration dfsConfig = Dfs.TestDfsCluster.CreateClientConfig();

@@ -310,9 +310,29 @@ namespace Tkl.Jumbo.Jet
             if( _task != null )
                 _task.Finish();
 
-            foreach( TaskExecutionUtility associatedTask in _associatedTasks )
+            if( _associatedTasks.Count > 1 && JetClient.Configuration.TaskServer.MultiThreadedTaskFinish )
             {
-                associatedTask.FinishTask();
+                _log.Info("Using multi-threaded task finish for associated tasks.");
+
+                foreach( TaskExecutionUtility associatedTask in _associatedTasks )
+                {
+                    associatedTask.FinishTaskAsync();
+                }
+
+                WaitHandle[] events = (from associatedTask in _associatedTasks
+                                       select (WaitHandle)associatedTask._finishedEvent).ToArray();
+
+                // TODO: This will break if there are more than 64 child tasks.
+                WaitHandle.WaitAll(events);
+
+                _log.Info("All associated tasks have finished.");
+            }
+            else
+            {
+                foreach( TaskExecutionUtility associatedTask in _associatedTasks )
+                {
+                    associatedTask.FinishTask();
+                }
             }
 
             _finished = true;
@@ -408,6 +428,18 @@ namespace Tkl.Jumbo.Jet
                     ((IDisposable)_finishedEvent).Dispose();
                 }
             }
+        }
+
+        private void FinishTaskAsync()
+        {
+            // TODO: Using the ThreadPool is not a good idea; if there is more than one level of associated tasks it could cause deadlock if the pool is exhausted
+            // because each work item will queue additional work items and then wait for their completion.
+            ThreadPool.QueueUserWorkItem(FinishTaskWaitCallback);
+        }
+
+        private void FinishTaskWaitCallback(object state)
+        {
+            FinishTask();
         }
 
         private void CheckDisposed()

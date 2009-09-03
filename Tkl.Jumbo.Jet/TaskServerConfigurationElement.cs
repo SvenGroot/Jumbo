@@ -109,5 +109,16 @@ namespace Tkl.Jumbo.Jet
             get { return (bool)this["runTaskHostInAppDomain"]; }
             set { this["runTaskHostInAppDomain"] = value; }
         }
+
+        /// <summary>
+        /// Gets or sets a value that indicates whether the task host should use multiple threads to call <see cref="IPushTask{TInput,TOutput}.Finish"/> on
+        /// child stage tasks, if there is more than one.
+        /// </summary>
+        [ConfigurationProperty("multiThreadedTaskFinish", DefaultValue = false, IsRequired = false, IsKey = false)]
+        public bool MultiThreadedTaskFinish
+        {
+            get { return (bool)this["multiThreadedTaskFinish"]; }
+            set { this["multiThreadedTaskFinish"] = value; }
+        }
     }
 }

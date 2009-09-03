@@ -16,7 +16,7 @@ namespace Tkl.Jumbo.Test.Jet
         [TestFixtureSetUp]
         public void Setup()
         {
-            _cluster = new TestJetCluster(null, true, 4, CompressionType.None);
+            _cluster = new TestJetCluster(null, true, 4, CompressionType.None, false);
         }
 
         [TestFixtureTearDown]
