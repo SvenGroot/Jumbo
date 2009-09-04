@@ -9,6 +9,7 @@ using Tkl.Jumbo.Jet.Samples.Tasks;
 using Tkl.Jumbo.IO;
 using System.IO;
 using Tkl.Jumbo.Jet.Samples.IO;
+using System.Runtime.InteropServices;
 
 namespace Tkl.Jumbo.Jet.Samples
 {
@@ -33,7 +34,7 @@ namespace Tkl.Jumbo.Jet.Samples
         public DbGen([Description("The output directory on the Jumbo DFS where the generated data will be written.")] string outputPath,
                      [Description("The number of tasks to use to generate the data.")] int taskCount, 
                      [Description("The local path to the dbgen executable.")] string dbGenPath,
-                     [Description("The scale factor of the database."), OptionalArgument(1)] int scaleFactor)
+                     [Description("The scale factor of the database."), Optional, DefaultParameterValue(1)] int scaleFactor)
         {
             if( outputPath == null )
                 throw new ArgumentNullException("outputPath");

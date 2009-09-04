@@ -7,6 +7,7 @@ using Tkl.Jumbo.Jet.Jobs;
 using Tkl.Jumbo.Jet.Samples.IO;
 using Tkl.Jumbo.Jet.Tasks;
 using Tkl.Jumbo.Dfs;
+using System.Runtime.InteropServices;
 
 namespace Tkl.Jumbo.Jet.Samples
 {
@@ -29,7 +30,7 @@ namespace Tkl.Jumbo.Jet.Samples
         /// <param name="mergeTasks">The number of merge tasks to use.</param>
         public GraySort([Description("The input file or directory on the Jumbo DFS containing the data to be sorted.")] string inputPath,
                         [Description("The output directory on the Jumbo DFS where the sorted data will be written.")] string outputPath,
-                        [Description("The number of merge tasks to use."), OptionalArgument(1)] int mergeTasks)
+                        [Description("The number of merge tasks to use."), Optional, DefaultParameterValue(1)] int mergeTasks)
             : base(inputPath, outputPath, mergeTasks, typeof(EmptyTask<GenSortRecord>), "InputStage", null, null, typeof(GenSortRecordReader), typeof(GenSortRecordWriter), typeof(RangePartitioner), true)
         {
             SampleSize = 10000;

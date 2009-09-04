@@ -112,7 +112,6 @@
     <Compile Include="Jobs\JobRunnerNamedArgument.cs" />
     <Compile Include="Jobs\JobRunnerPositionalArgument.cs" />
     <Compile Include="Jobs\NamedArgumentAttribute.cs" />
-    <Compile Include="Jobs\OptionalArgumentAttribute.cs" />
     <Compile Include="MergeRecordReader.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="RunTaskJetHeartbeatResponse.cs" />

@@ -44,10 +44,9 @@ namespace Tkl.Jumbo.Jet.Jobs
             for( int x = 0; x < parameters.Length; ++x )
             {
                 ParameterInfo parameter = parameters[x];
-                OptionalArgumentAttribute optionalAttribute = (OptionalArgumentAttribute)Attribute.GetCustomAttribute(parameter, typeof(OptionalArgumentAttribute));
-                if( optionalAttribute == null && hasOptionalAttribute )
+                if( !parameter.IsOptional && hasOptionalAttribute )
                     throw new ArgumentException("Job runner constructor cannot have non-optional arguments after an optional argument.");
-                else if( optionalAttribute != null && !hasOptionalAttribute )
+                else if( parameter.IsOptional && !hasOptionalAttribute )
                 {
                     hasOptionalAttribute = true;
                     _minimumArgumentCount = x;
@@ -55,7 +54,8 @@ namespace Tkl.Jumbo.Jet.Jobs
 
                 DescriptionAttribute descriptionAttribute = (DescriptionAttribute)Attribute.GetCustomAttribute(parameter, typeof(DescriptionAttribute));
 
-                _arguments[x] = new JobRunnerPositionalArgument(parameter.Name, parameter.ParameterType, optionalAttribute != null, optionalAttribute == null ? null : optionalAttribute.DefaultValue, descriptionAttribute == null ? null : descriptionAttribute.Description);
+                object defaultValue = ((parameter.Attributes & ParameterAttributes.HasDefault) == ParameterAttributes.HasDefault) ? parameter.DefaultValue : null;
+                _arguments[x] = new JobRunnerPositionalArgument(parameter.Name, parameter.ParameterType, parameter.IsOptional, defaultValue, descriptionAttribute == null ? null : descriptionAttribute.Description);
             }
             if( !hasOptionalAttribute )
                 _minimumArgumentCount = _arguments.Length;

@@ -1,11 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text;
 using Tkl.Jumbo.Jet.Jobs;
-using System.ComponentModel;
-using Tkl.Jumbo.Jet.Samples.Tasks;
 using Tkl.Jumbo.Jet.Samples.IO;
+using Tkl.Jumbo.Jet.Samples.Tasks;
 
 namespace Tkl.Jumbo.Jet.Samples
 {
@@ -40,7 +41,7 @@ namespace Tkl.Jumbo.Jet.Samples
         public GenSort([Description("The output directory on the Jumbo DFS where the generated data will be written.")] string outputPath,
                        [Description("The number of records to generate.")] ulong recordCount,
                        [Description("The number of tasks to use to generate the data.")] int taskCount,
-                       [Description("The record number to start at."), OptionalArgument(0UL)] ulong startRecord)
+                       [Description("The record number to start at."), Optional, DefaultParameterValue(0UL)] ulong startRecord)
             : base(null, outputPath, 0, typeof(GenSortTask), null, null, null, null, typeof(GenSortRecordWriter), null, false)
         {
             if( recordCount < 1 )

@@ -7,6 +7,7 @@ using Tkl.Jumbo.Jet.Jobs;
 using Tkl.Jumbo.Jet.Samples.Tasks;
 using Tkl.Jumbo.IO;
 using Tkl.Jumbo.Dfs;
+using System.Runtime.InteropServices;
 
 namespace Tkl.Jumbo.Jet.Samples
 {
@@ -30,8 +31,8 @@ namespace Tkl.Jumbo.Jet.Samples
         /// <param name="sizePerTaskMB">The size, in megabytes, of the data to generate per task. Specify zero to use the DFS block size.</param>
         public GenWords([Description("The output directory on the Jumbo DFS where the generated data will be written.")] string outputPath,
                         [Description("The directory on the Jumbo DFS where the dictionary files are stored.")] string dictionaryPath, 
-                        [Description("The number of generator tasks to use.")] int taskCount, 
-                        [Description("The size, in megabytes, of the data to generate per task. Specify zero to use the DFS block size."), OptionalArgument(0)] int sizePerTaskMB)
+                        [Description("The number of generator tasks to use.")] int taskCount,
+                        [Description("The size, in megabytes, of the data to generate per task. Specify zero to use the DFS block size."), Optional, DefaultParameterValue(0)] int sizePerTaskMB)
             : base(null, outputPath, 0, typeof(GenWordsTask), null, null, null, null, typeof(TextRecordWriter<StringWritable>), null, false)
         {
             if( dictionaryPath == null )

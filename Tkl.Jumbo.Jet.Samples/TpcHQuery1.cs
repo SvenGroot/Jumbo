@@ -8,6 +8,7 @@ using Tkl.Jumbo.Jet.Samples.IO;
 using Tkl.Jumbo.IO;
 using Tkl.Jumbo.Dfs;
 using Tkl.Jumbo.Jet.Tasks;
+using System.Runtime.InteropServices;
 
 namespace Tkl.Jumbo.Jet.Samples
 {
@@ -26,7 +27,7 @@ namespace Tkl.Jumbo.Jet.Samples
         /// <param name="inputPath">The path on the DFS with the input data.</param>
         /// <param name="outputPath">The path on the DFS to which to write the output data.</param>
         /// <param name="delta">The delta parameter for the query.</param>
-        public TpcHQuery1(string inputPath, string outputPath, [OptionalArgument(90)] int delta)
+        public TpcHQuery1(string inputPath, string outputPath, [Optional, DefaultParameterValue(90)] int delta)
         {
             if( inputPath == null )
                 throw new ArgumentNullException("inputPath");
