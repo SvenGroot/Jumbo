@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using Tkl.Jumbo.Dfs;
+using System.IO;
 
 namespace Tkl.Jumbo.Jet
 {
@@ -242,7 +243,14 @@ namespace Tkl.Jumbo.Jet
             }
 
             _log.InfoFormat("Running job {0}.", job.JobId);
-            System.Environment.SetEnvironmentVariable("JUMBO_LAST_JOB", job.JobId.ToString());
+            try
+            {
+                File.WriteAllText("jumbo_last_job.txt", job.JobId.ToString());
+            }
+            catch
+            {
+                // Don't care if this fails.
+            }
             JobServer.RunJob(job.JobId);
         }
         
