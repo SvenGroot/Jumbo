@@ -16,7 +16,7 @@
         <include name="System.Configuration.dll"/>
         <include name="System.Core.dll"/>
         <include name="System.Runtime.Remoting.dll"/>
-	<include name="System.Xml.Linq.dll"/>
+        <include name="System.Xml.Linq.dll"/>
         <include name="../lib/log4net.dll"/>
         <include name="../Tkl.Jumbo/nantbin/Tkl.Jumbo.dll"/>
         <include name="../Tkl.Jumbo.Dfs/nantbin/Tkl.Jumbo.Dfs.dll"/>

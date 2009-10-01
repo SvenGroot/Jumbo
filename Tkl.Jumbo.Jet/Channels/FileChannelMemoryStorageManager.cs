@@ -5,45 +5,17 @@ using System.Text;
 using Tkl.Jumbo.IO;
 using System.IO;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 
 namespace Tkl.Jumbo.Jet.Channels
 {
     sealed class FileChannelMemoryStorageManager : IDisposable
     {
-        #region Nested types
-
-        private sealed class NotifyDisposedMemoryStream : MemoryStream
-        {
-            private readonly FileChannelMemoryStorageManager _manager;
-            private bool _disposed;
-
-            public NotifyDisposedMemoryStream(int capacity, FileChannelMemoryStorageManager manager)
-                : base(capacity)
-            {
-                RegisteredSize = capacity;
-                _manager = manager;
-            }
-
-            public int RegisteredSize { get; private set; }
-
-            protected override void Dispose(bool disposing)
-            {
-                base.Dispose(disposing);
-                if( !_disposed )
-                {
-                    _disposed = true;
-                    _manager.NotifyStreamDisposed(this);
-                }
-            }
-        }
-
-        #endregion
-
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(FileChannelMemoryStorageManager));
 
         private static FileChannelMemoryStorageManager _instance;
         private readonly long _maxSize;
-        private readonly List<NotifyDisposedMemoryStream> _inputs = new List<NotifyDisposedMemoryStream>();
+        private readonly List<UnmanagedBufferMemoryStream> _inputs = new List<UnmanagedBufferMemoryStream>();
         private long _currentSize;
         private bool _disposed;
 
@@ -65,7 +37,7 @@ namespace Tkl.Jumbo.Jet.Channels
             return _instance;
         }
 
-        public MemoryStream AddStreamIfSpaceAvailable(int size)
+        public Stream AddStreamIfSpaceAvailable(int size)
         {
             CheckDisposed();
             lock( _inputs )
@@ -73,7 +45,8 @@ namespace Tkl.Jumbo.Jet.Channels
                 long spaceAvailable = _maxSize - _currentSize;
                 if( size < spaceAvailable )
                 {
-                    NotifyDisposedMemoryStream stream = new NotifyDisposedMemoryStream(size, this);
+                    UnmanagedBufferMemoryStream stream = new UnmanagedBufferMemoryStream(size);
+                    stream.Disposed += new EventHandler(UnmanagedBufferMemoryStream_Disposed);
                     _inputs.Add(stream);
                     _currentSize += size;
                     _log.DebugFormat("Added stream of size {0} to memory storage; space used now {1}.", size, _currentSize);
@@ -84,14 +57,13 @@ namespace Tkl.Jumbo.Jet.Channels
             }
         }
 
-        public void RemoveStream(MemoryStream stream)
+        private void RemoveStream(UnmanagedBufferMemoryStream stream)
         {
             lock( _inputs )
             {
-                NotifyDisposedMemoryStream notifyStream = (NotifyDisposedMemoryStream)stream;
-                if( _inputs.Remove(notifyStream) )
+                if( _inputs.Remove(stream) )
                 {
-                    _currentSize -= notifyStream.RegisteredSize;
+                    _currentSize -= stream.InitialCapacity;
                     _log.DebugFormat("Removed stream from memory storage, space used now {0}.", _currentSize);
                 }
                 else
@@ -101,15 +73,15 @@ namespace Tkl.Jumbo.Jet.Channels
             }
         }
 
-        private void NotifyStreamDisposed(NotifyDisposedMemoryStream stream)
-        {
-            RemoveStream(stream);
-        }
-
         private void CheckDisposed()
         {
             if( _disposed )
                 throw new ObjectDisposedException(typeof(FileChannelMemoryStorageManager).FullName);
+        }
+
+        private void UnmanagedBufferMemoryStream_Disposed(object sender, EventArgs e)
+        {
+            RemoveStream((UnmanagedBufferMemoryStream)sender);
         }
 
         #region IDisposable Members
@@ -121,7 +93,7 @@ namespace Tkl.Jumbo.Jet.Channels
                 _disposed = true;
                 lock( _inputs )
                 {
-                    foreach( NotifyDisposedMemoryStream stream in _inputs )
+                    foreach( UnmanagedBufferMemoryStream stream in _inputs )
                     {
                         stream.Dispose();
                     }
