@@ -242,6 +242,7 @@ namespace Tkl.Jumbo.Jet
             }
 
             _log.InfoFormat("Running job {0}.", job.JobId);
+            System.Environment.SetEnvironmentVariable("JUMBO_LAST_JOB", job.JobId.ToString());
             JobServer.RunJob(job.JobId);
         }
         
