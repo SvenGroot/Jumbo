@@ -108,11 +108,13 @@
     <Compile Include="Jobs\BaseJobRunner.cs" />
     <Compile Include="Jobs\BasicJob.cs" />
     <Compile Include="Jobs\IJobRunner.cs" />
+    <Compile Include="Jobs\JobBuilder.cs" />
     <Compile Include="Jobs\JobRunnerArgument.cs" />
     <Compile Include="Jobs\JobRunnerInfo.cs" />
     <Compile Include="Jobs\JobRunnerNamedArgument.cs" />
     <Compile Include="Jobs\JobRunnerPositionalArgument.cs" />
     <Compile Include="Jobs\NamedArgumentAttribute.cs" />
+    <Compile Include="Jobs\RecordCollector.cs" />
     <Compile Include="MergeRecordReader.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="RunTaskJetHeartbeatResponse.cs" />
