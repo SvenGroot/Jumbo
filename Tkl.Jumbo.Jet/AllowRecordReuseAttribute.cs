@@ -9,7 +9,7 @@ namespace Tkl.Jumbo.Jet
     /// Attribute for task classes that indicates that the input record reader may reuse the same
     /// object instance for every record.
     /// </summary>
-    [AttributeUsage(AttributeTargets.Class, Inherited = true, AllowMultiple = false)]
+    [AttributeUsage(AttributeTargets.Class | AttributeTargets.Method, Inherited = true, AllowMultiple = false)]
     public sealed class AllowRecordReuseAttribute : Attribute
     {
         /// <summary>

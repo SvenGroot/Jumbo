@@ -19,6 +19,8 @@ namespace Tkl.Jumbo.Jet.Samples
     [Description("Counts the number of occurrences of each word in the input file or files. This version uses JobBuilder.")]
     public sealed class WordCount2 : BaseJobRunner
     {
+        private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(WordCount2));
+
         private string _inputPath;
         private string _outputPath;
         private int _combinerTasks;
@@ -59,16 +61,43 @@ namespace Tkl.Jumbo.Jet.Samples
             JobBuilder builder = new JobBuilder();
 
             RecordReader<Utf8StringWritable> input = builder.CreateRecordReader<Utf8StringWritable>(_inputPath, typeof(WordRecordReader));
-            RecordCollector<KeyValuePairWritable<Utf8StringWritable, Int32Writable>> pipelineChannelCollector = new RecordCollector<KeyValuePairWritable<Utf8StringWritable, Int32Writable>>(ChannelType.Pipeline, null, null);
-            RecordCollector<KeyValuePairWritable<Utf8StringWritable, Int32Writable>> fileChannelCollector = new RecordCollector<KeyValuePairWritable<Utf8StringWritable, Int32Writable>>(ChannelType.File, null, _combinerTasks == 0 ? null : (int?)_combinerTasks);
+            RecordCollector<KeyValuePairWritable<Utf8StringWritable, Int32Writable>> collector = new RecordCollector<KeyValuePairWritable<Utf8StringWritable, Int32Writable>>(null, null, _combinerTasks == 0 ? null : (int?)_combinerTasks);
 
-            builder.ProcessRecords(input, pipelineChannelCollector.CreateRecordWriter(), typeof(WordCountTask));
-            builder.ProcessRecords(pipelineChannelCollector.CreateRecordReader(), fileChannelCollector.CreateRecordWriter(), typeof(WordCountAccumulatorTask));
+            builder.ProcessRecords(input, collector.CreateRecordWriter(), WordCount);
 
             RecordWriter<KeyValuePairWritable<Utf8StringWritable, Int32Writable>> output = builder.CreateRecordWriter<KeyValuePairWritable<Utf8StringWritable, Int32Writable>>(_outputPath, typeof(TextRecordWriter<KeyValuePairWritable<Utf8StringWritable, Int32Writable>>));
-            builder.ProcessRecords(fileChannelCollector.CreateRecordReader(), output, typeof(WordCountAccumulatorTask));
+            builder.AccumulateRecords(collector.CreateRecordReader(), output, WordCountAccumulator);
 
-            return jetClient.RunJob(builder.JobConfiguration, dfsClient, (from a in builder.Assemblies select a.Location).ToArray()).JobId;
+            return jetClient.RunJob(builder.JobConfiguration, dfsClient, builder.AssemblyFiles.ToArray()).JobId;
+        }
+
+        /// <summary>
+        /// Counts words.
+        /// </summary>
+        /// <param name="input"></param>
+        /// <param name="output"></param>
+        [AllowRecordReuse]
+        public static void WordCount(RecordReader<Utf8StringWritable> input, RecordWriter<KeyValuePairWritable<Utf8StringWritable, Int32Writable>> output)
+        {
+            _log.Info("Starting count.");
+            KeyValuePairWritable<Utf8StringWritable, Int32Writable> record = new KeyValuePairWritable<Utf8StringWritable,Int32Writable>(null, new Int32Writable(1));
+            foreach( var word in input.EnumerateRecords() )
+            {
+                record.Key = word;
+                output.WriteRecord(record);
+            }
+        }
+
+        /// <summary>
+        /// Accumulates counts.
+        /// </summary>
+        /// <param name="key"></param>
+        /// <param name="value"></param>
+        /// <param name="newValue"></param>
+        [AllowRecordReuse]
+        public static void WordCountAccumulator(Utf8StringWritable key, Int32Writable value, Int32Writable newValue)
+        {
+            value.Value += newValue.Value;
         }
     }
 }

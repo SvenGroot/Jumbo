@@ -91,12 +91,12 @@ namespace Tkl.Jumbo.Jet.Jobs
         /// <summary>
         /// Gets the channel type.
         /// </summary>
-        public Channels.ChannelType? ChannelType { get; private set; }
+        public Channels.ChannelType? ChannelType { get; internal set; }
 
         /// <summary>
         /// Gets the number of partitions.
         /// </summary>
-        public int? Partitions { get; private set; }
+        public int? Partitions { get; internal set; }
 
         internal StageConfiguration InputStage { get; set; }
 

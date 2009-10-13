@@ -7,9 +7,30 @@ using System.Reflection;
 using Tkl.Jumbo.Dfs;
 using Tkl.Jumbo.Jet.Channels;
 using System.IO;
+using System.Reflection.Emit;
+using Tkl.Jumbo.Jet.Tasks;
 
 namespace Tkl.Jumbo.Jet.Jobs
 {
+    /// <summary>
+    /// Delegate for tasks.
+    /// </summary>
+    /// <typeparam name="TInput">The type of the input records.</typeparam>
+    /// <typeparam name="TOutput">The type of the output records.</typeparam>
+    /// <param name="input">The record reader providing the input records.</param>
+    /// <param name="output">The record writer collecting the output records.</param>
+    public delegate void TaskFunction<TInput, TOutput>(RecordReader<TInput> input, RecordWriter<TOutput> output) where TInput : IWritable, new() where TOutput : IWritable, new();
+
+    /// <summary>
+    /// Delegate for accumulator tasks
+    /// </summary>
+    /// <typeparam name="TKey">The type of the keys.</typeparam>
+    /// <typeparam name="TValue">The type of the values.</typeparam>
+    /// <param name="key">The key of the record.</param>
+    /// <param name="value">The value associated with the key in the accumulator that must be updated.</param>
+    /// <param name="newValue">The new value associated with the key.</param>
+    public delegate void AccumulatorFunction<TKey, TValue>(TKey key, TValue value, TValue newValue) where TKey : IWritable, IComparable<TKey>, new() where TValue : class, IWritable, new();
+
     /// <summary>
     /// Provides easy construction of Jumbo Jet jobs.
     /// </summary>
@@ -72,6 +93,10 @@ namespace Tkl.Jumbo.Jet.Jobs
         private readonly HashSet<Assembly> _assemblies = new HashSet<Assembly>();
         private readonly DfsClient _dfsClient = new DfsClient();
         private readonly JetClient _jetClient = new JetClient();
+        private AssemblyBuilder _dynamicAssembly;
+        private ModuleBuilder _dynamicModule;
+        private string _dynamicAssemblyDir;
+        private bool _assemblySaved;
 
         /// <summary>
         /// Gets the job configuration.
@@ -80,25 +105,41 @@ namespace Tkl.Jumbo.Jet.Jobs
         {
             get
             {
-                _assemblies.Remove(typeof(BasicJob).Assembly); // Don't include Tkl.Jumbo.Jet assembly
-                _assemblies.Remove(typeof(RecordReader<>).Assembly); // Don't include Tkl.Jumbo assembly
                 _job.AssemblyFileNames.Clear();
-                _job.AssemblyFileNames.AddRange(from a in _assemblies select Path.GetFileName(a.Location));
+                _job.AssemblyFileNames.AddRange(from a in Assemblies select Path.GetFileName(a.Location));
+                if( _dynamicAssembly != null )
+                    _job.AssemblyFileNames.Add(_dynamicAssembly.GetName().Name + ".dll");
 
                 return _job;
             }
         }
 
         /// <summary>
-        /// Gets the list of custom assemblies containing the task and record reader and writer types.
+        /// Gets the full paths of all the assembly files used by this job builder's job.
         /// </summary>
-        public IEnumerable<Assembly> Assemblies
+        public IEnumerable<string> AssemblyFiles
+        {
+            get
+            {
+                var files = from a in Assemblies
+                            select a.Location;
+                if( _dynamicAssembly != null )
+                {
+                    SaveDynamicAssembly();
+                    string assemblyFileName = _dynamicAssembly.GetName().Name + ".dll";
+                    files = files.Concat(new[] { Path.Combine(_dynamicAssemblyDir, assemblyFileName) });
+                }
+                return files;
+            }
+        }
+
+        private IEnumerable<Assembly> Assemblies
         {
             get 
             {
                 _assemblies.Remove(typeof(BasicJob).Assembly); // Don't include Tkl.Jumbo.Jet assembly
                 _assemblies.Remove(typeof(RecordReader<>).Assembly); // Don't include Tkl.Jumbo assembly
-                return _assemblies.ToArray(); 
+                return _assemblies; 
             }
         }
 
@@ -214,7 +255,151 @@ namespace Tkl.Jumbo.Jet.Jobs
             if( collector != null )
                 collector.InputStage = stage;
 
-            _assemblies.Add(taskType.Assembly);
+            if( !object.Equals(taskType.Assembly, _dynamicAssembly) )
+                _assemblies.Add(taskType.Assembly);
+        }
+
+        /// <summary>
+        /// Processes records using the specified task function.
+        /// </summary>
+        /// <typeparam name="TInput">The input record type.</typeparam>
+        /// <typeparam name="TOutput">The output record type.</typeparam>
+        /// <param name="input">The record reader to read records to process from.</param>
+        /// <param name="output">The record writer to write the result to.</param>
+        /// <param name="task">The task function.</param>
+        public void ProcessRecords<TInput, TOutput>(RecordReader<TInput> input, RecordWriter<TOutput> output, TaskFunction<TInput, TOutput> task)
+            where TInput : IWritable, new()
+            where TOutput : IWritable, new()
+        {
+            if( input == null )
+                throw new ArgumentNullException("input");
+            if( output == null )
+                throw new ArgumentNullException("output");
+            if( task == null )
+                throw new ArgumentNullException("task");
+
+            MethodInfo taskMethod = task.Method;
+            if( !(taskMethod.IsStatic && taskMethod.IsPublic) )
+                throw new ArgumentException("The task method specified must be public and static.", "task");
+
+            CreateDynamicAssembly();
+
+            TypeBuilder taskTypeBuilder = _dynamicModule.DefineType(_dynamicAssembly.GetName().Name + "." + taskMethod.Name, TypeAttributes.Class | TypeAttributes.Public | TypeAttributes.Sealed, typeof(Configurable), new[] { typeof(IPullTask<TInput, TOutput>) });
+
+            SetAllowRecordReuseAttribute(taskMethod, taskTypeBuilder);
+
+            MethodBuilder runMethod = taskTypeBuilder.DefineMethod("Run", MethodAttributes.Public | MethodAttributes.Virtual, null, new[] { typeof(RecordReader<TInput>), typeof(RecordWriter<TOutput>) });
+            runMethod.DefineParameter(1, ParameterAttributes.None, "input");
+            runMethod.DefineParameter(2, ParameterAttributes.None, "output");
+
+            ILGenerator generator = runMethod.GetILGenerator();
+            generator.Emit(OpCodes.Ldarg_1);
+            generator.Emit(OpCodes.Ldarg_2);
+            generator.Emit(OpCodes.Call, taskMethod);
+            generator.Emit(OpCodes.Ret);
+
+            Type taskType = taskTypeBuilder.CreateType();
+
+            ProcessRecords(input, output, taskType);
+        }
+
+        /// <summary>
+        /// Processes records using the specified accumulator function.
+        /// </summary>
+        /// <typeparam name="TKey">The type of the key of the records.</typeparam>
+        /// <typeparam name="TValue">The type of the value of the records.</typeparam>
+        /// <param name="input">The record reader to read records to process from.</param>
+        /// <param name="output">The record writer to write the result to.</param>
+        /// <param name="accumulator">The accumulator function.</param>
+        public void AccumulateRecords<TKey, TValue>(RecordReader<KeyValuePairWritable<TKey, TValue>> input, RecordWriter<KeyValuePairWritable<TKey, TValue>> output, AccumulatorFunction<TKey, TValue> accumulator)
+            where TKey : IWritable, IComparable<TKey>, new()
+            where TValue : class, IWritable, new()
+        {
+            if( input == null )
+                throw new ArgumentNullException("input");
+            if( output == null )
+                throw new ArgumentNullException("output");
+            if( accumulator == null )
+                throw new ArgumentNullException("task");
+
+            MethodInfo accumulatorMethod = accumulator.Method;
+            if( !(accumulatorMethod.IsStatic && accumulatorMethod.IsPublic) )
+                throw new ArgumentException("The accumulator method specified must be public and static.", "task");
+
+            CreateDynamicAssembly();
+
+            TypeBuilder taskTypeBuilder = _dynamicModule.DefineType(_dynamicAssembly.GetName().Name + "." + accumulatorMethod.Name, TypeAttributes.Class | TypeAttributes.Sealed, typeof(AccumulatorTask<TKey, TValue>));
+
+            SetAllowRecordReuseAttribute(accumulatorMethod, taskTypeBuilder);
+
+            MethodBuilder accumulateMethod = taskTypeBuilder.DefineMethod("Accumulate", MethodAttributes.Public | MethodAttributes.Virtual, null, new[] { typeof(TKey), typeof(TValue), typeof(TValue) });
+            accumulateMethod.DefineParameter(1, ParameterAttributes.None, "key");
+            accumulateMethod.DefineParameter(2, ParameterAttributes.None, "value");
+            accumulateMethod.DefineParameter(3, ParameterAttributes.None, "newValue");
+
+            ILGenerator generator = accumulateMethod.GetILGenerator();
+            generator.Emit(OpCodes.Ldarg_1);
+            generator.Emit(OpCodes.Ldarg_2);
+            generator.Emit(OpCodes.Ldarg_3);
+            generator.Emit(OpCodes.Call, accumulatorMethod);
+            generator.Emit(OpCodes.Ret);
+
+            Type taskType = taskTypeBuilder.CreateType();
+
+            RecordCollector<KeyValuePairWritable<TKey, TValue>> collector = RecordCollector<KeyValuePairWritable<TKey, TValue>>.GetCollector(input);
+            if( collector != null )
+            {
+                if( collector.InputStage == null )
+                    throw new ArgumentException("Cannot read from the specified record reader because the associated RecordCollector isn't being written to.");
+                if( collector.ChannelType == null && collector.InputStage.TaskCount > 1 )
+                {
+                    // If the channel type is not explicitly specified, we will create an pipelined accumulator task attached to the input, and then feed that to a File channel
+                    RecordCollector<KeyValuePairWritable<TKey, TValue>> intermediateCollector = new RecordCollector<KeyValuePairWritable<TKey, TValue>>(null, null, collector.Partitions);
+                    // Force the input channel to use pipeline with no partitions.
+                    collector.ChannelType = ChannelType.Pipeline;
+                    collector.Partitions = 1;
+                    ProcessRecords(input, intermediateCollector.CreateRecordWriter(), taskType);
+                    // Change input so the real next stage will connect to the intermediate collector below.
+                    input = intermediateCollector.CreateRecordReader();
+                }
+            }
+
+            ProcessRecords(input, output, taskType);
+        }
+
+        private static void SetAllowRecordReuseAttribute(MethodInfo taskMethod, TypeBuilder taskTypeBuilder)
+        {
+            Type allowRecordReuseAttributeType = typeof(AllowRecordReuseAttribute);
+            AllowRecordReuseAttribute allowRecordReuse = (AllowRecordReuseAttribute)Attribute.GetCustomAttribute(taskMethod, allowRecordReuseAttributeType);
+            if( allowRecordReuse != null )
+            {
+                ConstructorInfo ctor = allowRecordReuseAttributeType.GetConstructor(Type.EmptyTypes);
+                PropertyInfo passThrough = allowRecordReuseAttributeType.GetProperty("PassThrough");
+
+                CustomAttributeBuilder allowRecordReuseBuilder = new CustomAttributeBuilder(ctor, new object[] { }, new[] { passThrough }, new object[] { allowRecordReuse.PassThrough });
+                taskTypeBuilder.SetCustomAttribute(allowRecordReuseBuilder);
+            }
+        }
+
+        private void SaveDynamicAssembly()
+        {
+            string assemblyFileName = _dynamicAssembly.GetName().Name + ".dll";
+            _dynamicAssembly.Save(assemblyFileName);
+            _assemblySaved = true;
+        }
+
+        private void CreateDynamicAssembly()
+        {
+            if( _assemblySaved )
+                throw new InvalidOperationException("You cannot define new delegate-based tasks after the dynamic assembly has been saved.");
+            if( _dynamicAssembly == null )
+            {
+                // Use a Guid to ensure a unique name.
+                AssemblyName name = new AssemblyName("Tkl.Jumbo.Jet.Generated." + Guid.NewGuid().ToString("N"));
+                _dynamicAssemblyDir = Path.GetTempPath();
+                _dynamicAssembly = AppDomain.CurrentDomain.DefineDynamicAssembly(name, AssemblyBuilderAccess.Save, _dynamicAssemblyDir);
+                _dynamicModule = _dynamicAssembly.DefineDynamicModule(name.Name, name.Name + ".dll");
+            }
         }
     }
 }

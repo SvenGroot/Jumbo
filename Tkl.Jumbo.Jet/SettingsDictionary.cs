@@ -13,6 +13,23 @@ namespace Tkl.Jumbo.Jet
     [Serializable]
     public sealed class SettingsDictionary : Dictionary<string, string>, IXmlSerializable
     {
+        /// <summary>
+        /// Initializes a new instance of the <see cref="SettingsDictionary"/> class.
+        /// </summary>
+        public SettingsDictionary()
+        {
+        }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="SettingsDictionary"/> class with serialized data.
+        /// </summary>
+        /// <param name="info">A <see cref="System.Runtime.Serialization.SerializationInfo"/> object containing the information required to serialize the <see cref="SettingsDictionary"/>.</param>
+        /// <param name="context">A <see cref="System.Runtime.Serialization.StreamingContext"/> structure containing the source and destination of the serialized stream associated with the <see cref="SettingsDictionary"/>.</param>
+        private SettingsDictionary(System.Runtime.Serialization.SerializationInfo info, System.Runtime.Serialization.StreamingContext context)
+            : base(info, context)
+        {
+        }
+
         #region IXmlSerializable Members
 
         System.Xml.Schema.XmlSchema IXmlSerializable.GetSchema()
@@ -72,23 +89,6 @@ namespace Tkl.Jumbo.Jet
             }
             else
                 return defaultValue;
-        }
-
-        /// <summary>
-        /// Initializes a new instance of the <see cref="SettingsDictionary"/> class.
-        /// </summary>
-        public SettingsDictionary()
-        {
-        }
-
-        /// <summary>
-        /// Initializes a new instance of the <see cref="SettingsDictionary"/> class with serialized data.
-        /// </summary>
-        /// <param name="info">A <see cref="System.Runtime.Serialization.SerializationInfo"/> object containing the information required to serialize the <see cref="SettingsDictionary"/>.</param>
-        /// <param name="context">A <see cref="System.Runtime.Serialization.StreamingContext"/> structure containing the source and destination of the serialized stream associated with the <see cref="SettingsDictionary"/>.</param>
-        private SettingsDictionary(System.Runtime.Serialization.SerializationInfo info, System.Runtime.Serialization.StreamingContext context)
-            : base(info, context)
-        {
         }
 
         /// <summary>
