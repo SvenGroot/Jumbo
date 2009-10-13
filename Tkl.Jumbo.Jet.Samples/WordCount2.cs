@@ -60,12 +60,12 @@ namespace Tkl.Jumbo.Jet.Samples
 
             JobBuilder builder = new JobBuilder();
 
-            RecordReader<Utf8StringWritable> input = builder.CreateRecordReader<Utf8StringWritable>(_inputPath, typeof(WordRecordReader));
-            RecordCollector<KeyValuePairWritable<Utf8StringWritable, Int32Writable>> collector = new RecordCollector<KeyValuePairWritable<Utf8StringWritable, Int32Writable>>(null, null, _combinerTasks == 0 ? null : (int?)_combinerTasks);
+            var input = builder.CreateRecordReader<Utf8StringWritable>(_inputPath, typeof(WordRecordReader));
+            var collector = new RecordCollector<KeyValuePairWritable<Utf8StringWritable, Int32Writable>>(null, null, _combinerTasks == 0 ? null : (int?)_combinerTasks);
+            var output = builder.CreateRecordWriter<KeyValuePairWritable<Utf8StringWritable, Int32Writable>>(_outputPath, typeof(TextRecordWriter<KeyValuePairWritable<Utf8StringWritable, Int32Writable>>), BlockSize, ReplicationFactor);
 
             builder.ProcessRecords(input, collector.CreateRecordWriter(), WordCount);
 
-            RecordWriter<KeyValuePairWritable<Utf8StringWritable, Int32Writable>> output = builder.CreateRecordWriter<KeyValuePairWritable<Utf8StringWritable, Int32Writable>>(_outputPath, typeof(TextRecordWriter<KeyValuePairWritable<Utf8StringWritable, Int32Writable>>));
             builder.AccumulateRecords(collector.CreateRecordReader(), output, WordCountAccumulator);
 
             return jetClient.RunJob(builder.JobConfiguration, dfsClient, builder.AssemblyFiles.ToArray()).JobId;

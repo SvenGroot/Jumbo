@@ -192,14 +192,7 @@ namespace Tkl.Jumbo.Jet.Jobs
                 // Add sort stage, pipelined to first stage.
                 StageConfiguration sortStage = config.AddStage("SortStage", new[] { firstStage }, typeof(SortTask<>).MakeGenericType(outputType), SecondStageTaskCount, ChannelType.Pipeline, ChannelConnectivity.Full, null, PartitionerType, null, null);
                 // Add merge stage; this stage outputs if there is no second stage.
-                if( SecondStageTaskType == null )
-                    outputStage = config.AddStage("MergeStage", new[] { sortStage }, SecondStageTaskType ?? typeof(EmptyTask<>).MakeGenericType(outputType), SecondStageTaskCount, ChannelType, ChannelConnectivity.Full, typeof(MergeRecordReader<>).MakeGenericType(outputType), null, OutputPath, OutputWriterType);
-                else
-                {
-                    StageConfiguration mergeStage = config.AddStage("MergeStage", new[] { sortStage }, SecondStageTaskType ?? typeof(EmptyTask<>).MakeGenericType(outputType), SecondStageTaskCount, ChannelType, ChannelConnectivity.Full, typeof(MergeRecordReader<>).MakeGenericType(outputType), null, null, null);
-                    // Add second stage if necessary, pipelined to merge stage.
-                    outputStage = config.AddStage(SecondStageName, new[] { mergeStage }, SecondStageTaskType, 1, ChannelType.Pipeline, ChannelConnectivity.PointToPoint, null, null, OutputPath, OutputWriterType);
-                }
+                outputStage = config.AddStage(SecondStageName ?? "MergeStage", new[] { sortStage }, SecondStageTaskType ?? typeof(EmptyTask<>).MakeGenericType(outputType), SecondStageTaskCount, ChannelType, ChannelConnectivity.Full, typeof(MergeRecordReader<>).MakeGenericType(outputType), null, OutputPath, OutputWriterType);
             }
             else if( SecondStageTaskCount > 0 )
             {

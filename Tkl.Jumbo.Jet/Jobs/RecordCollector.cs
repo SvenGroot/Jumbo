@@ -81,12 +81,13 @@ namespace Tkl.Jumbo.Jet.Jobs
             ChannelType = channelType;
             PartitionerType = partitionerType ?? typeof(HashPartitioner<T>);
             Partitions = partitions;
+            MultiInputRecordReaderType = typeof(MultiRecordReader<T>);
         }
 
         /// <summary>
         /// Gets the partitioner to use to spread the records across the output tasks. This is not used during debugging.
         /// </summary>
-        public Type PartitionerType { get; private set; }
+        public Type PartitionerType { get; internal set; }
 
         /// <summary>
         /// Gets the channel type.
@@ -99,6 +100,8 @@ namespace Tkl.Jumbo.Jet.Jobs
         public int? Partitions { get; internal set; }
 
         internal StageConfiguration InputStage { get; set; }
+
+        internal Type MultiInputRecordReaderType { get; set; }
 
         /// <summary>
         /// Create the record writer used to collect records.

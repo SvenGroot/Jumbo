@@ -57,6 +57,7 @@
     <Compile Include="..\Version.cs">
       <Link>Properties\Version.cs</Link>
     </Compile>
+    <Compile Include="GraySort2.cs" />
     <Compile Include="WordCount2.cs" />
     <Compile Include="GenSort.cs" />
     <Compile Include="GenWords.cs" />
