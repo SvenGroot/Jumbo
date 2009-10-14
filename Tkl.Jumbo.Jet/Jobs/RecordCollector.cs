@@ -101,6 +101,9 @@ namespace Tkl.Jumbo.Jet.Jobs
 
         internal StageConfiguration InputStage { get; set; }
 
+        // This is used when this record collector is actually representing multiple other channels, e.g. for joins.
+        internal InputStageInfo[] InputChannels { get; set; }
+
         internal Type MultiInputRecordReaderType { get; set; }
 
         /// <summary>

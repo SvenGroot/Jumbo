@@ -104,7 +104,7 @@ namespace Tkl.Jumbo.Jet
         }
 
         /// <summary>
-        /// Gets or sets the input that this stage's tasks read from the DFS.
+        /// Gets the input that this stage's tasks read from the DFS.
         /// </summary>
         /// <remarks>
         /// If this property is not <see langword="null"/>, then the stage will have as many tasks as there are inputs, and
@@ -116,7 +116,7 @@ namespace Tkl.Jumbo.Jet
         }
 
         /// <summary>
-        /// Gets or sets a list of child stages that will be connected to this stage's tasks via a <see cref="Channels.PipelineOutputChannel"/>.
+        /// Gets a list of child stages that will be connected to this stage's tasks via a <see cref="Channels.PipelineOutputChannel"/>.
         /// </summary>
         public Collection<StageConfiguration> ChildStages
         {

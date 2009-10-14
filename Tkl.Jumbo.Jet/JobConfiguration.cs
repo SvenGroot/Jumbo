@@ -200,7 +200,6 @@ namespace Tkl.Jumbo.Jet
             }
 
             StageConfiguration stage = CreateStage(stageId, taskType, taskCount, outputPath, recordWriterType, null, null);
-            stage.MultiInputRecordReaderType = stageMultiInputRecordReaderType;
             if( isPipelineChannel )
             {
                 InputStageInfo parentStage = inputStages.First();
@@ -210,6 +209,9 @@ namespace Tkl.Jumbo.Jet
             {
                 if( hasInputs )
                 {
+                    if( inputStages.Count() > 1 )
+                        stage.MultiInputRecordReaderType = stageMultiInputRecordReaderType;
+
                     ValidateChannelConnectivityConstraints(inputStages, stage);
 
                     foreach( InputStageInfo info in inputStages )
