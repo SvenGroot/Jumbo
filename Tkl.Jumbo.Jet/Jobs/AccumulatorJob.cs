@@ -159,14 +159,19 @@ namespace Tkl.Jumbo.Jet.Jobs
                 if( FirstStageTaskCount <= 0 )
                     throw new InvalidOperationException("First stage has no tasks.");
                 // Add the first stage, which doesn't have any input.
-                firstStage = config.AddStage(FirstStageName, null, FirstStageTaskType, FirstStageTaskCount, ChannelType.File, ChannelConnectivity.Full, null, null, null, null);
+                firstStage = config.AddStage(FirstStageName, FirstStageTaskType, FirstStageTaskCount, null, null, null);
             }
 
             // Add the accumulator child stage
             StageConfiguration accumulatorChildStage = config.AddPointToPointStage("Accumulator", firstStage, AccumulatorTaskType, ChannelType.Pipeline, null, null);
 
             // Add second stage.
-            StageConfiguration outputStage = config.AddStage(AccumulatorStageName, new[] { accumulatorChildStage }, AccumulatorTaskType, AccumulatorTaskCount, ChannelType, ChannelConnectivity.Full, null, PartitionerType, OutputPath, OutputWriterType);
+            InputStageInfo info = new InputStageInfo(accumulatorChildStage)
+            {
+                ChannelType = ChannelType,
+                PartitionerType = PartitionerType
+            };
+            StageConfiguration outputStage = config.AddStage(AccumulatorStageName, AccumulatorTaskType, AccumulatorTaskCount, info, OutputPath, OutputWriterType);
             ConfigureDfsOutput(outputStage);
 
             JetClient jetClient = new JetClient(JetConfiguration);

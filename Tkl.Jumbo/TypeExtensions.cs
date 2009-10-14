@@ -48,5 +48,28 @@ namespace Tkl.Jumbo
             else
                 return null;
         }
+
+        /// <summary>
+        /// Finds a specific generic base type, based on the generic type definition of the base type.
+        /// </summary>
+        /// <param name="type">The type whose base types to check.</param>
+        /// <param name="baseType">The generic type definition of the base type.</param>
+        /// <param name="throwOnNotFound"><see langword="true"/> to throw an exception if the specified type doesn't inherit from the type;
+        /// <see langword="false"/> to return <see langword="null"/> in that case.</param>
+        /// <returns>The instantiated generic base type.</returns>
+        public static Type FindGenericBaseType(this Type type, Type baseType, bool throwOnNotFound)
+        {
+            Type current = type.BaseType;
+            while( current != null )
+            {
+                if( current.IsGenericType && current.GetGenericTypeDefinition() == baseType )
+                    return current;
+                current = current.BaseType;
+            }
+            if( throwOnNotFound )
+                throw new ArgumentException(string.Format(System.Globalization.CultureInfo.CurrentCulture, "Type {0} does not inherit from {1}.", type, baseType));
+            else
+                return null;
+        }
     }
 }

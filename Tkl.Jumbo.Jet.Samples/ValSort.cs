@@ -70,8 +70,8 @@ namespace Tkl.Jumbo.Jet.Samples
 
             // Sort the records by input ID, this ensures that the combiner task gets the records in order of file and block so it can easily compre the first and last records
             // of consecutive files.
-            StageConfiguration sortStage = job.AddStage("SortStage", new[] { valSortStage }, typeof(SortTask<ValSortRecord>), 1, ChannelType.File, ChannelConnectivity.Full, null, null, null, null);
-            StageConfiguration combinerStage = job.AddStage("CombinerStage", new[] { sortStage }, typeof(ValSortCombinerTask), 1, ChannelType.Pipeline, ChannelConnectivity.PointToPoint, null, null, _outputPath, typeof(TextRecordWriter<StringWritable>));
+            StageConfiguration sortStage = job.AddStage("SortStage", typeof(SortTask<ValSortRecord>), 1, new InputStageInfo(valSortStage), null, null);
+            StageConfiguration combinerStage = job.AddStage("CombinerStage", typeof(ValSortCombinerTask), 1, new InputStageInfo(sortStage) { ChannelType = ChannelType.Pipeline }, _outputPath, typeof(TextRecordWriter<StringWritable>));
             _outputFile = combinerStage.DfsOutput.GetPath(1);
 
             ConfigureDfsOutput(combinerStage);

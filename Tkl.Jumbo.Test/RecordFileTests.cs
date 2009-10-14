@@ -24,7 +24,7 @@ namespace Tkl.Jumbo.Test
                 using( RecordFileWriter<StringWritable> writer = new RecordFileWriter<StringWritable>(stream) )
                 {
                     Assert.AreEqual(typeof(StringWritable), writer.Header.RecordType);
-                    Assert.AreEqual(typeof(StringWritable).AssemblyQualifiedName, writer.Header.RecordTypeName);
+                    Assert.AreEqual(typeof(StringWritable).FullName + ", " + typeof(StringWritable).Assembly.GetName().Name, writer.Header.RecordTypeName);
                     Assert.AreEqual(1, writer.Header.Version);
                     Assert.AreEqual(0, writer.RecordsWritten);
                     Assert.AreNotEqual(0, writer.BytesWritten); // Because it must've written the header this isn't 0.
@@ -56,7 +56,7 @@ namespace Tkl.Jumbo.Test
                 using( RecordFileReader<StringWritable> reader = new RecordFileReader<StringWritable>(stream, offset, Math.Min(stepSize, stream.Length - offset), true) )
                 {
                     Assert.AreEqual(typeof(StringWritable), reader.Header.RecordType);
-                    Assert.AreEqual(typeof(StringWritable).AssemblyQualifiedName, reader.Header.RecordTypeName);
+                    Assert.AreEqual(typeof(StringWritable).FullName + ", " + typeof(StringWritable).Assembly.GetName().Name, reader.Header.RecordTypeName);
                     Assert.AreEqual(1, reader.Header.Version);
                     foreach( StringWritable record in reader.EnumerateRecords() )
                     {

@@ -128,7 +128,7 @@ namespace Tkl.Jumbo.Test.Jet
 
             const int taskCount = 3;
             const string outputPath = "/output";
-            target.AddStage("SecondStage", new[] { inputStage1, inputStage2 }, typeof(Tasks.LineAdderTask), taskCount, Tkl.Jumbo.Jet.Channels.ChannelType.File, ChannelConnectivity.Full, null, null, outputPath, typeof(TextRecordWriter<Int32Writable>));
+            target.AddStage("SecondStage", typeof(Tasks.LineAdderTask), taskCount, new[] { new InputStageInfo(inputStage1), new InputStageInfo(inputStage2) }, typeof(MultiRecordReader<Int32Writable>), outputPath, typeof(TextRecordWriter<Int32Writable>));
 
             
             List<StageConfiguration> stages = target.GetInputStagesForStage("SecondStage").ToList();
@@ -152,7 +152,7 @@ namespace Tkl.Jumbo.Test.Jet
 
             const int taskCount = 3;
             const string outputPath = "/output";
-            StageConfiguration stage = target.AddStage("SecondStage", new[] { inputStage1, inputStage2 }, typeof(Tasks.LineAdderTask), taskCount, Tkl.Jumbo.Jet.Channels.ChannelType.File, ChannelConnectivity.Full, null, null, useOutput ? outputPath : null, useOutput ? typeof(TextRecordWriter<Int32Writable>) : null);
+            StageConfiguration stage = target.AddStage("SecondStage", typeof(Tasks.LineAdderTask), taskCount, new[] { new InputStageInfo(inputStage1), new InputStageInfo(inputStage2) }, typeof(MultiRecordReader<Int32Writable>), useOutput ? outputPath : null, typeof(TextRecordWriter<Int32Writable>));
 
             Assert.AreEqual(taskCount, stage.TaskCount);
             Assert.AreEqual(3, target.Stages.Count);
@@ -173,8 +173,16 @@ namespace Tkl.Jumbo.Test.Jet
             Assert.AreEqual(typeof(Tasks.LineAdderTask).AssemblyQualifiedName, stage.TaskTypeName);
             Assert.AreEqual(typeof(Tasks.LineAdderTask), stage.TaskType);
 
-            Assert.AreEqual(inputStage1.OutputChannel, inputStage2.OutputChannel);
             ChannelConfiguration channel = inputStage1.OutputChannel;
+            Assert.AreEqual(ChannelType.File, channel.ChannelType);
+            Assert.AreEqual(ChannelConnectivity.Full, channel.Connectivity);
+            Assert.IsFalse(channel.ForceFileDownload);
+            Assert.AreEqual(typeof(HashPartitioner<Int32Writable>).AssemblyQualifiedName, channel.PartitionerType.TypeName);
+            Assert.AreEqual(typeof(HashPartitioner<Int32Writable>), channel.PartitionerType.Type);
+            Assert.AreEqual(typeof(MultiRecordReader<Int32Writable>), channel.MultiInputRecordReaderType.Type);
+            Assert.AreEqual(typeof(MultiRecordReader<Int32Writable>).AssemblyQualifiedName, channel.MultiInputRecordReaderType.TypeName);
+            Assert.AreEqual(stage.StageId, channel.OutputStage);
+            channel = inputStage2.OutputChannel;
             Assert.AreEqual(ChannelType.File, channel.ChannelType);
             Assert.AreEqual(ChannelConnectivity.Full, channel.Connectivity);
             Assert.IsFalse(channel.ForceFileDownload);

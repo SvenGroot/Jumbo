@@ -16,6 +16,9 @@ namespace Tkl.Jumbo.IO
     ///   Depending on the type of record reader, the records of the input record readers might not
     ///   need to read records of type <typeparamref name="T"/>.
     /// </para>
+    /// <para>
+    ///   If you accept inputs of types other than <typeparamref name="T"/>, you must specify that using the <see cref="InputTypeAttribute"/>.
+    /// </para>
     /// <note>
     ///   While the <see cref="AddInput(IRecordReader)"/>, <see cref="AddInput(Type,string,string,long,bool)"/>, <see cref="WaitForInputs"/> 
     ///   and <see cref="GetInputReader"/> methods are thread safe, no other methods of this class are guaranteed to be thread

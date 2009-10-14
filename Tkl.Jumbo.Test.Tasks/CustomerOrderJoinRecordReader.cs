@@ -6,6 +6,7 @@ using Tkl.Jumbo.IO;
 
 namespace Tkl.Jumbo.Test.Tasks
 {
+    [InputType(typeof(Customer)), InputType(typeof(Order))]
     public sealed class CustomerOrderJoinRecordReader : InnerJoinRecordReader<Customer, Order, CustomerOrder>
     {
         public CustomerOrderJoinRecordReader(int totalInputCount, bool allowRecordReuse, int bufferSize, CompressionType compressionType)

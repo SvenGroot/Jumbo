@@ -71,7 +71,7 @@ namespace Tkl.Jumbo.Jet.Samples
             CheckAndCreateOutputPath(dfsClient, _outputPath);
 
             JobConfiguration jobConfig = new JobConfiguration(typeof(TpcHTableGenTask).Assembly);
-            StageConfiguration lineItemStage = jobConfig.AddStage("LineItem", null, typeof(TpcHTableGenTask), _taskCount, Tkl.Jumbo.Jet.Channels.ChannelType.File, Tkl.Jumbo.Jet.Channels.ChannelConnectivity.Full, null, null, _outputPath, typeof(RecordFileWriter<LineItem>));
+            StageConfiguration lineItemStage = jobConfig.AddStage("LineItem", typeof(TpcHTableGenTask), _taskCount, null, _outputPath, typeof(RecordFileWriter<LineItem>));
             jobConfig.AddSetting(TpcHTableGenTask.DbGenFileNameSetting, Path.GetFileName(_dbGenPath));
             jobConfig.AddTypedSetting(TpcHTableGenTask.ScaleFactorSetting, _scaleFactor);
 

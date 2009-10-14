@@ -92,7 +92,7 @@ namespace Tkl.Jumbo.IO
                         generator.Emit(OpCodes.Ldloc_S, byteArrayLocal); // load the property value
                         Label? endLabel = WriteCheckForNullIfReferenceType(generator, writeBooleanMethod, property, true, byteArrayLocal);
                         generator.Emit(OpCodes.Call, typeof(byte[]).GetProperty("Length").GetGetMethod()); // Get the length of the array.
-                        generator.Emit(OpCodes.Call, typeof(WritableUtility).GetMethod("Write7BitEncodedInt", BindingFlags.Static | BindingFlags.Public, null, new[] { typeof(BinaryWriter), typeof(int) }, null)); // Write length as compressed int.
+                        generator.Emit(OpCodes.Call, typeof(WritableUtility).GetMethod("Write7BitEncodedInt32", BindingFlags.Static | BindingFlags.Public, null, new[] { typeof(BinaryWriter), typeof(int) }, null)); // Write length as compressed int.
                         generator.Emit(OpCodes.Ldarg_1); // put the writer on the stack.
                         generator.Emit(OpCodes.Ldloc_S, byteArrayLocal); // put the byte array on the stack.
                         generator.Emit(OpCodes.Callvirt, typeof(BinaryWriter).GetMethod("Write", new[] { typeof(byte[]) })); // Write the array data.
@@ -216,7 +216,7 @@ namespace Tkl.Jumbo.IO
                         generator.Emit(OpCodes.Ldarg_0); // put the object on the stack.
                         generator.Emit(OpCodes.Ldarg_1); // put the reader on the stack.
                         generator.Emit(OpCodes.Ldarg_1); // put the reader on the stack (yes, twice).
-                        generator.Emit(OpCodes.Call, typeof(WritableUtility).GetMethod("Read7BitEncodedInt", BindingFlags.Static | BindingFlags.Public, null, new[] { typeof(BinaryReader) }, null)); // read the length
+                        generator.Emit(OpCodes.Call, typeof(WritableUtility).GetMethod("Read7BitEncodedInt32", BindingFlags.Static | BindingFlags.Public, null, new[] { typeof(BinaryReader) }, null)); // read the length
                         generator.Emit(OpCodes.Callvirt, typeof(BinaryReader).GetMethod("ReadBytes", new[] { typeof(int) })); // read the byte array
                         generator.Emit(OpCodes.Callvirt, property.GetSetMethod(true)); // set the byte array as the property value.
                     }

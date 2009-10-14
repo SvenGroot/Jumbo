@@ -12,6 +12,12 @@ namespace Tkl.Jumbo.IO
     /// <typeparam name="TOuter">The type of the records of the outer relation.</typeparam>
     /// <typeparam name="TInner">The type of the records of the inner relation.</typeparam>
     /// <typeparam name="TResult">The type of the result records.</typeparam>
+    /// <remarks>
+    /// <para>
+    ///   Classes inheriting from <see cref="InnerJoinRecordReader{TOuter, TInner, TResult}"/> must specify
+    ///   <see cref="InputTypeAttribute"/> attributes with both <typeparamref name="TOuter"/> and <typeparamref name="TInner"/>.
+    /// </para>
+    /// </remarks>
     public abstract class InnerJoinRecordReader<TOuter, TInner, TResult> : MultiInputRecordReader<TResult>
         where TOuter : class, IWritable, new()
         where TInner : class, IWritable, new()

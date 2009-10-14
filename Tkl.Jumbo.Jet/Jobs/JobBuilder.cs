@@ -296,7 +296,14 @@ namespace Tkl.Jumbo.Jet.Jobs
                 // We default to the File channel if not specified.
                 ChannelType channelType = inputCollector.ChannelType == null ? ChannelType.File : inputCollector.ChannelType.Value;
 
-                stage = _job.AddStage(stageId, new[] { inputCollector.InputStage }, taskType, taskCount, channelType, ChannelConnectivity.Full, inputCollector.MultiInputRecordReaderType, inputCollector.PartitionerType, outputPath, outputWriterType);
+
+                InputStageInfo inputStage = new InputStageInfo(inputCollector.InputStage) 
+                {
+                    ChannelType = channelType, 
+                    MultiInputRecordReaderType = inputCollector.MultiInputRecordReaderType, 
+                    PartitionerType = inputCollector.PartitionerType 
+                };
+                stage = _job.AddStage(stageId, taskType, taskCount, inputStage, outputPath, outputWriterType);
             }
 
             if( outputRef != null )
@@ -500,6 +507,41 @@ namespace Tkl.Jumbo.Jet.Jobs
                 // Now we add the EmptyTask to collect the merger's results and write to the real output, if necessary.
                 ProcessRecords(outputCollector.CreateRecordReader(), realOutput, typeof(EmptyTask<T>), stageId);
             }
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <typeparam name="TOuter"></typeparam>
+        /// <typeparam name="TInner"></typeparam>
+        /// <typeparam name="TResult"></typeparam>
+        /// <param name="outerInput"></param>
+        /// <param name="innerInput"></param>
+        /// <param name="output"></param>
+        /// <param name="joinRecordReader"></param>
+        /// <param name="outerComparer"></param>
+        /// <param name="innerComparer"></param>
+        public void Join<TOuter, TInner, TResult>(RecordReader<TOuter> outerInput, RecordReader<TInner> innerInput, RecordWriter<TResult> output, Type joinRecordReader, Type outerComparer, Type innerComparer)
+            where TOuter : class, IWritable, new()
+            where TInner : class, IWritable, new()
+            where TResult : IWritable, new()
+        {
+            if( outerInput == null )
+                throw new ArgumentNullException("outerInput");
+            if( innerInput == null )
+                throw new ArgumentNullException("innerInput");
+            if( output == null )
+                throw new ArgumentNullException("output");
+            if( joinRecordReader == null )
+                throw new ArgumentNullException("joinRecordReader");
+            if( !joinRecordReader.IsSubclassOf(typeof(InnerJoinRecordReader<TOuter, TInner, TResult>)) )
+                throw new ArgumentException("The specified join record reader type does not inherit from InnerJoinRecordReader.", "joinRecordReader");
+            if( outerComparer != null && outerComparer.GetInterfaces().Contains(typeof(IComparer<TOuter>)) )
+                throw new ArgumentException("The specified outer comparer does not implement IComparer<TOuter>.", "outerComparer");
+            if( innerComparer != null && innerComparer.GetInterfaces().Contains(typeof(IComparer<TInner>)) )
+                throw new ArgumentException("The specified inner comparer does not implement IComparer<TInner>.", "innerComparer");
+
+            
         }
 
         private static void SetAllowRecordReuseAttribute(MethodInfo taskMethod, TypeBuilder taskTypeBuilder)

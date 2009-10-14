@@ -91,8 +91,8 @@ namespace Tkl.Jumbo.Test.Jet
 
             JobConfiguration config = new JobConfiguration(typeof(StringConversionTask).Assembly);
             StageConfiguration conversionStage = config.AddInputStage("ConversionStage", dfsClient.NameServer.GetFileInfo("/sortinput"), typeof(StringConversionTask), typeof(LineRecordReader));
-            StageConfiguration sortStage = config.AddStage("SortStage", new[] { conversionStage }, typeof(SortTask<Int32Writable>), 1, ChannelType.Pipeline, ChannelConnectivity.PointToPoint, null, null, null, null);
-            config.AddStage("MergeStage", new[] { sortStage }, typeof(EmptyTask<Int32Writable>), 1, ChannelType.File, ChannelConnectivity.Full, typeof(MergeRecordReader<Int32Writable>), null, outputPath, typeof(BinaryRecordWriter<Int32Writable>));
+            StageConfiguration sortStage = config.AddStage("SortStage", typeof(SortTask<Int32Writable>), 1, new InputStageInfo(conversionStage) { ChannelType = ChannelType.Pipeline }, null, null);
+            config.AddStage("MergeStage", typeof(EmptyTask<Int32Writable>), 1, new InputStageInfo(sortStage) { MultiInputRecordReaderType = typeof(MergeRecordReader<Int32Writable>) }, outputPath, typeof(BinaryRecordWriter<Int32Writable>));
 
             RunJob(dfsClient, config);
 
@@ -147,13 +147,13 @@ namespace Tkl.Jumbo.Test.Jet
                 foreach( Order order in orders )
                     recordFile.WriteRecord(order);
             }
-
+             
             const int joinTasks = 2;
             JobConfiguration config = new JobConfiguration(typeof(CustomerOrderJoinRecordReader).Assembly);
             StageConfiguration customerInput = config.AddInputStage("CustomerInput", dfsClient.NameServer.GetFileInfo("/testjoin/customers"), typeof(EmptyTask<Customer>), typeof(RecordFileReader<Customer>));
-            StageConfiguration customerSort = config.AddStage("CustomerSort", new[] { customerInput }, typeof(SortTask<Customer>), joinTasks, ChannelType.Pipeline, ChannelConnectivity.Full, null, null, null, null);
+            StageConfiguration customerSort = config.AddStage("CustomerSort", typeof(SortTask<Customer>), joinTasks, new InputStageInfo(customerInput) { ChannelType = ChannelType.Pipeline }, null, null);
             StageConfiguration orderInput = config.AddInputStage("OrderInput", dfsClient.NameServer.GetFileInfo("/testjoin/orders"), typeof(EmptyTask<Order>), typeof(RecordFileReader<Order>));
-            StageConfiguration orderSort = config.AddStage("CustomerSort", new[] { orderInput }, typeof(SortTask<Order>), joinTasks, ChannelType.Pipeline, ChannelConnectivity.Full, null, null, null, null);
+            StageConfiguration orderSort = config.AddStage("OrderSort", typeof(SortTask<Order>), joinTasks, new InputStageInfo(orderInput) { ChannelType = ChannelType.Pipeline }, null, null);
 
             orderInput.AddSetting(HashPartitionerConstants.EqualityComparerSetting, typeof(OrderJoinComparer).AssemblyQualifiedName);
             orderSort.AddSetting(SortTaskConstants.ComparerSetting, typeof(OrderJoinComparer).AssemblyQualifiedName);
@@ -161,17 +161,15 @@ namespace Tkl.Jumbo.Test.Jet
 
             const string outputPath = "/testjoinoutput";
             dfsClient.NameServer.CreateDirectory(outputPath);
-            StageConfiguration joinStage = config.AddStage("Join", new[] { customerSort }, typeof(EmptyTask<CustomerOrder>), joinTasks, ChannelType.File, ChannelConnectivity.Full, typeof(MergeRecordReader<Customer>), null, outputPath, typeof(RecordFileWriter<CustomerOrder>));
-            ChannelConfiguration channel = new ChannelConfiguration()
+            InputStageInfo customerSortInfo = new InputStageInfo(customerSort)
             {
-                ChannelType = ChannelType.File,
-                PartitionerType = typeof(HashPartitioner<Order>),
-                Connectivity = ChannelConnectivity.Full,
-                MultiInputRecordReaderType = typeof(MergeRecordReader<Order>),
-                OutputStage = joinStage.StageId,
+                MultiInputRecordReaderType = typeof(MergeRecordReader<Customer>)
             };
-            orderSort.OutputChannel = channel;
-            joinStage.MultiInputRecordReaderType = typeof(CustomerOrderJoinRecordReader);
+            InputStageInfo orderSortInfo = new InputStageInfo(orderSort)
+            {
+                MultiInputRecordReaderType = typeof(MergeRecordReader<Order>)
+            };
+            StageConfiguration joinStage = config.AddStage("Join", typeof(EmptyTask<CustomerOrder>), joinTasks, new[] { customerSortInfo, orderSortInfo }, typeof(CustomerOrderJoinRecordReader), outputPath, typeof(RecordFileWriter<CustomerOrder>));
 
             RunJob(dfsClient, config);
 
@@ -291,7 +289,7 @@ namespace Tkl.Jumbo.Test.Jet
                 stage = config.AddPointToPointStage("IntermediateTask", stage, adderTask, ChannelType.Pipeline, null, null);
                 channelType = ChannelType.File;
             }
-            config.AddStage("OutputTask", new[] { stage }, adderTask, 1, channelType, ChannelConnectivity.Full, null, null, outputPath, typeof(TextRecordWriter<Int32Writable>));
+            config.AddStage("OutputTask", adderTask, 1, new InputStageInfo(stage) { ChannelType = channelType }, outputPath, typeof(TextRecordWriter<Int32Writable>));
             foreach( ChannelConfiguration channel in config.GetAllChannels() )
             {
                 if( channel.ChannelType == ChannelType.File )

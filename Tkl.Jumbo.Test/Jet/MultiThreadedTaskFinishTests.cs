@@ -47,9 +47,9 @@ namespace Tkl.Jumbo.Test.Jet
 
             JobConfiguration config = new JobConfiguration(typeof(StringConversionTask).Assembly);
             StageConfiguration conversionStage = config.AddInputStage("ConversionStage", dfsClient.NameServer.GetFileInfo("/sortinput"), typeof(StringConversionTask), typeof(LineRecordReader));
-            StageConfiguration sortStage = config.AddStage("SortStage", new[] { conversionStage }, typeof(SortTask<Int32Writable>), 2, ChannelType.Pipeline, ChannelConnectivity.PointToPoint, null, null, null, null);
-            StageConfiguration innerMergeStage = config.AddStage("InnerMergeStage", new[] { sortStage }, typeof(EmptyTask<Int32Writable>), 2, ChannelType.File, ChannelConnectivity.Full, typeof(MergeRecordReader<Int32Writable>), null, null, null);
-            config.AddStage("MergeStage", new[] { innerMergeStage }, typeof(EmptyTask<Int32Writable>), 1, ChannelType.File, ChannelConnectivity.Full, typeof(MergeRecordReader<Int32Writable>), null, outputPath, typeof(BinaryRecordWriter<Int32Writable>));
+            StageConfiguration sortStage = config.AddStage("SortStage", typeof(SortTask<Int32Writable>), 2, new InputStageInfo(conversionStage) { ChannelType = ChannelType.Pipeline }, null, null);
+            StageConfiguration innerMergeStage = config.AddStage("InnerMergeStage", typeof(EmptyTask<Int32Writable>), 2, new InputStageInfo(sortStage) { MultiInputRecordReaderType = typeof(MergeRecordReader<Int32Writable>) }, null, null);
+            config.AddStage("MergeStage", typeof(EmptyTask<Int32Writable>), 1, new InputStageInfo(innerMergeStage) { MultiInputRecordReaderType = typeof(MergeRecordReader<Int32Writable>) }, outputPath, typeof(BinaryRecordWriter<Int32Writable>));
 
             RunJob(dfsClient, config);
 

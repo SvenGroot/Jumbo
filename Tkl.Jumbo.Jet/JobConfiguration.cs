@@ -138,27 +138,33 @@ namespace Tkl.Jumbo.Jet
         }
 
         /// <summary>
-        /// Adds a stage that reads data from another stage.
+        /// Adds a stage that takes input from other stages or no input.
         /// </summary>
-        /// <param name="stageId">The name of the stage; this will be used as the base name for all the tasks in the stage.</param>
-        /// <param name="inputStages">The stages from which this stage gets its input, or <see langword="null"/> to create a stage with no input at all.</param>
-        /// <param name="taskType">The type implementing the task action; this type must implement <see cref="ITask{TInput,TOutput}"/>.</param>
-        /// <param name="taskCount">The number of tasks to create in this stage.</param>
-        /// <param name="channelType">One of the <see cref="ChannelType"/> files indicating the type of channel to use between the the input stages and the new stage.</param>
-        /// <param name="connectivity">The type of connectivity to use. Ignored if <paramref name="channelType"/> is <see cref="ChannelType.Pipeline"/>.</param>
-        /// <param name="multiInputRecordReaderType">The type of the multi input record reader to use by the output tasks if there are multiple input tasks, or
-        /// <see langword="null"/> to use the default <see cref="MultiRecordReader{T}"/>. This type must derive from <see cref="MultiInputRecordReader{T}"/>.</param>
-        /// <param name="partitionerType">The type of the partitioner to use, or <see langword="null"/> to use the default <see cref="HashPartitioner{T}"/>. This type must implement <see cref="IPartitioner{T}"/>.</param>
+        /// <param name="stageId">The ID of the new stage.</param>
+        /// <param name="taskType">The type implementing the task's functionality; this type must implement <see cref="ITask{TInput,TOutput}"/>.</param>
+        /// <param name="taskCount">The number of tasks in the new stage.</param>
+        /// <param name="inputStage">Information about the input stage for this stage, or <see langword="null"/> if the stage has no inputs.</param>
         /// <param name="outputPath">The name of a DFS directory to write the stage's output files to, or <see langword="null"/> to indicate this stage does not write to the DFS.</param>
         /// <param name="recordWriterType">The type of the record writer to use when writing to the output files; this parameter is ignored if <paramref name="outputPath"/> is <see langword="null" />.</param>
         /// <returns>A <see cref="StageConfiguration"/> for the new stage.</returns>
-        /// <remarks>
-        /// <note>
-        ///   Information about stages is not preserved through XML serialization, so you should not use this method on a <see cref="JobConfiguration"/>
-        ///   object created using the <see cref="LoadXml(string)"/> method.
-        /// </note>
-        /// </remarks>
-        public StageConfiguration AddStage(string stageId, IEnumerable<StageConfiguration> inputStages, Type taskType, int taskCount, ChannelType channelType, ChannelConnectivity connectivity, Type multiInputRecordReaderType, Type partitionerType, string outputPath, Type recordWriterType)
+        public StageConfiguration AddStage(string stageId, Type taskType, int taskCount, InputStageInfo inputStage, string outputPath, Type recordWriterType)
+        {
+            return AddStage(stageId, taskType, taskCount, inputStage == null ? null : new[] { inputStage }, null, outputPath, recordWriterType);
+        }
+
+        /// <summary>
+        /// Adds a stage that takes input from other stages or no input.
+        /// </summary>
+        /// <param name="stageId">The ID of the new stage.</param>
+        /// <param name="taskType">The type implementing the task's functionality; this type must implement <see cref="ITask{TInput,TOutput}"/>.</param>
+        /// <param name="taskCount">The number of tasks in the new stage.</param>
+        /// <param name="inputStages">Information about the input stages for this stage, or <see langword="null"/> if the stage has no inputs.</param>
+        /// <param name="stageMultiInputRecordReaderType">The type of the multi input record reader to use to combine records from multiple input stages. This type must
+        /// inherit from <see cref="MultiInputRecordReader{T}"/>. This type is not used if the stage has zero or one inputs.</param>
+        /// <param name="outputPath">The name of a DFS directory to write the stage's output files to, or <see langword="null"/> to indicate this stage does not write to the DFS.</param>
+        /// <param name="recordWriterType">The type of the record writer to use when writing to the output files; this parameter is ignored if <paramref name="outputPath"/> is <see langword="null" />.</param>
+        /// <returns>A <see cref="StageConfiguration"/> for the new stage.</returns>
+        public StageConfiguration AddStage(string stageId, Type taskType, int taskCount, IEnumerable<InputStageInfo> inputStages, Type stageMultiInputRecordReaderType, string outputPath, Type recordWriterType)
         {
             if( stageId == null )
                 throw new ArgumentNullException("stageId");
@@ -169,69 +175,71 @@ namespace Tkl.Jumbo.Jet
             if( outputPath != null && recordWriterType == null )
                 throw new ArgumentNullException("recordWriterType");
 
-            Type taskInterfaceType = FindGenericInterfaceType(taskType, typeof(ITask<,>));
+            Type taskInterfaceType = taskType.FindGenericInterfaceType(typeof(ITask<,>), true);
             ValidateOutputType(outputPath, recordWriterType, taskInterfaceType);
 
             Type inputType = taskInterfaceType.GetGenericArguments()[0];
-            Type inputStageOutputType = null;
 
-            ValidatePartitionerType(partitionerType, inputType);
-
-            
-            if( inputStages != null && inputStages.Count() > 0 )
+            bool isPipelineChannel = false;
+            bool hasInputs = false;
+            if( inputStages != null )
             {
-                if( inputStages.Count() > 1 && channelType == ChannelType.Pipeline )
-                    throw new ArgumentException("You cannot use a pipeline channel type with a more than one input.");
-
-                inputStageOutputType = inputStages.First().TaskType.FindGenericInterfaceType(typeof(ITask<,>)).GetGenericArguments()[1];
-
-                if( channelType == ChannelType.Pipeline )
-                    ValidateChannelRecordType(inputType, inputStages); // for pipeline channels the type needs to match the input type.
-                else
+                if( inputStages.Count() > 1 && stageMultiInputRecordReaderType == null )
+                    throw new ArgumentNullException("stageMultiInputRecordReaderType", "You must specify a stage multi input record reader if there is more than one input stage.");
+                foreach( InputStageInfo info in inputStages )
                 {
-                    // All the input stages must have the same output type, but because the record reader can change the record type, it is not
-                    // necessary for this to match the input type of the current stage (of course, if it doesn't and the input record reader doesn't
-                    // accept this type of input, all hell will break loose; or the job will fail, whatever)
-                    ValidateChannelRecordType(inputStageOutputType, inputStages);
+                    hasInputs = true;
+                    if( info.ChannelType == ChannelType.Pipeline )
+                    {
+                        if( inputStages.Count() > 1 )
+                            throw new ArgumentException("When using a pipeline channel you can specify only one input.");
+                        isPipelineChannel = true;
+                    }
+                    info.ValidateTypes(stageMultiInputRecordReaderType, inputType);
                 }
             }
 
             StageConfiguration stage = CreateStage(stageId, taskType, taskCount, outputPath, recordWriterType, null, null);
-            if( channelType == ChannelType.Pipeline && inputStages != null && inputStages.Count() > 0 )
+            stage.MultiInputRecordReaderType = stageMultiInputRecordReaderType;
+            if( isPipelineChannel )
             {
-                StageConfiguration parentStage = inputStages.ElementAt(0);
-                AddChildStage(partitionerType, inputType, stage, parentStage);
+                InputStageInfo parentStage = inputStages.First();
+                AddChildStage(parentStage.PartitionerType, inputType, stage, parentStage.InputStage);
             }
             else
             {
-                if( inputStages != null && inputStages.Count() > 0 )
+                if( hasInputs )
                 {
-                    ValidateChannelConnectivityConstraints(inputStages, connectivity, stage);
+                    ValidateChannelConnectivityConstraints(inputStages, stage);
 
-                    foreach( StageConfiguration inputStage in inputStages )
+                    foreach( InputStageInfo info in inputStages )
                     {
-                        if( inputStage.ChildStages != null && inputStage.ChildStages.Count > 0 )
-                        {
+                        if( info.InputStage.ChildStages != null && info.InputStage.ChildStages.Count > 0 )
                             throw new ArgumentException("One of the specified input stages already has child stages so cannot be used as input.", "inputStages");
-                        }
+                        else if( info.InputStage.DfsOutput != null )
+                            throw new ArgumentException("One of the specified input stages already has DFS output so cannot be used as input.", "inputStages");
+                        else if( info.InputStage.OutputChannel != null )
+                            throw new ArgumentException("One of the specified input stages already has an output channel so cannot be used as input.", "inputStages");
                     }
 
-                    ChannelConfiguration channel = new ChannelConfiguration()
+                    foreach( InputStageInfo info in inputStages )
                     {
-                        ChannelType = channelType,
-                        PartitionerType = partitionerType ?? typeof(HashPartitioner<>).MakeGenericType(inputStageOutputType),
-                        Connectivity = connectivity,
-                        MultiInputRecordReaderType = multiInputRecordReaderType ?? (channelType == ChannelType.Tcp ? typeof(RoundRobinMultiInputRecordReader<>).MakeGenericType(inputStageOutputType) : typeof(MultiRecordReader<>).MakeGenericType(inputStageOutputType)),
-                        OutputStage = stageId,
-                    };
-                    foreach( StageConfiguration inputStage in inputStages )
-                    {
-                        inputStage.OutputChannel = channel;
+                        Type inputStageOutputType = info.InputStage.TaskType.FindGenericInterfaceType(typeof(ITask<,>)).GetGenericArguments()[1];
+                        ChannelConfiguration channel = new ChannelConfiguration()
+                        {
+                            ChannelType = info.ChannelType,
+                            PartitionerType = info.PartitionerType,
+                            Connectivity = info.ChannelConnectivity,
+                            MultiInputRecordReaderType = info.MultiInputRecordReaderType,
+                            OutputStage = stageId,
+                        };
+                        info.InputStage.OutputChannel = channel;
                     }
                 }
                 Stages.Add(stage);
             }
             return stage;
+
         }
 
         /// <summary>
@@ -248,52 +256,29 @@ namespace Tkl.Jumbo.Jet
         {
             if( inputStage == null )
                 throw new ArgumentNullException("inputStage");
-            return AddStage(stageId, new[] { inputStage }, taskType, channelType == ChannelType.Pipeline ? 1 : inputStage.TaskCount, channelType, ChannelConnectivity.PointToPoint, null, null, outputPath, recordWriterType);
+            InputStageInfo info = new InputStageInfo(inputStage)
+            {
+                ChannelType = channelType,
+                ChannelConnectivity = ChannelConnectivity.PointToPoint
+            };
+            return AddStage(stageId, taskType, channelType == ChannelType.Pipeline ? 1 : inputStage.TotalTaskCount, info, outputPath, recordWriterType);
         }
 
-        private static void ValidateChannelConnectivityConstraints(IEnumerable<StageConfiguration> inputStages, ChannelConnectivity connectivity, StageConfiguration stage)
+        private static void ValidateChannelConnectivityConstraints(IEnumerable<InputStageInfo> inputStages, StageConfiguration stage)
         {
-            int inputTaskCount = 0;
-            switch( connectivity )
+            foreach( InputStageInfo info in inputStages )
             {
-            case ChannelConnectivity.PointToPoint:
-                foreach( StageConfiguration inputStage in inputStages )
+                switch( info.ChannelConnectivity )
                 {
-                    int inputStageTaskCount = inputStage.TaskCount;
-                    StageConfiguration current = inputStage.Parent;
-                    while( current != null )
-                    {
-                        inputStageTaskCount *= current.TaskCount;
-                        current = inputStage.Parent;
-                    }
-                    inputTaskCount += inputStageTaskCount;
+                case ChannelConnectivity.PointToPoint:
+                    if( info.InputStage.TotalTaskCount != stage.TaskCount )
+                        throw new ArgumentException("Point to point stage needs to have the same number of outputs as inputs.");
+                    break;
+                case ChannelConnectivity.Full:
+                    if( info.InputStage.Parent != null && info.InputStage.TaskCount != stage.TaskCount )
+                        throw new ArgumentException("A fully connected stage with a child stage as input needs to have the same number of tasks as the input child stage.");
+                    break;
                 }
-
-                if( inputTaskCount != stage.TaskCount )
-                    throw new ArgumentException("Point to point stage needs to have the same number of outputs as inputs.");
-                break;
-            case ChannelConnectivity.Full:
-                inputTaskCount = -1;
-                bool first = true;
-                foreach( StageConfiguration inputStage in inputStages )
-                {
-                    if( first )
-                        first = false;
-                    else
-                    {
-                        if( inputTaskCount == -1 && inputStage.Parent != null || inputTaskCount != -1 && inputStage.Parent == null )
-                            throw new ArgumentException("All inputs of a fully connected channel must be either child stages, or non-compound stages; you cannot mix them.");
-                    }
-
-                    if( inputStage.Parent != null )
-                    {
-                        if( inputTaskCount == -1 )
-                            inputTaskCount = inputStage.TaskCount;
-                        else if( inputTaskCount != inputStage.TaskCount )
-                            throw new ArgumentException("All inputs of a fully connected channel with a child stage as input need to have the same number of tasks.");
-                    }
-                }
-                break;
             }
         }
 
@@ -304,28 +289,6 @@ namespace Tkl.Jumbo.Jet
                 throw new ArgumentException("The partitioner type for the pipeline output channel of the specified task is already specified.");
             else
                 parentStage.ChildStagePartitionerType = partitionerType ?? typeof(HashPartitioner<>).MakeGenericType(inputType);
-        }
-
-        private static void ValidatePartitionerType(Type partitionerType, Type inputType)
-        {
-            if( partitionerType != null )
-            {
-                Type partitionerInterfaceType = FindGenericInterfaceType(partitionerType, typeof(IPartitioner<>));
-                Type partitionedType = partitionerInterfaceType.GetGenericArguments()[0];
-                if( partitionedType != inputType )
-                    throw new ArgumentException(string.Format(System.Globalization.CultureInfo.CurrentCulture, "The partitioner type {0} cannot partition objects of type {1}.", partitionerType, inputType), "partitionerType");
-            }
-        }
-
-        private static void ValidateMultiInputRecordReaderType(Type multiInputRecordReaderType, Type inputType)
-        {
-            if( multiInputRecordReaderType != null )
-            {
-                Type baseType = FindGenericBaseType(multiInputRecordReaderType, typeof(MultiInputRecordReader<>));
-                Type recordType = baseType.GetGenericArguments()[0];
-                if( recordType != inputType )
-                    throw new ArgumentException(string.Format(System.Globalization.CultureInfo.CurrentCulture, "The specified multi input record reader type {0} doesn't return objects of type {1}.", multiInputRecordReaderType, inputType), "multiInputRecordReaderType");
-            }
         }
 
         private static StageConfiguration CreateStage(string stageId, Type taskType, int taskCount, string outputPath, Type recordWriterType, IEnumerable<DfsFile> inputs, Type recordReaderType)
@@ -550,8 +513,8 @@ namespace Tkl.Jumbo.Jet
                 if( stage.DfsOutput != null || stage.OutputChannel != null )
                     throw new ArgumentException(string.Format(System.Globalization.CultureInfo.CurrentCulture, "Input stage {0} already has an output channel or DFS output.", stage.StageId), "inputStages");
                 Type inputTaskType = stage.TaskType;
-                // We skip the check if the task type isn't stored.
-                if( inputTaskType != null )
+                // We skip the check if the task type isn't stored or if the input type isn't specified.
+                if( !(inputTaskType == null || inputType == null)  )
                 {
                     Type inputTaskInterfaceType = inputTaskType.FindGenericInterfaceType(typeof(ITask<,>));
                     Type inputTaskOutputType = inputTaskInterfaceType.GetGenericArguments()[1];
