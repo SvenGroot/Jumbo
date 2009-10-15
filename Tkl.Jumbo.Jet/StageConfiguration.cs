@@ -13,25 +13,22 @@ namespace Tkl.Jumbo.Jet
     /// but on different inputs.
     /// </summary>
     [XmlType("Stage", Namespace=JobConfiguration.XmlNamespace)]
-    public class StageConfiguration : ObjectWithParent<StageConfiguration>
+    public class StageConfiguration
     {
         private string _stageId;
         private string _taskTypeName;
         private Type _taskType;
-        private string _childStagePartitionerTypeName;
-        private Type _childStagePartitionerType;
         private int _taskCount;
         private bool? _allowRecordReuse;
         private bool? _allowOutputRecordReuse;
         private readonly ExtendedCollection<TaskDfsInput> _dfsInputs = new ExtendedCollection<TaskDfsInput>();
-        private readonly ChildCollection<StageConfiguration, StageConfiguration> _childStages;
+        private StageConfiguration _childStage;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="StageConfiguration"/> class.
         /// </summary>
         public StageConfiguration()
         {
-            _childStages = new ChildCollection<StageConfiguration, StageConfiguration>(this);
         }
 
         /// <summary>
@@ -116,45 +113,36 @@ namespace Tkl.Jumbo.Jet
         }
 
         /// <summary>
-        /// Gets a list of child stages that will be connected to this stage's tasks via a <see cref="Channels.PipelineOutputChannel"/>.
+        /// Gets or sets a child stage that will be connected to this stage's tasks via a <see cref="Channels.PipelineOutputChannel"/>.
         /// </summary>
-        public Collection<StageConfiguration> ChildStages
+        public StageConfiguration ChildStage
         {
-            get { return _childStages; }
+            get { return _childStage; }
+            set
+            {
+                if( _childStage != value )
+                {
+                    if( value.Parent != null )
+                        throw new ArgumentException("The item already has a parent.");
+                    if( _childStage != null )
+                        _childStage.Parent = null;
+                    _childStage = value;
+                    if( _childStage != null )
+                        _childStage.Parent = this;
+                }
+            }
         }
+
+        /// <summary>
+        /// Gets the parent of this instance.
+        /// </summary>
+        [XmlIgnore]
+        public StageConfiguration Parent { get; private set; }
 
         /// <summary>
         /// Gets or sets the name of the type of the partitioner to use to partitioner elements amount the child stages' tasks.
         /// </summary>
-        [XmlAttribute("childStagePartitioner")]
-        public string ChildStagePartitionerTypeName
-        {
-            get { return _childStagePartitionerTypeName; }
-            set 
-            {
-                _childStagePartitionerType = null;
-                _childStagePartitionerTypeName = value; 
-            }
-        }
-
-        /// <summary>
-        /// Gets or sets the type of the partitioner to use to partitioner elements amount the child stages' tasks.
-        /// </summary>
-        [XmlIgnore]
-        public Type ChildStagePartitionerType
-        {
-            get 
-            {
-                if( _childStagePartitionerType == null && _childStagePartitionerTypeName != null )
-                    _childStagePartitionerType = Type.GetType(_childStagePartitionerTypeName);
-                return _childStagePartitionerType; 
-            }
-            set 
-            { 
-                _childStagePartitionerType = value;
-                _childStagePartitionerTypeName = value == null ? null : value.AssemblyQualifiedName;
-            }
-        }
+        public TypeReference ChildStagePartitionerType { get; set; }
 
         /// <summary>
         /// Gets or sets a list of settings that are specific to this task.
@@ -249,13 +237,9 @@ namespace Tkl.Jumbo.Jet
                 if( _allowOutputRecordReuse == null )
                 {
                     _allowOutputRecordReuse = true;
-                    foreach( StageConfiguration childStage in ChildStages )
+                    if( ChildStage != null )
                     {
-                        if( !childStage.AllowRecordReuse )
-                        {
-                            _allowOutputRecordReuse = false;
-                            break;
-                        }
+                        _allowOutputRecordReuse = ChildStage.AllowRecordReuse;
                     }
                 }
                 return _allowOutputRecordReuse.Value;
@@ -302,11 +286,9 @@ namespace Tkl.Jumbo.Jet
             if( childStageId == null )
                 throw new ArgumentNullException("childStageId");
 
-            if( ChildStages != null )
+            if( ChildStage != null && ChildStage.StageId == childStageId )
             {
-                return (from childStage in ChildStages
-                        where childStage.StageId == childStageId
-                        select childStage).SingleOrDefault();
+                return ChildStage;
             }
             else
                 return null;

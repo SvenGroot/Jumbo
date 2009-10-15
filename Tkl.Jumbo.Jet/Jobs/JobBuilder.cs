@@ -397,6 +397,49 @@ namespace Tkl.Jumbo.Jet.Jobs
         /// <typeparam name="TValue">The type of the value of the records.</typeparam>
         /// <param name="input">The record reader to read records to process from.</param>
         /// <param name="output">The record writer to write the result to.</param>
+        /// <param name="accumulatorTaskType">The accumulator task type.</param>
+        public void AccumulateRecords<TKey, TValue>(RecordReader<KeyValuePairWritable<TKey, TValue>> input, RecordWriter<KeyValuePairWritable<TKey, TValue>> output, Type accumulatorTaskType)
+            where TKey : IWritable, IComparable<TKey>, new()
+            where TValue : class, IWritable, new()
+        {
+            if( input == null )
+                throw new ArgumentNullException("input");
+            if( output == null )
+                throw new ArgumentNullException("output");
+            if( accumulatorTaskType == null )
+                throw new ArgumentNullException("accumulatorTaskType");
+            if( !accumulatorTaskType.IsSubclassOf(typeof(AccumulatorTask<TKey, TValue>)) )
+                throw new ArgumentException("The specified task type is not an accumulator task.", "accumulatorTaskType");
+
+            RecordCollector<KeyValuePairWritable<TKey, TValue>> collector = RecordCollector<KeyValuePairWritable<TKey, TValue>>.GetCollector(input);
+            if( collector != null )
+            {
+                if( collector.InputStage == null && collector.InputChannels == null )
+                    throw new ArgumentException("Cannot read from the specified record reader because the associated RecordCollector isn't being written to.");
+                if( collector.InputStage != null && collector.ChannelType == null && collector.InputStage.TaskCount > 1 )
+                {
+                    // If the channel type is not explicitly specified, we will create an pipelined accumulator task attached to the input, and then feed that to a File channel
+                    // If the input collector represents multiple channels, we can't pipeline to it.
+                    RecordCollector<KeyValuePairWritable<TKey, TValue>> intermediateCollector = new RecordCollector<KeyValuePairWritable<TKey, TValue>>(null, null, collector.Partitions);
+                    // Force the input channel to use pipeline with no partitions.
+                    collector.ChannelType = ChannelType.Pipeline;
+                    collector.Partitions = 1;
+                    ProcessRecords(input, intermediateCollector.CreateRecordWriter(), accumulatorTaskType);
+                    // Change input so the real next stage will connect to the intermediate collector below.
+                    input = intermediateCollector.CreateRecordReader();
+                }
+            }
+
+            ProcessRecords(input, output, accumulatorTaskType);
+        }
+
+        /// <summary>
+        /// Processes records using the specified accumulator function.
+        /// </summary>
+        /// <typeparam name="TKey">The type of the key of the records.</typeparam>
+        /// <typeparam name="TValue">The type of the value of the records.</typeparam>
+        /// <param name="input">The record reader to read records to process from.</param>
+        /// <param name="output">The record writer to write the result to.</param>
         /// <param name="accumulator">The accumulator function.</param>
         public void AccumulateRecords<TKey, TValue>(RecordReader<KeyValuePairWritable<TKey, TValue>> input, RecordWriter<KeyValuePairWritable<TKey, TValue>> output, AccumulatorFunction<TKey, TValue> accumulator)
             where TKey : IWritable, IComparable<TKey>, new()
@@ -433,26 +476,7 @@ namespace Tkl.Jumbo.Jet.Jobs
 
             Type taskType = taskTypeBuilder.CreateType();
 
-            RecordCollector<KeyValuePairWritable<TKey, TValue>> collector = RecordCollector<KeyValuePairWritable<TKey, TValue>>.GetCollector(input);
-            if( collector != null )
-            {
-                if( collector.InputStage == null && collector.InputChannels == null )
-                    throw new ArgumentException("Cannot read from the specified record reader because the associated RecordCollector isn't being written to.");
-                if( collector.InputStage != null && collector.ChannelType == null && collector.InputStage.TaskCount > 1 )
-                {
-                    // If the channel type is not explicitly specified, we will create an pipelined accumulator task attached to the input, and then feed that to a File channel
-                    // If the input collector represents multiple channels, we can't pipeline to it.
-                    RecordCollector<KeyValuePairWritable<TKey, TValue>> intermediateCollector = new RecordCollector<KeyValuePairWritable<TKey, TValue>>(null, null, collector.Partitions);
-                    // Force the input channel to use pipeline with no partitions.
-                    collector.ChannelType = ChannelType.Pipeline;
-                    collector.Partitions = 1;
-                    ProcessRecords(input, intermediateCollector.CreateRecordWriter(), taskType);
-                    // Change input so the real next stage will connect to the intermediate collector below.
-                    input = intermediateCollector.CreateRecordReader();
-                }
-            }
-
-            ProcessRecords(input, output, taskType);
+            AccumulateRecords(input, output, taskType);
         }
 
         /// <summary>

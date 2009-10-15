@@ -91,21 +91,18 @@ namespace Tkl.Jumbo.Jet.Channels
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1004:GenericMethodsShouldProvideTypeParameter")]
         public Tkl.Jumbo.IO.RecordWriter<T> CreateRecordWriter<T>() where T : Tkl.Jumbo.IO.IWritable, new()
         {
-            IList<StageConfiguration> childStages = _taskExecution.Configuration.StageConfiguration.ChildStages;
-            if( childStages.Count == 1 && childStages[0].TaskCount == 1 )
-                return CreateRecordWriter<T>(_taskExecution.CreateAssociatedTask(childStages[0], 1));
+            StageConfiguration childStage = _taskExecution.Configuration.StageConfiguration.ChildStage;
+            if( childStage.TaskCount == 1 )
+                return CreateRecordWriter<T>(_taskExecution.CreateAssociatedTask(childStage, 1));
             else
             {
                 List<RecordWriter<T>> writers = new List<RecordWriter<T>>();
-                IPartitioner<T> partitioner = (IPartitioner<T>)JetActivator.CreateInstance(_taskExecution.Configuration.StageConfiguration.ChildStagePartitionerType, _taskExecution);
+                IPartitioner<T> partitioner = (IPartitioner<T>)JetActivator.CreateInstance(_taskExecution.Configuration.StageConfiguration.ChildStagePartitionerType.Type, _taskExecution);
 
-                foreach( StageConfiguration stage in childStages )
+                for( int x = 1; x <= childStage.TaskCount; ++x )
                 {
-                    for( int x = 1; x <= stage.TaskCount; ++x )
-                    {
-                        TaskExecutionUtility childTaskExecution = _taskExecution.CreateAssociatedTask(stage, x);
-                        writers.Add(CreateRecordWriter<T>(childTaskExecution));
-                    }
+                    TaskExecutionUtility childTaskExecution = _taskExecution.CreateAssociatedTask(childStage, x);
+                    writers.Add(CreateRecordWriter<T>(childTaskExecution));
                 }
                 return new MultiRecordWriter<T>(writers, partitioner);
             }

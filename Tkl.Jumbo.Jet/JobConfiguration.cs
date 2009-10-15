@@ -216,8 +216,8 @@ namespace Tkl.Jumbo.Jet
 
                     foreach( InputStageInfo info in inputStages )
                     {
-                        if( info.InputStage.ChildStages != null && info.InputStage.ChildStages.Count > 0 )
-                            throw new ArgumentException("One of the specified input stages already has child stages so cannot be used as input.", "inputStages");
+                        if( info.InputStage.ChildStage != null )
+                            throw new ArgumentException("One of the specified input stages already has a child stage so cannot be used as input.", "inputStages");
                         else if( info.InputStage.DfsOutput != null )
                             throw new ArgumentException("One of the specified input stages already has DFS output so cannot be used as input.", "inputStages");
                         else if( info.InputStage.OutputChannel != null )
@@ -286,11 +286,10 @@ namespace Tkl.Jumbo.Jet
 
         private static void AddChildStage(Type partitionerType, Type inputType, StageConfiguration stage, StageConfiguration parentStage)
         {
-            parentStage.ChildStages.Add(stage);
-            if( parentStage.ChildStagePartitionerType != null && partitionerType != null && parentStage.ChildStagePartitionerType != partitionerType )
-                throw new ArgumentException("The partitioner type for the pipeline output channel of the specified task is already specified.");
-            else
-                parentStage.ChildStagePartitionerType = partitionerType ?? typeof(HashPartitioner<>).MakeGenericType(inputType);
+            if( parentStage.ChildStage != null )
+                throw new ArgumentException("The input stage already has a child stage.");
+            parentStage.ChildStage = stage;
+            parentStage.ChildStagePartitionerType = partitionerType ?? typeof(HashPartitioner<>).MakeGenericType(inputType);
         }
 
         private static StageConfiguration CreateStage(string stageId, Type taskType, int taskCount, string outputPath, Type recordWriterType, IEnumerable<DfsFile> inputs, Type recordReaderType)
@@ -414,13 +413,11 @@ namespace Tkl.Jumbo.Jet
             Queue<StageConfiguration> nestedStages = new Queue<StageConfiguration>(Stages);
             while( nestedStages.Count > 0 )
             {
+                // TODO: This code was adapted from when multiple child stages was still possibe, it might not be the best solution anymore.
                 StageConfiguration stage = nestedStages.Dequeue();
-                if( stage.ChildStages.Count > 0 )
+                if( stage.ChildStage != null )
                 {
-                    foreach( StageConfiguration childStage in stage.ChildStages )
-                    {
-                        nestedStages.Enqueue(childStage);
-                    }
+                    nestedStages.Enqueue(stage.ChildStage);
                 }
                 else if( stage.OutputChannel != null && stage.OutputChannel.OutputStage == stageId )
                     yield return stage;
@@ -436,13 +433,11 @@ namespace Tkl.Jumbo.Jet
             Stack<StageConfiguration> nestedStages = new Stack<StageConfiguration>(Stages);
             while( nestedStages.Count > 0 )
             {
+                // TODO: This code was adapted from when multiple child stages was still possibe, it might not be the best solution anymore.
                 StageConfiguration stage = nestedStages.Pop();
-                if( stage.ChildStages.Count > 0 )
+                if( stage.ChildStage != null )
                 {
-                    foreach( StageConfiguration childStage in stage.ChildStages )
-                    {
-                        nestedStages.Push(childStage);
-                    }
+                    nestedStages.Push(stage.ChildStage);
                 }
                 else if( stage.OutputChannel != null )
                     yield return stage.OutputChannel;

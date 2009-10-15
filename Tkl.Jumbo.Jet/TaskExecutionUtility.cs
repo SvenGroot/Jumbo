@@ -474,7 +474,7 @@ namespace Tkl.Jumbo.Jet
 
         private IOutputChannel CreateOutputChannel()
         {
-            if( Configuration.StageConfiguration.ChildStages.Count > 0 )
+            if( Configuration.StageConfiguration.ChildStage != null )
                 return new PipelineOutputChannel(this);
             else
             {

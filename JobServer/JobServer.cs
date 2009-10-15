@@ -587,16 +587,14 @@ namespace JobServerApplication
 
         private void CreateChildTasks(JobInfo jobInfo, TaskInfo owner, StageConfiguration stage)
         {
-            if( stage.ChildStages != null )
+            if( stage.ChildStage != null )
             {
-                foreach( StageConfiguration childStage in stage.ChildStages )
+                StageConfiguration childStage = stage.ChildStage;
+                for( int x = 1; x <= childStage.TaskCount; ++x )
                 {
-                    for( int x = 1; x <= childStage.TaskCount; ++x )
-                    {
-                        TaskInfo taskInfo = new TaskInfo(owner, childStage, x);
-                        jobInfo.Tasks.Add(taskInfo.TaskId.ToString(), taskInfo);
-                        CreateChildTasks(jobInfo, taskInfo, childStage);
-                    }
+                    TaskInfo taskInfo = new TaskInfo(owner, childStage, x);
+                    jobInfo.Tasks.Add(taskInfo.TaskId.ToString(), taskInfo);
+                    CreateChildTasks(jobInfo, taskInfo, childStage);
                 }
             }
         }
