@@ -302,12 +302,11 @@ namespace Tkl.Jumbo.Jet
                 StageId = stageId,
                 TaskType = taskType,
                 TaskCount = taskCount,
-                DfsOutput = outputPath == null ? null : new TaskDfsOutput()
-                {
-                    PathFormat = DfsPath.Combine(outputPath, stageId + "{0:000}"),
-                    RecordWriterType = recordWriterType,
-                }
             };
+
+            if( outputPath != null )
+                stage.SetDfsOutput(outputPath, recordWriterType);
+
             if( inputs != null )
             {
                 foreach( DfsFile file in inputs )
@@ -428,6 +427,25 @@ namespace Tkl.Jumbo.Jet
         }
 
         /// <summary>
+        /// Renames a stage and updates all references to its name.
+        /// </summary>
+        /// <param name="stage">The stage to rename.</param>
+        /// <param name="newName">The new name of the stage.</param>
+        public void RenameStage(StageConfiguration stage, string newName)
+        {
+            if( stage == null )
+                throw new ArgumentNullException("stage");
+            if( newName == null )
+                throw new ArgumentNullException("newName");
+
+            foreach( StageConfiguration inputStage in GetInputStagesForStage(stage.StageId) )
+            {
+                inputStage.OutputChannel.OutputStage = newName;
+            }
+            stage.StageId = newName;
+        }
+
+        /// <summary>
         /// Gets all channels in the job.
         /// </summary>
         /// <returns>A list of all channels in the jobs.</returns>
@@ -524,7 +542,7 @@ namespace Tkl.Jumbo.Jet
             }
         }
 
-        private static void ValidateOutputType(string outputPath, Type recordWriterType, Type taskInterfaceType)
+        internal static void ValidateOutputType(string outputPath, Type recordWriterType, Type taskInterfaceType)
         {
             if( outputPath != null )
             {

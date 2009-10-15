@@ -5,6 +5,7 @@ using System.Text;
 using System.Xml.Serialization;
 using System.Collections.ObjectModel;
 using Tkl.Jumbo.Jet.Channels;
+using Tkl.Jumbo.Dfs;
 
 namespace Tkl.Jumbo.Jet
 {
@@ -311,6 +312,30 @@ namespace Tkl.Jumbo.Jet
             }
             else
                 return null;
+        }
+
+        /// <summary>
+        /// Sets the DFS output of the stage.
+        /// </summary>
+        /// <param name="outputPath">The path of the directory on the DFS to write to.</param>
+        /// <param name="recordWriterType">The type of the record writer to use.</param>
+        public void SetDfsOutput(string outputPath, Type recordWriterType)
+        {
+            if( outputPath == null )
+                throw new ArgumentNullException("outputPath");
+            if( recordWriterType == null )
+                throw new ArgumentNullException("recordWriterType");
+            if( TaskType == null || string.IsNullOrEmpty(StageId) )
+                throw new InvalidOperationException("Cannot set output before stage ID and task type are set.");
+            if( ChildStage != null || OutputChannel != null || DfsOutput != null )
+                throw new InvalidOperationException("This stage already has output.");
+            JobConfiguration.ValidateOutputType(outputPath, recordWriterType, TaskType.FindGenericInterfaceType(typeof(ITask<,>)));
+
+            DfsOutput = new TaskDfsOutput()
+            {
+                PathFormat = DfsPath.Combine(outputPath, StageId + "{0:000}"),
+                RecordWriterType = recordWriterType,
+            };
         }
 
         /// <summary>

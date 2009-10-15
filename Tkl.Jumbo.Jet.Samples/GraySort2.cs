@@ -70,8 +70,11 @@ namespace Tkl.Jumbo.Jet.Samples
             JobBuilder builder = new JobBuilder();
             var input = builder.CreateRecordReader<GenSortRecord>(_inputPath, typeof(GenSortRecordReader));
             var output = builder.CreateRecordWriter<GenSortRecord>(_outputPath, typeof(GenSortRecordWriter), BlockSize, ReplicationFactor);
+            RecordCollector<GenSortRecord> collector = new RecordCollector<GenSortRecord>(null, typeof(RangePartitioner), _mergeTasks == 0 ? null : (int?)_mergeTasks);
 
-            builder.SortRecords(input, output, typeof(RangePartitioner), _mergeTasks == 0 ? null : (int?)_mergeTasks);
+            // TODO: Replace with partition function once it exists.
+            builder.ProcessRecords(input, collector.CreateRecordWriter(), typeof(EmptyTask<GenSortRecord>));
+            builder.SortRecords(collector.CreateRecordReader(), output);
 
             Job job = jetClient.JobServer.CreateJob();
             JobConfiguration config = builder.JobConfiguration;

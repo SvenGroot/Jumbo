@@ -54,6 +54,18 @@ namespace Tkl.Jumbo.Test.Jet
             }
         }
 
+        public class FakeKvpProducingTask : IPullTask<StringWritable, KeyValuePairWritable<StringWritable, Int32Writable>>
+        {
+            #region IPullTask<StringWritable,KeyValuePair<StringWritable,Int32Writable>> Members
+
+            public void Run(RecordReader<StringWritable> input, RecordWriter<KeyValuePairWritable<StringWritable, Int32Writable>> output)
+            {
+                throw new NotImplementedException();
+            }
+
+            #endregion
+        }
+
         #endregion
 
         private TestJetCluster _cluster;
@@ -169,20 +181,284 @@ namespace Tkl.Jumbo.Test.Jet
         }
 
         [Test]
-        public void TestAccumulateRecordsSingleStage()
+        public void TestProcessRecordsEmptyTaskReplacementPipelinePossible()
         {
             JobBuilder builder = new JobBuilder(_dfsClient, _jetClient);
 
-            var input = builder.CreateRecordReader<KeyValuePairWritable<StringWritable, Int32Writable>>(_inputPath, typeof(BinaryRecordReader<KeyValuePairWritable<StringWritable, Int32Writable>>));
+            var input = builder.CreateRecordReader<StringWritable>(_inputPath, typeof(LineRecordReader));
+            var output = builder.CreateRecordWriter<Int32Writable>(_outputPath, typeof(TextRecordWriter<Int32Writable>));
+            var collector = new RecordCollector<StringWritable>(ChannelType.Pipeline, null, null);
+            builder.ProcessRecords(input, collector.CreateRecordWriter(), typeof(EmptyTask<StringWritable>));
+            builder.ProcessRecords(collector.CreateRecordReader(), output, typeof(LineCounterTask));
+
+            // This should result in a single stage job with no child stages, same as if you hadn't done this at all.
+            JobConfiguration config = builder.JobConfiguration;
+            Assert.AreEqual(1, config.AssemblyFileNames.Count);
+            Assert.AreEqual(Path.GetFileName(typeof(LineCounterTask).Assembly.Location), config.AssemblyFileNames[0]);
+
+            Assert.AreEqual(1, config.Stages.Count);
+            VerifyStage(config, config.Stages[0], 3, typeof(LineCounterTask).Name, typeof(LineCounterTask), null, typeof(LineRecordReader), typeof(TextRecordWriter<Int32Writable>), ChannelType.File, ChannelConnectivity.Full, null, null, null);  
+        }
+
+        [Test]
+        public void TestProcessRecordsEmptyTaskReplacementPipelineImpossible()
+        {
+            JobBuilder builder = new JobBuilder(_dfsClient, _jetClient);
+
+            var input = builder.CreateRecordReader<StringWritable>(_inputPath, typeof(LineRecordReader));
+            var output = builder.CreateRecordWriter<Int32Writable>(_outputPath, typeof(TextRecordWriter<Int32Writable>));
+            // Empty task replacement is not possible because the output of the empty task is being partitioned.
+            var collector = new RecordCollector<StringWritable>(ChannelType.Pipeline, null, 4);
+            builder.ProcessRecords(input, collector.CreateRecordWriter(), typeof(EmptyTask<StringWritable>));
+            builder.ProcessRecords(collector.CreateRecordReader(), output, typeof(LineCounterTask));
+
+            // This should result in a single stage task with child stages, same as if you hadn't done this at all.
+            JobConfiguration config = builder.JobConfiguration;
+            Assert.AreEqual(1, config.AssemblyFileNames.Count);
+            Assert.AreEqual(Path.GetFileName(typeof(LineCounterTask).Assembly.Location), config.AssemblyFileNames[0]);
+
+            Assert.AreEqual(1, config.Stages.Count);
+            VerifyStage(config, config.Stages[0], 3, typeof(EmptyTask<StringWritable>).Name, typeof(EmptyTask<StringWritable>), null, typeof(LineRecordReader), null, ChannelType.Pipeline, ChannelConnectivity.Full, typeof(HashPartitioner<StringWritable>), typeof(MultiRecordReader<Int32Writable>), typeof(LineCounterTask).Name);
+            VerifyStage(config, config.Stages[0].ChildStage, 4, typeof(LineCounterTask).Name, typeof(LineCounterTask), null, null, typeof(TextRecordWriter<Int32Writable>), ChannelType.Pipeline, ChannelConnectivity.Full, null, null, null);
+        }
+
+        [Test]
+        public void TestProcessRecordsEmptyTaskReplacementPossible()
+        {
+            JobBuilder builder = new JobBuilder(_dfsClient, _jetClient);
+
+            var input = builder.CreateRecordReader<StringWritable>(_inputPath, typeof(LineRecordReader));
+            var output = builder.CreateRecordWriter<Int32Writable>(_outputPath, typeof(TextRecordWriter<Int32Writable>));
+            var collector1 = new RecordCollector<Int32Writable>(null, null, 4);
+            var collector2 = new RecordCollector<Int32Writable>(null, null, 4);
+            builder.ProcessRecords(input, collector1.CreateRecordWriter(), typeof(LineCounterTask));
+            builder.ProcessRecords(collector1.CreateRecordReader(), collector2.CreateRecordWriter(), typeof(EmptyTask<Int32Writable>));
+            // Replacement is possible because partitioner type and partition count match.
+            builder.ProcessRecords(collector2.CreateRecordReader(), output, typeof(LineAdderTask));
+
+            JobConfiguration config = builder.JobConfiguration;
+            Assert.AreEqual(1, config.AssemblyFileNames.Count);
+            Assert.AreEqual(Path.GetFileName(typeof(LineCounterTask).Assembly.Location), config.AssemblyFileNames[0]);
+
+            Assert.AreEqual(2, config.Stages.Count);
+            VerifyStage(config, config.Stages[0], 3, typeof(LineCounterTask).Name, typeof(LineCounterTask), null, typeof(LineRecordReader), null, ChannelType.File, ChannelConnectivity.Full, typeof(HashPartitioner<Int32Writable>), typeof(MultiRecordReader<Int32Writable>), typeof(LineAdderTask).Name);
+            VerifyStage(config, config.Stages[1], 4, typeof(LineAdderTask).Name, typeof(LineAdderTask), null, null, typeof(TextRecordWriter<Int32Writable>), ChannelType.File, ChannelConnectivity.Full, null, null, null);
+        }
+
+        [Test]
+        public void TestProcessRecordsEmptyTaskReplacementImpossible()
+        {
+            JobBuilder builder = new JobBuilder(_dfsClient, _jetClient);
+
+            var input = builder.CreateRecordReader<StringWritable>(_inputPath, typeof(LineRecordReader));
+            var output = builder.CreateRecordWriter<Int32Writable>(_outputPath, typeof(TextRecordWriter<Int32Writable>));
+            var collector1 = new RecordCollector<Int32Writable>(null, null, 4);
+            var collector2 = new RecordCollector<Int32Writable>(null, null, 2);
+            builder.ProcessRecords(input, collector1.CreateRecordWriter(), typeof(LineCounterTask));
+            builder.ProcessRecords(collector1.CreateRecordReader(), collector2.CreateRecordWriter(), typeof(EmptyTask<Int32Writable>));
+            // Replacement is not possible because partition count doesn't match.
+            builder.ProcessRecords(collector2.CreateRecordReader(), output, typeof(LineAdderTask));
+
+            JobConfiguration config = builder.JobConfiguration;
+            Assert.AreEqual(1, config.AssemblyFileNames.Count);
+            Assert.AreEqual(Path.GetFileName(typeof(LineCounterTask).Assembly.Location), config.AssemblyFileNames[0]);
+
+            Assert.AreEqual(3, config.Stages.Count);
+            VerifyStage(config, config.Stages[0], 3, typeof(LineCounterTask).Name, typeof(LineCounterTask), null, typeof(LineRecordReader), null, ChannelType.File, ChannelConnectivity.Full, typeof(HashPartitioner<Int32Writable>), typeof(MultiRecordReader<Int32Writable>), typeof(EmptyTask<Int32Writable>).Name);
+            VerifyStage(config, config.Stages[1], 4, typeof(EmptyTask<Int32Writable>).Name, typeof(EmptyTask<Int32Writable>), null, null, null, ChannelType.File, ChannelConnectivity.Full, typeof(HashPartitioner<Int32Writable>), typeof(MultiRecordReader<Int32Writable>), typeof(LineAdderTask).Name);
+            VerifyStage(config, config.Stages[2], 2, typeof(LineAdderTask).Name, typeof(LineAdderTask), null, null, typeof(TextRecordWriter<Int32Writable>), ChannelType.File, ChannelConnectivity.Full, null, null, null);
+        }
+
+        [Test]
+        public void TestProcessRecordsEmptyTaskReplacementImpossible2()
+        {
+            JobBuilder builder = new JobBuilder(_dfsClient, _jetClient);
+
+            var input = builder.CreateRecordReader<StringWritable>(_inputPath, typeof(LineRecordReader));
+            var output = builder.CreateRecordWriter<Int32Writable>(_outputPath, typeof(TextRecordWriter<Int32Writable>));
+            var collector1 = new RecordCollector<Int32Writable>(null, null, 4);
+            var collector2 = new RecordCollector<Int32Writable>(null, typeof(FakePartitioner), 4);
+            builder.ProcessRecords(input, collector1.CreateRecordWriter(), typeof(LineCounterTask));
+            builder.ProcessRecords(collector1.CreateRecordReader(), collector2.CreateRecordWriter(), typeof(EmptyTask<Int32Writable>));
+            // Replacement is not possible because partitioner type doesn't match.
+            builder.ProcessRecords(collector2.CreateRecordReader(), output, typeof(LineAdderTask));
+
+            JobConfiguration config = builder.JobConfiguration;
+            Assert.AreEqual(2, config.AssemblyFileNames.Count);
+            Assert.AreEqual(Path.GetFileName(typeof(LineCounterTask).Assembly.Location), config.AssemblyFileNames[0]);
+
+            Assert.AreEqual(3, config.Stages.Count);
+            VerifyStage(config, config.Stages[0], 3, typeof(LineCounterTask).Name, typeof(LineCounterTask), null, typeof(LineRecordReader), null, ChannelType.File, ChannelConnectivity.Full, typeof(HashPartitioner<Int32Writable>), typeof(MultiRecordReader<Int32Writable>), typeof(EmptyTask<Int32Writable>).Name);
+            VerifyStage(config, config.Stages[1], 4, typeof(EmptyTask<Int32Writable>).Name, typeof(EmptyTask<Int32Writable>), null, null, null, ChannelType.File, ChannelConnectivity.Full, typeof(FakePartitioner), typeof(MultiRecordReader<Int32Writable>), typeof(LineAdderTask).Name);
+            VerifyStage(config, config.Stages[2], 4, typeof(LineAdderTask).Name, typeof(LineAdderTask), null, null, typeof(TextRecordWriter<Int32Writable>), ChannelType.File, ChannelConnectivity.Full, null, null, null);
+        }
+
+        [Test]
+        public void TestProcessRecordsEmptyTaskReplacementImpossible3()
+        {
+            JobBuilder builder = new JobBuilder(_dfsClient, _jetClient);
+
+            var input = builder.CreateRecordReader<StringWritable>(_inputPath, typeof(LineRecordReader));
+            var output = builder.CreateRecordWriter<Int32Writable>(_outputPath, typeof(TextRecordWriter<Int32Writable>));
+            var collector1 = new RecordCollector<Int32Writable>(ChannelType.Pipeline, null, 4);
+            var collector2 = new RecordCollector<Int32Writable>(null, null, 4);
+            builder.ProcessRecords(input, collector1.CreateRecordWriter(), typeof(LineCounterTask));
+            builder.ProcessRecords(collector1.CreateRecordReader(), collector2.CreateRecordWriter(), typeof(EmptyTask<Int32Writable>));
+            // Replacement is not possible because partition count doesn't match.
+            builder.ProcessRecords(collector2.CreateRecordReader(), output, typeof(LineAdderTask));
+
+            JobConfiguration config = builder.JobConfiguration;
+            Assert.AreEqual(1, config.AssemblyFileNames.Count);
+            Assert.AreEqual(Path.GetFileName(typeof(LineCounterTask).Assembly.Location), config.AssemblyFileNames[0]);
+
+            Assert.AreEqual(2, config.Stages.Count);
+            VerifyStage(config, config.Stages[0], 3, typeof(LineCounterTask).Name, typeof(LineCounterTask), null, typeof(LineRecordReader), null, ChannelType.Pipeline, ChannelConnectivity.Full, typeof(HashPartitioner<Int32Writable>), typeof(MultiRecordReader<Int32Writable>), typeof(EmptyTask<Int32Writable>).Name);
+            VerifyStage(config, config.Stages[0].ChildStage, 4, typeof(EmptyTask<Int32Writable>).Name, typeof(EmptyTask<Int32Writable>), null, null, null, ChannelType.File, ChannelConnectivity.Full, typeof(HashPartitioner<Int32Writable>), typeof(MultiRecordReader<Int32Writable>), typeof(LineAdderTask).Name);
+            VerifyStage(config, config.Stages[1], 4, typeof(LineAdderTask).Name, typeof(LineAdderTask), null, null, typeof(TextRecordWriter<Int32Writable>), ChannelType.File, ChannelConnectivity.Full, null, null, null);
+        }
+
+        [Test]
+        public void TestProcessRecordsPartitionMatching()
+        {
+            JobBuilder builder = new JobBuilder(_dfsClient, _jetClient);
+
+            var input = builder.CreateRecordReader<StringWritable>(_inputPath, typeof(LineRecordReader));
+            var output = builder.CreateRecordWriter<Int32Writable>(_outputPath, typeof(TextRecordWriter<Int32Writable>));
+            var collector1 = new RecordCollector<Int32Writable>(ChannelType.Pipeline, null, 4);
+            var collector2 = new RecordCollector<Int32Writable>(null, null, null);
+            builder.ProcessRecords(input, collector1.CreateRecordWriter(), typeof(LineCounterTask));
+            builder.ProcessRecords(collector1.CreateRecordReader(), collector2.CreateRecordWriter(), typeof(LineAdderTask));
+            builder.ProcessRecords(collector2.CreateRecordReader(), output, typeof(LineAdderTask));
+
+            JobConfiguration config = builder.JobConfiguration;
+            Assert.AreEqual(1, config.AssemblyFileNames.Count);
+            Assert.AreEqual(Path.GetFileName(typeof(LineCounterTask).Assembly.Location), config.AssemblyFileNames[0]);
+
+            Assert.AreEqual(2, config.Stages.Count);
+            VerifyStage(config, config.Stages[0], 3, typeof(LineCounterTask).Name, typeof(LineCounterTask), null, typeof(LineRecordReader), null, ChannelType.Pipeline, ChannelConnectivity.Full, typeof(HashPartitioner<Int32Writable>), typeof(MultiRecordReader<Int32Writable>), typeof(LineAdderTask).Name);
+            VerifyStage(config, config.Stages[0].ChildStage, 4, typeof(LineAdderTask).Name, typeof(LineAdderTask), null, null, null, ChannelType.File, ChannelConnectivity.Full, typeof(HashPartitioner<Int32Writable>), typeof(MultiRecordReader<Int32Writable>), typeof(LineAdderTask).Name);
+            // Partition count should be four because it should match the internal partitioning of the compound input stage
+            VerifyStage(config, config.Stages[1], 4, typeof(LineAdderTask).Name, typeof(LineAdderTask), null, null, typeof(TextRecordWriter<Int32Writable>), ChannelType.File, ChannelConnectivity.Full, null, null, null);
+        }
+
+        [Test]
+        public void TestAccumulateRecordsDfsInput()
+        {
+            JobBuilder builder = new JobBuilder(_dfsClient, _jetClient);
+
+            var input = builder.CreateRecordReader<KeyValuePairWritable<StringWritable, Int32Writable>>(_inputPath, typeof(RecordFileReader<KeyValuePairWritable<StringWritable, Int32Writable>>));
             var output = builder.CreateRecordWriter<KeyValuePairWritable<StringWritable, Int32Writable>>(_outputPath, typeof(TextRecordWriter<KeyValuePairWritable<StringWritable, Int32Writable>>));
             builder.AccumulateRecords(input, output, typeof(FakeAccumulatorTask));
 
             JobConfiguration config = builder.JobConfiguration;
             Assert.AreEqual(1, config.AssemblyFileNames.Count);
 
-            Assert.AreEqual(1, config.Stages.Count);
+            // When you want to accumulate directly on DFS input, it will treat that as being a single input range that should be accumulated in its entirety, not as a pre-partitioned
+            // file. As a result, it will assume you want one partition and create two stages, one to accumulate locally and one to combine the results.
+            Assert.AreEqual(2, config.Stages.Count);
 
-            VerifyStage(config, config.Stages[0], 3, typeof(FakeAccumulatorTask).Name, typeof(FakeAccumulatorTask), null, typeof(BinaryRecordReader<KeyValuePairWritable<StringWritable, Int32Writable>>), typeof(TextRecordWriter<KeyValuePairWritable<StringWritable, Int32Writable>>), ChannelType.File, ChannelConnectivity.Full, null, null, null);
+            VerifyStage(config, config.Stages[0], 3, "Input" + typeof(FakeAccumulatorTask).Name, typeof(FakeAccumulatorTask), null, typeof(RecordFileReader<KeyValuePairWritable<StringWritable, Int32Writable>>), null, ChannelType.File, ChannelConnectivity.Full, typeof(HashPartitioner<KeyValuePairWritable<StringWritable, Int32Writable>>), typeof(MultiRecordReader<KeyValuePairWritable<StringWritable, Int32Writable>>), typeof(FakeAccumulatorTask).Name);
+            VerifyStage(config, config.Stages[1], 1, typeof(FakeAccumulatorTask).Name, typeof(FakeAccumulatorTask), null, null, typeof(TextRecordWriter<KeyValuePairWritable<StringWritable, Int32Writable>>), ChannelType.File, ChannelConnectivity.Full, null, null, null);
+        }
+
+        [Test]
+        public void TestAccumulateRecordsChannelInput()
+        {
+            JobBuilder builder = new JobBuilder(_dfsClient, _jetClient);
+
+            var input = builder.CreateRecordReader<StringWritable>(_inputPath, typeof(LineRecordReader));
+            var output = builder.CreateRecordWriter<KeyValuePairWritable<StringWritable, Int32Writable>>(_outputPath, typeof(TextRecordWriter<KeyValuePairWritable<StringWritable, Int32Writable>>));
+            RecordCollector<KeyValuePairWritable<StringWritable, Int32Writable>> collector = new RecordCollector<KeyValuePairWritable<StringWritable, Int32Writable>>(null, null, 2);
+
+            builder.ProcessRecords(input, collector.CreateRecordWriter(), typeof(FakeKvpProducingTask));
+            builder.AccumulateRecords(collector.CreateRecordReader(), output, typeof(FakeAccumulatorTask));
+
+            JobConfiguration config = builder.JobConfiguration;
+            Assert.AreEqual(1, config.AssemblyFileNames.Count);
+
+            Assert.AreEqual(2, config.Stages.Count);
+
+            VerifyStage(config, config.Stages[0], 3, typeof(FakeKvpProducingTask).Name, typeof(FakeKvpProducingTask), null, typeof(LineRecordReader), null, ChannelType.Pipeline, ChannelConnectivity.Full, typeof(HashPartitioner<KeyValuePairWritable<StringWritable, Int32Writable>>), null, "Input" + typeof(FakeAccumulatorTask).Name);
+            VerifyStage(config, config.Stages[0].ChildStage, 1, "Input" + typeof(FakeAccumulatorTask).Name, typeof(FakeAccumulatorTask), null, null, null, ChannelType.File, ChannelConnectivity.Full, typeof(HashPartitioner<KeyValuePairWritable<StringWritable, Int32Writable>>), typeof(MultiRecordReader<KeyValuePairWritable<StringWritable, Int32Writable>>), typeof(FakeAccumulatorTask).Name);
+            VerifyStage(config, config.Stages[1], 2, typeof(FakeAccumulatorTask).Name, typeof(FakeAccumulatorTask), null, null, typeof(TextRecordWriter<KeyValuePairWritable<StringWritable, Int32Writable>>), ChannelType.File, ChannelConnectivity.Full, null, null, null);
+        }
+
+        [Test]
+        public void TestAccumulateRecordsSingleInputDfsOutput()
+        {
+            JobBuilder builder = new JobBuilder(_dfsClient, _jetClient);
+
+            var input = builder.CreateRecordReader<StringWritable>(_inputPath, typeof(LineRecordReader));
+            var output = builder.CreateRecordWriter<KeyValuePairWritable<StringWritable, Int32Writable>>(_outputPath, typeof(TextRecordWriter<KeyValuePairWritable<StringWritable, Int32Writable>>));
+            RecordCollector<StringWritable> collector1 = new RecordCollector<StringWritable>(null, null, 1);
+            RecordCollector<KeyValuePairWritable<StringWritable, Int32Writable>> collector2 = new RecordCollector<KeyValuePairWritable<StringWritable, Int32Writable>>(null, null, 2);
+
+            builder.ProcessRecords(input, collector1.CreateRecordWriter(), typeof(EmptyTask<StringWritable>)); // empty task can't be replaced because it has no input channel
+            // This second stage will have only one task
+            builder.ProcessRecords(collector1.CreateRecordReader(), collector2.CreateRecordWriter(), typeof(FakeKvpProducingTask));
+            // accumulator task with input stage with only one task should not create two steps, only one, which is pipelined.
+            builder.AccumulateRecords(collector2.CreateRecordReader(), output, typeof(FakeAccumulatorTask));
+
+            JobConfiguration config = builder.JobConfiguration;
+            Assert.AreEqual(1, config.AssemblyFileNames.Count);
+
+            Assert.AreEqual(2, config.Stages.Count);
+
+            // Not verifying the first stage, not important.
+            VerifyStage(config, config.Stages[1], 1, typeof(FakeKvpProducingTask).Name, typeof(FakeKvpProducingTask), null, null, null, ChannelType.Pipeline, ChannelConnectivity.Full, typeof(HashPartitioner<KeyValuePairWritable<StringWritable, Int32Writable>>), null, "Input" + typeof(FakeAccumulatorTask).Name);
+            VerifyStage(config, config.Stages[1].ChildStage, 2, "Input" + typeof(FakeAccumulatorTask).Name, typeof(FakeAccumulatorTask), null, null, typeof(TextRecordWriter<KeyValuePairWritable<StringWritable, Int32Writable>>), ChannelType.File, ChannelConnectivity.Full, null, null, null);
+        }
+
+        [Test]
+        public void TestAccumulateRecordsSingleInputChannelOutput()
+        {
+            JobBuilder builder = new JobBuilder(_dfsClient, _jetClient);
+
+            var input = builder.CreateRecordReader<StringWritable>(_inputPath, typeof(LineRecordReader));
+            var output = builder.CreateRecordWriter<KeyValuePairWritable<StringWritable, Int32Writable>>(_outputPath, typeof(TextRecordWriter<KeyValuePairWritable<StringWritable, Int32Writable>>));
+            RecordCollector<StringWritable> collector1 = new RecordCollector<StringWritable>(null, null, 1);
+            RecordCollector<KeyValuePairWritable<StringWritable, Int32Writable>> collector2 = new RecordCollector<KeyValuePairWritable<StringWritable, Int32Writable>>(null, null, 2);
+            RecordCollector<KeyValuePairWritable<StringWritable, Int32Writable>> collector3 = new RecordCollector<KeyValuePairWritable<StringWritable, Int32Writable>>(null, null, 1);
+
+            builder.ProcessRecords(input, collector1.CreateRecordWriter(), typeof(EmptyTask<StringWritable>)); // empty task can't be replaced because it has no input channel
+            // This second stage will have only one task
+            builder.ProcessRecords(collector1.CreateRecordReader(), collector2.CreateRecordWriter(), typeof(FakeKvpProducingTask));
+            // accumulator task with input stage with only one task should not create two steps, only one, which is pipelined.
+            builder.AccumulateRecords(collector2.CreateRecordReader(), collector3.CreateRecordWriter(), typeof(FakeAccumulatorTask));
+            // This won't replace the empty task because the partition count on the channels doesn't match.
+            builder.ProcessRecords(collector3.CreateRecordReader(), output, typeof(EmptyTask<KeyValuePairWritable<StringWritable, Int32Writable>>));
+
+            JobConfiguration config = builder.JobConfiguration;
+            Assert.AreEqual(1, config.AssemblyFileNames.Count);
+
+            Assert.AreEqual(4, config.Stages.Count);
+
+            // Not verifying the first stage, not important.
+            VerifyStage(config, config.Stages[1], 1, typeof(FakeKvpProducingTask).Name, typeof(FakeKvpProducingTask), null, null, null, ChannelType.Pipeline, ChannelConnectivity.Full, typeof(HashPartitioner<KeyValuePairWritable<StringWritable, Int32Writable>>), null, "Input" + typeof(FakeAccumulatorTask).Name);
+            VerifyStage(config, config.Stages[1].ChildStage, 1, "Input" + typeof(FakeAccumulatorTask).Name, typeof(FakeAccumulatorTask), null, null, null, ChannelType.File, ChannelConnectivity.Full, typeof(HashPartitioner<KeyValuePairWritable<StringWritable, Int32Writable>>), typeof(MultiRecordReader<KeyValuePairWritable<StringWritable, Int32Writable>>), typeof(EmptyTask<KeyValuePairWritable<StringWritable, Int32Writable>>).Name);
+            VerifyStage(config, config.Stages[2], 2, typeof(EmptyTask<KeyValuePairWritable<StringWritable, Int32Writable>>).Name, typeof(EmptyTask<KeyValuePairWritable<StringWritable, Int32Writable>>), null, null, null, ChannelType.File, ChannelConnectivity.Full, typeof(HashPartitioner<KeyValuePairWritable<StringWritable, Int32Writable>>), typeof(MultiRecordReader<KeyValuePairWritable<StringWritable, Int32Writable>>), typeof(EmptyTask<KeyValuePairWritable<StringWritable, Int32Writable>>).Name);
+        }
+
+        [Test]
+        public void TestAccumulateRecordsEmptyTaskReplacement()
+        {
+            JobBuilder builder = new JobBuilder(_dfsClient, _jetClient);
+
+            var input = builder.CreateRecordReader<KeyValuePairWritable<StringWritable, Int32Writable>>(_inputPath, typeof(RecordFileReader<KeyValuePairWritable<StringWritable, Int32Writable>>));
+            var output = builder.CreateRecordWriter<KeyValuePairWritable<StringWritable, Int32Writable>>(_outputPath, typeof(TextRecordWriter<KeyValuePairWritable<StringWritable, Int32Writable>>));
+            RecordCollector<KeyValuePairWritable<StringWritable, Int32Writable>> collector = new RecordCollector<KeyValuePairWritable<StringWritable, Int32Writable>>(null, null, 1);
+            builder.ProcessRecords(input, collector.CreateRecordWriter(), typeof(EmptyTask<KeyValuePairWritable<StringWritable, Int32Writable>>)); // empty task well be replaced because followup explicitly pipeline
+            builder.AccumulateRecords(collector.CreateRecordReader(), output, typeof(FakeAccumulatorTask));
+
+            JobConfiguration config = builder.JobConfiguration;
+            Assert.AreEqual(1, config.AssemblyFileNames.Count);
+
+            // When you want to accumulate directly on DFS input, it will treat that as being a single input range that should be accumulated in its entirety, not as a pre-partitioned
+            // file. As a result, it will assume you want one partition and create two stages, one to accumulate locally and one to combine the results.
+            Assert.AreEqual(2, config.Stages.Count);
+
+            VerifyStage(config, config.Stages[0], 3, "Input" + typeof(FakeAccumulatorTask).Name, typeof(FakeAccumulatorTask), null, typeof(RecordFileReader<KeyValuePairWritable<StringWritable, Int32Writable>>), null, ChannelType.File, ChannelConnectivity.Full, typeof(HashPartitioner<KeyValuePairWritable<StringWritable, Int32Writable>>), typeof(MultiRecordReader<KeyValuePairWritable<StringWritable, Int32Writable>>), typeof(FakeAccumulatorTask).Name);
+            VerifyStage(config, config.Stages[1], 1, typeof(FakeAccumulatorTask).Name, typeof(FakeAccumulatorTask), null, null, typeof(TextRecordWriter<KeyValuePairWritable<StringWritable, Int32Writable>>), ChannelType.File, ChannelConnectivity.Full, null, null, null);
         }
 
         private static void VerifyStage(JobConfiguration config, StageConfiguration stage, int taskCount, string stageId, Type taskType, Type stageMultiInputRecordReader, Type recordReaderType, Type recordWriterType, ChannelType channelType, ChannelConnectivity channelConnectivity, Type partitionerType, Type multiInputRecordReader, string outputStageId)
@@ -207,11 +483,6 @@ namespace Tkl.Jumbo.Test.Jet
             else
             {
                 Assert.IsEmpty(stage.DfsInputs);
-                Assert.IsNotNull(config.GetInputStagesForStage(stage.StageId));
-                if( channelType == ChannelType.Pipeline )
-                    Assert.IsNotNull(stage.Parent);
-                else
-                    Assert.IsNull(stage.Parent);
             }
 
             if( recordWriterType != null )
@@ -219,7 +490,7 @@ namespace Tkl.Jumbo.Test.Jet
                 Assert.IsNull(stage.ChildStage);
                 Assert.IsNull(stage.OutputChannel);
                 Assert.IsNotNull(stage.DfsOutput);
-                Assert.AreEqual(DfsPath.Combine(_outputPath, stage.TaskType.Name + "{0:000}"), stage.DfsOutput.PathFormat);
+                Assert.AreEqual(DfsPath.Combine(_outputPath, stageId + "{0:000}"), stage.DfsOutput.PathFormat);
                 Assert.AreEqual(0, stage.DfsOutput.ReplicationFactor);
                 Assert.AreEqual(0, stage.DfsOutput.BlockSize);
                 Assert.AreEqual(recordWriterType, stage.DfsOutput.RecordWriterType);
