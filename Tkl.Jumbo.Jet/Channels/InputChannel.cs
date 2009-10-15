@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using Tkl.Jumbo.IO;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 
 namespace Tkl.Jumbo.Jet.Channels
 {
@@ -114,10 +115,11 @@ namespace Tkl.Jumbo.Jet.Channels
         private void GetInputTaskIdsFull(IList<StageConfiguration> stages, int index, TaskId baseTaskId)
         {
             StageConfiguration stage = stages[index];
-            if( stages.Count == 1 || index < stages.Count - 1 )
+            if( stage.InternalPartitionCount == 1 || stage.TaskCount == 1 )
             {
-                // Either this is a stage with child stages or the input stage is not a compound stage,
-                // this means we need to connect to all tasks in the stage.
+                // Partitioning is not done in this stage.
+                // Note that since internal partitioning can happen only once, if this is a child stage the task count must be one.
+                Debug.Assert(stage.Parent == null || stage.TaskCount == 1);
                 for( int x = 1; x <= stage.TaskCount; ++x )
                 {
                     TaskId taskId = new TaskId(baseTaskId, stage.StageId, x);
@@ -129,15 +131,13 @@ namespace Tkl.Jumbo.Jet.Channels
             }
             else
             {
-                TaskId taskId;
-                // This is the last child stage in a compound stage; we're connecting to one task only.
-                // If the stage has only one task, then we assume partitioning hasn't been done yet and every task in this stage
-                // connects to that one task. Otherwise, every task connects to the matching task in the input stage.
-                if( stage.TaskCount == 1 )
-                    taskId = new TaskId(baseTaskId, stage.StageId, 1);
+                // This is the child stage where internal partitioning takes place (it can happen only once).
+                // Connect to the matching task number
+                TaskId taskId = new TaskId(baseTaskId, stage.StageId, TaskExecution.Configuration.TaskId.TaskNumber);
+                if( index == stages.Count - 1 )
+                    _inputTaskIds.Add(taskId.ToString());
                 else
-                    taskId = new TaskId(baseTaskId, stage.StageId, TaskExecution.Configuration.TaskId.TaskNumber);
-                _inputTaskIds.Add(taskId.ToString());
+                    GetInputTaskIdsFull(stages, index + 1, taskId);
             }
         }
 

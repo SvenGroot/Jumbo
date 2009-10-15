@@ -273,12 +273,13 @@ namespace Tkl.Jumbo.Jet
                 switch( info.ChannelConnectivity )
                 {
                 case ChannelConnectivity.PointToPoint:
-                    if( info.InputStage.TotalTaskCount != stage.TaskCount )
-                        throw new ArgumentException("Point to point stage needs to have the same number of outputs as inputs.");
-                    break;
+                    throw new NotSupportedException("Rules for PointToPoint need to be re-evaluated.");
+                    //if( info.InputStage.TotalTaskCount != stage.TaskCount )
+                    //    throw new ArgumentException("Point to point stage needs to have the same number of outputs as inputs.");
+                    //break;
                 case ChannelConnectivity.Full:
-                    if( info.InputStage.Parent != null && info.InputStage.TaskCount != stage.TaskCount )
-                        throw new ArgumentException("A fully connected stage with a child stage as input needs to have the same number of tasks as the input child stage.");
+                    if( info.InputStage.InternalPartitionCount > 1 && info.InputStage.InternalPartitionCount != stage.TaskCount )
+                        throw new ArgumentException("A fully connected stage with an internally partitioned compound stage as input needs to have the same number of tasks as the input child stage.");
                     break;
                 }
             }
@@ -288,6 +289,8 @@ namespace Tkl.Jumbo.Jet
         {
             if( parentStage.ChildStage != null )
                 throw new ArgumentException("The input stage already has a child stage.");
+            if( stage.TaskCount > 1 && parentStage.InternalPartitionCount > 1 )
+                throw new ArgumentException("The input stage already has internal partitioning, cannot add another child stage with internal partitioning.");
             parentStage.ChildStage = stage;
             parentStage.ChildStagePartitionerType = partitionerType ?? typeof(HashPartitioner<>).MakeGenericType(inputType);
         }

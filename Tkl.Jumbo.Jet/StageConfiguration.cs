@@ -277,6 +277,25 @@ namespace Tkl.Jumbo.Jet
         }
 
         /// <summary>
+        /// Gets the total number of partitions output from this stage. This does not include the output channel's partitioning, only the internal partitioning
+        /// done by compound stages.
+        /// </summary>
+        /// <remarks>
+        /// This number will be 1 unless this stage is a child stage in a compound stage, and partitioning occurs inside the compound stage before this stage.
+        /// </remarks>
+        [XmlIgnore]
+        public int InternalPartitionCount
+        {
+            get
+            {
+                if( Parent == null )
+                    return 1;
+                else
+                    return Parent.InternalPartitionCount * TaskCount;
+            }
+        }
+
+        /// <summary>
         /// Gets a child stage of this stage.
         /// </summary>
         /// <param name="childStageId">The child stage ID.</param>

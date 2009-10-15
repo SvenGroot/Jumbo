@@ -118,6 +118,29 @@ namespace Tkl.Jumbo.Jet
         }
 
         /// <summary>
+        /// Gets the partition number of the task.
+        /// </summary>
+        /// <remarks>
+        /// For non-child stages, this number is always 1. For child stages, this will find the location in the chain of parent stages
+        /// in the compound where partitioning was done and return the task number of that task.
+        /// </remarks>
+        public int PartitionNumber
+        {
+            get
+            {
+                if( ParentTaskId == null )
+                    return 1;
+                else
+                {
+                    if( TaskNumber > 1 )
+                        return TaskNumber;
+                    else
+                        return new TaskId(ParentTaskId).PartitionNumber;
+                }
+            }
+        }
+
+        /// <summary>
         /// Gets a string representation of the <see cref="TaskId"/>.
         /// </summary>
         /// <returns>A string representation of the <see cref="TaskId"/>.</returns>
