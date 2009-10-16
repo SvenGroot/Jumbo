@@ -334,6 +334,8 @@ namespace Tkl.Jumbo.Jet.Jobs
                     ((inputCollector.ChannelType == ChannelType.Pipeline && taskCount == 1) ||
                      (inputCollector.ChannelType == null && inputCollector.InputStage.Parent == null && taskCount == inputCollector.InputStage.TaskCount && MatchInputChannelSettings(inputCollector.InputStage, inputCollector.PartitionerType, inputCollector.MultiInputRecordReaderType))) )
                 {
+                    // TODO: Under these circumstances, if the input stage task is something other than EmptyTask we could still pipeline this stage rather than use file or TCP.
+                    
                     // Replace the EmptyTask
                     stage = inputCollector.InputStage;
                     stage.TaskType = taskType;
@@ -452,7 +454,9 @@ namespace Tkl.Jumbo.Jet.Jobs
             RecordCollector<KeyValuePairWritable<TKey, TValue>> collector = RecordCollector<KeyValuePairWritable<TKey, TValue>>.GetCollector(input);
             if( collector == null )
             {
-                // TODO: Match partitions if channel output (see how that works out with pipeline output channel; accumulate too)
+                // Note: as per research diary 16-10-2009, we cannot decide to match the output channel's partition count here because
+                // depending on the partitioner that might change the semantics of the operation.
+
                 // Connecting directly to DFS input, so we're creating a single partition.
                 RecordCollector<KeyValuePairWritable<TKey, TValue>> intermediateCollector = new RecordCollector<KeyValuePairWritable<TKey, TValue>>(null, null, 1);
                 ProcessRecords(input, intermediateCollector.CreateRecordWriter(), accumulatorTaskType, "Input" + accumulatorTaskType.Name);
@@ -463,6 +467,9 @@ namespace Tkl.Jumbo.Jet.Jobs
             {
                 if( collector.InputStage != null )
                 {
+                    // TODO: With an unspecified partition count on the input stage, we could try to match the output channel partitions if the partitioner type is the same.
+                    // See research diary 16-10-2009
+
                     RecordWriter<KeyValuePairWritable<TKey, TValue>> outputWriter = output;
                     RecordCollector<KeyValuePairWritable<TKey, TValue>> intermediateCollector = null;
                     // We'll need a second step unless:
@@ -500,7 +507,8 @@ namespace Tkl.Jumbo.Jet.Jobs
                 {
                     // TODO: Reconsider this. Like files, are join results considered single range or pre-partitioned?
                     // We're connecting to multiple input channels. We will leave the partitions as they are, so it's only a single-step, and we can't pipeline.
-                    ProcessRecords(input, output, accumulatorTaskType);
+                    //ProcessRecords(input, output, accumulatorTaskType);
+                    throw new NotImplementedException();
                 }
                 else
                     throw new ArgumentException("The specified record reader was not created by a JobBuilder or RecordCollector.", "input");
@@ -578,6 +586,14 @@ namespace Tkl.Jumbo.Jet.Jobs
             Type sortTaskType = typeof(SortTask<T>);
             Type mergeReaderType = typeof(MergeRecordReader<T>);
 
+            ++_sortStages;
+            string sortStageId = "SortStage";
+            if( _sortStages > 1 )
+                sortStageId += _sortStages.ToString(System.Globalization.CultureInfo.InvariantCulture);
+            string mergeStageId = "MergeStage";
+            if( _sortStages > 1 )
+                mergeStageId += _sortStages.ToString(System.Globalization.CultureInfo.InvariantCulture);
+
             // TODO: Stage names.
             // DFS input is treated as being a single range; therefore to correctly sort the entire input, we must partition it.
             // If connecting directly to DFS input, we will therefore gather all into a single partition.
@@ -585,13 +601,13 @@ namespace Tkl.Jumbo.Jet.Jobs
 
             if( inputCollector == null )
             {
-                // TODO: Match partitions if channel output (see how that works out with pipeline output channel; accumulate too; note if more than 1 partition needs EmptyTask first)
+                // TODO: As per research diary 16-10-2009, it might be possible to match output channel partitions.
                 // Input is DFS. We will sort it, then merge
                 RecordCollector<T> intermediateCollector = new RecordCollector<T>(null, null, 1);
                 intermediateCollector.MultiInputRecordReaderType = mergeReaderType;
-                ProcessRecords(input, intermediateCollector.CreateRecordWriter(), sortTaskType);
+                ProcessRecords(input, intermediateCollector.CreateRecordWriter(), sortTaskType, sortStageId);
                 // We need an empty task that merges the result and writes to the output.
-                ProcessRecords(intermediateCollector.CreateRecordReader(), output, typeof(EmptyTask<T>));
+                ProcessRecords(intermediateCollector.CreateRecordReader(), output, typeof(EmptyTask<T>), mergeStageId);
             }
             else
             {
@@ -611,23 +627,40 @@ namespace Tkl.Jumbo.Jet.Jobs
                     }
                     else if( inputCollector.ChannelType == null )
                     {
-                        // Channel type was not specified, so use Pipeline
+                        // Merge not necessary, and channel type was not specified, so use Pipeline
                         inputCollector.ChannelType = ChannelType.Pipeline;
                     }
-                    // TODO: Match partitions if channel output (see how that works out with pipeline output channel)
+                    // TODO: As per research diary 16-10-2009, it might be possible to match output channel partitions.
 
-                    ProcessRecords(input, outputWriter, sortTaskType);
+                    ProcessRecords(input, outputWriter, sortTaskType, sortStageId);
 
                     if( intermediateCollector != null )
-                        ProcessRecords(intermediateCollector.CreateRecordReader(), output, typeof(EmptyTask<T>));
+                    {
+                        ProcessRecords(intermediateCollector.CreateRecordReader(), output, typeof(EmptyTask<T>), mergeStageId);
+                    }
                 }
                 else if( inputCollector.InputChannels == null )
                 {
                     // TODO: This'll need to work much like the DFS input case. Or maybe not; see Accumulate.
+                    throw new NotImplementedException();
                 }
                 else
                     throw new ArgumentException("The specified record reader was not created by a JobBuilder or RecordCollector.", "input");
             }
+        }
+
+        /// <summary>
+        /// Partitions the records according to the partitioning options specified by the output channel, without processing them.
+        /// </summary>
+        /// <typeparam name="T">The type of the records.</typeparam>
+        /// <param name="input">The input records to partition.</param>
+        /// <param name="output">The output to write the partitions to.</param>
+        public void PartitionRecords<T>(RecordReader<T> input, RecordWriter<T> output)
+            where T : IWritable, new()
+        {
+            if( RecordCollector<T>.GetCollector(output) == null )
+                throw new ArgumentException("The output of a partitioning operation must be a RecordCollector.", "output");
+            ProcessRecords(input, output, typeof(EmptyTask<T>));
         }
 
         /// <summary>

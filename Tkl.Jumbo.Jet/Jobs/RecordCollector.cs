@@ -75,12 +75,15 @@ namespace Tkl.Jumbo.Jet.Jobs
         /// </summary>
         /// <param name="channelType">The channel type to use to transfer the records between tasks, or <see langword="null"/> to let the runtime decide.</param>
         /// <param name="partitionerType">The type of the partitioner to use to spread the records across the output tasks, or <see langword="null"/> to use the default hash partitioner.</param>
-        /// <param name="partitions">The number of partitions to use, or <see langword="null"/> to let the runtime decide.</param>
+        /// <param name="partitions">The number of partitions to use, or <see langword="null"/> or 0 to let the runtime decide.</param>
         public RecordCollector(Channels.ChannelType? channelType, Type partitionerType, int? partitions)
         {
+            if( partitions < 0 )
+                throw new ArgumentOutOfRangeException("Partition count cannot be less than zero.", "partitions");
             ChannelType = channelType;
             PartitionerType = partitionerType ?? typeof(HashPartitioner<T>);
-            Partitions = partitions;
+            // Treat 0 the same as null.
+            Partitions = partitions == 0 ? null : partitions;
             MultiInputRecordReaderType = typeof(MultiRecordReader<T>);
         }
 
