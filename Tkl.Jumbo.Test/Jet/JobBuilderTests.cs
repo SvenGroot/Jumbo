@@ -519,6 +519,41 @@ namespace Tkl.Jumbo.Test.Jet
             VerifyStage(config, config.Stages[1].ChildStage, 2, "SortStage", typeof(SortTask<Int32Writable>), null, null, typeof(TextRecordWriter<Int32Writable>), ChannelType.File, ChannelConnectivity.Full, null, null, null);
         }
 
+        [Test]
+        public void TestGenerateRecordsSingleStage()
+        {
+            JobBuilder builder = new JobBuilder(_dfsClient, _jetClient);
+
+            var output = builder.CreateRecordWriter<Int32Writable>(_outputPath, typeof(TextRecordWriter<Int32Writable>));
+            builder.GenerateRecords(output, typeof(LineCounterTask), 2);
+
+            JobConfiguration config = builder.JobConfiguration;
+            Assert.AreEqual(1, config.AssemblyFileNames.Count);
+
+            Assert.AreEqual(1, config.Stages.Count);
+            StageConfiguration stage = config.Stages[0];
+            VerifyStage(config, stage, 2, typeof(LineCounterTask).Name, typeof(LineCounterTask), null, null, typeof(TextRecordWriter<Int32Writable>), ChannelType.File, ChannelConnectivity.Full, null, null, null);
+        }
+
+        [Test]
+        public void TestGenerateRecordsMultiStage()
+        {
+            JobBuilder builder = new JobBuilder(_dfsClient, _jetClient);
+
+            var output = builder.CreateRecordWriter<Int32Writable>(_outputPath, typeof(TextRecordWriter<Int32Writable>));
+            var collector = new RecordCollector<Int32Writable>();
+            builder.GenerateRecords(collector.CreateRecordWriter(), typeof(LineCounterTask), 2);
+            builder.ProcessRecords(collector.CreateRecordReader(), output, typeof(LineAdderTask));
+
+            JobConfiguration config = builder.JobConfiguration;
+            Assert.AreEqual(1, config.AssemblyFileNames.Count);
+
+            Assert.AreEqual(2, config.Stages.Count);
+
+            VerifyStage(config, config.Stages[0], 2, typeof(LineCounterTask).Name, typeof(LineCounterTask), null, null, null, ChannelType.File, ChannelConnectivity.Full, typeof(HashPartitioner<Int32Writable>), typeof(MultiRecordReader<Int32Writable>), typeof(LineAdderTask).Name);
+            VerifyStage(config, config.Stages[1], 1, typeof(LineAdderTask).Name, typeof(LineAdderTask), null, null, typeof(TextRecordWriter<Int32Writable>), ChannelType.File, ChannelConnectivity.Full, null, null, null);
+        }
+
         private static void VerifyStage(JobConfiguration config, StageConfiguration stage, int taskCount, string stageId, Type taskType, Type stageMultiInputRecordReader, Type recordReaderType, Type recordWriterType, ChannelType channelType, ChannelConnectivity channelConnectivity, Type partitionerType, Type multiInputRecordReader, string outputStageId)
         {
             Assert.AreEqual(stageId, stage.StageId);

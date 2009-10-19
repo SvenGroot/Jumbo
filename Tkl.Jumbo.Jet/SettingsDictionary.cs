@@ -21,6 +21,15 @@ namespace Tkl.Jumbo.Jet
         }
 
         /// <summary>
+        /// Initializes a new instance of the <see cref="SettingsDictionary"/> class with elements that are copied from the specified <see cref="IDictionary{TKey,TValue}"/>.
+        /// </summary>
+        /// <param name="dictionary">The <see cref="IDictionary{TKey,TValue}"/> whose elements are copied to the <see cref="SettingsDictionary"/>.</param>
+        public SettingsDictionary(IDictionary<string, string> dictionary)
+            : base(dictionary)
+        {
+        }
+
+        /// <summary>
         /// Initializes a new instance of the <see cref="SettingsDictionary"/> class with serialized data.
         /// </summary>
         /// <param name="info">A <see cref="System.Runtime.Serialization.SerializationInfo"/> object containing the information required to serialize the <see cref="SettingsDictionary"/>.</param>
@@ -69,6 +78,17 @@ namespace Tkl.Jumbo.Jet
         }
 
         #endregion
+
+        /// <summary>
+        /// Adds a setting with the specified type.
+        /// </summary>
+        /// <typeparam name="T">The type of the setting.</typeparam>
+        /// <param name="key">The name of the setting.</param>
+        /// <param name="value">The value of the setting.</param>
+        public void AddTypedSetting<T>(string key, T value)
+        {
+            Add(key, Convert.ToString(value, System.Globalization.CultureInfo.InvariantCulture));
+        }
 
         /// <summary>
         /// Gets a setting with the specified type and default value.

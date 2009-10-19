@@ -387,7 +387,9 @@ namespace Tkl.Jumbo.Jet
         /// <param name="value">The value of the setting.</param>
         public void AddTypedSetting<T>(string key, T value)
         {
-            AddSetting(key, Convert.ToString(value, System.Globalization.CultureInfo.InvariantCulture));
+            if( StageSettings == null )
+                StageSettings = new SettingsDictionary();
+            StageSettings.AddTypedSetting(key, value);
         }
     }
 }

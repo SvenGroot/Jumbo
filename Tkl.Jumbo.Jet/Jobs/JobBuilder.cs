@@ -14,25 +14,6 @@ using System.Diagnostics;
 namespace Tkl.Jumbo.Jet.Jobs
 {
     /// <summary>
-    /// Delegate for tasks.
-    /// </summary>
-    /// <typeparam name="TInput">The type of the input records.</typeparam>
-    /// <typeparam name="TOutput">The type of the output records.</typeparam>
-    /// <param name="input">The record reader providing the input records.</param>
-    /// <param name="output">The record writer collecting the output records.</param>
-    public delegate void TaskFunction<TInput, TOutput>(RecordReader<TInput> input, RecordWriter<TOutput> output) where TInput : IWritable, new() where TOutput : IWritable, new();
-
-    /// <summary>
-    /// Delegate for accumulator tasks
-    /// </summary>
-    /// <typeparam name="TKey">The type of the keys.</typeparam>
-    /// <typeparam name="TValue">The type of the values.</typeparam>
-    /// <param name="key">The key of the record.</param>
-    /// <param name="value">The value associated with the key in the accumulator that must be updated.</param>
-    /// <param name="newValue">The new value associated with the key.</param>
-    public delegate void AccumulatorFunction<TKey, TValue>(TKey key, TValue value, TValue newValue) where TKey : IWritable, IComparable<TKey>, new() where TValue : class, IWritable, new();
-
-    /// <summary>
     /// Provides easy construction of Jumbo Jet jobs.
     /// </summary>
     public sealed class JobBuilder
@@ -245,10 +226,10 @@ namespace Tkl.Jumbo.Jet.Jobs
             where TInput : IWritable, new()
             where TOutput : IWritable, new()
         {
-            ProcessRecords(input, output, taskType, null);
+            ProcessRecords(input, output, taskType, null, null);
         }
 
-            /// <summary>
+        /// <summary>
         /// Processes records using the specified task type.
         /// </summary>
         /// <typeparam name="TInput">The input record type.</typeparam>
@@ -261,6 +242,23 @@ namespace Tkl.Jumbo.Jet.Jobs
             where TInput : IWritable, new()
             where TOutput : IWritable, new()
         {
+            ProcessRecords(input, output, taskType, stageId, null);
+        }
+
+        /// <summary>
+        /// Processes records using the specified task type.
+        /// </summary>
+        /// <typeparam name="TInput">The input record type.</typeparam>
+        /// <typeparam name="TOutput">The output record type.</typeparam>
+        /// <param name="input">The record reader to read records to process from.</param>
+        /// <param name="output">The record writer to write the result to.</param>
+        /// <param name="taskType">The type of the task.</param>
+        /// <param name="stageId">The ID of this processing stage in the job, or <see langword="null"/> to use the name of the task type.</param>
+        /// <param name="stageSettings">A dictionary containing settings to use for the stage. May be <see langword="null"/>.</param>
+        public void ProcessRecords<TInput, TOutput>(RecordReader<TInput> input, RecordWriter<TOutput> output, Type taskType, string stageId, IDictionary<string, string> stageSettings)
+            where TInput : IWritable, new()
+            where TOutput : IWritable, new()
+        {
             if( input == null )
                 throw new ArgumentNullException("input");
             if( output == null )
@@ -268,118 +266,7 @@ namespace Tkl.Jumbo.Jet.Jobs
             if( taskType == null )
                 throw new ArgumentNullException("taskType");
 
-            if( stageId == null )
-                stageId = taskType.Name;
-
-            Type taskInterfaceType = taskType.FindGenericInterfaceType(typeof(ITask<,>), true);
-            Type[] arguments = taskInterfaceType.GetGenericArguments();
-            if( !(arguments[0] == typeof(TInput) && arguments[1] == typeof(TOutput)) )
-                throw new ArgumentException("The specified task type does not have input and output types matching the specified record reader and writer.", "taskType");
-
-            string outputPath = null;
-            Type outputWriterType = null;
-            RecordCollector<TOutput> collector = null;
-            RecordWriterReference<TOutput> outputRef = output as RecordWriterReference<TOutput>;
-            if( outputRef != null )
-            {
-                outputPath = outputRef.Output;
-                outputWriterType = outputRef.RecordWriterType;
-                _assemblies.Add(outputWriterType.Assembly);
-            }
-            else
-            {
-                collector = RecordCollector<TOutput>.GetCollector(output);
-                if( collector != null )
-                {
-                    if( collector.InputStage != null || collector.InputChannels != null )
-                        throw new ArgumentException("Cannot write to the specified record writer, because that writer is already used by another stage.", "output");
-                    _assemblies.Add(collector.PartitionerType.Assembly);
-                }
-                else
-                    throw new ArgumentException("Unsupported output record writer.", "output");
-            }
-
-            RecordReaderReference<TInput> inputRef = input as RecordReaderReference<TInput>;
-            StageConfiguration stage;
-            if( inputRef != null )
-            {
-                // We're adding an input stage.
-                stage = _job.AddInputStage(stageId, _dfsClient.NameServer.GetFileSystemEntryInfo(inputRef.Input), taskType, inputRef.RecordReaderType, outputPath, outputWriterType);
-                _assemblies.Add(inputRef.RecordReaderType.Assembly);
-            }
-            else
-            {
-                RecordCollector<TInput> inputCollector = RecordCollector<TInput>.GetCollector(input);
-                if( inputCollector == null )
-                    throw new ArgumentException("The specified record reader was not created by a JobBuilder or RecordCollector.", "input");
-                if( inputCollector.InputStage == null && inputCollector.InputChannels == null )
-                    throw new ArgumentException("Cannot read from the specified record reader because the associated RecordCollector isn't being written to.");
-
-                // Determine the number of partitions to use on the input channel
-                int taskCount;
-                if( inputCollector.Partitions != null )
-                    taskCount = inputCollector.Partitions.Value; // Use specified amount
-                else if( inputCollector.ChannelType == ChannelType.Pipeline )
-                    taskCount = 1; // Pipeline channel always uses one if unspecified
-                else if( inputCollector.InputStage != null && inputCollector.InputStage.InternalPartitionCount > 1 )
-                    taskCount = inputCollector.InputStage.InternalPartitionCount; // Connecting to a compound stage with internal partitioning we must use the same number of tasks.
-                else
-                    taskCount = _jetClient.JobServer.GetMetrics().TaskServers.Count; // Otherwise default to the number of nodes in the cluster
-
-                // We can replace an empty task if:
-                // - The channel type is pipeline and taskCount is one.
-                // - The channel type is not specified, the input stage is not a child stage, and the task count, partitioner type and multi input record 
-                //   reader type are the same as the EmptyTask's input.
-                if( inputCollector.InputStage != null && inputCollector.InputStage.TaskType == typeof(EmptyTask<TInput>) &&
-                    ((inputCollector.ChannelType == ChannelType.Pipeline && taskCount == 1) ||
-                     (inputCollector.ChannelType == null && inputCollector.InputStage.Parent == null && taskCount == inputCollector.InputStage.TaskCount && MatchInputChannelSettings(inputCollector.InputStage, inputCollector.PartitionerType, inputCollector.MultiInputRecordReaderType))) )
-                {
-                    // TODO: Under these circumstances, if the input stage task is something other than EmptyTask we could still pipeline this stage rather than use file or TCP.
-                    
-                    // Replace the EmptyTask
-                    stage = inputCollector.InputStage;
-                    stage.TaskType = taskType;
-                    _job.RenameStage(stage, stageId);
-                    if( outputRef != null )
-                    {
-                        stage.SetDfsOutput(outputPath, outputWriterType);
-                    }
-                }
-                else
-                {
-                    // We default to the File channel if not specified.
-                    ChannelType channelType = inputCollector.ChannelType == null ? ChannelType.File : inputCollector.ChannelType.Value;
-
-                    InputStageInfo[] inputStages;
-                    if( inputCollector.InputStage != null )
-                    {
-                        inputStages = new[] { new InputStageInfo(inputCollector.InputStage)
-                        {
-                            ChannelType = channelType,
-                            MultiInputRecordReaderType = inputCollector.MultiInputRecordReaderType,
-                            PartitionerType = inputCollector.PartitionerType
-                        } };
-                    }
-                    else
-                        inputStages = inputCollector.InputChannels;
-                    // If there is only one input, the stageMultiInputRecordReaderType parameter won't be used so it doesn't matter what we pass.
-                    // If there are more than one, the multi input record reader type of this inputCollector indicates what reader to use to combine
-                    // the input from the stages so we must pass that.
-                    stage = _job.AddStage(stageId, taskType, taskCount, inputStages, inputCollector.MultiInputRecordReaderType, outputPath, outputWriterType);
-                }
-            }
-
-            if( outputRef != null )
-            {
-                stage.DfsOutput.BlockSize = outputRef.BlockSize;
-                stage.DfsOutput.ReplicationFactor = outputRef.ReplicationFactor;
-            }
-
-            if( collector != null )
-                collector.InputStage = stage;
-
-            if( !object.Equals(taskType.Assembly, _dynamicAssembly) )
-                _assemblies.Add(taskType.Assembly);
+            stageId = ProcessRecordsInternal<TInput, TOutput>(input, output, taskType, stageId, stageSettings, 0);
         }
 
         /// <summary>
@@ -401,30 +288,32 @@ namespace Tkl.Jumbo.Jet.Jobs
             if( task == null )
                 throw new ArgumentNullException("task");
 
-            MethodInfo taskMethod = task.Method;
-            if( !(taskMethod.IsStatic && taskMethod.IsPublic) )
-                throw new ArgumentException("The task method specified must be public and static.", "task");
-
-            CreateDynamicAssembly();
-
-            TypeBuilder taskTypeBuilder = _dynamicModule.DefineType(_dynamicAssembly.GetName().Name + "." + taskMethod.Name, TypeAttributes.Class | TypeAttributes.Public | TypeAttributes.Sealed, typeof(Configurable), new[] { typeof(IPullTask<TInput, TOutput>) });
-
-            SetAllowRecordReuseAttribute(taskMethod, taskTypeBuilder);
-
-            MethodBuilder runMethod = taskTypeBuilder.DefineMethod("Run", MethodAttributes.Public | MethodAttributes.Virtual, null, new[] { typeof(RecordReader<TInput>), typeof(RecordWriter<TOutput>) });
-            runMethod.DefineParameter(1, ParameterAttributes.None, "input");
-            runMethod.DefineParameter(2, ParameterAttributes.None, "output");
-
-            ILGenerator generator = runMethod.GetILGenerator();
-            generator.Emit(OpCodes.Ldarg_1);
-            generator.Emit(OpCodes.Ldarg_2);
-            generator.Emit(OpCodes.Call, taskMethod);
-            generator.Emit(OpCodes.Ret);
-
-            Type taskType = taskTypeBuilder.CreateType();
-
-            ProcessRecords(input, output, taskType);
+            ProcessRecords<TInput, TOutput>(input, output, task.Method, null, 0, false, true);
         }
+
+        /// <summary>
+        /// Processes records using the specified task function.
+        /// </summary>
+        /// <typeparam name="TInput">The input record type.</typeparam>
+        /// <typeparam name="TOutput">The output record type.</typeparam>
+        /// <param name="input">The record reader to read records to process from.</param>
+        /// <param name="output">The record writer to write the result to.</param>
+        /// <param name="task">The task function.</param>
+        /// <param name="stageSettings">A dictionary containing settings to use for the stage. May be <see langword="null"/>.</param>
+        public void ProcessRecords<TInput, TOutput>(RecordReader<TInput> input, RecordWriter<TOutput> output, TaskFunctionWithConfiguration<TInput, TOutput> task, IDictionary<string, string> stageSettings)
+            where TInput : IWritable, new()
+            where TOutput : IWritable, new()
+        {
+            if( input == null )
+                throw new ArgumentNullException("input");
+            if( output == null )
+                throw new ArgumentNullException("output");
+            if( task == null )
+                throw new ArgumentNullException("task");
+
+            ProcessRecords<TInput, TOutput>(input, output, task.Method, stageSettings, 0, true, true);
+        }
+
 
         /// <summary>
         /// Processes records using the specified accumulator function.
@@ -664,6 +553,86 @@ namespace Tkl.Jumbo.Jet.Jobs
         }
 
         /// <summary>
+        /// Generates records using a task that takes no input.
+        /// </summary>
+        /// <typeparam name="T">The type of the records.</typeparam>
+        /// <param name="output">The output to write the records to.</param>
+        /// <param name="taskType">The type of the task.</param>
+        /// <param name="taskCount">The number of task instances to create when running the job.</param>
+        public void GenerateRecords<T>(RecordWriter<T> output, Type taskType, int taskCount)
+            where T : IWritable, new()
+        {
+            GenerateRecords(output, taskType, taskCount, null, null);
+        }
+
+        /// <summary>
+        /// Generates records using a task that takes no input.
+        /// </summary>
+        /// <typeparam name="T">The type of the records.</typeparam>
+        /// <param name="output">The output to write the records to.</param>
+        /// <param name="taskType">The type of the task.</param>
+        /// <param name="taskCount">The number of task instances to create when running the job.</param>
+        /// <param name="stageId">The ID of this processing stage in the job, or <see langword="null"/> to use the name of the task type.</param>
+        /// <param name="stageSettings">A dictionary containing settings to use for the stage. May be <see langword="null"/>.</param>
+        public void GenerateRecords<T>(RecordWriter<T> output, Type taskType, int taskCount, string stageId, IDictionary<string, string> stageSettings)
+            where T : IWritable, new()
+        {
+            if( output == null )
+                throw new ArgumentNullException("output");
+            if( taskType == null )
+                throw new ArgumentNullException("taskType");
+            if( taskCount < 1 )
+                throw new ArgumentOutOfRangeException("taskCount");
+
+            // Even though it's not used, we still need to pass the input type to the ProcessRecordsInternal method, which we'll need to do using reflection.
+            Type inputType = taskType.FindGenericInterfaceType(typeof(ITask<,>), true).GetGenericArguments()[0];
+            MethodInfo processRecordsMethod = GetType().GetMethod("ProcessRecordsInternal", BindingFlags.NonPublic | BindingFlags.Instance);
+            processRecordsMethod = processRecordsMethod.MakeGenericMethod(inputType, typeof(T));
+            processRecordsMethod.Invoke(this, new object[] { null, output, taskType, stageId, stageSettings, taskCount });
+        }
+
+        /// <summary>
+        /// Generates records using a task that takes no input.
+        /// </summary>
+        /// <typeparam name="T">The type of the records.</typeparam>
+        /// <param name="output">The output to write the records to.</param>
+        /// <param name="task">The task function.</param>
+        /// <param name="taskCount">The number of task instances to create when running the job.</param>
+        public void GenerateRecords<T>(RecordWriter<T> output, OutputOnlyTaskFunction<T> task, int taskCount)
+            where T : IWritable, new()
+        {
+            if( task == null )
+                throw new ArgumentNullException("task");
+            if( output == null )
+                throw new ArgumentNullException("output");
+            if( taskCount < 1 )
+                throw new ArgumentOutOfRangeException("taskCount");
+
+            ProcessRecords<StringWritable, T>(null, output, task.Method, null, taskCount, false, false);
+        }
+
+        /// <summary>
+        /// Generates records using a task that takes no input.
+        /// </summary>
+        /// <typeparam name="T">The type of the records.</typeparam>
+        /// <param name="output">The output to write the records to.</param>
+        /// <param name="task">The task function.</param>
+        /// <param name="taskCount">The number of task instances to create when running the job.</param>
+        /// <param name="stageSettings">A dictionary containing settings to use for the stage. May be <see langword="null"/>.</param>
+        public void GenerateRecords<T>(RecordWriter<T> output, OutputOnlyTaskFunctionWithConfiguration<T> task, int taskCount, IDictionary<string, string> stageSettings)
+            where T : IWritable, new()
+        {
+            if( task == null )
+                throw new ArgumentNullException("task");
+            if( output == null )
+                throw new ArgumentNullException("output");
+            if( taskCount < 1 )
+                throw new ArgumentOutOfRangeException("taskCount");
+
+            ProcessRecords<StringWritable, T>(null, output, task.Method, stageSettings, taskCount, true, false);
+        }
+
+        /// <summary>
         /// 
         /// </summary>
         /// <typeparam name="TOuter"></typeparam>
@@ -698,6 +667,174 @@ namespace Tkl.Jumbo.Jet.Jobs
             
         }
 
+        private string ProcessRecordsInternal<TInput, TOutput>(RecordReader<TInput> input, RecordWriter<TOutput> output, Type taskType, string stageId, IDictionary<string, string> stageSettings, int taskCount)
+            where TInput : IWritable, new()
+            where TOutput : IWritable, new()
+        {
+            if( stageId == null )
+                stageId = taskType.Name;
+
+            Type taskInterfaceType = taskType.FindGenericInterfaceType(typeof(ITask<,>), true);
+            Type[] arguments = taskInterfaceType.GetGenericArguments();
+            if( !(arguments[0] == typeof(TInput) && arguments[1] == typeof(TOutput)) )
+                throw new ArgumentException("The specified task type does not have input and output types matching the specified record reader and writer.", "taskType");
+
+            string outputPath = null;
+            Type outputWriterType = null;
+            RecordCollector<TOutput> collector = null;
+            RecordWriterReference<TOutput> outputRef = output as RecordWriterReference<TOutput>;
+            if( outputRef != null )
+            {
+                outputPath = outputRef.Output;
+                outputWriterType = outputRef.RecordWriterType;
+                _assemblies.Add(outputWriterType.Assembly);
+            }
+            else
+            {
+                collector = RecordCollector<TOutput>.GetCollector(output);
+                if( collector != null )
+                {
+                    if( collector.InputStage != null || collector.InputChannels != null )
+                        throw new ArgumentException("Cannot write to the specified record writer, because that writer is already used by another stage.", "output");
+                    _assemblies.Add(collector.PartitionerType.Assembly);
+                }
+                else
+                    throw new ArgumentException("Unsupported output record writer.", "output");
+            }
+
+            RecordReaderReference<TInput> inputRef = input as RecordReaderReference<TInput>;
+            StageConfiguration stage;
+            if( inputRef != null )
+            {
+                // We're adding an input stage.
+                stage = _job.AddInputStage(stageId, _dfsClient.NameServer.GetFileSystemEntryInfo(inputRef.Input), taskType, inputRef.RecordReaderType, outputPath, outputWriterType);
+                _assemblies.Add(inputRef.RecordReaderType.Assembly);
+            }
+            else if( input != null )
+            {
+                RecordCollector<TInput> inputCollector = RecordCollector<TInput>.GetCollector(input);
+                if( inputCollector == null )
+                    throw new ArgumentException("The specified record reader was not created by a JobBuilder or RecordCollector.", "input");
+                if( inputCollector.InputStage == null && inputCollector.InputChannels == null )
+                    throw new ArgumentException("Cannot read from the specified record reader because the associated RecordCollector isn't being written to.");
+
+                // Determine the number of partitions to use on the input channel
+                if( taskCount == 0 )
+                {
+                    if( inputCollector.Partitions != null )
+                        taskCount = inputCollector.Partitions.Value; // Use specified amount
+                    else if( inputCollector.ChannelType == ChannelType.Pipeline )
+                        taskCount = 1; // Pipeline channel always uses one if unspecified
+                    else if( inputCollector.InputStage != null && inputCollector.InputStage.InternalPartitionCount > 1 )
+                        taskCount = inputCollector.InputStage.InternalPartitionCount; // Connecting to a compound stage with internal partitioning we must use the same number of tasks.
+                    else
+                        taskCount = _jetClient.JobServer.GetMetrics().TaskServers.Count; // Otherwise default to the number of nodes in the cluster
+                }
+
+
+                // We can replace an empty task if:
+                // - The channel type is pipeline and taskCount is one.
+                // - The channel type is not specified, the input stage is not a child stage, and the task count, partitioner type and multi input record 
+                //   reader type are the same as the EmptyTask's input.
+                if( inputCollector.InputStage != null && inputCollector.InputStage.TaskType == typeof(EmptyTask<TInput>) &&
+                    ((inputCollector.ChannelType == ChannelType.Pipeline && taskCount == 1) ||
+                     (inputCollector.ChannelType == null && inputCollector.InputStage.Parent == null && taskCount == inputCollector.InputStage.TaskCount && MatchInputChannelSettings(inputCollector.InputStage, inputCollector.PartitionerType, inputCollector.MultiInputRecordReaderType))) )
+                {
+                    // TODO: Under these circumstances, if the input stage task is something other than EmptyTask we could still pipeline this stage rather than use file or TCP.
+
+                    // Replace the EmptyTask
+                    stage = inputCollector.InputStage;
+                    stage.TaskType = taskType;
+                    _job.RenameStage(stage, stageId);
+                    if( outputRef != null )
+                    {
+                        stage.SetDfsOutput(outputPath, outputWriterType);
+                    }
+                }
+                else
+                {
+                    // We default to the File channel if not specified.
+                    ChannelType channelType = inputCollector.ChannelType == null ? ChannelType.File : inputCollector.ChannelType.Value;
+
+                    InputStageInfo[] inputStages;
+                    if( inputCollector.InputStage != null )
+                    {
+                        inputStages = new[] { new InputStageInfo(inputCollector.InputStage)
+                        {
+                            ChannelType = channelType,
+                            MultiInputRecordReaderType = inputCollector.MultiInputRecordReaderType,
+                            PartitionerType = inputCollector.PartitionerType
+                        } };
+                    }
+                    else
+                        inputStages = inputCollector.InputChannels;
+                    // If there is only one input, the stageMultiInputRecordReaderType parameter won't be used so it doesn't matter what we pass.
+                    // If there are more than one, the multi input record reader type of this inputCollector indicates what reader to use to combine
+                    // the input from the stages so we must pass that.
+                    stage = _job.AddStage(stageId, taskType, taskCount, inputStages, inputCollector.MultiInputRecordReaderType, outputPath, outputWriterType);
+                }
+            }
+            else // no input
+            {
+                stage = _job.AddStage(stageId, taskType, taskCount, null, outputPath, outputWriterType);
+            }
+
+            if( outputRef != null )
+            {
+                stage.DfsOutput.BlockSize = outputRef.BlockSize;
+                stage.DfsOutput.ReplicationFactor = outputRef.ReplicationFactor;
+            }
+
+            if( stageSettings != null )
+            {
+                stage.StageSettings = new SettingsDictionary(stageSettings);
+            }
+
+            if( collector != null )
+                collector.InputStage = stage;
+
+            if( !object.Equals(taskType.Assembly, _dynamicAssembly) )
+                _assemblies.Add(taskType.Assembly);
+            return stageId;
+        }
+
+        private void ProcessRecords<TInput, TOutput>(RecordReader<TInput> input, RecordWriter<TOutput> output, MethodInfo taskMethod, IDictionary<string, string> stageSettings, int taskCount, bool useConfiguration, bool useInput)
+            where TInput : IWritable, new()
+            where TOutput : IWritable, new()
+        {
+            if( !(taskMethod.IsStatic && taskMethod.IsPublic) )
+                throw new ArgumentException("The task method specified must be public and static.", "task");
+
+            CreateDynamicAssembly();
+
+            TypeBuilder taskTypeBuilder = _dynamicModule.DefineType(_dynamicAssembly.GetName().Name + "." + taskMethod.Name, TypeAttributes.Class | TypeAttributes.Public | TypeAttributes.Sealed, typeof(Configurable), new[] { typeof(IPullTask<TInput, TOutput>) });
+
+            SetAllowRecordReuseAttribute(taskMethod, taskTypeBuilder);
+
+            MethodBuilder runMethod = taskTypeBuilder.DefineMethod("Run", MethodAttributes.Public | MethodAttributes.Virtual, null, new[] { typeof(RecordReader<TInput>), typeof(RecordWriter<TOutput>) });
+            runMethod.DefineParameter(1, ParameterAttributes.None, "input");
+            runMethod.DefineParameter(2, ParameterAttributes.None, "output");
+
+            ILGenerator generator = runMethod.GetILGenerator();
+            if( useInput )
+            {
+                generator.Emit(OpCodes.Ldarg_1);
+            }
+            generator.Emit(OpCodes.Ldarg_2);
+            if( useConfiguration )
+            {
+                // Put the TaskAttemptConfiguration on the stack.
+                generator.Emit(OpCodes.Ldarg_0);
+                generator.Emit(OpCodes.Call, typeof(Configurable).GetProperty("TaskAttemptConfiguration").GetGetMethod());
+            }
+            generator.Emit(OpCodes.Call, taskMethod);
+            generator.Emit(OpCodes.Ret);
+
+            Type taskType = taskTypeBuilder.CreateType();
+
+            ProcessRecordsInternal(input, output, taskType, null, stageSettings, taskCount);
+        }
+        
         private static void SetAllowRecordReuseAttribute(MethodInfo taskMethod, TypeBuilder taskTypeBuilder)
         {
             Type allowRecordReuseAttributeType = typeof(AllowRecordReuseAttribute);

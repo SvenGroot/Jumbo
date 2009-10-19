@@ -20,7 +20,7 @@ namespace Tkl.Jumbo.Jet.Samples
     /// </para>
     /// </remarks>
     [Description("Sorts the input file or files containing data in the gensort format.")]
-    public class GraySort2 : BaseJobRunner
+    public class GraySort2 : JobBuilderJob
     {
         private readonly string _inputPath;
         private readonly string _outputPath;
@@ -55,34 +55,21 @@ namespace Tkl.Jumbo.Jet.Samples
         public int MaxMergeInputs { get; set; }
 
         /// <summary>
-        /// Runs the job
+        /// Builds the job.
         /// </summary>
-        /// <returns></returns>
-        public override Guid RunJob()
+        /// <param name="builder">The job builder</param>
+        protected override void BuildJob(JobBuilder builder)
         {
-            PromptIfInteractive(true);
-
             DfsClient dfsClient = new DfsClient(DfsConfiguration);
-            JetClient jetClient = new JetClient(JetConfiguration);
 
             CheckAndCreateOutputPath(dfsClient, _outputPath);
 
-            JobBuilder builder = new JobBuilder();
             var input = builder.CreateRecordReader<GenSortRecord>(_inputPath, typeof(GenSortRecordReader));
             var output = builder.CreateRecordWriter<GenSortRecord>(_outputPath, typeof(GenSortRecordWriter), BlockSize, ReplicationFactor);
             RecordCollector<GenSortRecord> collector = new RecordCollector<GenSortRecord>(null, typeof(RangePartitioner), _mergeTasks);
 
             builder.PartitionRecords(input, collector.CreateRecordWriter());
             builder.SortRecords(collector.CreateRecordReader(), output);
-
-            Job job = jetClient.JobServer.CreateJob();
-            JobConfiguration config = builder.JobConfiguration;
-
-            OnJobCreated(job, config);
-
-            jetClient.RunJob(job, config, dfsClient, builder.AssemblyFiles.ToArray());
-
-            return job.JobId;
         }
 
         /// <summary>
@@ -90,7 +77,7 @@ namespace Tkl.Jumbo.Jet.Samples
         /// </summary>
         /// <param name="job"></param>
         /// <param name="jobConfiguration"></param>
-        protected void OnJobCreated(Job job, JobConfiguration jobConfiguration)
+        protected override void OnJobCreated(Job job, JobConfiguration jobConfiguration)
         {
             // The partition file is not placed directly in the job's directory because the task server doesn't need to download it.
             string partitionFileDirectory = DfsPath.Combine(job.Path, "partitions");
