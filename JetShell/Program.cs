@@ -107,15 +107,15 @@ namespace JetShell
                         else
                         {
                             Guid jobId = jobRunner.RunJob();
-                            WaitForJobCompletion(jetClient, _jobStatusPollInterval, jobId);
-                            jobRunner.FinishJob();
+                            bool success = WaitForJobCompletion(jetClient, _jobStatusPollInterval, jobId);
+                            jobRunner.FinishJob(success);
                         }
                     }
                 }
             }
         }
 
-        private static void WaitForJobCompletion(JetClient jetClient, int interval, Guid jobId)
+        private static bool WaitForJobCompletion(JetClient jetClient, int interval, Guid jobId)
         {
             JobStatus status;
             while( !jetClient.JobServer.WaitForJobCompletion(jobId, interval) )
@@ -126,11 +126,16 @@ namespace JetShell
             status = jetClient.JobServer.GetJobStatus(jobId);
             Console.WriteLine(status);
             Console.WriteLine();
-            Console.WriteLine("Job completed.");
+            if( status.IsFinished )
+                Console.WriteLine("Job completed.");
+            else
+                Console.WriteLine("Job failed.");
             Console.WriteLine("Start time: {0:yyyy'-'MM'-'dd' 'HH':'mm':'ss'.'fff}", status.StartTime.ToLocalTime());
             Console.WriteLine("End time:   {0:yyyy'-'MM'-'dd' 'HH':'mm':'ss'.'fff}", status.EndTime.ToLocalTime());
             TimeSpan duration = status.EndTime - status.StartTime;
             Console.WriteLine("Duration:   {0} ({1}s)", duration, duration.TotalSeconds);
+
+            return status.IsFinished;
         }
 
         private static void PrintAssemblyJobList(Assembly assembly)

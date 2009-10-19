@@ -113,7 +113,7 @@ namespace Tkl.Jumbo.Jet
         }
 
         /// <summary>
-        /// Gets a value that indicates whether the task has finished.
+        /// Gets a value that indicates whether the task has finished successfully.
         /// </summary>
         public bool IsFinished
         {

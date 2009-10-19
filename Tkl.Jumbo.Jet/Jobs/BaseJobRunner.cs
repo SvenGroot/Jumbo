@@ -52,7 +52,8 @@ namespace Tkl.Jumbo.Jet.Jobs
         /// <summary>
         /// Called after the job finishes.
         /// </summary>
-        public virtual void FinishJob()
+        /// <param name="success"><see langword="true"/> if the job completed successfully; <see langword="false"/> if the job failed.</param>
+        public virtual void FinishJob(bool success)
         {
             PromptIfInteractive(false);
         }
@@ -74,6 +75,17 @@ namespace Tkl.Jumbo.Jet.Jobs
                     Console.WriteLine("Press any key to exit . . .");
                 Console.ReadKey();
             }
+        }
+
+        /// <summary>
+        /// If <see cref="DeleteOutputBeforeRun"/> is <see langword="true"/>, deletes the output path and then re-creates it; otherwise,
+        /// checks if the output path exists and creates it if it doesn't exist and fails if it does. Uses the value of the <see cref="Configurable.DfsConfiguration"/>
+        /// property to access the DFS.
+        /// </summary>
+        /// <param name="outputPath">The directory where the job's output will be stored.</param>
+        protected void CheckAndCreateOutputPath(string outputPath)
+        {
+            CheckAndCreateOutputPath(new DfsClient(DfsConfiguration), outputPath);
         }
 
         /// <summary>

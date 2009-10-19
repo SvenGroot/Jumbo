@@ -19,6 +19,7 @@ namespace Tkl.Jumbo.Jet.Jobs
         /// <summary>
         /// Called after the job finishes.
         /// </summary>
-        void FinishJob();
+        /// <param name="success"><see langword="true"/> if the job completed successfully; <see langword="false"/> if the job failed.</param>
+        void FinishJob(bool success);
     }
 }

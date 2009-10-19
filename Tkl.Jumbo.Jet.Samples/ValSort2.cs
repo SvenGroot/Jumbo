@@ -28,7 +28,7 @@ namespace Tkl.Jumbo.Jet.Samples
     /// </para>
     /// </remarks>
     [Description("Validates whether the input is correctly sorted.")]
-    public class ValSort : BaseJobRunner
+    public class ValSort2 : JobBuilderJob
     {
         private readonly string _inputPath;
         private readonly string _outputPath;
@@ -39,7 +39,7 @@ namespace Tkl.Jumbo.Jet.Samples
         /// </summary>
         /// <param name="inputPath">The input file or directory for the job.</param>
         /// <param name="outputPath">The output directory for the job.</param>
-        public ValSort([Description("The input file or directory on the Jumbo DFS containing the data to validate.")] string inputPath, 
+        public ValSort2([Description("The input file or directory on the Jumbo DFS containing the data to validate.")] string inputPath,
                        [Description("The output directory on the Jumbo DFS where the results of the validation will be written.")] string outputPath)
         {
             if( inputPath == null )
@@ -52,32 +52,32 @@ namespace Tkl.Jumbo.Jet.Samples
         }
 
         /// <summary>
-        /// Starts the job.
+        /// Builds the job.
         /// </summary>
-        /// <returns>The job ID of the newly created job.</returns>
-        public override Guid RunJob()
+        /// <param name="builder">The job builder.</param>
+        protected override void BuildJob(JobBuilder builder)
         {
-            PromptIfInteractive(true);
+            CheckAndCreateOutputPath(_outputPath);
 
-            DfsClient dfsClient = new DfsClient(DfsConfiguration);
+            var input = builder.CreateRecordReader<GenSortRecord>(_inputPath, typeof(GenSortRecordReader));
+            var collector1 = new RecordCollector<ValSortRecord>(null, null, 1);
+            var collector2 = new RecordCollector<ValSortRecord>(ChannelType.Pipeline, null, 1);
+            var output = builder.CreateRecordWriter<StringWritable>(_outputPath, typeof(TextRecordWriter<StringWritable>), BlockSize, ReplicationFactor);
 
-            CheckAndCreateOutputPath(dfsClient, _outputPath);
+            builder.ProcessRecords(input, collector1.CreateRecordWriter(), typeof(ValSortTask), "ValSortStage");
+            // Not using SortRecords because each ValSortTask produces only one output record, so there's no sense to the merge sort strategy.
+            builder.ProcessRecords(collector1.CreateRecordReader(), collector2.CreateRecordWriter(), typeof(SortTask<ValSortRecord>), "SortStage");
+            builder.ProcessRecords(collector2.CreateRecordReader(), output, typeof(ValSortCombinerTask), "CombinerStage");
+        }
 
-            JobConfiguration job = new JobConfiguration(typeof(ValSortTask).Assembly);
-
-            FileSystemEntry input = GetInputFileSystemEntry(dfsClient, _inputPath);
-            StageConfiguration valSortStage = job.AddInputStage("ValSortStage", input, typeof(ValSortTask), typeof(GenSortRecordReader));
-
-            // Sort the records by input ID, this ensures that the combiner task gets the records in order of file and block so it can easily compre the first and last records
-            // of consecutive files.
-            StageConfiguration sortStage = job.AddStage("SortStage", typeof(SortTask<ValSortRecord>), 1, new InputStageInfo(valSortStage), null, null);
-            StageConfiguration combinerStage = job.AddStage("CombinerStage", typeof(ValSortCombinerTask), 1, new InputStageInfo(sortStage) { ChannelType = ChannelType.Pipeline }, _outputPath, typeof(TextRecordWriter<StringWritable>));
-            _outputFile = combinerStage.DfsOutput.GetPath(1);
-
-            ConfigureDfsOutput(combinerStage);
-
-            JetClient jetClient = new JetClient(JetConfiguration);
-            return jetClient.RunJob(job, typeof(ValSortTask).Assembly.Location).JobId;
+        /// <summary>
+        /// Overrides <see cref="JobBuilderJob.OnJobCreated"/>.
+        /// </summary>
+        /// <param name="job"></param>
+        /// <param name="jobConfiguration"></param>
+        protected override void OnJobCreated(Job job, JobConfiguration jobConfiguration)
+        {
+            _outputFile = jobConfiguration.GetStage("SortStage").GetChildStage("CombinerStage").DfsOutput.GetPath(1);
         }
 
         /// <summary>
