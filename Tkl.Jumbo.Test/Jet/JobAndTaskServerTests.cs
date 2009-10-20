@@ -11,6 +11,7 @@ using Tkl.Jumbo.Jet.Channels;
 using Tkl.Jumbo.Test.Tasks;
 using System.Threading;
 using Tkl.Jumbo.Jet.Tasks;
+using Tkl.Jumbo.Jet.Jobs;
 
 namespace Tkl.Jumbo.Test.Jet
 {
@@ -155,7 +156,7 @@ namespace Tkl.Jumbo.Test.Jet
             StageConfiguration orderInput = config.AddInputStage("OrderInput", dfsClient.NameServer.GetFileInfo("/testjoin/orders"), typeof(EmptyTask<Order>), typeof(RecordFileReader<Order>));
             StageConfiguration orderSort = config.AddStage("OrderSort", typeof(SortTask<Order>), joinTasks, new InputStageInfo(orderInput) { ChannelType = ChannelType.Pipeline }, null, null);
 
-            orderInput.AddSetting(HashPartitionerConstants.EqualityComparerSetting, typeof(OrderJoinComparer).AssemblyQualifiedName);
+            orderInput.AddSetting(PartitionerConstants.EqualityComparerSetting, typeof(OrderJoinComparer).AssemblyQualifiedName);
             orderSort.AddSetting(SortTaskConstants.ComparerSetting, typeof(OrderJoinComparer).AssemblyQualifiedName);
             orderSort.AddSetting(MergeRecordReaderConstants.ComparerSetting, typeof(OrderJoinComparer).AssemblyQualifiedName);
 
@@ -177,6 +178,73 @@ namespace Tkl.Jumbo.Test.Jet
             for( int x = 0; x < joinTasks; ++x )
             {
                 using( DfsInputStream stream = dfsClient.OpenFile(DfsPath.Combine(outputPath, string.Format("Join{0:000}", x+1))) )
+                using( RecordFileReader<CustomerOrder> reader = new RecordFileReader<CustomerOrder>(stream) )
+                {
+                    while( reader.ReadRecord() )
+                    {
+                        actual.Add(reader.CurrentRecord);
+                    }
+                }
+            }
+
+            List<CustomerOrder> expected = (from customer in customers
+                                            join order in orders on customer.Id equals order.CustomerId
+                                            select new CustomerOrder() { CustomerId = customer.Id, ItemId = order.ItemId, Name = customer.Name, OrderId = order.Id }).ToList();
+            expected.Sort();
+            actual.Sort();
+
+            Assert.IsTrue(Utilities.CompareList(expected, actual));
+        }
+
+        [Test]
+        public void TestJobExecutionJobBuilderJoin()
+        {
+            List<Customer> customers = new List<Customer>();
+            List<Order> orders = new List<Order>();
+
+            Utilities.GenerateJoinData(customers, orders, 30000, 3, 100);
+            customers.Randomize();
+            orders.Randomize();
+
+            DfsClient dfsClient = new DfsClient(Dfs.TestDfsCluster.CreateClientConfig());
+            dfsClient.NameServer.CreateDirectory("/testjbjoin");
+            using( DfsOutputStream stream = dfsClient.CreateFile("/testjbjoin/customers") )
+            using( RecordFileWriter<Customer> recordFile = new RecordFileWriter<Customer>(stream) )
+            {
+                foreach( Customer customer in customers )
+                    recordFile.WriteRecord(customer);
+            }
+
+            using( DfsOutputStream stream = dfsClient.CreateFile("/testjbjoin/orders") )
+            using( RecordFileWriter<Order> recordFile = new RecordFileWriter<Order>(stream) )
+            {
+                foreach( Order order in orders )
+                    recordFile.WriteRecord(order);
+            }
+
+            const string outputPath = "/testjbjoinoutput";
+            const int joinTasks = 2;
+
+            JobBuilder builder = new JobBuilder(dfsClient, new JetClient(TestJetCluster.CreateClientConfig()));
+
+            var customerInput = builder.CreateRecordReader<Customer>("/testjbjoin/customers", typeof(RecordFileReader<Customer>));
+            var orderInput = builder.CreateRecordReader<Order>("/testjbjoin/orders", typeof(RecordFileReader<Order>));
+            var customerCollector = new RecordCollector<Customer>(null, null, joinTasks);
+            var orderCollector = new RecordCollector<Order>(null, null, joinTasks);
+            var output = builder.CreateRecordWriter<CustomerOrder>(outputPath, typeof(RecordFileWriter<CustomerOrder>));
+
+            builder.PartitionRecords(customerInput, customerCollector.CreateRecordWriter(), "CustomerInputStage");
+            builder.PartitionRecords(orderInput, orderCollector.CreateRecordWriter(), "OrderInputStage");
+            builder.JoinRecords(customerCollector.CreateRecordReader(), orderCollector.CreateRecordReader(), output, typeof(CustomerOrderJoinRecordReader), null, typeof(OrderJoinComparer));
+
+            dfsClient.NameServer.CreateDirectory(outputPath);
+
+            RunJob(dfsClient, builder.JobConfiguration);
+
+            List<CustomerOrder> actual = new List<CustomerOrder>();
+            for( int x = 0; x < joinTasks; ++x )
+            {
+                using( DfsInputStream stream = dfsClient.OpenFile(DfsPath.Combine(outputPath, string.Format("JoinStage{0:000}", x + 1))) )
                 using( RecordFileReader<CustomerOrder> reader = new RecordFileReader<CustomerOrder>(stream) )
                 {
                     while( reader.ReadRecord() )

@@ -13,7 +13,7 @@ namespace Tkl.Jumbo.Jet
     /// <para>
     ///   You can customize the behaviour of the <see cref="HashPartitioner{T}"/> by specifying a custom <see cref="IEqualityComparer{T}"/>.
     ///   To do this, specify the type name of the custom comparer in the <see cref="StageConfiguration.StageSettings"/> of the stage
-    ///   that produces the records to be partitioned using the <see cref="HashPartitionerConstants.EqualityComparerSetting"/> key.
+    ///   that produces the records to be partitioned using the <see cref="PartitionerConstants.EqualityComparerSetting"/> key.
     /// </para>
     /// <para>
     ///   If you don't specify a comparer, <see cref="EqualityComparer{T}.Default"/> will be used.
@@ -33,7 +33,7 @@ namespace Tkl.Jumbo.Jet
             _comparer = null;
             if( TaskAttemptConfiguration != null )
             {
-                string comparerTypeName = TaskAttemptConfiguration.StageConfiguration.GetSetting(HashPartitionerConstants.EqualityComparerSetting, null);
+                string comparerTypeName = TaskAttemptConfiguration.StageConfiguration.GetSetting(PartitionerConstants.EqualityComparerSetting, null);
                 if( !string.IsNullOrEmpty(comparerTypeName) )
                     _comparer = (IEqualityComparer<T>)JetActivator.CreateInstance(Type.GetType(comparerTypeName, true), DfsConfiguration, JetConfiguration, TaskAttemptConfiguration);
             }

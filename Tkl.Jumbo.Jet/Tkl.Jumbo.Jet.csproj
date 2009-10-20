@@ -85,7 +85,7 @@
     <Compile Include="FileChannelConfigurationElement.cs" />
     <Compile Include="GlobalSuppressions.cs" />
     <Compile Include="HashPartitioner.cs" />
-    <Compile Include="HashPartitionerConstants.cs" />
+    <Compile Include="PartitionerConstants.cs" />
     <Compile Include="IConfigurable.cs" />
     <Compile Include="InputStageInfo.cs" />
     <Compile Include="IPullTask.cs" />

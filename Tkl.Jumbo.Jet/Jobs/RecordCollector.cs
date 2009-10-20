@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using Tkl.Jumbo.IO;
+using Tkl.Jumbo.Jet.Channels;
 
 namespace Tkl.Jumbo.Jet.Jobs
 {
@@ -47,7 +48,7 @@ namespace Tkl.Jumbo.Jet.Jobs
             private readonly RecordCollector<T> _collector;
 
             public CollectorRecordReader(RecordCollector<T> collector)
-                : base(collector._writer.List)
+                : base(collector._writer == null ? (IEnumerable<T>)new T[] { } : collector._writer.List)
             {
                 _collector = collector;
             }
@@ -81,7 +82,7 @@ namespace Tkl.Jumbo.Jet.Jobs
             if( partitions < 0 )
                 throw new ArgumentOutOfRangeException("Partition count cannot be less than zero.", "partitions");
             ChannelType = channelType;
-            PartitionerType = partitionerType ?? typeof(HashPartitioner<T>);
+            PartitionerType = partitionerType;
             // Treat 0 the same as null.
             Partitions = partitions == 0 ? null : partitions;
             MultiInputRecordReaderType = typeof(MultiRecordReader<T>);
@@ -127,7 +128,7 @@ namespace Tkl.Jumbo.Jet.Jobs
         /// <returns>A record reader.</returns>
         public RecordReader<T> CreateRecordReader()
         {
-            if( _writer == null )
+            if( _writer == null && InputChannels == null )
                 throw new InvalidOperationException("You must create a record writer before you can create a record reader.");
             return new CollectorRecordReader(this);
         }
@@ -148,6 +149,16 @@ namespace Tkl.Jumbo.Jet.Jobs
                 return crr.Collector;
             else
                 return null;
+        }
+
+        internal InputStageInfo ToInputStageInfo(ChannelType realChannelType)
+        {
+            return new InputStageInfo(InputStage)
+            {
+                ChannelType = realChannelType,
+                MultiInputRecordReaderType = MultiInputRecordReaderType,
+                PartitionerType = PartitionerType ?? typeof(HashPartitioner<T>)
+            };
         }
     }
 }

@@ -266,7 +266,7 @@ namespace Tkl.Jumbo.Jet.Jobs
             if( taskType == null )
                 throw new ArgumentNullException("taskType");
 
-            stageId = ProcessRecordsInternal<TInput, TOutput>(input, output, taskType, stageId, stageSettings, 0);
+            ProcessRecordsInternal<TInput, TOutput>(input, output, taskType, stageId, stageSettings, 0);
         }
 
         /// <summary>
@@ -456,86 +456,23 @@ namespace Tkl.Jumbo.Jet.Jobs
         /// <typeparam name="T">The type of the records.</typeparam>
         /// <param name="input">The input records to sort.</param>
         /// <param name="output">The record writer receiving the sorted result.</param>
-        /// <remarks>
-        /// <para>
-        ///   If <paramref name="input"/> or <paramref name="output"/> were created by a <see cref="RecordCollector{T}"/>, the partitioner type
-        ///   and number of partitions specified by those collectors will not be used.
-        /// </para>
-        /// </remarks>
         public void SortRecords<T>(RecordReader<T> input, RecordWriter<T> output)
             where T : IWritable, new()
         {
-            if( input == null )
-                throw new ArgumentNullException("input");
-            if( output == null )
-                throw new ArgumentNullException("output");
-
-            RecordCollector<T> inputCollector = RecordCollector<T>.GetCollector(input);
-
-            Type sortTaskType = typeof(SortTask<T>);
-            Type mergeReaderType = typeof(MergeRecordReader<T>);
-
-            ++_sortStages;
-            string sortStageId = "SortStage";
-            if( _sortStages > 1 )
-                sortStageId += _sortStages.ToString(System.Globalization.CultureInfo.InvariantCulture);
-            string mergeStageId = "MergeStage";
-            if( _sortStages > 1 )
-                mergeStageId += _sortStages.ToString(System.Globalization.CultureInfo.InvariantCulture);
-
-            // TODO: Stage names.
-            // DFS input is treated as being a single range; therefore to correctly sort the entire input, we must partition it.
-            // If connecting directly to DFS input, we will therefore gather all into a single partition.
-            // We will always connect an accumulator task to the input. If the input is another task, we pipeline it.
-
-            if( inputCollector == null )
-            {
-                // TODO: As per research diary 16-10-2009, it might be possible to match output channel partitions.
-                // Input is DFS. We will sort it, then merge
-                RecordCollector<T> intermediateCollector = new RecordCollector<T>(null, null, 1);
-                intermediateCollector.MultiInputRecordReaderType = mergeReaderType;
-                ProcessRecords(input, intermediateCollector.CreateRecordWriter(), sortTaskType, sortStageId);
-                // We need an empty task that merges the result and writes to the output.
-                ProcessRecords(intermediateCollector.CreateRecordReader(), output, typeof(EmptyTask<T>), mergeStageId);
-            }
-            else
-            {
-                if( inputCollector.InputStage != null )
-                {
-                    RecordWriter<T> outputWriter = output;
-                    RecordCollector<T> intermediateCollector = null;
-                    // We won't need a second stage if the channel is explicitly pipeline or if we have only one input.
-                    // Unlike Accumulate, we don't need a second stage with one input when writing to a channel because we
-                    // always use internal partitioning anyway.
-                    if( !(inputCollector.ChannelType == ChannelType.Pipeline || inputCollector.InputStage.TaskCount == 1) )
-                    {
-                        intermediateCollector = new RecordCollector<T>(inputCollector.ChannelType, inputCollector.PartitionerType, inputCollector.Partitions);
-                        intermediateCollector.MultiInputRecordReaderType = mergeReaderType;
-                        inputCollector.ChannelType = ChannelType.Pipeline;
-                        outputWriter = intermediateCollector.CreateRecordWriter();
-                    }
-                    else if( inputCollector.ChannelType == null )
-                    {
-                        // Merge not necessary, and channel type was not specified, so use Pipeline
-                        inputCollector.ChannelType = ChannelType.Pipeline;
-                    }
-                    // TODO: As per research diary 16-10-2009, it might be possible to match output channel partitions.
-
-                    ProcessRecords(input, outputWriter, sortTaskType, sortStageId);
-
-                    if( intermediateCollector != null )
-                    {
-                        ProcessRecords(intermediateCollector.CreateRecordReader(), output, typeof(EmptyTask<T>), mergeStageId);
-                    }
-                }
-                else if( inputCollector.InputChannels == null )
-                {
-                    // TODO: This'll need to work much like the DFS input case. Or maybe not; see Accumulate.
-                    throw new NotImplementedException();
-                }
-                else
-                    throw new ArgumentException("The specified record reader was not created by a JobBuilder or RecordCollector.", "input");
-            }
+            SortRecords(input, output, null);
+        }
+        
+        /// <summary>
+        /// Sorts the records using the specified partitioner type.
+        /// </summary>
+        /// <typeparam name="T">The type of the records.</typeparam>
+        /// <param name="input">The input records to sort.</param>
+        /// <param name="output">The record writer receiving the sorted result.</param>
+        /// <param name="comparerType">The <see cref="IComparer{T}"/> to use to compare elements while sorting, or <see langword="null"/> to use <see cref="Comparer{T}.Default"/>.</param>
+        public void SortRecords<T>(RecordReader<T> input, RecordWriter<T> output, Type comparerType)
+            where T : IWritable, new()
+        {
+            SortRecordsInternal<T>(input, output, comparerType, false);
         }
 
         /// <summary>
@@ -547,9 +484,22 @@ namespace Tkl.Jumbo.Jet.Jobs
         public void PartitionRecords<T>(RecordReader<T> input, RecordWriter<T> output)
             where T : IWritable, new()
         {
+            PartitionRecords(input, output, null);
+        }
+        
+        /// <summary>
+        /// Partitions the records according to the partitioning options specified by the output channel, without processing them.
+        /// </summary>
+        /// <typeparam name="T">The type of the records.</typeparam>
+        /// <param name="input">The input records to partition.</param>
+        /// <param name="output">The output to write the partitions to.</param>
+        /// <param name="stageId">The ID of the stage.</param>
+        public void PartitionRecords<T>(RecordReader<T> input, RecordWriter<T> output, string stageId)
+            where T : IWritable, new()
+        {
             if( RecordCollector<T>.GetCollector(output) == null )
                 throw new ArgumentException("The output of a partitioning operation must be a RecordCollector.", "output");
-            ProcessRecords(input, output, typeof(EmptyTask<T>));
+            ProcessRecords(input, output, typeof(EmptyTask<T>), stageId);
         }
 
         /// <summary>
@@ -644,7 +594,7 @@ namespace Tkl.Jumbo.Jet.Jobs
         /// <param name="joinRecordReader"></param>
         /// <param name="outerComparer"></param>
         /// <param name="innerComparer"></param>
-        public void Join<TOuter, TInner, TResult>(RecordReader<TOuter> outerInput, RecordReader<TInner> innerInput, RecordWriter<TResult> output, Type joinRecordReader, Type outerComparer, Type innerComparer)
+        public void JoinRecords<TOuter, TInner, TResult>(RecordReader<TOuter> outerInput, RecordReader<TInner> innerInput, RecordWriter<TResult> output, Type joinRecordReader, Type outerComparer, Type innerComparer)
             where TOuter : class, IWritable, new()
             where TInner : class, IWritable, new()
             where TResult : IWritable, new()
@@ -659,15 +609,71 @@ namespace Tkl.Jumbo.Jet.Jobs
                 throw new ArgumentNullException("joinRecordReader");
             if( !joinRecordReader.IsSubclassOf(typeof(InnerJoinRecordReader<TOuter, TInner, TResult>)) )
                 throw new ArgumentException("The specified join record reader type does not inherit from InnerJoinRecordReader.", "joinRecordReader");
-            if( outerComparer != null && outerComparer.GetInterfaces().Contains(typeof(IComparer<TOuter>)) )
-                throw new ArgumentException("The specified outer comparer does not implement IComparer<TOuter>.", "outerComparer");
-            if( innerComparer != null && innerComparer.GetInterfaces().Contains(typeof(IComparer<TInner>)) )
-                throw new ArgumentException("The specified inner comparer does not implement IComparer<TInner>.", "innerComparer");
+            if( outerComparer != null && !(outerComparer.GetInterfaces().Contains(typeof(IComparer<TOuter>)) && outerComparer.GetInterfaces().Contains(typeof(IEqualityComparer<TOuter>))) )
+                throw new ArgumentException("The specified outer comparer does not implement IComparer<TOuter> or IEqualityComparer<TOuter>.", "outerComparer");
+            if( innerComparer != null && !(innerComparer.GetInterfaces().Contains(typeof(IComparer<TInner>)) && innerComparer.GetInterfaces().Contains(typeof(IEqualityComparer<TInner>))) )
+                throw new ArgumentException("The specified inner comparer does not implement IComparer<TInner> or IEqualityComparer<TInner>.", "innerComparer");
 
-            
+            RecordCollector<TOuter> outerInputCollector = RecordCollector<TOuter>.GetCollector(outerInput);
+            RecordCollector<TInner> innerInputCollector = RecordCollector<TInner>.GetCollector(innerInput);
+            ConfigureInputCollectorForJoin(outerInputCollector, outerComparer);
+            ConfigureInputCollectorForJoin(innerInputCollector, innerComparer);
+
+            RecordCollector<TOuter> outerSortCollector = new RecordCollector<TOuter>(null, outerInputCollector == null ? null : outerInputCollector.PartitionerType, outerInputCollector == null ? 1 : outerInputCollector.Partitions);
+            RecordCollector<TInner> innerSortCollector = new RecordCollector<TInner>(null, innerInputCollector == null ? null : innerInputCollector.PartitionerType, innerInputCollector == null ? 1 : innerInputCollector.Partitions);
+            outerSortCollector.MultiInputRecordReaderType = typeof(MergeRecordReader<TOuter>);
+            innerSortCollector.MultiInputRecordReaderType = typeof(MergeRecordReader<TInner>);
+
+            SortRecordsInternal(outerInput, outerSortCollector.CreateRecordWriter(), outerComparer, true);
+            SortRecordsInternal(innerInput, innerSortCollector.CreateRecordWriter(), innerComparer, true);
+
+            RecordCollector<TResult> outputCollector = RecordCollector<TResult>.GetCollector(output);
+            if( outputCollector == null || !((outputCollector.Partitions == null || outputCollector.Partitions == outerSortCollector.InputStage.InternalPartitionCount) && outputCollector.PartitionerType == null) )
+            {
+                // Writing to the DFS; we need an empty stage to do the join.
+                outputCollector = new RecordCollector<TResult>();
+                outputCollector.InputChannels = new[] { outerSortCollector.ToInputStageInfo(ChannelType.File), innerSortCollector.ToInputStageInfo(ChannelType.File) };
+                outputCollector.MultiInputRecordReaderType = joinRecordReader;
+                outputCollector.Partitions = outerSortCollector.InputStage.InternalPartitionCount;
+
+                // TODO: Unique stage names.
+                ProcessRecords(outputCollector.CreateRecordReader(), output, typeof(EmptyTask<TResult>), "JoinStage");
+            }
+            else
+            {
+                outputCollector.InputChannels = new[] { outerSortCollector.ToInputStageInfo(ChannelType.File), innerSortCollector.ToInputStageInfo(ChannelType.File) };
+                outputCollector.MultiInputRecordReaderType = joinRecordReader;
+                outputCollector.Partitions = outerSortCollector.InputStage.InternalPartitionCount;
+            }
         }
 
-        private string ProcessRecordsInternal<TInput, TOutput>(RecordReader<TInput> input, RecordWriter<TOutput> output, Type taskType, string stageId, IDictionary<string, string> stageSettings, int taskCount)
+        private void ConfigureInputCollectorForJoin<T>(RecordCollector<T> inputCollector, Type comparer) where T : class, IWritable, new()
+        {
+            if( inputCollector != null )
+            {
+                // Set the input channel types to pipeline; this will make sure SortRecords will not add an EmptyTask second stage.
+                if( inputCollector.ChannelType == null )
+                {
+                    inputCollector.ChannelType = ChannelType.Pipeline;
+                }
+                if( comparer != null )
+                {
+                    if( inputCollector.InputStage != null )
+                        inputCollector.InputStage.AddSetting(PartitionerConstants.EqualityComparerSetting, comparer.AssemblyQualifiedName);
+                    else if( inputCollector.InputChannels != null )
+                    {
+                        foreach( InputStageInfo info in inputCollector.InputChannels )
+                        {
+                            info.InputStage.AddSetting(PartitionerConstants.EqualityComparerSetting, comparer.AssemblyQualifiedName);
+                        }
+                    }
+                    else
+                        throw new ArgumentException("The specified input record collector is not being written to.");
+                }
+            }
+        }
+
+        private void ProcessRecordsInternal<TInput, TOutput>(RecordReader<TInput> input, RecordWriter<TOutput> output, Type taskType, string stageId, IDictionary<string, string> stageSettings, int taskCount)
             where TInput : IWritable, new()
             where TOutput : IWritable, new()
         {
@@ -696,7 +702,8 @@ namespace Tkl.Jumbo.Jet.Jobs
                 {
                     if( collector.InputStage != null || collector.InputChannels != null )
                         throw new ArgumentException("Cannot write to the specified record writer, because that writer is already used by another stage.", "output");
-                    _assemblies.Add(collector.PartitionerType.Assembly);
+                    if( collector.PartitionerType != null )
+                        _assemblies.Add(collector.PartitionerType.Assembly);
                 }
                 else
                     throw new ArgumentException("Unsupported output record writer.", "output");
@@ -736,9 +743,7 @@ namespace Tkl.Jumbo.Jet.Jobs
                 // - The channel type is pipeline and taskCount is one.
                 // - The channel type is not specified, the input stage is not a child stage, and the task count, partitioner type and multi input record 
                 //   reader type are the same as the EmptyTask's input.
-                if( inputCollector.InputStage != null && inputCollector.InputStage.TaskType == typeof(EmptyTask<TInput>) &&
-                    ((inputCollector.ChannelType == ChannelType.Pipeline && taskCount == 1) ||
-                     (inputCollector.ChannelType == null && inputCollector.InputStage.Parent == null && taskCount == inputCollector.InputStage.TaskCount && MatchInputChannelSettings(inputCollector.InputStage, inputCollector.PartitionerType, inputCollector.MultiInputRecordReaderType))) )
+                if( CanReplaceEmptyTask<TInput>(taskCount, inputCollector) )
                 {
                     // TODO: Under these circumstances, if the input stage task is something other than EmptyTask we could still pipeline this stage rather than use file or TCP.
 
@@ -759,12 +764,7 @@ namespace Tkl.Jumbo.Jet.Jobs
                     InputStageInfo[] inputStages;
                     if( inputCollector.InputStage != null )
                     {
-                        inputStages = new[] { new InputStageInfo(inputCollector.InputStage)
-                        {
-                            ChannelType = channelType,
-                            MultiInputRecordReaderType = inputCollector.MultiInputRecordReaderType,
-                            PartitionerType = inputCollector.PartitionerType
-                        } };
+                        inputStages = new[] { inputCollector.ToInputStageInfo(channelType) };
                     }
                     else
                         inputStages = inputCollector.InputChannels;
@@ -795,7 +795,17 @@ namespace Tkl.Jumbo.Jet.Jobs
 
             if( !object.Equals(taskType.Assembly, _dynamicAssembly) )
                 _assemblies.Add(taskType.Assembly);
-            return stageId;
+        }
+
+        private bool CanReplaceEmptyTask<TInput>(int taskCount, RecordCollector<TInput> inputCollector) where TInput : IWritable, new()
+        {
+            // We can replace an empty task if:
+            // - The channel type is pipeline and taskCount is one.
+            // - The channel type is not specified, the input stage is not a child stage, and the task count, partitioner type and multi input record 
+            //   reader type are the same as the EmptyTask's input.
+            return inputCollector.InputStage != null && inputCollector.InputStage.TaskType == typeof(EmptyTask<TInput>) &&
+                                ((inputCollector.ChannelType == ChannelType.Pipeline && taskCount == 1) ||
+                                 (inputCollector.ChannelType == null && inputCollector.InputStage.Parent == null && taskCount == inputCollector.InputStage.TaskCount && MatchInputChannelSettings(inputCollector.InputStage, inputCollector.PartitionerType, inputCollector.MultiInputRecordReaderType)));
         }
 
         private void ProcessRecords<TInput, TOutput>(RecordReader<TInput> input, RecordWriter<TOutput> output, MethodInfo taskMethod, IDictionary<string, string> stageSettings, int taskCount, bool useConfiguration, bool useInput)
@@ -876,10 +886,103 @@ namespace Tkl.Jumbo.Jet.Jobs
             if( inputStages.Length == 1 )
             {
                 StageConfiguration inputStage = inputStages[0];
-                return inputStage.OutputChannel.PartitionerType.Type == partitionerType && inputStage.OutputChannel.MultiInputRecordReaderType.Type == multiInputRecordReaderType;
+                return (partitionerType == null || inputStage.OutputChannel.PartitionerType.Type == partitionerType) && inputStage.OutputChannel.MultiInputRecordReaderType.Type == multiInputRecordReaderType;
             }
             else
                 return false;
         }
+
+        private void SortRecordsInternal<T>(RecordReader<T> input, RecordWriter<T> output, Type comparerType, bool forceNoMergeStage)
+            where T : IWritable, new()
+        {
+            if( input == null )
+                throw new ArgumentNullException("input");
+            if( output == null )
+                throw new ArgumentNullException("output");
+            if( comparerType != null && !comparerType.GetInterfaces().Contains(typeof(IComparer<T>)) )
+                throw new ArgumentException("The specified comparer type does not implement IComparer<T>.");
+
+            RecordCollector<T> inputCollector = RecordCollector<T>.GetCollector(input);
+
+            Type sortTaskType = typeof(SortTask<T>);
+            Type mergeReaderType = typeof(MergeRecordReader<T>);
+
+            ++_sortStages;
+            string sortStageId = "SortStage";
+            if( _sortStages > 1 )
+                sortStageId += _sortStages.ToString(System.Globalization.CultureInfo.InvariantCulture);
+            string mergeStageId = "MergeStage";
+            if( _sortStages > 1 )
+                mergeStageId += _sortStages.ToString(System.Globalization.CultureInfo.InvariantCulture);
+
+            // TODO: Stage names.
+            // DFS input is treated as being a single range; therefore to correctly sort the entire input, we must partition it.
+            // If connecting directly to DFS input, we will therefore gather all into a single partition.
+            // We will always connect an accumulator task to the input. If the input is another task, we pipeline it.
+
+            SettingsDictionary sortStageSettings = null;
+            if( comparerType != null )
+            {
+                // The merge record reader will automatically read the comparer type from the input stage as well, so we don't need to
+                // specify anything else for that.
+                _assemblies.Add(comparerType.Assembly);
+                sortStageSettings = new SettingsDictionary();
+                sortStageSettings.Add(SortTaskConstants.ComparerSetting, comparerType.AssemblyQualifiedName);
+            }
+
+            if( inputCollector == null )
+            {
+                if( forceNoMergeStage )
+                    ProcessRecords(input, output, sortTaskType, sortStageId, sortStageSettings);
+                else
+                {
+                    // TODO: As per research diary 16-10-2009, it might be possible to match output channel partitions.
+                    // Input is DFS. We will sort it, then merge
+                    RecordCollector<T> intermediateCollector = new RecordCollector<T>(null, null, 1);
+                    intermediateCollector.MultiInputRecordReaderType = mergeReaderType;
+                    ProcessRecords(input, intermediateCollector.CreateRecordWriter(), sortTaskType, sortStageId, sortStageSettings);
+                    // We need an empty task that merges the result and writes to the output.
+                    ProcessRecords(intermediateCollector.CreateRecordReader(), output, typeof(EmptyTask<T>), mergeStageId);
+                }
+            }
+            else
+            {
+                if( inputCollector.InputStage != null )
+                {
+                    RecordWriter<T> outputWriter = output;
+                    RecordCollector<T> intermediateCollector = null;
+                    // We won't need a second stage if the channel is explicitly pipeline or if we have only one input.
+                    // Unlike Accumulate, we don't need a second stage with one input when writing to a channel because we
+                    // always use internal partitioning anyway.
+                    if( !(forceNoMergeStage || inputCollector.ChannelType == ChannelType.Pipeline || inputCollector.InputStage.TaskCount == 1) )
+                    {
+                        intermediateCollector = new RecordCollector<T>(inputCollector.ChannelType, inputCollector.PartitionerType, inputCollector.Partitions);
+                        intermediateCollector.MultiInputRecordReaderType = mergeReaderType;
+                        inputCollector.ChannelType = ChannelType.Pipeline;
+                        outputWriter = intermediateCollector.CreateRecordWriter();
+                    }
+                    else if( inputCollector.ChannelType == null )
+                    {
+                        // Merge not necessary, and channel type was not specified, so use Pipeline
+                        inputCollector.ChannelType = ChannelType.Pipeline;
+                    }
+                    // TODO: As per research diary 16-10-2009, it might be possible to match output channel partitions.
+
+                    ProcessRecords(input, outputWriter, sortTaskType, sortStageId, sortStageSettings);
+
+                    if( intermediateCollector != null )
+                    {
+                        ProcessRecords(intermediateCollector.CreateRecordReader(), output, typeof(EmptyTask<T>), mergeStageId);
+                    }
+                }
+                else if( inputCollector.InputChannels == null )
+                {
+                    // TODO: This'll need to work much like the DFS input case. Or maybe not; see Accumulate.
+                    throw new NotImplementedException();
+                }
+                else
+                    throw new ArgumentException("The specified record reader was not created by a JobBuilder or RecordCollector.", "input");
+            }
+        }    
     }
 }
