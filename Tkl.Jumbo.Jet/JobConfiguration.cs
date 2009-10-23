@@ -225,7 +225,6 @@ namespace Tkl.Jumbo.Jet
 
                     foreach( InputStageInfo info in inputStages )
                     {
-                        Type inputStageOutputType = info.InputStage.TaskType.FindGenericInterfaceType(typeof(ITask<,>)).GetGenericArguments()[1];
                         ChannelConfiguration channel = new ChannelConfiguration()
                         {
                             ChannelType = info.ChannelType,
@@ -523,25 +522,6 @@ namespace Tkl.Jumbo.Jet
             return stage;
         }
 
-        private static void ValidateChannelRecordType(Type inputType, IEnumerable<StageConfiguration> inputStages)
-        {
-            // Validate channel type
-            foreach( StageConfiguration stage in inputStages )
-            {
-                if( stage.DfsOutput != null || stage.OutputChannel != null )
-                    throw new ArgumentException(string.Format(System.Globalization.CultureInfo.CurrentCulture, "Input stage {0} already has an output channel or DFS output.", stage.StageId), "inputStages");
-                Type inputTaskType = stage.TaskType;
-                // We skip the check if the task type isn't stored or if the input type isn't specified.
-                if( !(inputTaskType == null || inputType == null)  )
-                {
-                    Type inputTaskInterfaceType = inputTaskType.FindGenericInterfaceType(typeof(ITask<,>));
-                    Type inputTaskOutputType = inputTaskInterfaceType.GetGenericArguments()[1];
-                    if( inputTaskOutputType != inputType )
-                        throw new ArgumentException(string.Format(System.Globalization.CultureInfo.CurrentCulture, "Input stage {0} has output type {1} instead of the required type {2}.", stage.StageId, inputTaskOutputType, inputType), "inputStages");
-                }
-            }
-        }
-
         internal static void ValidateOutputType(string outputPath, Type recordWriterType, Type taskInterfaceType)
         {
             if( outputPath != null )
@@ -553,20 +533,6 @@ namespace Tkl.Jumbo.Jet
                 if( outputType != recordType )
                     throw new ArgumentException(string.Format(System.Globalization.CultureInfo.CurrentCulture, "The specified record type {0} is not identical to the specified task type's output type {1}.", recordType, outputType));
             }
-        }
-
-
-        private static Type FindGenericInterfaceType(Type type, Type interfaceType)
-        {
-            // This is necessary because while in .Net you can use type.GetInterface with a generic interface type,
-            // in Mono that only works if you specify the type arguments which is precisely what we don't want.
-            Type[] interfaces = type.GetInterfaces();
-            foreach( Type i in interfaces )
-            {
-                if( i.IsGenericType && i.GetGenericTypeDefinition() == interfaceType )
-                    return i;
-            }
-            throw new ArgumentException(string.Format(System.Globalization.CultureInfo.CurrentCulture, "Type {0} does not implement interface {1}.", type, interfaceType));
         }
 
         private static Type FindGenericBaseType(Type type, Type baseType)

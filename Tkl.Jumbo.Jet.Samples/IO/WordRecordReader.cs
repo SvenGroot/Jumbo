@@ -20,7 +20,6 @@ namespace Tkl.Jumbo.Jet.Samples.IO
         {
             private Stream _stream;
             private byte[] _buffer;
-            private char[] _charBuffer;
             private int _bufferPos;
             private int _bufferLength;
             private readonly Utf8StringWritable _word = new Utf8StringWritable();
@@ -29,7 +28,6 @@ namespace Tkl.Jumbo.Jet.Samples.IO
             {
                 _stream = stream;
                 _buffer = new byte[bufferSize];
-                _charBuffer = new char[Encoding.UTF8.GetMaxCharCount(bufferSize) + 1];
             }
 
             public Utf8StringWritable Word
@@ -96,7 +94,6 @@ namespace Tkl.Jumbo.Jet.Samples.IO
         private Utf8StringWritable _word;
         private long _position;
         private long _end;
-        private StringWritable _record = new StringWritable();
 
         /// <summary>
         /// Initializes a new instance of the <see

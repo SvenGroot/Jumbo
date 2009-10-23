@@ -6,6 +6,11 @@ using Tkl.Jumbo.IO;
 
 namespace Tkl.Jumbo.Jet.Jobs
 {
+
+  // Bug in Mono C# compiler gives XML comment warning about delegates
+#pragma warning disable 1587
+#pragma warning disable 1591
+
     /// <summary>
     /// Delegate for tasks.
     /// </summary>
@@ -57,4 +62,8 @@ namespace Tkl.Jumbo.Jet.Jobs
     /// <param name="configuration">The configuration for the task.</param>
     public delegate void OutputOnlyTaskFunctionWithConfiguration<T>(RecordWriter<T> output, TaskAttemptConfiguration configuration)
         where T : IWritable, new();
+
+#pragma warning restore 1587
+#pragma warning restore 1591
+
 }

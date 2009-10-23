@@ -23,7 +23,6 @@ namespace Tkl.Jumbo.Test.Jet
         public void Setup()
         {
             _cluster = new TestJetCluster(16777216, true, 2, CompressionType.None, true);
-            DfsClient dfsClient = new DfsClient(Dfs.TestDfsCluster.CreateClientConfig());
             Utilities.TraceLineAndFlush("File generation complete.");
         }
 

@@ -145,7 +145,6 @@ namespace Tkl.Jumbo.Jet.Channels
         {
             int outputTaskNumber = TaskExecution.Configuration.TaskId.TaskNumber;
             IList<StageConfiguration> inputStages = TaskExecution.Configuration.JobConfiguration.GetPipelinedStages(InputStage.CompoundStageId);
-            int totalTaskCount = InputStage.TotalTaskCount;
 
             int remainder = outputTaskNumber;
             TaskId result = null;

@@ -22,7 +22,6 @@ namespace DataServerApplication
         private readonly DfsConfiguration _config;
 
         private INameServerHeartbeatProtocol _nameServer;
-        private INameServerClientProtocol _nameServerClient;
         private List<HeartbeatData> _pendingHeartbeatData = new List<HeartbeatData>();
 
         private List<Guid> _blocks = new List<Guid>();
@@ -31,7 +30,6 @@ namespace DataServerApplication
         private volatile bool _running;
         private readonly Queue<ReplicateBlockHeartbeatResponse> _blocksToReplicate = new Queue<ReplicateBlockHeartbeatResponse>();
         private readonly Thread _replicateBlocksThread;
-        private readonly ManualResetEvent _abortEvent = new ManualResetEvent(false);
 
         public DataServer()
             : this(DfsConfiguration.GetConfiguration())
@@ -49,7 +47,6 @@ namespace DataServerApplication
             System.IO.Directory.CreateDirectory(_temporaryBlockStorageDirectory);
             _port = config.DataServer.Port;
             _nameServer = DfsClient.CreateNameServerHeartbeatClient(config);
-            _nameServerClient = DfsClient.CreateNameServerClient(config);
 
             _replicateBlocksThread = new Thread(ReplicateBlocksThread) { Name = "ReplicateBlockThread", IsBackground = true };
 
@@ -362,7 +359,7 @@ namespace DataServerApplication
             }
         }
 
-        private void StatusUpdateThread()
+	  /*private void StatusUpdateThread()
         {
             int interval = _config.DataServer.StatusUpdateInterval * 1000;
             while( _running )
@@ -375,6 +372,6 @@ namespace DataServerApplication
                 _log.InfoFormat("Sending updated disk space status to the name server: total = {0}, free = {1}, DFS used = {2}.", data.DiskSpaceTotal, data.DiskSpaceFree, data.DiskSpaceUsed);
                 AddDataForNextHeartbeat(data);
             }
-        }
+			}*/
     }
 }

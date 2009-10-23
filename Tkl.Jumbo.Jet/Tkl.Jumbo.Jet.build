@@ -41,6 +41,6 @@
         <include name="../Tkl.Jumbo.Dfs/nantbin/*.*"/>
       </fileset>
     </copy>
-    <exec program="sgen" commandline="/force /type:Tkl.Jumbo.Jet.JobConfiguration /assembly:nantbin/Tkl.Jumbo.Jet.dll /compiler:/keyfile:jumbo.snk" />
+    <exec program="sgen" commandline="/force /type:Tkl.Jumbo.Jet.JobConfiguration /assembly:nantbin/Tkl.Jumbo.Jet.dll /reference:nantbin/Tkl.Jumbo.dll /compiler:/keyfile:jumbo.snk" />
   </target>
 </project>

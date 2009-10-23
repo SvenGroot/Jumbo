@@ -170,7 +170,7 @@ namespace Tkl.Jumbo.Test.Jet
             {
                 MultiInputRecordReaderType = typeof(MergeRecordReader<Order>)
             };
-            StageConfiguration joinStage = config.AddStage("Join", typeof(EmptyTask<CustomerOrder>), joinTasks, new[] { customerSortInfo, orderSortInfo }, typeof(CustomerOrderJoinRecordReader), outputPath, typeof(RecordFileWriter<CustomerOrder>));
+            config.AddStage("Join", typeof(EmptyTask<CustomerOrder>), joinTasks, new[] { customerSortInfo, orderSortInfo }, typeof(CustomerOrderJoinRecordReader), outputPath, typeof(RecordFileWriter<CustomerOrder>));
 
             RunJob(dfsClient, config);
 
