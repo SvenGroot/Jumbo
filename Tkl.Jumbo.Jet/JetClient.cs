@@ -220,6 +220,7 @@ namespace Tkl.Jumbo.Jet
         /// <param name="dfsClient">A <see cref="DfsClient"/> used to access the Jumbo DFS.</param>
         /// <param name="files">The local paths of the files to store in the job directory on the DFS. This should include the assembly containing the task classes.</param>
         /// <returns>An instance of the <see cref="Job"/> class describing the job that was started.</returns>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1031:DoNotCatchGeneralExceptionTypes")]
         public void RunJob(Job job, JobConfiguration config, DfsClient dfsClient, params string[] files)
         {
             if( config == null )

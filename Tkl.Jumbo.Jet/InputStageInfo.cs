@@ -22,7 +22,7 @@ namespace Tkl.Jumbo.Jet
         public InputStageInfo(StageConfiguration inputStage)
         {
             if( inputStage == null )
-                throw new ArgumentNullException("inputStage ");
+                throw new ArgumentNullException("inputStage");
 
             InputStage = inputStage;
         }
@@ -78,7 +78,7 @@ namespace Tkl.Jumbo.Jet
             Type partitionerInterfaceType = PartitionerType.FindGenericInterfaceType(typeof(IPartitioner<>));
             Type partitionedType = partitionerInterfaceType.GetGenericArguments()[0];
             if( partitionedType != inputType )
-                throw new ArgumentException(string.Format(System.Globalization.CultureInfo.CurrentCulture, "The partitioner type {0} cannot partition objects of type {1}.", PartitionerType, inputType), "partitionerType");
+                throw new ArgumentException(string.Format(System.Globalization.CultureInfo.CurrentCulture, "The partitioner type {0} cannot partition objects of type {1}.", PartitionerType, inputType));
         }
 
         internal void ValidateTypes(Type stageMultiInputRecordReaderType, Type inputType)
@@ -109,11 +109,11 @@ namespace Tkl.Jumbo.Jet
             baseType = MultiInputRecordReaderType.FindGenericBaseType(typeof(MultiInputRecordReader<>), true);
             recordType = baseType.GetGenericArguments()[0];
             if( !acceptedInputTypes.Contains(recordType) )
-                throw new ArgumentException(string.Format(System.Globalization.CultureInfo.CurrentCulture, "The specified channel multi input record reader type {0} doesn't return objects of the correct type.", MultiInputRecordReaderType), "multiInputRecordReaderType");
+                throw new ArgumentException(string.Format(System.Globalization.CultureInfo.CurrentCulture, "The specified channel multi input record reader type {0} doesn't return objects of the correct type.", MultiInputRecordReaderType));
 
             List<Type> channelAcceptedInputTypes = GetMultiInputRecordReaderAcceptedInputTypes(MultiInputRecordReaderType, recordType);
             if( !channelAcceptedInputTypes.Contains(stageOutputType) )
-                throw new ArgumentException(string.Format(System.Globalization.CultureInfo.CurrentCulture, "The specified channel multi input record reader type {0} doesn't accept objects of the correct type.", MultiInputRecordReaderType), "multiInputRecordReaderType");
+                throw new ArgumentException(string.Format(System.Globalization.CultureInfo.CurrentCulture, "The specified channel multi input record reader type {0} doesn't accept objects of the correct type.", MultiInputRecordReaderType));
         }
 
         private static List<Type> GetMultiInputRecordReaderAcceptedInputTypes(Type multiInputRecordReaderType, Type inputType)

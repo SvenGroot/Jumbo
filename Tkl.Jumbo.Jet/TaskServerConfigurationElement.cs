@@ -115,7 +115,7 @@ namespace Tkl.Jumbo.Jet
         /// child stage tasks, if there is more than one.
         /// </summary>
         [ConfigurationProperty("multiThreadedTaskFinish", DefaultValue = false, IsRequired = false, IsKey = false)]
-        public bool MultiThreadedTaskFinish
+        public bool MultithreadedTaskFinish
         {
             get { return (bool)this["multiThreadedTaskFinish"]; }
             set { this["multiThreadedTaskFinish"] = value; }

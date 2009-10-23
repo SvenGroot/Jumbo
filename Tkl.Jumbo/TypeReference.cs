@@ -27,7 +27,7 @@ namespace Tkl.Jumbo
         /// <summary>
         /// Gets or sets the type that this <see cref="TypeReference"/> references.
         /// </summary>
-        public Type Type
+        public Type ReferencedType
         {
             get
             {
@@ -76,6 +76,56 @@ namespace Tkl.Jumbo
         public static implicit operator TypeReference(Type type)
         {
             return new TypeReference(type);
+        }
+
+        /// <summary>
+        /// Determines whether the specified <see cref="Object"/> is equal to the current <see cref="TypeReference"/>.
+        /// </summary>
+        /// <param name="obj">The <see cref="Object"/> to compare to the current <see cref="TypeReference"/>.</param>
+        /// <returns><see langword="true"/> if the specified <see cref="Object"/> is equal to the current <see cref="TypeReference"/>; otherwise, <see langword="false"/>.</returns>
+        public override bool Equals(object obj)
+        {
+            if( obj is TypeReference )
+            {
+                TypeReference right = (TypeReference)obj;
+                return right.ReferencedType == ReferencedType;
+            }
+            else
+                return false;
+        }
+
+        /// <summary>
+        /// Serves as a hash function for a particular type. 
+        /// </summary>
+        /// <returns>A hash code for the current <see cref="Object"/>.</returns>
+        public override int GetHashCode()
+        {
+            if( ReferencedType == null )
+                return 0;
+            else
+                return ReferencedType.GetHashCode();
+        }
+
+        /// <summary>
+        /// Determines whether two specified <see cref="TypeReference"/> object have the same value.
+        /// </summary>
+        /// <param name="left">A <see cref="TypeReference"/>.</param>
+        /// <param name="right">A <see cref="TypeReference"/>.</param>
+        /// <returns><see langword="true"/> if the value of <paramref name="left"/> is the same as the value of <paramref name="right"/>; otherwise, <see langword="false"/>.</returns>
+        public static bool operator ==(TypeReference left, TypeReference right)
+        {
+            return object.Equals(left, right);
+        }
+
+        /// <summary>
+        /// Determines whether two specified <see cref="TypeReference"/> object have different values.
+        /// </summary>
+        /// <param name="left">A <see cref="TypeReference"/>.</param>
+        /// <param name="right">A <see cref="TypeReference"/>.</param>
+        /// <returns><see langword="true"/> if the value of <paramref name="left"/> is different from the value of <paramref name="right"/>; otherwise, <see langword="false"/>.</returns>
+        public static bool operator !=(TypeReference left, TypeReference right)
+        {
+            return !object.Equals(left, right);
         }
 
         #region IXmlSerializable Members

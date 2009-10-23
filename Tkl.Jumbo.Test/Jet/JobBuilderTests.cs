@@ -608,7 +608,7 @@ namespace Tkl.Jumbo.Test.Jet
             Assert.AreEqual(stageId, stage.StageId);
             Assert.AreEqual(taskCount, stage.TaskCount);
             Assert.AreEqual(taskType, stage.TaskType);
-            Assert.AreEqual(stageMultiInputRecordReader, stage.MultiInputRecordReaderType.Type);
+            Assert.AreEqual(stageMultiInputRecordReader, stage.MultiInputRecordReaderType.ReferencedType);
             if( recordReaderType != null )
             {
                 Assert.IsNull(stage.Parent);
@@ -644,8 +644,8 @@ namespace Tkl.Jumbo.Test.Jet
                 {
                     Assert.IsNull(stage.OutputChannel);
                     Assert.IsNotNull(stage.ChildStage);
-                    Assert.IsNotNull(stage.GetChildStage(outputStageId));
-                    Assert.AreEqual(partitionerType, stage.ChildStagePartitionerType.Type);
+                    Assert.IsNotNull(stage.GetNamedChildStage(outputStageId));
+                    Assert.AreEqual(partitionerType, stage.ChildStagePartitionerType.ReferencedType);
                 }
                 else
                 {
@@ -653,8 +653,8 @@ namespace Tkl.Jumbo.Test.Jet
                     Assert.AreEqual(channelType, stage.OutputChannel.ChannelType);
                     Assert.AreEqual(outputStageId, stage.OutputChannel.OutputStage);
                     Assert.AreEqual(channelConnectivity, stage.OutputChannel.Connectivity);
-                    Assert.AreEqual(partitionerType, stage.OutputChannel.PartitionerType.Type);
-                    Assert.AreEqual(multiInputRecordReader, stage.OutputChannel.MultiInputRecordReaderType.Type);
+                    Assert.AreEqual(partitionerType, stage.OutputChannel.PartitionerType.ReferencedType);
+                    Assert.AreEqual(multiInputRecordReader, stage.OutputChannel.MultiInputRecordReaderType.ReferencedType);
                 }
             }
         }

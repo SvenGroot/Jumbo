@@ -178,8 +178,8 @@ namespace Tkl.Jumbo.Test.Jet
             Assert.AreEqual(ChannelConnectivity.Full, channel.Connectivity);
             Assert.IsFalse(channel.ForceFileDownload);
             Assert.AreEqual(typeof(HashPartitioner<Int32Writable>).AssemblyQualifiedName, channel.PartitionerType.TypeName);
-            Assert.AreEqual(typeof(HashPartitioner<Int32Writable>), channel.PartitionerType.Type);
-            Assert.AreEqual(typeof(MultiRecordReader<Int32Writable>), channel.MultiInputRecordReaderType.Type);
+            Assert.AreEqual(typeof(HashPartitioner<Int32Writable>), channel.PartitionerType.ReferencedType);
+            Assert.AreEqual(typeof(MultiRecordReader<Int32Writable>), channel.MultiInputRecordReaderType.ReferencedType);
             Assert.AreEqual(typeof(MultiRecordReader<Int32Writable>).AssemblyQualifiedName, channel.MultiInputRecordReaderType.TypeName);
             Assert.AreEqual(stage.StageId, channel.OutputStage);
             channel = inputStage2.OutputChannel;
@@ -187,8 +187,8 @@ namespace Tkl.Jumbo.Test.Jet
             Assert.AreEqual(ChannelConnectivity.Full, channel.Connectivity);
             Assert.IsFalse(channel.ForceFileDownload);
             Assert.AreEqual(typeof(HashPartitioner<Int32Writable>).AssemblyQualifiedName, channel.PartitionerType.TypeName);
-            Assert.AreEqual(typeof(HashPartitioner<Int32Writable>), channel.PartitionerType.Type);
-            Assert.AreEqual(typeof(MultiRecordReader<Int32Writable>), channel.MultiInputRecordReaderType.Type);
+            Assert.AreEqual(typeof(HashPartitioner<Int32Writable>), channel.PartitionerType.ReferencedType);
+            Assert.AreEqual(typeof(MultiRecordReader<Int32Writable>), channel.MultiInputRecordReaderType.ReferencedType);
             Assert.AreEqual(typeof(MultiRecordReader<Int32Writable>).AssemblyQualifiedName, channel.MultiInputRecordReaderType.TypeName);
             Assert.AreEqual(stage.StageId, channel.OutputStage);
         }
@@ -227,8 +227,8 @@ namespace Tkl.Jumbo.Test.Jet
             Assert.AreEqual(ChannelConnectivity.PointToPoint, channel.Connectivity);
             Assert.IsFalse(channel.ForceFileDownload);
             Assert.AreEqual(typeof(HashPartitioner<Int32Writable>).AssemblyQualifiedName, channel.PartitionerType.TypeName); // not important but anyway
-            Assert.AreEqual(typeof(HashPartitioner<Int32Writable>), channel.PartitionerType.Type); // not important but anyway
-            Assert.AreEqual(typeof(MultiRecordReader<Int32Writable>), channel.MultiInputRecordReaderType.Type);
+            Assert.AreEqual(typeof(HashPartitioner<Int32Writable>), channel.PartitionerType.ReferencedType); // not important but anyway
+            Assert.AreEqual(typeof(MultiRecordReader<Int32Writable>), channel.MultiInputRecordReaderType.ReferencedType);
             Assert.AreEqual(typeof(MultiRecordReader<Int32Writable>).AssemblyQualifiedName, channel.MultiInputRecordReaderType.TypeName);
             Assert.AreEqual(stage.StageId, channel.OutputStage);
         }

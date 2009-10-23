@@ -43,7 +43,7 @@ namespace Tkl.Jumbo.Test.Jet
             jetConfig.TaskServer.MaxNonInputTasks = maxTasks;
             jetConfig.TaskServer.FileServerPort = TaskServerFileServerPort;
             jetConfig.FileChannel.CompressionType = compressionType;
-            jetConfig.TaskServer.MultiThreadedTaskFinish = multiThreadedTaskFinish;
+            jetConfig.TaskServer.MultithreadedTaskFinish = multiThreadedTaskFinish;
             if( Environment.OSVersion.Platform == PlatformID.Unix )
                 jetConfig.TaskServer.ListenIPv4AndIPv6 = false;
             DfsConfiguration dfsConfig = Dfs.TestDfsCluster.CreateClientConfig();

@@ -77,7 +77,7 @@ namespace Tkl.Jumbo.Jet.Samples
         /// <param name="jobConfiguration"></param>
         protected override void OnJobCreated(Job job, JobConfiguration jobConfiguration)
         {
-            _outputFile = jobConfiguration.GetStage("SortStage").GetChildStage("CombinerStage").DfsOutput.GetPath(1);
+            _outputFile = jobConfiguration.GetStage("SortStage").GetNamedChildStage("CombinerStage").DfsOutput.GetPath(1);
         }
 
         /// <summary>

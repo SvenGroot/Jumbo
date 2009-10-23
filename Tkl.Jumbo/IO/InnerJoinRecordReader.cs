@@ -18,6 +18,7 @@ namespace Tkl.Jumbo.IO
     ///   <see cref="InputTypeAttribute"/> attributes with both <typeparamref name="TOuter"/> and <typeparamref name="TInner"/>.
     /// </para>
     /// </remarks>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1005:AvoidExcessiveParametersOnGenericTypes")]
     public abstract class InnerJoinRecordReader<TOuter, TInner, TResult> : MultiInputRecordReader<TResult>
         where TOuter : class, IWritable, new()
         where TInner : class, IWritable, new()
@@ -38,7 +39,7 @@ namespace Tkl.Jumbo.IO
         /// <param name="allowRecordReuse"><see langword="true"/> if the record reader may reuse record instances; otherwise, <see langword="false"/>.</param>
         /// <param name="bufferSize">The buffer size to use to read input files.</param>
         /// <param name="compressionType">The compression type to us to read input files.</param>
-        public InnerJoinRecordReader(int totalInputCount, bool allowRecordReuse, int bufferSize, CompressionType compressionType)
+        protected InnerJoinRecordReader(int totalInputCount, bool allowRecordReuse, int bufferSize, CompressionType compressionType)
             : base(totalInputCount, allowRecordReuse, bufferSize, compressionType)
         {
             if( totalInputCount != 2 )

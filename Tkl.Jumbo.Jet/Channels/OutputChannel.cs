@@ -62,7 +62,7 @@ namespace Tkl.Jumbo.Jet.Channels
                 {
                     string outputStageId = channelConfig.OutputStage;
 
-                    int outputTaskNumber = GetOutputTaskNumber(channelConfig);
+                    int outputTaskNumber = GetOutputTaskNumber();
 
                     _outputTaskIds.Add(TaskId.CreateTaskIdString(outputStageId, outputTaskNumber));
                 }
@@ -100,14 +100,15 @@ namespace Tkl.Jumbo.Jet.Channels
         /// <typeparam name="T">The type of the records.</typeparam>
         /// <param name="writers">The writers to write the records to.</param>
         /// <returns>A <see cref="MultiRecordWriter{T}"/> that serves as the record writer for the channel.</returns>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1006:DoNotNestGenericTypesInMemberSignatures")]
         protected MultiRecordWriter<T> CreateMultiRecordWriter<T>(IEnumerable<RecordWriter<T>> writers)
             where T : IWritable, new()
         {
-            IPartitioner<T> partitioner = (IPartitioner<T>)JetActivator.CreateInstance(TaskExecution.Configuration.StageConfiguration.OutputChannel.PartitionerType.Type, TaskExecution);
+            IPartitioner<T> partitioner = (IPartitioner<T>)JetActivator.CreateInstance(TaskExecution.Configuration.StageConfiguration.OutputChannel.PartitionerType.ReferencedType, TaskExecution);
             return new MultiRecordWriter<T>(writers, partitioner);
         }
 
-        private int GetOutputTaskNumber(ChannelConfiguration channelConfig)
+        private int GetOutputTaskNumber()
         {
             // TODO: Re-evaluate connecting rules for PointToPoint.
             // If there are multiple input stages, we need to check which one we are and adjust the output task number according to the

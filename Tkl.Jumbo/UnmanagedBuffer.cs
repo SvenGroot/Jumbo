@@ -38,7 +38,7 @@ namespace Tkl.Jumbo
         /// </summary>
         ~UnmanagedBuffer()
         {
-            Dispose(false);
+            DisposeInternal();
         }
 
         /// <summary>
@@ -130,11 +130,11 @@ namespace Tkl.Jumbo
         /// </summary>
         public void Dispose()
         {
-            Dispose(true);
+            DisposeInternal();
             GC.SuppressFinalize(this);
         }
 
-        private void Dispose(bool disposing)
+        private void DisposeInternal()
         {
             if( _buffer != null )
             {

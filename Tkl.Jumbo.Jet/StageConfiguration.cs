@@ -301,7 +301,7 @@ namespace Tkl.Jumbo.Jet
         /// </summary>
         /// <param name="childStageId">The child stage ID.</param>
         /// <returns>The <see cref="StageConfiguration"/> for the child stage, or <see langword="null"/> if no stage with the specified name exists.</returns>
-        public StageConfiguration GetChildStage(string childStageId)
+        public StageConfiguration GetNamedChildStage(string childStageId)
         {
             if( childStageId == null )
                 throw new ArgumentNullException("childStageId");

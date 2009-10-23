@@ -97,7 +97,7 @@ namespace Tkl.Jumbo.Jet.Channels
             else
             {
                 List<RecordWriter<T>> writers = new List<RecordWriter<T>>();
-                IPartitioner<T> partitioner = (IPartitioner<T>)JetActivator.CreateInstance(_taskExecution.Configuration.StageConfiguration.ChildStagePartitionerType.Type, _taskExecution);
+                IPartitioner<T> partitioner = (IPartitioner<T>)JetActivator.CreateInstance(_taskExecution.Configuration.StageConfiguration.ChildStagePartitionerType.ReferencedType, _taskExecution);
 
                 for( int x = 1; x <= childStage.TaskCount; ++x )
                 {

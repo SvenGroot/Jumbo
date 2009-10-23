@@ -80,7 +80,7 @@ namespace Tkl.Jumbo.Jet.Jobs
         public RecordCollector(Channels.ChannelType? channelType, Type partitionerType, int? partitions)
         {
             if( partitions < 0 )
-                throw new ArgumentOutOfRangeException("Partition count cannot be less than zero.", "partitions");
+                throw new ArgumentOutOfRangeException("partitions", "Partition count cannot be less than zero.");
             ChannelType = channelType;
             PartitionerType = partitionerType;
             // Treat 0 the same as null.

@@ -159,6 +159,7 @@ namespace Tkl.Jumbo.Jet.Jobs
         /// <param name="recordReaderType">The type of the record reader to use.</param>
         /// <returns>An instance of a record reader. Note the return value is not necessarily of the type specified in <paramref name="recordReaderType"/>,
         /// so do not try to cast it.</returns>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1004:GenericMethodsShouldProvideTypeParameter")]
         public RecordReader<T> CreateRecordReader<T>(string input, Type recordReaderType)
             where T : IWritable, new()
         {
@@ -181,6 +182,7 @@ namespace Tkl.Jumbo.Jet.Jobs
         /// <param name="recordWriterType">The type of the record writer to use.</param>
         /// <returns>An instance of a record writer. Note the return value is not necessarily of the type specified in <paramref name="recordWriterType"/>,
         /// so do not try to cast it.</returns>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1004:GenericMethodsShouldProvideTypeParameter")]
         public RecordWriter<T> CreateRecordWriter<T>(string output, Type recordWriterType)
             where T : IWritable, new()
         {
@@ -197,6 +199,7 @@ namespace Tkl.Jumbo.Jet.Jobs
         /// <param name="replicationFactor">The replication factor of the output files, or 0 to use the DFS default replication factor.</param>
         /// <returns>An instance of a record writer. Note the return value is not necessarily of the type specified in <paramref name="recordWriterType"/>,
         /// so do not try to cast it.</returns>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1004:GenericMethodsShouldProvideTypeParameter")]
         public RecordWriter<T> CreateRecordWriter<T>(string output, Type recordWriterType, int blockSize, int replicationFactor)
             where T : IWritable, new()
         {
@@ -205,7 +208,7 @@ namespace Tkl.Jumbo.Jet.Jobs
             if( recordWriterType == null )
                 throw new ArgumentNullException("recordWriterType");
             if( !recordWriterType.IsSubclassOf(typeof(RecordWriter<T>)) )
-                throw new ArgumentException(string.Format(System.Globalization.CultureInfo.CurrentCulture, "recordWriterType does not specify a type that inherits from {0}", typeof(RecordWriter<T>).FullName), "recordReaderType");
+                throw new ArgumentException(string.Format(System.Globalization.CultureInfo.CurrentCulture, "recordWriterType does not specify a type that inherits from {0}", typeof(RecordWriter<T>).FullName), "recordWriterType");
             if( replicationFactor < 0 )
                 throw new InvalidOperationException("Replication factor may not be less than zero.");
             if( blockSize < 0 )
@@ -323,6 +326,7 @@ namespace Tkl.Jumbo.Jet.Jobs
         /// <param name="input">The record reader to read records to process from.</param>
         /// <param name="output">The record writer to write the result to.</param>
         /// <param name="accumulatorTaskType">The accumulator task type.</param>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1006:DoNotNestGenericTypesInMemberSignatures")]
         public void AccumulateRecords<TKey, TValue>(RecordReader<KeyValuePairWritable<TKey, TValue>> input, RecordWriter<KeyValuePairWritable<TKey, TValue>> output, Type accumulatorTaskType)
             where TKey : IWritable, IComparable<TKey>, new()
             where TValue : class, IWritable, new()
@@ -412,6 +416,7 @@ namespace Tkl.Jumbo.Jet.Jobs
         /// <param name="input">The record reader to read records to process from.</param>
         /// <param name="output">The record writer to write the result to.</param>
         /// <param name="accumulator">The accumulator function.</param>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1006:DoNotNestGenericTypesInMemberSignatures")]
         public void AccumulateRecords<TKey, TValue>(RecordReader<KeyValuePairWritable<TKey, TValue>> input, RecordWriter<KeyValuePairWritable<TKey, TValue>> output, AccumulatorFunction<TKey, TValue> accumulator)
             where TKey : IWritable, IComparable<TKey>, new()
             where TValue : class, IWritable, new()
@@ -421,11 +426,11 @@ namespace Tkl.Jumbo.Jet.Jobs
             if( output == null )
                 throw new ArgumentNullException("output");
             if( accumulator == null )
-                throw new ArgumentNullException("task");
+                throw new ArgumentNullException("accumulator");
 
             MethodInfo accumulatorMethod = accumulator.Method;
             if( !(accumulatorMethod.IsStatic && accumulatorMethod.IsPublic) )
-                throw new ArgumentException("The accumulator method specified must be public and static.", "task");
+                throw new ArgumentException("The accumulator method specified must be public and static.", "accumulator");
 
             CreateDynamicAssembly();
 
@@ -647,7 +652,7 @@ namespace Tkl.Jumbo.Jet.Jobs
             }
         }
 
-        private void ConfigureInputCollectorForJoin<T>(RecordCollector<T> inputCollector, Type comparer) where T : class, IWritable, new()
+        private static void ConfigureInputCollectorForJoin<T>(RecordCollector<T> inputCollector, Type comparer) where T : class, IWritable, new()
         {
             if( inputCollector != null )
             {
@@ -726,17 +731,7 @@ namespace Tkl.Jumbo.Jet.Jobs
                     throw new ArgumentException("Cannot read from the specified record reader because the associated RecordCollector isn't being written to.");
 
                 // Determine the number of partitions to use on the input channel
-                if( taskCount == 0 )
-                {
-                    if( inputCollector.Partitions != null )
-                        taskCount = inputCollector.Partitions.Value; // Use specified amount
-                    else if( inputCollector.ChannelType == ChannelType.Pipeline )
-                        taskCount = 1; // Pipeline channel always uses one if unspecified
-                    else if( inputCollector.InputStage != null && inputCollector.InputStage.InternalPartitionCount > 1 )
-                        taskCount = inputCollector.InputStage.InternalPartitionCount; // Connecting to a compound stage with internal partitioning we must use the same number of tasks.
-                    else
-                        taskCount = _jetClient.JobServer.GetMetrics().TaskServers.Count; // Otherwise default to the number of nodes in the cluster
-                }
+                taskCount = DetermineTaskCount<TInput>(taskCount, inputCollector);
 
 
                 // We can replace an empty task if:
@@ -797,6 +792,22 @@ namespace Tkl.Jumbo.Jet.Jobs
                 _assemblies.Add(taskType.Assembly);
         }
 
+        private int DetermineTaskCount<TInput>(int taskCount, RecordCollector<TInput> inputCollector) where TInput : IWritable, new()
+        {
+            if( taskCount == 0 )
+            {
+                if( inputCollector.Partitions != null )
+                    taskCount = inputCollector.Partitions.Value; // Use specified amount
+                else if( inputCollector.ChannelType == ChannelType.Pipeline )
+                    taskCount = 1; // Pipeline channel always uses one if unspecified
+                else if( inputCollector.InputStage != null && inputCollector.InputStage.InternalPartitionCount > 1 )
+                    taskCount = inputCollector.InputStage.InternalPartitionCount; // Connecting to a compound stage with internal partitioning we must use the same number of tasks.
+                else
+                    taskCount = _jetClient.JobServer.GetMetrics().TaskServers.Count; // Otherwise default to the number of nodes in the cluster
+            }
+            return taskCount;
+        }
+
         private bool CanReplaceEmptyTask<TInput>(int taskCount, RecordCollector<TInput> inputCollector) where TInput : IWritable, new()
         {
             // We can replace an empty task if:
@@ -813,7 +824,7 @@ namespace Tkl.Jumbo.Jet.Jobs
             where TOutput : IWritable, new()
         {
             if( !(taskMethod.IsStatic && taskMethod.IsPublic) )
-                throw new ArgumentException("The task method specified must be public and static.", "task");
+                throw new ArgumentException("The task method specified must be public and static.", "taskMethod");
 
             CreateDynamicAssembly();
 
@@ -886,7 +897,7 @@ namespace Tkl.Jumbo.Jet.Jobs
             if( inputStages.Length == 1 )
             {
                 StageConfiguration inputStage = inputStages[0];
-                return (partitionerType == null || inputStage.OutputChannel.PartitionerType.Type == partitionerType) && inputStage.OutputChannel.MultiInputRecordReaderType.Type == multiInputRecordReaderType;
+                return (partitionerType == null || inputStage.OutputChannel.PartitionerType.ReferencedType == partitionerType) && inputStage.OutputChannel.MultiInputRecordReaderType.ReferencedType == multiInputRecordReaderType;
             }
             else
                 return false;

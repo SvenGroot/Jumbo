@@ -26,7 +26,6 @@ namespace Tkl.Jumbo.Jet
         private static readonly XmlSerializer _serializer = new XmlSerializer(typeof(JobConfiguration));
         private readonly ExtendedCollection<string> _assemblyFileNames = new ExtendedCollection<string>();
         private readonly ExtendedCollection<StageConfiguration> _stages = new ExtendedCollection<StageConfiguration>();
-        private readonly ExtendedCollection<ChannelConfiguration> _channels = new ExtendedCollection<ChannelConfiguration>();
 
         /// <summary>
         /// Initializes a new instance of the <see cref="JobConfiguration"/> class.
@@ -354,7 +353,7 @@ namespace Tkl.Jumbo.Jet
             for( int x = 0; x < stageIds.Length; ++x )
             {
                 if( x > 0 )
-                    current = current.GetChildStage(stageIds[x]);
+                    current = current.GetNamedChildStage(stageIds[x]);
 
                 if( current == null )
                     return null;
@@ -449,6 +448,7 @@ namespace Tkl.Jumbo.Jet
         /// Gets all channels in the job.
         /// </summary>
         /// <returns>A list of all channels in the jobs.</returns>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1024:UsePropertiesWhereAppropriate")]
         public IEnumerable<ChannelConfiguration> GetAllChannels()
         {
             Stack<StageConfiguration> nestedStages = new Stack<StageConfiguration>(Stages);
@@ -523,7 +523,7 @@ namespace Tkl.Jumbo.Jet
             return stage;
         }
 
-        private void ValidateChannelRecordType(Type inputType, IEnumerable<StageConfiguration> inputStages)
+        private static void ValidateChannelRecordType(Type inputType, IEnumerable<StageConfiguration> inputStages)
         {
             // Validate channel type
             foreach( StageConfiguration stage in inputStages )

@@ -310,7 +310,7 @@ namespace Tkl.Jumbo.Jet
             if( _task != null )
                 _task.Finish();
 
-            if( _associatedTasks.Count > 1 && JetClient.Configuration.TaskServer.MultiThreadedTaskFinish )
+            if( _associatedTasks.Count > 1 && JetClient.Configuration.TaskServer.MultithreadedTaskFinish )
             {
                 _log.Info("Using multi-threaded task finish for associated tasks.");
 
@@ -535,7 +535,7 @@ namespace Tkl.Jumbo.Jet
                     return (RecordReader<T>)InputChannels[0].CreateRecordReader();
                 else
                 {
-                    Type multiInputRecordReaderType = Configuration.StageConfiguration.MultiInputRecordReaderType.Type;
+                    Type multiInputRecordReaderType = Configuration.StageConfiguration.MultiInputRecordReaderType.ReferencedType;
                     int bufferSize = multiInputRecordReaderType == typeof(MergeRecordReader<T>) ? JetClient.Configuration.FileChannel.MergeTaskReadBufferSize : JetClient.Configuration.FileChannel.ReadBufferSize;
                     CompressionType compressionType = Configuration.JobConfiguration.GetTypedSetting(FileOutputChannel.CompressionTypeSetting, JetClient.Configuration.FileChannel.CompressionType);
                     MultiInputRecordReader<T> reader = (MultiInputRecordReader<T>)JetActivator.CreateInstance(multiInputRecordReaderType, this, InputChannels.Count, AllowRecordReuse, bufferSize, compressionType);
