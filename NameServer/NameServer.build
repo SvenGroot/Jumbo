@@ -33,6 +33,7 @@
         <include name="../Tkl.Jumbo/nantbin/*.*"/>
         <include name="../Tkl.Jumbo.Dfs/nantbin/*.*"/>
         <include name="../dfs.config"/>
+        <include name="../common.config"/>
       </fileset>
     </copy>
   </target>

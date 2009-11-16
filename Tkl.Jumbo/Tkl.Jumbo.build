@@ -22,11 +22,12 @@
         <include name="Properties/AssemblyInfo.cs"/>
         <include name="*.cs"/>
         <include name="IO/*.cs"/>
-	<include name="../Version.cs"/>
+        <include name="NetworkTopology/*.cs" />
+        <include name="../Version.cs"/>
       </sources>
       <nowarn>
-	<warning number="1584"
-	if="${nant.settings.currentframework=='mono-2.0'}" />
+	      <warning number="1584"
+	      if="${nant.settings.currentframework=='mono-2.0'}" />
       </nowarn>
     </csc>
     <copy file="../lib/log4net.dll" todir="nantbin"/>
