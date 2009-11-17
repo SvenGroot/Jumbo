@@ -26,7 +26,7 @@ namespace Tkl.Jumbo.NetworkTopology
                 configuration = JumboConfiguration.GetConfiguration();
 
             _log.InfoFormat("Using topology resolver type {0}.", configuration.NetworkTopology.Resolver);
-            _resolver = (ITopologyResolver)Activator.CreateInstance(Type.GetType(configuration.NetworkTopology.Resolver));
+            _resolver = (ITopologyResolver)Activator.CreateInstance(Type.GetType(configuration.NetworkTopology.Resolver), configuration);
         }
 
         /// <summary>
@@ -46,8 +46,8 @@ namespace Tkl.Jumbo.NetworkTopology
             if( node == null )
                 throw new ArgumentNullException("node");
 
-            string rackId = _resolver.ResolveNode(node.Address);
-            _log.InfoFormat("Node {0} was resolved to rack {1}.", node.Address, rackId ?? "(default)");
+            string rackId = ResolveNode(node.Address.HostName);
+            _log.InfoFormat("Node {0} was resolved to rack {1}.", node.Address, rackId);
             Rack rack;
             if( !_racks.TryGetValue(rackId, out rack) )
             {
@@ -72,5 +72,16 @@ namespace Tkl.Jumbo.NetworkTopology
 
             node.Rack.Nodes.Remove(node);
         }
+
+        /// <summary>
+        /// Determines which rack a node belongs to.
+        /// </summary>
+        /// <param name="hostName">The host name of the node.</param>
+        /// <returns>The rack ID of the rack that the server belongs to.</returns>
+        public string ResolveNode(string hostName)
+        {
+            return _resolver.ResolveNode(hostName) ?? "(default)";
+        }
+    
     }
 }

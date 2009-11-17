@@ -13,6 +13,7 @@ using System.Diagnostics;
 using Tkl.Jumbo;
 using System.Threading;
 using System.Collections.ObjectModel;
+using Tkl.Jumbo.NetworkTopology;
 
 namespace NameServerApplication
 {
@@ -30,7 +31,10 @@ namespace NameServerApplication
         private Random _random = new Random();
 
         private readonly FileSystem _fileSystem;
+
         private readonly Dictionary<ServerAddress, DataServerInfo> _dataServers = new Dictionary<ServerAddress, DataServerInfo>();
+        private readonly NetworkTopology _topology; // Lock _dataServers when accessing _topology; don't lock _topology itself.
+
         private readonly Dictionary<Guid, BlockInfo> _blocks = new Dictionary<Guid, BlockInfo>();
         private readonly Dictionary<Guid, PendingBlock> _pendingBlocks = new Dictionary<Guid, PendingBlock>();
         private readonly Dictionary<Guid, BlockInfo> _underReplicatedBlocks = new Dictionary<Guid, BlockInfo>();
@@ -40,24 +44,20 @@ namespace NameServerApplication
         private System.Threading.ManualResetEvent _safeModeEvent = new System.Threading.ManualResetEvent(false);
         private readonly Timer _checkpointTimer;
 
-        private NameServer()
-            : this(true)
-        {
-        }
 
-        private NameServer(bool replayLog)
-            : this(DfsConfiguration.GetConfiguration(), true)
-        {
-        }
 
-        private NameServer(DfsConfiguration config, bool replayLog)
+        private NameServer(JumboConfiguration jumboConfig, DfsConfiguration dfsConfig, bool replayLog)
         {
-            if( config == null )
+            if( jumboConfig == null )
+                throw new ArgumentNullException("jumboConfig");
+            if( dfsConfig == null )
                 throw new ArgumentNullException("config");
-            Configuration = config;
-            _replicationFactor = config.NameServer.ReplicationFactor;
-            _blockSize = config.NameServer.BlockSize;
-            _fileSystem = new FileSystem(config, replayLog);
+
+            Configuration = dfsConfig;
+            _topology = new NetworkTopology(jumboConfig);
+            _replicationFactor = dfsConfig.NameServer.ReplicationFactor;
+            _blockSize = dfsConfig.NameServer.BlockSize;
+            _fileSystem = new FileSystem(dfsConfig, replayLog);
             _fileSystem.FileDeleted += new EventHandler<FileDeletedEventArgs>(_fileSystem_FileDeleted);
             _fileSystem.GetBlocks(_blocks, _pendingBlocks);
             foreach( BlockInfo block in _blocks.Values )
@@ -80,20 +80,22 @@ namespace NameServerApplication
 
         public static void Run()
         {
-            Run(DfsConfiguration.GetConfiguration());
+            Run(JumboConfiguration.GetConfiguration(), DfsConfiguration.GetConfiguration());
         }
 
         [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.Synchronized)]
-        public static void Run(DfsConfiguration config)
+        public static void Run(JumboConfiguration jumboConfig, DfsConfiguration dfsConfig)
         {
-            if( config == null )
+            if( jumboConfig == null )
+                throw new ArgumentNullException("jumboConfig");
+            if( dfsConfig == null )
                 throw new ArgumentNullException("config");
 
             _log.Info("---- NameServer is starting ----");
             _log.LogEnvironmentInformation();
             
-            Instance = new NameServer(config, true);
-            ConfigureRemoting(config);
+            Instance = new NameServer(jumboConfig, dfsConfig, true);
+            ConfigureRemoting(dfsConfig);
         }
 
         [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.Synchronized)]
@@ -354,6 +356,7 @@ namespace NameServerApplication
                     metrics.DataServers.Add(new DataServerMetrics()
                     {
                         Address = server.Address,
+                        RackId = server.Rack.RackId,
                         LastContactUtc = server.LastContactUtc,
                         BlockCount = server.Blocks.Count,
                         DiskSpaceFree = server.DiskSpaceFree,
@@ -480,6 +483,7 @@ namespace NameServerApplication
                     if( address.HostName != ServerContext.Current.ClientHostName )
                         _log.Warn("The data server reported a different hostname than is indicated in the ServerContext.");
                     dataServer = new DataServerInfo(address);
+                    _topology.AddNode(dataServer);
                     _dataServers.Add(address, dataServer);
                 }
 
@@ -751,13 +755,149 @@ namespace NameServerApplication
             return null;
         }
 
+        private DataServerInfo SelectClosestServerWithMinimumDistance(IEnumerable<DataServerInfo> eligibleServers, string writerHostName, string writerRackId, int minimumDistance)
+        {
+            lock( _random )
+            {
+                DataServerInfo result = (from server in eligibleServers
+                                         let serverDistance = server.DistanceFrom(writerHostName, writerRackId)
+                                         where serverDistance > minimumDistance
+                                         orderby serverDistance ascending, server.PendingBlocks.Count ascending, _random.Next() ascending
+                                         select server).First();
+                return result;
+            }
+        }
+
+        private DataServerInfo SelectRandomServer(IEnumerable<DataServerInfo> eligibleServers)
+        {
+            lock( _random )
+            {
+                return (from server in eligibleServers
+                        orderby server.PendingBlocks.Count ascending, _random.Next() ascending
+                        select server).First();
+            }
+        }
+
         private BlockAssignment AssignBlockToDataServers(BlockInfo block)
         {
+            long freeSpaceThreshold = Configuration.NameServer.DataServerFreeSpaceThreshold;
+            /*Guid blockId = block.BlockId;
+            bool forceDifferentRack = false;
+            lock( _dataServers )
+            {
+                var currentDataServers = (from server in _dataServers.Values
+                                          where server.Blocks.Contains(blockId)
+                                          select server).ToList();
+                var eligibleServers = (from server in _dataServers.Values
+                                       where server.HasReportedBlocks && !server.Blocks.Contains(blockId) && server.DiskSpaceFree >= freeSpaceThreshold
+                                       select server).ToList();
+
+                int serversNeeded = block.File.ReplicationFactor - currentDataServers.Count;
+                int serversUsed = currentDataServers.Count;
+
+                List<DataServerInfo> newDataServers = new List<DataServerInfo>(serversNeeded);
+
+                string writerHostName = null;
+                string writerRackId = null;
+                if( currentDataServers.Count > 1 && _topology.Racks.Count > 1 )
+                {
+                    // If there is more than one current replica, we need to determine if they're on different racks.
+                    // If they're not we need to force the next replica to be on a different rack.
+                    forceDifferentRack = (from server in currentDataServers select server.Rack.RackId).Distinct().Count() == 1;
+                    writerHostName = currentDataServers[0].Address.HostName;
+                    writerRackId = currentDataServers[0].Rack.RackId;
+                }
+                else if( ServerContext.Current != null )
+                {
+                    writerHostName = ServerContext.Current.ClientHostName;
+                    writerRackId = _topology.ResolveNode(writerHostName);
+                }
+
+                while( serversNeeded > 0 )
+                {
+                    DataServerInfo selectedServer;
+                    switch( serversUsed )
+                    {
+                    case 0:
+                        // This is the first replica. Try to place it on the same node as the write if possible.
+                        // TODO: If the writer is not in the cluster at all, this will favour the default rack if there is one.
+                        selectedServer = SelectClosestServerWithMinimumDistance(eligibleServers, writerHostName, writerRackId, 0);
+                        // For the next replicas, these will be used to place it in a different or the same rack as the first replica.
+                        writerHostName = selectedServer.Address.HostName;
+                        writerRackId = selectedServer.Rack.RackId;
+                        break;
+                    case 1:
+                        // The second replica should go on a different rack than the first.
+                        if( _topology.Racks.Count == 1 )
+                            selectedServer = SelectRandomServer(eligibleServers);
+                        else
+                            selectedServer = SelectClosestServerWithMinimumDistance(eligibleServers, writerHostName, writerRackId, 2);
+                        break;
+                    case 2:
+                        // The third replica should go on the same rack as the first, unless forceDifferentRack is true.
+                        // TODO: If there are no more eligible nodes in the same rack, this would cause random placement, and we might want to try matching the second rack if possible
+                        if( _topology.Racks.Count == 1 )
+                            selectedServer = SelectRandomServer(eligibleServers);
+                        else
+                        {
+                            selectedServer = SelectClosestServerWithMinimumDistance(eligibleServers, writerHostName, writerRackId, forceDifferentRack ? 2 : 1);
+                            forceDifferentRack = false;
+                        }
+                        break;
+                    default:
+                        if( _topology.Racks.Count > 1 && forceDifferentRack )
+                        {
+                            selectedServer = SelectClosestServerWithMinimumDistance(eligibleServers, writerHostName, writerRackId, 2);
+                            forceDifferentRack = false;
+                        }
+                        else
+                            selectedServer = SelectRandomServer(eligibleServers);
+                        break;
+                    }
+
+                    eligibleServers.Remove(selectedServer);
+                    newDataServers.Add(selectedServer);
+                    --serversNeeded;
+                    ++serversUsed;
+                }
+
+                for( int i = 0; i < newDataServers.Count - 1; ++i )
+                {
+                    int closestNodeIndex = i + 1;
+                    int distance = newDataServers[i].DistanceFrom(newDataServers[closestNodeIndex]);
+                    // This uses the fact that the distance if never greater than 2, and that a distance 0 won't happen outside of test scenarios.
+                    // If the next node in line is in the same rack, there's no point looking for a closer node.
+                    if( distance > 1 )
+                    {
+                        for( int j = closestNodeIndex + 1; j < newDataServers.Count; ++j )
+                        {
+                            if( newDataServers[i].DistanceFrom(newDataServers[j]) < 2 )
+                            {
+                                closestNodeIndex = j;
+                                break;
+                            }
+                        }
+                        // Swap the closest one with the next one.
+                        DataServerInfo temp = newDataServers[i + 1];
+                        newDataServers[i + 1] = newDataServers[closestNodeIndex];
+                        newDataServers[closestNodeIndex] = temp;
+                    }
+                }
+
+                if( _log.IsInfoEnabled )
+                {
+                    foreach( DataServerInfo server in newDataServers )
+                        _log.InfoFormat("Assigned data server for block {0}: {1}", blockId, server.Address);
+                }
+
+                return new BlockAssignment(blockId, (from server in newDataServers select server.Address));
+            }*/
+
+
             // TODO: Better selection policy.
             Guid blockId = block.BlockId;
             List<DataServerInfo> unassignedDataServers;
             int serversNeeded;
-            long freeSpaceThreshold = Configuration.NameServer.DataServerFreeSpaceThreshold;
             List<ServerAddress> dataServers;
             lock( _dataServers )
             {
@@ -827,11 +967,6 @@ namespace NameServerApplication
                 }
             }
 
-            if( _log.IsInfoEnabled )
-            {
-                foreach( ServerAddress address in dataServers )
-                    _log.InfoFormat("Assigned data server for block {0}: {1}", blockId, address);
-            }
 
             return new BlockAssignment(blockId, dataServers);
         }
@@ -900,6 +1035,7 @@ namespace NameServerApplication
             lock( _dataServers )
             {
                 removed = _dataServers.Remove(info.Address);
+                NetworkTopology.RemoveNode(info);
                 if( _dataServers.Count < _replicationFactor )
                     SafeMode = true;
             }

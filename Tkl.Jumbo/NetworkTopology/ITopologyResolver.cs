@@ -13,8 +13,8 @@ namespace Tkl.Jumbo.NetworkTopology
         /// <summary>
         /// Determines which rack a node belongs to.
         /// </summary>
-        /// <param name="address">The <see cref="ServerAddress"/> of the node.</param>
+        /// <param name="hostName">The host name of the node.</param>
         /// <returns>The rack ID of the rack that the server belongs to.</returns>
-        string ResolveNode(ServerAddress address);
+        string ResolveNode(string hostName);
     }
 }

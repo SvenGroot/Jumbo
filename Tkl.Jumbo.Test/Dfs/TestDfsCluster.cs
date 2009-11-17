@@ -44,7 +44,7 @@ namespace Tkl.Jumbo.Test.Dfs
                     config.NameServer.BlockSize = blockSize.Value;
                 if( Environment.OSVersion.Platform == PlatformID.Unix )
                     config.NameServer.ListenIPv4AndIPv6 = false;
-                NameServer.Run(config);
+                NameServer.Run(new JumboConfiguration(), config);
                 _path = editLogPath;
                 StartDataServers(dataServers);
             }

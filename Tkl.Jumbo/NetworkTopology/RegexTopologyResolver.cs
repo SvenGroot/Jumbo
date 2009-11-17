@@ -27,16 +27,16 @@ namespace Tkl.Jumbo.NetworkTopology
         /// <summary>
         /// Determines which rack a node belongs to.
         /// </summary>
-        /// <param name="address">The <see cref="ServerAddress"/> of the node.</param>
+        /// <param name="hostName">The host name of the node.</param>
         /// <returns>The rack ID of the rack that the server belongs to.</returns>
-        public string ResolveNode(ServerAddress address)
+        public string ResolveNode(string hostName)
         {
-            if( address == null )
-                throw new ArgumentNullException("address");
+            if( hostName == null )
+                throw new ArgumentNullException("hostName");
 
             foreach( RackConfigurationElement rack in _configuration.RegexTopologyResolver.Racks )
             {
-                if( Regex.IsMatch(address.HostName, rack.NodeRegex) )
+                if( Regex.IsMatch(hostName, rack.NodeRegex) )
                     return rack.RackId;
             }
 

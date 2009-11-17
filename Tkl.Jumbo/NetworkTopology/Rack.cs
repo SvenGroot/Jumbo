@@ -64,20 +64,13 @@ namespace Tkl.Jumbo.NetworkTopology
         /// <summary>
         /// Initializes a new instance of the <see cref="Rack"/> class.
         /// </summary>
-        public Rack()
-        {
-            _nodes = new NodeCollection(this);
-        }
-
-        /// <summary>
-        /// Initializes a new instance of the <see cref="Rack"/> class.
-        /// </summary>
         /// <param name="rackId">The unique identifier for the rack.</param>
         public Rack(string rackId)
         {
             if( rackId == null )
                 throw new ArgumentNullException("rackId");
 
+            _nodes = new NodeCollection(this);
             RackId = rackId;
         }
 

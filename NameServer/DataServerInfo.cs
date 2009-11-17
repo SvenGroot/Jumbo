@@ -4,26 +4,20 @@ using System.Linq;
 using System.Text;
 using Tkl.Jumbo.Dfs;
 using Tkl.Jumbo;
+using Tkl.Jumbo.NetworkTopology;
 
 namespace NameServerApplication
 {
-    class DataServerInfo
+    class DataServerInfo : TopologyNode
     {
         private readonly List<HeartbeatResponse> _pendingResponses = new List<HeartbeatResponse>();
         private readonly HashSet<Guid> _blocks = new HashSet<Guid>();
         private readonly HashSet<Guid> _pendingBlocks = new HashSet<Guid>();
 
-        public DataServerInfo(string hostName, int port)
-        {
-            Address = new ServerAddress(hostName, port);
-        }
-
         public DataServerInfo(ServerAddress address)
         {
             Address = address;
         }
-
-        public ServerAddress Address { get; private set; }
 
         public bool HasReportedBlocks { get; set; }
 

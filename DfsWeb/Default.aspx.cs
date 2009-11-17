@@ -32,6 +32,7 @@ public partial class _Default : System.Web.UI.Page
             else if( lastContact.TotalSeconds > 5 )
                 row.BgColor = "yellow";
             row.Cells.Add(new HtmlTableCell() { InnerText = server.Address.HostName });
+            row.Cells.Add(new HtmlTableCell() { InnerText = server.RackId });
             row.Cells.Add(new HtmlTableCell() { InnerText = server.Address.Port.ToString() });
             row.Cells.Add(new HtmlTableCell() { InnerText = string.Format("{0:0.0}s ago", lastContact.TotalSeconds) });
             row.Cells.Add(new HtmlTableCell() { InnerText = server.BlockCount.ToString() });

@@ -17,6 +17,11 @@ namespace Tkl.Jumbo
         public ServerAddress Address { get; set; }
 
         /// <summary>
+        /// Gets or sets the ID of the rack of the server.
+        /// </summary>
+        public string RackId { get; set; }
+
+        /// <summary>
         /// Gets or sets the time of the last heartbeat sent to the name server (for data servers) or job server (for task servers).
         /// </summary>
         public DateTime LastContactUtc { get; set; }
