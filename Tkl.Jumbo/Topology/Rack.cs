@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Collections.ObjectModel;
 
-namespace Tkl.Jumbo.NetworkTopology
+namespace Tkl.Jumbo.Topology
 {
     /// <summary>
     /// Represents a rack that groups together nodes in the network topology.

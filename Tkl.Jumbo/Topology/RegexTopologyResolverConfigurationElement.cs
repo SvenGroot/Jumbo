@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Configuration;
 
-namespace Tkl.Jumbo.NetworkTopology
+namespace Tkl.Jumbo.Topology
 {
     /// <summary>
     /// Provides configuration for the <see cref="RegexTopologyResolver"/>.

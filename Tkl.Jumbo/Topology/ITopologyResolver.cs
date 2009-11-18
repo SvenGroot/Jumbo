@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-namespace Tkl.Jumbo.NetworkTopology
+namespace Tkl.Jumbo.Topology
 {
     /// <summary>
     /// Interface for network topology resolvers.

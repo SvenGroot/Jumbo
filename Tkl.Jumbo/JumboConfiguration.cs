@@ -15,18 +15,18 @@ namespace Tkl.Jumbo
         /// Gets the configuration for the network topology support.
         /// </summary>
         [ConfigurationProperty("networkTopology", IsRequired = false, IsKey = false)]
-        public NetworkTopology.NetworkTopologyConfigurationElement NetworkTopology
+        public Topology.NetworkTopologyConfigurationElement NetworkTopology
         {
-            get { return (NetworkTopology.NetworkTopologyConfigurationElement)this["networkTopology"]; }
+            get { return (Topology.NetworkTopologyConfigurationElement)this["networkTopology"]; }
         }
 
         /// <summary>
-        /// Gets the configuration for the <see cref="Tkl.Jumbo.NetworkTopology.RegexTopologyResolver"/> class.
+        /// Gets the configuration for the <see cref="Tkl.Jumbo.Topology.RegexTopologyResolver"/> class.
         /// </summary>
         [ConfigurationProperty("regexTopologyResolver", IsRequired = false, IsKey = false)]
-        public NetworkTopology.RegexTopologyResolverConfigurationElement RegexTopologyResolver
+        public Topology.RegexTopologyResolverConfigurationElement RegexTopologyResolver
         {
-            get { return (NetworkTopology.RegexTopologyResolverConfigurationElement)this["regexTopologyResolver"]; }
+            get { return (Topology.RegexTopologyResolverConfigurationElement)this["regexTopologyResolver"]; }
         }
 
         /// <summary>

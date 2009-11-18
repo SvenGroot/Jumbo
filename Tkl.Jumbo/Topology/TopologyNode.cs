@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-namespace Tkl.Jumbo.NetworkTopology
+namespace Tkl.Jumbo.Topology
 {
     /// <summary>
     /// Base class for cluster nodes that are part of a network topology.

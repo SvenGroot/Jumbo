@@ -13,7 +13,7 @@ using System.Diagnostics;
 using Tkl.Jumbo;
 using System.Threading;
 using System.Collections.ObjectModel;
-using Tkl.Jumbo.NetworkTopology;
+using Tkl.Jumbo.Topology;
 
 namespace NameServerApplication
 {
@@ -28,12 +28,12 @@ namespace NameServerApplication
 
         private readonly int _replicationFactor;
         private readonly int _blockSize;
-        private Random _random = new Random();
 
         private readonly FileSystem _fileSystem;
 
         private readonly Dictionary<ServerAddress, DataServerInfo> _dataServers = new Dictionary<ServerAddress, DataServerInfo>();
         private readonly NetworkTopology _topology; // Lock _dataServers when accessing _topology; don't lock _topology itself.
+        private readonly ReplicaPlacement _replicaPlacement; // Lock _dataServers when accessing _replicaPlacement.
 
         private readonly Dictionary<Guid, BlockInfo> _blocks = new Dictionary<Guid, BlockInfo>();
         private readonly Dictionary<Guid, PendingBlock> _pendingBlocks = new Dictionary<Guid, PendingBlock>();
@@ -55,6 +55,7 @@ namespace NameServerApplication
 
             Configuration = dfsConfig;
             _topology = new NetworkTopology(jumboConfig);
+            _replicaPlacement = new ReplicaPlacement(Configuration, _topology);
             _replicationFactor = dfsConfig.NameServer.ReplicationFactor;
             _blockSize = dfsConfig.NameServer.BlockSize;
             _fileSystem = new FileSystem(dfsConfig, replayLog);
@@ -309,17 +310,19 @@ namespace NameServerApplication
             // I allow calling this even if safemode is on, but it might return an empty list in that case.
             lock( _blocks )
             {
-                BlockInfo block;
-                if( !_blocks.TryGetValue(blockID, out block) )
-                    throw new ArgumentException("Invalid block ID.");
+                lock( _dataServers )
+                {
+                    BlockInfo block;
+                    if( !_blocks.TryGetValue(blockID, out block) )
+                        throw new ArgumentException("Invalid block ID.");
 
-                var localServers = from server in block.DataServers
-                                   where server.Address.HostName == ServerContext.Current.ClientHostName 
-                                   select server.Address;
-                var remoteServers = from server in block.DataServers
-                                    where server.Address.HostName != ServerContext.Current.ClientHostName 
-                                    select server.Address;
-                return localServers.Concat(remoteServers).ToArray();
+                    string hostName = ServerContext.Current.ClientHostName;
+                    string rackId = _topology.ResolveNode(hostName);
+
+                    return (from server in block.DataServers
+                            orderby server.DistanceFrom(hostName, rackId) ascending
+                            select server.Address).ToArray();
+                }
             }
         }
 
@@ -755,225 +758,22 @@ namespace NameServerApplication
             return null;
         }
 
-        private DataServerInfo SelectClosestServerWithMinimumDistance(IEnumerable<DataServerInfo> eligibleServers, string writerHostName, string writerRackId, int minimumDistance)
-        {
-            lock( _random )
-            {
-                DataServerInfo result = (from server in eligibleServers
-                                         let serverDistance = server.DistanceFrom(writerHostName, writerRackId)
-                                         where serverDistance > minimumDistance
-                                         orderby serverDistance ascending, server.PendingBlocks.Count ascending, _random.Next() ascending
-                                         select server).First();
-                return result;
-            }
-        }
-
-        private DataServerInfo SelectRandomServer(IEnumerable<DataServerInfo> eligibleServers)
-        {
-            lock( _random )
-            {
-                return (from server in eligibleServers
-                        orderby server.PendingBlocks.Count ascending, _random.Next() ascending
-                        select server).First();
-            }
-        }
-
         private BlockAssignment AssignBlockToDataServers(BlockInfo block)
         {
-            long freeSpaceThreshold = Configuration.NameServer.DataServerFreeSpaceThreshold;
-            /*Guid blockId = block.BlockId;
-            bool forceDifferentRack = false;
+            // If we are assigning a new block, the server context's client host name is the client that called AppendBlock and therefore the writer of the block.
+            // If we are re-assigning an existing block, this is done internally so there won't be a server context.
+            string writerHostName = null;
+            if( ServerContext.Current != null )
+                writerHostName = ServerContext.Current.ClientHostName;
+
             lock( _dataServers )
             {
-                var currentDataServers = (from server in _dataServers.Values
-                                          where server.Blocks.Contains(blockId)
-                                          select server).ToList();
-                var eligibleServers = (from server in _dataServers.Values
-                                       where server.HasReportedBlocks && !server.Blocks.Contains(blockId) && server.DiskSpaceFree >= freeSpaceThreshold
-                                       select server).ToList();
-
-                int serversNeeded = block.File.ReplicationFactor - currentDataServers.Count;
-                int serversUsed = currentDataServers.Count;
-
-                List<DataServerInfo> newDataServers = new List<DataServerInfo>(serversNeeded);
-
-                string writerHostName = null;
-                string writerRackId = null;
-                if( currentDataServers.Count > 1 && _topology.Racks.Count > 1 )
-                {
-                    // If there is more than one current replica, we need to determine if they're on different racks.
-                    // If they're not we need to force the next replica to be on a different rack.
-                    forceDifferentRack = (from server in currentDataServers select server.Rack.RackId).Distinct().Count() == 1;
-                    writerHostName = currentDataServers[0].Address.HostName;
-                    writerRackId = currentDataServers[0].Rack.RackId;
-                }
-                else if( ServerContext.Current != null )
-                {
-                    writerHostName = ServerContext.Current.ClientHostName;
-                    writerRackId = _topology.ResolveNode(writerHostName);
-                }
-
-                while( serversNeeded > 0 )
-                {
-                    DataServerInfo selectedServer;
-                    switch( serversUsed )
-                    {
-                    case 0:
-                        // This is the first replica. Try to place it on the same node as the write if possible.
-                        // TODO: If the writer is not in the cluster at all, this will favour the default rack if there is one.
-                        selectedServer = SelectClosestServerWithMinimumDistance(eligibleServers, writerHostName, writerRackId, 0);
-                        // For the next replicas, these will be used to place it in a different or the same rack as the first replica.
-                        writerHostName = selectedServer.Address.HostName;
-                        writerRackId = selectedServer.Rack.RackId;
-                        break;
-                    case 1:
-                        // The second replica should go on a different rack than the first.
-                        if( _topology.Racks.Count == 1 )
-                            selectedServer = SelectRandomServer(eligibleServers);
-                        else
-                            selectedServer = SelectClosestServerWithMinimumDistance(eligibleServers, writerHostName, writerRackId, 2);
-                        break;
-                    case 2:
-                        // The third replica should go on the same rack as the first, unless forceDifferentRack is true.
-                        // TODO: If there are no more eligible nodes in the same rack, this would cause random placement, and we might want to try matching the second rack if possible
-                        if( _topology.Racks.Count == 1 )
-                            selectedServer = SelectRandomServer(eligibleServers);
-                        else
-                        {
-                            selectedServer = SelectClosestServerWithMinimumDistance(eligibleServers, writerHostName, writerRackId, forceDifferentRack ? 2 : 1);
-                            forceDifferentRack = false;
-                        }
-                        break;
-                    default:
-                        if( _topology.Racks.Count > 1 && forceDifferentRack )
-                        {
-                            selectedServer = SelectClosestServerWithMinimumDistance(eligibleServers, writerHostName, writerRackId, 2);
-                            forceDifferentRack = false;
-                        }
-                        else
-                            selectedServer = SelectRandomServer(eligibleServers);
-                        break;
-                    }
-
-                    eligibleServers.Remove(selectedServer);
-                    newDataServers.Add(selectedServer);
-                    --serversNeeded;
-                    ++serversUsed;
-                }
-
-                for( int i = 0; i < newDataServers.Count - 1; ++i )
-                {
-                    int closestNodeIndex = i + 1;
-                    int distance = newDataServers[i].DistanceFrom(newDataServers[closestNodeIndex]);
-                    // This uses the fact that the distance if never greater than 2, and that a distance 0 won't happen outside of test scenarios.
-                    // If the next node in line is in the same rack, there's no point looking for a closer node.
-                    if( distance > 1 )
-                    {
-                        for( int j = closestNodeIndex + 1; j < newDataServers.Count; ++j )
-                        {
-                            if( newDataServers[i].DistanceFrom(newDataServers[j]) < 2 )
-                            {
-                                closestNodeIndex = j;
-                                break;
-                            }
-                        }
-                        // Swap the closest one with the next one.
-                        DataServerInfo temp = newDataServers[i + 1];
-                        newDataServers[i + 1] = newDataServers[closestNodeIndex];
-                        newDataServers[closestNodeIndex] = temp;
-                    }
-                }
-
-                if( _log.IsInfoEnabled )
-                {
-                    foreach( DataServerInfo server in newDataServers )
-                        _log.InfoFormat("Assigned data server for block {0}: {1}", blockId, server.Address);
-                }
-
-                return new BlockAssignment(blockId, (from server in newDataServers select server.Address));
-            }*/
-
-
-            // TODO: Better selection policy.
-            Guid blockId = block.BlockId;
-            List<DataServerInfo> unassignedDataServers;
-            int serversNeeded;
-            List<ServerAddress> dataServers;
-            lock( _dataServers )
-            {
-                // This function is also used to find new data servers to send an under-replicated block, which is why we need to check server.Blocks.
-                unassignedDataServers = (from server in _dataServers.Values
-                                         where server.HasReportedBlocks && !server.Blocks.Contains(blockId) && server.DiskSpaceFree >= freeSpaceThreshold
-                                         select server).ToList();
-                serversNeeded = block.File.ReplicationFactor - (from server in _dataServers.Values where server.Blocks.Contains(blockId) select server).Count();
-
-
-                if( unassignedDataServers.Count < serversNeeded )
-                    throw new DfsException("Insufficient data servers to replicate new block. This can also happen if some servers are low on disk space.");
-
-                dataServers = new List<ServerAddress>(serversNeeded);
-
-                // Check if any data servers are running on the client's own system.
-                if( ServerContext.Current != null )
-                {
-                    string clientHostName = ServerContext.Current.ClientHostName;
-                    var localServers = (from server in unassignedDataServers
-                                        where server.Address.HostName == clientHostName
-                                        select server).ToArray();
-
-                    if( localServers.Length > 0 )
-                    {
-                        if( localServers.Length == 1 )
-                        {
-                            dataServers.Add(localServers[0].Address);
-                            unassignedDataServers.Remove(localServers[0]);
-                            localServers[0].PendingBlocks.Add(blockId);
-                        }
-                        else
-                        {
-                            // We will order the servers so that those with the smallest number of pending blocks are up front, and
-                            // if multiple servers have the same number of pending blocks they are ordered at random.
-                            lock( _random )
-                            {
-                                var server = (from s in localServers
-                                              orderby s.PendingBlocks.Count ascending, _random.Next() ascending
-                                              select s).First();
-
-                                dataServers.Add(server.Address);
-                                server.PendingBlocks.Add(blockId);
-                                unassignedDataServers.Remove(server);
-                            }
-                        }
-                        --serversNeeded;
-                    }
-                }
-
-                if( serversNeeded > 0 )
-                {
-                    lock( _random )
-                    {
-                        // We will order the servers so that those with the smallest number of pending blocks are up front, and
-                        // if multiple servers have the same number of pending blocks they are ordered at random.
-                        var randomizedServers = (from server in unassignedDataServers
-                                                 orderby server.PendingBlocks.Count ascending, _random.Next() ascending
-                                                 select server).Take(serversNeeded);
-
-                        foreach( DataServerInfo server in randomizedServers )
-                        {
-                            dataServers.Add(server.Address);
-                            server.PendingBlocks.Add(blockId);
-                        }
-                    }
-                }
+                return _replicaPlacement.AssignBlockToDataServers(_dataServers.Values, block, writerHostName);
             }
-
-
-            return new BlockAssignment(blockId, dataServers);
         }
 
         private void ReassignBlock(BlockInfo block)
         {
-            // TODO: This should take topology into account.
             _log.InfoFormat("Reassigning new servers for underreplicated block {0}.", block.BlockId);
             if( block.DataServers.Count == 0 )
             {
@@ -983,11 +783,7 @@ namespace NameServerApplication
             {
                 BlockAssignment assignment = AssignBlockToDataServers(block);
 
-                DataServerInfo source;
-                lock( _random )
-                {
-                    source = block.DataServers[_random.Next(block.DataServers.Count)];
-                }
+                DataServerInfo source = block.DataServers[0];
 
                 source.AddResponseForNextHeartbeat(new ReplicateBlockHeartbeatResponse(assignment));
             }

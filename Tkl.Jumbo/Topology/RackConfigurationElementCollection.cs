@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Configuration;
 
-namespace Tkl.Jumbo.NetworkTopology
+namespace Tkl.Jumbo.Topology
 {
     /// <summary>
     /// Represents a collection of <see cref="RackConfigurationElement"/> objects in a configuration file.
@@ -17,6 +17,16 @@ namespace Tkl.Jumbo.NetworkTopology
         public RackConfigurationElementCollection()
         {
             AddElementName = "rack";
+        }
+
+        /// <summary>
+        /// Gets the element in the collection at the specified index.
+        /// </summary>
+        /// <param name="index">The index of the item to return.</param>
+        /// <returns>The item at the specified index.</returns>
+        public RackConfigurationElement this[int index]
+        {
+            get { return (RackConfigurationElement)BaseGet(index); }
         }
 
         /// <summary>
@@ -39,14 +49,30 @@ namespace Tkl.Jumbo.NetworkTopology
         }
 
         /// <summary>
-        /// Gets the element in the collection at the specified index.
+        /// Adds an element to the collection.
         /// </summary>
-        /// <param name="index">The index of the item to return.</param>
-        /// <returns>The item at the specified index.</returns>
-        public RackConfigurationElement this[int index]
+        /// <param name="element">The element to add to the collection.</param>
+        public void Add(RackConfigurationElement element)
         {
-            get { return (RackConfigurationElement)BaseGet(index); }
+            BaseAdd(element);
         }
 
+        /// <summary>
+        /// Removes an element from the collection.
+        /// </summary>
+        /// <param name="element">The element to remove from the collection.</param>
+        public void Remove(RackConfigurationElement element)
+        {
+            BaseRemove(element);
+        }
+
+        /// <summary>
+        /// Removes the element at the specified index from the collection.
+        /// </summary>
+        /// <param name="index">The index of the element to remove.</param>
+        public void RemoveAt(int index)
+        {
+            BaseRemoveAt(index);
+        }
     }
 }

@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using Tkl.Jumbo.Dfs;
 using Tkl.Jumbo;
-using Tkl.Jumbo.NetworkTopology;
+using Tkl.Jumbo.Topology;
 
 namespace NameServerApplication
 {
