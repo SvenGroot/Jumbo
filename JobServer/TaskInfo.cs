@@ -16,6 +16,7 @@ namespace JobServerApplication
         private TaskInfo _owner;
         private List<TaskServerInfo> _badServers;
         private TaskState _state;
+        private Guid? _inputBlock;
 
         public TaskInfo(JobInfo job, StageConfiguration stage, int taskNumber)
         {
@@ -112,15 +113,19 @@ namespace JobServerApplication
         }
 
         /// <summary>
-        /// NOTE: Only call if Stage.DfsInputs is not null.
+        /// NOTE: Only call if Stage.DfsInputs is not null, and inside the _jobs lock. The value of this function is cached, only first call uses DfsClient.
         /// </summary>
         /// <param name="dfsClient"></param>
         /// <returns></returns>
         public Guid GetBlockId(DfsClient dfsClient)
         {
-            TaskDfsInput input = Stage.DfsInputs[TaskId.TaskNumber - 1];
-            Tkl.Jumbo.Dfs.DfsFile file = Job.GetFileInfo(dfsClient, input.Path);
-            return file.Blocks[input.Block];
+            if( _inputBlock == null )
+            {
+                TaskDfsInput input = Stage.DfsInputs[TaskId.TaskNumber - 1];
+                Tkl.Jumbo.Dfs.DfsFile file = Job.GetFileInfo(dfsClient, input.Path);
+                _inputBlock = file.Blocks[input.Block];
+            }
+            return _inputBlock.Value;
         }
 
         public TaskStatus ToTaskStatus()

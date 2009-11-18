@@ -405,6 +405,20 @@ namespace NameServerApplication
             }
         }
 
+        public Guid[] GetDataServerBlocks(ServerAddress dataServer, Guid[] blocks)
+        {
+            _log.DebugFormat("GetDataServerBlockCount, dataServer = {0}", dataServer);
+            if( dataServer == null )
+                throw new ArgumentNullException("dataServer");
+            if( blocks == null )
+                throw new ArgumentNullException("blocks");
+            lock( _dataServers )
+            {
+                DataServerInfo server = _dataServers[dataServer];
+                return server.Blocks.Intersect(blocks).ToArray();
+            }
+        }
+
         public string GetLogFileContents(int maxSize)
         {
             if( maxSize <= 0 )

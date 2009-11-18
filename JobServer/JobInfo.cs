@@ -25,6 +25,7 @@ namespace JobServerApplication
         private readonly HashSet<ServerAddress> _taskServers = new HashSet<ServerAddress>();
         private readonly ManualResetEvent _jobCompletedEvent = new ManualResetEvent(false);
         private Guid[] _inputBlocks;
+        private Dictionary<Guid, TaskInfo> _inputBlockMap;
         private readonly Dictionary<string, DfsFile> _files = new Dictionary<string, DfsFile>();
         private List<TaskStatus> _failedTaskAttempts;
 
@@ -74,6 +75,14 @@ namespace JobServerApplication
             }
         }
 
+        public Guid[] GetUnscheduledInputBlocks(DfsClient dfsClient)
+        {
+            // TaskInfo caches the Block IDs, so this only incurs DFS calls on the first run.
+            return (from task in Tasks.Values
+                    where task.Stage.DfsInputs != null && task.Stage.DfsInputs.Count > 0 && task.Server != null
+                    select task.GetBlockId(dfsClient)).ToArray();
+        }
+
         public Guid[] GetInputBlocks(DfsClient dfsClient)
         {
             // This method will only be called with _jobs locked, so no need to do any further locking
@@ -84,6 +93,24 @@ namespace JobServerApplication
                                 select task.GetBlockId(dfsClient)).ToArray();
             }
             return _inputBlocks;
+        }
+
+        public TaskInfo GetTaskForInputBlock(Guid blockId, DfsClient dfsClient)
+        {
+            // This method will only be called with _jobs locked, so no need to do any further locking
+            if( _inputBlockMap == null )
+            {
+                _inputBlockMap = new Dictionary<Guid, TaskInfo>();
+                foreach( TaskInfo task in Tasks.Values )
+                {
+                    if( task.Stage.DfsInputs != null && task.Stage.DfsInputs.Count > 0 )
+                    {
+                        _inputBlockMap.Add(task.GetBlockId(dfsClient), task);
+                    }
+                }
+            }
+
+            return _inputBlockMap[blockId];
         }
 
         public IEnumerable<TaskInfo> GetDfsInputTasks()
