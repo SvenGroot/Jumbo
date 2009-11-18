@@ -172,7 +172,7 @@ namespace Tkl.Jumbo
             {
                 using( TcpClient client = (TcpClient)parameter )
                 {
-                    _log.InfoFormat("Connection accepted from {0}.", client.Client.RemoteEndPoint);
+                    //_log.InfoFormat("Connection accepted from {0}.", client.Client.RemoteEndPoint);
                     HandleConnection(client);
                 }
             }

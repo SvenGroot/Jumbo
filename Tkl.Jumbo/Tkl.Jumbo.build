@@ -22,7 +22,7 @@
         <include name="Properties/AssemblyInfo.cs"/>
         <include name="*.cs"/>
         <include name="IO/*.cs"/>
-        <include name="NetworkTopology/*.cs" />
+        <include name="Topology/*.cs" />
         <include name="../Version.cs"/>
       </sources>
       <nowarn>

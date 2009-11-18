@@ -48,7 +48,9 @@ namespace TaskServerApplication
                         Guid jobID = new Guid(guidBytes);
                         string file = reader.ReadString();
 
+                        _log.DebugFormat("Sending file {0} to {1}", file, client.Client.RemoteEndPoint);
                         SendFile(writer, jobID, file);
+                        _log.DebugFormat("Sending file {0} complete.", file);
                     }
                     catch( Exception )
                     {
@@ -73,8 +75,8 @@ namespace TaskServerApplication
         {
             string dir = _taskServer.GetJobDirectory(jobID);
             string path = Path.Combine(dir, file);
-            if( File.Exists(path) )
-            {
+            //if( File.Exists(path) )
+            //{
                 long uncompressedSize = _taskServer.GetUncompressedTemporaryFileSize(jobID, file);
 
                 using( FileStream fileStream = File.OpenRead(path) )
@@ -86,11 +88,11 @@ namespace TaskServerApplication
                         writer.Write(uncompressedSize);
                     fileStream.CopyTo(writer.BaseStream);
                 }
-            }
-            else
-            {
-                writer.Write(-1L);
-            }
+            //}
+            //else
+            //{
+            //    writer.Write(-1L);
+            //}
         }
     }
 }

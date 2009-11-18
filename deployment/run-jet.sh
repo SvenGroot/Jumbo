@@ -4,16 +4,22 @@ scriptDir=$(dirname $0)
 startStop=$1
 
 if [ $startStop = "start" ]; then
-    $scriptDir/run-server.sh $startStop JobServer
-    $scriptDir/run-server.sh $startStop JetWeb
+    ssh $jobServer $jumboDir/run-server.sh $startStop JobServer 2>&1 | sed "s/^/$jobServer: /"
+    ssh $jobServer $jumboDir/run-server.sh $startStop JetWeb 2>&1 | sed "s/^/$jobServer: /"
     sleep 1
 fi
-for slave in `cat $scriptDir/slaves`; do
-    ssh $slave $jumboDir/run-server.sh $startStop TaskServer 2>&1 | sed "s/^/$slave: /" &
+
+for group in `cat $scriptDir/groups`; do
+    if [ "$group" != "masters" ]; then
+        for slave in `cat $scriptDir/$group`; do
+	    ssh $slave $jumboDir/run-server.sh $startStop TaskServer 2>&1 | sed "s/^/$slave: /" &
+        done
+    fi
 done
 wait
+
 if [ $startStop = "stop" ]; then
     sleep 1
-    $scriptDir/run-server.sh $startStop JetWeb
-    $scriptDir/run-server.sh $startStop JobServer
+    ssh $jobServer $jumboDir/run-server.sh $startStop JetWeb 2>&1 | sed "s/^/$jobServer: /"
+    ssh $jobServer $jumboDir/run-server.sh $startStop JobServer 2>&1 | sed "s/^/$jobServer: /"
 fi
