@@ -36,7 +36,7 @@ namespace JobServerApplication.Scheduling
                 if( capacity > 0 && job.UnscheduledTasks > 0 )
                 {
                     // Remove tasks that have been scheduled.
-                    inputTasks.RemoveAll((task) => task.Server == null);
+                    inputTasks.RemoveAll((task) => task.Server != null);
                     ScheduleInputTasksNonLocal(job, taskServers, capacity, inputTasks, newServers);
                 }
             }
@@ -52,6 +52,7 @@ namespace JobServerApplication.Scheduling
 
         private int ScheduleInputTasks(JobInfo job, Dictionary<ServerAddress, TaskServerInfo> servers, int capacity, Guid[] inputBlocks, DfsClient dfsClient, List<TaskServerInfo> newServers)
         {
+            HashSet<Guid> inputBlockSet = new HashSet<Guid>(inputBlocks);
             foreach( TaskServerInfo taskServer in servers.Values )
             {
                 if( taskServer.AvailableTasks > 0 )
@@ -78,11 +79,14 @@ namespace JobServerApplication.Scheduling
                                 taskServer.AssignTask(job, task);
                                 if( !newServers.Contains(taskServer) )
                                     newServers.Add(taskServer);
+                                inputBlockSet.Remove(localBlocks[block]);
                                 _log.InfoFormat("Task {0} has been assigned to server {1} (data local).", task.GlobalID, taskServer.Address);
                                 --capacity;
                                 ++block;
                             }
                         }
+                        if( capacity > 0 )
+                            inputBlocks = inputBlockSet.ToArray();
                     }
                 }
             }
@@ -106,6 +110,7 @@ namespace JobServerApplication.Scheduling
                         // One way to do that would be to change NameServer.GetDataServerBlocks to return blocks within a certain distance, and then retry with increasing distance.
                         TaskInfo task = eligibleTasks[_random.Next(eligibleTasks.Count)];
                         taskServer.AssignTask(job, task);
+                        _log.InfoFormat("Task {0} has been assigned to server {1} (NOT data local).", task.GlobalID, taskServer.Address);
                         if( !newServers.Contains(taskServer) )
                             newServers.Add(taskServer);
                         --capacity;
