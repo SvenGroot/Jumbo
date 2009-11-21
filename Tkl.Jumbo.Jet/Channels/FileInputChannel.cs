@@ -159,7 +159,8 @@ namespace Tkl.Jumbo.Jet.Channels
 
                 while( !_disposed && tasksLeft.Count > 0 )
                 {
-                    CompletedTask[] completedTasks = _jobServer.WaitForTaskCompletion(_jobID, tasksLeftArray, _pollingInterval);
+                    Thread.Sleep(_pollingInterval);
+                    CompletedTask[] completedTasks = _jobServer.CheckTaskCompletion(_jobID, tasksLeftArray);
                     if( completedTasks != null && completedTasks.Length > 0 )
                     {
                         _log.InfoFormat("Received {0} new completed tasks.", completedTasks.Length);

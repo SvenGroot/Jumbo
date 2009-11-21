@@ -40,9 +40,9 @@ namespace JobServerApplication
             return JobServer.Instance.GetTaskServerForTask(jobID, taskID);
         }
 
-        public CompletedTask[] WaitForTaskCompletion(Guid jobId, string[] tasks, int timeout)
+        public CompletedTask[] CheckTaskCompletion(Guid jobId, string[] tasks)
         {
-            return JobServer.Instance.WaitForTaskCompletion(jobId, tasks, timeout);
+            return JobServer.Instance.CheckTaskCompletion(jobId, tasks);
         }
 
         public JobStatus GetJobStatus(Guid jobId)
