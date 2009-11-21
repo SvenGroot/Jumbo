@@ -29,11 +29,6 @@ namespace JobServerApplication
         {
             JobServer.Instance.RunJob(jobID);
         }
-
-        public bool WaitForJobCompletion(Guid jobID, int timeout)
-        {
-            return JobServer.Instance.WaitForJobCompletion(jobID, timeout);
-        }
         
         public ServerAddress GetTaskServerForTask(Guid jobID, string taskID)
         {

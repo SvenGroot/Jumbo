@@ -138,12 +138,6 @@ namespace JobServerApplication
             }
         }
 
-        public bool WaitForJobCompletion(Guid jobId, int timeout)
-        {
-            JobInfo job = GetRunningOrFinishedJob(jobId);
-            return job.JobCompletedEvent.WaitOne(timeout, false);
-        }
-
         public ServerAddress GetTaskServerForTask(Guid jobID, string taskID)
         {
             _log.DebugFormat("GetTaskServerForTask, jobID = {{{0}}}, taskID = \"{1}\"", jobID, taskID);
@@ -535,6 +529,7 @@ namespace JobServerApplication
                 JobStatus result = new JobStatus()
                 {
                     JobId = jobId,
+                    IsFinished = job.State > JobState.Running,
                     RunningTaskCount = (from task in job.SchedulingTasksById.Values
                                         where task.State == TaskState.Running
                                         select task).Count(),

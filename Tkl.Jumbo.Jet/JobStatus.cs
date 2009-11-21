@@ -88,6 +88,11 @@ namespace Tkl.Jumbo.Jet
         public DateTime EndTime { get; set; }
 
         /// <summary>
+        /// Gets or sets a value that indicates whether the job has finished.
+        /// </summary>
+        public bool IsFinished { get; set; }
+
+        /// <summary>
         /// Gets the number of task attempts that failed.
         /// </summary>
         [XmlIgnore]
@@ -113,9 +118,9 @@ namespace Tkl.Jumbo.Jet
         }
 
         /// <summary>
-        /// Gets a value that indicates whether the task has finished successfully.
+        /// Gets a value that indicates whether the job has finished successfully.
         /// </summary>
-        public bool IsFinished
+        public bool IsSuccessful
         {
             get { return FinishedTaskCount == TaskCount; }
         }

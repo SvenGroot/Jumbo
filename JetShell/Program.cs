@@ -8,6 +8,7 @@ using System.Text;
 using Tkl.Jumbo;
 using Tkl.Jumbo.Jet;
 using Tkl.Jumbo.Jet.Jobs;
+using System.Threading;
 
 namespace JetShell
 {
@@ -117,16 +118,16 @@ namespace JetShell
 
         private static bool WaitForJobCompletion(JetClient jetClient, int interval, Guid jobId)
         {
-            JobStatus status;
-            while( !jetClient.JobServer.WaitForJobCompletion(jobId, interval) )
+            JobStatus status = null;
+            do
             {
+                Thread.Sleep(interval);
                 status = jetClient.JobServer.GetJobStatus(jobId);
                 Console.WriteLine(status);
-            }
-            status = jetClient.JobServer.GetJobStatus(jobId);
-            Console.WriteLine(status);
+            } while( !status.IsFinished );
+
             Console.WriteLine();
-            if( status.IsFinished )
+            if( status.IsSuccessful )
                 Console.WriteLine("Job completed.");
             else
                 Console.WriteLine("Job failed.");
@@ -135,7 +136,7 @@ namespace JetShell
             TimeSpan duration = status.EndTime - status.StartTime;
             Console.WriteLine("Duration:   {0} ({1}s)", duration, duration.TotalSeconds);
 
-            return status.IsFinished;
+            return status.IsSuccessful;
         }
 
         private static void PrintAssemblyJobList(Assembly assembly)

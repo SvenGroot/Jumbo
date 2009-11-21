@@ -284,7 +284,7 @@ namespace Tkl.Jumbo.Test.Jet
             JetClient target = new JetClient(TestJetCluster.CreateClientConfig());
             Job job = target.RunJob(config, dfsClient, typeof(StringConversionTask).Assembly.Location);
 
-            bool complete = target.JobServer.WaitForJobCompletion(job.JobId, Timeout.Infinite);
+            bool complete = target.WaitForJobCompletion(job.JobId, Timeout.Infinite, 1000);
             Assert.IsTrue(complete);
         }
 
@@ -331,7 +331,7 @@ namespace Tkl.Jumbo.Test.Jet
             JetClient target = new JetClient(TestJetCluster.CreateClientConfig());
             Job job = target.RunJob(config, dfsClient, typeof(LineCounterTask).Assembly.Location);
 
-            bool complete = target.JobServer.WaitForJobCompletion(job.JobId, Timeout.Infinite);
+            bool complete = target.WaitForJobCompletion(job.JobId, Timeout.Infinite, 1000);
             Assert.IsTrue(complete);
 
             string outputFileName = DfsPath.Combine(outputPath, "OutputTask001");

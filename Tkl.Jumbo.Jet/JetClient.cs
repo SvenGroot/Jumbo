@@ -4,6 +4,8 @@ using System.Linq;
 using System.Text;
 using Tkl.Jumbo.Dfs;
 using System.IO;
+using System.Diagnostics;
+using System.Threading;
 
 namespace Tkl.Jumbo.Jet
 {
@@ -253,6 +255,31 @@ namespace Tkl.Jumbo.Jet
                 // Don't care if this fails.
             }
             JobServer.RunJob(job.JobId);
+        }
+
+        /// <summary>
+        /// Waits until the specified job has finished.
+        /// </summary>
+        /// <param name="jobId">The job ID of the job to wait for.</param>
+        /// <param name="millisecondsTimeout">The maximum amount of time to wait.</param>
+        /// <param name="millisecondsInterval">The interval at which to check for job completion.</param>
+        /// <returns><see langword="true"/> if the job finished, or <see langword="null"/> if the timeout expired.</returns>
+        public bool WaitForJobCompletion(Guid jobId, int millisecondsTimeout, int millisecondsInterval)
+        {
+            Stopwatch sw = new Stopwatch();
+            sw.Start();
+            JobStatus status = JobServer.GetJobStatus(jobId);
+            if( status == null )
+                throw new ArgumentException("Unknown job ID.", "jobId");
+
+            while( !status.IsFinished && (millisecondsTimeout == Timeout.Infinite || sw.ElapsedMilliseconds < millisecondsTimeout) )
+            {
+                Thread.Sleep(millisecondsInterval);
+                status = JobServer.GetJobStatus(jobId);
+            }
+
+            sw.Stop();
+            return status.IsFinished;
         }
         
         private static T CreateJobServerClientInternal<T>(string hostName, int port)
