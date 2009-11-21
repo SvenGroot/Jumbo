@@ -85,7 +85,8 @@ namespace TaskServerApplication
         public void NotifyTaskStatusChanged(Guid jobID, string taskID, TaskAttemptStatus newStatus, float progress)
         {
             AddDataForNextHeartbeat(new TaskStatusChangedJetHeartbeatData(jobID, taskID, newStatus, progress));
-            SendHeartbeat(false);
+            if( newStatus == TaskAttemptStatus.Completed )
+                SendHeartbeat();
         }
 
         public string GetJobDirectory(Guid jobID)
@@ -308,7 +309,8 @@ namespace TaskServerApplication
 
             while( _running )
             {
-                SendHeartbeat(true);
+                SendHeartbeat();
+                Thread.Sleep(_heartbeatInterval);
             }
         }
 
@@ -322,7 +324,7 @@ namespace TaskServerApplication
             _log.InfoFormat("-----Task server is shutting down-----");
         }
 
-        private void SendHeartbeat(bool waitForTasks)
+        private void SendHeartbeat()
         {
             JetHeartbeatData[] data = null;
             lock( _pendingHeartbeatData )
@@ -336,7 +338,7 @@ namespace TaskServerApplication
 
             JetHeartbeatResponse[] responses = null;
 
-            RpcHelper.TryRemotingCall(() => responses = _jobServer.Heartbeat(LocalAddress, data, waitForTasks ? _heartbeatInterval : 0), _heartbeatInterval, -1);
+            RpcHelper.TryRemotingCall(() => responses = _jobServer.Heartbeat(LocalAddress, data), _heartbeatInterval, -1);
 
             if( responses != null )
                 ProcessResponses(responses);

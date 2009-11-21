@@ -279,7 +279,7 @@ namespace JobServerApplication
 
         #region IJobServerHeartbeatProtocol Members
 
-        public JetHeartbeatResponse[] Heartbeat(Tkl.Jumbo.ServerAddress address, JetHeartbeatData[] data, int timeout)
+        public JetHeartbeatResponse[] Heartbeat(Tkl.Jumbo.ServerAddress address, JetHeartbeatData[] data)
         {
             if( address == null )
                 throw new ArgumentNullException("address");
@@ -317,13 +317,6 @@ namespace JobServerApplication
                             responses.Add(response);
                         }
                     }
-                }
-
-                if( timeout != 0 && responses == null )
-                {
-                    Monitor.Exit(_taskServers); // Exit the lock while waiting.
-                    server.TasksAssignedEvent.WaitOne(timeout, false);
-                    Monitor.Enter(_taskServers);
                 }
 
                 if( server.AssignedTasks.Count > 0 || server.AssignedNonInputTasks.Count > 0 )
@@ -517,16 +510,14 @@ namespace JobServerApplication
         /// <param name="job"></param>
         private void ScheduleTasks(JobInfo job)
         {
-	System.Diagnostics.Stopwatch sw = new System.Diagnostics.Stopwatch();
-	sw.Start();
+            System.Diagnostics.Stopwatch sw = new System.Diagnostics.Stopwatch();
+            sw.Start();
             lock( _taskServers )
             {
-                IEnumerable<TaskServerInfo> newServers = _scheduler.ScheduleTasks(_taskServers, job, _dfsClient);
-                foreach( TaskServerInfo server in newServers )
-                    server.TasksAssignedEvent.Set();
+                _scheduler.ScheduleTasks(_taskServers, job, _dfsClient);
             }
-	sw.Stop();
-	_log.DebugFormat("Scheduling run took {0}", sw.Elapsed.TotalSeconds);
+            sw.Stop();
+            _log.DebugFormat("Scheduling run took {0}", sw.Elapsed.TotalSeconds);
         }
 
         /// <summary>

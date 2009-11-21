@@ -37,7 +37,7 @@ namespace Tkl.Jumbo.Test.Jet
         public void TestCreateJobServerHeartbeatClient()
         {
             IJobServerHeartbeatProtocol client = JetClient.CreateJobServerHeartbeatClient(TestJetCluster.CreateClientConfig());
-            client.Heartbeat(new ServerAddress("localhost", 15000), null, 0);
+            client.Heartbeat(new ServerAddress("localhost", 15000), null);
         }
 
         [Test]
