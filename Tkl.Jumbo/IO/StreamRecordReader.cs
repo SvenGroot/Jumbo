@@ -58,9 +58,9 @@ namespace Tkl.Jumbo.IO
         {
             if( stream == null )
                 throw new ArgumentNullException("stream");
-            if( offset < 0 || offset >= stream.Length )
+            if( offset < 0 || (offset > 0 && offset >= stream.Length) )
                 throw new ArgumentOutOfRangeException("offset");
-            if( size <= 0 )
+            if( size < 0 )
                 throw new ArgumentOutOfRangeException("size");
             if( offset + size > stream.Length )
                 throw new ArgumentException("Offset + size is beyond the end of the stream.");
