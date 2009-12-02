@@ -176,5 +176,11 @@
         <include name="**"/>
       </fileset>
     </copy>
+    <copy todir="nantbin/JetWeb">
+      <fileset>
+        <include name="jet.config"/>
+        <include name="dfs.config"/>
+      </fileset>
+    </copy>
   </target>
 </project>

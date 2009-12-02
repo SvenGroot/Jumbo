@@ -114,6 +114,8 @@ namespace JobServerApplication
                     throw;
                 }
 
+                jobInfo.JobName = config.JobName;
+
                 foreach( StageConfiguration stage in config.Stages )
                 {
                     for( int x = 1; x <= stage.TaskCount; ++x )
@@ -529,6 +531,7 @@ namespace JobServerApplication
                 JobStatus result = new JobStatus()
                 {
                     JobId = jobId,
+                    JobName = job.JobName,
                     IsFinished = job.State > JobState.Running,
                     RunningTaskCount = (from task in job.SchedulingTasksById.Values
                                         where task.State == TaskState.Running

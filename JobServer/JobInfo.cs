@@ -36,6 +36,7 @@ namespace JobServerApplication
             Job = job;
         }
         public Job Job { get; private set; }
+        public string JobName { get; set; }
         public JobState State { get; set; }
         public int UnscheduledTasks { get; set; }
         public int FinishedTasks { get; set; }

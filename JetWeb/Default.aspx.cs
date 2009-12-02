@@ -45,8 +45,11 @@ public partial class _Default : System.Web.UI.Page
             JobStatus job = client.JobServer.GetJobStatus(jobId);
             HtmlTableRow row = new HtmlTableRow();
             row.Cells.Add(new HtmlTableCell() { InnerHtml = string.Format("<a href=\"job.aspx?id={0}\">{{{0}}}</a>", jobId) });
+            row.Cells.Add(new HtmlTableCell() { InnerText = job.JobName ?? "(unnamed)" });
             row.Cells.Add(new HtmlTableCell() { InnerText = job.StartTime.ToString(System.Globalization.DateTimeFormatInfo.InvariantInfo.UniversalSortableDateTimePattern) });
-            row.Cells.Add(new HtmlTableCell() { InnerText = (job.Progress * 100).ToString("0.0'%'") });
+            TimeSpan duration = DateTime.UtcNow - job.StartTime;
+            row.Cells.Add(new HtmlTableCell() { InnerText = string.Format("{0:hh:mm:ss.f} ({1:0.00}s)", duration, duration.TotalSeconds) });
+            row.Cells.Add(CreateProgressCell(job.Progress));
             row.Cells.Add(new HtmlTableCell() { InnerText = job.TaskCount.ToString() });
             row.Cells.Add(new HtmlTableCell() { InnerText = job.RunningTaskCount.ToString() });
             row.Cells.Add(new HtmlTableCell() { InnerText = job.UnscheduledTaskCount.ToString() });
@@ -61,6 +64,7 @@ public partial class _Default : System.Web.UI.Page
             JobStatus job = client.JobServer.GetJobStatus(jobId);
             HtmlTableRow row = new HtmlTableRow();
             row.Cells.Add(new HtmlTableCell() { InnerHtml = string.Format("<a href=\"job.aspx?id={0}\">{{{0}}}</a>", jobId) });
+            row.Cells.Add(new HtmlTableCell() { InnerText = job.JobName ?? "(unnamed)" });
             row.Cells.Add(new HtmlTableCell() { InnerText = job.StartTime.ToString(System.Globalization.DateTimeFormatInfo.InvariantInfo.UniversalSortableDateTimePattern) });
             row.Cells.Add(new HtmlTableCell() { InnerText = job.EndTime.ToString(System.Globalization.DateTimeFormatInfo.InvariantInfo.UniversalSortableDateTimePattern) });
             TimeSpan duration = job.EndTime - job.StartTime;
@@ -76,6 +80,7 @@ public partial class _Default : System.Web.UI.Page
             JobStatus job = client.JobServer.GetJobStatus(jobId);
             HtmlTableRow row = new HtmlTableRow();
             row.Cells.Add(new HtmlTableCell() { InnerHtml = string.Format("<a href=\"job.aspx?id={0}\">{{{0}}}</a>", jobId) });
+            row.Cells.Add(new HtmlTableCell() { InnerText = job.JobName ?? "(unnamed)" });
             row.Cells.Add(new HtmlTableCell() { InnerText = job.StartTime.ToString(System.Globalization.DateTimeFormatInfo.InvariantInfo.UniversalSortableDateTimePattern) });
             row.Cells.Add(new HtmlTableCell() { InnerText = job.EndTime.ToString() });
             TimeSpan duration = job.EndTime - job.StartTime;
@@ -85,5 +90,13 @@ public partial class _Default : System.Web.UI.Page
             row.Cells.Add(new HtmlTableCell() { InnerText = job.NonDataLocalTaskCount.ToString() });
             FailedJobsTable.Rows.Add(row);
         }
+    }
+
+    private HtmlTableCell CreateProgressCell(float progress)
+    {
+        progress *= 100;
+        HtmlTableCell cell = new HtmlTableCell();
+        cell.InnerHtml = string.Format("<div class=\"progressBar\"><div class=\"progressBarValue\" style=\"width:{0}%\">&nbsp;</div></div> {1:0.0}%", progress.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture), progress);
+        return cell;
     }
 }

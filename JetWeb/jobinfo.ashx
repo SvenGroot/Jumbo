@@ -72,15 +72,24 @@ public class jobinfo : IHttpHandler
     {
         Guid jobId = new Guid(context.Request.QueryString["id"]);
         JetClient client = new JetClient();
+        DfsClient dfsClient = new DfsClient();
         JobStatus job = client.JobServer.GetJobStatus(jobId);
         context.Response.ContentType = "application/zip";
-        context.Response.AddHeader("Content-Disposition", "attachment; filename=job_" + jobId.ToString() + ".zip");
+        string fileName = string.Format(System.Globalization.CultureInfo.InvariantCulture, "{0},%20{1}%20({2}).zip", typeof(DfsClient).Assembly.GetName().Version.Revision, job.JobName, job.JobId);
+        context.Response.AddHeader("Content-Disposition", "attachment; filename=" + fileName);
         context.Response.Cache.SetCacheability(HttpCacheability.NoCache);
         using( ZipOutputStream stream = new ZipOutputStream(context.Response.OutputStream) )
         {
             stream.SetLevel(9);
 
-            stream.PutNextEntry(new ZipEntry("job.xml"));
+            stream.PutNextEntry(new ZipEntry("config.xml"));
+            string configFilePath = DfsPath.Combine(DfsPath.Combine(client.Configuration.JobServer.JetDfsPath, "job_" + job.JobId.ToString("B")), Job.JobConfigFileName);
+            using( DfsInputStream configStream = dfsClient.OpenFile(configFilePath) )
+            {
+                configStream.CopyTo(stream);
+            }
+            
+            stream.PutNextEntry(new ZipEntry("summary.xml"));
             using( MemoryStream xmlStream = new MemoryStream() )
             {
                 using( XmlWriter writer = XmlWriter.Create(xmlStream) )

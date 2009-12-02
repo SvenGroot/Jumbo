@@ -158,6 +158,7 @@ namespace Tkl.Jumbo.Jet.Jobs
             StageConfiguration outputStage = null;
             StageConfiguration firstStage;
             JobConfiguration config = new JobConfiguration(assemblies.ToArray());
+            config.JobName = GetType().Name; // Use the class name as the job's friendly name.
             if( InputPath != null )
             {
                 FileSystemEntry input = GetInputFileSystemEntry(dfsClient, InputPath);

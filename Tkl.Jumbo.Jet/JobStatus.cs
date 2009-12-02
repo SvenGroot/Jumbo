@@ -25,6 +25,11 @@ namespace Tkl.Jumbo.Jet
         public Guid JobId { get; set; }
 
         /// <summary>
+        /// Gets or sets the display name of the job.
+        /// </summary>
+        public string JobName { get; set; }
+
+        /// <summary>
         /// Gets the tasks of this job.
         /// </summary>
         public Collection<TaskStatus> Tasks

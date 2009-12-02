@@ -28,6 +28,9 @@ namespace Tkl.Jumbo.Jet.Jobs
 
             JobConfiguration config = builder.JobConfiguration;
 
+            if( config.JobName == null )
+                config.JobName = GetType().Name; // Use the class name as the job's friendly name, if it hasn't been set explicitly.
+
             Job job = jetClient.JobServer.CreateJob();
 
             OnJobCreated(job, config);

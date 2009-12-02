@@ -50,6 +50,7 @@ namespace Tkl.Jumbo.Jet.Samples
             JetClient jetClient = new JetClient(JetConfiguration);
             CheckAndCreateOutputPath(dfsClient, _outputPath);
             JobConfiguration jobConfig = new JobConfiguration(typeof(PricingSummaryTask).Assembly);
+            jobConfig.JobName = GetType().Name; // Use the class name as the job's friendly name.
             FileSystemEntry input = dfsClient.NameServer.GetFileSystemEntryInfo(_inputPath);
             StageConfiguration inputStage = jobConfig.AddInputStage("PricingSummaryTask", input, typeof(PricingSummaryTask), typeof(RecordFileReader<LineItem>));
             StageConfiguration accumulatorPipelineStage = jobConfig.AddPointToPointStage("Accumulator", inputStage, typeof(PricingSummaryAccumulatorTask), Tkl.Jumbo.Jet.Channels.ChannelType.Pipeline, null, null);

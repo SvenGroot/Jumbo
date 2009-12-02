@@ -50,9 +50,15 @@ namespace Tkl.Jumbo.Jet
         /// <param name="assemblyFileNames">The file names of the assemblies containing the task types for this class.</param>
         public JobConfiguration(params string[] assemblyFileNames)
         {
-            if (assemblyFileNames != null)
+            if( assemblyFileNames != null )
                 _assemblyFileNames.AddRange(assemblyFileNames);
         }
+
+        /// <summary>
+        /// Gets or sets a descriptive name for the job. This is used for informational purposes only, and doesn't need to be unique.
+        /// </summary>
+        [XmlAttribute("name")]
+        public string JobName { get; set; }
 
         /// <summary>
         /// Gets the file name of the assembly holding the task classes.

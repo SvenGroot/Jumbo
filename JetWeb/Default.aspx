@@ -49,7 +49,9 @@
     <table id="RunningJobsTable" runat="server">
         <tr>
             <th scope="col">Job ID</th>
+            <th scope="col">Job Name</th>
             <th scope="col">Start time</th>
+            <th scope="col">Duration</th>
             <th scope="col">Progress</th>
             <th scope="col">Tasks</th>
             <th scope="col">Running tasks</th>
@@ -63,6 +65,7 @@
     <table id="FinishedJobsTable" runat="server">
         <tr>
             <th scope="col">Job ID</th>
+            <th scope="col">Job Name</th>
             <th scope="col">Start time</th>
             <th scope="col">End time</th>
             <th scope="col">Duration</th>
@@ -75,6 +78,7 @@
     <table id="FailedJobsTable" runat="server">
         <tr>
             <th scope="col">Job ID</th>
+            <th scope="col">Job Name</th>
             <th scope="col">Start time</th>
             <th scope="col">End time</th>
             <th scope="col">Duration</th>

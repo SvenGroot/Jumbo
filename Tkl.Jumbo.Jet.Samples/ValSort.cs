@@ -64,6 +64,7 @@ namespace Tkl.Jumbo.Jet.Samples
             CheckAndCreateOutputPath(dfsClient, _outputPath);
 
             JobConfiguration job = new JobConfiguration(typeof(ValSortTask).Assembly);
+            job.JobName = GetType().Name; // Use the class name as the job's friendly name.
 
             FileSystemEntry input = GetInputFileSystemEntry(dfsClient, _inputPath);
             StageConfiguration valSortStage = job.AddInputStage("ValSortStage", input, typeof(ValSortTask), typeof(GenSortRecordReader));
