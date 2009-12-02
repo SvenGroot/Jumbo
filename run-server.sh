@@ -20,15 +20,17 @@ case $startStop in
     cd $scriptDir
     if [ $command = "DfsWeb" ]; then
         cd DfsWeb
-		nohup xsp2 --port $dfsWebPort --nonstop --pidfile $pid > /dev/null 2>&1 < /dev/null &
-		cd ..
+	nohup xsp2 --port $dfsWebPort --nonstop --pidfile $pid > /dev/null 2>&1 < /dev/null &
+	cd ..
     elif [ $command = "JetWeb" ]; then
-		cd JetWeb
-		nohup xsp2 --port $jetWebPort --nonstop --pidfile $pid > /dev/null 2>&1 < /dev/null &
-		cd ..
+	cp jet.config JetWeb
+	cp dfs.config JetWeb
+	cd JetWeb
+	nohup xsp2 --port $jetWebPort --nonstop --pidfile $pid > /dev/null 2>&1 < /dev/null &
+	cd ..
     else
-		nohup mono $command.exe > /dev/null 2>&1 < /dev/null &
-		echo $! > $pid
+	nohup mono $command.exe > /dev/null 2>&1 < /dev/null &
+	echo $! > $pid
     fi
     ;;
     (stop)
