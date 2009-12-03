@@ -14,20 +14,20 @@ namespace Tkl.Jumbo.Jet
         /// <summary>
         /// Gets or sets the buffer size to use for input to push and pull tasks.
         /// </summary>
-        [ConfigurationProperty("readBufferSize", DefaultValue = 65536, IsRequired = false, IsKey = false)]
-        public int ReadBufferSize
+        [ConfigurationProperty("readBufferSize", DefaultValue = "64KB", IsRequired = false, IsKey = false)]
+        public ByteSize ReadBufferSize
         {
-            get { return (int)this["readBufferSize"]; }
+            get { return (ByteSize)this["readBufferSize"]; }
             set { this["readBufferSize"] = value; }
         }
 
         /// <summary>
         /// Gets or sets the buffer size to use for the <see cref="MergeRecordReader{T}"/>.
         /// </summary>
-        [ConfigurationProperty("mergeTaskReadBufferSize", DefaultValue = 0x100000, IsRequired = false, IsKey = false)]
-        public int MergeTaskReadBufferSize
+        [ConfigurationProperty("mergeTaskReadBufferSize", DefaultValue = "1MB", IsRequired = false, IsKey = false)]
+        public ByteSize MergeTaskReadBufferSize
         {
-            get { return (int)this["mergeTaskReadBufferSize"]; }
+            get { return (ByteSize)this["mergeTaskReadBufferSize"]; }
             set { this["mergeTaskReadBufferSize"] = value; }
         }
         /// <summary>
@@ -43,10 +43,10 @@ namespace Tkl.Jumbo.Jet
         /// <summary>
         /// Gets or sets the maximum size of the the in-memory input storage.
         /// </summary>
-        [ConfigurationProperty("memoryStorageSize", DefaultValue = 0x6400000L, IsRequired = false, IsKey = false)]
-        public long MemoryStorageSize
+        [ConfigurationProperty("memoryStorageSize", DefaultValue = "100MB", IsRequired = false, IsKey = false)]
+        public ByteSize MemoryStorageSize
         {
-            get { return (long)this["memoryStorageSize"]; }
+            get { return (ByteSize)this["memoryStorageSize"]; }
             set { this["memoryStorageSize"] = value; }
         }
 

@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Xml.Serialization;
 using System.Xml;
+using System.ComponentModel;
 
 namespace Tkl.Jumbo.Jet
 {
@@ -87,7 +88,7 @@ namespace Tkl.Jumbo.Jet
         /// <param name="value">The value of the setting.</param>
         public void AddTypedSetting<T>(string key, T value)
         {
-            Add(key, Convert.ToString(value, System.Globalization.CultureInfo.InvariantCulture));
+            Add(key, (string)TypeDescriptor.GetConverter(value).ConvertTo(null, System.Globalization.CultureInfo.InvariantCulture, value, typeof(string)));
         }
 
         /// <summary>
@@ -102,10 +103,7 @@ namespace Tkl.Jumbo.Jet
             string value;
             if( TryGetValue(key, out value) )
             {
-                if( typeof(T).IsEnum )
-                    return (T)Enum.Parse(typeof(T), value);
-                else
-                    return (T)Convert.ChangeType(value, typeof(T), System.Globalization.CultureInfo.InvariantCulture);
+                return (T)TypeDescriptor.GetConverter(defaultValue).ConvertFrom(null, System.Globalization.CultureInfo.InvariantCulture, value);
             }
             else
                 return defaultValue;

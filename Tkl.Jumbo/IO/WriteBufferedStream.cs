@@ -23,7 +23,7 @@ namespace Tkl.Jumbo.IO
     {
         private readonly Stream _stream;
         private readonly byte[] _buffer;
-        private int _bufferPos = 0;
+        private int _bufferPos;
         private bool _disposed;
 
         /// <summary>

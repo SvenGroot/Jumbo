@@ -11,6 +11,8 @@
       <Word>IPv4</Word>
       <Word>IPv6</Word>
       <Word>Deserializer</Word>
+      <Word>Iec</Word>
+      <Word>Petabyte</Word>
     </Recognized>
   </Words>
 </Dictionary>

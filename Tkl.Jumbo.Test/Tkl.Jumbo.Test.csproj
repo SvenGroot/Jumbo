@@ -50,6 +50,7 @@
     <Compile Include="..\Version.cs">
       <Link>Properties\Version.cs</Link>
     </Compile>
+    <Compile Include="ByteSizeTests.cs" />
     <Compile Include="Dfs\BlockAssignmentTests.cs" />
     <Compile Include="Dfs\BlockReportHeartbeatDataTests.cs" />
     <Compile Include="Dfs\BlockSenderTests.cs" />

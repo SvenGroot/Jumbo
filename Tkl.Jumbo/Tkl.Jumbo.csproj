@@ -55,6 +55,9 @@
     <Compile Include="..\Version.cs">
       <Link>Properties\Version.cs</Link>
     </Compile>
+    <Compile Include="ByteSize.cs" />
+    <Compile Include="ByteSizeConverter.cs" />
+    <Compile Include="ByteSizeSuffixOptions.cs" />
     <Compile Include="ChildCollection.cs" />
     <Compile Include="ClientChannelSink.cs" />
     <Compile Include="ClientChannelSinkProvider.cs" />

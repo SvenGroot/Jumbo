@@ -48,27 +48,10 @@ public partial class _Default : System.Web.UI.Page
 
     private string FormatSize(long bytes)
     {
-        double size;
-        string unit;
-        if( bytes > 0x40000000 )
-        {
-            size = bytes / (double)0x40000000;
-            unit = "GB";
-        }
-        else if( bytes > 0x100000 )
-        {
-            size = bytes / (double)0x100000;
-            unit = "MB";
-        }
-        else if( bytes > 0x400 )
-        {
-            size = bytes / (double)0x400;
-            unit = "KB";
-        }
-        else
+        if( bytes < ByteSize.Kilobyte )
         {
             return string.Format("{0:#,0} bytes", bytes);
         }
-        return string.Format("<abbr title=\"{2:#,0} bytes\">{0:#,0.0} {1}</abbr>", size, unit, bytes);
+        return string.Format("<abbr title=\"{1:#,0} bytes\">{0:#,0.0}</abbr>", new ByteSize(bytes).ToShortString("#,0.#", ByteSizeSuffixOptions.LeadingSpace), bytes);
     }
 }

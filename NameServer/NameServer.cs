@@ -57,7 +57,7 @@ namespace NameServerApplication
             _topology = new NetworkTopology(jumboConfig);
             _replicaPlacement = new ReplicaPlacement(Configuration, _topology);
             _replicationFactor = dfsConfig.NameServer.ReplicationFactor;
-            _blockSize = dfsConfig.NameServer.BlockSize;
+            _blockSize = (int)dfsConfig.NameServer.BlockSize;
             _fileSystem = new FileSystem(dfsConfig, replayLog);
             _fileSystem.FileDeleted += new EventHandler<FileDeletedEventArgs>(_fileSystem_FileDeleted);
             _fileSystem.GetBlocks(_blocks, _pendingBlocks);
