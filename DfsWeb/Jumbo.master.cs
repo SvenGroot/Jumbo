@@ -12,7 +12,7 @@ public partial class Jumbo : System.Web.UI.MasterPage
     protected void Page_Load(object sender, EventArgs e)
     {
         JumboVersionLabel.Text = typeof(DfsClient).Assembly.GetName().Version.ToString();
-        OsVersionLabel.Text = Environment.OSVersion.ToString();
+        OsVersionLabel.Text = RuntimeEnvironment.OperatingSystemDescription;
         ClrVersionLabel.Text = RuntimeEnvironment.Description;
         ArchitectureLabel.Text = (IntPtr.Size * 8).ToString();
     }

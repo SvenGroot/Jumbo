@@ -16,6 +16,7 @@
         <include name="System.Configuration.dll"/>
         <include name="System.Core.dll"/>
         <include name="System.Runtime.Remoting.dll"/>
+        <include name="System.Management.dll"/>
         <include name="../lib/log4net.dll"/>
       </references>
       <sources>
