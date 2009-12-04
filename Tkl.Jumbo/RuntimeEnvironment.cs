@@ -161,6 +161,7 @@ namespace Tkl.Jumbo
                 log.InfoFormat("   OS Version: {0}", OperatingSystemDescription);
                 log.InfoFormat("  CLR Version: {0} ({1} bit runtime)", Description, IntPtr.Size * 8);
                 log.InfoFormat("          CPU: {0} CPUs ({1})", Environment.ProcessorCount, ProcessorName);
+                log.InfoFormat("       Memory: {0}", new MemoryStatus());
             }
         }
 
