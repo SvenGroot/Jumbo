@@ -7,6 +7,7 @@ using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Management;
 using System.ComponentModel;
+using System.IO;
 
 namespace Tkl.Jumbo
 {
@@ -18,6 +19,7 @@ namespace Tkl.Jumbo
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(RuntimeEnvironment));
         private static readonly Type _monoRuntime = typeof(object).Assembly.GetType("Mono.Runtime");
         private static string _operatingSystemDescription;
+        private static string _processorName;
 
         /// <summary>
         /// Gets a value that indicates what runtime the application is running on.
@@ -81,6 +83,33 @@ namespace Tkl.Jumbo
         }
 
         /// <summary>
+        /// Gets the name of the system's processor.
+        /// </summary>
+        public static string ProcessorName
+        {
+            [MethodImpl(MethodImplOptions.Synchronized)]
+            get
+            {
+                if( _processorName == null )
+                {
+                    switch( Environment.OSVersion.Platform )
+                    {
+                    case PlatformID.Win32NT:
+                        _processorName = GetProcessorNameWindows();
+                        break;
+                    case PlatformID.Unix:
+                        _processorName = GetProcessorNameUnix();
+                        break;
+                    }
+                    if( _processorName == null )
+                        _processorName = "unknown";
+                }
+                return _processorName;
+            }
+        }
+
+
+        /// <summary>
         /// Modifies a <see cref="ProcessStartInfo"/> to use the runtime environment.
         /// </summary>
         /// <param name="startInfo">The <see cref="ProcessStartInfo"/>.</param>
@@ -131,6 +160,7 @@ namespace Tkl.Jumbo
                     log.InfoFormat("{0} Version: {1}", entry.GetName().Name, entry.GetName().Version);
                 log.InfoFormat("   OS Version: {0}", OperatingSystemDescription);
                 log.InfoFormat("  CLR Version: {0} ({1} bit runtime)", Description, IntPtr.Size * 8);
+                log.InfoFormat("          CPU: {0} CPUs ({1})", Environment.ProcessorCount, ProcessorName);
             }
         }
 
@@ -179,7 +209,7 @@ namespace Tkl.Jumbo
         private static string GetOSDescriptionWindows()
         {
             // Use WMI to get the OS name.
-            SelectQuery query = new SelectQuery("Win32_OperatingSystem");
+            SelectQuery query = new SelectQuery("Win32_OperatingSystem", null, new[] { "Caption" });
             ManagementObjectSearcher searcher = new ManagementObjectSearcher(query);
 
             foreach( ManagementBaseObject obj in searcher.Get() )
@@ -210,6 +240,40 @@ namespace Tkl.Jumbo
             {
                 return null;
             }
+        }
+
+        private static string GetProcessorNameWindows()
+        {
+            SelectQuery query = new SelectQuery("Win32_Processor", null, new[] { "Name" });
+            ManagementObjectSearcher searcher = new ManagementObjectSearcher(query);
+
+            // We assume all CPUs are identical, which should be true in an SMP system.
+            foreach( ManagementBaseObject obj in searcher.Get() )
+            {
+                return (string)obj["Name"];
+            }
+
+            return null;            
+        }
+
+        private static string GetProcessorNameUnix()
+        {
+            if( File.Exists("/proc/cpuinfo") )
+            {
+                using( StreamReader reader = File.OpenText("/proc/cpuinfo") )
+                {
+                    string line;
+                    while( (line = reader.ReadLine()) != null )
+                    {
+                        // We assume all CPUs are identical, which should be true in an SMP system.
+                        if( line.StartsWith("model name", StringComparison.Ordinal) )
+                        {
+                            return line.Substring(line.IndexOf(":") + 1).Trim();
+                        }
+                    }
+                }
+            }
+            return null;
         }
     }
 
