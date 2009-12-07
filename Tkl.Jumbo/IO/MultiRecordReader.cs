@@ -22,12 +22,13 @@ namespace Tkl.Jumbo.IO
         /// <summary>
         /// Initializes a new instance of the <see cref="MultiRecordReader{T}"/> class.
         /// </summary>
+        /// <param name="partitions">The partitions that this multi input record reader will read.</param>
         /// <param name="totalInputCount">The total number of input readers that this record reader will have.</param>
         /// <param name="allowRecordReuse"><see langword="true"/> if the record reader may reuse record instances; otherwise, <see langword="false"/>.</param>
         /// <param name="bufferSize">The buffer size to use to read input files.</param>
         /// <param name="compressionType">The compression type to us to read input files.</param>
-        public MultiRecordReader(int totalInputCount, bool allowRecordReuse, int bufferSize, CompressionType compressionType)
-            : base(totalInputCount, allowRecordReuse, bufferSize, compressionType)
+        public MultiRecordReader(IEnumerable<int> partitions, int totalInputCount, bool allowRecordReuse, int bufferSize, CompressionType compressionType)
+            : base(partitions, totalInputCount, allowRecordReuse, bufferSize, compressionType)
         {
         }
 
@@ -89,7 +90,7 @@ namespace Tkl.Jumbo.IO
                 WaitForInputs(newReaderNumber, Timeout.Infinite);
                 _timeWaitingStopwatch.Stop();
 
-                _currentReader = (RecordReader<T>)GetInputReader(_currentReaderNumber);
+                _currentReader = (RecordReader<T>)GetInputReader(CurrentPartition,_currentReaderNumber);
                 _currentReaderNumber = newReaderNumber;
             }
             return true;

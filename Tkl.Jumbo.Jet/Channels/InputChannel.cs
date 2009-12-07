@@ -97,14 +97,16 @@ namespace Tkl.Jumbo.Jet.Channels
         /// <summary>
         /// Creates a record reader of the type indicated by the channel.
         /// </summary>
-        /// <returns>An instance of a class implementing <see cref="IMultiInputRecordReader"/>.</returns>
+        /// <returns>An instance of a class implementin
+        /// g <see cref="IMultiInputRecordReader"/>.</returns>
         protected IMultiInputRecordReader CreateChannelRecordReader()
         {
             Type multiInputRecordReaderType = InputStage.OutputChannel.MultiInputRecordReaderType.ReferencedType;
             _log.InfoFormat(System.Globalization.CultureInfo.CurrentCulture, "Creating MultiRecordReader of type {3} for {0} inputs, allow record reuse = {1}, buffer size = {2}.", InputTaskIds.Count, TaskExecution.AllowRecordReuse, TaskExecution.JetClient.Configuration.FileChannel.ReadBufferSize, multiInputRecordReaderType);
             int bufferSize = multiInputRecordReaderType.GetGenericTypeDefinition() == typeof(MergeRecordReader<>) ? (int)TaskExecution.JetClient.Configuration.FileChannel.MergeTaskReadBufferSize : (int)TaskExecution.JetClient.Configuration.FileChannel.ReadBufferSize;
             // We're not using JetActivator to create the object because we need to delay calling NotifyConfigurationChanged until after InputStage was set.
-            IMultiInputRecordReader reader = (IMultiInputRecordReader)Activator.CreateInstance(multiInputRecordReaderType, _inputTaskIds.Count, TaskExecution.AllowRecordReuse, bufferSize, CompressionType);
+            int[] partitions = new int[] { TaskExecution.Configuration.TaskId.TaskNumber };
+            IMultiInputRecordReader reader = (IMultiInputRecordReader)Activator.CreateInstance(multiInputRecordReaderType, partitions, _inputTaskIds.Count, TaskExecution.AllowRecordReuse, bufferSize, CompressionType);
             IChannelMultiInputRecordReader channelReader = reader as IChannelMultiInputRecordReader;
             if( channelReader != null )
                 channelReader.InputStage = InputStage;

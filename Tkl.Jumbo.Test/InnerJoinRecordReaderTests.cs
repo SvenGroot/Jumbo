@@ -43,9 +43,9 @@ namespace Tkl.Jumbo.Test
             EnumerableRecordReader<Customer> customerReader = new EnumerableRecordReader<Customer>(_customers);
             EnumerableRecordReader<Order> orderReader = new EnumerableRecordReader<Order>(_orders);
 
-            CustomerOrderJoinRecordReader joinReader = new CustomerOrderJoinRecordReader(2, allowRecordReuse, 4096, CompressionType.None);
-            joinReader.AddInput(customerReader);
-            joinReader.AddInput(orderReader);
+            CustomerOrderJoinRecordReader joinReader = new CustomerOrderJoinRecordReader(new[] { 0 }, 2, allowRecordReuse, 4096, CompressionType.None);
+            joinReader.AddInput(new[] { new RecordInput(customerReader) });
+            joinReader.AddInput(new[] { new RecordInput(orderReader) });
 
             Trace.WriteLine(string.Format("Result size: {0}", linqResult.Count()));
             Assert.IsTrue(Utilities.CompareList(linqResult.ToList(), joinReader.EnumerateRecords().ToList()));

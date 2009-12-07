@@ -16,7 +16,7 @@ namespace Tkl.Jumbo.Jet
     /// <summary>
     /// Encapsulates all the data and functionality needed to run a task and its pipelined tasks.
     /// </summary>
-    public class TaskExecutionUtility : IDisposable
+    public sealed class TaskExecutionUtility : IDisposable
     {
         #region Nested types
 
@@ -56,6 +56,73 @@ namespace Tkl.Jumbo.Jet
             #endregion
         }
 
+        // This class is used if the input of a compound task is a channel and the output is a file (and there is no internal partitioning)
+        // in which case we want to name output files after partitions rather than task numbers. Since there can be more than one partition,
+        // this writer keeps an eye on 
+        private sealed class PartitionDfsOutputRecordWriter<T> : RecordWriter<T>
+            where T : IWritable, new()
+        {
+            private readonly TaskExecutionUtility _task;
+            private RecordWriter<T> _recordWriter;
+            private IMultiInputRecordReader _reader;
+
+            public PartitionDfsOutputRecordWriter(TaskExecutionUtility task)
+            {
+                _task = task;
+
+                if( _task._inputReader == null )
+                    _task.InputRecordReaderCreated += new EventHandler(_task_InputRecordReaderCreated);
+                else
+                    ConnectToReader();
+            }
+
+            protected override void WriteRecordInternal(T record)
+            {
+                _recordWriter.WriteRecord(record);
+            }
+
+            private void IMultiInputRecordReader_CurrentPartitionChanged(object sender, EventArgs e)
+            {
+                CreateOutputWriter();
+            }
+
+            private void _task_InputRecordReaderCreated(object sender, EventArgs e)
+            {
+                ConnectToReader();
+            }
+
+            private void CreateOutputWriter()
+            {
+                if( _recordWriter != null )
+                    _recordWriter.Dispose();
+
+                _recordWriter = _task.CreateDfsOutputRecordWriter<T>(_reader.CurrentPartition);
+            }
+
+            private void ConnectToReader()
+            {
+                _reader = (IMultiInputRecordReader)_task._inputReader;
+                _reader.CurrentPartitionChanged += new EventHandler(IMultiInputRecordReader_CurrentPartitionChanged);
+                CreateOutputWriter();
+            }
+
+            protected override void Dispose(bool disposing)
+            {
+                base.Dispose(disposing);
+                if( disposing )
+                {
+                    if( _recordWriter != null )
+                        _recordWriter.Dispose();
+                }
+            }
+        }
+
+        private sealed class DfsOutputInfo
+        {
+            public string DfsOutputPath { get; set; }
+            public string DfsOutputTempPath { get; set; }
+        }
+
         #endregion
 
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(TaskExecutionUtility));
@@ -75,9 +142,14 @@ namespace Tkl.Jumbo.Jet
         private bool _finished;
         private bool _isAssociatedTask;
         private readonly ManualResetEvent _finishedEvent = new ManualResetEvent(false);
-        private string _dfsOutputTempPath;
-        private string _dfsOutputPath;
+        private List<DfsOutputInfo> _dfsOutputs;
         private readonly List<StageConfiguration> _inputStages = new List<StageConfiguration>();
+        private readonly TaskExecutionUtility _baseTask;
+
+        /// <summary>
+        /// Event raised when the input record reader is creatd
+        /// </summary>
+        public event EventHandler InputRecordReaderCreated;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="TaskExecutionUtility"/> class.
@@ -99,6 +171,7 @@ namespace Tkl.Jumbo.Jet
         private TaskExecutionUtility(TaskExecutionUtility baseTask, StageConfiguration childStage, int childTaskNumber)
             : this(baseTask.JetClient, baseTask.Umbilical, baseTask.Configuration.JobId, baseTask.Configuration.JobConfiguration, childStage, new TaskId(baseTask.Configuration.TaskId, childStage.StageId, childTaskNumber), baseTask.DfsClient, baseTask.Configuration.LocalJobDirectory, baseTask.Configuration.DfsJobDirectory, baseTask.Configuration.Attempt)
         {
+            _baseTask = baseTask;
             _isAssociatedTask = true;
             _inputStages.Add(baseTask.Configuration.StageConfiguration);
         }
@@ -261,6 +334,7 @@ namespace Tkl.Jumbo.Jet
             if( _inputReader == null )
             {
                 _inputReader = CreateInputRecordReader<T>();
+                OnInputRecordReaderCreated(EventArgs.Empty);
                 StartProgressThread();
             }
             return (RecordReader<T>)_inputReader;
@@ -359,7 +433,8 @@ namespace Tkl.Jumbo.Jet
                     _outputStream = null;
                 }
 
-                DfsClient.NameServer.Move(_dfsOutputTempPath, _dfsOutputPath);
+                foreach( DfsOutputInfo output in _dfsOutputs )
+                    DfsClient.NameServer.Move(output.DfsOutputTempPath, output.DfsOutputPath);
             }
         }
 
@@ -391,7 +466,7 @@ namespace Tkl.Jumbo.Jet
         /// Releases all resources used by this <see cref="TaskExecutionUtility"/>.
         /// </summary>
         /// <param name="disposing"><see langword="true"/> to release managed and unmanaged resources; <see langword="false" /> to release only unmanaged resources.</param>
-        protected virtual void Dispose(bool disposing)
+        private void Dispose(bool disposing)
         {
             if( !_disposed )
             {
@@ -500,15 +575,16 @@ namespace Tkl.Jumbo.Jet
         {
             if( Configuration.StageConfiguration.DfsOutput != null )
             {
-                string file = DfsPath.Combine(DfsPath.Combine(Configuration.DfsJobDirectory, "temp"), Configuration.TaskAttemptId);
-                _log.DebugFormat("Opening output file {0}", file);
-                _dfsOutputTempPath = file;
-                TaskDfsOutput output = Configuration.StageConfiguration.DfsOutput;
-                _dfsOutputPath = output.GetPath(Configuration.TaskId.TaskNumber);
-                _outputStream = DfsClient.CreateFile(file, output.BlockSize, output.ReplicationFactor);
-                _log.DebugFormat("Creating record writer of type {0}", Configuration.StageConfiguration.DfsOutput.RecordWriterTypeName);
-                Type recordWriterType = Configuration.StageConfiguration.DfsOutput.RecordWriterType;
-                return (RecordWriter<T>)JetActivator.CreateInstance(recordWriterType, this, _outputStream);
+                _dfsOutputs = new List<DfsOutputInfo>();
+                if( Configuration.StageConfiguration.InternalPartitionCount == 1 )
+                {
+                    TaskExecutionUtility root = this;
+                    while( root._baseTask != null )
+                        root = root._baseTask;
+                    if( root.InputChannels != null && root.InputChannels.Count == 1 )
+                        return new PartitionDfsOutputRecordWriter<T>(root);
+                }
+                return CreateDfsOutputRecordWriter<T>(Configuration.TaskId.TaskNumber);
             }
             else if( OutputChannel != null )
             {
@@ -517,6 +593,19 @@ namespace Tkl.Jumbo.Jet
             }
             else
                 return null;
+        }
+
+        private RecordWriter<T> CreateDfsOutputRecordWriter<T>(int partition) where T : IWritable, new()
+        {
+            string file = DfsPath.Combine(DfsPath.Combine(Configuration.DfsJobDirectory, "temp"), Configuration.TaskAttemptId + "_part" + partition.ToString(System.Globalization.CultureInfo.InvariantCulture));
+            _log.DebugFormat("Opening output file {0}", file);
+
+            TaskDfsOutput output = Configuration.StageConfiguration.DfsOutput;
+            _dfsOutputs.Add(new DfsOutputInfo() { DfsOutputTempPath = file, DfsOutputPath = output.GetPath(partition) });
+            _outputStream = DfsClient.CreateFile(file, output.BlockSize, output.ReplicationFactor);
+            _log.DebugFormat("Creating record writer of type {0}", Configuration.StageConfiguration.DfsOutput.RecordWriterTypeName);
+            Type recordWriterType = Configuration.StageConfiguration.DfsOutput.RecordWriterType;
+            return (RecordWriter<T>)JetActivator.CreateInstance(recordWriterType, this, _outputStream);
         }
 
         private RecordReader<T> CreateInputRecordReader<T>()
@@ -538,10 +627,10 @@ namespace Tkl.Jumbo.Jet
                     Type multiInputRecordReaderType = Configuration.StageConfiguration.MultiInputRecordReaderType.ReferencedType;
                     int bufferSize = multiInputRecordReaderType == typeof(MergeRecordReader<T>) ? (int)JetClient.Configuration.FileChannel.MergeTaskReadBufferSize : (int)JetClient.Configuration.FileChannel.ReadBufferSize;
                     CompressionType compressionType = Configuration.JobConfiguration.GetTypedSetting(FileOutputChannel.CompressionTypeSetting, JetClient.Configuration.FileChannel.CompressionType);
-                    MultiInputRecordReader<T> reader = (MultiInputRecordReader<T>)JetActivator.CreateInstance(multiInputRecordReaderType, this, InputChannels.Count, AllowRecordReuse, bufferSize, compressionType);
+                    MultiInputRecordReader<T> reader = (MultiInputRecordReader<T>)JetActivator.CreateInstance(multiInputRecordReaderType, this, new int[] { 0 }, InputChannels.Count, AllowRecordReuse, bufferSize, compressionType);
                     foreach( IInputChannel inputChannel in InputChannels )
                     {
-                        reader.AddInput(inputChannel.CreateRecordReader());
+                        reader.AddInput(new[] { new RecordInput(inputChannel.CreateRecordReader()) });
                     }
                     return reader;
                 }
@@ -630,6 +719,13 @@ namespace Tkl.Jumbo.Jet
                 _finishedEvent.WaitOne(_progressInterval, false);
             }
             _log.Info("Progress thread has finished.");
+        }
+
+        private void OnInputRecordReaderCreated(EventArgs e)
+        {
+            EventHandler handler = InputRecordReaderCreated;
+            if( handler != null )
+                handler(this, e);
         }
     }
 }

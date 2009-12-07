@@ -20,7 +20,7 @@ namespace Tkl.Jumbo.IO
     ///   If you accept inputs of types other than <typeparamref name="T"/>, you must specify that using the <see cref="InputTypeAttribute"/>.
     /// </para>
     /// <note>
-    ///   While the <see cref="AddInput(IRecordReader)"/>, <see cref="AddInput(Type,string,string,long,bool)"/>, <see cref="WaitForInputs"/> 
+    ///   While the <see cref="AddInput"/>, <see cref="WaitForInputs"/> 
     ///   and <see cref="GetInputReader"/> methods are thread safe, no other methods of this class are guaranteed to be thread
     ///   safe, and derived classes are not required to make <see cref="RecordReader{T}.ReadRecordInternal"/> thread safe.
     ///   Essentially, you may have only one thread reading from the <see cref="MultiInputRecordReader{T}"/>, while one or
@@ -30,89 +30,42 @@ namespace Tkl.Jumbo.IO
     public abstract class MultiInputRecordReader<T> : RecordReader<T>, IMultiInputRecordReader
         where T : IWritable, new()
     {
-        #region Nested types
-
-        private sealed class Input : IDisposable
-        {
-            private IRecordReader _reader;
-            private readonly string _sourceName;
-            private readonly long _uncompressedSize;
-            private readonly MultiInputRecordReader<T> _input;
-            private readonly Type _inputRecordReaderType;
-            private readonly bool _deleteFile;
-
-            public Input(IRecordReader reader, Type inputRecordReaderType, string fileName, string sourceName, MultiInputRecordReader<T> input, long uncompressedSize, bool deleteFile)
-            {
-                _reader = reader;
-                FileName = fileName;
-                _input = input;
-                _sourceName = sourceName;
-                _uncompressedSize = uncompressedSize;
-                _inputRecordReaderType = inputRecordReaderType;
-                _deleteFile = deleteFile;
-            }
-
-            public string FileName { get; private set; }
-
-            public IRecordReader Reader
-            {
-                get
-                {
-                    if( _reader == null )
-                    {
-                        _reader = (IRecordReader)Activator.CreateInstance(_inputRecordReaderType, FileName, _input.AllowRecordReuse, _deleteFile, _input.BufferSize, _input.CompressionType, _uncompressedSize);
-                        _reader.SourceName = _sourceName;
-                    }
-                    return _reader;
-                }
-            }
-
-            public bool IsReaderCreated
-            {
-                get
-                {
-                    return _reader != null;
-                }
-            }
-
-            #region IDisposable Members
-
-            public void Dispose()
-            {
-                if( _reader != null )
-                {
-                    ((IDisposable)_reader).Dispose();
-                    _reader = null;
-                }
-                GC.SuppressFinalize(this);
-            }
-
-            #endregion
-        }
-
-        #endregion
-
         private bool _disposed;
-        private readonly List<Input> _inputs = new List<Input>();
+        private readonly SortedList<int, List<RecordInput>> _inputs = new SortedList<int, List<RecordInput>>();
+        private int _currentPartition;
+
+        /// <summary>
+        /// Event raised when the value of the <see cref="CurrentPartition"/> property changes.
+        /// </summary>
+        public event EventHandler CurrentPartitionChanged;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="MultiInputRecordReader{T}"/> class.
         /// </summary>
+        /// <param name="partitions">The partitions that this multi input record reader will read.</param>
         /// <param name="totalInputCount">The total number of input readers that this record reader will have.</param>
         /// <param name="allowRecordReuse"><see langword="true"/> if the record reader may reuse record instances; otherwise, <see langword="false"/>.</param>
         /// <param name="bufferSize">The buffer size to use to read input files.</param>
         /// <param name="compressionType">The compression type to us to read input files.</param>
-        protected MultiInputRecordReader(int totalInputCount, bool allowRecordReuse, int bufferSize, CompressionType compressionType)
+        protected MultiInputRecordReader(IEnumerable<int> partitions, int totalInputCount, bool allowRecordReuse, int bufferSize, CompressionType compressionType)
         {
+            if( partitions == null )
+                throw new ArgumentNullException("partitions");
             if( totalInputCount < 1 )
                 throw new ArgumentOutOfRangeException("totalInputCount", "Multi input record reader must have at least one input.");
             if( bufferSize <= 0 )
                 throw new ArgumentOutOfRangeException("bufferSize", "Buffer size must be larger than zero.");
 
+            foreach( int partition in partitions )
+            {
+                _inputs.Add(partition, new List<RecordInput>());
+            }
+
             TotalInputCount = totalInputCount;
             AllowRecordReuse = allowRecordReuse;
             BufferSize = bufferSize;
             CompressionType = compressionType;
+            CurrentPartition = _inputs.Keys[0];
         }
 
         /// <summary>
@@ -144,15 +97,19 @@ namespace Tkl.Jumbo.IO
             {
                 lock( _inputs )
                 {
-                    return (from input in _inputs
+                    if( _inputs.Count == 0 ) // prevent division by zero.
+                        return 0;
+
+                    return (from inputList in _inputs.Values
+                            from input in inputList
                             where input.IsReaderCreated
-                            select input.Reader.Progress).Sum() / (float)TotalInputCount;
+                            select input.Reader.Progress).Sum() / (float)(TotalInputCount * _inputs.Count);
                 }
             }
         }
 
         /// <summary>
-        /// Gets a value that indicates if any reader has data available.
+        /// Gets a value that indicates if any reader for the current partition has data available.
         /// </summary>
         public override bool RecordsAvailable
         {
@@ -162,10 +119,11 @@ namespace Tkl.Jumbo.IO
                 {
                     // We treat inputs whose reader hasn't yet been created as if RecordsAvailable is true, as they are read from a file
                     // so their readers would always return true anyway.
-                    return _inputs.Exists((i) => !i.IsReaderCreated || i.Reader.RecordsAvailable);
+                    return _inputs.Values[0].Exists((i) => !i.IsReaderCreated || i.Reader.RecordsAvailable);
                 }
             }
         }
+
 
         /// <summary>
         /// Gets the current number of inputs that have been added to the <see cref="MultiInputRecordReader{T}"/>.
@@ -176,8 +134,35 @@ namespace Tkl.Jumbo.IO
             {
                 lock( _inputs )
                 {
-                    return _inputs.Count;
+                    return _inputs.Count == 0 ? 0 : _inputs.Values[0].Count;
                 }
+            }
+        }
+
+        /// <summary>
+        /// Gets or sets the partition that calls to <see cref="RecordReader{T}.ReadRecord"/> should return records for.
+        /// </summary>
+        public int CurrentPartition
+        {
+            get { return _currentPartition; }
+            set 
+            {
+                if( _currentPartition != value )
+                {
+                    _currentPartition = value;
+                    OnCurrentPartitionChanged(EventArgs.Empty);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Gets all partitions that this reader currently has data for.
+        /// </summary>
+        public IList<int> Partitions
+        {
+            get
+            {
+                return _inputs.Keys;
             }
         }
 
@@ -190,34 +175,34 @@ namespace Tkl.Jumbo.IO
         }
 
         /// <summary>
-        /// Adds the specified record reader to the inputs to be read by this record reader.
+        /// Adds the specified input to be read by this record reader.
         /// </summary>
-        /// <param name="reader">The record reader to read from.</param>
-        public void AddInput(IRecordReader reader)
+        /// <param name="partitions">The partitions for this input.</param>
+        /// <remarks>
+        /// Which partitions a multi input record reader is responsible for is specified when that reader is created.
+        /// All calls to <see cref="AddInput"/> must specify those exact same partitions, sorted by the partition number.
+        /// </remarks>
+        public void AddInput(IList<RecordInput> partitions)
         {
-            if( reader == null )
-                throw new ArgumentNullException("reader");
-            CheckDisposed();
-            AddInput(new Input(reader, null, null, null, this, -1L, false));
-        }
+            if( partitions == null )
+                throw new ArgumentNullException("partitions");
+            if( partitions.Count != _inputs.Count )
+                throw new ArgumentException("Incorrect number of partitions.");
 
-        /// <summary>
-        /// Adds the specified input file to the inputs to be read by this record reader.
-        /// </summary>
-        /// <param name="recordReaderType">The type of the record reader to be created to read the input file. This type be derived from <see cref="RecordReader{T}"/> and have a constructor with the same 
-        /// parameters as <see cref="BinaryRecordReader{T}(string,bool,bool,int,Tkl.Jumbo.CompressionType,long)"/>.</param>
-        /// <param name="fileName">The file to read.</param>
-        /// <param name="sourceName">A name used to identify the source of this input. Can be <see langword="null"/>.</param>
-        /// <param name="uncompressedSize">The size of the file's data after decompression; only needed if <see cref="CompressionType"/> is not <see cref="Tkl.Jumbo.CompressionType.None"/>.</param>
-        /// <param name="deleteFile"><see langword="true"/> to delete the file after reading finishes; otherwise, <see langword="false"/>.</param>
-        public void AddInput(Type recordReaderType, string fileName, string sourceName, long uncompressedSize, bool deleteFile)
-        {
-            if( recordReaderType == null )
-                throw new ArgumentNullException("recordReaderType");
-            if( fileName == null )
-                throw new ArgumentNullException("fileName");
-            CheckDisposed();
-            AddInput(new Input(null, recordReaderType, fileName, sourceName, this, uncompressedSize, deleteFile));
+            lock( _inputs )
+            {
+                if( CurrentInputCount >= TotalInputCount )
+                    throw new InvalidOperationException("The merge task input already has all inputs.");
+
+                for( int x = 0; x < partitions.Count; ++x )
+                {
+                    RecordInput input = partitions[x];
+                    input.Input = this;
+                    _inputs.Values[x].Add(input);
+                }
+
+                Monitor.PulseAll(_inputs);
+            }
         }
 
         /// <summary>
@@ -237,7 +222,7 @@ namespace Tkl.Jumbo.IO
             sw.Start();
             lock( _inputs )
             {
-                while( _inputs.Count < inputCount )
+                while( _inputs.Values[0].Count < inputCount )
                 {
                     int timeoutRemaining = Timeout.Infinite;
                     if( timeout > 0 )
@@ -256,13 +241,14 @@ namespace Tkl.Jumbo.IO
         /// <summary>
         /// Returns the record reader for the specified input.
         /// </summary>
+        /// <param name="partition">The partition of the reader to return.</param>
         /// <param name="index">The index of the record reader to return.</param>
         /// <returns>An instance of a class implementing <see cref="IRecordReader"/> for the specified input.</returns>
-        protected IRecordReader GetInputReader(int index)
+        protected IRecordReader GetInputReader(int partition, int index)
         {
             lock( _inputs )
             {
-                return _inputs[index].Reader;
+                return _inputs[partition][index].Reader;
             }
         }
 
@@ -279,9 +265,12 @@ namespace Tkl.Jumbo.IO
                 {
                     lock( _inputs )
                     {
-                        foreach( Input input in _inputs )
+                        foreach( List<RecordInput> inputList in _inputs.Values )
                         {
-                            input.Dispose();
+                            foreach( RecordInput input in inputList )
+                            {
+                                input.Dispose();
+                            }
                         }
                         _inputs.Clear();
                         _disposed = true;
@@ -295,24 +284,23 @@ namespace Tkl.Jumbo.IO
         }
 
         /// <summary>
+        /// Raises the <see cref="CurrentPartitionChanged"/> event.
+        /// </summary>
+        /// <param name="e">The data for the event.</param>
+        protected virtual void OnCurrentPartitionChanged(EventArgs e)
+        {
+            EventHandler handler = CurrentPartitionChanged;
+            if( handler != null )
+                handler(this, e);
+        }
+
+        /// <summary>
         /// Throws a <see cref="ObjectDisposedException"/> if the object has been disposed.
         /// </summary>
         protected void CheckDisposed()
         {
             if( _disposed )
                 throw new ObjectDisposedException(GetType().FullName);
-        }
-
-
-        private void AddInput(Input input)
-        {
-            lock( _inputs )
-            {
-                if( _inputs.Count >= TotalInputCount )
-                    throw new InvalidOperationException("The merge task input already has all inputs.");
-                _inputs.Add(input);
-                Monitor.PulseAll(_inputs);
-            }
         }
     }
 }

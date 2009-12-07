@@ -66,13 +66,16 @@ namespace Tkl.Jumbo.Jet.Channels
 
             _log.InfoFormat("Begin listening for {0} inputs on {1}.", _reader.TotalInputCount, listener.LocalEndpoint);
 
+            RecordInput[] inputs = new RecordInput[1];
+
             try
             {
                 while( _running && _reader.CurrentInputCount < _reader.TotalInputCount )
                 {
                     TcpClient client = listener.AcceptTcpClient();
                     _log.InfoFormat("Accepted connection from {0}.", client.Client.RemoteEndPoint);
-                    _reader.AddInput((IRecordReader)JetActivator.CreateInstance(_inputReaderType, TaskExecution, client, TaskExecution.AllowRecordReuse));
+                    inputs[0] = new RecordInput((IRecordReader)JetActivator.CreateInstance(_inputReaderType, TaskExecution, client, TaskExecution.AllowRecordReuse));
+                    _reader.AddInput(inputs);
                 }
 
                 _log.Info("Received all inputs; listener is shutting down.");

@@ -27,28 +27,39 @@ namespace Tkl.Jumbo.Test.Jet
         [Test]
         public void TestMergeRecordReader()
         {
-            TestMergeSort(100, CompressionType.None);
+            TestMergeSort(1, 100, CompressionType.None);
         }
 
         [Test]
         public void TestMergeRecordReaderMultiplePasses()
         {
-            TestMergeSort(20, CompressionType.None);
+            TestMergeSort(1, 20, CompressionType.None);
         }
 
         [Test]
         public void TestMergeRecordReaderMultiplePassesWithCompression()
         {
-            TestMergeSort(20, CompressionType.GZip);
+            TestMergeSort(1, 20, CompressionType.GZip);
         }
 
-        private static void TestMergeSort(int maxMergeInputs, CompressionType compression)
+        [Test]
+        public void TestMergeRecordReaderMultiplePartitions()
+        {
+            TestMergeSort(3, 100, CompressionType.None);
+        }
+
+        [Test]
+        public void TestMergeRecordReaderMultiplePartitionsMultiplePasses()
+        {
+            TestMergeSort(3, 20, CompressionType.None);
+        }
+
+        private static void TestMergeSort(int partitions, int maxMergeInputs, CompressionType compression)
         {
             const int inputCount = 50;
             const int recordCountMin = 1000;
             const int recordCountMax = 10000;
-            List<Int32Writable> sortedList = new List<Int32Writable>();
-            MergeRecordReader<Int32Writable> reader = new MergeRecordReader<Int32Writable>(inputCount, false, 4096, compression);
+            MergeRecordReader<Int32Writable> reader = new MergeRecordReader<Int32Writable>(Enumerable.Range(0, partitions), inputCount, false, 4096, compression);
             StageConfiguration stageConfig = new StageConfiguration();
             stageConfig.AddTypedSetting(MergeRecordReaderConstants.MaxMergeInputsSetting, maxMergeInputs);
             stageConfig.StageId = "Merge";
@@ -56,25 +67,38 @@ namespace Tkl.Jumbo.Test.Jet
             reader.TaskAttemptConfiguration = new TaskAttemptConfiguration(Guid.Empty, new JobConfiguration(), new TaskId(stageConfig.StageId, 1), stageConfig, Utilities.TestOutputPath, "", 1, null);
             reader.NotifyConfigurationChanged();
             Random rnd = new Random();
+            List<Int32Writable>[] sortedLists = new List<Int32Writable>[partitions];
+            RecordInput[] partitionInputs = new RecordInput[partitions];
             for( int x = 0; x < inputCount; ++x )
             {
-                int recordCount = rnd.Next(recordCountMin, recordCountMax);
-                List<Int32Writable> records = new List<Int32Writable>(recordCount);
-                for( int record = 0; record < recordCount; ++record )
+                for( int partition = 0; partition < partitions; ++partition )
                 {
-                    int value = rnd.Next();
-                    records.Add(value);
-                    sortedList.Add(value);
+                    if( sortedLists[partition] == null )
+                        sortedLists[partition] = new List<Int32Writable>();
+                    int recordCount = rnd.Next(recordCountMin, recordCountMax);
+                    List<Int32Writable> records = new List<Int32Writable>(recordCount);
+                    for( int record = 0; record < recordCount; ++record )
+                    {
+                        int value = rnd.Next();
+                        records.Add(value);
+                        sortedLists[partition].Add(value);
+                    }
+                    records.Sort();
+                    partitionInputs[partition] = new RecordInput(new EnumerableRecordReader<Int32Writable>(records));
                 }
-                records.Sort();
-                reader.AddInput(new EnumerableRecordReader<Int32Writable>(records));
+                reader.AddInput(partitionInputs);
             }
 
-            sortedList.Sort();
+            for( int partition = 0; partition < partitions; ++partition )
+            {
+                List<Int32Writable> expected = sortedLists[partition];
+                expected.Sort();
 
-            List<Int32Writable> result = new List<Int32Writable>(reader.EnumerateRecords());
+                reader.CurrentPartition = partition;
+                List<Int32Writable> result = new List<Int32Writable>(reader.EnumerateRecords());
 
-            Assert.IsTrue(Utilities.CompareList(sortedList, result));
+                Assert.IsTrue(Utilities.CompareList(expected, result));
+            }
         }
     }
 }

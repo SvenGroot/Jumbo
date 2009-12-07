@@ -16,6 +16,11 @@ namespace Tkl.Jumbo.IO
     public interface IMultiInputRecordReader : IRecordReader
     {
         /// <summary>
+        /// Event that is raised if the value of the <see cref="CurrentPartition"/> property changes.
+        /// </summary>
+        event EventHandler CurrentPartitionChanged;
+
+        /// <summary>
         /// Gets the total number of inputs readers that this record reader will have.
         /// </summary>
         int TotalInputCount { get; }
@@ -26,20 +31,38 @@ namespace Tkl.Jumbo.IO
         int CurrentInputCount { get; }
 
         /// <summary>
-        /// Adds the specified record reader to the inputs to be read by this record reader.
+        /// Gets a value that indicates that this record reader is allowed to reuse record instances.
         /// </summary>
-        /// <param name="reader">The record reader to read from.</param>
-        void AddInput(IRecordReader reader);
+        bool AllowRecordReuse { get; }
 
         /// <summary>
-        /// Adds the specified input file to the inputs to be read by this record reader.
+        /// Gets the buffer size to use to read input files.
         /// </summary>
-        /// <param name="recordReaderType">The type of the record reader to be created to read the input file. This type be derived from <see cref="RecordReader{T}"/> and have a constructor with the same 
-        /// parameters as <see cref="BinaryRecordReader{T}(string,bool,bool,int,Tkl.Jumbo.CompressionType,long)"/>.</param>
-        /// <param name="fileName">The file to read.</param>
-        /// <param name="sourceName">A name used to identify the source of this input. Can be <see langword="null"/>.</param>
-        /// <param name="uncompressedSize">The size of the file's data after decompression; only needed if <see cref="CompressionType"/> is not <see cref="Tkl.Jumbo.CompressionType.None"/>.</param>
-        /// <param name="deleteFile"><see langword="true"/> to delete the file after reading finishes; otherwise, <see langword="false"/>.</param>
-        void AddInput(Type recordReaderType, string fileName, string sourceName, long uncompressedSize, bool deleteFile);
+        int BufferSize { get; }
+
+        /// <summary>
+        /// Gets the type of compression to use to read input files.
+        /// </summary>
+        CompressionType CompressionType { get; }
+
+        /// <summary>
+        /// Gets all partitions that this reader currently has data for.
+        /// </summary>
+        IList<int> Partitions { get; }
+
+        /// <summary>
+        /// Gets or sets the partition that calls to <see cref="RecordReader{T}.ReadRecord"/> should return records for.
+        /// </summary>
+        int CurrentPartition { get; set; }
+
+        /// <summary>
+        /// Adds the specified input to be read by this record reader.
+        /// </summary>
+        /// <param name="partitions">The partitions for this input.</param>
+        /// <remarks>
+        /// Which partitions a multi input record reader is responsible for is specified when that reader is created.
+        /// All calls to <see cref="AddInput"/> must specify those exact same partitions, sorted by the partition number.
+        /// </remarks>
+        void AddInput(IList<RecordInput> partitions);
     }
 }

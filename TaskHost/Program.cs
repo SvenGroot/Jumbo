@@ -128,14 +128,13 @@ namespace TaskHost
             _log.Debug("DoRunTask invoked.");
             ITask<TInput, TOutput> task = taskExecution.GetTaskInstance<TInput, TOutput>();
             // Lifetime is managed by the TaskExecutionUtility class, no need to put them in a using block.
+            RecordReader<TInput> input = taskExecution.GetInputReader<TInput>();
+            // Lifetime is managed by the TaskExecutionUtility class, no need to put them in a using block.
             RecordWriter<TOutput> output = taskExecution.GetOutputWriter<TOutput>();
             Stopwatch taskStopwatch = new Stopwatch();
 
-
             IPullTask<TInput, TOutput> pullTask = task as IPullTask<TInput, TOutput>;
 
-            // Lifetime is managed by the TaskExecutionUtility class, no need to put them in a using block.
-            RecordReader<TInput> input = taskExecution.GetInputReader<TInput>();
 
             if( pullTask != null )
             {

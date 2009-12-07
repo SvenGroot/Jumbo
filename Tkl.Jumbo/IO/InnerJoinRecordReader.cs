@@ -35,12 +35,13 @@ namespace Tkl.Jumbo.IO
         /// <summary>
         /// Initializes a new instance of the <see cref="InnerJoinRecordReader{TOuter, TInner, TResult}"/> class.
         /// </summary>
+        /// <param name="partitions">The partitions that this multi input record reader will read.</param>
         /// <param name="totalInputCount">The total number of input readers that this record reader will have.</param>
         /// <param name="allowRecordReuse"><see langword="true"/> if the record reader may reuse record instances; otherwise, <see langword="false"/>.</param>
         /// <param name="bufferSize">The buffer size to use to read input files.</param>
         /// <param name="compressionType">The compression type to us to read input files.</param>
-        protected InnerJoinRecordReader(int totalInputCount, bool allowRecordReuse, int bufferSize, CompressionType compressionType)
-            : base(totalInputCount, allowRecordReuse, bufferSize, compressionType)
+        protected InnerJoinRecordReader(IEnumerable<int> partitions, int totalInputCount, bool allowRecordReuse, int bufferSize, CompressionType compressionType)
+            : base(partitions, totalInputCount, allowRecordReuse, bufferSize, compressionType)
         {
             if( totalInputCount != 2 )
                 throw new ArgumentOutOfRangeException("totalInputCount", "InnerJoinRecordReader must have exactly two input readers.");
@@ -55,8 +56,9 @@ namespace Tkl.Jumbo.IO
             if( _outer == null )
             {
                 WaitForInputs(2, Timeout.Infinite);
-                _outer = (RecordReader<TOuter>)GetInputReader(0);
-                _inner = (RecordReader<TInner>)GetInputReader(1);
+                _outer = (RecordReader<TOuter>)GetInputReader(CurrentPartition, 0);
+                _inner = (RecordReader<TInner>)GetInputReader(CurrentPartition, 1);
+
                 _outerHasRecords = _outer.ReadRecord();
                 _innerHasRecords = _inner.ReadRecord();
             }

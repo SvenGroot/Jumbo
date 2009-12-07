@@ -293,11 +293,11 @@ namespace Tkl.Jumbo.Jet.Channels
             {
                 IRecordReader taskReader = (IRecordReader)JetActivator.CreateInstance(_inputReaderType, TaskExecution, memoryStream, TaskExecution.AllowRecordReuse);
                 taskReader.SourceName = task.TaskId;
-                reader.AddInput(taskReader);
+                reader.AddInput(new[] { new RecordInput(taskReader) });
             }
             else
             {
-                reader.AddInput(_inputReaderType, fileName, task.TaskId, uncompressedSize, deleteFile);
+                reader.AddInput(new[] { new RecordInput(_inputReaderType, fileName, task.TaskId, uncompressedSize, deleteFile) });
             }
 
             if( !_isReady )
