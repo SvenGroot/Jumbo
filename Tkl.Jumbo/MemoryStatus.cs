@@ -154,7 +154,7 @@ namespace Tkl.Jumbo
 
         private bool ExtractMemInfoValue(string line, string field, ref long value)
         {
-            if( line.StartsWith(field) )
+            if( line.StartsWith(field, StringComparison.Ordinal) )
             {
                 // Strip the field, the colon, and the kB
                 string valueString = line.Substring(field.Length + 1, line.Length - field.Length - 3);
