@@ -66,7 +66,7 @@ namespace Tkl.Jumbo.Jet.Samples
                             where stage.DfsInputs != null
                             from input in stage.DfsInputs
                             select input;
-            RangePartitioner.CreatePartitionFile(dfsClient, partitionFileName, dfsInputs.ToArray(), SecondStageTaskCount, SampleSize);
+            RangePartitioner.CreatePartitionFile(dfsClient, partitionFileName, dfsInputs.ToArray(), SecondStageTaskCount * PartitionsPerTask, SampleSize);
 
             jobConfiguration.AddSetting("partitionFile", partitionFileName);
             if( MaxMergeInputs > 0 )
