@@ -63,15 +63,17 @@ namespace Tkl.Jumbo.Jet
             where T : IWritable, new()
         {
             private readonly TaskExecutionUtility _task;
+            private readonly TaskExecutionUtility _rootTask;
             private RecordWriter<T> _recordWriter;
             private IMultiInputRecordReader _reader;
 
-            public PartitionDfsOutputRecordWriter(TaskExecutionUtility task)
+            public PartitionDfsOutputRecordWriter(TaskExecutionUtility task, TaskExecutionUtility rootTask)
             {
                 _task = task;
+                _rootTask = rootTask;
 
                 if( _task._inputReader == null )
-                    _task.InputRecordReaderCreated += new EventHandler(_task_InputRecordReaderCreated);
+                    _rootTask.InputRecordReaderCreated += new EventHandler(_task_InputRecordReaderCreated);
                 else
                     ConnectToReader();
             }
@@ -101,7 +103,7 @@ namespace Tkl.Jumbo.Jet
 
             private void ConnectToReader()
             {
-                _reader = (IMultiInputRecordReader)_task._inputReader;
+                _reader = (IMultiInputRecordReader)_rootTask._inputReader;
                 _reader.CurrentPartitionChanged += new EventHandler(IMultiInputRecordReader_CurrentPartitionChanged);
                 CreateOutputWriter();
             }
@@ -582,7 +584,7 @@ namespace Tkl.Jumbo.Jet
                     while( root._baseTask != null )
                         root = root._baseTask;
                     if( root.InputChannels != null && root.InputChannels.Count == 1 )
-                        return new PartitionDfsOutputRecordWriter<T>(root);
+                        return new PartitionDfsOutputRecordWriter<T>(this, root);
                 }
                 return CreateDfsOutputRecordWriter<T>(Configuration.TaskId.TaskNumber);
             }
