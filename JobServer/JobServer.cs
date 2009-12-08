@@ -121,11 +121,18 @@ namespace JobServerApplication
                     for( int x = 1; x <= stage.TaskCount; ++x )
                     {
                         TaskInfo taskInfo;
-                        taskInfo = new TaskInfo(jobInfo, stage, x);
+
+                        // Don't do the work trying to find the input stages if the stage has dfs inputs.
+                        StageConfiguration[] inputStages = (stage.DfsInputs == null || stage.DfsInputs.Count == 0) ? config.GetInputStagesForStage(stage.StageId).ToArray() : null;
+                        taskInfo = new TaskInfo(jobInfo, stage, inputStages, x);
                         jobInfo.SchedulingTasksById.Add(taskInfo.TaskId.ToString(), taskInfo);
                         jobInfo.SchedulingTasks.Add(taskInfo);
                         jobInfo.Tasks.Add(taskInfo.TaskId.ToString(), taskInfo);
                         CreateChildTasks(jobInfo, taskInfo, stage);
+                        if( taskInfo.Partitions != null )
+                        {
+                            _log.InfoFormat("Task {0} has been assigned the following partitions: {1}", taskInfo.TaskId, taskInfo.Partitions.ToDelimitedString());
+                        }
                     }
                 }
 
@@ -174,6 +181,18 @@ namespace JobServerApplication
             }
 
             return result.ToArray();
+        }
+
+        public int[] GetPartitionsForTask(Guid jobId, string taskId)
+        {
+            if( taskId == null )
+                throw new ArgumentNullException("taskId");
+
+            lock( _jobs )
+            {
+                TaskInfo task = _jobs[jobId].Tasks[taskId];
+                return task.Partitions == null ? null : task.Partitions.ToArray();
+            }
         }
 
         public JobStatus GetJobStatus(Guid jobId)

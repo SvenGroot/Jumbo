@@ -14,6 +14,8 @@ namespace Tkl.Jumbo.Jet.Channels
     [XmlType("Channel", Namespace=JobConfiguration.XmlNamespace)]
     public class ChannelConfiguration
     {
+        private int _partitionsPerTask = 1;
+
         /// <summary>
         /// Gets or sets the type of the channel.
         /// </summary>
@@ -29,6 +31,16 @@ namespace Tkl.Jumbo.Jet.Channels
         /// Gets or sets the ID of the stage whose tasks that read from the channel.
         /// </summary>
         public string OutputStage { get; set; }
+
+        /// <summary>
+        /// Gets or sets the number of partitions to create for every output task.
+        /// </summary>
+        [XmlAttribute("partitionsPerTask")]
+        public int PartitionsPerTask
+        {
+            get { return _partitionsPerTask; }
+            set { _partitionsPerTask = value; }
+        }
 
         /// <summary>
         /// Gets or sets a value that indicates whether the file channel should always use TCP downloads.

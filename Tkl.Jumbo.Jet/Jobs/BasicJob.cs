@@ -48,6 +48,7 @@ namespace Tkl.Jumbo.Jet.Jobs
             if( sortFirstStageOutput && secondStageTaskCount <= 0 )
                 throw new ArgumentException("Second stage task count must be larger than zero when sorting.");
 
+            PartitionsPerTask = 1;
             InputPath = inputPath;
             OutputPath = outputPath;
             SecondStageTaskCount = secondStageTaskCount;
@@ -67,6 +68,12 @@ namespace Tkl.Jumbo.Jet.Jobs
         /// </summary>
         [NamedArgument("channel", Description = "The channel type to use (File or Tcp).")]
         public ChannelType ChannelType { get; set; }
+
+        /// <summary>
+        /// Gets or sets the number of partitions per merge task.
+        /// </summary>
+        [NamedArgument("ppt", Description = "The number of partitions per merge task. The default is 1.")]
+        public int PartitionsPerTask { get; set; }
 
         /// <summary>
         /// Gets the input file or directory for the job.
@@ -191,14 +198,14 @@ namespace Tkl.Jumbo.Jet.Jobs
                 Type interfaceType = FirstStageTaskType.FindGenericInterfaceType(typeof(ITask<,>));
                 Type outputType = interfaceType.GetGenericArguments()[1];
                 // Add sort stage, pipelined to first stage.
-                StageConfiguration sortStage = config.AddStage("SortStage", typeof(SortTask<>).MakeGenericType(outputType), SecondStageTaskCount, new InputStageInfo(firstStage) { ChannelType = ChannelType.Pipeline, PartitionerType = PartitionerType }, null, null);
+                StageConfiguration sortStage = config.AddStage("SortStage", typeof(SortTask<>).MakeGenericType(outputType), SecondStageTaskCount * PartitionsPerTask, new InputStageInfo(firstStage) { ChannelType = ChannelType.Pipeline, PartitionerType = PartitionerType }, null, null);
                 // Add merge stage; this stage outputs if there is no second stage.
-                outputStage = config.AddStage(SecondStageName ?? "MergeStage", SecondStageTaskType ?? typeof(EmptyTask<>).MakeGenericType(outputType), SecondStageTaskCount, new InputStageInfo(sortStage) { ChannelType = ChannelType, MultiInputRecordReaderType = typeof(MergeRecordReader<>).MakeGenericType(outputType) }, OutputPath, OutputWriterType);
+                outputStage = config.AddStage(SecondStageName ?? "MergeStage", SecondStageTaskType ?? typeof(EmptyTask<>).MakeGenericType(outputType), SecondStageTaskCount, new InputStageInfo(sortStage) { ChannelType = ChannelType, PartitionsPerTask = PartitionsPerTask, MultiInputRecordReaderType = typeof(MergeRecordReader<>).MakeGenericType(outputType) }, OutputPath, OutputWriterType);
             }
             else if( SecondStageTaskCount > 0 )
             {
                 // Add second stage.
-                outputStage = config.AddStage(SecondStageName, SecondStageTaskType, SecondStageTaskCount, new InputStageInfo(firstStage) { ChannelType = ChannelType, PartitionerType = PartitionerType }, OutputPath, OutputWriterType);
+                outputStage = config.AddStage(SecondStageName, SecondStageTaskType, SecondStageTaskCount, new InputStageInfo(firstStage) { ChannelType = ChannelType, PartitionsPerTask = PartitionsPerTask, PartitionerType = PartitionerType }, OutputPath, OutputWriterType);
             }
 
             ConfigureDfsOutput(outputStage);

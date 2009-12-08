@@ -28,5 +28,44 @@ namespace Tkl.Jumbo
                 list[k] = temp;
             }
         }
+
+        /// <summary>
+        /// Creates a string with the items of a list separated by the specified delimiter.
+        /// </summary>
+        /// <typeparam name="T">The type of the elements.</typeparam>
+        /// <param name="list">A list.</param>
+        /// <param name="delimiter">The delimiter to use.</param>
+        /// <returns>A string containing the delimited list.</returns>
+        public static string ToDelimitedString<T>(this IEnumerable<T> list, string delimiter)
+        {
+            if( list == null )
+                throw new ArgumentNullException("list");
+            if( delimiter == null )
+                throw new ArgumentNullException("delimiter");
+
+            StringBuilder result = new StringBuilder();
+            bool first = true;
+            foreach( T item in list )
+            {
+                if( first )
+                    first = false;
+                else
+                    result.Append(delimiter);
+                result.Append(item);
+            }
+
+            return result.ToString();
+        }
+
+        /// <summary>
+        /// Creates a string with the items of a list separated by a comma.
+        /// </summary>
+        /// <typeparam name="T">The type of the elements.</typeparam>
+        /// <param name="list">A list.</param>
+        /// <returns>A string containing the delimited list.</returns>
+        public static string ToDelimitedString<T>(this IEnumerable<T> list)
+        {
+            return list.ToDelimitedString(", ");
+        }
     }
 }

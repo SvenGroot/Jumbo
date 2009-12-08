@@ -309,6 +309,14 @@ namespace Tkl.Jumbo.Jet
         public ITaskServerUmbilicalProtocol Umbilical { get; private set; }
 
         /// <summary>
+        /// Gets the <see cref="TaskExecutionUtility"/> for the previous task in the pipeline.
+        /// </summary>
+        public TaskExecutionUtility BaseTask
+        {
+            get { return _baseTask; }
+        }
+
+        /// <summary>
         /// Gets the output record writer.
         /// </summary>
         /// <typeparam name="T">The type of records for the task's output</typeparam>

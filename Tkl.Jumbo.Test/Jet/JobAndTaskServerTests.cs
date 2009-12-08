@@ -81,25 +81,19 @@ namespace Tkl.Jumbo.Test.Jet
         [Test]
         public void TestJobExecutionSort()
         {
-            const int recordCount = 2500000;
-            const string inputFileName = "/sortinput";
-            string outputPath = "/sortoutput";
-            DfsClient dfsClient = new DfsClient(Dfs.TestDfsCluster.CreateClientConfig());
-            dfsClient.NameServer.CreateDirectory(outputPath);
+            TestJobExecutionSort("/sortinput1", "/sortoutput1", 1, 1, false);
+        }
 
-            List<int> expected = CreateNumberListInputFile(recordCount, inputFileName, dfsClient);
-            expected.Sort();
+        [Test]
+        public void TestJobExecutionSortMultiplePartitionsPerTask()
+        {
+            TestJobExecutionSort("/sortinput2", "/sortoutput2", 2, 3, false);
+        }
 
-            JobConfiguration config = new JobConfiguration(typeof(StringConversionTask).Assembly);
-            StageConfiguration conversionStage = config.AddInputStage("ConversionStage", dfsClient.NameServer.GetFileInfo("/sortinput"), typeof(StringConversionTask), typeof(LineRecordReader));
-            StageConfiguration sortStage = config.AddStage("SortStage", typeof(SortTask<Int32Writable>), 1, new InputStageInfo(conversionStage) { ChannelType = ChannelType.Pipeline }, null, null);
-            config.AddStage("MergeStage", typeof(EmptyTask<Int32Writable>), 1, new InputStageInfo(sortStage) { MultiInputRecordReaderType = typeof(MergeRecordReader<Int32Writable>) }, outputPath, typeof(BinaryRecordWriter<Int32Writable>));
-
-            RunJob(dfsClient, config);
-
-            string outputFileName = DfsPath.Combine(outputPath, "MergeStage001");
-
-            CheckOutput(dfsClient, expected, outputFileName);
+        [Test]
+        public void TestJobExecutionSortMultiplePartitionsPerTaskTcpFileDownload()
+        {
+            TestJobExecutionSort("/sortinput3", "/sortoutput3", 2, 3, true);
         }
 
         [Test]
@@ -264,19 +258,81 @@ namespace Tkl.Jumbo.Test.Jet
 
         }
 
-        private static void CheckOutput(DfsClient dfsClient, IList<int> expected, string outputFileName)
+        private void TestJobExecutionSort(string inputFileName, string outputPath, int mergeTasks, int partitionsPerTask, bool forceFileDownload)
+        {
+            const int recordCount = 2500000;
+            DfsClient dfsClient = new DfsClient(Dfs.TestDfsCluster.CreateClientConfig());
+            dfsClient.NameServer.CreateDirectory(outputPath);
+
+            List<int> expected = CreateNumberListInputFile(recordCount, inputFileName, dfsClient);
+            expected.Sort();
+
+            JobConfiguration config = new JobConfiguration(typeof(StringConversionTask).Assembly);
+            StageConfiguration conversionStage = config.AddInputStage("ConversionStage", dfsClient.NameServer.GetFileInfo(inputFileName), typeof(StringConversionTask), typeof(LineRecordReader));
+            StageConfiguration sortStage = config.AddStage("SortStage", typeof(SortTask<Int32Writable>), mergeTasks * partitionsPerTask, new InputStageInfo(conversionStage) { ChannelType = ChannelType.Pipeline }, null, null);
+            config.AddStage("MergeStage", typeof(EmptyTask<Int32Writable>), mergeTasks, new InputStageInfo(sortStage) { MultiInputRecordReaderType = typeof(MergeRecordReader<Int32Writable>), PartitionsPerTask = partitionsPerTask }, outputPath, typeof(BinaryRecordWriter<Int32Writable>));
+            sortStage.OutputChannel.ForceFileDownload = forceFileDownload;
+
+            RunJob(dfsClient, config);
+
+            CheckOutput(dfsClient, expected, outputPath);
+        }
+
+        private static void CheckOutput(DfsClient dfsClient, IList<int> expected, string outputPath)
         {
             List<int> actual = new List<int>();
-            using( DfsInputStream stream = dfsClient.OpenFile(outputFileName) )
-            using( BinaryRecordReader<Int32Writable> reader = new BinaryRecordReader<Int32Writable>(stream) )
+            IList<int>[] partitions;
+
+            IEnumerable<string> fileNames;
+            FileSystemEntry entry = dfsClient.NameServer.GetFileSystemEntryInfo(outputPath);
+            if( entry is DfsFile )
             {
-                while( reader.ReadRecord() )
-                {
-                    actual.Add(reader.CurrentRecord.Value);
-                }
+                fileNames = new[] { entry.FullPath };
+            }
+            else
+            {
+                fileNames = from child in ((DfsDirectory)entry).Children
+                            where child is DfsFile
+                            orderby child.FullPath
+                            select child.FullPath;
+
+                // We need to create partitions that match the output.
             }
 
-            Assert.IsTrue(Utilities.CompareList(expected, actual));
+            int partitionCount = fileNames.Count();
+            if( partitionCount == 1 )
+                partitions = new[] { expected };
+            else
+            {
+                HashPartitioner<int> partitioner = new HashPartitioner<int>();
+                partitioner.Partitions = partitionCount;
+                partitions = new IList<int>[partitionCount];
+                for( int x = 0; x < partitionCount; ++x )
+                {
+                    partitions[x] = new List<int>();
+                }
+
+                foreach( int x in expected )
+                    partitions[partitioner.GetPartition(x)].Add(x);
+            }
+
+
+            int partition = 0;
+            foreach( string outputFileName in fileNames )
+            {
+                actual.Clear();
+                using( DfsInputStream stream = dfsClient.OpenFile(outputFileName) )
+                using( BinaryRecordReader<Int32Writable> reader = new BinaryRecordReader<Int32Writable>(stream) )
+                {
+                    while( reader.ReadRecord() )
+                    {
+                        actual.Add(reader.CurrentRecord.Value);
+                    }
+                }
+                Assert.IsTrue(Utilities.CompareList(partitions[partition], actual));
+                ++partition;
+            }
+
         }
 
         private static void RunJob(DfsClient dfsClient, JobConfiguration config)

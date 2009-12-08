@@ -31,7 +31,7 @@ namespace Tkl.Jumbo.Jet.Channels
         private Thread _inputPollThread;
         private Thread _downloadThread;
         private IJobServerClientProtocol _jobServer;
-        private TaskId _outputTaskId;
+        private string _outputStageId;
         private bool _isReady;
         private readonly ManualResetEvent _readyEvent = new ManualResetEvent(false);
         private bool _disposed;
@@ -55,7 +55,7 @@ namespace Tkl.Jumbo.Jet.Channels
             _jobDirectory = taskExecution.Configuration.LocalJobDirectory;
             _jobID = taskExecution.Configuration.JobId;
             _jobServer = taskExecution.JetClient.JobServer;
-            _outputTaskId = taskExecution.Configuration.TaskId;
+            _outputStageId = taskExecution.Configuration.StageConfiguration.StageId;
             // The type of the records in the intermediate files will be the output type of the input stage, which usually matches the input type of the output stage but
             // in the case of a join it may not.
             _inputReaderType = typeof(BinaryRecordReader<>).MakeGenericType(InputRecordType);
@@ -259,46 +259,42 @@ namespace Tkl.Jumbo.Jet.Channels
 
         private bool DownloadCompletedFile(IMultiInputRecordReader reader, CompletedTask task)
         {
-            _log.InfoFormat("Task {0} output file is now available.", task.TaskId);
+            _log.InfoFormat("Task {0} output files are now available.", task.TaskId);
+
+            IList<RecordInput> inputs;
+
             string fileName = null;
-            bool deleteFile;
-            Stream memoryStream = null;
             long uncompressedSize = -1L;
             if( !InputStage.OutputChannel.ForceFileDownload && task.TaskServer.HostName == Dns.GetHostName() )
             {
+                inputs = new List<RecordInput>(Partitions.Count);
                 ITaskServerClientProtocol taskServer = JetClient.CreateTaskServerClient(task.TaskServer);
                 string taskOutputDirectory = taskServer.GetOutputFileDirectory(task.JobId, task.TaskId);
-                fileName = Path.Combine(taskOutputDirectory, FileOutputChannel.CreateChannelFileName(task.TaskId, _outputTaskId.ToString()));
-                long size = new FileInfo(fileName).Length;
-                _log.InfoFormat("Using local file {0} as input.", fileName);
-                deleteFile = false; // We don't delete output files; if this task fails they might still be needed
-                uncompressedSize = TaskExecution.Umbilical.GetUncompressedTemporaryFileSize(task.JobId, Path.GetFileName(fileName));
-                if( uncompressedSize != -1 )
+                foreach( int partition in Partitions )
                 {
-                    LocalBytesRead += uncompressedSize;
-                    CompressedLocalBytesRead += size;
+                    fileName = Path.Combine(taskOutputDirectory, FileOutputChannel.CreateChannelFileName(task.TaskId, TaskId.CreateTaskIdString(_outputStageId, partition)));
+                    long size = new FileInfo(fileName).Length;
+                    _log.InfoFormat("Using local file {0} as input.", fileName);
+                    uncompressedSize = TaskExecution.Umbilical.GetUncompressedTemporaryFileSize(task.JobId, Path.GetFileName(fileName));
+                    if( uncompressedSize != -1 )
+                    {
+                        LocalBytesRead += uncompressedSize;
+                        CompressedLocalBytesRead += size;
+                    }
+                    else
+                        LocalBytesRead += size;
+                    // We don't delete output files; if this task fails they might still be needed
+                    inputs.Add(new RecordInput(_inputReaderType, fileName, task.TaskId, uncompressedSize, false));
                 }
-                else
-                    LocalBytesRead += size;
             }
             else
             {
-                if( !DownloadFile(task, _outputTaskId.ToString(), out fileName, out memoryStream, out uncompressedSize) )
-                    return false; // We couldn't download because the server is busy
-                deleteFile = TaskExecution.JetClient.Configuration.FileChannel.DeleteIntermediateFiles; // Files we've downloaded can be deleted.
+                inputs = DownloadFiles(task);
+                if( inputs == null )
+                    return false; // Couldn't download because the server was busy
             }
 
-            _log.InfoFormat("Creating record reader for task {0}'s output, allowRecordReuse = {1}.", task.TaskId, TaskExecution.AllowRecordReuse);
-            if( fileName == null )
-            {
-                IRecordReader taskReader = (IRecordReader)JetActivator.CreateInstance(_inputReaderType, TaskExecution, memoryStream, TaskExecution.AllowRecordReuse);
-                taskReader.SourceName = task.TaskId;
-                reader.AddInput(new[] { new RecordInput(taskReader) });
-            }
-            else
-            {
-                reader.AddInput(new[] { new RecordInput(_inputReaderType, fileName, task.TaskId, uncompressedSize, deleteFile) });
-            }
+            reader.AddInput(inputs);
 
             if( !_isReady )
             {
@@ -312,12 +308,14 @@ namespace Tkl.Jumbo.Jet.Channels
             return true;
         }
 
-        private bool DownloadFile(CompletedTask task, string outputTaskId, out string fileName, out Stream memoryStream, out long uncompressedSize)
+        private IList<RecordInput> DownloadFiles(CompletedTask task)
         {
-            string fileToDownload = FileOutputChannel.CreateChannelFileName(task.TaskId, outputTaskId);
+            var filesToDownload = (from partition in Partitions
+                                   select FileOutputChannel.CreateChannelFileName(task.TaskId, TaskId.CreateTaskIdString(_outputStageId, partition))).ToArray();
 
+            List<RecordInput> downloadedFiles = new List<RecordInput>();
             int port = task.TaskServerFileServerPort;
-            _log.InfoFormat("Attempting to download file {0} from server {1}:{2}.", fileToDownload, task.TaskServer.HostName, port);
+            _log.InfoFormat("Attempting to download files {0} from server {1}:{2}.", filesToDownload.ToDelimitedString(), task.TaskServer.HostName, port);
             using( TcpClient client = new TcpClient(task.TaskServer.HostName, port) )
             using( NetworkStream stream = client.GetStream() )
             using( BinaryWriter writer = new BinaryWriter(stream) )
@@ -327,46 +325,50 @@ namespace Tkl.Jumbo.Jet.Channels
                 if( connectionAccepted == 0 )
                 {
                     _log.InfoFormat("Server {0}:{1} rejected our download attempt because it is busy.", task.TaskServer.HostName, port);
-                    fileName = null;
-                    memoryStream = null;
-                    uncompressedSize = 0;
-                    return false;
+                    return null;
                 }
 
-                _log.InfoFormat("Downloading file {0} from server {1}:{2}.", fileToDownload, task.TaskServer.HostName, port);
                 writer.Write(_jobID.ToByteArray());
-                writer.Write(fileToDownload);
+                writer.Write(filesToDownload.Length);
+                foreach( string fileToDownload in filesToDownload )
+                    writer.Write(fileToDownload);
 
-                long size = reader.ReadInt64();
-                uncompressedSize = reader.ReadInt64();
-                if( size >= 0 )
+                foreach( string fileToDownload in filesToDownload )
                 {
-                    string targetFile = null;
-                    memoryStream = _memoryStorage.AddStreamIfSpaceAvailable((int)uncompressedSize);
-                    if( memoryStream == null )
+                    _log.InfoFormat("Downloading file {0} from server {1}:{2}.", fileToDownload, task.TaskServer.HostName, port);
+                    long size = reader.ReadInt64();
+                    long uncompressedSize = reader.ReadInt64();
+                    if( size >= 0 )
                     {
-                        targetFile = Path.Combine(_jobDirectory, string.Format(System.Globalization.CultureInfo.InvariantCulture, "{0}_{1}.input", task.TaskId, outputTaskId));
-                        using( FileStream fileStream = File.Create(targetFile) )
+                        string targetFile = null;
+                        Stream memoryStream = _memoryStorage.AddStreamIfSpaceAvailable((int)size);
+                        if( memoryStream == null )
                         {
-                            stream.CopySize(fileStream, size);
+                            targetFile = Path.Combine(_jobDirectory, Path.GetFileNameWithoutExtension(fileToDownload) + ".input");
+                            using( FileStream fileStream = File.Create(targetFile) )
+                            {
+                                stream.CopySize(fileStream, size);
+                            }
+                            downloadedFiles.Add(new RecordInput(_inputReaderType, targetFile, task.TaskId, uncompressedSize, TaskExecution.JetClient.Configuration.FileChannel.DeleteIntermediateFiles));
+                            _log.InfoFormat("Download complete, file stored in {0}.", targetFile);
+
                         }
-                        _log.InfoFormat("Download complete, file stored in {0}.", targetFile);
+                        else
+                        {
+                            stream.CopySize(memoryStream, size);
+                            memoryStream.Position = 0;
+                            IRecordReader taskReader = (IRecordReader)JetActivator.CreateInstance(_inputReaderType, TaskExecution, memoryStream.CreateDecompressor(CompressionType, uncompressedSize), TaskExecution.AllowRecordReuse);
+                            taskReader.SourceName = task.TaskId;
+                            downloadedFiles.Add(new RecordInput(taskReader));
+                            _log.InfoFormat("Download complete, file stored in memory.", targetFile);
+                        }
+                        NetworkBytesRead += size;
                     }
                     else
-                    {
-                        using( Stream decompressorStream = stream.CreateDecompressor(CompressionType, uncompressedSize) )
-                        {
-                            decompressorStream.CopySize(memoryStream, uncompressedSize);
-                        }
-                        memoryStream.Position = 0;
-                        _log.InfoFormat("Download complete, file stored in memory.", targetFile);
-                    }
-                    NetworkBytesRead += size;
-                    fileName = targetFile;
-                    return true;
+                        throw new InvalidOperationException(); // TODO: Recover from this.
                 }
-                else
-                    throw new InvalidOperationException(); // TODO: Recover from this.
+
+                return downloadedFiles;
             }
         }
 

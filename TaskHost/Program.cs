@@ -134,28 +134,20 @@ namespace TaskHost
             Stopwatch taskStopwatch = new Stopwatch();
 
             IPullTask<TInput, TOutput> pullTask = task as IPullTask<TInput, TOutput>;
-
-
-            if( pullTask != null )
+            IPushTask<TInput, TOutput> pushTask = task as IPushTask<TInput, TOutput>;
+            IMultiInputRecordReader multiInputReader = input as IMultiInputRecordReader;
+            if( multiInputReader != null )
             {
-                _log.Info("Running pull task.");
-                taskStopwatch.Start();
-                pullTask.Run(input, output);
-                taskStopwatch.Stop();
+                foreach( int partition in multiInputReader.Partitions )
+                {
+                    multiInputReader.CurrentPartition = partition;
+                    CallTaskRunMethod<TInput, TOutput>(input, output, taskStopwatch, pullTask, pushTask);
+                }
             }
             else
-            {
-                _log.Info("Running push task.");
-                IPushTask<TInput, TOutput> pushTask = (IPushTask<TInput, TOutput>)task;
-                taskStopwatch.Start();
-                foreach( TInput record in input.EnumerateRecords() )
-                {
-                    pushTask.ProcessRecord(record, output);
-                }
-                // Finish is called by taskExecution.FinishTask below.
-                taskStopwatch.Stop();
-            }
+                CallTaskRunMethod<TInput, TOutput>(input, output, taskStopwatch, pullTask, pushTask);
             TimeSpan timeWaiting;
+
             MultiRecordReader<TInput> multiReader = input as MultiRecordReader<TInput>;
             if( multiReader != null )
                 timeWaiting = multiReader.TimeWaiting;
@@ -172,6 +164,30 @@ namespace TaskHost
         }
 
 #pragma warning restore 0169
+
+        private static void CallTaskRunMethod<TInput, TOutput>(RecordReader<TInput> input, RecordWriter<TOutput> output, Stopwatch taskStopwatch, IPullTask<TInput, TOutput> pullTask, IPushTask<TInput, TOutput> pushTask)
+            where TInput : IWritable, new()
+            where TOutput : IWritable, new()
+        {
+            if( pullTask != null )
+            {
+                _log.Info("Running pull task.");
+                taskStopwatch.Start();
+                pullTask.Run(input, output);
+                taskStopwatch.Stop();
+            }
+            else
+            {
+                _log.Info("Running push task.");
+                taskStopwatch.Start();
+                foreach( TInput record in input.EnumerateRecords() )
+                {
+                    pushTask.ProcessRecord(record, output);
+                }
+                // Finish is called by taskExecution.FinishTask below.
+                taskStopwatch.Stop();
+            }
+        }
 
          private static void CurrentDomain_UnhandledException(object sender, UnhandledExceptionEventArgs e)
         {

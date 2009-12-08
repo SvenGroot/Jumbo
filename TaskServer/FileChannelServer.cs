@@ -46,11 +46,17 @@ namespace TaskServerApplication
                     {
                         byte[] guidBytes = reader.ReadBytes(16);
                         Guid jobID = new Guid(guidBytes);
-                        string file = reader.ReadString();
+                        int fileCount = reader.ReadInt32();
+                        string[] files = new string[fileCount];
+                        for( int x = 0; x < fileCount; ++x )
+                        {
+                            files[x] = reader.ReadString();
+                        }
 
-                        _log.DebugFormat("Sending file {0} to {1}", file, client.Client.RemoteEndPoint);
-                        SendFile(writer, jobID, file);
-                        _log.DebugFormat("Sending file {0} complete.", file);
+                        _log.DebugFormat("Sending files {0} to {1}", files.ToDelimitedString(), client.Client.RemoteEndPoint);
+                        foreach( string file in files )
+                            SendFile(writer, jobID, file);
+                        _log.DebugFormat("Sending files {0} complete.", files.ToDelimitedString());
                     }
                     catch( Exception )
                     {

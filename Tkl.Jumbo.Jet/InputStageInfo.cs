@@ -25,6 +25,7 @@ namespace Tkl.Jumbo.Jet
                 throw new ArgumentNullException("inputStage");
 
             InputStage = inputStage;
+            PartitionsPerTask = 1;
         }
 
         /// <summary>
@@ -53,6 +54,11 @@ namespace Tkl.Jumbo.Jet
             }
             set { _partitionerType = value; }
         }
+
+        /// <summary>
+        /// Gets the number of partitions to create for each output task.
+        /// </summary>
+        public int PartitionsPerTask { get; set; }
 
         /// <summary>
         /// Gets the type of multi input record reader to use.

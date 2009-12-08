@@ -196,6 +196,8 @@ namespace Tkl.Jumbo.Jet
                     hasInputs = true;
                     if( info.ChannelType == ChannelType.Pipeline )
                     {
+                        if( info.PartitionsPerTask > 1 )
+                            throw new ArgumentException("When using a pipeline channel, you cannot use multiple partitions per task.");
                         if( inputStages.Count() > 1 )
                             throw new ArgumentException("When using a pipeline channel you can specify only one input.");
                         isPipelineChannel = true;
@@ -238,6 +240,7 @@ namespace Tkl.Jumbo.Jet
                             Connectivity = info.ChannelConnectivity,
                             MultiInputRecordReaderType = info.MultiInputRecordReaderType,
                             OutputStage = stageId,
+                            PartitionsPerTask = info.PartitionsPerTask,
                         };
                         info.InputStage.OutputChannel = channel;
                     }
@@ -274,6 +277,9 @@ namespace Tkl.Jumbo.Jet
         {
             foreach( InputStageInfo info in inputStages )
             {
+                if( info.PartitionsPerTask > 1 && stage.MultiInputRecordReaderType != null )
+                    throw new NotSupportedException("Using multiple partitions per task is not supported when using multiple input stages.");
+
                 switch( info.ChannelConnectivity )
                 {
                 case ChannelConnectivity.PointToPoint:
@@ -282,7 +288,7 @@ namespace Tkl.Jumbo.Jet
                     //    throw new ArgumentException("Point to point stage needs to have the same number of outputs as inputs.");
                     //break;
                 case ChannelConnectivity.Full:
-                    if( info.InputStage.InternalPartitionCount > 1 && info.InputStage.InternalPartitionCount != stage.TaskCount )
+                    if( info.InputStage.InternalPartitionCount > 1 && info.InputStage.InternalPartitionCount != (stage.TaskCount * info.PartitionsPerTask) )
                         throw new ArgumentException("A fully connected stage with an internally partitioned compound stage as input needs to have the same number of tasks as the input child stage.");
                     break;
                 }

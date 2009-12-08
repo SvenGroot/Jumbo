@@ -17,6 +17,8 @@ namespace Tkl.Jumbo.Jet.Channels
 
         private readonly List<string> _inputTaskIds = new List<string>();
         private ReadOnlyCollection<string> _inputTaskIdsReadOnlyWrapper;
+        private readonly List<int> _partitions = new List<int>();
+        private ReadOnlyCollection<int> _partitionsReadOnlyWrapper;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="InputChannel"/> class.
@@ -43,7 +45,7 @@ namespace Tkl.Jumbo.Jet.Channels
                 IList<StageConfiguration> stages = taskExecution.Configuration.JobConfiguration.GetPipelinedStages(inputStage.CompoundStageId);
                 if( stages == null )
                     throw new ArgumentException(string.Format(System.Globalization.CultureInfo.CurrentCulture, "Input stage ID {0} could not be found.", inputStage.StageId));
-                GetInputTaskIdsFull(stages, 0, null);
+                GetInputTaskIdsFull(stages);
                 break;
             case ChannelConnectivity.PointToPoint:
                 _inputTaskIds.Add(GetInputTaskIdPointToPoint());
@@ -70,6 +72,19 @@ namespace Tkl.Jumbo.Jet.Channels
         /// Gets the type of the records create by the input task of this channel.
         /// </summary>
         protected Type InputRecordType { get; private set; }
+
+        /// <summary>
+        /// Gets the partitions that the task that this input channel is for is processing.
+        /// </summary>
+        public ReadOnlyCollection<int> Partitions
+        {
+            get
+            {
+                if( _partitionsReadOnlyWrapper == null )
+                    System.Threading.Interlocked.CompareExchange(ref _partitionsReadOnlyWrapper, _partitions.AsReadOnly(), null);
+                return _partitionsReadOnlyWrapper;
+            }
+        }
 
         /// <summary>
         /// Gets a collection of input task IDs.
@@ -105,7 +120,8 @@ namespace Tkl.Jumbo.Jet.Channels
             _log.InfoFormat(System.Globalization.CultureInfo.CurrentCulture, "Creating MultiRecordReader of type {3} for {0} inputs, allow record reuse = {1}, buffer size = {2}.", InputTaskIds.Count, TaskExecution.AllowRecordReuse, TaskExecution.JetClient.Configuration.FileChannel.ReadBufferSize, multiInputRecordReaderType);
             int bufferSize = multiInputRecordReaderType.GetGenericTypeDefinition() == typeof(MergeRecordReader<>) ? (int)TaskExecution.JetClient.Configuration.FileChannel.MergeTaskReadBufferSize : (int)TaskExecution.JetClient.Configuration.FileChannel.ReadBufferSize;
             // We're not using JetActivator to create the object because we need to delay calling NotifyConfigurationChanged until after InputStage was set.
-            int[] partitions = new int[] { TaskExecution.Configuration.TaskId.TaskNumber };
+            int[] partitions = GetPartitions();
+            _partitions.AddRange(partitions);
             IMultiInputRecordReader reader = (IMultiInputRecordReader)Activator.CreateInstance(multiInputRecordReaderType, partitions, _inputTaskIds.Count, TaskExecution.AllowRecordReuse, bufferSize, CompressionType);
             IChannelMultiInputRecordReader channelReader = reader as IChannelMultiInputRecordReader;
             if( channelReader != null )
@@ -114,32 +130,14 @@ namespace Tkl.Jumbo.Jet.Channels
             return reader;
         }
 
-        private void GetInputTaskIdsFull(IList<StageConfiguration> stages, int index, TaskId baseTaskId)
+        private void GetInputTaskIdsFull(IList<StageConfiguration> stages)
         {
-            StageConfiguration stage = stages[index];
-            if( stage.InternalPartitionCount == 1 || stage.TaskCount == 1 )
+            // We add only the root task IDs, we ignore child tasks.
+            StageConfiguration stage = stages[0];
+            for( int x = 1; x <= stage.TaskCount; ++x )
             {
-                // Partitioning is not done in this stage.
-                // Note that since internal partitioning can happen only once, if this is a child stage the task count must be one.
-                Debug.Assert(stage.Parent == null || stage.TaskCount == 1);
-                for( int x = 1; x <= stage.TaskCount; ++x )
-                {
-                    TaskId taskId = new TaskId(baseTaskId, stage.StageId, x);
-                    if( index == stages.Count - 1 )
-                        _inputTaskIds.Add(taskId.ToString());
-                    else
-                        GetInputTaskIdsFull(stages, index + 1, taskId);
-                }
-            }
-            else
-            {
-                // This is the child stage where internal partitioning takes place (it can happen only once).
-                // Connect to the matching task number
-                TaskId taskId = new TaskId(baseTaskId, stage.StageId, TaskExecution.Configuration.TaskId.TaskNumber);
-                if( index == stages.Count - 1 )
-                    _inputTaskIds.Add(taskId.ToString());
-                else
-                    GetInputTaskIdsFull(stages, index + 1, taskId);
+                TaskId taskId = new TaskId(stage.StageId, x);
+                _inputTaskIds.Add(taskId.ToString());
             }
         }
 
@@ -159,7 +157,11 @@ namespace Tkl.Jumbo.Jet.Channels
             }
 
             return result.ToString();
-        }    
+        }
 
+        private int[] GetPartitions()
+        {
+            return TaskExecution.JetClient.JobServer.GetPartitionsForTask(TaskExecution.Configuration.JobId, TaskExecution.Configuration.TaskId.ToString());
+        }
     }
 }

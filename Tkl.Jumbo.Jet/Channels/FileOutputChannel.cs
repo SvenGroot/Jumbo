@@ -24,10 +24,16 @@ namespace Tkl.Jumbo.Jet.Channels
         public FileOutputChannel(TaskExecutionUtility taskExecution)
             : base(taskExecution)
         {
-            string inputTaskId = taskExecution.Configuration.TaskId.ToString();
+            TaskExecutionUtility root = taskExecution;
+            while( root.BaseTask != null )
+                root = root.BaseTask;
+
+            // We don't include child task IDs in the output file name because internal partitioning can happen only once
+            // so the number always matches the output partition number anyway.
+            string inputTaskId = root.Configuration.TaskId.ToString();
             string localJobDirectory = taskExecution.Configuration.LocalJobDirectory;
 
-            _fileNames = (from taskId in OutputTaskIds
+            _fileNames = (from taskId in OutputIds
                           select Path.Combine(localJobDirectory, CreateChannelFileName(inputTaskId, taskId))).ToList();
 
             if( _fileNames.Count == 0 )

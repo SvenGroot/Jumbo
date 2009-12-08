@@ -47,6 +47,7 @@ namespace Tkl.Jumbo.Test.Jet
             if( Environment.OSVersion.Platform == PlatformID.Unix )
                 jetConfig.TaskServer.ListenIPv4AndIPv6 = false;
             DfsConfiguration dfsConfig = Dfs.TestDfsCluster.CreateClientConfig();
+            //jetConfig.FileChannel.DeleteIntermediateFiles = false;
 
             Utilities.TraceLineAndFlush("Jet cluster starting.");
 

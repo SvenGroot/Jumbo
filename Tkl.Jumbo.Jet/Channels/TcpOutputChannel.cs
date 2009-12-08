@@ -44,9 +44,9 @@ namespace Tkl.Jumbo.Jet.Channels
         private List<RecordWriter<T>> CreateOutputWriters<T>()
             where T : IWritable, new()
         {
-            List<RecordWriter<T>> writers = new List<RecordWriter<T>>(OutputTaskIds.Count);
+            List<RecordWriter<T>> writers = new List<RecordWriter<T>>(OutputIds.Count);
 
-            foreach( string taskId in OutputTaskIds )
+            foreach( string taskId in OutputIds )
             {
                 TcpClient client = ConnectToOutput(taskId);
                 writers.Add(new NetworkRecordWriter<T>(client, TaskExecution.Configuration.TaskId.ToString()));

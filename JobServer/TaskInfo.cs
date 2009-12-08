@@ -18,7 +18,7 @@ namespace JobServerApplication
         private TaskState _state;
         private Guid? _inputBlock;
 
-        public TaskInfo(JobInfo job, StageConfiguration stage, int taskNumber)
+        public TaskInfo(JobInfo job, StageConfiguration stage, IList<StageConfiguration> inputStages, int taskNumber)
         {
             if( stage == null )
                 throw new ArgumentNullException("stage");
@@ -28,6 +28,27 @@ namespace JobServerApplication
             TaskId = new TaskId(stage.StageId, taskNumber);
             Job = job;
             _taskCompletedEvent = new ManualResetEvent(false);
+
+            if( inputStages != null )
+            {
+                foreach( StageConfiguration inputStage in inputStages )
+                {
+                    if( Partitions == null )
+                    {
+                        int partitionsPerTask = inputStage.OutputChannel.PartitionsPerTask;
+                        Partitions = new List<int>(partitionsPerTask < 1 ? 1 : partitionsPerTask);
+                        if( partitionsPerTask <= 1 )
+                            Partitions.Add(taskNumber);
+                        else
+                        {
+                            int begin = ((taskNumber - 1) * partitionsPerTask) + 1;
+                            Partitions.AddRange(Enumerable.Range(begin, partitionsPerTask));
+                        }
+                    }
+                    else if( inputStage.OutputChannel.PartitionsPerTask > 1 || Partitions.Count > 1 )
+                        throw new InvalidOperationException("Cannot use multiple partitions per task when there are multiple input channels.");
+                }
+            }
         }
 
         public TaskInfo(TaskInfo owner, StageConfiguration stage, int taskNumber)
@@ -48,6 +69,8 @@ namespace JobServerApplication
         public TaskId TaskId { get; private set; }
 
         public JobInfo Job { get; private set; }
+
+        public List<int> Partitions { get; set; }
 
         public TaskState State
         {

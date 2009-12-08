@@ -22,7 +22,7 @@ namespace Tkl.Jumbo.Jet
     /// <typeparam name="T">The type of the values to partition.</typeparam>
     public class HashPartitioner<T> : Configurable, IPartitioner<T>
     {
-        private IEqualityComparer<T> _comparer;
+        private IEqualityComparer<T> _comparer = EqualityComparer<T>.Default;
 
         /// <summary>
         /// Indicates the configuration has been changed. <see cref="JetActivator.ApplyConfiguration"/> calls this method

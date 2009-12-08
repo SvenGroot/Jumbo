@@ -40,6 +40,11 @@ namespace JobServerApplication
             return JobServer.Instance.CheckTaskCompletion(jobId, tasks);
         }
 
+        public int[] GetPartitionsForTask(Guid jobId, string taskId)
+        {
+            return JobServer.Instance.GetPartitionsForTask(jobId, taskId);
+        }
+
         public JobStatus GetJobStatus(Guid jobId)
         {
             return JobServer.Instance.GetJobStatus(jobId);
