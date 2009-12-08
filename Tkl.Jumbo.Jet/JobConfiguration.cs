@@ -277,7 +277,7 @@ namespace Tkl.Jumbo.Jet
         {
             foreach( InputStageInfo info in inputStages )
             {
-                if( info.PartitionsPerTask > 1 && stage.MultiInputRecordReaderType != null )
+                if( info.PartitionsPerTask > 1 && inputStages.Count() > 1 )
                     throw new NotSupportedException("Using multiple partitions per task is not supported when using multiple input stages.");
 
                 switch( info.ChannelConnectivity )
