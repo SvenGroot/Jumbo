@@ -140,6 +140,7 @@ namespace TaskHost
             {
                 foreach( int partition in multiInputReader.Partitions )
                 {
+                    _log.InfoFormat("Running task for partition {0}.", partition);
                     multiInputReader.CurrentPartition = partition;
                     CallTaskRunMethod<TInput, TOutput>(input, output, taskStopwatch, pullTask, pushTask);
                 }

@@ -315,7 +315,7 @@ namespace Tkl.Jumbo.Jet.Channels
 
             List<RecordInput> downloadedFiles = new List<RecordInput>();
             int port = task.TaskServerFileServerPort;
-            _log.InfoFormat("Attempting to download files {0} from server {1}:{2}.", filesToDownload.ToDelimitedString(), task.TaskServer.HostName, port);
+            _log.InfoFormat("Downloading {0} from server {1}:{2}.", filesToDownload.ToDelimitedString(), task.TaskServer.HostName, port);
             using( TcpClient client = new TcpClient(task.TaskServer.HostName, port) )
             using( NetworkStream stream = client.GetStream() )
             using( BinaryWriter writer = new BinaryWriter(stream) )
@@ -324,7 +324,7 @@ namespace Tkl.Jumbo.Jet.Channels
                 int connectionAccepted = reader.ReadInt32();
                 if( connectionAccepted == 0 )
                 {
-                    _log.InfoFormat("Server {0}:{1} rejected our download attempt because it is busy.", task.TaskServer.HostName, port);
+                    _log.InfoFormat("Server {0}:{1} is busy.", task.TaskServer.HostName, port);
                     return null;
                 }
 
@@ -335,7 +335,6 @@ namespace Tkl.Jumbo.Jet.Channels
 
                 foreach( string fileToDownload in filesToDownload )
                 {
-                    _log.InfoFormat("Downloading file {0} from server {1}:{2}.", fileToDownload, task.TaskServer.HostName, port);
                     long size = reader.ReadInt64();
                     long uncompressedSize = reader.ReadInt64();
                     if( size >= 0 )
@@ -350,7 +349,7 @@ namespace Tkl.Jumbo.Jet.Channels
                                 stream.CopySize(fileStream, size);
                             }
                             downloadedFiles.Add(new RecordInput(_inputReaderType, targetFile, task.TaskId, uncompressedSize, TaskExecution.JetClient.Configuration.FileChannel.DeleteIntermediateFiles));
-                            _log.InfoFormat("Download complete, file stored in {0}.", targetFile);
+                            _log.InfoFormat("File stored in {0}.", targetFile);
 
                         }
                         else
@@ -360,13 +359,14 @@ namespace Tkl.Jumbo.Jet.Channels
                             IRecordReader taskReader = (IRecordReader)JetActivator.CreateInstance(_inputReaderType, TaskExecution, memoryStream.CreateDecompressor(CompressionType, uncompressedSize), TaskExecution.AllowRecordReuse);
                             taskReader.SourceName = task.TaskId;
                             downloadedFiles.Add(new RecordInput(taskReader));
-                            _log.InfoFormat("Download complete, file stored in memory.", targetFile);
                         }
                         NetworkBytesRead += size;
                     }
                     else
                         throw new InvalidOperationException(); // TODO: Recover from this.
                 }
+
+                _log.Info("Download complete.");
 
                 return downloadedFiles;
             }
