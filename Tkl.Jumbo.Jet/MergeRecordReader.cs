@@ -51,17 +51,27 @@ namespace Tkl.Jumbo.Jet
             }
         }
 
+        private sealed class FinalPassInfo
+        {
+            public int Pass { get; set; }
+            public int FirstInput { get; set; }
+            public int PreviousPassOutputsProcessed { get; set; }
+            public SortedList<int, List<PreviousMergePassOutput>> PreviousPassOutputs { get; set; }
+            public MergeInputComparer Comparer { get; set; }
+        }
+
         #endregion
 
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(MergeRecordReader<T>));
 
-        private SortedList<int, PriorityQueue<MergeInput>> _finalPassQueue;
+        private PriorityQueue<MergeInput> _finalPassQueue;
+        private FinalPassInfo _finalPassInfo;
         private readonly ManualResetEvent _finalPassEvent = new ManualResetEvent(false);
-        private bool _finalPassStarted;
         private readonly Thread _mergeThread;
         private bool _started;
         private MergeInput _currentFront;
         private string _mergeIntermediateOutputPath;
+        private int _maxMergeInputs;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="MergeRecordReader{T}"/> class.
@@ -89,10 +99,20 @@ namespace Tkl.Jumbo.Jet
         {
             CheckDisposed();
 
-            if( !_finalPassStarted )
+            if( _finalPassInfo == null )
                 _finalPassEvent.WaitOne();
 
-            PriorityQueue<MergeInput> partitionQueue = _finalPassQueue[CurrentPartition];
+            if( _finalPassQueue == null )
+            {
+                int firstInput = _finalPassInfo.FirstInput;
+                int previousPassOutputsProcessed = _finalPassInfo.PreviousPassOutputsProcessed;
+                List<PreviousMergePassOutput> previousPassOutputs;
+                _finalPassInfo.PreviousPassOutputs.TryGetValue(CurrentPartition, out previousPassOutputs);
+                _finalPassQueue = CreateMergeQueue(_maxMergeInputs, _finalPassInfo.Comparer, ref firstInput, ref previousPassOutputsProcessed, CurrentPartition, previousPassOutputs);
+                _log.InfoFormat("Partition {0} merge pass {1}: merging {2} inputs.", CurrentPartition, _finalPassInfo.Pass, _finalPassQueue.Count);
+            }
+
+            PriorityQueue<MergeInput> partitionQueue = _finalPassQueue;
 
             if( _currentFront != null )
             {
@@ -120,6 +140,16 @@ namespace Tkl.Jumbo.Jet
             }
         }
 
+        /// <summary>
+        /// Overrides <see cref="MultiInputRecordReader{T}.OnCurrentPartitionChanged"/>.
+        /// </summary>
+        /// <param name="e"></param>
+        protected override void OnCurrentPartitionChanged(EventArgs e)
+        {
+            _finalPassQueue = null;
+            base.OnCurrentPartitionChanged(e);
+        }
+
         private void MergeThread()
         {
             _mergeIntermediateOutputPath = Path.Combine(TaskAttemptConfiguration.LocalJobDirectory, TaskAttemptConfiguration.TaskId.ToString());
@@ -132,6 +162,8 @@ namespace Tkl.Jumbo.Jet
             if( maxMergeInputs <= 0 )
                 throw new InvalidOperationException("maxMergeInputs must be larger than zero.");
             _log.InfoFormat("Merging {0} inputs with max {1} inputs per pass.", TotalInputCount, maxMergeInputs);
+
+            _maxMergeInputs = maxMergeInputs;
 
             IComparer<T> recordComparer;
 
@@ -157,29 +189,38 @@ namespace Tkl.Jumbo.Jet
                 // Wait until we have enough inputs for another merge pass.
                 _log.InfoFormat("Waiting for {0} inputs to become available.", processed + maxMergeInputs);
                 WaitForInputs(processed + maxMergeInputs, Timeout.Infinite);
-                _log.InfoFormat("{0} inputs are available.", processed + maxMergeInputs);
+                _log.InfoFormat("{0} inputs are available.", CurrentInputCount);
                 int partitionMergeOutputsProcessed = 0;
                 int partitionProcessed = 0;
 
+                bool needMorePasses = false;
                 foreach( int partition in Partitions )
                 {
                     partitionMergeOutputsProcessed = mergeOutputsProcessed;
                     partitionProcessed = processed;
-                    ProcessInputsForMergePass(maxMergeInputs, comparer, ref partitionProcessed, previousMergePassOutputFiles, pass, ref partitionMergeOutputsProcessed, partition);
+                    needMorePasses = ProcessInputsForMergePass(maxMergeInputs, comparer, ref partitionProcessed, previousMergePassOutputFiles, pass, ref partitionMergeOutputsProcessed, partition);
+                    if( !needMorePasses )
+                        break;
                 }
 
                 // Because the final values of each partition's partitionMergeOutputsProcessed and processed are the same, we can simply set them to the last one here.
                 mergeOutputsProcessed = partitionMergeOutputsProcessed;
                 processed = partitionProcessed;
+
+                if( !needMorePasses )
+                {
+                    _finalPassInfo = new FinalPassInfo() { Pass = pass, Comparer = comparer, FirstInput = processed, PreviousPassOutputs = previousMergePassOutputFiles, PreviousPassOutputsProcessed = partitionMergeOutputsProcessed };
+                    break;
+                }
+
                 ++pass;
             }
 
             _log.Info("Starting final pass for all partitions.");
-            _finalPassStarted = true;
             _finalPassEvent.Set();
         }
 
-        private void ProcessInputsForMergePass(int maxMergeInputs, MergeInputComparer comparer, ref int processed, SortedList<int, List<PreviousMergePassOutput>> previousMergePassOutputFiles, int pass, ref int partitionMergeOutputsProcessed, int partition)
+        private bool ProcessInputsForMergePass(int maxMergeInputs, MergeInputComparer comparer, ref int processed, SortedList<int, List<PreviousMergePassOutput>> previousMergePassOutputFiles, int pass, ref int partitionMergeOutputsProcessed, int partition)
         {
             RecordWriter<T> writer = null;
             bool disposeWriter = false;
@@ -187,31 +228,18 @@ namespace Tkl.Jumbo.Jet
 
             try
             {
-                // Create the merge queue from the new inputs.
-                PriorityQueue<MergeInput> queue = new PriorityQueue<MergeInput>(EnumerateInputs(partition, processed, maxMergeInputs), comparer);
-                processed += queue.Count;
-                // If the queue size is smaller than the amount of inputs we can merge, and we have previous merge results, we'll add those.
                 List<PreviousMergePassOutput> partitionPreviousPassOutputFiles = null;
                 previousMergePassOutputFiles.TryGetValue(partition, out partitionPreviousPassOutputFiles);
-                if( queue.Count < maxMergeInputs && partitionPreviousPassOutputFiles != null && partitionPreviousPassOutputFiles.Count > 0 )
-                {
-                    while( queue.Count < maxMergeInputs && partitionMergeOutputsProcessed < partitionPreviousPassOutputFiles.Count )
-                    {
-                        PreviousMergePassOutput previousOutput = previousMergePassOutputFiles[partition][partitionMergeOutputsProcessed];
-                        // No need to keep track of this reader to dispose it; BinaryRecordReader will dispose itself after reading the final record.
-                        RecordReader<T> reader = new BinaryRecordReader<T>(previousOutput.File, TaskAttemptConfiguration.AllowRecordReuse, JetConfiguration.FileChannel.DeleteIntermediateFiles, BufferSize, CompressionType, previousOutput.UncompressedSize);
-                        if( reader.ReadRecord() )
-                        {
-                            queue.Enqueue(new MergeInput() { Value = reader.CurrentRecord, Reader = reader });
-                        }
-                        ++partitionMergeOutputsProcessed;
-                    }
-                }
-                _log.InfoFormat("Partition {0} merge pass {1}: merging {2} inputs.", partition, pass, queue.Count);
+                int previousMergeOutputCount = partitionPreviousPassOutputFiles == null ? 0 : partitionPreviousPassOutputFiles.Count;
+                int remainingInputCount = (TotalInputCount - processed) + (previousMergeOutputCount - partitionMergeOutputsProcessed);
 
-                if( processed < TotalInputCount || partitionPreviousPassOutputFiles != null && partitionMergeOutputsProcessed < partitionPreviousPassOutputFiles.Count )
+                if( remainingInputCount > maxMergeInputs )
                 {
-                    string outputFile = Path.Combine(_mergeIntermediateOutputPath, string.Format(System.Globalization.CultureInfo.InvariantCulture, "{0}_partition{1}_pass{2}.mergeoutput.tmp", TaskAttemptConfiguration.TaskAttemptId, partition, pass));
+                    // Create the merge queue from the new inputs.
+                    PriorityQueue<MergeInput> queue = CreateMergeQueue(maxMergeInputs, comparer, ref processed, ref partitionMergeOutputsProcessed, partition, partitionPreviousPassOutputFiles);
+                    _log.InfoFormat("Partition {0} merge pass {1}: merging {2} inputs.", partition, pass, queue.Count);
+
+                    string outputFile = Path.Combine(_mergeIntermediateOutputPath, string.Format(System.Globalization.CultureInfo.InvariantCulture, "partition{0}_pass{1}.mergeoutput.tmp", partition, pass));
                     _log.InfoFormat("Creating file {0} to hold output of partition {1} pass {2}.", outputFile, partition, pass);
                     disposeWriter = true;
                     writer = new BinaryRecordWriter<T>(new FileStream(outputFile, FileMode.CreateNew, FileAccess.Write, FileShare.None, BufferSize).CreateCompressor(CompressionType));
@@ -222,19 +250,17 @@ namespace Tkl.Jumbo.Jet
                     previousMergePassOutputFiles[partition].Add(currentOutput);
                     MergeQueue(queue, writer);
                     _log.InfoFormat("Partition {0} merge pass {1} complete", partition, pass);
+
+                    if( currentOutput != null )
+                        currentOutput.UncompressedSize = writer.BytesWritten;
+
+                    return true;
                 }
                 else
                 {
-                    // The final pass will be done in ReadRecordInternal()
-                    if( _finalPassQueue == null )
-                    {
-                        _finalPassQueue = new SortedList<int, PriorityQueue<MergeRecordReader<T>.MergeInput>>();
-                    }
-                    _finalPassQueue.Add(partition, queue);
+                    // Every partition would set _finalPassInfo to the same
+                    return false;
                 }
-
-                if( currentOutput != null )
-                    currentOutput.UncompressedSize = writer.BytesWritten;
             }
             finally
             {
@@ -244,6 +270,29 @@ namespace Tkl.Jumbo.Jet
                     writer = null;
                 }
             }
+        }
+
+        private PriorityQueue<MergeInput> CreateMergeQueue(int maxMergeInputs, MergeInputComparer comparer, ref int processed, ref int partitionMergeOutputsProcessed, int partition, List<PreviousMergePassOutput> partitionPreviousPassOutputFiles)
+        {
+            PriorityQueue<MergeInput> queue = new PriorityQueue<MergeInput>(EnumerateInputs(partition, processed, maxMergeInputs), comparer);
+            processed += queue.Count;
+            // If the queue size is smaller than the amount of inputs we can merge, and we have previous merge results, we'll add those.
+            if( queue.Count < maxMergeInputs && partitionPreviousPassOutputFiles != null && partitionPreviousPassOutputFiles.Count > 0 )
+            {
+                _log.InfoFormat("Queue size {0}, adding previous pass outputs.", queue.Count);
+                while( queue.Count < maxMergeInputs && partitionMergeOutputsProcessed < partitionPreviousPassOutputFiles.Count )
+                {
+                    PreviousMergePassOutput previousOutput = partitionPreviousPassOutputFiles[partitionMergeOutputsProcessed];
+                    // No need to keep track of this reader to dispose it; BinaryRecordReader will dispose itself after reading the final record.
+                    RecordReader<T> reader = new BinaryRecordReader<T>(previousOutput.File, TaskAttemptConfiguration.AllowRecordReuse, JetConfiguration.FileChannel.DeleteIntermediateFiles, BufferSize, CompressionType, previousOutput.UncompressedSize);
+                    if( reader.ReadRecord() )
+                    {
+                        queue.Enqueue(new MergeInput() { Value = reader.CurrentRecord, Reader = reader });
+                    }
+                    ++partitionMergeOutputsProcessed;
+                }
+            }
+            return queue;
         }
 
         private static void MergeQueue(PriorityQueue<MergeInput> queue, RecordWriter<T> writer)
