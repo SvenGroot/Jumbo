@@ -143,6 +143,7 @@ namespace TaskHost
                     _log.InfoFormat("Running task for partition {0}.", partition);
                     multiInputReader.CurrentPartition = partition;
                     CallTaskRunMethod<TInput, TOutput>(input, output, taskStopwatch, pullTask, pushTask);
+                    _log.InfoFormat("Finished running task for partition {0}.", partition);
                 }
             }
             else

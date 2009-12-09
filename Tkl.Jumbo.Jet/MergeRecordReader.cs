@@ -61,6 +61,7 @@ namespace Tkl.Jumbo.Jet
         private readonly Thread _mergeThread;
         private bool _started;
         private MergeInput _currentFront;
+        private string _mergeIntermediateOutputPath;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="MergeRecordReader{T}"/> class.
@@ -121,6 +122,7 @@ namespace Tkl.Jumbo.Jet
 
         private void MergeThread()
         {
+            _mergeIntermediateOutputPath = Path.Combine(TaskAttemptConfiguration.LocalJobDirectory, "MergeFiles");
             int maxMergeInputs = TaskAttemptConfiguration.StageConfiguration.GetTypedSetting(MergeRecordReaderConstants.MaxMergeInputsSetting, 0);
             if( maxMergeInputs == 0 )
                 maxMergeInputs = TaskAttemptConfiguration.JobConfiguration.GetTypedSetting(MergeRecordReaderConstants.MaxMergeInputsSetting, MergeRecordReaderConstants.DefaultMaxMergeInputs);
@@ -153,6 +155,7 @@ namespace Tkl.Jumbo.Jet
                 // Wait until we have enough inputs for another merge pass.
                 _log.InfoFormat("Waiting for {0} inputs to become available.", processed + maxMergeInputs);
                 WaitForInputs(processed + maxMergeInputs, Timeout.Infinite);
+                _log.InfoFormat("{0} inputs are available.", processed + maxMergeInputs);
                 int partitionMergeOutputsProcessed = 0;
                 int partitionProcessed = 0;
 
@@ -206,7 +209,7 @@ namespace Tkl.Jumbo.Jet
 
                 if( processed < TotalInputCount || partitionPreviousPassOutputFiles != null && partitionMergeOutputsProcessed < partitionPreviousPassOutputFiles.Count )
                 {
-                    string outputFile = Path.Combine(TaskAttemptConfiguration.LocalJobDirectory, string.Format(System.Globalization.CultureInfo.InvariantCulture, "{0}_partition{1}_pass{2}.mergeoutput.tmp", TaskAttemptConfiguration.TaskAttemptId, partition, pass));
+                    string outputFile = Path.Combine(_mergeIntermediateOutputPath, string.Format(System.Globalization.CultureInfo.InvariantCulture, "{0}_partition{1}_pass{2}.mergeoutput.tmp", TaskAttemptConfiguration.TaskAttemptId, partition, pass));
                     _log.InfoFormat("Creating file {0} to hold output of partition {1} pass {2}.", outputFile, partition, pass);
                     disposeWriter = true;
                     writer = new BinaryRecordWriter<T>(new FileStream(outputFile, FileMode.CreateNew, FileAccess.Write, FileShare.None, BufferSize).CreateCompressor(CompressionType));
@@ -221,7 +224,6 @@ namespace Tkl.Jumbo.Jet
                 else
                 {
                     // The final pass will be done in ReadRecordInternal()
-                    _log.InfoFormat("Partition {0} final pass.", partition);
                     if( _finalPassQueue == null )
                     {
                         _finalPassQueue = new SortedList<int, PriorityQueue<MergeRecordReader<T>.MergeInput>>();

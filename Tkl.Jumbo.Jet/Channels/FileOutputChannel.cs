@@ -32,6 +32,10 @@ namespace Tkl.Jumbo.Jet.Channels
             // so the number always matches the output partition number anyway.
             string inputTaskId = root.Configuration.TaskId.ToString();
             string localJobDirectory = taskExecution.Configuration.LocalJobDirectory;
+            string directory = Path.Combine(localJobDirectory, inputTaskId);
+            if( !Directory.Exists(directory) )
+                Directory.CreateDirectory(directory);
+
 
             _fileNames = (from taskId in OutputIds
                           select Path.Combine(localJobDirectory, CreateChannelFileName(inputTaskId, taskId))).ToList();
@@ -62,7 +66,7 @@ namespace Tkl.Jumbo.Jet.Channels
 
         internal static string CreateChannelFileName(string inputTaskID, string outputTaskID)
         {
-            return string.Format(System.Globalization.CultureInfo.InvariantCulture, "{0}_{1}.output", inputTaskID, outputTaskID);
+            return Path.Combine(inputTaskID, outputTaskID + ".output");
         }
 
         #region IOutputChannel members

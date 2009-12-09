@@ -197,7 +197,7 @@ namespace Tkl.Jumbo.Jet
             if( stageConfiguration == null && taskId.ParentTaskId != null )
                 throw new ArgumentException("Cannot create task execution utility for pipelined task.");
 
-            _log.DebugFormat("Creating task execution utility for task {0}.", taskId);
+            //_log.DebugFormat("Creating task execution utility for task {0}.", taskId);
 
             JetClient = jetClient;
             Umbilical = umbilical;
@@ -208,15 +208,15 @@ namespace Tkl.Jumbo.Jet
             if( stageConfiguration == null )
                 _inputStages.AddRange(jobConfiguration.GetInputStagesForStage(taskId.StageId));
 
-            _log.DebugFormat("Loading type {0}.", Configuration.StageConfiguration.TaskTypeName);
+            //_log.DebugFormat("Loading type {0}.", Configuration.StageConfiguration.TaskTypeName);
             TaskType = Configuration.StageConfiguration.TaskType;
-            _log.Debug("Determining input and output types.");
+            //_log.Debug("Determining input and output types.");
             Type taskInterfaceType = TaskType.FindGenericInterfaceType(typeof(ITask<,>));
             Type[] arguments = taskInterfaceType.GetGenericArguments();
             InputRecordType = arguments[0];
             OutputRecordType = arguments[1];
-            _log.InfoFormat("Input type: {0}", InputRecordType.AssemblyQualifiedName);
-            _log.InfoFormat("Output type: {0}", OutputRecordType.AssemblyQualifiedName);
+            //_log.InfoFormat("Input type: {0}", InputRecordType.AssemblyQualifiedName);
+            //_log.InfoFormat("Output type: {0}", OutputRecordType.AssemblyQualifiedName);
         }
 
         /// <summary>
@@ -598,7 +598,7 @@ namespace Tkl.Jumbo.Jet
             }
             else if( OutputChannel != null )
             {
-                _log.Debug("Creating output channel record writer.");
+                //_log.Debug("Creating output channel record writer.");
                 return OutputChannel.CreateRecordWriter<T>();
             }
             else
@@ -613,7 +613,7 @@ namespace Tkl.Jumbo.Jet
             TaskDfsOutput output = Configuration.StageConfiguration.DfsOutput;
             _dfsOutputs.Add(new DfsOutputInfo() { DfsOutputTempPath = file, DfsOutputPath = output.GetPath(partition) });
             _outputStream = DfsClient.CreateFile(file, output.BlockSize, output.ReplicationFactor);
-            _log.DebugFormat("Creating record writer of type {0}", Configuration.StageConfiguration.DfsOutput.RecordWriterTypeName);
+            //_log.DebugFormat("Creating record writer of type {0}", Configuration.StageConfiguration.DfsOutput.RecordWriterTypeName);
             Type recordWriterType = Configuration.StageConfiguration.DfsOutput.RecordWriterType;
             return (RecordWriter<T>)JetActivator.CreateInstance(recordWriterType, this, _outputStream);
         }
@@ -624,12 +624,12 @@ namespace Tkl.Jumbo.Jet
             if( Configuration.StageConfiguration.DfsInputs != null && Configuration.StageConfiguration.DfsInputs.Count > 0 )
             {
                 TaskDfsInput input = Configuration.StageConfiguration.DfsInputs[Configuration.TaskId.TaskNumber - 1];
-                _log.DebugFormat("Creating record reader of type {0}", input.RecordReaderTypeName);
+                //_log.DebugFormat("Creating record reader of type {0}", input.RecordReaderTypeName);
                 return input.CreateRecordReader<T>(DfsClient, this);
             }
             else if( InputChannels != null )
             {
-                _log.Debug("Creating input channel record reader.");
+                //_log.Debug("Creating input channel record reader.");
                 if( InputChannels.Count == 1 )
                     return (RecordReader<T>)InputChannels[0].CreateRecordReader();
                 else

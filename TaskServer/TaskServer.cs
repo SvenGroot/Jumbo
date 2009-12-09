@@ -378,6 +378,20 @@ namespace TaskServerApplication
                 _pendingHeartbeatData.Add(data);
         }
 
+        private void CleanupJobFiles(Guid jobId, string directory)
+        {
+            foreach( string file in System.IO.Directory.GetFiles(directory) )
+            {
+                if( file.EndsWith(".output") || file.EndsWith(".input") )
+                {
+                    _log.DebugFormat("Job {0} cleanup: deleting file {1}.", jobId, file);
+                    System.IO.File.Delete(file);
+                }
+            }
+            foreach( string subDirectory in Directory.GetDirectories(directory) )
+                CleanupJobFiles(jobId, subDirectory);
+        }
+
         private void CleanupJobFiles(Guid jobId)
         {
             lock( _uncompressedTemporaryFileSizes )
@@ -390,14 +404,7 @@ namespace TaskServerApplication
                 if( Configuration.FileChannel.DeleteIntermediateFiles )
                 {
                     string jobDirectory = GetJobDirectory(jobId);
-                    foreach( string file in System.IO.Directory.GetFiles(jobDirectory) )
-                    {
-                        if( file.EndsWith(".output") || file.EndsWith(".input") )
-                        {
-                            _log.DebugFormat("Job {0} cleanup: deleting file {1}.", jobId, file);
-                            System.IO.File.Delete(file);
-                        }
-                    }
+                    CleanupJobFiles(jobId, jobDirectory);
                 }
             }
             catch( UnauthorizedAccessException ex )
