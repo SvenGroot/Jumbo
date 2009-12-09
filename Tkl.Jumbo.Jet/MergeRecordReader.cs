@@ -122,7 +122,9 @@ namespace Tkl.Jumbo.Jet
 
         private void MergeThread()
         {
-            _mergeIntermediateOutputPath = Path.Combine(TaskAttemptConfiguration.LocalJobDirectory, "MergeFiles");
+            _mergeIntermediateOutputPath = Path.Combine(TaskAttemptConfiguration.LocalJobDirectory, TaskAttemptConfiguration.TaskId.ToString());
+            if( !Directory.Exists(_mergeIntermediateOutputPath) )
+                Directory.CreateDirectory(_mergeIntermediateOutputPath);
             int maxMergeInputs = TaskAttemptConfiguration.StageConfiguration.GetTypedSetting(MergeRecordReaderConstants.MaxMergeInputsSetting, 0);
             if( maxMergeInputs == 0 )
                 maxMergeInputs = TaskAttemptConfiguration.JobConfiguration.GetTypedSetting(MergeRecordReaderConstants.MaxMergeInputsSetting, MergeRecordReaderConstants.DefaultMaxMergeInputs);
