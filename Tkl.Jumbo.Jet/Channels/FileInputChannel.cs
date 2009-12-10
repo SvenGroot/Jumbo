@@ -31,6 +31,7 @@ namespace Tkl.Jumbo.Jet.Channels
         private Thread _inputPollThread;
         private Thread _downloadThread;
         private IJobServerClientProtocol _jobServer;
+        private readonly string _inputDirectory;
         private string _outputStageId;
         private bool _isReady;
         private readonly ManualResetEvent _readyEvent = new ManualResetEvent(false);
@@ -55,6 +56,9 @@ namespace Tkl.Jumbo.Jet.Channels
             _jobDirectory = taskExecution.Configuration.LocalJobDirectory;
             _jobID = taskExecution.Configuration.JobId;
             _jobServer = taskExecution.JetClient.JobServer;
+            _inputDirectory = Path.Combine(_jobDirectory, taskExecution.Configuration.TaskId.ToString());
+            if( !Directory.Exists(_inputDirectory) )
+                Directory.CreateDirectory(_inputDirectory);
             _outputStageId = taskExecution.Configuration.StageConfiguration.StageId;
             // The type of the records in the intermediate files will be the output type of the input stage, which usually matches the input type of the output stage but
             // in the case of a join it may not.
@@ -272,10 +276,11 @@ namespace Tkl.Jumbo.Jet.Channels
                 string taskOutputDirectory = taskServer.GetOutputFileDirectory(task.JobId, task.TaskId);
                 foreach( int partition in Partitions )
                 {
-                    fileName = Path.Combine(taskOutputDirectory, FileOutputChannel.CreateChannelFileName(task.TaskId, TaskId.CreateTaskIdString(_outputStageId, partition)));
+                    string outputFileName = FileOutputChannel.CreateChannelFileName(task.TaskId, TaskId.CreateTaskIdString(_outputStageId, partition));
+                    fileName = Path.Combine(taskOutputDirectory, outputFileName);
                     long size = new FileInfo(fileName).Length;
                     _log.InfoFormat("Using local file {0} as input.", fileName);
-                    uncompressedSize = TaskExecution.Umbilical.GetUncompressedTemporaryFileSize(task.JobId, Path.GetFileName(fileName));
+                    uncompressedSize = TaskExecution.Umbilical.GetUncompressedTemporaryFileSize(task.JobId, outputFileName);
                     if( uncompressedSize != -1 )
                     {
                         LocalBytesRead += uncompressedSize;
@@ -343,7 +348,7 @@ namespace Tkl.Jumbo.Jet.Channels
                         Stream memoryStream = _memoryStorage.AddStreamIfSpaceAvailable((int)size);
                         if( memoryStream == null )
                         {
-                            targetFile = Path.Combine(_jobDirectory, Path.GetFileNameWithoutExtension(fileToDownload) + ".input");
+                            targetFile = Path.Combine(_inputDirectory, string.Format(System.Globalization.CultureInfo.InvariantCulture, "{0}_{1}.input", task.TaskId, Path.GetFileNameWithoutExtension(fileToDownload)));
                             using( FileStream fileStream = File.Create(targetFile) )
                             {
                                 stream.CopySize(fileStream, size);

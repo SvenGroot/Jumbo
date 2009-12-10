@@ -66,6 +66,7 @@ namespace Tkl.Jumbo.Jet
             private readonly TaskExecutionUtility _rootTask;
             private RecordWriter<T> _recordWriter;
             private IMultiInputRecordReader _reader;
+            private long _bytesWritten;
 
             public PartitionDfsOutputRecordWriter(TaskExecutionUtility task, TaskExecutionUtility rootTask)
             {
@@ -76,6 +77,17 @@ namespace Tkl.Jumbo.Jet
                     _rootTask.InputRecordReaderCreated += new EventHandler(_task_InputRecordReaderCreated);
                 else
                     ConnectToReader();
+            }
+
+            public override long BytesWritten
+            {
+                get
+                {
+                    if( _recordWriter == null )
+                        return _bytesWritten;
+                    else
+                        return _bytesWritten + _recordWriter.BytesWritten;
+                }
             }
 
             protected override void WriteRecordInternal(T record)
@@ -96,7 +108,10 @@ namespace Tkl.Jumbo.Jet
             private void CreateOutputWriter()
             {
                 if( _recordWriter != null )
+                {
+                    _bytesWritten += _recordWriter.BytesWritten;
                     _recordWriter.Dispose();
+                }
 
                 _recordWriter = _task.CreateDfsOutputRecordWriter<T>(_reader.CurrentPartition);
             }
@@ -114,7 +129,11 @@ namespace Tkl.Jumbo.Jet
                 if( disposing )
                 {
                     if( _recordWriter != null )
+                    {
+                        _bytesWritten += _recordWriter.BytesWritten;
                         _recordWriter.Dispose();
+                        _recordWriter = null;
+                    }
                 }
             }
         }

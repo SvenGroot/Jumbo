@@ -14,6 +14,7 @@ namespace Tkl.Jumbo.Jet.Channels
     {
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(FileOutputChannel));
 
+        private readonly string _localJobDirectory;
         private readonly List<string> _fileNames;
         private IEnumerable<IRecordWriter> _writers;
 
@@ -31,20 +32,20 @@ namespace Tkl.Jumbo.Jet.Channels
             // We don't include child task IDs in the output file name because internal partitioning can happen only once
             // so the number always matches the output partition number anyway.
             string inputTaskId = root.Configuration.TaskId.ToString();
-            string localJobDirectory = taskExecution.Configuration.LocalJobDirectory;
-            string directory = Path.Combine(localJobDirectory, inputTaskId);
+            _localJobDirectory = taskExecution.Configuration.LocalJobDirectory;
+            string directory = Path.Combine(_localJobDirectory, inputTaskId);
             if( !Directory.Exists(directory) )
                 Directory.CreateDirectory(directory);
 
 
             _fileNames = (from taskId in OutputIds
-                          select Path.Combine(localJobDirectory, CreateChannelFileName(inputTaskId, taskId))).ToList();
+                          select CreateChannelFileName(inputTaskId, taskId)).ToList();
 
             if( _fileNames.Count == 0 )
             {
                 // This is allowed for debugging and testing purposes so you don't have to have an output task.
                 _log.Warn("The file channel has no output tasks; writing channel output to a dummy file.");
-                _fileNames.Add(Path.Combine(localJobDirectory, CreateChannelFileName(inputTaskId, "DummyTask")));
+                _fileNames.Add(CreateChannelFileName(inputTaskId, "DummyTask"));
             }
         }
 
@@ -55,7 +56,7 @@ namespace Tkl.Jumbo.Jet.Channels
                 int x = 0;
                 foreach( IRecordWriter writer in _writers )
                 {
-                    string fileName = Path.GetFileName(_fileNames[x]);
+                    string fileName = _fileNames[x];
                     TaskExecution.Umbilical.SetUncompressedTemporaryFileSize(TaskExecution.Configuration.JobId, fileName, writer.BytesWritten);
 
                     ++x;
@@ -81,14 +82,14 @@ namespace Tkl.Jumbo.Jet.Channels
         {
             if( _fileNames.Count == 1 )
             {
-                RecordWriter<T> result = new BinaryRecordWriter<T>(File.Create(_fileNames[0]).CreateCompressor(CompressionType));
+                RecordWriter<T> result = new BinaryRecordWriter<T>(File.Create(Path.Combine(_localJobDirectory, _fileNames[0])).CreateCompressor(CompressionType));
                 _writers = new[] { result };
                 return result;
             }
             else
             {
                 var writers = from file in _fileNames
-                              select (RecordWriter<T>)new BinaryRecordWriter<T>(File.Create(file).CreateCompressor(CompressionType));
+                              select (RecordWriter<T>)new BinaryRecordWriter<T>(File.Create(Path.Combine(_localJobDirectory, file)).CreateCompressor(CompressionType));
                 _writers = writers.Cast<IRecordWriter>();
                 return CreateMultiRecordWriter<T>(writers);
             }

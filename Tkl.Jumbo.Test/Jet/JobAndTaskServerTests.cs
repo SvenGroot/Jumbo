@@ -414,10 +414,12 @@ namespace Tkl.Jumbo.Test.Jet
                 channelType = ChannelType.File;
             }
             config.AddStage("OutputTask", adderTask, 1, new InputStageInfo(stage) { ChannelType = channelType }, outputPath, typeof(TextRecordWriter<Int32Writable>));
+            if( forceFileDownload )
+                config.AddTypedSetting(FileInputChannel.MemoryStorageSizeSetting, 0L);
             foreach( ChannelConfiguration channel in config.GetAllChannels() )
             {
                 if( channel.ChannelType == ChannelType.File )
-                    channel.ForceFileDownload = true;
+                    channel.ForceFileDownload = forceFileDownload;
             }
 
             return config;
