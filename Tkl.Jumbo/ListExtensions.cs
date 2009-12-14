@@ -17,7 +17,19 @@ namespace Tkl.Jumbo
         /// <param name="list">The list to randomize.</param>
         public static void Randomize<T>(this IList<T> list)
         {
-            Random rnd = new Random();   // i.e., java.util.Random.
+            list.Randomize(new Random());
+        }
+
+        /// <summary>
+        /// Randomizes the specified list.
+        /// </summary>
+        /// <typeparam name="T">The type of the elements.</typeparam>
+        /// <param name="list">The list to randomize.</param>
+        /// <param name="rnd">The randomizer to use.</param>
+        public static void Randomize<T>(this IList<T> list, Random rnd)
+        {
+            if( rnd == null )
+                throw new ArgumentNullException("rnd");
             int n = list.Count;        // The number of items left to shuffle (loop invariant).
             while( n > 1 )
             {

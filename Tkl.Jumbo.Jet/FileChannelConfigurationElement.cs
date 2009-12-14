@@ -59,5 +59,15 @@ namespace Tkl.Jumbo.Jet
             get { return (CompressionType)this["compressionType"]; }
             set { this["compressionType"] = value; }
         }
+
+        /// <summary>
+        /// Gets or sets the number of download threads to use.
+        /// </summary>
+        [ConfigurationProperty("downloadThreads", DefaultValue = 1, IsRequired = false, IsKey = false)]
+        public int DownloadThreads
+        {
+            get { return (int)this["downloadThreads"]; }
+            set { this["downloadThreads"] = value; }
+        }
     }
 }

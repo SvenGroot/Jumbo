@@ -76,6 +76,8 @@
     <Compile Include="JumboConfiguration.cs" />
     <Compile Include="MemoryStatus.cs" />
     <Compile Include="NativeMethods.cs" />
+    <Compile Include="SpinLock.cs" />
+    <Compile Include="SpinWait.cs" />
     <Compile Include="Topology\NetworkTopology.cs" />
     <Compile Include="Topology\NetworkTopologyConfigurationElement.cs" />
     <Compile Include="Topology\RackConfigurationElement.cs" />
