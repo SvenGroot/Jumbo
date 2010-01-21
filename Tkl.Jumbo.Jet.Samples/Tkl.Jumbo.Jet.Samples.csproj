@@ -57,6 +57,7 @@
     <Compile Include="..\Version.cs">
       <Link>Properties\Version.cs</Link>
     </Compile>
+    <Compile Include="FileChannelTest.cs" />
     <Compile Include="GenSort2.cs" />
     <Compile Include="GraySort2.cs" />
     <Compile Include="ValSort2.cs" />

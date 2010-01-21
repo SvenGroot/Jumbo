@@ -29,7 +29,7 @@ namespace Tkl.Jumbo.Jet.Channels
         private string _jobDirectory;
         private Guid _jobID;
         private Thread _inputPollThread;
-        private Thread[] _downloadThreads;
+        private Thread _downloadThread;
         private IJobServerClientProtocol _jobServer;
         private readonly string _inputDirectory;
         private string _outputStageId;
@@ -37,7 +37,7 @@ namespace Tkl.Jumbo.Jet.Channels
         private readonly ManualResetEvent _readyEvent = new ManualResetEvent(false);
         private bool _disposed;
         private FileChannelMemoryStorageManager _memoryStorage;
-        private readonly Queue<CompletedTask> _completedTasks = new Queue<CompletedTask>();
+        private readonly List<CompletedTask> _completedTasks = new List<CompletedTask>();
         private volatile bool _allInputTasksCompleted;
         private readonly Type _inputReaderType;
 
@@ -57,7 +57,6 @@ namespace Tkl.Jumbo.Jet.Channels
             _jobID = taskExecution.Configuration.JobId;
             _jobServer = taskExecution.JetClient.JobServer;
             _inputDirectory = Path.Combine(_jobDirectory, taskExecution.Configuration.TaskId.ToString());
-            _downloadThreads = new Thread[taskExecution.JetClient.Configuration.FileChannel.DownloadThreads];
             if( !Directory.Exists(_inputDirectory) )
                 Directory.CreateDirectory(_inputDirectory);
             _outputStageId = taskExecution.Configuration.StageConfiguration.StageId;
@@ -106,14 +105,9 @@ namespace Tkl.Jumbo.Jet.Channels
             _inputPollThread = new Thread(InputPollThread);
             _inputPollThread.Name = "FileInputChannelPolling";
             _inputPollThread.Start();
-            _log.InfoFormat("Starting {0} download threads.", _downloadThreads.Length);
-            for( int x = 0; x < _downloadThreads.Length; ++x )
-            {
-                Thread downloadThread = new Thread(DownloadThread);
-                downloadThread.Name = "FileInputChannelDownload" + x.ToString(System.Globalization.CultureInfo.InvariantCulture);
-                _downloadThreads[x] = downloadThread;
-                downloadThread.Start(reader);
-            }
+            _downloadThread = new Thread(() => DownloadThread(reader));
+            _downloadThread.Name = "FileInputChannelDownload";
+            _downloadThread.Start();
 
             // Wait until the reader has at least one input.
             _readyEvent.WaitOne();
@@ -160,7 +154,6 @@ namespace Tkl.Jumbo.Jet.Channels
         {
             try
             {
-                Random rnd = new Random();
                 HashSet<string> tasksLeft = new HashSet<string>(InputTaskIds);
                 string[] tasksLeftArray = tasksLeft.ToArray();
                 long memoryStorageSize = TaskExecution.Configuration.JobConfiguration.GetTypedSetting(MemoryStorageSizeSetting, TaskExecution.JetClient.Configuration.FileChannel.MemoryStorageSize);
@@ -175,15 +168,12 @@ namespace Tkl.Jumbo.Jet.Channels
                     if( completedTasks != null && completedTasks.Length > 0 )
                     {
                         _log.InfoFormat("Received {0} new completed tasks.", completedTasks.Length);
-                        completedTasks.Randomize(rnd); // Randomize to prevent all tasks hitting the same server.
-
+                        completedTasks.Randomize(); // Randomize to prevent all tasks hitting the same server.
                         lock( _completedTasks )
                         {
-                            foreach( CompletedTask task in completedTasks )
-                                _completedTasks.Enqueue(task);
-                            Monitor.PulseAll(_completedTasks);
+                            _completedTasks.AddRange(completedTasks);
+                            Monitor.Pulse(_completedTasks);
                         }
-
                         foreach( CompletedTask task in completedTasks )
                         {
                             tasksLeft.Remove(task.TaskId);
@@ -191,13 +181,12 @@ namespace Tkl.Jumbo.Jet.Channels
                         tasksLeftArray = tasksLeft.ToArray();
                     }
                 }
-
                 _allInputTasksCompleted = true;
                 lock( _completedTasks )
                 {
-                    Monitor.PulseAll(_completedTasks);
+                    // Just making sure the download thread wakes up after this flag is set.
+                    Monitor.Pulse(_completedTasks);
                 }
-
                 if( _disposed )
                     _log.Info("Input poll thread aborted because the object was disposed.");
                 else
@@ -212,9 +201,8 @@ namespace Tkl.Jumbo.Jet.Channels
             }
         }
 
-        private void DownloadThread(object param)
+        private void DownloadThread(IMultiInputRecordReader reader)
         {
-            IMultiInputRecordReader reader = (IMultiInputRecordReader)param;
             List<CompletedTask> tasksToProcess = new List<CompletedTask>();
             List<CompletedTask> remainingTasks = new List<CompletedTask>();
             Random rnd = new Random();
@@ -222,17 +210,18 @@ namespace Tkl.Jumbo.Jet.Channels
             {
                 lock( _completedTasks )
                 {
-                    while( _completedTasks.Count == 0 )
+                    if( _completedTasks.Count == 0 )
                     {
                         if( _allInputTasksCompleted )
-                        {
-                            _log.Info("All files are downloaded.");
-                            return;
-                        }
+                            break;
                         Monitor.Wait(_completedTasks);
                     }
 
-                    tasksToProcess.Add(_completedTasks.Dequeue());
+                    if( _completedTasks.Count > 0 )
+                    {
+                        tasksToProcess.AddRange(_completedTasks);
+                        _completedTasks.Clear();
+                    }
                 }
 
                 while( tasksToProcess.Count > 0 )
@@ -253,18 +242,23 @@ namespace Tkl.Jumbo.Jet.Channels
                     if( remainingTasks.Count > 0 )
                     {
                         tasksToProcess.AddRange(remainingTasks);
-
-                        // Also add a newly arrived tasks to the list if possible, to improve the chances of the next iteration doing work.
+                        // Also add newly arrived tasks to the list, to improve the chances of the next iteration doing work.
                         lock( _completedTasks )
                         {
                             if( _completedTasks.Count > 0 )
-                                tasksToProcess.Add(_completedTasks.Dequeue());
+                            {
+                                tasksToProcess.AddRange(_completedTasks);
+                                _completedTasks.Clear();
+                            }
                         }
                     }
                 }
             }
 
-            _log.Warn("Download thread aborted because the object was disposed.");
+            if( _disposed )
+                _log.Info("Download thread aborted because the object was disposed.");
+            else
+                _log.Info("All files are downloaded.");
         }
 
         private bool DownloadCompletedFile(IMultiInputRecordReader reader, CompletedTask task)
