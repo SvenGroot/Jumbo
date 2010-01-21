@@ -37,7 +37,10 @@ namespace JobServerApplication.Scheduling
                 {
                     // Remove tasks that have been scheduled.
                     inputTasks.RemoveAll((task) => task.Server != null);
-                    ScheduleInputTasksNonLocal(job, taskServers, capacity, inputTasks, newServers);
+                    if( inputTasks.Count > 0 )
+                    {
+                        ScheduleInputTasksNonLocal(job, taskServers, capacity, inputTasks, newServers);
+                    }
                 }
             }
 
