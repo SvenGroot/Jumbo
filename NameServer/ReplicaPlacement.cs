@@ -153,8 +153,7 @@ namespace NameServerApplication
                 DataServerInfo result = (from server in eligibleServers
                                          let serverDistance = server.DistanceFrom(writerHostName, writerRackId)
                                          where serverDistance >= minimumDistance
-                                         orderby serverDistance ascending, server.PendingBlocks.Count ascending, _random.Next() ascending
-                                         select server).First();
+                                         select new { Server=server, Distance=serverDistance }).OrderBy(s => s.Distance).ThenBy(s => s.Server.PendingBlocks.Count).ThenBy(s => _random.Next()).First().Server;
                 return result;
             }
         }
