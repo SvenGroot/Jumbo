@@ -71,6 +71,17 @@ namespace JetShell
             metrics.PrintMetrics(Console.Out);
         }
 
+        private static void PrintVersion(JetClient client, string[] args)
+        {
+            Console.WriteLine("Jumbo {0}", typeof(Tkl.Jumbo.ServerAddress).Assembly.GetName().Version);
+        }
+
+        private static void PrintRevision(JetClient client, string[] args)
+        {
+            Console.WriteLine(typeof(Tkl.Jumbo.ServerAddress).Assembly.GetName().Version.Revision);
+        }
+
+
         private static void RunJob(JetClient jetClient, string[] args)
         {
             if( args.Length < 2 )
@@ -163,6 +174,8 @@ namespace JetShell
 
             commands.Add("metrics", PrintMetrics);
             commands.Add("job", RunJob);
+            commands.Add("version", PrintVersion);
+            commands.Add("revision", PrintRevision);
 
             return commands;
         }    

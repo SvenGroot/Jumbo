@@ -309,6 +309,16 @@ namespace DfsShell
             }
         }
 
+        private static void PrintVersion(DfsClient client, string[] args)
+        {
+            Console.WriteLine("Jumbo {0}", typeof(Tkl.Jumbo.ServerAddress).Assembly.GetName().Version);
+        }
+
+        private static void PrintRevision(DfsClient client, string[] args)
+        {
+            Console.WriteLine(typeof(Tkl.Jumbo.ServerAddress).Assembly.GetName().Version.Revision);
+        }
+
         private static Dictionary<string, Action<DfsClient, string[]>> CreateCommandList()
         {
             Dictionary<string, Action<DfsClient, string[]>> result = new Dictionary<string, Action<DfsClient, string[]>>();
@@ -326,6 +336,8 @@ namespace DfsShell
             result.Add("waitsafemode", WaitSafeMode);
             result.Add("cat", PrintFile);
             result.Add("mv", Move);
+            result.Add("version", PrintVersion);
+            result.Add("revision", PrintRevision);
 
             return result;
         }
