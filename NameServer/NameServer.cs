@@ -563,6 +563,7 @@ namespace NameServerApplication
             }
             if( e.File.Blocks.Count > 0 )
             {
+                List<BlockInfo> removedBlocks = new List<BlockInfo>(e.File.Blocks.Count);
                 lock( _blocks )
                 {
                     lock( _underReplicatedBlocks )
@@ -575,9 +576,20 @@ namespace NameServerApplication
                                 _blocks.Remove(block);
                                 _underReplicatedBlocks.Remove(block);
                                 MarkForDataServerDeletion(block, info);
+                                removedBlocks.Add(info);
                             }
                             else
                                 _log.Warn("File system attempted to delete a file with unknown blocks.");
+                        }
+                    }
+                }
+                lock( _dataServers )
+                {
+                    foreach( BlockInfo block in removedBlocks )
+                    {
+                        foreach( DataServerInfo server in block.DataServers )
+                        {
+                            server.Blocks.Remove(block.BlockId);
                         }
                     }
                 }

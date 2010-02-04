@@ -386,6 +386,20 @@ namespace Tkl.Jumbo.Test.Dfs
             Assert.IsTrue(result);
             Tkl.Jumbo.Dfs.DfsDirectory dir = target.GetDirectoryInfo("/test1");
             Assert.IsNull(dir);
+
+            using( DfsOutputStream stream = new DfsOutputStream(target, "/deletetest") )
+            {
+                Utilities.GenerateData(stream, 1000);
+            }
+
+            DfsFile file = target.GetFileInfo("/deletetest");
+            ServerAddress[] servers = target.GetDataServersForBlock(file.Blocks[0]);
+            Assert.AreEqual(1, servers.Length);
+            CollectionAssert.Contains(target.GetDataServerBlocks(servers[0]), file.Blocks[0]);
+
+            result = target.Delete("/deletetest", false);
+            Assert.IsTrue(result);
+            CollectionAssert.DoesNotContain(target.GetDataServerBlocks(servers[0]), file.Blocks[0]);
         }
 
         [Test]
