@@ -269,7 +269,7 @@ namespace Tkl.Jumbo
                         // We assume all CPUs are identical, which should be true in an SMP system.
                         if( line.StartsWith("model name", StringComparison.Ordinal) )
                         {
-                            return line.Substring(line.IndexOf(":") + 1).Trim();
+                            return line.Substring(line.IndexOf(":", StringComparison.Ordinal) + 1).Trim();
                         }
                     }
                 }

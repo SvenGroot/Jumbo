@@ -12,6 +12,7 @@ namespace Tkl.Jumbo
     /// <remarks>
     /// The public API is based on .Net 4.0's SpinWait class so once Mono supports that we can switch if desired.
     /// </remarks>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1815:OverrideEqualsAndOperatorEqualsOnValueTypes")]
     public struct SpinWait
     {
         private const int _yieldInterval = 0x19;

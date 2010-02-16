@@ -67,6 +67,7 @@
     <Compile Include="CompressionUtility.cs" />
     <Compile Include="CompressionType.cs" />
     <Compile Include="DriveSpaceInfo.cs" />
+    <Compile Include="IndividualProcessorStatus.cs" />
     <Compile Include="IO\ChildReaderException.cs" />
     <Compile Include="IO\IMultiInputRecordReader.cs" />
     <Compile Include="IO\InnerJoinRecordReader.cs" />
@@ -77,6 +78,7 @@
     <Compile Include="JumboConfiguration.cs" />
     <Compile Include="MemoryStatus.cs" />
     <Compile Include="NativeMethods.cs" />
+    <Compile Include="ProcessorStatus.cs" />
     <Compile Include="SpinLock.cs" />
     <Compile Include="SpinWait.cs" />
     <Compile Include="Topology\NetworkTopology.cs" />

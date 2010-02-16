@@ -14,6 +14,7 @@ namespace Tkl.Jumbo
     /// <remarks>
     /// The public API is based on .Net 4.0's SpinWait class so once Mono supports that we can switch if desired.
     /// </remarks>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1815:OverrideEqualsAndOperatorEqualsOnValueTypes"), System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Naming", "CA1702:CompoundWordsShouldBeCasedCorrectly", MessageId = "SpinLock")]
     public struct SpinLock
     {
         private volatile int _owner;
@@ -49,7 +50,7 @@ namespace Tkl.Jumbo
         /// Acquires the lock in a reliable manner.
         /// </summary>
         /// <param name="lockTaken"><see langword="true"/> if the lock was acquired; otherwise, <see langword="false"/>.</param>
-        [ReliabilityContract(Consistency.WillNotCorruptState, Cer.MayFail)]
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1045:DoNotPassTypesByReference", MessageId = "0#"), ReliabilityContract(Consistency.WillNotCorruptState, Cer.MayFail)]
         public void Enter(ref bool lockTaken)
         {
             TryEnter(Timeout.Infinite, ref lockTaken);
@@ -59,7 +60,7 @@ namespace Tkl.Jumbo
         /// Attempts to acquire the lock in a reliable manner.
         /// </summary>
         /// <param name="lockTaken"><see langword="true"/> if the lock was acquired; otherwise, <see langword="false"/>.</param>
-        [ReliabilityContract(Consistency.WillNotCorruptState, Cer.MayFail)]
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1045:DoNotPassTypesByReference", MessageId = "0#"), ReliabilityContract(Consistency.WillNotCorruptState, Cer.MayFail)]
         public void TryEnter(ref bool lockTaken)
         {
             TryEnter(0, ref lockTaken);
@@ -70,7 +71,7 @@ namespace Tkl.Jumbo
         /// </summary>
         /// <param name="millisecondsTimeout">The number of milliseconds to wait, or <see langword="Timeout.Infinite"/> to wait forever.</param>
         /// <param name="lockTaken"><see langword="true"/> if the lock was acquired; otherwise, <see langword="false"/>.</param>
-        [ReliabilityContract(Consistency.WillNotCorruptState, Cer.MayFail)]
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1045:DoNotPassTypesByReference", MessageId = "1#"), ReliabilityContract(Consistency.WillNotCorruptState, Cer.MayFail)]
         public void TryEnter(int millisecondsTimeout, ref bool lockTaken)
         {
             if( millisecondsTimeout < -1 )

@@ -334,6 +334,51 @@ namespace Tkl.Jumbo
             return left.Value != right.Value;
         }
 
+        /// <summary>
+        /// Returns a value indicating whether a specified <see cref="ByteSize"/> is less than another <see cref="ByteSize"/>.
+        /// </summary>
+        /// <param name="left">A <see cref="ByteSize"/>.</param>
+        /// <param name="right">A <see cref="ByteSize"/>.</param>
+        /// <returns><see langword="true"/> if <paramref name="left"/> is less than <paramref name="right"/>; otherwise, <see langword="false"/>.</returns>
+        public static bool operator <(ByteSize left, ByteSize right)
+        {
+            return left.Value < right.Value;
+        }
+
+        /// <summary>
+        /// Returns a value indicating whether a specified <see cref="ByteSize"/> is less than or equal to another <see cref="ByteSize"/>.
+        /// </summary>
+        /// <param name="left">A <see cref="ByteSize"/>.</param>
+        /// <param name="right">A <see cref="ByteSize"/>.</param>
+        /// <returns><see langword="true"/> if <paramref name="left"/> is less than or equal to <paramref name="right"/>; otherwise, <see langword="false"/>.</returns>
+        public static bool operator <=(ByteSize left, ByteSize right)
+        {
+            return left.Value <= right.Value;
+        }
+
+        /// <summary>
+        /// Returns a value indicating whether a specified <see cref="ByteSize"/> is greater than another <see cref="ByteSize"/>.
+        /// </summary>
+        /// <param name="left">A <see cref="ByteSize"/>.</param>
+        /// <param name="right">A <see cref="ByteSize"/>.</param>
+        /// <returns><see langword="true"/> if <paramref name="left"/> is greater than <paramref name="right"/>; otherwise, <see langword="false"/>.</returns>
+        public static bool operator >(ByteSize left, ByteSize right)
+        {
+            return left.Value > right.Value;
+        }
+
+        /// <summary>
+        /// Returns a value indicating whether a specified <see cref="ByteSize"/> is greater than or equal to another <see cref="ByteSize"/>.
+        /// </summary>
+        /// <param name="left">A <see cref="ByteSize"/>.</param>
+        /// <param name="right">A <see cref="ByteSize"/>.</param>
+        /// <returns><see langword="true"/> if <paramref name="left"/> is greater than or equal to <paramref name="right"/>; otherwise, <see langword="false"/>.</returns>
+        public static bool operator >=(ByteSize left, ByteSize right)
+        {
+            return left.Value >= right.Value;
+        }
+
+
         #region IEquatable<ByteSize> Members
 
         /// <summary>

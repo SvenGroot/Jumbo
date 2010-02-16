@@ -25,15 +25,15 @@ namespace Tkl.Jumbo
         /// </summary>
         /// <typeparam name="T">The type of the elements.</typeparam>
         /// <param name="list">The list to randomize.</param>
-        /// <param name="rnd">The randomizer to use.</param>
-        public static void Randomize<T>(this IList<T> list, Random rnd)
+        /// <param name="random">The randomizer to use.</param>
+        public static void Randomize<T>(this IList<T> list, Random random)
         {
-            if( rnd == null )
-                throw new ArgumentNullException("rnd");
+            if( random == null )
+                throw new ArgumentNullException("random");
             int n = list.Count;        // The number of items left to shuffle (loop invariant).
             while( n > 1 )
             {
-                int k = rnd.Next(n);  // 0 <= k < n.
+                int k = random.Next(n);  // 0 <= k < n.
                 n--;                     // n is now the last pertinent index;
                 T temp = list[n];     // swap array[n] with array[k] (does nothing if k == n).
                 list[n] = list[k];

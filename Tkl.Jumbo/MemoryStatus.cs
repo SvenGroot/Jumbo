@@ -152,7 +152,7 @@ namespace Tkl.Jumbo
             }
         }
 
-        private bool ExtractMemInfoValue(string line, string field, ref long value)
+        private static bool ExtractMemInfoValue(string line, string field, ref long value)
         {
             if( line.StartsWith(field, StringComparison.Ordinal) )
             {
