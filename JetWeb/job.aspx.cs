@@ -45,10 +45,13 @@ public partial class job : System.Web.UI.Page
         row.Cells.Add(new HtmlTableCell() { InnerText = job.NonDataLocalTaskCount.ToString() });
         RunningJobsTable.Rows.Add(row);
 
-        foreach( TaskStatus task in job.Tasks )
+        foreach( StageStatus stage in job.Stages )
         {
-            row = CreateTaskTableRow(job, task, false, true);
-            TasksTable.Rows.Add(row);
+            foreach( TaskStatus task in stage.Tasks )
+            {
+                row = CreateTaskTableRow(job, task, false, true);
+                TasksTable.Rows.Add(row);
+            }
         }
 
         if( job.ErrorTaskCount > 0 )

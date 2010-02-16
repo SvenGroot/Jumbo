@@ -9,13 +9,14 @@ using System.Collections.ObjectModel;
 namespace Tkl.Jumbo.Jet
 {
     /// <summary>
-    /// Provides status information about the currently running 
+    /// Provides status information about the currently running job.
     /// </summary>
     [Serializable]
     public class JobStatus
     {
         private ExtendedCollection<TaskStatus> _tasks = new ExtendedCollection<TaskStatus>();
         private ExtendedCollection<TaskStatus> _failedTaskAttempts = new ExtendedCollection<TaskStatus>();
+        private readonly ExtendedCollection<StageStatus> _stages = new ExtendedCollection<StageStatus>();
 
         internal const string DatePattern = "yyyy'-'MM'-'dd' 'HH':'mm':'ss'.'fff'Z'";
 
@@ -30,11 +31,11 @@ namespace Tkl.Jumbo.Jet
         public string JobName { get; set; }
 
         /// <summary>
-        /// Gets the tasks of this job.
+        /// Gets the stages of this job.
         /// </summary>
-        public Collection<TaskStatus> Tasks
+        public Collection<StageStatus> Stages
         {
-            get { return _tasks; }
+            get { return _stages; }
         }
 
         /// <summary>
@@ -46,11 +47,11 @@ namespace Tkl.Jumbo.Jet
         }
 
         /// <summary>
-        /// Gets or sets the total number of tasks in the 
+        /// Gets the total number of tasks in the job.
         /// </summary>
         public int TaskCount
         {
-            get { return Tasks.Count; }
+            get { return Stages.Sum(s => s.Tasks.Count); }
         }
 
         /// <summary>
@@ -117,7 +118,8 @@ namespace Tkl.Jumbo.Jet
         {
             get
             {
-                return (from task in Tasks
+                return (from stage in Stages
+                        from task in stage.Tasks
                         select task.Progress).Average();
             }
         }
@@ -157,7 +159,8 @@ namespace Tkl.Jumbo.Jet
                         new XAttribute("errors", ErrorTaskCount.ToString(System.Globalization.CultureInfo.InvariantCulture)),
                         new XAttribute("nonDataLocalTasks", NonDataLocalTaskCount.ToString(System.Globalization.CultureInfo.InvariantCulture))),
                     new XElement("Tasks",
-                        from task in Tasks
+                        from stage in Stages
+                        from task in stage.Tasks
                         select task.ToXml()),
                     ErrorTaskCount == 0 ? 
                         null : 
@@ -187,8 +190,19 @@ namespace Tkl.Jumbo.Jet
                 FinishedTaskCount = (int)jobInfo.Attribute("finishedTasks"),
                 NonDataLocalTaskCount = (int)jobInfo.Attribute("nonDataLocalTasks"),
             };
-            jobStatus.Tasks.AddRange(from task in job.Element("Tasks").Elements("Task")
-                                     select TaskStatus.FromXml(task, jobStatus));
+
+            var stages = from task in job.Element("Tasks").Elements("Task")
+                         let taskStatus = TaskStatus.FromXml(task, jobStatus)
+                         let taskId = new TaskId(taskStatus.TaskId)
+                         group taskStatus by taskId.StageId;
+
+            foreach( var stage in stages )
+            {
+                StageStatus stageStatus = new StageStatus() { StageId = stage.Key };
+                stageStatus.Tasks.AddRange(stage);
+                jobStatus.Stages.Add(stageStatus);
+            }
+
             if( job.Element("FailedTaskAttempts") != null )
             {
                 jobStatus.FailedTaskAttempts.AddRange(from task in job.Element("FailedTaskAttempts").Elements("Task")

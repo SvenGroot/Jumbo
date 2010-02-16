@@ -99,7 +99,8 @@ public class jobinfo : IHttpHandler
                 xmlStream.WriteTo(stream);
             }
 
-            var servers = (from task in job.Tasks
+            var servers = (from stage in job.Stages 
+                           from task in stage.Tasks
                            select task.TaskServer).Distinct();
 
             var downloads = (from server in servers

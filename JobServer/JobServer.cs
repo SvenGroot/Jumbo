@@ -118,6 +118,8 @@ namespace JobServerApplication
 
                 foreach( StageConfiguration stage in config.Stages )
                 {
+                    StageInfo stageInfo = new StageInfo(stage.StageId);
+                    jobInfo.Stages.Add(stageInfo);
                     for( int x = 1; x <= stage.TaskCount; ++x )
                     {
                         TaskInfo taskInfo;
@@ -128,6 +130,7 @@ namespace JobServerApplication
                         jobInfo.SchedulingTasksById.Add(taskInfo.TaskId.ToString(), taskInfo);
                         jobInfo.SchedulingTasks.Add(taskInfo);
                         jobInfo.Tasks.Add(taskInfo.TaskId.ToString(), taskInfo);
+                        stageInfo.Tasks.Add(taskInfo);
                         CreateChildTasks(jobInfo, taskInfo, stage);
                         if( taskInfo.Partitions != null )
                         {
@@ -561,8 +564,7 @@ namespace JobServerApplication
                     StartTime = job.StartTimeUtc,
                     EndTime = job.EndTimeUtc
                 };
-                result.Tasks.AddRange(from task in job.SchedulingTasksById.Values
-                             select task.ToTaskStatus());
+                result.Stages.AddRange(from stage in job.Stages select stage.ToStageStatus());
                 result.FailedTaskAttempts.AddRange(job.FailedTaskAttempts);
                 return result;
             }

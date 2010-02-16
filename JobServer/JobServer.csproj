@@ -65,6 +65,7 @@
     <Compile Include="Scheduling\IScheduler.cs" />
     <Compile Include="Scheduling\RoundRobinScheduler.cs" />
     <Compile Include="Scheduling\StagedScheduler.cs" />
+    <Compile Include="StageInfo.cs" />
     <Compile Include="TaskInfo.cs" />
     <Compile Include="TaskServerInfo.cs" />
   </ItemGroup>

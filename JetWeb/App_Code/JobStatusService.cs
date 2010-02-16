@@ -29,17 +29,20 @@ public class JobStatusService : System.Web.Services.WebService
         JetClient client = new JetClient();
         JobStatus job = client.JobServer.GetJobStatus(jobId);
         // Set the end time to the current time for jobs that are running so they get displayed correctly.
-        List<TaskStatus> tasks = new List<TaskStatus>();
-        foreach( TaskStatus task in job.Tasks )
+        foreach( StageStatus stage in job.Stages )
         {
-            if( task.State == TaskState.Running )
-                task.EndTime = DateTime.UtcNow;
+            List<TaskStatus> tasks = new List<TaskStatus>();
+            foreach( TaskStatus task in stage.Tasks )
+            {
+                if( task.State == TaskState.Running )
+                    task.EndTime = DateTime.UtcNow;
 
-            if( task.State != TaskState.Created && (task.State != TaskState.Finished || task.EndTime >= lastUpdateTime) )
-                tasks.Add(task);
+                if( task.State != TaskState.Created && (task.State != TaskState.Finished || task.EndTime >= lastUpdateTime) )
+                    tasks.Add(task);
+            }
+            stage.Tasks.Clear();
+            stage.Tasks.AddRange(tasks);
         }
-        job.Tasks.Clear();
-        job.Tasks.AddRange(tasks);
         return job;
     }
 

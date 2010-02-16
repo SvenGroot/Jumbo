@@ -28,6 +28,7 @@ namespace JobServerApplication
         private Dictionary<Guid, TaskInfo> _inputBlockMap;
         private readonly Dictionary<string, DfsFile> _files = new Dictionary<string, DfsFile>();
         private List<TaskStatus> _failedTaskAttempts;
+        private readonly List<StageInfo> _stages = new List<StageInfo>();
 
         public JobInfo(Job job)
         {
@@ -47,6 +48,10 @@ namespace JobServerApplication
         public Dictionary<string, TaskInfo> Tasks
         {
             get { return _tasks; }
+        }
+        public List<StageInfo> Stages
+        {
+            get { return _stages; }
         }
         public Dictionary<string, TaskInfo> SchedulingTasksById
         {

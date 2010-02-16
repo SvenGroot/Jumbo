@@ -30,7 +30,7 @@
             var errorType = args.ErrorType;
             var iErrorCode = args.ErrorCode;
 
-            var errMsg = "Unhandled Error in Silverlight 2 Application " + appSource + "\n";
+            var errMsg = "Unhandled Error in Silverlight 3 Application " + appSource + "\n";
 
             errMsg += "Code: " + iErrorCode + "    \n";
             errMsg += "Category: " + errorType + "       \n";
@@ -57,10 +57,10 @@
 			<param name="source" value="ClientBin/JumboExecutionVisualizer.xap"/>
 			<param name="onerror" value="onSilverlightError" />
 			<param name="background" value="white" />
-			<param name="minRuntimeVersion" value="2.0.31005.0" />
+			<param name="minRuntimeVersion" value="3.0.50106.0" />
 			<param name="autoUpgrade" value="true" />
 			<param name="initParams" value="prefix=ctl00_MainContentPlaceHolder_" />
-			<a href="http://go.microsoft.com/fwlink/?LinkID=124807" style="text-decoration: none;">
+			<a href="http://go.microsoft.com/fwlink/?LinkID=149156&amp;v=3.0.50106.0" style="text-decoration: none;">
      			<img src="http://go.microsoft.com/fwlink/?LinkId=108181" alt="Get Microsoft Silverlight" style="border-style: none"/>
 			</a>
 		</object>
