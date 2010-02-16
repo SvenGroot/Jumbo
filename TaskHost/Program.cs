@@ -41,57 +41,64 @@ namespace TaskHost
             string dfsJobDirectory = args[3];
             int attempt = Convert.ToInt32(args[4]);
 
-            Stopwatch sw = new Stopwatch();
-            sw.Start();
-            string logFile = Path.Combine(jobDirectory, taskId + "_" + attempt.ToString() + ".log");
-            ConfigureLog(logFile);
-
-            _log.InfoFormat("Running task; job ID = \"{0}\", job directory = \"{1}\", task ID = \"{2}\", attempt, = {3}, DFS job directory = \"{4}\"", jobId, jobDirectory, taskId, attempt, dfsJobDirectory);
-            _log.DebugFormat("Command line: {0}", Environment.CommandLine);
-            _log.LogEnvironmentInformation();
-            
-            _log.Info("Loading configuration.");
-            string configDirectory = Path.Combine(jobDirectory, "config");
-            DfsConfiguration dfsConfig = DfsConfiguration.FromXml(Path.Combine(configDirectory, "dfs.config"));
-            JetConfiguration jetConfig = JetConfiguration.FromXml(Path.Combine(configDirectory, "jet.config"));
-
-            _log.Info("Creating RPC clients.");
-            ITaskServerUmbilicalProtocol umbilical = JetClient.CreateTaskServerUmbilicalClient(jetConfig.TaskServer.Port);
-            _dfsClient = new DfsClient(dfsConfig);
-            _jetClient = new JetClient(jetConfig);
-
-
-            string xmlConfigPath = Path.Combine(jobDirectory, Job.JobConfigFileName);
-            _log.DebugFormat("Loading job configuration from local file {0}.", xmlConfigPath);
-            JobConfiguration config = JobConfiguration.LoadXml(xmlConfigPath);
-            _log.Debug("Job configuration loaded.");
-
-            if( config.AssemblyFileNames != null )
+            using( ProcessorStatus processorStatus = new ProcessorStatus() )
             {
-                foreach( string assemblyFileName in config.AssemblyFileNames )
+                Stopwatch sw = new Stopwatch();
+                sw.Start();
+                string logFile = Path.Combine(jobDirectory, taskId + "_" + attempt.ToString() + ".log");
+                ConfigureLog(logFile);
+
+                _log.InfoFormat("Running task; job ID = \"{0}\", job directory = \"{1}\", task ID = \"{2}\", attempt, = {3}, DFS job directory = \"{4}\"", jobId, jobDirectory, taskId, attempt, dfsJobDirectory);
+                _log.DebugFormat("Command line: {0}", Environment.CommandLine);
+                _log.LogEnvironmentInformation();
+
+                _log.Info("Loading configuration.");
+                string configDirectory = Path.Combine(jobDirectory, "config");
+                DfsConfiguration dfsConfig = DfsConfiguration.FromXml(Path.Combine(configDirectory, "dfs.config"));
+                JetConfiguration jetConfig = JetConfiguration.FromXml(Path.Combine(configDirectory, "jet.config"));
+
+                _log.Info("Creating RPC clients.");
+                ITaskServerUmbilicalProtocol umbilical = JetClient.CreateTaskServerUmbilicalClient(jetConfig.TaskServer.Port);
+                _dfsClient = new DfsClient(dfsConfig);
+                _jetClient = new JetClient(jetConfig);
+
+
+                string xmlConfigPath = Path.Combine(jobDirectory, Job.JobConfigFileName);
+                _log.DebugFormat("Loading job configuration from local file {0}.", xmlConfigPath);
+                JobConfiguration config = JobConfiguration.LoadXml(xmlConfigPath);
+                _log.Debug("Job configuration loaded.");
+
+                if( config.AssemblyFileNames != null )
                 {
-                    _log.DebugFormat("Loading assembly {0}.", assemblyFileName);
-                    Assembly.LoadFrom(Path.Combine(jobDirectory, assemblyFileName));
-                }
-            }
-            
-            try
-            {
-                using( TaskExecutionUtility taskExecution = new TaskExecutionUtility(_jetClient, umbilical, jobId, config, new TaskId(taskId), _dfsClient, jobDirectory, dfsJobDirectory, attempt) )
-                {
-                    RunTask(taskExecution);
+                    foreach( string assemblyFileName in config.AssemblyFileNames )
+                    {
+                        _log.DebugFormat("Loading assembly {0}.", assemblyFileName);
+                        Assembly.LoadFrom(Path.Combine(jobDirectory, assemblyFileName));
+                    }
                 }
 
-                sw.Stop();
+                try
+                {
+                    using( TaskExecutionUtility taskExecution = new TaskExecutionUtility(_jetClient, umbilical, jobId, config, new TaskId(taskId), _dfsClient, jobDirectory, dfsJobDirectory, attempt) )
+                    {
+                        RunTask(taskExecution);
+                    }
 
-                _log.Info("Reporting completion to task server.");
-                umbilical.ReportCompletion(jobId, taskId);
+                    sw.Stop();
+
+                    _log.Info("Reporting completion to task server.");
+                    umbilical.ReportCompletion(jobId, taskId);
+                }
+                catch( Exception ex )
+                {
+                    _log.Fatal("Failed to execute task.", ex);
+                }
+                _log.InfoFormat("Task host finished execution of task, execution time: {0}s", sw.Elapsed.TotalSeconds);
+                processorStatus.Refresh();
+                _log.InfoFormat("Processor usage during this task (system-wide, not process specific):");
+                _log.Info(processorStatus.Total);
             }
-            catch( Exception ex )
-            {
-                _log.Fatal("Failed to execute task.", ex);
-            }
-            _log.InfoFormat("Task host finished execution of task, execution time: {0}s", sw.Elapsed.TotalSeconds);
+            
             return 0;
         }
 

@@ -120,5 +120,15 @@ namespace Tkl.Jumbo.Jet
             get { return (bool)this["multiThreadedTaskFinish"]; }
             set { this["multiThreadedTaskFinish"] = value; }
         }
+
+        /// <summary>
+        /// Gets or sets a value that indicates whether the task should periodically log processor and memory usage status.
+        /// </summary>
+        [ConfigurationProperty("logSystemStatus", DefaultValue = false, IsRequired = false, IsKey = false)]
+        public bool LogSystemStatus
+        {
+            get { return (bool)this["logSystemStatus"]; }
+            set { this["logSystemStatus"] = value; }
+        }
     }
 }

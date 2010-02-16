@@ -724,30 +724,42 @@ namespace Tkl.Jumbo.Jet
 
         private void ProgressThread()
         {
-            _log.Info("Progress thread has started.");
-            // Thread that reports progress
-            float previousProgress = -1;
-            while( !(_finished || _disposed) )
+            using( MemoryStatus memStatus = JetClient.Configuration.TaskServer.LogSystemStatus ? new MemoryStatus() : null )
+            using( ProcessorStatus procStatus = JetClient.Configuration.TaskServer.LogSystemStatus ? new ProcessorStatus() : null )
             {
-                float progress = 0;
-                if( _inputReader != null )
-                    progress = _inputReader.Progress;
-                if( progress != previousProgress )
+
+                _log.Info("Progress thread has started.");
+                // Thread that reports progress
+                float previousProgress = -1;
+                while( !(_finished || _disposed) )
                 {
-                    try
+                    float progress = 0;
+                    if( _inputReader != null )
+                        progress = _inputReader.Progress;
+                    if( progress != previousProgress )
                     {
-                        _log.InfoFormat("Reporting progress: {0}%", (int)(progress * 100));
-                        Umbilical.ReportProgress(Configuration.JobId, Configuration.TaskId.ToString(), progress);
-                        previousProgress = progress;
+                        try
+                        {
+                            _log.InfoFormat("Reporting progress: {0}%", (int)(progress * 100));
+                            if( procStatus != null )
+                            {
+                                procStatus.Refresh();
+                                memStatus.Refresh();
+                                _log.DebugFormat("CPU: {0}", procStatus.Total);
+                                _log.DebugFormat("Memory: {0}", memStatus);
+                            }
+                            Umbilical.ReportProgress(Configuration.JobId, Configuration.TaskId.ToString(), progress);
+                            previousProgress = progress;
+                        }
+                        catch( SocketException ex )
+                        {
+                            _log.Error("Failed to report progress to the task server.", ex);
+                        }
                     }
-                    catch( SocketException ex )
-                    {
-                        _log.Error("Failed to report progress to the task server.", ex);
-                    }
+                    _finishedEvent.WaitOne(_progressInterval, false);
                 }
-                _finishedEvent.WaitOne(_progressInterval, false);
+                _log.Info("Progress thread has finished.");
             }
-            _log.Info("Progress thread has finished.");
         }
 
         private void OnInputRecordReaderCreated(EventArgs e)

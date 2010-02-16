@@ -11,7 +11,7 @@ namespace Tkl.Jumbo
     /// <summary>
     /// Represents a snapshot of the system's memory status.
     /// </summary>
-    public sealed class MemoryStatus
+    public sealed class MemoryStatus : IDisposable
     {
         private long _totalPhysicalMemory;
         private long _availablePhysicalMemory;
@@ -19,6 +19,7 @@ namespace Tkl.Jumbo
         private long _bufferedMemory;
         private long _totalSwap;
         private long _availableSwap;
+        private StreamReader _procMemInfoReader;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="MemoryStatus"/> class.
@@ -129,27 +130,34 @@ namespace Tkl.Jumbo
 
         private void RefreshUnix()
         {
-            if( File.Exists("/proc/meminfo") )
+            if( _procMemInfoReader == null )
             {
-                int neededFields = 6;
-                using( StreamReader reader = File.OpenText("/proc/meminfo") )
+                if( File.Exists("/proc/meminfo") )
                 {
-                    string line;
-                    while( neededFields > 0 && (line = reader.ReadLine()) != null )
-                    {
-                        if( ExtractMemInfoValue(line, "MemTotal:", ref _totalPhysicalMemory) ||
-                            ExtractMemInfoValue(line, "MemFree:", ref _availablePhysicalMemory) ||
-                            ExtractMemInfoValue(line, "Buffers:", ref _bufferedMemory) ||
-                            ExtractMemInfoValue(line, "Cached:", ref _cachedMemory) ||
-                            ExtractMemInfoValue(line, "SwapTotal:", ref _totalSwap) ||
-                            ExtractMemInfoValue(line, "SwapFree:", ref _availableSwap) )
-                            --neededFields;
-                    }
+                    _procMemInfoReader = File.OpenText("/proc/meminfo");
                 }
-
-                // Correct for the difference between free and available.
-                _availablePhysicalMemory += _cachedMemory;
             }
+            else
+            {
+                _procMemInfoReader.DiscardBufferedData();
+                _procMemInfoReader.BaseStream.Position = 0;
+            }
+
+            int neededFields = 6;
+            string line;
+            while( neededFields > 0 && (line = _procMemInfoReader.ReadLine()) != null )
+            {
+                if( ExtractMemInfoValue(line, "MemTotal:", ref _totalPhysicalMemory) ||
+                    ExtractMemInfoValue(line, "MemFree:", ref _availablePhysicalMemory) ||
+                    ExtractMemInfoValue(line, "Buffers:", ref _bufferedMemory) ||
+                    ExtractMemInfoValue(line, "Cached:", ref _cachedMemory) ||
+                    ExtractMemInfoValue(line, "SwapTotal:", ref _totalSwap) ||
+                    ExtractMemInfoValue(line, "SwapFree:", ref _availableSwap) )
+                    --neededFields;
+            }
+
+            // Correct for the difference between free and available.
+            _availablePhysicalMemory += _cachedMemory;
         }
 
         private static bool ExtractMemInfoValue(string line, string field, ref long value)
@@ -164,5 +172,19 @@ namespace Tkl.Jumbo
             else
                 return false;
         }
+
+        #region IDisposable Members
+
+        /// <summary>
+        /// Releases all resources used by the <see cref="MemoryStatus"/> class.
+        /// </summary>
+        public void Dispose()
+        {
+
+            if( _procMemInfoReader != null )
+                _procMemInfoReader.Dispose();
+        }
+
+        #endregion
     }
 }
