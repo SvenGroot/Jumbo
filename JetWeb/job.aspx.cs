@@ -6,6 +6,7 @@ using System.Web.UI;
 using System.Web.UI.WebControls;
 using Tkl.Jumbo.Jet;
 using System.Web.UI.HtmlControls;
+using System.Globalization;
 
 public partial class job : System.Web.UI.Page
 {
@@ -14,29 +15,30 @@ public partial class job : System.Web.UI.Page
     protected void Page_Load(object sender, EventArgs e)
     {
         Guid jobId = new Guid(Request.QueryString["id"]);
-        HeaderText.InnerText = string.Format("Job {0}", jobId);
-        Title = string.Format("Job {0} - Jumbo Jet", jobId);
         JetClient client = new JetClient();
         JobStatus job = client.JobServer.GetJobStatus(jobId);
+        HeaderText.InnerText = string.Format("Job {0} ({1})", job.JobName, jobId);
+        Title = string.Format("Job {0} ({1}) - Jumbo Jet", job.JobName, jobId);
 
         HtmlTableRow row = new HtmlTableRow() { ID = "CurrentJobRow" };
-        row.Cells.Add(new HtmlTableCell() { InnerText = job.JobId.ToString() });
         row.Cells.Add(new HtmlTableCell() { InnerText = job.StartTime.ToString(_datePattern, System.Globalization.CultureInfo.InvariantCulture) });
+        TimeSpan duration;
         if( job.IsFinished )
         {
             _downloadLink.HRef = "jobinfo.ashx?id=" + jobId.ToString();
             _downloadLink.Visible = true;
 
             row.Cells.Add(new HtmlTableCell() { InnerText = job.EndTime.ToString(_datePattern, System.Globalization.CultureInfo.InvariantCulture) });
-            TimeSpan duration = job.EndTime - job.StartTime;
-            row.Cells.Add(new HtmlTableCell() { InnerText = string.Format("{0} ({1}s)", duration, duration.TotalSeconds) });
+            duration = job.EndTime - job.StartTime;
         }
         else
         {
+            Response.AppendHeader("Refresh", "5");
             row.Cells.Add(new HtmlTableCell());
-            row.Cells.Add(new HtmlTableCell());
+            duration = DateTime.UtcNow - job.StartTime;
         }
-        row.Cells.Add(new HtmlTableCell() { InnerText = (job.Progress * 100).ToString("0.0'%'") });
+        row.Cells.Add(new HtmlTableCell() { InnerText = string.Format("{0} ({1}s)", duration, duration.TotalSeconds) });
+        row.Cells.Add(CreateProgressCell(job.Progress));
         row.Cells.Add(new HtmlTableCell() { InnerText = job.TaskCount.ToString() });
         row.Cells.Add(new HtmlTableCell() { InnerText = job.RunningTaskCount.ToString() });
         row.Cells.Add(new HtmlTableCell() { InnerText = job.UnscheduledTaskCount.ToString() });
@@ -47,57 +49,45 @@ public partial class job : System.Web.UI.Page
 
         foreach( StageStatus stage in job.Stages )
         {
-            foreach( TaskStatus task in stage.Tasks )
-            {
-                row = CreateTaskTableRow(job, task, false, true);
-                TasksTable.Rows.Add(row);
-            }
-        }
+            row = new HtmlTableRow();
+            row.Cells.Add(new HtmlTableCell() { InnerHtml = string.Format("<a href=\"stage.aspx?job={0}&amp;stage={1}\">{1}</a>", job.JobId, Server.HtmlEncode(stage.StageId)) });
+            DateTime? startTime = stage.StartTime;
+            if( startTime == null )
+                row.Cells.Add(new HtmlTableCell());
+            else
+                row.Cells.Add(new HtmlTableCell() { InnerText = startTime.Value.ToString(_datePattern, CultureInfo.InvariantCulture) });
 
-        if( job.ErrorTaskCount > 0 )
-        {
-            _failedTaskAttemptsPlaceHolder.Visible = true;
-            foreach( TaskStatus task in job.FailedTaskAttempts )
-            {
-                row = CreateTaskTableRow(job, task, true, false);
-                _failedTaskAttemptsTable.Rows.Add(row);
-            }
-        }
-    }
+            DateTime? endTime = stage.EndTime;
+            if( endTime == null )
+                row.Cells.Add(new HtmlTableCell());
+            else
+                row.Cells.Add(new HtmlTableCell() { InnerText = endTime.Value.ToString(_datePattern, CultureInfo.InvariantCulture) });
 
-    private static HtmlTableRow CreateTaskTableRow(JobStatus job, TaskStatus task, bool useErrorEndTime, bool includeProgress)
-    {
-        HtmlTableRow row = new HtmlTableRow() { ID = "TaskStatusRow_" + task.TaskId };
-        row.Cells.Add(new HtmlTableCell() { InnerText = task.TaskId });
-        row.Cells.Add(new HtmlTableCell() { InnerText = task.State.ToString() });
-        row.Cells.Add(new HtmlTableCell() { InnerText = task.TaskServer == null ? "" : task.TaskServer.ToString() });
-        row.Cells.Add(new HtmlTableCell() { InnerText = task.Attempts.ToString() });
-        if( task.State >= TaskState.Running && task.TaskServer != null )
-        {
-            row.Cells.Add(new HtmlTableCell() { InnerText = task.StartTime.ToString(_datePattern, System.Globalization.CultureInfo.InvariantCulture) });
-            if( task.State == TaskState.Finished || (useErrorEndTime && task.State == TaskState.Error) )
-            {
-                row.Cells.Add(new HtmlTableCell() { InnerText = task.EndTime.ToString(_datePattern, System.Globalization.CultureInfo.InvariantCulture) });
-                TimeSpan duration = task.EndTime - task.StartTime;
-                row.Cells.Add(new HtmlTableCell() { InnerText = string.Format("{0} ({1}s)", duration, duration.TotalSeconds) });
-            }
+            if( startTime == null )
+                row.Cells.Add(new HtmlTableCell());
             else
             {
-                row.Cells.Add(new HtmlTableCell() { InnerText = "" });
-                row.Cells.Add(new HtmlTableCell() { InnerText = "" });
+                duration = endTime == null ? DateTime.UtcNow - startTime.Value : endTime.Value - startTime.Value;
+                row.Cells.Add(new HtmlTableCell() { InnerText = string.Format("{0} ({1}s)", duration, duration.TotalSeconds) });
             }
-            if( includeProgress )
-                row.Cells.Add(new HtmlTableCell() { InnerText = (task.Progress * 100).ToString("0.0'%'") });
-            row.Cells.Add(new HtmlTableCell() { InnerHtml = string.Format("<a href=\"logfile.aspx?taskServer={0}&amp;port={1}&amp;job={2}&amp;task={3}&amp;attempt={4}\">View</a>", task.TaskServer.HostName, task.TaskServer.Port, job.JobId, task.TaskId, task.Attempts) });
+
+            row.Cells.Add(CreateProgressCell(stage.Progress));
+            row.Cells.Add(new HtmlTableCell() { InnerText = stage.Tasks.Count.ToString() });
+            row.Cells.Add(new HtmlTableCell() { InnerText = stage.RunningTaskCount.ToString() });
+            row.Cells.Add(new HtmlTableCell() { InnerText = stage.PendingTaskCount.ToString() });
+            row.Cells.Add(new HtmlTableCell() { InnerText = stage.FinishedTaskCount.ToString() });
+
+            StagesTable.Rows.Add(row);
         }
-        else
-        {
-            row.Cells.Add(new HtmlTableCell() { InnerText = "" });
-            row.Cells.Add(new HtmlTableCell() { InnerText = "" });
-            row.Cells.Add(new HtmlTableCell() { InnerText = "" });
-            row.Cells.Add(new HtmlTableCell() { InnerText = "" });
-            row.Cells.Add(new HtmlTableCell() { InnerText = "" });
-        }
-        return row;
+
+        _allTasksLink.HRef = "alltasks.aspx?id=" + job.JobId.ToString();
+    }
+
+    private HtmlTableCell CreateProgressCell(float progress)
+    {
+        progress *= 100;
+        HtmlTableCell cell = new HtmlTableCell();
+        cell.InnerHtml = string.Format("<div class=\"progressBar\"><div class=\"progressBarValue\" style=\"width:{0}%\">&nbsp;</div></div> {1:0.0}%", progress.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture), progress);
+        return cell;
     }
 }
