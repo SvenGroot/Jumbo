@@ -75,6 +75,8 @@
     <Compile Include="IO\Int64Writable.cs" />
     <Compile Include="IO\RecordInput.cs" />
     <Compile Include="IO\RoundRobinMultiInputRecordReader.cs" />
+    <Compile Include="IO\WritableNotNullAttribute.cs" />
+    <Compile Include="IO\WritableIgnoreAttribute.cs" />
     <Compile Include="JumboConfiguration.cs" />
     <Compile Include="MemoryStatus.cs" />
     <Compile Include="NativeMethods.cs" />

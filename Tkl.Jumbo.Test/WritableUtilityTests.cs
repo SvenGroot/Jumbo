@@ -22,6 +22,7 @@ namespace Tkl.Jumbo.Test
                 IntProperty = n;
             }
 
+            [WritableNotNull]
             public string StringProperty { get; set; }
             public string AnotherStringProperty { get; set; }
             public int IntProperty { get; private set; }
@@ -30,6 +31,9 @@ namespace Tkl.Jumbo.Test
             public Int32Writable AnotherWritableProperty { get; set; }
             public DateTime DateProperty { get; set; }
             public byte[] ByteArrayProperty { get; set; }
+            public int[] IntArrayProperty { get; set; }
+            [WritableIgnore]
+            public int Ignored { get; set; }
         }
 
         [Test]
@@ -47,6 +51,8 @@ namespace Tkl.Jumbo.Test
                 AnotherWritableProperty = null,
                 DateProperty = DateTime.UtcNow,
                 ByteArrayProperty = new byte[] { 1, 2, 3, 4 },
+                IntArrayProperty = new int[] { 1234, 567457, 545643, 8786, 5613 },
+                Ignored = 42
             };
             byte[] data;
             using( MemoryStream stream = new MemoryStream() )
@@ -75,6 +81,23 @@ namespace Tkl.Jumbo.Test
             Assert.AreEqual(expected.AnotherWritableProperty, actual.AnotherWritableProperty);
             Assert.AreEqual(expected.DateProperty, actual.DateProperty);
             Assert.IsTrue(Utilities.CompareList(expected.ByteArrayProperty, actual.ByteArrayProperty));
+            Assert.IsTrue(Utilities.CompareList(expected.IntArrayProperty, actual.IntArrayProperty));
+            Assert.AreEqual(0, actual.Ignored); // Not serialized
+        }
+
+        [Test]
+        [ExpectedException(typeof(InvalidOperationException))]
+        public void TestNotNullException()
+        {
+            Action<TestClass, BinaryWriter> writeMethod = WritableUtility.CreateSerializer<TestClass>();
+
+            TestClass expected = new TestClass();
+            using( MemoryStream stream = new MemoryStream() )
+            using( BinaryWriter writer = new BinaryWriter(stream) )
+            {
+                // Fails because StringProperty is null.
+                writeMethod(expected, writer);
+            }
         }
     }
 }

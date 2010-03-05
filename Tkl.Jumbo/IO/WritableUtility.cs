@@ -5,6 +5,7 @@ using System.Text;
 using System.IO;
 using System.Reflection;
 using System.Reflection.Emit;
+using System.Globalization;
 
 namespace Tkl.Jumbo.IO
 {
@@ -49,7 +50,7 @@ namespace Tkl.Jumbo.IO
 
             foreach( PropertyInfo property in properties )
             {
-                if( property.CanRead && property.CanWrite && !property.IsSpecialName )
+                if( property.CanRead && property.CanWrite && !property.IsSpecialName && !Attribute.IsDefined(property, typeof(WritableIgnoreAttribute)) )
                 {
                     MethodInfo getMethod = property.GetGetMethod();
                     if( property.PropertyType.GetInterface(typeof(IWritable).FullName) != null )
@@ -83,6 +84,7 @@ namespace Tkl.Jumbo.IO
                     }
                     else if( property.PropertyType == typeof(byte[]) )
                     {
+                        // Special case for byte[] because there's a BinaryWriter.Write(byte[]) method.
                         // We need to store the size and the data of the byte array.
                         LocalBuilder byteArrayLocal = generator.DeclareLocal(typeof(byte[]));
                         generator.Emit(OpCodes.Ldarg_1); // put the writer on the stack.
@@ -91,7 +93,8 @@ namespace Tkl.Jumbo.IO
                         generator.Emit(OpCodes.Stloc_S, byteArrayLocal); // store it in a local.
                         generator.Emit(OpCodes.Ldloc_S, byteArrayLocal); // load the property value
                         Label? endLabel = WriteCheckForNullIfReferenceType(generator, writeBooleanMethod, property, true, byteArrayLocal);
-                        generator.Emit(OpCodes.Call, typeof(byte[]).GetProperty("Length").GetGetMethod()); // Get the length of the array.
+                        generator.Emit(OpCodes.Ldlen);
+                        generator.Emit(OpCodes.Conv_I4);
                         generator.Emit(OpCodes.Call, typeof(WritableUtility).GetMethod("Write7BitEncodedInt32", BindingFlags.Static | BindingFlags.Public, null, new[] { typeof(BinaryWriter), typeof(int) }, null)); // Write length as compressed int.
                         generator.Emit(OpCodes.Ldarg_1); // put the writer on the stack.
                         generator.Emit(OpCodes.Ldloc_S, byteArrayLocal); // put the byte array on the stack.
@@ -99,6 +102,49 @@ namespace Tkl.Jumbo.IO
                         if( endLabel != null )
                         {
                             generator.MarkLabel(endLabel.Value);
+                        }
+                    }
+                    else if( property.PropertyType.IsArray )
+                    {
+                        Type elementType = property.PropertyType.GetElementType();
+                        MethodInfo writeMethod = typeof(BinaryWriter).GetMethod("Write", new[] { elementType });
+                        if( writeMethod != null )
+                        {
+                            // We need to store the size and the data of the byte array.
+                            LocalBuilder byteArrayLocal = generator.DeclareLocal(property.PropertyType);
+                            LocalBuilder lengthLocal = generator.DeclareLocal(typeof(int));
+                            LocalBuilder indexLocal = generator.DeclareLocal(typeof(int));
+                            generator.Emit(OpCodes.Ldarg_1); // put the writer on the stack.
+                            generator.Emit(OpCodes.Ldarg_0); // put the object on the stack
+                            generator.Emit(OpCodes.Callvirt, property.GetGetMethod()); // Get the property value.
+                            generator.Emit(OpCodes.Stloc_S, byteArrayLocal); // store it in a local.
+                            generator.Emit(OpCodes.Ldloc_S, byteArrayLocal); // load the property value
+                            Label? endLabel = WriteCheckForNullIfReferenceType(generator, writeBooleanMethod, property, true, byteArrayLocal);
+                            generator.Emit(OpCodes.Ldlen); // Get the array length
+                            generator.Emit(OpCodes.Conv_I4); // Convert it to Int32.
+                            generator.Emit(OpCodes.Stloc_S, lengthLocal); // Store in local
+                            generator.Emit(OpCodes.Ldloc, lengthLocal); // Load local
+                            generator.Emit(OpCodes.Call, typeof(WritableUtility).GetMethod("Write7BitEncodedInt32", BindingFlags.Static | BindingFlags.Public, null, new[] { typeof(BinaryWriter), typeof(int) }, null)); // Write length as compressed int.
+                            Label forLoopStartLabel;
+                            Label forLoopEndLabel;
+                            EmitForLoopStart(generator, indexLocal, out forLoopStartLabel, out forLoopEndLabel);
+
+                            // for loop body
+                            generator.Emit(OpCodes.Ldarg_1); // put the writer on the stack.
+                            generator.Emit(OpCodes.Ldloc_S, byteArrayLocal); // put the byte array on the stack.
+                            generator.Emit(OpCodes.Ldloc_S, indexLocal); // put the index on the stack
+                            generator.Emit(OpCodes.Ldelem, elementType); // Get the element at index.
+                            generator.Emit(OpCodes.Callvirt, writeMethod); // Write the array element.
+
+                            EmitForLoopEnd(generator, lengthLocal, indexLocal, forLoopStartLabel, forLoopEndLabel);
+                            if( endLabel != null )
+                            {
+                                generator.MarkLabel(endLabel.Value);
+                            }
+                        }
+                        else
+                        {
+                            throw new NotSupportedException(string.Format(System.Globalization.CultureInfo.CurrentCulture, "Cannot generate an IWritable.Write implementation for type {0} because property {1} has unsupported type {2}.", typeof(T), property.Name, property.PropertyType));
                         }
                     }
                     else
@@ -158,10 +204,10 @@ namespace Tkl.Jumbo.IO
 
             foreach( PropertyInfo property in properties )
             {
-                if( property.CanWrite && property.CanRead && !property.IsSpecialName )
+                if( property.CanWrite && property.CanRead && !property.IsSpecialName && !Attribute.IsDefined(property, typeof(WritableIgnoreAttribute)) )
                 {
                     Label? endLabel = null;
-                    if( !property.PropertyType.IsValueType )
+                    if( !property.PropertyType.IsValueType && !Attribute.IsDefined(property, typeof(WritableNotNullAttribute)) )
                     {
                         // Read a boolean to see if the property is null.
                         generator.Emit(OpCodes.Ldarg_1); // load the reader.
@@ -220,6 +266,34 @@ namespace Tkl.Jumbo.IO
                         generator.Emit(OpCodes.Callvirt, typeof(BinaryReader).GetMethod("ReadBytes", new[] { typeof(int) })); // read the byte array
                         generator.Emit(OpCodes.Callvirt, property.GetSetMethod(true)); // set the byte array as the property value.
                     }
+                    else if( property.PropertyType.IsArray )
+                    {
+                        Type elementType = property.PropertyType.GetElementType();
+                        MethodInfo readMethod = _readMethods[elementType];
+                        LocalBuilder lengthLocal = generator.DeclareLocal(typeof(int));
+                        LocalBuilder arrayLocal = generator.DeclareLocal(property.PropertyType);
+                        LocalBuilder indexLocal = generator.DeclareLocal(typeof(int));
+                        generator.Emit(OpCodes.Ldarg_1); // put the reader on the stack.
+                        generator.Emit(OpCodes.Call, typeof(WritableUtility).GetMethod("Read7BitEncodedInt32", BindingFlags.Static | BindingFlags.Public, null, new[] { typeof(BinaryReader) }, null)); // read the length
+                        generator.Emit(OpCodes.Stloc_S, lengthLocal); // Store the length
+                        generator.Emit(OpCodes.Ldloc_S, lengthLocal); // Load the length
+                        generator.Emit(OpCodes.Newarr, elementType); // Create a new array
+                        generator.Emit(OpCodes.Stloc_S, arrayLocal); // Store the array.
+                        Label forLoopStartLabel, forLoopEndLabel;
+                        EmitForLoopStart(generator, indexLocal, out forLoopStartLabel, out forLoopEndLabel);
+
+                        // for loop body
+                        generator.Emit(OpCodes.Ldloc_S, arrayLocal); // Load the array
+                        generator.Emit(OpCodes.Ldloc_S, indexLocal); // Load the length
+                        generator.Emit(OpCodes.Ldarg_1); // Load the writer
+                        generator.Emit(OpCodes.Callvirt, readMethod); // Read the value
+                        generator.Emit(OpCodes.Stelem, elementType); // Store the value in the array
+
+                        EmitForLoopEnd(generator, lengthLocal, indexLocal, forLoopStartLabel, forLoopEndLabel);
+                        generator.Emit(OpCodes.Ldarg_0); // Load the this object
+                        generator.Emit(OpCodes.Ldloc_S, arrayLocal); // Load the array
+                        generator.Emit(OpCodes.Callvirt, property.GetSetMethod(true)); // set the array as the property value.
+                    }
                     else
                     {
                         MethodInfo readMethod = _readMethods[property.PropertyType];
@@ -267,23 +341,36 @@ namespace Tkl.Jumbo.IO
                     generator.Emit(OpCodes.Ldloc_S, local);
                 }
                 Label notNullLabel = generator.DefineLabel();
-                endLabel = generator.DefineLabel();
-                generator.Emit(OpCodes.Brtrue_S, notNullLabel);
-                // This is code for if the value is null;
-                if( !writerIsOnStack )
-                    generator.Emit(OpCodes.Ldarg_1); // load the writer
-                generator.Emit(OpCodes.Ldc_I4_0);
-                generator.Emit(OpCodes.Callvirt, writeBooleanMethod);
-                generator.Emit(OpCodes.Br_S, endLabel.Value);
-                generator.MarkLabel(notNullLabel);
-                // Code for if the value is not null
-                if( !writerIsOnStack )
-                    generator.Emit(OpCodes.Ldarg_1); // load the writer
-                generator.Emit(OpCodes.Ldc_I4_1);
-                generator.Emit(OpCodes.Callvirt, writeBooleanMethod);
-                if( writerIsOnStack )
-                    generator.Emit(OpCodes.Ldarg_1); // load the writer back on the stack.
-                generator.Emit(OpCodes.Ldloc, local); // put the property value back on the stack
+                generator.Emit(OpCodes.Brtrue_S, notNullLabel); // branch if not null
+
+                // Check if null values are allowed.
+                if( !Attribute.IsDefined(property, typeof(WritableNotNullAttribute)) )
+                {
+                    endLabel = generator.DefineLabel();
+                    // This is code for if the value is null;
+                    if( !writerIsOnStack )
+                        generator.Emit(OpCodes.Ldarg_1); // load the writer
+                    generator.Emit(OpCodes.Ldc_I4_0);
+                    generator.Emit(OpCodes.Callvirt, writeBooleanMethod);
+                    generator.Emit(OpCodes.Br_S, endLabel.Value);
+                    generator.MarkLabel(notNullLabel);
+                    // Code for if the value is not null
+                    if( !writerIsOnStack )
+                        generator.Emit(OpCodes.Ldarg_1); // load the writer
+                    generator.Emit(OpCodes.Ldc_I4_1);
+                    generator.Emit(OpCodes.Callvirt, writeBooleanMethod);
+                    if( writerIsOnStack )
+                        generator.Emit(OpCodes.Ldarg_1); // load the writer back on the stack.
+                }
+                else
+                {
+                    // Null values not allowed, write code to throw na exception.
+                    generator.Emit(OpCodes.Ldstr, string.Format(CultureInfo.CurrentCulture, "Property {0} may not be null.", property.Name)); // Load exception message
+                    generator.Emit(OpCodes.Newobj, typeof(InvalidOperationException).GetConstructor(new[] { typeof(string) })); // Create exception object
+                    generator.Emit(OpCodes.Throw); // Throw exception
+                    generator.MarkLabel(notNullLabel);
+                }
+                generator.Emit(OpCodes.Ldloc_S, local); // put the property value back on the stack
             }
             return endLabel;
         }
@@ -344,6 +431,30 @@ namespace Tkl.Jumbo.IO
             }
             while( (currentByte & 0x80) != 0 );
             return result;
+        }
+
+        private static void EmitForLoopEnd(ILGenerator generator, LocalBuilder lengthLocal, LocalBuilder indexLocal, Label forLoopStartLabel, Label forLoopEndLabel)
+        {
+            // Increment index variable.
+            generator.Emit(OpCodes.Ldloc_S, indexLocal); // put the index on the stack
+            generator.Emit(OpCodes.Ldc_I4_1); // put constant 1 on the stack
+            generator.Emit(OpCodes.Add); // Add them.
+            generator.Emit(OpCodes.Stloc_S, indexLocal); // store the result
+            // for loop condition.
+            generator.MarkLabel(forLoopEndLabel); // start of for-loop condition
+            generator.Emit(OpCodes.Ldloc_S, indexLocal); // put the index on the stack
+            generator.Emit(OpCodes.Ldloc_S, lengthLocal); // put the length on the stack
+            generator.Emit(OpCodes.Blt_S, forLoopStartLabel); // branch to for loop body if index less than length.
+        }
+
+        private static void EmitForLoopStart(ILGenerator generator, LocalBuilder indexLocal, out Label forLoopStartLabel, out Label forLoopEndLabel)
+        {
+            generator.Emit(OpCodes.Ldc_I4_0); // Load constant 0
+            generator.Emit(OpCodes.Stloc_S, indexLocal); // Store in index local
+            forLoopStartLabel = generator.DefineLabel();
+            forLoopEndLabel = generator.DefineLabel();
+            generator.Emit(OpCodes.Br_S, forLoopEndLabel); // Branch to loop condition
+            generator.MarkLabel(forLoopStartLabel); // Start of for loop body.
         }
     }
 }
