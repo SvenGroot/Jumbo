@@ -7,6 +7,7 @@ using System.Runtime.Remoting.Channels.Tcp;
 using System.Net.Sockets;
 using System.Runtime.Serialization.Formatters.Binary;
 using System.IO;
+using Tkl.Jumbo.Rpc;
 
 namespace Tkl.Jumbo.Dfs
 {
@@ -15,12 +16,11 @@ namespace Tkl.Jumbo.Dfs
     /// </summary>
     public class DfsClient
     {
-        private const string _nameServerUrlFormat = "tcp://{0}:{1}/NameServer";
+        private const string _nameServerObjectName = "NameServer";
         private const int _bufferSize = 4096;
 
         static DfsClient()
         {
-            RpcHelper.RegisterClientChannel();
         }
 
         /// <summary>
@@ -428,8 +428,7 @@ namespace Tkl.Jumbo.Dfs
 
         private static T CreateNameServerClientInternal<T>(string hostName, int port)
         {
-            string url = string.Format(System.Globalization.CultureInfo.InvariantCulture, _nameServerUrlFormat, hostName, port);
-            return (T)Activator.GetObject(typeof(T), url);
+            return RpcHelper.CreateClient<T>(hostName, port, _nameServerObjectName);
         }
 
         private static void CopyStream(string fileName, System.IO.Stream inputStream, System.IO.Stream outputStream, ProgressCallback progressCallback)

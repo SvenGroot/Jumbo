@@ -9,6 +9,7 @@ using System.Threading;
 using Tkl.Jumbo.Dfs;
 using System.Diagnostics;
 using System.IO;
+using Tkl.Jumbo.Rpc;
 
 namespace TaskServerApplication
 {
@@ -64,7 +65,7 @@ namespace TaskServerApplication
                 Instance = new TaskServer(jetConfig, dfsConfig);
 
                 RpcHelper.RegisterServerChannels(jetConfig.TaskServer.Port, jetConfig.TaskServer.ListenIPv4AndIPv6);
-                RpcHelper.RegisterService(typeof(RpcServer), "TaskServer");
+                RpcHelper.RegisterService("TaskServer", Instance);
             }
 
             Instance.RunInternal();

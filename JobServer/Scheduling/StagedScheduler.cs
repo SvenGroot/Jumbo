@@ -67,7 +67,7 @@ namespace JobServerApplication.Scheduling
                         localBlocks = new List<Guid>();
                         foreach( ServerAddress dataServer in dataServers )
                         {
-                            localBlocks.AddRange(dfsClient.NameServer.GetDataServerBlocks(dataServer, inputBlocks));
+                            localBlocks.AddRange(dfsClient.NameServer.GetDataServerBlocksFromList(dataServer, inputBlocks));
                         }
                     }
 
