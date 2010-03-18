@@ -11,7 +11,7 @@ using System;
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("Kitsuregawa Lab")]
 [assembly: AssemblyProduct("Jumbo")]
-[assembly: AssemblyCopyright("Copyright © Sven Groot 2009")]
+[assembly: AssemblyCopyright("Copyright © Sven Groot 2010")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 [assembly: CLSCompliant(true)]
