@@ -7,6 +7,7 @@ using System.Net.Sockets;
 using IO = System.IO;
 using System.Threading;
 using Tkl.Jumbo;
+using Tkl.Jumbo.Rpc;
 
 namespace DfsShell
 {
@@ -52,6 +53,8 @@ namespace DfsShell
                 else
                     PrintUsage();
             }
+
+            RpcHelper.CloseConnections();
         }
 
         private static void CreateDirectory(DfsClient client, string[] args)

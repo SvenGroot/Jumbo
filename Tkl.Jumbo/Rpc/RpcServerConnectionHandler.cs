@@ -24,7 +24,6 @@ namespace Tkl.Jumbo.Rpc
             if( serverSocket == null )
                 throw new ArgumentNullException("serverSocket");
 
-            Console.WriteLine("Creating new handler.");
             _serverSocket = serverSocket;
             _stream = new RpcStream(_serverSocket);
             _beginReadRequestCallback = new AsyncCallback(BeginReadRequestCallback);
@@ -142,7 +141,6 @@ namespace Tkl.Jumbo.Rpc
 
         private void Close()
         {
-            Console.WriteLine("Closing handler.");
             _stream.Dispose();
             _serverSocket.Close();
         }

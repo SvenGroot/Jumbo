@@ -63,6 +63,8 @@ namespace JobServerApplication
         {
             _log.Info("-----Job server is shutting down-----");
             RpcHelper.UnregisterServerChannels(Instance.Configuration.JobServer.Port);
+            RpcHelper.AbortRetries();
+            RpcHelper.CloseConnections();
             Instance = null;
         }
 

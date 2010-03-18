@@ -79,7 +79,6 @@ namespace Tkl.Jumbo.Rpc
                     {
                         if( now - connection.LastUsed > _connectionTimeout )
                         {
-                            Console.WriteLine("Closing connection.");
                             // Connection timed out, remove it from the list
                             if( previous == null )
                                 _firstConnection = connection.Next;

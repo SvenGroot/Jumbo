@@ -322,6 +322,7 @@ namespace TaskServerApplication
                 _fileServer.Stop();
             _running = false;
             RpcHelper.AbortRetries();
+            RpcHelper.CloseConnections();
             _log.InfoFormat("-----Task server is shutting down-----");
         }
 
