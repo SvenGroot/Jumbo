@@ -33,6 +33,7 @@ namespace Tkl.Jumbo.Rpc
                 if( method.GetParameters().Length > 0 )
                     parameters = handler.ReadParameters();
                 ServerContext.Current = context; // Set the server context for the current thread.
+                log4net.ThreadContext.Properties["ClientHostName"] = context.ClientHostName;
                 object result = method.Invoke(server.Server, parameters);
                 ServerContext.Current = null;
                 handler.SendResult(result);

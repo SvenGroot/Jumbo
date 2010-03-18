@@ -25,7 +25,7 @@ namespace Tkl.Jumbo.Rpc
         {
             _timeoutCallback = new WaitOrTimerCallback(TimeoutConnections);
             _timeoutEvent = new AutoResetEvent(false);
-            _registeredTimeoutEvent = ThreadPool.UnsafeRegisterWaitForSingleObject(_timeoutEvent, _timeoutCallback, null, _connectionTimeout, true);
+            _registeredTimeoutEvent = ThreadPool.RegisterWaitForSingleObject(_timeoutEvent, _timeoutCallback, null, _connectionTimeout, true);
         }
 
         /// <summary>
@@ -84,7 +84,7 @@ namespace Tkl.Jumbo.Rpc
                 }
             }
             _registeredTimeoutEvent.Unregister(null);
-            _registeredTimeoutEvent = ThreadPool.UnsafeRegisterWaitForSingleObject(_timeoutEvent, _timeoutCallback, null, _connectionTimeout, true);
+            _registeredTimeoutEvent = ThreadPool.RegisterWaitForSingleObject(_timeoutEvent, _timeoutCallback, null, _connectionTimeout, true);
         }
     }
 }

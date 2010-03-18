@@ -85,7 +85,7 @@ namespace Tkl.Jumbo.Rpc
             }
 
             ILGenerator generator = proxyMethod.GetILGenerator();
-            LocalBuilder argumentArrayLocal = generator.DeclareLocal(typeof(object[]));
+            generator.DeclareLocal(typeof(object[]));
             generator.Emit(OpCodes.Ldarg_0); // Load this
             generator.Emit(OpCodes.Ldfld, hostNameField); // Load the host name field
             generator.Emit(OpCodes.Ldarg_0); // Load this
