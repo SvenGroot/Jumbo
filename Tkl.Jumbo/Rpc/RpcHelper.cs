@@ -25,7 +25,7 @@ namespace Tkl.Jumbo.Rpc
         /// <param name="port">The port on which to listen.</param>
         /// <param name="listenIPv4AndIPv6">When IPv6 is available, <see langword="true"/> to listen on IPv4 as well as 
         /// IPv6; <see langword="false"/> to listen on IPv6 only. When IPv6 is not available, this parameter has no effect.</param>
-        [MethodImpl(MethodImplOptions.Synchronized)]
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Naming", "CA1709:IdentifiersShouldBeCasedCorrectly", MessageId = "Pv"), MethodImpl(MethodImplOptions.Synchronized)]
         public static void RegisterServerChannels(int port, bool listenIPv4AndIPv6)
         {
             if( _serverChannels == null )
@@ -86,6 +86,7 @@ namespace Tkl.Jumbo.Rpc
         /// <param name="port">The port of the RPC server.</param>
         /// <param name="objectName">The object name of the service.</param>
         /// <returns>An object that implements the specified interface that forwards all calls to the specified service.</returns>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1004:GenericMethodsShouldProvideTypeParameter")]
         public static T CreateClient<T>(string hostName, int port, string objectName)
         {
             if( hostName == null )

@@ -10,13 +10,12 @@ using System.Net;
 
 namespace Tkl.Jumbo.Rpc
 {
-    class RpcClientConnectionHandler
+    sealed class RpcClientConnectionHandler : IDisposable
     {
         private static readonly MethodBase _fixExceptionMethod = GetFixExceptionMethod();
         private static readonly string _hostName = Dns.GetHostName();
         private readonly TcpClient _client;
         private readonly RpcStream _stream;
-        private readonly byte[] _byteBuffer = new byte[4];
         private readonly BinaryFormatter _formatter = new BinaryFormatter();
         private readonly ServerConnectionCache _cache;
         private bool _hostNameSent;
@@ -75,16 +74,7 @@ namespace Tkl.Jumbo.Rpc
             _client.Close();
         }
 
-        private void WriteInt32(int value, Stream stream)
-        {
-            _byteBuffer[0] = (byte)value;
-            _byteBuffer[1] = (byte)(value >> 8);
-            _byteBuffer[2] = (byte)(value >> 0x10);
-            _byteBuffer[3] = (byte)(value >> 0x18);
-            stream.Write(_byteBuffer, 0, 4);
-        }
-
-        private void WriteString(string value, Stream stream)
+        private static void WriteString(string value, Stream stream)
         {
             byte[] buffer = Encoding.UTF8.GetBytes(value);
             if( buffer.Length > byte.MaxValue )
@@ -110,5 +100,15 @@ namespace Tkl.Jumbo.Rpc
             return typeof(Exception).GetMethod(methodName, BindingFlags.NonPublic | BindingFlags.Instance);
 
         }
+
+        #region IDisposable Members
+
+        public void Dispose()
+        {
+            _stream.Dispose();
+            ((IDisposable)_client).Dispose();
+        }
+
+        #endregion
     }
 }

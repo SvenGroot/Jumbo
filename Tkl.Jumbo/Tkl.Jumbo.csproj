@@ -82,7 +82,6 @@
     <Compile Include="Rpc\RpcClient.cs" />
     <Compile Include="Rpc\RpcClientConnectionHandler.cs" />
     <Compile Include="Rpc\RpcException.cs" />
-    <Compile Include="Rpc\RpcFixedLengthStream.cs" />
     <Compile Include="Rpc\RpcHelper.cs" />
     <Compile Include="Rpc\RpcProxyBuilder.cs" />
     <Compile Include="Rpc\RpcRequestHandler.cs" />

@@ -21,6 +21,7 @@ namespace Tkl.Jumbo.Rpc
         private static readonly AutoResetEvent _timeoutEvent;
         private static RegisteredWaitHandle _registeredTimeoutEvent;
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1810:InitializeReferenceTypeStaticFieldsInline")]
         static RpcClient()
         {
             _timeoutCallback = new WaitOrTimerCallback(TimeoutConnections);

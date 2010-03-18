@@ -13,6 +13,7 @@ namespace Tkl.Jumbo.Rpc
         private static readonly ModuleBuilder _proxyModule;
         private static readonly Dictionary<Type, Type> _proxies = new Dictionary<Type, Type>();
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1810:InitializeReferenceTypeStaticFieldsInline")]
         static RpcProxyBuilder()
         {
             _proxyAssembly = AppDomain.CurrentDomain.DefineDynamicAssembly(new AssemblyName("Tkl.Jumbo.Rpc.DynamicProxy"), AssemblyBuilderAccess.Run);

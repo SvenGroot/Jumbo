@@ -10,7 +10,7 @@ using System.Net;
 
 namespace Tkl.Jumbo.Rpc
 {
-    sealed class RpcServerConnectionHandler
+    sealed class RpcServerConnectionHandler : IDisposable
     {
         private readonly Socket _serverSocket;
         private readonly RpcStream _stream;
@@ -31,6 +31,7 @@ namespace Tkl.Jumbo.Rpc
             _context = new ServerContext() { ClientHostAddress = ((IPEndPoint)_serverSocket.RemoteEndPoint).Address };
         }
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1031:DoNotCatchGeneralExceptionTypes")]
         public void BeginReadRequest()
         {
             bool hasData = false;
@@ -52,6 +53,7 @@ namespace Tkl.Jumbo.Rpc
             }
         }
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1031:DoNotCatchGeneralExceptionTypes")]
         private void BeginReadRequestCallback(IAsyncResult ar)
         {
             bool hasData = false;
@@ -74,6 +76,7 @@ namespace Tkl.Jumbo.Rpc
             }
         }
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1031:DoNotCatchGeneralExceptionTypes")]
         public void ProcessRequest()
         {
             try
@@ -93,6 +96,8 @@ namespace Tkl.Jumbo.Rpc
             {
                 TrySendError(ex);
             }
+
+            BeginReadRequest();
         }
 
         public object[] ReadParameters()
@@ -110,6 +115,7 @@ namespace Tkl.Jumbo.Rpc
             SendResponse(false, ex);
         }
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1031:DoNotCatchGeneralExceptionTypes")]
         public void TrySendError(Exception ex)
         {
             try
@@ -144,5 +150,15 @@ namespace Tkl.Jumbo.Rpc
             _stream.Dispose();
             _serverSocket.Close();
         }
+
+        #region IDisposable Members
+
+        public void Dispose()
+        {
+            _stream.Dispose();
+            ((IDisposable)_serverSocket).Dispose();
+        }
+
+        #endregion
     }
 }

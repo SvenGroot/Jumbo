@@ -74,12 +74,6 @@ namespace Tkl.Jumbo.Rpc
         {
         }
 
-        public int ReadInt32()
-        {
-            Read(_byteBuffer, 0, 4);
-            return (_byteBuffer[0] & 0xff) | (_byteBuffer[1] << 8) | (_byteBuffer[2] << 0x10) | (_byteBuffer[3] << 0x18);
-        }
-
         public string ReadString()
         {
             int length = ReadByte();

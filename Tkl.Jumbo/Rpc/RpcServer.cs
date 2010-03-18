@@ -43,6 +43,7 @@ namespace Tkl.Jumbo.Rpc
             }
         }
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1031:DoNotCatchGeneralExceptionTypes")]
         private void AcceptSocketCallback(IAsyncResult ar)
         {
             TcpListener listener = (TcpListener)ar.AsyncState;
@@ -64,7 +65,7 @@ namespace Tkl.Jumbo.Rpc
             {
                 if( handler != null )
                 {
-                    handler.SendError(ex);
+                    handler.TrySendError(ex);
                 }
                 if( socket != null )
                     socket.Close();

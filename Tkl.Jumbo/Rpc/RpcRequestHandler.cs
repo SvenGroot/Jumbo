@@ -17,6 +17,7 @@ namespace Tkl.Jumbo.Rpc
 
         private static readonly Dictionary<string, ServerObject> _registeredObjects = new Dictionary<string, ServerObject>();
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1031:DoNotCatchGeneralExceptionTypes")]
         public static void HandleRequest(ServerContext context, string objectName, string interfaceName, string operationName, RpcServerConnectionHandler handler)
         {
             ServerObject server = GetRegisteredObject(objectName);
@@ -46,8 +47,6 @@ namespace Tkl.Jumbo.Rpc
             {
                 handler.SendError(ex);
             }
-
-            handler.BeginReadRequest();
         }
 
         public static void RegisterObject(string objectName, object server)
