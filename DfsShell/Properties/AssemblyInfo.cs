@@ -10,7 +10,7 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("Kitsuregawa Lab")]
 [assembly: AssemblyProduct("Jumbo")]
-[assembly: AssemblyCopyright("Copyright © Sven Groot 2008")]
+[assembly: AssemblyCopyright("Copyright © Sven Groot 2010")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 [assembly: log4net.Config.XmlConfigurator()]
