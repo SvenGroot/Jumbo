@@ -419,7 +419,7 @@ namespace NameServerApplication
                 FindEntry(from, out fromName, out fromParent, out fromEntry);
 
                 if( fromEntry == null )
-                    throw new ArgumentException("The file or directory \"{0}\" does not exist.", from);
+                    throw new ArgumentException(string.Format("The file or directory \"{0}\" does not exist.", from));
 
                 string toName;
                 FileSystemEntry toEntry;
@@ -431,7 +431,7 @@ namespace NameServerApplication
                     toParent = (DfsDirectory)toEntry;
                 }
                 else if( toEntry != null )
-                    throw new ArgumentException(string.Format("The path \"{0}\" is an existing file."));
+                    throw new ArgumentException(string.Format("The path \"{0}\" is an existing file.", to));
 
                 Move(fromEntry, toParent, toName);
             }
