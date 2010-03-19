@@ -22,6 +22,7 @@
       <sources>
         <include name="Properties/AssemblyInfo.cs"/>
         <include name="*.cs"/>
+        <include name="Commands/*.cs"/>
         <include name="../Version.cs"/>
       </sources>
     </csc>

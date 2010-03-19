@@ -63,6 +63,17 @@
     <Compile Include="ClientChannelSink.cs" />
     <Compile Include="ClientChannelSinkProvider.cs" />
     <Compile Include="CollectionExtensions.cs" />
+    <Compile Include="CommandLine\ArgumentParsedEventArgs.cs" />
+    <Compile Include="CommandLine\CommandLineArgument.cs" />
+    <Compile Include="CommandLine\CommandLineArgumentException.cs" />
+    <Compile Include="CommandLine\CommandLineConstructorAttribute.cs" />
+    <Compile Include="CommandLine\CommandLineParser.cs" />
+    <Compile Include="CommandLine\ShellCommand.cs" />
+    <Compile Include="CommandLine\NamedCommandLineArgument.cs" />
+    <Compile Include="CommandLine\NamedCommandLineArgumentAttribute.cs" />
+    <Compile Include="CommandLine\PositionalCommandLineArgument.cs" />
+    <Compile Include="CommandLine\ShellCommandAttribute.cs" />
+    <Compile Include="CommandLine\StringExtensions.cs" />
     <Compile Include="ExtendedCollection.cs" />
     <Compile Include="CompressionUtility.cs" />
     <Compile Include="CompressionType.cs" />
@@ -81,6 +92,11 @@
     <Compile Include="MemoryStatus.cs" />
     <Compile Include="NativeMethods.cs" />
     <Compile Include="ProcessorStatus.cs" />
+    <Compile Include="Properties\Resources.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>Resources.resx</DependentUpon>
+    </Compile>
     <Compile Include="SpinLock.cs" />
     <Compile Include="SpinWait.cs" />
     <Compile Include="Topology\NetworkTopology.cs" />
@@ -151,6 +167,12 @@
     <CodeAnalysisDictionary Include="..\CodeAnalysisDictionary.xml">
       <Link>CodeAnalysisDictionary.xml</Link>
     </CodeAnalysisDictionary>
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Properties\Resources.resx">
+      <Generator>ResXFileCodeGenerator</Generator>
+      <LastGenOutput>Resources.Designer.cs</LastGenOutput>
+    </EmbeddedResource>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

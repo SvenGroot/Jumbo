@@ -41,11 +41,28 @@
     <Reference Include="System.Core">
       <RequiredTargetFramework>3.5</RequiredTargetFramework>
     </Reference>
+    <Reference Include="System.Data" />
+    <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="..\Version.cs">
       <Link>Properties\Version.cs</Link>
     </Compile>
+    <Compile Include="Commands\CreateDirectoryCommand.cs" />
+    <Compile Include="Commands\DeleteCommand.cs" />
+    <Compile Include="Commands\DfsShellCommand.cs" />
+    <Compile Include="Commands\DfsShellCommandWithProgress.cs" />
+    <Compile Include="Commands\GetCommand.cs" />
+    <Compile Include="Commands\ListDirectoryCommand.cs" />
+    <Compile Include="Commands\MoveCommand.cs" />
+    <Compile Include="Commands\PrintBlockInfoCommand.cs" />
+    <Compile Include="Commands\PrintFileCommand.cs" />
+    <Compile Include="Commands\PrintFileInfoCommand.cs" />
+    <Compile Include="Commands\PrintMetricsCommand.cs" />
+    <Compile Include="Commands\PrintSafeModeCommand.cs" />
+    <Compile Include="Commands\PrintVersionCommand.cs" />
+    <Compile Include="Commands\PutCommand.cs" />
+    <Compile Include="Commands\WaitSafeModeCommand.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
