@@ -57,7 +57,7 @@ namespace Tkl.Jumbo.Jet.Samples
 
             var input = builder.CreateRecordReader<Utf8StringWritable>(_inputPath, typeof(WordRecordReader));
             var collector = new RecordCollector<KeyValuePairWritable<Utf8StringWritable, Int32Writable>>(null, null, _combinerTasks == 0 ? null : (int?)_combinerTasks);
-            var output = builder.CreateRecordWriter<KeyValuePairWritable<Utf8StringWritable, Int32Writable>>(_outputPath, typeof(TextRecordWriter<KeyValuePairWritable<Utf8StringWritable, Int32Writable>>), BlockSize, ReplicationFactor);
+            var output = builder.CreateRecordWriter<KeyValuePairWritable<Utf8StringWritable, Int32Writable>>(_outputPath, typeof(TextRecordWriter<KeyValuePairWritable<Utf8StringWritable, Int32Writable>>), (int)BlockSize.Value, ReplicationFactor);
 
             builder.ProcessRecords(input, collector.CreateRecordWriter(), WordCount);
 

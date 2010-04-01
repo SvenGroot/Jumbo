@@ -5,6 +5,7 @@ using System.Text;
 using System.ComponentModel;
 using System.Reflection;
 using Tkl.Jumbo.Dfs;
+using Tkl.Jumbo.CommandLine;
 
 namespace Tkl.Jumbo.Jet.Jobs
 {
@@ -16,9 +17,7 @@ namespace Tkl.Jumbo.Jet.Jobs
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(JobRunnerInfo));
 
         private readonly Type _jobRunnerType;
-        private readonly JobRunnerPositionalArgument[] _arguments;
-        private readonly Dictionary<string, JobRunnerNamedArgument> _namedArguments = new Dictionary<string,JobRunnerNamedArgument>();
-        private readonly int _minimumArgumentCount;
+        private CommandLineParser _parser;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="JobRunnerInfo"/> class.
@@ -32,43 +31,6 @@ namespace Tkl.Jumbo.Jet.Jobs
                 throw new ArgumentException("Specified type is not a job runner.", "type");
 
             _jobRunnerType = type;
-
-            ConstructorInfo[] ctors = type.GetConstructors();
-            if( ctors.Length < 1 )
-                throw new ArgumentException("Job runner type does not have any public constructors.", "type");
-            // If there's more than one, we just use the first one; job runners should normally have only one constructor.
-            ConstructorInfo ctor = ctors[0];
-            ParameterInfo[] parameters = ctor.GetParameters();
-            _arguments = new JobRunnerPositionalArgument[parameters.Length];
-            bool hasOptionalAttribute = false;
-            for( int x = 0; x < parameters.Length; ++x )
-            {
-                ParameterInfo parameter = parameters[x];
-                if( !parameter.IsOptional && hasOptionalAttribute )
-                    throw new ArgumentException("Job runner constructor cannot have non-optional arguments after an optional argument.");
-                else if( parameter.IsOptional && !hasOptionalAttribute )
-                {
-                    hasOptionalAttribute = true;
-                    _minimumArgumentCount = x;
-                }
-
-                DescriptionAttribute descriptionAttribute = (DescriptionAttribute)Attribute.GetCustomAttribute(parameter, typeof(DescriptionAttribute));
-
-                object defaultValue = ((parameter.Attributes & ParameterAttributes.HasDefault) == ParameterAttributes.HasDefault) ? parameter.DefaultValue : null;
-                _arguments[x] = new JobRunnerPositionalArgument(parameter.Name, parameter.ParameterType, parameter.IsOptional, defaultValue, descriptionAttribute == null ? null : descriptionAttribute.Description);
-            }
-            if( !hasOptionalAttribute )
-                _minimumArgumentCount = _arguments.Length;
-
-            PropertyInfo[] properties = type.GetProperties(BindingFlags.Public | BindingFlags.Instance);
-            foreach( PropertyInfo prop in properties )
-            {
-                if( Attribute.IsDefined(prop, typeof(NamedArgumentAttribute)) )
-                {
-                    JobRunnerNamedArgument argument = new JobRunnerNamedArgument(prop);
-                    _namedArguments.Add(argument.Name, argument);
-                }
-            }
         }
 
         /// <summary>
@@ -92,74 +54,15 @@ namespace Tkl.Jumbo.Jet.Jobs
         }
 
         /// <summary>
-        /// Gets a string describing the command line usage of the job runner.
+        /// Gets the command line parser for this job runner.
         /// </summary>
-        /// <param name="usagePrefix">A string to prepend to the first line of the usage (e.g. the executable name).</param>
-        /// <param name="maxLineLength">The maximum line length of lines in the usage.</param>
-        /// <returns>A string describing the command line usage of the job runner.</returns>
-        public string GetUsage(string usagePrefix, int maxLineLength)
+        public CommandLineParser CommandLineParser
         {
-            if( usagePrefix == null )
-                throw new ArgumentNullException("usagePrefix");
-
-            StringBuilder usage = new StringBuilder();
-            usage.Append(usagePrefix);
-            usage.Append(Name);
-            foreach( JobRunnerNamedArgument argument in _namedArguments.Values )
+            get
             {
-                usage.Append(" [-");
-                usage.Append(argument.Name);
-                if( argument.ArgumentType != typeof(bool) )
-                {
-                    usage.Append(" ");
-                    usage.Append(argument.PropertyName);
-                }
-                usage.Append("]");
+                // DFS paths can start with / so we always use - as the argument switch.
+                return _parser ?? (_parser = new CommandLineParser(_jobRunnerType) { NamedArgumentSwitch = "-" });
             }
-
-            foreach( JobRunnerPositionalArgument argument in _arguments )
-            {
-                usage.Append(" ");
-                if( argument.IsOptional )
-                    usage.Append("[");
-                else
-                    usage.Append("<");
-                usage.Append(argument.Name);
-                if( argument.IsOptional )
-                {
-                    if( argument.DefaultValue != null )
-                    {
-                        usage.Append("=");
-                        usage.Append(argument.DefaultValue);
-                    }
-                    usage.Append("]");
-                }
-                else
-                    usage.Append(">");
-            }
-
-            usage = new StringBuilder(usage.ToString().GetLines(maxLineLength, 3));
-            if( !string.IsNullOrEmpty(Description) )
-            {
-                usage.Insert(0, Description.GetLines(Console.WindowWidth - 1, 0) + Environment.NewLine);
-            }
-
-            foreach( JobRunnerPositionalArgument argument in _arguments )
-            {
-                if( !string.IsNullOrEmpty(argument.Description) )
-                {
-                    usage.AppendLine();
-                    usage.Append(string.Format(System.Globalization.CultureInfo.CurrentCulture, "{0,13} : {1}", argument.Name, argument.Description).GetLines(maxLineLength, 16));
-                }
-            }
-
-            foreach( JobRunnerNamedArgument argument in _namedArguments.Values )
-            {
-                usage.AppendLine();
-                usage.Append(string.Format(System.Globalization.CultureInfo.CurrentCulture, "{0,13} : {1}", "-" + argument.Name, argument.Description).GetLines(maxLineLength, 16));
-            }
-
-            return usage.ToString();
         }
 
         /// <summary>
@@ -203,8 +106,9 @@ namespace Tkl.Jumbo.Jet.Jobs
         /// <param name="dfsConfiguration">The Jumbo DFS configuration for the job.</param>
         /// <param name="jetConfiguration">The Jumbo Jet configuration for the job.</param>
         /// <param name="args">The arguments for the job.</param>
+        /// <param name="index">The index of the first argument to parse.</param>
         /// <returns>An instance of the job runner, or <see langword="null" /> if the incorrect number of arguments was specified.</returns>
-        public IJobRunner CreateInstance(DfsConfiguration dfsConfiguration, JetConfiguration jetConfiguration, string[] args)
+        public IJobRunner CreateInstance(DfsConfiguration dfsConfiguration, JetConfiguration jetConfiguration, string[] args, int index)
         {
             if( dfsConfiguration == null )
                 throw new ArgumentNullException("dfsConfiguration");
@@ -213,61 +117,39 @@ namespace Tkl.Jumbo.Jet.Jobs
             if( args == null )
                 throw new ArgumentNullException("args");
 
-            int arg;
-            StringBuilder logMessage = new StringBuilder("Creating job runner for job ");
-            logMessage.Append(Name);
-            for( arg = 0; arg < args.Length && args[arg].StartsWith("-", StringComparison.Ordinal); ++arg )
+            IJobRunner jobRunner = (IJobRunner)CommandLineParser.Parse(args, index);
+
+            if( jobRunner != null )
             {
-                string argumentName = args[arg].Substring(1);
-                JobRunnerNamedArgument argument;
-                if( _namedArguments.TryGetValue(argumentName, out argument) )
+                StringBuilder logMessage = new StringBuilder("Created job runner for job ");
+                logMessage.Append(Name);
+
+                foreach( NamedCommandLineArgument argument in CommandLineParser.NamedArguments )
                 {
-                    if( argument.ArgumentType == typeof(bool) )
-                        argument.Value = true;
-                    else
+                    if( argument.Value != null )
                     {
-                        ++arg;
-                        if( arg < args.Length )
-                            argument.Value = argument.ConvertToArgumentType(args[arg]);
-                        else
-                            throw new ArgumentException(string.Format(System.Globalization.CultureInfo.CurrentCulture, "Argument {0} has no value.", argument.Name));
+                        logMessage.Append(", ");
+                        logMessage.Append(argument.PropertyName);
+                        logMessage.Append(" = ");
+                        logMessage.Append(argument.Value);
                     }
-
-                    logMessage.Append(", ");
-                    logMessage.Append(argument.PropertyName);
-                    logMessage.Append(" = ");
-                    logMessage.Append(argument.Value);
                 }
-                else
-                    throw new ArgumentException("Unknown argument " + args[arg]);
-            }
-
-            if( args.Length - arg < _minimumArgumentCount || args.Length - arg > _arguments.Length )
-                return null;
-
-            object[] typedArguments = new object[_arguments.Length];
-            for( int x = 0; x < _arguments.Length; ++x )
-            {
-                if( x + arg < args.Length )
+                foreach( PositionalCommandLineArgument argument in CommandLineParser.PositionalArguments )
                 {
-                    if( args[x + arg].StartsWith("-", StringComparison.Ordinal) )
-                        throw new ArgumentException("You cannot use a named argument after a positional argument.");
-                    typedArguments[x] = _arguments[x].ConvertToArgumentType(args[x + arg]);
+                    if( argument.Value != null )
+                    {
+                        logMessage.Append(", ");
+                        logMessage.Append(argument.Name);
+                        logMessage.Append(" = ");
+                        logMessage.Append(argument.Value);
+                    }
                 }
-                else
-                    typedArguments[x] = _arguments[x].DefaultValue;
-                logMessage.Append(", ");
-                logMessage.Append(_arguments[x].Name);
-                logMessage.Append(" = ");
-                logMessage.Append(typedArguments[x]);
+
+                _log.Info(logMessage.ToString());
+
+                JetActivator.ApplyConfiguration(jobRunner, dfsConfiguration, jetConfiguration, null);
             }
 
-            _log.Info(logMessage.ToString());
-            IJobRunner jobRunner = (IJobRunner)JetActivator.CreateInstance(_jobRunnerType, dfsConfiguration, jetConfiguration, null, typedArguments);
-            foreach( JobRunnerNamedArgument argument in _namedArguments.Values )
-            {
-                argument.ApplyValue(jobRunner);
-            }
             return jobRunner;
         }
 
@@ -275,10 +157,11 @@ namespace Tkl.Jumbo.Jet.Jobs
         /// Creates an instance of the job runner with the configuration from the app.config file.
         /// </summary>
         /// <param name="args">The arguments for the job.</param>
+        /// <param name="index">The index of the first argument to parse.</param>
         /// <returns>An instance of the job runner, or <see langword="null" /> if the incorrect number of arguments was specified.</returns>
-        public IJobRunner CreateInstance(string[] args)
+        public IJobRunner CreateInstance(string[] args, int index)
         {
-            return CreateInstance(DfsConfiguration.GetConfiguration(), JetConfiguration.GetConfiguration(), args);
+            return CreateInstance(DfsConfiguration.GetConfiguration(), JetConfiguration.GetConfiguration(), args, index);
         }
     }
 }

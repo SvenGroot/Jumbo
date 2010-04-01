@@ -8,6 +8,7 @@ using Tkl.Jumbo.Jet.Samples.IO;
 using Tkl.Jumbo.Jet.Tasks;
 using Tkl.Jumbo.Dfs;
 using System.Runtime.InteropServices;
+using Tkl.Jumbo.CommandLine;
 
 namespace Tkl.Jumbo.Jet.Samples
 {
@@ -45,13 +46,13 @@ namespace Tkl.Jumbo.Jet.Samples
         /// <summary>
         /// Gets or sets the sample size used to determine the partitioner's split points.
         /// </summary>
-        [NamedArgument("s", Description = "The number of records to sample in order to determine the partitioner's split points. The default is 10000.")]
+        [NamedCommandLineArgument("s"), Description("The number of records to sample in order to determine the partitioner's split points. The default is 10000.")]
         public int SampleSize { get; set; }
 
         /// <summary>
         /// Gets or sets the maximum number of merge inputs for a single merge pass.
         /// </summary>
-        [NamedArgument("m", Description = "The maximum number of inputs for a single merge pass. If unspecified, Jumbo Jet's default value will be used.")]
+        [NamedCommandLineArgument("m"), Description("The maximum number of inputs for a single merge pass. If unspecified, Jumbo Jet's default value will be used.")]
         public int MaxMergeInputs { get; set; }
 
         /// <summary>
@@ -65,7 +66,7 @@ namespace Tkl.Jumbo.Jet.Samples
             CheckAndCreateOutputPath(dfsClient, _outputPath);
 
             var input = builder.CreateRecordReader<GenSortRecord>(_inputPath, typeof(GenSortRecordReader));
-            var output = builder.CreateRecordWriter<GenSortRecord>(_outputPath, typeof(GenSortRecordWriter), BlockSize, ReplicationFactor);
+            var output = builder.CreateRecordWriter<GenSortRecord>(_outputPath, typeof(GenSortRecordWriter), (int)BlockSize.Value, ReplicationFactor);
             RecordCollector<GenSortRecord> collector = new RecordCollector<GenSortRecord>(null, typeof(RangePartitioner), _mergeTasks);
 
             builder.PartitionRecords(input, collector.CreateRecordWriter());

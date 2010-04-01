@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using Tkl.Jumbo.Dfs;
+using Tkl.Jumbo.CommandLine;
+using System.ComponentModel;
 
 namespace Tkl.Jumbo.Jet.Jobs
 {
@@ -14,13 +16,13 @@ namespace Tkl.Jumbo.Jet.Jobs
         /// <summary>
         /// Gets or sets a value that indicates whether the output directory should be deleted, if it exists, before the job is executed.
         /// </summary>
-        [NamedArgument("d", Description = "Delete the output directory before running the job, if it exists.")]
+        [NamedCommandLineArgument("d"), Description("Delete the output directory before running the job, if it exists.")]
         public bool DeleteOutputBeforeRun { get; set; }
 
         /// <summary>
         /// Gets or sets a value that indicates whether the job runner should wait for user input before starting the job and before exitting.
         /// </summary>
-        [NamedArgument("i", Description = "Wait for user confirmation before starting the job and before exitting.")]
+        [NamedCommandLineArgument("i"), Description("Wait for user confirmation before starting the job and before exitting.")]
         public bool IsInteractive { get; set; }
 
         /// <summary>
@@ -29,7 +31,7 @@ namespace Tkl.Jumbo.Jet.Jobs
         /// <remarks>
         /// Derived classes should use this value with the <see cref="TaskDfsOutput"/> items of the job configuration.
         /// </remarks>
-        [NamedArgument("replication", Description = "Replication factor of the job's output files.")]
+        [NamedCommandLineArgument("replication"), Description("Replication factor of the job's output files.")]
         public int ReplicationFactor { get; set; }
 
         /// <summary>
@@ -38,8 +40,8 @@ namespace Tkl.Jumbo.Jet.Jobs
         /// <remarks>
         /// Derived classes should use this value with the <see cref="TaskDfsOutput"/> items of the job configuration.
         /// </remarks>
-        [NamedArgument("blockSize", Description = "Block size of the job's output files.")]
-        public int BlockSize { get; set; }
+        [NamedCommandLineArgument("blockSize"), Description("Block size of the job's output files.")]
+        public ByteSize BlockSize { get; set; }
 
         #region IJobRunner Members
 
@@ -127,10 +129,12 @@ namespace Tkl.Jumbo.Jet.Jobs
 
             if( ReplicationFactor < 0 )
                 throw new InvalidOperationException("Replication factor may not be less than zero.");
-            if( BlockSize < 0 )
+            if( BlockSize.Value < 0 )
                 throw new InvalidOperationException("Block size may not be less than zero.");
+            if( BlockSize.Value > Int32.MaxValue )
+                throw new InvalidOperationException("Block size may not be larger than 2GB.");
 
-            stage.DfsOutput.BlockSize = BlockSize;
+            stage.DfsOutput.BlockSize = (int)BlockSize.Value;
             stage.DfsOutput.ReplicationFactor = ReplicationFactor;
         }
 

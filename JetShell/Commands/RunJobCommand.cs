@@ -52,15 +52,11 @@ namespace JetShell.Commands
                     }
                     else
                     {
-                        int firstRemainingArg = _argIndex + 2;
-                        string[] remainingArgs = new string[_args.Length - firstRemainingArg];
-                        if( remainingArgs.Length > 0 )
-                            Array.Copy(_args, firstRemainingArg, remainingArgs, 0, remainingArgs.Length);
-                        IJobRunner jobRunner = jobRunnerInfo.CreateInstance(remainingArgs);
+                        IJobRunner jobRunner = jobRunnerInfo.CreateInstance(_args, _argIndex + 2);
                         if( jobRunner == null )
                         {
-                            string baseUsage = string.Format("Usage: JetShell.exe job {0} ", Path.GetFileName(assemblyFileName));
-                            Console.WriteLine(jobRunnerInfo.GetUsage(baseUsage, Console.WindowWidth - 1));
+                            string baseUsage = string.Format("Usage: JetShell.exe job {0} {1} ", Path.GetFileName(assemblyFileName), jobRunnerInfo.Name);
+                            Console.WriteLine(jobRunnerInfo.CommandLineParser.GetCustomUsage(baseUsage, Console.WindowWidth - 1));
                         }
                         else
                         {

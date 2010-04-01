@@ -394,12 +394,13 @@ namespace Tkl.Jumbo.CommandLine
             if( index < 0 || index > args.Length )
                 throw new ArgumentOutOfRangeException("index");
 
-            // Reset all named arguments to their default value.
+            // Reset all arguments to their default value.
             foreach( NamedCommandLineArgument argument in _namedArguments.Values )
+                argument.Value = argument.DefaultValue;
+            foreach( PositionalCommandLineArgument argument in _positionalArguments )
                 argument.Value = argument.DefaultValue;
 
             int positionalArgumentIndex = 0;
-            object[] positionalArguments = new object[_positionalArguments.Length];
 
             for( int x = index; x < args.Length; ++x )
             {
@@ -411,9 +412,9 @@ namespace Tkl.Jumbo.CommandLine
                 }
                 else
                 {
-                    if( positionalArgumentIndex >= positionalArguments.Length )
+                    if( positionalArgumentIndex >= _positionalArguments.Length )
                         return null;
-                    cancel = ParsePositionalArgument(positionalArgumentIndex, positionalArguments, arg);
+                    cancel = ParsePositionalArgument(positionalArgumentIndex, arg);
                     if( !_positionalArguments[positionalArgumentIndex].ArgumentType.IsArray )
                         ++positionalArgumentIndex;
                 }
@@ -421,27 +422,24 @@ namespace Tkl.Jumbo.CommandLine
                     return null;
             }
 
-            if( positionalArgumentIndex < positionalArguments.Length && _positionalArguments[positionalArgumentIndex].ArgumentType.IsArray && positionalArguments[positionalArgumentIndex] != null )
+            if( positionalArgumentIndex < _positionalArguments.Length && _positionalArguments[positionalArgumentIndex].ArgumentType.IsArray && _positionalArguments[positionalArgumentIndex].Value != null )
                 ++positionalArgumentIndex;
 
             if( positionalArgumentIndex < _minimumArgumentCount )
                 return null;
-
-            for( ; positionalArgumentIndex < _positionalArguments.Length; ++positionalArgumentIndex )
-                positionalArguments[positionalArgumentIndex] = _positionalArguments[positionalArgumentIndex].DefaultValue;
 
             if( _positionalArguments.Length > 0 )
             {
                 PositionalCommandLineArgument lastArgument = _positionalArguments[_positionalArguments.Length - 1];
                 if( lastArgument.ArgumentType.IsArray )
                 {
-                    List<object> items = (List<object>)positionalArguments[positionalArguments.Length - 1];
+                    List<object> items = (List<object>)_positionalArguments[_positionalArguments.Length - 1].Value;
                     if( items != null )
-                        positionalArguments[positionalArguments.Length - 1] = ConvertToArray(lastArgument.ArgumentType.GetElementType(), items);
+                        _positionalArguments[_positionalArguments.Length - 1].Value = ConvertToArray(lastArgument.ArgumentType.GetElementType(), items);
                 }
             }
 
-            object commandLineArguments = Activator.CreateInstance(_argumentsType, positionalArguments);
+            object commandLineArguments = Activator.CreateInstance(_argumentsType, (from arg in _positionalArguments select arg.Value).ToArray());
             foreach( NamedCommandLineArgument argument in _namedArguments.Values )
             {
                 if( argument.ArgumentType.IsArray )
@@ -466,20 +464,20 @@ namespace Tkl.Jumbo.CommandLine
                 handler(this, e);
         }
 
-        private bool ParsePositionalArgument(int positionalArgumentIndex, object[] positionalArguments, string arg)
+        private bool ParsePositionalArgument(int positionalArgumentIndex, string arg)
         {
             PositionalCommandLineArgument argument = _positionalArguments[positionalArgumentIndex];
 
             object value = argument.ConvertToArgumentType(arg);
             if( argument.ArgumentType.IsArray )
             {
-                if( positionalArguments[positionalArgumentIndex] == null )
-                    positionalArguments[positionalArgumentIndex] = new List<object>();
-                ((List<object>)positionalArguments[positionalArgumentIndex]).Add(value);
+                if( argument.Value == null )
+                    argument.Value = new List<object>();
+                ((List<object>)argument.Value).Add(value);
             }
             else
             {
-                positionalArguments[positionalArgumentIndex] = value;
+                argument.Value = value;
             }
             ArgumentParsedEventArgs e = new ArgumentParsedEventArgs(argument, value);
             OnArgumentParsed(e);

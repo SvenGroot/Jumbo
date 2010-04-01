@@ -76,7 +76,7 @@ namespace Tkl.Jumbo.Jet.Samples
             DfsClient dfsClient = new DfsClient(DfsConfiguration);
             CheckAndCreateOutputPath(dfsClient, _outputPath);
 
-            RecordWriter<GenSortRecord> output = builder.CreateRecordWriter<GenSortRecord>(_outputPath, typeof(GenSortRecordWriter), BlockSize, ReplicationFactor);
+            RecordWriter<GenSortRecord> output = builder.CreateRecordWriter<GenSortRecord>(_outputPath, typeof(GenSortRecordWriter), (int)BlockSize.Value, ReplicationFactor);
 
             SettingsDictionary settings = new SettingsDictionary();
             settings.AddTypedSetting(_startRecordSetting, _startRecord);

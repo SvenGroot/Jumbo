@@ -7,6 +7,8 @@ using System.Reflection;
 using Tkl.Jumbo.IO;
 using Tkl.Jumbo.Jet.Tasks;
 using Tkl.Jumbo.Jet.Channels;
+using Tkl.Jumbo.CommandLine;
+using System.ComponentModel;
 
 namespace Tkl.Jumbo.Jet.Jobs
 {
@@ -66,13 +68,13 @@ namespace Tkl.Jumbo.Jet.Jobs
         /// <summary>
         /// Gets or sets the channel type to use.
         /// </summary>
-        [NamedArgument("channel", Description = "The channel type to use (File or Tcp).")]
+        [NamedCommandLineArgument("channel"), Description("The channel type to use (File or Tcp).")]
         public ChannelType ChannelType { get; set; }
 
         /// <summary>
         /// Gets or sets the number of partitions per merge task.
         /// </summary>
-        [NamedArgument("ppt", Description = "The number of partitions per merge task. The default is 1.")]
+        [NamedCommandLineArgument("ppt"), Description("The number of partitions per merge task. The default is 1.")]
         public int PartitionsPerTask { get; set; }
 
         /// <summary>
