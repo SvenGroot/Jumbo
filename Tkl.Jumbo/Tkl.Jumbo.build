@@ -21,12 +21,16 @@
       </references>
       <sources>
         <include name="Properties/AssemblyInfo.cs"/>
+        <include name="Properties/Resources.Designer.cs"/>
         <include name="*.cs"/>
         <include name="IO/*.cs"/>
         <include name="Topology/*.cs" />
         <include name="CommandLine/*.cs"/>
         <include name="../Version.cs"/>
       </sources>
+      <resources dynamicprefix="true" prefix="Tkl.Jumbo">
+        <include name="Properties/Resources.resx"/>
+      </resources>
       <nowarn>
 	      <warning number="1584"
 	      if="${nant.settings.currentframework=='mono-2.0'}" />

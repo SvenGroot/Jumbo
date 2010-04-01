@@ -55,6 +55,10 @@
     <Compile Include="..\Version.cs">
       <Link>Properties\Version.cs</Link>
     </Compile>
+    <Compile Include="Commands\JetShellCommand.cs" />
+    <Compile Include="Commands\PrintMetricsCommand.cs" />
+    <Compile Include="Commands\PrintVersionCommand.cs" />
+    <Compile Include="Commands\RunJobCommand.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
