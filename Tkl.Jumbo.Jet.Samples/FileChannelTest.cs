@@ -10,6 +10,7 @@ using Tkl.Jumbo.Jet.Channels;
 using Tkl.Jumbo.Jet.Tasks;
 using System.ComponentModel;
 using System.Runtime.InteropServices;
+using Tkl.Jumbo.CommandLine;
 
 namespace Tkl.Jumbo.Jet.Samples
 {
@@ -41,7 +42,7 @@ namespace Tkl.Jumbo.Jet.Samples
         /// <summary>
         /// Gets or sets the sample size used to determine the partitioner's split points.
         /// </summary>
-        [NamedArgument("s", Description = "The number of records to sample in order to determine the partitioner's split points. The default is 10000.")]
+        [NamedCommandLineArgument("s"), Description("The number of records to sample in order to determine the partitioner's split points. The default is 10000.")]
         public int SampleSize { get; set; }
 
         /// <summary>
@@ -69,7 +70,7 @@ namespace Tkl.Jumbo.Jet.Samples
             CheckAndCreateOutputPath(dfsClient, _outputPath);
 
             var input = builder.CreateRecordReader<GenSortRecord>(_inputPath, typeof(GenSortRecordReader));
-            var output = builder.CreateRecordWriter<Int64Writable>(_outputPath, typeof(TextRecordWriter<Int64Writable>), BlockSize, ReplicationFactor);
+            var output = builder.CreateRecordWriter<Int64Writable>(_outputPath, typeof(TextRecordWriter<Int64Writable>), (int)BlockSize.Value, ReplicationFactor);
             RecordCollector<GenSortRecord> collector = new RecordCollector<GenSortRecord>(ChannelType.Pipeline, typeof(RangePartitioner), _mergeTasks);
             RecordCollector<GenSortRecord> collector2 = new RecordCollector<GenSortRecord>(ChannelType.File, typeof(RangePartitioner), _mergeTasks);
 

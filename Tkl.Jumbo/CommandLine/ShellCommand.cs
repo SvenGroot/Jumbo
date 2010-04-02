@@ -57,7 +57,7 @@ namespace Tkl.Jumbo.CommandLine
 
             foreach( var command in commands )
             {
-                Console.Write(string.Format("{0,13} : {1}", command.Name, command.Description).GetLines(Console.WindowWidth - 1, 16));
+                Console.Write(string.Format("{0,13} : {1}", command.Name, command.Description).SplitLines(Console.WindowWidth - 1, 16));
                 Console.WriteLine();
             }
         }

@@ -49,8 +49,6 @@ namespace Tkl.Jumbo.CommandLine
             get { return _property.Name; }
         }
 
-        internal object Value { get; set; }
-
         internal void ApplyValue(object target)
         {
             if( target == null )

@@ -95,6 +95,11 @@ namespace Tkl.Jumbo.CommandLine
         /// </para>
         /// </remarks>
         public object DefaultValue { get; private set; }
+
+        /// <summary>
+        /// Gets the value of the argument in the last call to <see cref="CommandLineParser.Parse"/>.
+        /// </summary>
+        public object Value { get; internal set; }
         
         /// <summary>
         /// Converts the specified string to the argument type, as specified in the <see cref="ArgumentType"/> property.

@@ -8,6 +8,7 @@ using Tkl.Jumbo.Jet;
 using Tkl.Jumbo.Dfs;
 using System.Diagnostics;
 using Tkl.Jumbo;
+using System.ComponentModel;
 
 namespace TaskServerApplication
 {
@@ -20,6 +21,7 @@ namespace TaskServerApplication
             private Process _process;
             private Thread _appDomainThread; // only used when running the task in an appdomain rather than a different process.
             private TaskServer _taskServer;
+            private const int _processLaunchRetryCount = 10;
 
             public event EventHandler ProcessExited;
 
@@ -56,36 +58,50 @@ namespace TaskServerApplication
             public void Run(int createProcessDelay)
             {
                 if( Debugger.IsAttached || _taskServer.Configuration.TaskServer.RunTaskHostInAppDomain )
+                {
                     RunTaskAppDomain();
+                    State = TaskAttemptStatus.Running;
+                }
                 else
                 {
                     _log.DebugFormat("Launching new process for task {0}.", FullTaskID);
-                    ProcessStartInfo startInfo = new ProcessStartInfo("TaskHost.exe", string.Format("\"{0}\" \"{1}\" \"{2}\" \"{3}\" {4}", JobID, JobDirectory, TaskID, DfsJobDirectory, Attempt));
-                    startInfo.UseShellExecute = false;
-                    startInfo.CreateNoWindow = true;
-                    string profileOutputFile = null;
-                    //if( !string.IsNullOrEmpty(TaskConfiguration.ProfileOptions) )
-                    //{
-                    //    profileOutputFile = IO.Path.Combine(JobDirectory, string.Format(System.Globalization.CultureInfo.InvariantCulture, "{0}_{1}_profile.txt", TaskID, Attempt));
-                    //    if( RuntimeEnvironment.RuntimeType == RuntimeEnvironmentType.Mono )
-                    //        _log.InfoFormat("Profiling is enabled for task {0}, output file {1}.", FullTaskID, profileOutputFile);
-                    //    else
-                    //        _log.WarnFormat("Profiling is requested for task {0}, but not supported on this platform.", FullTaskID);
-                    //}
-                    RuntimeEnvironment.ModifyProcessStartInfo(startInfo, profileOutputFile, null);
-                    _process = new Process();
-                    _process.StartInfo = startInfo;
-                    _process.EnableRaisingEvents = true;
-                    _process.Exited += new EventHandler(_process_Exited);
-                    _process.Start();
-                    _log.DebugFormat("Host process for task {0} has started, pid = {1}.", FullTaskID, _process.Id);
-                    if( createProcessDelay > 0 )
+                    int retriesLeft = _processLaunchRetryCount;
+                    bool success = false;
+                    do
                     {
-                        _log.DebugFormat("Sleeping for {0}ms", createProcessDelay);
-                        Thread.Sleep(createProcessDelay);
-                    }
+                        try
+                        {
+                            ProcessStartInfo startInfo = new ProcessStartInfo("TaskHost.exe", string.Format("\"{0}\" \"{1}\" \"{2}\" \"{3}\" {4}", JobID, JobDirectory, TaskID, DfsJobDirectory, Attempt));
+                            startInfo.UseShellExecute = false;
+                            startInfo.CreateNoWindow = true;
+                            string profileOutputFile = null;
+                            RuntimeEnvironment.ModifyProcessStartInfo(startInfo, profileOutputFile, null);
+                            _process = new Process();
+                            _process.StartInfo = startInfo;
+                            _process.EnableRaisingEvents = true;
+                            _process.Exited += new EventHandler(_process_Exited);
+                            _process.Start();
+                            _log.DebugFormat("Host process for task {0} has started, pid = {1}.", FullTaskID, _process.Id);
+                            if( createProcessDelay > 0 )
+                            {
+                                _log.DebugFormat("Sleeping for {0}ms", createProcessDelay);
+                                Thread.Sleep(createProcessDelay);
+                            }
+                            success = true;
+                        }
+                        catch( Win32Exception ex )
+                        {
+                            --retriesLeft;
+                            _log.Error(string.Format("Could not create host process for task {0}, {1} retries left.", FullTaskID, retriesLeft), ex);
+                            Thread.Sleep(1000);
+                        }
+                    } while( !success && retriesLeft > 0 );
+
+                    if( success )
+                        State = TaskAttemptStatus.Running;
+                    else
+                        OnProcessExited(EventArgs.Empty);
                 }
-                State = TaskAttemptStatus.Running;
             }
 
             public void Kill()

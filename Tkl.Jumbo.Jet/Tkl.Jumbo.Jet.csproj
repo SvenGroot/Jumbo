@@ -114,9 +114,6 @@
     <Compile Include="Jobs\JobBuilderJob.cs" />
     <Compile Include="Jobs\JobRunnerArgument.cs" />
     <Compile Include="Jobs\JobRunnerInfo.cs" />
-    <Compile Include="Jobs\JobRunnerNamedArgument.cs" />
-    <Compile Include="Jobs\JobRunnerPositionalArgument.cs" />
-    <Compile Include="Jobs\NamedArgumentAttribute.cs" />
     <Compile Include="Jobs\RecordCollector.cs" />
     <Compile Include="MergeRecordReader.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
