@@ -34,7 +34,7 @@ namespace Tkl.Jumbo.IO
         ///   that indicates whether it's <see langword="null"/> or not.
         /// </para>
         /// </remarks>
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1004:GenericMethodsShouldProvideTypeParameter")]
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Naming", "CA2204:Literals should be spelled correctly", MessageId = "IWritable"), System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1004:GenericMethodsShouldProvideTypeParameter")]
         public static Action<T, BinaryWriter> CreateSerializer<T>()
         {
             Type type = typeof(T);

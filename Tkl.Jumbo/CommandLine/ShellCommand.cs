@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Reflection;
 using System.ComponentModel;
+using System.Globalization;
 
 namespace Tkl.Jumbo.CommandLine
 {
@@ -57,7 +58,7 @@ namespace Tkl.Jumbo.CommandLine
 
             foreach( var command in commands )
             {
-                Console.Write(string.Format("{0,13} : {1}", command.Name, command.Description).SplitLines(Console.WindowWidth - 1, 16));
+                Console.Write(string.Format(CultureInfo.CurrentCulture, "{0,13} : {1}", command.Name, command.Description).SplitLines(Console.WindowWidth - 1, 16));
                 Console.WriteLine();
             }
         }
@@ -70,6 +71,10 @@ namespace Tkl.Jumbo.CommandLine
         /// <returns>The <see cref="Type"/> of the specified shell command, or <see langword="null"/> if none could be found.</returns>
         public static Type GetShellCommand(Assembly assembly, string commandName)
         {
+            if( assembly == null )
+                throw new ArgumentNullException("assembly");
+            if( commandName == null )
+                throw new ArgumentNullException("commandName");
             return (from type in assembly.GetTypes()
                     let attribute = (ShellCommandAttribute)Attribute.GetCustomAttribute(type, typeof(ShellCommandAttribute))
                     where type.IsSubclassOf(typeof(ShellCommand)) && attribute != null && string.Equals(attribute.CommandName, commandName, StringComparison.OrdinalIgnoreCase)

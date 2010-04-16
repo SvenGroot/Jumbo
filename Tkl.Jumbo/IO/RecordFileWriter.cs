@@ -29,6 +29,8 @@ namespace Tkl.Jumbo.IO
         public RecordFileWriter(Stream stream)
             : base(stream)
         {
+            if( stream == null )
+                throw new ArgumentNullException("stream");
             _writer = new BinaryWriter(stream);
             _header = new RecordFileHeader(typeof(T), false); // TODO: Make the value of useStrongName configurable.
 

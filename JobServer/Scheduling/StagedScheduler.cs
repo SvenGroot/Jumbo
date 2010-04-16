@@ -104,7 +104,7 @@ namespace JobServerApplication.Scheduling
                 if( taskServer.AvailableTasks > 0 )
                 {
                     var eligibleTasks = (from task in unscheduledTasks
-                                         where !task.BadServers.Contains(taskServer)
+                                         where !task.BadServers.Contains(taskServer) && task.Server == null
                                          select task).ToList();
 
                     while( taskServer.AvailableTasks > 0 )
@@ -155,8 +155,8 @@ namespace JobServerApplication.Scheduling
                             newServers.Add(taskServer);
                         _log.InfoFormat("Task {0} has been assigned to server {1}.", task.GlobalID, taskServer.Address);
                         outOfSlots = false;
-                        ++taskIndex;
                     }
+                    ++taskIndex;
                 }
             }
             if( outOfSlots && taskIndex < tasks.Count )

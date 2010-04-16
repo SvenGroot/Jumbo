@@ -214,11 +214,13 @@ namespace Tkl.Jumbo
         {
             // Use WMI to get the OS name.
             SelectQuery query = new SelectQuery("Win32_OperatingSystem", null, new[] { "Caption" });
-            ManagementObjectSearcher searcher = new ManagementObjectSearcher(query);
-
-            foreach( ManagementBaseObject obj in searcher.Get() )
+            using( ManagementObjectSearcher searcher = new ManagementObjectSearcher(query) )
             {
-                return (string)obj["Caption"];
+
+                foreach( ManagementBaseObject obj in searcher.Get() )
+                {
+                    return (string)obj["Caption"];
+                }
             }
 
             return null;
@@ -249,14 +251,15 @@ namespace Tkl.Jumbo
         private static string GetProcessorNameWindows()
         {
             SelectQuery query = new SelectQuery("Win32_Processor", null, new[] { "Name" });
-            ManagementObjectSearcher searcher = new ManagementObjectSearcher(query);
-
-            // We assume all CPUs are identical, which should be true in an SMP system.
-            foreach( ManagementBaseObject obj in searcher.Get() )
+            using( ManagementObjectSearcher searcher = new ManagementObjectSearcher(query) )
             {
-                return (string)obj["Name"];
-            }
 
+                // We assume all CPUs are identical, which should be true in an SMP system.
+                foreach( ManagementBaseObject obj in searcher.Get() )
+                {
+                    return (string)obj["Name"];
+                }
+            }
             return null;            
         }
 

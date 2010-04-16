@@ -54,7 +54,7 @@ namespace Tkl.Jumbo.CommandLine
     ///   In Visual Basic, you can use the <see langword="Optional"/> keyword and built-in syntax to specify the default value.
     /// </para>
     /// <para>
-    ///   Properties of <typeparamref name="T"/> that have the <see cref="NamedCommandLineArgumentAttribute"/> attribute applied will be used as named
+    ///   Properties of the type that have the <see cref="NamedCommandLineArgumentAttribute"/> attribute applied will be used as named
     ///   command line arguments for the type.
     /// </para>
     /// <para>
@@ -379,11 +379,11 @@ namespace Tkl.Jumbo.CommandLine
         }
 
         /// <summary>
-        /// Parses the specified command line arguments and creates an instance of the command line arguments type <typeparamref name="T"/> containing the arguments.
+        /// Parses the specified command line arguments and creates an instance of the command line arguments type containing the arguments.
         /// </summary>
         /// <param name="args">The command line arguments.</param>
         /// <param name="index">The index of the first argument to parse.</param>
-        /// <returns>An instance of <typeparamref name="T"/>, or <see langword="null"/> if there are too many or too few positional arguments.</returns>
+        /// <returns>An instance of the command line arguments type, or <see langword="null"/> if there are too many or too few positional arguments.</returns>
         /// <exception cref="CommandLineArgumentException">An unknown named argument was used, or a named argument was missing a value,
         /// or one of the argument values could not be converted to the argument type.</exception>
         /// <exception cref="ArgumentNullException"><paramref name="args"/> is <see langword="null"/>.</exception>

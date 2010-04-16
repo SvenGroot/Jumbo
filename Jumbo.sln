@@ -20,6 +20,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		jet.config = jet.config
 		jumbo-config.sh = jumbo-config.sh
 		Jumbo.build = Jumbo.build
+		Jumbo.ruleset = Jumbo.ruleset
 		run-dfs.sh = run-dfs.sh
 		run-jet.sh = run-jet.sh
 		run-server.sh = run-server.sh

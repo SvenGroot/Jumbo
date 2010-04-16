@@ -65,7 +65,7 @@ namespace Tkl.Jumbo.IO
             AllowRecordReuse = allowRecordReuse;
             BufferSize = bufferSize;
             CompressionType = compressionType;
-            CurrentPartition = _inputs.Keys[0];
+            _currentPartition = _inputs.Keys[0];
         }
 
         /// <summary>

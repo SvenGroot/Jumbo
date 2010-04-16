@@ -49,6 +49,8 @@ namespace Tkl.Jumbo.Jet
 
         void IXmlSerializable.ReadXml(XmlReader reader)
         {
+            if( reader == null )
+                throw new ArgumentNullException("reader");
             string startElementName = reader.Name;
             int depth = reader.Depth;
             if( reader.IsEmptyElement )
@@ -69,6 +71,8 @@ namespace Tkl.Jumbo.Jet
 
         void IXmlSerializable.WriteXml(XmlWriter writer)
         {
+            if( writer == null )
+                throw new ArgumentNullException("writer");
             foreach( var item in this )
             {
                 writer.WriteStartElement("Setting", JobConfiguration.XmlNamespace);

@@ -37,6 +37,7 @@ namespace Tkl.Jumbo.Jet.Channels
             return _instance;
         }
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Reliability", "CA2000:Dispose objects before losing scope")]
         public Stream AddStreamIfSpaceAvailable(int size)
         {
             CheckDisposed();

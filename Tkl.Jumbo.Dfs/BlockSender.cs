@@ -172,7 +172,7 @@ namespace Tkl.Jumbo.Dfs
         ///   property is set to <see langword="true"/> on the last packet.
         /// </para>
         /// </remarks>
-        /// <exception cref="ArgumentNullException"><paramref name="packet"/> is <see langword="null" />.</exception>
+        /// <exception cref="ArgumentNullException"><paramref name="data"/> is <see langword="null" />.</exception>
         public void AddPacket(byte[] data, int size, bool isLastPacket)
         {
             CheckDisposed();
@@ -227,7 +227,7 @@ namespace Tkl.Jumbo.Dfs
                 throw new DfsException("There was an error sending a packet to the server.", _lastException);
         }
 
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1031:DoNotCatchGeneralExceptionTypes")]
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Reliability", "CA2000:Dispose objects before losing scope"), System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1031:DoNotCatchGeneralExceptionTypes")]
         private void SendPacketsThread(object data)
         {
             NetworkStream stream = (NetworkStream)data;

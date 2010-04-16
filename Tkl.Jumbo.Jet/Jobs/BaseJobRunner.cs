@@ -146,6 +146,8 @@ namespace Tkl.Jumbo.Jet.Jobs
         /// <returns>A <see cref="FileSystemEntry"/> instance for the specified path</returns>
         protected static FileSystemEntry GetInputFileSystemEntry(DfsClient dfsClient, string inputPath)
         {
+            if( dfsClient == null )
+                throw new ArgumentNullException("dfsClient");
             FileSystemEntry input = dfsClient.NameServer.GetFileSystemEntryInfo(inputPath);
             if( input == null )
                 throw new ArgumentException("The specified input path doesn't exist.", "inputPath");

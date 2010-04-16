@@ -225,6 +225,8 @@ namespace Tkl.Jumbo.Jet
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1031:DoNotCatchGeneralExceptionTypes")]
         public void RunJob(Job job, JobConfiguration config, DfsClient dfsClient, params string[] files)
         {
+            if( job == null )
+                throw new ArgumentNullException("job");
             if( config == null )
                 throw new ArgumentNullException("config");
             if( dfsClient == null )
