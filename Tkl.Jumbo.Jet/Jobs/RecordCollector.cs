@@ -22,6 +22,7 @@ namespace Tkl.Jumbo.Jet.Jobs
     ///   for informational purposes to build the job execution graph.
     /// </para>
     /// </remarks>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1001:TypesThatOwnDisposableFieldsShouldBeDisposable")]
     public class RecordCollector<T>
         where T : IWritable, new()
     {

@@ -112,6 +112,7 @@ namespace Tkl.Jumbo.IO
         /// Initializes a new instance of the <see cref="StreamRecordReader{T}"/> class with the specified stream.
         /// </summary>
         /// <param name="stream">The stream to read from.</param>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1062:Validate arguments of public methods", MessageId = "0")]
         public LineRecordReader(Stream stream)
             : this(stream, 0, stream.Length, false)
         {
@@ -133,6 +134,8 @@ namespace Tkl.Jumbo.IO
         public LineRecordReader(Stream stream, long offset, long size, bool allowRecordReuse)
             : base(stream, offset, size)
         {
+            if( stream == null )
+                throw new ArgumentNullException("stream");
             _reader = new LineReader(stream, _bufferSize);
             _position = offset;
             _end = offset + size;

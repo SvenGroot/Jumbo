@@ -60,13 +60,20 @@ namespace Tkl.Jumbo.IO
         /// to clean up unmanaged resources only.</param>
         protected override void Dispose(bool disposing)
         {
-            if( disposing )
+            try
             {
-                if( Stream != null )
+                if( disposing )
                 {
-                    Stream.Dispose();
-                    Stream = null;
+                    if( Stream != null )
+                    {
+                        Stream.Dispose();
+                        Stream = null;
+                    }
                 }
+            }
+            finally
+            {
+                base.Dispose(disposing);
             }
         }
     }

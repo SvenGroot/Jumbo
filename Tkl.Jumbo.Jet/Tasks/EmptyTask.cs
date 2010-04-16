@@ -24,6 +24,7 @@ namespace Tkl.Jumbo.Jet.Tasks
         /// </summary>
         /// <param name="input">The input for the task.</param>
         /// <param name="output">The output for the task.</param>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1062:Validate arguments of public methods", MessageId = "1"), System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1062:Validate arguments of public methods", MessageId = "0")]
         public void Run(RecordReader<T> input, RecordWriter<T> output)
         {
             foreach( T record in input.EnumerateRecords() )

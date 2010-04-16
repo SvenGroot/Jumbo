@@ -25,6 +25,8 @@ namespace Tkl.Jumbo.Jet.Channels
         public FileOutputChannel(TaskExecutionUtility taskExecution)
             : base(taskExecution)
         {
+            if( taskExecution == null )
+                throw new ArgumentNullException("taskExecution");
             TaskExecutionUtility root = taskExecution;
             while( root.BaseTask != null )
                 root = root.BaseTask;
@@ -77,7 +79,7 @@ namespace Tkl.Jumbo.Jet.Channels
         /// </summary>
         /// <typeparam name="T">The type of the records.</typeparam>
         /// <returns>A <see cref="RecordWriter{T}"/> for the channel.</returns>
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1004:GenericMethodsShouldProvideTypeParameter")]
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Reliability", "CA2000:Dispose objects before losing scope"), System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1004:GenericMethodsShouldProvideTypeParameter")]
         public override RecordWriter<T> CreateRecordWriter<T>()
         {
             if( _fileNames.Count == 1 )

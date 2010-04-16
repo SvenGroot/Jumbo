@@ -28,6 +28,9 @@ namespace Tkl.Jumbo
         /// <param name="random">The randomizer to use.</param>
         public static void Randomize<T>(this IList<T> list, Random random)
         {
+            if( list == null )
+                throw new ArgumentNullException("list");
+
             if( random == null )
                 throw new ArgumentNullException("random");
             int n = list.Count;        // The number of items left to shuffle (loop invariant).

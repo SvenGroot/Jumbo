@@ -39,6 +39,7 @@ namespace Tkl.Jumbo.Jet.Tasks
         /// </summary>
         /// <param name="record">The record to process.</param>
         /// <param name="output">The <see cref="RecordWriter{T}"/> to which the task's output should be written.</param>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1062:Validate arguments of public methods", MessageId = "0")]
         public void ProcessRecord(KeyValuePairWritable<TKey, TValue> record, RecordWriter<KeyValuePairWritable<TKey, TValue>> output)
         {
             TKey key;
@@ -70,6 +71,8 @@ namespace Tkl.Jumbo.Jet.Tasks
         /// </remarks>
         public void Finish(RecordWriter<KeyValuePairWritable<TKey, TValue>> output)
         {
+            if( output == null )
+                throw new ArgumentNullException("output");
             bool allowRecordReuse = TaskAttemptConfiguration.StageConfiguration.AllowOutputRecordReuse;
             KeyValuePairWritable<TKey, TValue> record = null;
             if( allowRecordReuse )

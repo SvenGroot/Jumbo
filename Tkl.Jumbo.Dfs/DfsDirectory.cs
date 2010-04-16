@@ -48,6 +48,8 @@ namespace Tkl.Jumbo.Dfs
         /// <param name="writer">The <see cref="TextWriter"/> </param>
         public void PrintListing(TextWriter writer)
         {
+            if( writer == null )
+                throw new ArgumentNullException("writer");
             writer.WriteLine("Directory listing for {0}", FullPath);
             writer.WriteLine();
 
@@ -66,6 +68,8 @@ namespace Tkl.Jumbo.Dfs
         /// <param name="writer">A <see cref="BinaryWriter"/> used to write to the file system image.</param>
         public override void SaveToFileSystemImage(BinaryWriter writer)
         {
+            if( writer == null )
+                throw new ArgumentNullException("writer");
             base.SaveToFileSystemImage(writer);
             writer.Write(Children.Count);
             foreach( FileSystemEntry entry in Children )
@@ -79,6 +83,8 @@ namespace Tkl.Jumbo.Dfs
         /// <param name="notifyFileSizeCallback">A function that should be called to notify the caller of the size of deserialized files.</param>
         protected override void LoadFromFileSystemImage(BinaryReader reader, Action<long> notifyFileSizeCallback)
         {
+            if( reader == null )
+                throw new ArgumentNullException("reader");
             int childCount = reader.ReadInt32();
             _children.Clear();
             _children.Capacity = childCount;

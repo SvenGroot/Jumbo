@@ -13,6 +13,7 @@
       <Word>Deserializer</Word>
       <Word>Iec</Word>
       <Word>Petabyte</Word>
+      <Word>IWritable</Word>
     </Recognized>
   </Words>
 </Dictionary>

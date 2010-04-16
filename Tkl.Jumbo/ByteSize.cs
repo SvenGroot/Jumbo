@@ -265,7 +265,7 @@ namespace Tkl.Jumbo
         /// Converts the numeric value of this instance to its equivalent string representation using the largest binary multiple possible.
         /// </summary>
         /// <param name="suffixOptions">A combination of <see cref="ByteSizeSuffixOptions"/> values indicating how to format the scale suffix.</param>
-        /// <returns>The string representation of the value of this instance as specified by <paramref name="format"/>, with the appropriate suffix appended as specified by <paramref name="suffixOptions"/>.</returns>
+        /// <returns>The string representation of the value of this instance with the appropriate suffix appended as specified by <paramref name="suffixOptions"/>.</returns>
         /// <remarks>
         /// <para>
         ///   The resulting string may contain a rounded number, depending on the scale and the formatting options used.
@@ -294,7 +294,7 @@ namespace Tkl.Jumbo
         /// Returns a value indicating whether this instance is equal to a specified object.
         /// </summary>
         /// <param name="obj">The object to compare to this instance.</param>
-        /// <returns><see langword="true"/> if <paramref name="other"/> has the same value as this instance; otherwise, <see langword="false"/>.</returns>
+        /// <returns><see langword="true"/> if <paramref name="obj"/> has the same value as this instance; otherwise, <see langword="false"/>.</returns>
         public override bool Equals(object obj)
         {
             if( obj is ByteSize )

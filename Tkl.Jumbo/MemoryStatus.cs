@@ -115,16 +115,17 @@ namespace Tkl.Jumbo
             _availablePhysicalMemory = (long)performanceInfo.PhysicalAvailable * (long)performanceInfo.PageSize;
 
             SelectQuery query = new SelectQuery("Win32_PageFileUsage", null, new[] { "CurrentUsage", "AllocatedBaseSize" });
-            ManagementObjectSearcher searcher = new ManagementObjectSearcher(query);
-
-            _totalSwap = 0;
-            _availableSwap = 0;
-            foreach( ManagementBaseObject obj in searcher.Get() )
+            using( ManagementObjectSearcher searcher = new ManagementObjectSearcher(query) )
             {
-                long size = (uint)obj["AllocatedBaseSize"] * ByteSize.Megabyte;
-                long used = (uint)obj["CurrentUsage"] * ByteSize.Megabyte;
-                _totalSwap += size;
-                _availableSwap += (size - used);
+                _totalSwap = 0;
+                _availableSwap = 0;
+                foreach( ManagementBaseObject obj in searcher.Get() )
+                {
+                    long size = (uint)obj["AllocatedBaseSize"] * ByteSize.Megabyte;
+                    long used = (uint)obj["CurrentUsage"] * ByteSize.Megabyte;
+                    _totalSwap += size;
+                    _availableSwap += (size - used);
+                }
             }
         }
 

@@ -34,6 +34,8 @@ namespace Tkl.Jumbo
 
         public ServerProcessing ProcessMessage(IServerChannelSinkStack sinkStack, System.Runtime.Remoting.Messaging.IMessage requestMsg, ITransportHeaders requestHeaders, System.IO.Stream requestStream, out System.Runtime.Remoting.Messaging.IMessage responseMsg, out ITransportHeaders responseHeaders, out System.IO.Stream responseStream)
         {
+            if( requestMsg == null )
+                throw new ArgumentNullException("requestMsg");
             LogicalCallContext context = (LogicalCallContext)requestMsg.Properties["__CallContext"];
             string hostName = (string)context.GetData("HostName");
             log4net.ThreadContext.Properties["ClientHostName"] = hostName;

@@ -14,7 +14,6 @@ namespace Tkl.Jumbo.Jet
     [Serializable]
     public class JobStatus
     {
-        private ExtendedCollection<TaskStatus> _tasks = new ExtendedCollection<TaskStatus>();
         private ExtendedCollection<TaskStatus> _failedTaskAttempts = new ExtendedCollection<TaskStatus>();
         private readonly ExtendedCollection<StageStatus> _stages = new ExtendedCollection<StageStatus>();
 

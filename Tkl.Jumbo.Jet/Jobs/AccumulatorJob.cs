@@ -31,7 +31,7 @@ namespace Tkl.Jumbo.Jet.Jobs
         /// <param name="accumulatorStageName">The name of the accumulator stage, or <see langword="null"/> to use the name of the task type.</param>
         /// <param name="inputReaderType">The type of record reader to use to read input.</param>
         /// <param name="outputWriterType">The type of record writer to use to write output.</param>
-        /// <param name="partitionerType">The type of partitioner to use if <paramref name="secondStageTaskCount"/> is larger than 1, or <see langword="null"/> to use the default <see cref="HashPartitioner{T}"/>.</param>
+        /// <param name="partitionerType">The type of partitioner to use if <paramref name="accumulatorTaskCount"/> is larger than 1, or <see langword="null"/> to use the default <see cref="HashPartitioner{T}"/>.</param>
         protected AccumulatorJob(string inputPath, string outputPath, int accumulatorTaskCount, Type firstStageTaskType, string firstStageName, Type accumulatorTaskType, string accumulatorStageName, Type inputReaderType, Type outputWriterType, Type partitionerType)
         {
             if( outputPath == null )

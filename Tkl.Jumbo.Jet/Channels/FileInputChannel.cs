@@ -313,6 +313,7 @@ namespace Tkl.Jumbo.Jet.Channels
             return true;
         }
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Maintainability", "CA1506:AvoidExcessiveClassCoupling")]
         private IList<RecordInput> DownloadFiles(CompletedTask task)
         {
             var filesToDownload = (from partition in Partitions

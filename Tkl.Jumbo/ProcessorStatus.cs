@@ -95,27 +95,29 @@ namespace Tkl.Jumbo
         private void RefreshWindows()
         {
             SelectQuery query = new SelectQuery("Win32_PerfRawData_PerfOS_Processor", null, new[] { "Name", "PercentUserTime", "PercentPrivilegedTime", "PercentIdleTime", "PercentInterruptTime", "TimeStamp_Sys100NS" });
-            ManagementObjectSearcher searcher = new ManagementObjectSearcher(query);
-
-            foreach( ManagementBaseObject obj in searcher.Get() )
+            using( ManagementObjectSearcher searcher = new ManagementObjectSearcher(query) )
             {
-                int index;
-                string name = (string)obj.GetPropertyValue("Name");
-                if( name == "_Total" )
-                {
-                    index = _total;
-                }
-                else
-                {
-                    index = Convert.ToInt32(name, CultureInfo.InvariantCulture);
-                }
 
-                // Despite the names, these properties are *not* percentages for PerfRawData.
-                _processorData[index].User = (ulong)obj.GetPropertyValue("PercentUserTime");
-                _processorData[index].System = (ulong)obj.GetPropertyValue("PercentPrivilegedTime");
-                _processorData[index].Idle = (ulong)obj.GetPropertyValue("PercentIdleTime");
-                _processorData[index].Irq = (ulong)obj.GetPropertyValue("PercentInterruptTime");
-                _processorData[index].Total = (ulong)obj.GetPropertyValue("TimeStamp_Sys100NS");
+                foreach( ManagementBaseObject obj in searcher.Get() )
+                {
+                    int index;
+                    string name = (string)obj.GetPropertyValue("Name");
+                    if( name == "_Total" )
+                    {
+                        index = _total;
+                    }
+                    else
+                    {
+                        index = Convert.ToInt32(name, CultureInfo.InvariantCulture);
+                    }
+
+                    // Despite the names, these properties are *not* percentages for PerfRawData.
+                    _processorData[index].User = (ulong)obj.GetPropertyValue("PercentUserTime");
+                    _processorData[index].System = (ulong)obj.GetPropertyValue("PercentPrivilegedTime");
+                    _processorData[index].Idle = (ulong)obj.GetPropertyValue("PercentIdleTime");
+                    _processorData[index].Irq = (ulong)obj.GetPropertyValue("PercentInterruptTime");
+                    _processorData[index].Total = (ulong)obj.GetPropertyValue("TimeStamp_Sys100NS");
+                }
             }
         }
 

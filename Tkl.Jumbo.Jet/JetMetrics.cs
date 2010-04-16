@@ -71,6 +71,8 @@ namespace Tkl.Jumbo.Jet
         /// <param name="writer">The <see cref="TextWriter"/> to print the metrics to.</param>
         public void PrintMetrics(TextWriter writer)
         {
+            if( writer == null )
+                throw new ArgumentNullException("writer");
             writer.WriteLine("Running jobs: {0}", RunningJobs.Count);
             PrintList(writer, RunningJobs);
             writer.WriteLine("Finished jobs: {0}", FinishedJobs.Count);

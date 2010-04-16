@@ -59,6 +59,8 @@ namespace Tkl.Jumbo.Jet.Tasks
         /// <param name="output">The <see cref="RecordWriter{T}"/> to which the task's output should be written.</param>
         public void Finish(Tkl.Jumbo.IO.RecordWriter<T> output)
         {
+            if( output == null )
+                throw new ArgumentNullException("output");
             _log.InfoFormat("Sorting {0} records.", _records.Count);
             _records.Sort(_comparer);
             _log.Info("Sort complete.");

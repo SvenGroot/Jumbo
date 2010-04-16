@@ -59,6 +59,8 @@ namespace Tkl.Jumbo
         /// <returns>The instantiated generic base type.</returns>
         public static Type FindGenericBaseType(this Type type, Type baseType, bool throwOnNotFound)
         {
+            if( type == null )
+                throw new ArgumentNullException("type");
             Type current = type.BaseType;
             while( current != null )
             {

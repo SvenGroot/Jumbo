@@ -123,7 +123,7 @@ namespace Tkl.Jumbo.Jet
             {
                 if( _childStage != value )
                 {
-                    if( value.Parent != null )
+                    if( value != null && value.Parent != null )
                         throw new ArgumentException("The item already has a parent.");
                     if( _childStage != null )
                         _childStage.Parent = null;

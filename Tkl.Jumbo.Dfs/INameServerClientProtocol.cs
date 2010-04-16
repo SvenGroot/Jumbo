@@ -33,9 +33,9 @@ namespace Tkl.Jumbo.Dfs
         /// <param name="path">The full path of the new file.</param>
         /// <param name="blockSize">The size of the blocks in the file, or zero to use the file system default block size.</param>
         /// <param name="replicationFactor">The number of replicas to create of the file's blocks, or zero to use the file system default replication factor.</param>
-        /// <exception cref="ArgumentNullException"><paramref name="directory"/> is <see langword="null" />, or <paramref name="name"/> is <see langword="null"/> or an empty string..</exception>
-        /// <exception cref="ArgumentException"><paramref name="directory"/> is not an absolute path, contains an empty component, contains a file name, or <paramref name="name"/> refers to an existing file or directory.</exception>
-        /// <exception cref="System.IO.DirectoryNotFoundException"><paramref name="directory"/> does not exist.</exception>
+        /// <exception cref="ArgumentNullException"><paramref name="path"/> is <see langword="null" />.</exception>
+        /// <exception cref="ArgumentException"><paramref name="path"/> is not an absolute path, contains an empty component, contains a file name, or refers to an existing file or directory.</exception>
+        /// <exception cref="System.IO.DirectoryNotFoundException">Part of the path specified in <paramref name="path"/> does not exist.</exception>
         BlockAssignment CreateFile(string path,  int blockSize, int replicationFactor);
 
         /// <summary>
@@ -78,9 +78,9 @@ namespace Tkl.Jumbo.Dfs
         /// </summary>
         /// <param name="path">The full path of the file to which to append a block.</param>
         /// <returns>Information about the new block.</returns>
-        /// <exception cref="ArgumentNullException"><paramref name="directory"/> is <see langword="null" />, or <paramref name="name"/> is <see langword="null"/> or an empty string..</exception>
-        /// <exception cref="ArgumentException"><paramref name="directory"/> is not an absolute path, contains an empty component, contains a file name, or <paramref name="name"/> refers to an existing file or directory.</exception>
-        /// <exception cref="System.IO.DirectoryNotFoundException"><paramref name="directory"/> does not exist.</exception>
+        /// <exception cref="ArgumentNullException"><paramref name="path"/> is <see langword="null" /> an empty string.</exception>
+        /// <exception cref="ArgumentException"><paramref name="path"/> is not an absolute path, contains an empty component, contains a file name, or refers to an existing file or directory.</exception>
+        /// <exception cref="System.IO.DirectoryNotFoundException">Part of <paramref name="path"/> does not exist.</exception>
         BlockAssignment AppendBlock(string path);
 
         /// <summary>

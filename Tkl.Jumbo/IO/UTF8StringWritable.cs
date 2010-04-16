@@ -280,7 +280,7 @@ namespace Tkl.Jumbo.IO
         /// Tests this <see cref="Utf8StringWritable"/> for equality with the specified <see cref="Utf8StringWritable"/>.
         /// </summary>
         /// <param name="other">The <see cref="Utf8StringWritable"/> to test for equality.</param>
-        /// <returns><see langword="true"/> if this instance is equal to <paramref name="obj"/>; otherwise, <see langword="false"/>.</returns>
+        /// <returns><see langword="true"/> if this instance is equal to <paramref name="other"/>; otherwise, <see langword="false"/>.</returns>
         public bool Equals(Utf8StringWritable other)
         {
             if( other == null || other._byteLength != _byteLength )
@@ -349,6 +349,8 @@ namespace Tkl.Jumbo.IO
         /// <param name="reader">The <see cref="System.IO.BinaryReader"/> to deserialize the object from.</param>
         public void Read(System.IO.BinaryReader reader)
         {
+            if( reader == null )
+                throw new ArgumentNullException("reader");
             int length = WritableUtility.Read7BitEncodedInt32(reader);
 			if( length <= Capacity )
 			{
@@ -372,6 +374,8 @@ namespace Tkl.Jumbo.IO
         /// <param name="writer">The <see cref="System.IO.BinaryWriter"/> to serialize the object to.</param>
         public void Write(System.IO.BinaryWriter writer)
         {
+            if( writer == null )
+                throw new ArgumentNullException("writer");
             WritableUtility.Write7BitEncodedInt32(writer, _byteLength);
             writer.Write(_utf8Bytes, 0, _byteLength);
         }
