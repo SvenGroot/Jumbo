@@ -7,7 +7,6 @@ using System.Runtime.InteropServices;
 // associated with an assembly.
 [assembly: AssemblyTitle("NameServer")]
 [assembly: AssemblyDescription("")]
-[assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("Kitsuregawa Lab")]
 [assembly: AssemblyProduct("Jumbo")]
 [assembly: AssemblyCopyright("Copyright © Sven Groot 2010")]

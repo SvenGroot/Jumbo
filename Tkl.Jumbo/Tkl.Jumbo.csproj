@@ -227,6 +227,6 @@
   </Target>
   -->
   <PropertyGroup>
-    <PreBuildEvent>"C:\Program Files\TortoiseSVN\bin\SubWCRev.exe" "$(SolutionDir)." "$(SolutionDir)VersionTemplate.cs" "$(SolutionDir)Version.cs"</PreBuildEvent>
+    <PreBuildEvent>PowerShell.exe -NoProfile -Command "&amp;'$(SolutionDir)Gen-Version.ps1'"</PreBuildEvent>
   </PropertyGroup>
 </Project>
