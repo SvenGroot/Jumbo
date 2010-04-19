@@ -44,7 +44,7 @@ namespace Tkl.Jumbo
                 {
                     MethodInfo method = _monoRuntime.GetMethod("GetDisplayName", BindingFlags.InvokeMethod | BindingFlags.NonPublic | BindingFlags.Static | BindingFlags.DeclaredOnly | BindingFlags.ExactBinding);
                     if( method != null )
-                        additionalInfo = (string)method.Invoke(null, null);
+                        additionalInfo = "Mono " + (string)method.Invoke(null, null);
                 }
                 else
                     additionalInfo = "Microsoft .Net";
@@ -108,6 +108,38 @@ namespace Tkl.Jumbo
             }
         }
 
+        /// <summary>
+        /// Gets the version of Jumbo.
+        /// </summary>
+        /// <remarks>
+        /// The value returned is actually the version of the Tkl.Jumbo assembly.
+        /// </remarks>
+        public static Version JumboVersion
+        {
+            get
+            {
+                return Assembly.GetExecutingAssembly().GetName().Version;
+            }
+        }
+
+        /// <summary>
+        /// Gets the Jumbo build configuration, typiclly the branch name.
+        /// </summary>
+        /// <remarks>
+        /// This is typically the subversion branch from which Jumbo was built.
+        /// </remarks>
+        public static string JumboConfiguration
+        {
+            get
+            {
+                AssemblyConfigurationAttribute config = (AssemblyConfigurationAttribute)Attribute.GetCustomAttribute(Assembly.GetExecutingAssembly(), typeof(AssemblyConfigurationAttribute));
+                if( config != null )
+                    return config.Configuration;
+                else
+                    return null;
+            }
+        }
+
 
         /// <summary>
         /// Modifies a <see cref="ProcessStartInfo"/> to use the runtime environment.
@@ -154,7 +186,7 @@ namespace Tkl.Jumbo
 
             if( log.IsInfoEnabled )
             {
-                log.InfoFormat("Jumbo Version: {0}", Assembly.GetExecutingAssembly().GetName().Version);
+                log.InfoFormat("Jumbo Version: {0} ({1})", JumboVersion, JumboConfiguration);
                 Assembly entry = Assembly.GetEntryAssembly();
                 if( entry != null ) // entry is null when running under nunit.
                     log.InfoFormat("{0} Version: {1}", entry.GetName().Name, entry.GetName().Version);
