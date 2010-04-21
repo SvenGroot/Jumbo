@@ -1,4 +1,6 @@
-﻿using System;
+﻿// $Id$
+//
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -93,9 +95,9 @@ namespace NameServerApplication
             return NameServer.Instance.GetDataServerBlocks(dataServer);
         }
 
-        public Guid[] GetDataServerBlocksFromList(ServerAddress dataServer, Guid[] blocks)
+        public Guid[] GetDataServerBlocks(ServerAddress dataServer, Guid[] blocks)
         {
-            return NameServer.Instance.GetDataServerBlocksFromList(dataServer, blocks);
+            return NameServer.Instance.GetDataServerBlocks(dataServer, blocks);
         }
 
         public string GetLogFileContents(int maxSize)

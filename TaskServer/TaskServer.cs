@@ -1,4 +1,6 @@
-﻿using System;
+﻿// $Id$
+//
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -9,7 +11,6 @@ using System.Threading;
 using Tkl.Jumbo.Dfs;
 using System.Diagnostics;
 using System.IO;
-using Tkl.Jumbo.Rpc;
 
 namespace TaskServerApplication
 {
@@ -65,7 +66,7 @@ namespace TaskServerApplication
                 Instance = new TaskServer(jetConfig, dfsConfig);
 
                 RpcHelper.RegisterServerChannels(jetConfig.TaskServer.Port, jetConfig.TaskServer.ListenIPv4AndIPv6);
-                RpcHelper.RegisterService("TaskServer", Instance);
+                RpcHelper.RegisterService(typeof(RpcServer), "TaskServer");
             }
 
             Instance.RunInternal();
@@ -322,7 +323,6 @@ namespace TaskServerApplication
                 _fileServer.Stop();
             _running = false;
             RpcHelper.AbortRetries();
-            RpcHelper.CloseConnections();
             _log.InfoFormat("-----Task server is shutting down-----");
         }
 

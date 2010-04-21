@@ -1,4 +1,6 @@
-﻿using System;
+﻿// $Id$
+//
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -6,7 +8,6 @@ using Tkl.Jumbo.Dfs;
 using System.IO;
 using System.Diagnostics;
 using System.Threading;
-using Tkl.Jumbo.Rpc;
 
 namespace Tkl.Jumbo.Jet
 {
@@ -15,13 +16,14 @@ namespace Tkl.Jumbo.Jet
     /// </summary>
     public class JetClient
     {
-        private const string _jobServerObjectName = "JobServer";
-        private const string _taskServerObjectName = "TaskServer";
+        private const string _jobServerUrlFormat = "tcp://{0}:{1}/JobServer";
+        private const string _taskServerUrlFormat = "tcp://{0}:{1}/TaskServer";
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(JetClient));
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1810:InitializeReferenceTypeStaticFieldsInline")]
         static JetClient()
         {
+            RpcHelper.RegisterClientChannel();
         }
 
         /// <summary>
@@ -286,12 +288,14 @@ namespace Tkl.Jumbo.Jet
         
         private static T CreateJobServerClientInternal<T>(string hostName, int port)
         {
-            return RpcHelper.CreateClient<T>(hostName, port, _jobServerObjectName);
+            string url = string.Format(System.Globalization.CultureInfo.InvariantCulture, _jobServerUrlFormat, hostName, port);
+            return (T)Activator.GetObject(typeof(T), url);
         }
 
         private static T CreateTaskServerClientInternal<T>(string hostName, int port)
         {
-            return RpcHelper.CreateClient<T>(hostName, port, _taskServerObjectName);
+            string url = string.Format(System.Globalization.CultureInfo.InvariantCulture, _taskServerUrlFormat, hostName, port);
+            return (T)Activator.GetObject(typeof(T), url);
         }
     }
 }

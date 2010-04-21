@@ -1,4 +1,6 @@
-﻿using System;
+﻿// $Id$
+//
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -19,7 +21,7 @@ namespace Tkl.Jumbo.Dfs
         /// <remarks>
         /// The <paramref name="address"/> parameter is necessary because data servers are identified by their
         /// host name and the port number they use to listen for clients, not their host name alone, so the
-        /// name server cannot rely on <see cref="Tkl.Jumbo.Rpc.ServerContext.ClientHostName"/>.
+        /// name server cannot rely on <see cref="ServerContext.ClientHostName"/>.
         /// </remarks>
         HeartbeatResponse[] Heartbeat(ServerAddress address, HeartbeatData[] data);
     }

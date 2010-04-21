@@ -1,4 +1,6 @@
-﻿using System;
+﻿// $Id$
+//
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -67,7 +69,7 @@ namespace JobServerApplication.Scheduling
                         localBlocks = new List<Guid>();
                         foreach( ServerAddress dataServer in dataServers )
                         {
-                            localBlocks.AddRange(dfsClient.NameServer.GetDataServerBlocksFromList(dataServer, inputBlocks));
+                            localBlocks.AddRange(dfsClient.NameServer.GetDataServerBlocks(dataServer, inputBlocks));
                         }
                     }
 

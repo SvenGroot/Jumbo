@@ -1,4 +1,6 @@
-﻿using System;
+﻿// $Id$
+//
+using System;
 using System.Text;
 
 namespace Tkl.Jumbo.CommandLine
