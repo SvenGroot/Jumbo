@@ -12,6 +12,7 @@ using Tkl.Jumbo;
 using Tkl.Jumbo.CommandLine;
 using System.Reflection;
 using DfsShell.Commands;
+using Tkl.Jumbo.Rpc;
 
 namespace DfsShell
 {
@@ -77,6 +78,8 @@ namespace DfsShell
                 else
                     PrintUsage();
             }
+
+            RpcHelper.CloseConnections();
         }
 
         private static void PrintVersion(DfsClient client, string[] args)

@@ -11,6 +11,7 @@ using Tkl.Jumbo;
 using Tkl.Jumbo.Jet;
 using Tkl.Jumbo.Jet.Jobs;
 using System.Threading;
+using Tkl.Jumbo.Rpc;
 using Tkl.Jumbo.CommandLine;
 using JetShell.Commands;
 
@@ -94,6 +95,8 @@ namespace JetShell
                 else
                     PrintUsage();
             }
+
+            RpcHelper.CloseConnections();
         }
 
         private static void PrintUsage()

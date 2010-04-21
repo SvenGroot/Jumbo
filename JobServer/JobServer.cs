@@ -9,6 +9,7 @@ using System.Runtime.CompilerServices;
 using Tkl.Jumbo;
 using Tkl.Jumbo.Dfs;
 using System.Threading;
+using Tkl.Jumbo.Rpc;
 
 namespace JobServerApplication
 {
@@ -54,7 +55,7 @@ namespace JobServerApplication
 
             Instance = new JobServer(configuration, dfsConfiguration);
             RpcHelper.RegisterServerChannels(configuration.JobServer.Port, configuration.JobServer.ListenIPv4AndIPv6);
-            RpcHelper.RegisterService(typeof(RpcServer), "JobServer");
+            RpcHelper.RegisterService("JobServer", Instance);
 
             _log.Info("Rpc server started.");
         }
@@ -64,6 +65,8 @@ namespace JobServerApplication
         {
             _log.Info("-----Job server is shutting down-----");
             RpcHelper.UnregisterServerChannels(Instance.Configuration.JobServer.Port);
+            RpcHelper.AbortRetries();
+            RpcHelper.CloseConnections();
             Instance = null;
         }
 

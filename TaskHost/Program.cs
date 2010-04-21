@@ -13,6 +13,7 @@ using Tkl.Jumbo.IO;
 using System.Threading;
 using Tkl.Jumbo;
 using System.Diagnostics;
+using Tkl.Jumbo.Rpc;
 
 namespace TaskHost
 {
@@ -100,6 +101,8 @@ namespace TaskHost
                 _log.InfoFormat("Processor usage during this task (system-wide, not process specific):");
                 _log.Info(processorStatus.Total);
             }
+
+            RpcHelper.CloseConnections(); // Cleanly close connections helps save server resources
             
             return 0;
         }

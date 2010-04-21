@@ -1,4 +1,4 @@
-﻿// $Id$
+﻿﻿// $Id$
 //
 using System;
 using System.Collections.Generic;
@@ -11,6 +11,7 @@ using System.IO;
 using Tkl.Jumbo;
 using System.Net.Sockets;
 using System.Net;
+using Tkl.Jumbo.Rpc;
 
 namespace DataServerApplication
 {
@@ -106,6 +107,7 @@ namespace DataServerApplication
             }
             _running = false;
             RpcHelper.AbortRetries();
+            RpcHelper.CloseConnections();
             lock( _blocksToReplicate )
             {
                 Monitor.Pulse(_blocksToReplicate);

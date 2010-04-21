@@ -16,6 +16,7 @@ using Tkl.Jumbo;
 using System.Threading;
 using System.Collections.ObjectModel;
 using Tkl.Jumbo.Topology;
+using Tkl.Jumbo.Rpc;
 
 namespace NameServerApplication
 {
@@ -407,7 +408,7 @@ namespace NameServerApplication
             }
         }
 
-        public Guid[] GetDataServerBlocks(ServerAddress dataServer, Guid[] blocks)
+        public Guid[] GetDataServerBlocksFromList(ServerAddress dataServer, Guid[] blocks)
         {
             _log.DebugFormat("GetDataServerBlockCount, dataServer = {0}", dataServer);
             if( dataServer == null )
@@ -820,7 +821,7 @@ namespace NameServerApplication
         private static void ConfigureRemoting(DfsConfiguration config)
         {
             RpcHelper.RegisterServerChannels(config.NameServer.Port, config.NameServer.ListenIPv4AndIPv6);
-            RpcHelper.RegisterService(typeof(RpcServer), "NameServer");
+            RpcHelper.RegisterService("NameServer", Instance);
             _log.Info("RPC server started.");
         }
 
