@@ -1,3 +1,5 @@
+﻿// $Id$
+//
 // CRC32.cs - Computes CRC32 data checksum of a data stream
 // Copyright (C) 2001 Mike Krueger
 //
