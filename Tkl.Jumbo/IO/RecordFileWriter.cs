@@ -22,7 +22,7 @@ namespace Tkl.Jumbo.IO
         private BinaryWriter _writer;
         private readonly RecordFileHeader _header;
         private long _lastRecordMarkerPosition;
-        private readonly IValueWriter<T> _valueWriter;
+        private static readonly IValueWriter<T> _valueWriter = (IValueWriter<T>)DefaultValueWriter.GetWriter(typeof(T));;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="RecordFileWriter{T}"/> class that writes to the specified stream.
@@ -33,11 +33,6 @@ namespace Tkl.Jumbo.IO
         {
             if( stream == null )
                 throw new ArgumentNullException("stream");
-
-            if( !typeof(T).GetInterfaces().Contains(typeof(IWritable)) )
-            {
-                _valueWriter = (IValueWriter<T>)DefaultValueWriter.GetWriter(typeof(T));
-            }
 
             _writer = new BinaryWriter(stream);
             _header = new RecordFileHeader(typeof(T), false); // TODO: Make the value of useStrongName configurable.

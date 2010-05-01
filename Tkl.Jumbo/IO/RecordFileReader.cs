@@ -27,7 +27,7 @@ namespace Tkl.Jumbo.IO
         private long _lastRecordMarkerPosition;
         private readonly long _end;
         private readonly bool _allowRecordReuse;
-        private readonly IValueWriter<T> _valueWriter;
+        private static readonly IValueWriter<T> _valueWriter = (IValueWriter<T>)DefaultValueWriter.GetWriter(typeof(T));
 
         /// <summary>
         /// Initializes a new instance of the <see cref="RecordFileReader{T}"/> class that reads from the specified stream.
@@ -64,9 +64,6 @@ namespace Tkl.Jumbo.IO
             if( stream == null )
                 throw new ArgumentNullException("stream");
             
-            if( !typeof(T).GetInterfaces().Contains(typeof(IWritable)) )
-                _valueWriter = (IValueWriter<T>)DefaultValueWriter.GetWriter(typeof(T));
-
             _reader = new BinaryReader(stream);
             ((IWritable)_header).Read(_reader);
 

@@ -15,10 +15,12 @@ namespace Tkl.Jumbo.IO
     /// <typeparam name="TKey">The type of the key.</typeparam>
     /// <typeparam name="TValue">The type of the value.</typeparam>
     public sealed class KeyValuePairWritable<TKey, TValue> : IWritable, IComparable<KeyValuePairWritable<TKey, TValue>>, IEquatable<KeyValuePairWritable<TKey, TValue>>, ICloneable
-        where TKey : IWritable, IComparable<TKey>, new()
-        where TValue : IWritable, new()
+        where TKey : IComparable<TKey>, new()
+        where TValue : new()
     {
         private static readonly IComparer<TKey> _keyComparer = Comparer<TKey>.Default;
+        private static readonly IValueWriter<TKey> _keyWriter = (IValueWriter<TKey>)DefaultValueWriter.GetWriter(typeof(TKey));
+        private static readonly IValueWriter<TValue> _valueWriter = (IValueWriter<TValue>)DefaultValueWriter.GetWriter(typeof(TValue));
 
         /// <summary>
         /// Initializes a new instance of the <see cref="KeyValuePairWritable{TKey,TValue}"/> class.
@@ -124,8 +126,15 @@ namespace Tkl.Jumbo.IO
                 throw new ArgumentNullException("writer");
             if( Key == null || Value == null )
                 throw new InvalidOperationException("Key and value may not be null.");
-            Key.Write(writer);
-            Value.Write(writer);
+            if( _keyWriter == null )
+                ((IWritable)Key).Write(writer);
+            else
+                _keyWriter.Write(Key, writer);
+
+            if( _valueWriter == null )
+                ((IWritable)Value).Write(writer);
+            else
+                _valueWriter.Write(Value, writer);
         }
 
         /// <summary>

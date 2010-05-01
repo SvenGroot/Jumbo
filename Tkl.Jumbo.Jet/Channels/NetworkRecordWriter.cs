@@ -17,16 +17,12 @@ namespace Tkl.Jumbo.Jet.Channels
         //private readonly WriteBufferedStream _bufferedStream;
         private readonly BinaryWriter _writer;
         private bool _disposed;
-        private readonly IValueWriter<T> _valueWriter;
+        private static readonly IValueWriter<T> _valueWriter = (IValueWriter<T>)DefaultValueWriter.GetWriter(typeof(T));
 
         public NetworkRecordWriter(TcpClient client, string taskId)
         {
             if( client == null )
                 throw new ArgumentNullException("client");
-            if( !typeof(T).GetInterfaces().Contains(typeof(IWritable)) )
-            {
-                _valueWriter = (IValueWriter<T>)DefaultValueWriter.GetWriter(typeof(T));
-            }
 
             _client = client;
             _stream = client.GetStream();

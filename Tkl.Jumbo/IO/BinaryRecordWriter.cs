@@ -16,7 +16,7 @@ namespace Tkl.Jumbo.IO
     public class BinaryRecordWriter<T> : StreamRecordWriter<T>
     {
         private BinaryWriter _writer;
-        private readonly IValueWriter<T> _valueWriter;
+        private static readonly IValueWriter<T> _valueWriter = (IValueWriter<T>)DefaultValueWriter.GetWriter(typeof(T));
 
         /// <summary>
         /// Initializes a new instance of the <see cref="BinaryRecordWriter{T}"/> class.
@@ -25,11 +25,6 @@ namespace Tkl.Jumbo.IO
         public BinaryRecordWriter(Stream stream)
             : base(stream)
         {
-            if( !typeof(T).GetInterfaces().Contains(typeof(IWritable)) )
-            {
-                _valueWriter = (IValueWriter<T>)DefaultValueWriter.GetWriter(typeof(T));
-            }
-
             _writer = new BinaryWriter(stream);
         }
 
