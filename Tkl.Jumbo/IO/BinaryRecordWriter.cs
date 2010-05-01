@@ -14,9 +14,9 @@ namespace Tkl.Jumbo.IO
     /// </summary>
     /// <typeparam name="T">The type of the record to write. Must implement <see cref="IWritable"/>.</typeparam>
     public class BinaryRecordWriter<T> : StreamRecordWriter<T>
-        where T : IWritable
     {
         private BinaryWriter _writer;
+        private readonly IValueWriter<T> _valueWriter;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="BinaryRecordWriter{T}"/> class.
@@ -25,6 +25,11 @@ namespace Tkl.Jumbo.IO
         public BinaryRecordWriter(Stream stream)
             : base(stream)
         {
+            if( !typeof(T).GetInterfaces().Contains(typeof(IWritable)) )
+            {
+                _valueWriter = (IValueWriter<T>)DefaultValueWriter.GetWriter(typeof(T));
+            }
+
             _writer = new BinaryWriter(stream);
         }
 
@@ -38,7 +43,10 @@ namespace Tkl.Jumbo.IO
                 throw new ArgumentNullException("record");
             CheckDisposed();
 
-            record.Write(_writer);
+            if( _valueWriter == null )
+                ((IWritable)record).Write(_writer);
+            else
+                _valueWriter.Write(record, _writer);
         }
 
         /// <summary>

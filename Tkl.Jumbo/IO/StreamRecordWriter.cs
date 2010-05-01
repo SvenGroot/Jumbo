@@ -14,7 +14,6 @@ namespace Tkl.Jumbo.IO
     /// </summary>
     /// <typeparam name="T">The type of the record.</typeparam>
     public abstract class StreamRecordWriter<T> : RecordWriter<T>
-        where T : IWritable
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="RecordWriter{T}"/> class.

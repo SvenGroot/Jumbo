@@ -26,8 +26,7 @@ namespace Tkl.Jumbo.Jet.Channels
         #region Nested types
 
         private sealed class PipelineRecordWriter<TRecord, TPipelinedTaskOutput> : RecordWriter<TRecord>
-            where TRecord : IWritable, new()
-            where TPipelinedTaskOutput : IWritable, new()
+            where TRecord : new()
         {
             private IPushTask<TRecord, TPipelinedTaskOutput> _task;
             private RecordWriter<TPipelinedTaskOutput> _output;
@@ -91,7 +90,7 @@ namespace Tkl.Jumbo.Jet.Channels
         /// <typeparam name="T">The type of record.</typeparam>
         /// <returns>A record writer for the channel.</returns>
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1004:GenericMethodsShouldProvideTypeParameter")]
-        public Tkl.Jumbo.IO.RecordWriter<T> CreateRecordWriter<T>() where T : Tkl.Jumbo.IO.IWritable, new()
+        public Tkl.Jumbo.IO.RecordWriter<T> CreateRecordWriter<T>()
         {
             StageConfiguration childStage = _taskExecution.Configuration.StageConfiguration.ChildStage;
             if( childStage.TaskCount == 1 )
@@ -112,7 +111,7 @@ namespace Tkl.Jumbo.Jet.Channels
 
         #endregion
 
-        private RecordWriter<T> CreateRecordWriter<T>(TaskExecutionUtility pipelinedTask) where T : IWritable, new()
+        private RecordWriter<T> CreateRecordWriter<T>(TaskExecutionUtility pipelinedTask)
         {
             MethodInfo createWriterMethod = typeof(PipelineOutputChannel)
                                                 .GetMethod("CreateRecordWriterInternal", BindingFlags.NonPublic | BindingFlags.Static)
@@ -124,8 +123,7 @@ namespace Tkl.Jumbo.Jet.Channels
 #pragma warning disable 169
 
         private static RecordWriter<TRecord> CreateRecordWriterInternal<TRecord, TPipelinedTaskOutput>(TaskExecutionUtility pipelinedTask)
-            where TRecord : IWritable, new()
-            where TPipelinedTaskOutput : IWritable, new()
+            where TRecord : new()
         {
             RecordWriter<TPipelinedTaskOutput> output = pipelinedTask.GetOutputWriter<TPipelinedTaskOutput>();
 

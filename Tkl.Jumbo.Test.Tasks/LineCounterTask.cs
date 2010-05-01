@@ -9,13 +9,13 @@ using Tkl.Jumbo.Jet;
 
 namespace Tkl.Jumbo.Test.Tasks
 {
-    public class LineCounterTask : IPullTask<StringWritable, Int32Writable>
+    public class LineCounterTask : IPullTask<StringWritable, int>
     {
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(LineCounterTask));
 
         #region ITask Members
 
-        public void Run(RecordReader<StringWritable> input, RecordWriter<Int32Writable> writer)
+        public void Run(RecordReader<StringWritable> input, RecordWriter<int> writer)
         {
             _log.Info("Running");
             int lines = 0;

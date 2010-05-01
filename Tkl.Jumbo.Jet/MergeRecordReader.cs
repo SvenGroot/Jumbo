@@ -22,7 +22,7 @@ namespace Tkl.Jumbo.Jet
     /// </para>
     /// </remarks>
     public sealed class MergeRecordReader<T> : MultiInputRecordReader<T>, IConfigurable, IChannelMultiInputRecordReader
-        where T : IWritable, new()
+        where T : new()
     {
         #region Nested types
 

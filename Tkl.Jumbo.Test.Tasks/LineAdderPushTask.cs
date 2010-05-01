@@ -9,18 +9,18 @@ using Tkl.Jumbo.Jet;
 
 namespace Tkl.Jumbo.Test.Tasks
 {
-    public class LineAdderPushTask : IPushTask<Int32Writable, Int32Writable>
+    public class LineAdderPushTask : IPushTask<int, int>
     {
         private int _lines;
 
         #region IPushTask<Int32Writable,Int32Writable> Members
 
-        public void ProcessRecord(Int32Writable record, RecordWriter<Int32Writable> output)
+        public void ProcessRecord(int record, RecordWriter<int> output)
         {
-            _lines += record.Value;
+            _lines += record;
         }
 
-        public void Finish(RecordWriter<Int32Writable> output)
+        public void Finish(RecordWriter<int> output)
         {
             output.WriteRecord(_lines);
         }

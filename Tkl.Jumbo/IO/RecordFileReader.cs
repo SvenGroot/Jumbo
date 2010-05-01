@@ -19,7 +19,7 @@ namespace Tkl.Jumbo.IO
     /// </para>
     /// </remarks>
     public class RecordFileReader<T> : StreamRecordReader<T>
-        where T : IWritable, new()
+        where T : new()
     {
         private BinaryReader _reader;
         private readonly RecordFileHeader _header = new RecordFileHeader();
@@ -27,6 +27,7 @@ namespace Tkl.Jumbo.IO
         private long _lastRecordMarkerPosition;
         private readonly long _end;
         private readonly bool _allowRecordReuse;
+        private readonly IValueWriter<T> _valueWriter;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="RecordFileReader{T}"/> class that reads from the specified stream.
@@ -62,6 +63,10 @@ namespace Tkl.Jumbo.IO
         {
             if( stream == null )
                 throw new ArgumentNullException("stream");
+            
+            if( !typeof(T).GetInterfaces().Contains(typeof(IWritable)) )
+                _valueWriter = (IValueWriter<T>)DefaultValueWriter.GetWriter(typeof(T));
+
             _reader = new BinaryReader(stream);
             ((IWritable)_header).Read(_reader);
 
@@ -111,9 +116,17 @@ namespace Tkl.Jumbo.IO
                 else
                 {
                     Debug.Assert(recordPrefix == RecordFile.RecordPrefix);
-                    if( !_allowRecordReuse || CurrentRecord == null )
-                        CurrentRecord = new T();
-                    CurrentRecord.Read(_reader);
+
+                    if( _valueWriter != null )
+                    {
+                        CurrentRecord = _valueWriter.Read(_reader);
+                    }
+                    else
+                    {
+                        if( !_allowRecordReuse || CurrentRecord == null )
+                            CurrentRecord = new T();
+                        ((IWritable)CurrentRecord).Read(_reader);
+                    }
                     return true;
                 }
             }

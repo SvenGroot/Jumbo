@@ -14,8 +14,7 @@ namespace Tkl.Jumbo.Jet
     /// <typeparam name="TInput">The input type of the task.</typeparam>
     /// <typeparam name="TOutput">The output type of the task.</typeparam>
     public interface IPushTask<TInput, TOutput> : ITask<TInput, TOutput>
-        where TInput : IWritable, new()
-        where TOutput : IWritable
+        where TInput : new()
     {
         /// <summary>
         /// Method called for each record in the task's input.

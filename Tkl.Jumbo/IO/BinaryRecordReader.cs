@@ -24,7 +24,7 @@ namespace Tkl.Jumbo.IO
     /// </para>
     /// </remarks>
     public class BinaryRecordReader<T> : StreamRecordReader<T>
-        where T : IWritable, new()
+        where T : new()
     {
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(BinaryRecordReader<T>));
 
@@ -33,6 +33,7 @@ namespace Tkl.Jumbo.IO
         private bool _allowRecordReuse;
         private string _fileName;
         private bool _deleteFile;
+        private readonly IValueWriter<T> _valueWriter;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="BinaryRecordReader{T}"/> class that reads from the specified file.
@@ -70,6 +71,11 @@ namespace Tkl.Jumbo.IO
         public BinaryRecordReader(Stream stream, bool allowRecordReuse)
             : base(stream)
         {
+            if( !typeof(T).GetInterfaces().Contains(typeof(IWritable)) )
+            {
+                _valueWriter = (IValueWriter<T>)DefaultValueWriter.GetWriter(typeof(T));
+            }
+
             _reader = new BinaryReader(stream);
             if( allowRecordReuse )
                 _record = new T();
@@ -91,11 +97,21 @@ namespace Tkl.Jumbo.IO
                 return false;
             }
             T record;
-            if( _allowRecordReuse )
-                record = _record;
+
+            if( _valueWriter != null )
+            {
+                record = _valueWriter.Read(_reader);
+            }
             else
-                record = new T();
-            record.Read(_reader);
+            {
+                if( _allowRecordReuse )
+                    record = _record;
+                else
+                    record = new T();
+
+                ((IWritable)record).Read(_reader);
+            }
+
             CurrentRecord = record;
             return true;
         }

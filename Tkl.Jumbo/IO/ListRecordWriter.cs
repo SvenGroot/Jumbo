@@ -13,7 +13,6 @@ namespace Tkl.Jumbo.IO
     /// </summary>
     /// <typeparam name="T">The type of record.</typeparam>
     public class ListRecordWriter<T> : RecordWriter<T>
-        where T : IWritable
     {
         private readonly List<T> _list = new List<T>();
 

@@ -11,18 +11,22 @@ using System.IO;
 namespace Tkl.Jumbo.Jet.Channels
 {
     sealed class NetworkRecordWriter<T> : RecordWriter<T>
-        where T : IWritable, new()
     {
         private readonly TcpClient _client;
         private readonly NetworkStream _stream;
         //private readonly WriteBufferedStream _bufferedStream;
         private readonly BinaryWriter _writer;
         private bool _disposed;
+        private readonly IValueWriter<T> _valueWriter;
 
         public NetworkRecordWriter(TcpClient client, string taskId)
         {
             if( client == null )
                 throw new ArgumentNullException("client");
+            if( !typeof(T).GetInterfaces().Contains(typeof(IWritable)) )
+            {
+                _valueWriter = (IValueWriter<T>)DefaultValueWriter.GetWriter(typeof(T));
+            }
 
             _client = client;
             _stream = client.GetStream();
@@ -39,7 +43,10 @@ namespace Tkl.Jumbo.Jet.Channels
             CheckDisposed();
 
             _writer.Write(true);
-            record.Write(_writer);
+            if( _valueWriter == null )
+                ((IWritable)record).Write(_writer);
+            else
+                _valueWriter.Write(record, _writer);
         }
 
         protected override void Dispose(bool disposing)

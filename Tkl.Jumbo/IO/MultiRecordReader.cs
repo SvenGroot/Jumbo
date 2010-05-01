@@ -15,7 +15,7 @@ namespace Tkl.Jumbo.IO
     /// </summary>
     /// <typeparam name="T">The type of the records.</typeparam>
     public sealed class MultiRecordReader<T> : MultiInputRecordReader<T>
-        where T : IWritable, new()
+        where T : new()
     {
         private RecordReader<T> _currentReader;
         private int _currentReaderNumber;

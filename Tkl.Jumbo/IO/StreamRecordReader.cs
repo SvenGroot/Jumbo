@@ -14,7 +14,7 @@ namespace Tkl.Jumbo.IO
     /// </summary>
     /// <typeparam name="T">The type of the records to read.</typeparam>
     public abstract class StreamRecordReader<T> : RecordReader<T>
-        where T : IWritable, new()
+        where T : new()
     {
         private bool _disposed;
         private long? _bytesRead;
