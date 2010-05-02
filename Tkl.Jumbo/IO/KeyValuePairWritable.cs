@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text;
 using System.IO;
 using System.Collections;
+using System.Runtime.Serialization;
 
 namespace Tkl.Jumbo.IO
 {
@@ -15,8 +16,7 @@ namespace Tkl.Jumbo.IO
     /// <typeparam name="TKey">The type of the key.</typeparam>
     /// <typeparam name="TValue">The type of the value.</typeparam>
     public sealed class KeyValuePairWritable<TKey, TValue> : IWritable, IComparable<KeyValuePairWritable<TKey, TValue>>, IEquatable<KeyValuePairWritable<TKey, TValue>>, ICloneable
-        where TKey : IComparable<TKey>, new()
-        where TValue : new()
+        where TKey : IComparable<TKey>
     {
         private static readonly IComparer<TKey> _keyComparer = Comparer<TKey>.Default;
         private static readonly IValueWriter<TKey> _keyWriter = (IValueWriter<TKey>)DefaultValueWriter.GetWriter(typeof(TKey));
@@ -145,12 +145,23 @@ namespace Tkl.Jumbo.IO
         {
             if( reader == null )
                 throw new ArgumentNullException("reader");
-            if( Key == null )
-                Key = new TKey();
-            Key.Read(reader);
-            if( Value == null )
-                Value = new TValue();
-            Value.Read(reader);
+            if( _keyWriter == null )
+            {
+                if( Key == null )
+                    Key = (TKey)FormatterServices.GetUninitializedObject(typeof(TKey));
+                ((IWritable)Key).Read(reader);
+            }
+            else
+                Key = _keyWriter.Read(reader);
+
+            if( _valueWriter == null )
+            {
+                if( Value == null )
+                    Value = (TValue)FormatterServices.GetUninitializedObject(typeof(TValue));
+                ((IWritable)Value).Read(reader);
+            }
+            else
+                Value = _valueWriter.Read(reader);
         }
 
         /// <summary>

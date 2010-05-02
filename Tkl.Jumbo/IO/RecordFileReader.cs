@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text;
 using System.IO;
 using System.Diagnostics;
+using System.Runtime.Serialization;
 
 namespace Tkl.Jumbo.IO
 {
@@ -19,7 +20,6 @@ namespace Tkl.Jumbo.IO
     /// </para>
     /// </remarks>
     public class RecordFileReader<T> : StreamRecordReader<T>
-        where T : new()
     {
         private BinaryReader _reader;
         private readonly RecordFileHeader _header = new RecordFileHeader();
@@ -121,7 +121,7 @@ namespace Tkl.Jumbo.IO
                     else
                     {
                         if( !_allowRecordReuse || CurrentRecord == null )
-                            CurrentRecord = new T();
+                            CurrentRecord = (T)FormatterServices.GetUninitializedObject(typeof(T));
                         ((IWritable)CurrentRecord).Read(_reader);
                     }
                     return true;

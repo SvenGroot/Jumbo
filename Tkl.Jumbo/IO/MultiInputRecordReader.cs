@@ -30,7 +30,6 @@ namespace Tkl.Jumbo.IO
     /// </note>
     /// </remarks>
     public abstract class MultiInputRecordReader<T> : RecordReader<T>, IMultiInputRecordReader
-        where T : new()
     {
         private bool _disposed;
         private readonly SortedList<int, List<RecordInput>> _inputs = new SortedList<int, List<RecordInput>>();

@@ -29,7 +29,6 @@ namespace Tkl.Jumbo.Jet
         }
 
         private class TaskContainer<TInput, TOutput> : ITaskContainer
-            where TInput : new()
         {
             private ITask<TInput, TOutput> _task;
             private RecordWriter<TOutput> _output;
@@ -356,7 +355,6 @@ namespace Tkl.Jumbo.Jet
         /// <returns>A <see cref="RecordReader{T}"/> that reads from the task's input channel or DFS input.</returns>
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1004:GenericMethodsShouldProvideTypeParameter")]
         public RecordReader<T> GetInputReader<T>()
-            where T : new()
         {
             CheckDisposed();
             if( _inputReader == null )
@@ -391,7 +389,6 @@ namespace Tkl.Jumbo.Jet
         /// <returns>An instance of <see cref="TaskType"/>.</returns>
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1004:GenericMethodsShouldProvideTypeParameter")]
         public ITask<TInput, TOutput> GetTaskInstance<TInput, TOutput>()
-            where TInput : new()
         {
             if( _task == null )
             {
@@ -635,7 +632,6 @@ namespace Tkl.Jumbo.Jet
         }
 
         private RecordReader<T> CreateInputRecordReader<T>()
-            where T : new()
         {
             if( Configuration.StageConfiguration.DfsInputs != null && Configuration.StageConfiguration.DfsInputs.Count > 0 )
             {

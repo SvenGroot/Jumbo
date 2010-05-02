@@ -24,9 +24,9 @@ namespace Tkl.Jumbo.Test.Jet
     {
         #region Nested types
 
-        public class FakePartitioner : IPartitioner<Int32Writable>
+        public class FakePartitioner : IPartitioner<int>
         {
-            #region IPartitioner<Int32Writable> Members
+            #region IPartitioner<int> Members
 
             public int Partitions
             {
@@ -40,7 +40,7 @@ namespace Tkl.Jumbo.Test.Jet
                 }
             }
 
-            public int GetPartition(Int32Writable value)
+            public int GetPartition(int value)
             {
                 throw new NotImplementedException();
             }
@@ -108,7 +108,7 @@ namespace Tkl.Jumbo.Test.Jet
             JobBuilder builder = new JobBuilder(_dfsClient, _jetClient);
 
             var input = builder.CreateRecordReader<StringWritable>(_inputPath, typeof(LineRecordReader));
-            var output = builder.CreateRecordWriter<Int32Writable>(_outputPath, typeof(TextRecordWriter<Int32Writable>));
+            var output = builder.CreateRecordWriter<int>(_outputPath, typeof(TextRecordWriter<int>));
             builder.ProcessRecords(input, output, typeof(LineCounterTask));
 
             JobConfiguration config = builder.JobConfiguration;
@@ -117,7 +117,7 @@ namespace Tkl.Jumbo.Test.Jet
 
             Assert.AreEqual(1, config.Stages.Count);
             StageConfiguration stage = config.Stages[0];
-            VerifyStage(config, stage, 3, typeof(LineCounterTask).Name, typeof(LineCounterTask), null, typeof(LineRecordReader), typeof(TextRecordWriter<Int32Writable>), ChannelType.File, ChannelConnectivity.Full, null, null, null);
+            VerifyStage(config, stage, 3, typeof(LineCounterTask).Name, typeof(LineCounterTask), null, typeof(LineRecordReader), typeof(TextRecordWriter<int>), ChannelType.File, ChannelConnectivity.Full, null, null, null);
         }
 
         [Test]
@@ -126,8 +126,8 @@ namespace Tkl.Jumbo.Test.Jet
             JobBuilder builder = new JobBuilder(_dfsClient, _jetClient);
 
             var input = builder.CreateRecordReader<StringWritable>(_inputPath, typeof(LineRecordReader));
-            var output = builder.CreateRecordWriter<Int32Writable>(_outputPath, typeof(TextRecordWriter<Int32Writable>));
-            var collector = new RecordCollector<Int32Writable>();
+            var output = builder.CreateRecordWriter<int>(_outputPath, typeof(TextRecordWriter<int>));
+            var collector = new RecordCollector<int>();
             builder.ProcessRecords(input, collector.CreateRecordWriter(), typeof(LineCounterTask));
             builder.ProcessRecords(collector.CreateRecordReader(), output, typeof(LineAdderTask));
 
@@ -137,8 +137,8 @@ namespace Tkl.Jumbo.Test.Jet
 
             Assert.AreEqual(2, config.Stages.Count);
 
-            VerifyStage(config, config.Stages[0], 3, typeof(LineCounterTask).Name, typeof(LineCounterTask), null, typeof(LineRecordReader), null, ChannelType.File, ChannelConnectivity.Full, typeof(HashPartitioner<Int32Writable>), typeof(MultiRecordReader<Int32Writable>), typeof(LineAdderTask).Name);
-            VerifyStage(config, config.Stages[1], 1, typeof(LineAdderTask).Name, typeof(LineAdderTask), null, null, typeof(TextRecordWriter<Int32Writable>), ChannelType.File, ChannelConnectivity.Full, null, null, null);
+            VerifyStage(config, config.Stages[0], 3, typeof(LineCounterTask).Name, typeof(LineCounterTask), null, typeof(LineRecordReader), null, ChannelType.File, ChannelConnectivity.Full, typeof(HashPartitioner<int>), typeof(MultiRecordReader<int>), typeof(LineAdderTask).Name);
+            VerifyStage(config, config.Stages[1], 1, typeof(LineAdderTask).Name, typeof(LineAdderTask), null, null, typeof(TextRecordWriter<int>), ChannelType.File, ChannelConnectivity.Full, null, null, null);
         }
 
         [Test]
@@ -147,8 +147,8 @@ namespace Tkl.Jumbo.Test.Jet
             JobBuilder builder = new JobBuilder(_dfsClient, _jetClient);
 
             var input = builder.CreateRecordReader<StringWritable>(_inputPath, typeof(LineRecordReader));
-            var output = builder.CreateRecordWriter<Int32Writable>(_outputPath, typeof(TextRecordWriter<Int32Writable>));
-            var collector = new RecordCollector<Int32Writable>(ChannelType.Pipeline, null, null);
+            var output = builder.CreateRecordWriter<int>(_outputPath, typeof(TextRecordWriter<int>));
+            var collector = new RecordCollector<int>(ChannelType.Pipeline, null, null);
             builder.ProcessRecords(input, collector.CreateRecordWriter(), typeof(LineCounterTask));
             builder.ProcessRecords(collector.CreateRecordReader(), output, typeof(LineAdderTask));
 
@@ -158,8 +158,8 @@ namespace Tkl.Jumbo.Test.Jet
 
             Assert.AreEqual(1, config.Stages.Count);
 
-            VerifyStage(config, config.Stages[0], 3, typeof(LineCounterTask).Name, typeof(LineCounterTask), null, typeof(LineRecordReader), null, ChannelType.Pipeline, ChannelConnectivity.Full, typeof(HashPartitioner<Int32Writable>), typeof(MultiRecordReader<Int32Writable>), typeof(LineAdderTask).Name);
-            VerifyStage(config, config.Stages[0].ChildStage, 1, typeof(LineAdderTask).Name, typeof(LineAdderTask), null, null, typeof(TextRecordWriter<Int32Writable>), ChannelType.Pipeline, ChannelConnectivity.Full, null, null, null);
+            VerifyStage(config, config.Stages[0], 3, typeof(LineCounterTask).Name, typeof(LineCounterTask), null, typeof(LineRecordReader), null, ChannelType.Pipeline, ChannelConnectivity.Full, typeof(HashPartitioner<int>), typeof(MultiRecordReader<int>), typeof(LineAdderTask).Name);
+            VerifyStage(config, config.Stages[0].ChildStage, 1, typeof(LineAdderTask).Name, typeof(LineAdderTask), null, null, typeof(TextRecordWriter<int>), ChannelType.Pipeline, ChannelConnectivity.Full, null, null, null);
         }
 
         [Test]
@@ -168,8 +168,8 @@ namespace Tkl.Jumbo.Test.Jet
             JobBuilder builder = new JobBuilder(_dfsClient, _jetClient);
 
             var input = builder.CreateRecordReader<StringWritable>(_inputPath, typeof(LineRecordReader));
-            var output = builder.CreateRecordWriter<Int32Writable>(_outputPath, typeof(TextRecordWriter<Int32Writable>));
-            var collector = new RecordCollector<Int32Writable>(ChannelType.Tcp, typeof(FakePartitioner), 2);
+            var output = builder.CreateRecordWriter<int>(_outputPath, typeof(TextRecordWriter<int>));
+            var collector = new RecordCollector<int>(ChannelType.Tcp, typeof(FakePartitioner), 2);
             builder.ProcessRecords(input, collector.CreateRecordWriter(), typeof(LineCounterTask));
             builder.ProcessRecords(collector.CreateRecordReader(), output, typeof(LineAdderTask));
 
@@ -178,8 +178,8 @@ namespace Tkl.Jumbo.Test.Jet
 
             Assert.AreEqual(2, config.Stages.Count);
 
-            VerifyStage(config, config.Stages[0], 3, typeof(LineCounterTask).Name, typeof(LineCounterTask), null, typeof(LineRecordReader), null, ChannelType.Tcp, ChannelConnectivity.Full, typeof(FakePartitioner), typeof(MultiRecordReader<Int32Writable>), typeof(LineAdderTask).Name);
-            VerifyStage(config, config.Stages[1], 2, typeof(LineAdderTask).Name, typeof(LineAdderTask), null, null, typeof(TextRecordWriter<Int32Writable>), ChannelType.File, ChannelConnectivity.Full, null, null, null);
+            VerifyStage(config, config.Stages[0], 3, typeof(LineCounterTask).Name, typeof(LineCounterTask), null, typeof(LineRecordReader), null, ChannelType.Tcp, ChannelConnectivity.Full, typeof(FakePartitioner), typeof(MultiRecordReader<int>), typeof(LineAdderTask).Name);
+            VerifyStage(config, config.Stages[1], 2, typeof(LineAdderTask).Name, typeof(LineAdderTask), null, null, typeof(TextRecordWriter<int>), ChannelType.File, ChannelConnectivity.Full, null, null, null);
         }
 
         [Test]
@@ -188,7 +188,7 @@ namespace Tkl.Jumbo.Test.Jet
             JobBuilder builder = new JobBuilder(_dfsClient, _jetClient);
 
             var input = builder.CreateRecordReader<StringWritable>(_inputPath, typeof(LineRecordReader));
-            var output = builder.CreateRecordWriter<Int32Writable>(_outputPath, typeof(TextRecordWriter<Int32Writable>));
+            var output = builder.CreateRecordWriter<int>(_outputPath, typeof(TextRecordWriter<int>));
             var collector = new RecordCollector<StringWritable>(ChannelType.Pipeline, null, null);
             builder.ProcessRecords(input, collector.CreateRecordWriter(), typeof(EmptyTask<StringWritable>));
             builder.ProcessRecords(collector.CreateRecordReader(), output, typeof(LineCounterTask));
@@ -199,7 +199,7 @@ namespace Tkl.Jumbo.Test.Jet
             Assert.AreEqual(Path.GetFileName(typeof(LineCounterTask).Assembly.Location), config.AssemblyFileNames[0]);
 
             Assert.AreEqual(1, config.Stages.Count);
-            VerifyStage(config, config.Stages[0], 3, typeof(LineCounterTask).Name, typeof(LineCounterTask), null, typeof(LineRecordReader), typeof(TextRecordWriter<Int32Writable>), ChannelType.File, ChannelConnectivity.Full, null, null, null);  
+            VerifyStage(config, config.Stages[0], 3, typeof(LineCounterTask).Name, typeof(LineCounterTask), null, typeof(LineRecordReader), typeof(TextRecordWriter<int>), ChannelType.File, ChannelConnectivity.Full, null, null, null);  
         }
 
         [Test]
@@ -208,7 +208,7 @@ namespace Tkl.Jumbo.Test.Jet
             JobBuilder builder = new JobBuilder(_dfsClient, _jetClient);
 
             var input = builder.CreateRecordReader<StringWritable>(_inputPath, typeof(LineRecordReader));
-            var output = builder.CreateRecordWriter<Int32Writable>(_outputPath, typeof(TextRecordWriter<Int32Writable>));
+            var output = builder.CreateRecordWriter<int>(_outputPath, typeof(TextRecordWriter<int>));
             // Empty task replacement is not possible because the output of the empty task is being partitioned.
             var collector = new RecordCollector<StringWritable>(ChannelType.Pipeline, null, 4);
             builder.ProcessRecords(input, collector.CreateRecordWriter(), typeof(EmptyTask<StringWritable>));
@@ -220,8 +220,8 @@ namespace Tkl.Jumbo.Test.Jet
             Assert.AreEqual(Path.GetFileName(typeof(LineCounterTask).Assembly.Location), config.AssemblyFileNames[0]);
 
             Assert.AreEqual(1, config.Stages.Count);
-            VerifyStage(config, config.Stages[0], 3, typeof(EmptyTask<StringWritable>).Name, typeof(EmptyTask<StringWritable>), null, typeof(LineRecordReader), null, ChannelType.Pipeline, ChannelConnectivity.Full, typeof(HashPartitioner<StringWritable>), typeof(MultiRecordReader<Int32Writable>), typeof(LineCounterTask).Name);
-            VerifyStage(config, config.Stages[0].ChildStage, 4, typeof(LineCounterTask).Name, typeof(LineCounterTask), null, null, typeof(TextRecordWriter<Int32Writable>), ChannelType.Pipeline, ChannelConnectivity.Full, null, null, null);
+            VerifyStage(config, config.Stages[0], 3, typeof(EmptyTask<StringWritable>).Name, typeof(EmptyTask<StringWritable>), null, typeof(LineRecordReader), null, ChannelType.Pipeline, ChannelConnectivity.Full, typeof(HashPartitioner<StringWritable>), typeof(MultiRecordReader<int>), typeof(LineCounterTask).Name);
+            VerifyStage(config, config.Stages[0].ChildStage, 4, typeof(LineCounterTask).Name, typeof(LineCounterTask), null, null, typeof(TextRecordWriter<int>), ChannelType.Pipeline, ChannelConnectivity.Full, null, null, null);
         }
 
         [Test]
@@ -230,11 +230,11 @@ namespace Tkl.Jumbo.Test.Jet
             JobBuilder builder = new JobBuilder(_dfsClient, _jetClient);
 
             var input = builder.CreateRecordReader<StringWritable>(_inputPath, typeof(LineRecordReader));
-            var output = builder.CreateRecordWriter<Int32Writable>(_outputPath, typeof(TextRecordWriter<Int32Writable>));
-            var collector1 = new RecordCollector<Int32Writable>(null, null, 4);
-            var collector2 = new RecordCollector<Int32Writable>(null, null, 4);
+            var output = builder.CreateRecordWriter<int>(_outputPath, typeof(TextRecordWriter<int>));
+            var collector1 = new RecordCollector<int>(null, null, 4);
+            var collector2 = new RecordCollector<int>(null, null, 4);
             builder.ProcessRecords(input, collector1.CreateRecordWriter(), typeof(LineCounterTask));
-            builder.ProcessRecords(collector1.CreateRecordReader(), collector2.CreateRecordWriter(), typeof(EmptyTask<Int32Writable>));
+            builder.ProcessRecords(collector1.CreateRecordReader(), collector2.CreateRecordWriter(), typeof(EmptyTask<int>));
             // Replacement is possible because partitioner type and partition count match.
             builder.ProcessRecords(collector2.CreateRecordReader(), output, typeof(LineAdderTask));
 
@@ -243,8 +243,8 @@ namespace Tkl.Jumbo.Test.Jet
             Assert.AreEqual(Path.GetFileName(typeof(LineCounterTask).Assembly.Location), config.AssemblyFileNames[0]);
 
             Assert.AreEqual(2, config.Stages.Count);
-            VerifyStage(config, config.Stages[0], 3, typeof(LineCounterTask).Name, typeof(LineCounterTask), null, typeof(LineRecordReader), null, ChannelType.File, ChannelConnectivity.Full, typeof(HashPartitioner<Int32Writable>), typeof(MultiRecordReader<Int32Writable>), typeof(LineAdderTask).Name);
-            VerifyStage(config, config.Stages[1], 4, typeof(LineAdderTask).Name, typeof(LineAdderTask), null, null, typeof(TextRecordWriter<Int32Writable>), ChannelType.File, ChannelConnectivity.Full, null, null, null);
+            VerifyStage(config, config.Stages[0], 3, typeof(LineCounterTask).Name, typeof(LineCounterTask), null, typeof(LineRecordReader), null, ChannelType.File, ChannelConnectivity.Full, typeof(HashPartitioner<int>), typeof(MultiRecordReader<int>), typeof(LineAdderTask).Name);
+            VerifyStage(config, config.Stages[1], 4, typeof(LineAdderTask).Name, typeof(LineAdderTask), null, null, typeof(TextRecordWriter<int>), ChannelType.File, ChannelConnectivity.Full, null, null, null);
         }
 
         [Test]
@@ -253,11 +253,11 @@ namespace Tkl.Jumbo.Test.Jet
             JobBuilder builder = new JobBuilder(_dfsClient, _jetClient);
 
             var input = builder.CreateRecordReader<StringWritable>(_inputPath, typeof(LineRecordReader));
-            var output = builder.CreateRecordWriter<Int32Writable>(_outputPath, typeof(TextRecordWriter<Int32Writable>));
-            var collector1 = new RecordCollector<Int32Writable>(null, null, 4);
-            var collector2 = new RecordCollector<Int32Writable>(null, null, 2);
+            var output = builder.CreateRecordWriter<int>(_outputPath, typeof(TextRecordWriter<int>));
+            var collector1 = new RecordCollector<int>(null, null, 4);
+            var collector2 = new RecordCollector<int>(null, null, 2);
             builder.ProcessRecords(input, collector1.CreateRecordWriter(), typeof(LineCounterTask));
-            builder.ProcessRecords(collector1.CreateRecordReader(), collector2.CreateRecordWriter(), typeof(EmptyTask<Int32Writable>));
+            builder.ProcessRecords(collector1.CreateRecordReader(), collector2.CreateRecordWriter(), typeof(EmptyTask<int>));
             // Replacement is not possible because partition count doesn't match.
             builder.ProcessRecords(collector2.CreateRecordReader(), output, typeof(LineAdderTask));
 
@@ -266,9 +266,9 @@ namespace Tkl.Jumbo.Test.Jet
             Assert.AreEqual(Path.GetFileName(typeof(LineCounterTask).Assembly.Location), config.AssemblyFileNames[0]);
 
             Assert.AreEqual(3, config.Stages.Count);
-            VerifyStage(config, config.Stages[0], 3, typeof(LineCounterTask).Name, typeof(LineCounterTask), null, typeof(LineRecordReader), null, ChannelType.File, ChannelConnectivity.Full, typeof(HashPartitioner<Int32Writable>), typeof(MultiRecordReader<Int32Writable>), typeof(EmptyTask<Int32Writable>).Name);
-            VerifyStage(config, config.Stages[1], 4, typeof(EmptyTask<Int32Writable>).Name, typeof(EmptyTask<Int32Writable>), null, null, null, ChannelType.File, ChannelConnectivity.Full, typeof(HashPartitioner<Int32Writable>), typeof(MultiRecordReader<Int32Writable>), typeof(LineAdderTask).Name);
-            VerifyStage(config, config.Stages[2], 2, typeof(LineAdderTask).Name, typeof(LineAdderTask), null, null, typeof(TextRecordWriter<Int32Writable>), ChannelType.File, ChannelConnectivity.Full, null, null, null);
+            VerifyStage(config, config.Stages[0], 3, typeof(LineCounterTask).Name, typeof(LineCounterTask), null, typeof(LineRecordReader), null, ChannelType.File, ChannelConnectivity.Full, typeof(HashPartitioner<int>), typeof(MultiRecordReader<int>), typeof(EmptyTask<int>).Name);
+            VerifyStage(config, config.Stages[1], 4, typeof(EmptyTask<int>).Name, typeof(EmptyTask<int>), null, null, null, ChannelType.File, ChannelConnectivity.Full, typeof(HashPartitioner<int>), typeof(MultiRecordReader<int>), typeof(LineAdderTask).Name);
+            VerifyStage(config, config.Stages[2], 2, typeof(LineAdderTask).Name, typeof(LineAdderTask), null, null, typeof(TextRecordWriter<int>), ChannelType.File, ChannelConnectivity.Full, null, null, null);
         }
 
         [Test]
@@ -277,11 +277,11 @@ namespace Tkl.Jumbo.Test.Jet
             JobBuilder builder = new JobBuilder(_dfsClient, _jetClient);
 
             var input = builder.CreateRecordReader<StringWritable>(_inputPath, typeof(LineRecordReader));
-            var output = builder.CreateRecordWriter<Int32Writable>(_outputPath, typeof(TextRecordWriter<Int32Writable>));
-            var collector1 = new RecordCollector<Int32Writable>(null, null, 4);
-            var collector2 = new RecordCollector<Int32Writable>(null, typeof(FakePartitioner), 4);
+            var output = builder.CreateRecordWriter<int>(_outputPath, typeof(TextRecordWriter<int>));
+            var collector1 = new RecordCollector<int>(null, null, 4);
+            var collector2 = new RecordCollector<int>(null, typeof(FakePartitioner), 4);
             builder.ProcessRecords(input, collector1.CreateRecordWriter(), typeof(LineCounterTask));
-            builder.ProcessRecords(collector1.CreateRecordReader(), collector2.CreateRecordWriter(), typeof(EmptyTask<Int32Writable>));
+            builder.ProcessRecords(collector1.CreateRecordReader(), collector2.CreateRecordWriter(), typeof(EmptyTask<int>));
             // Replacement is not possible because partitioner type doesn't match.
             builder.ProcessRecords(collector2.CreateRecordReader(), output, typeof(LineAdderTask));
 
@@ -290,9 +290,9 @@ namespace Tkl.Jumbo.Test.Jet
             Assert.AreEqual(Path.GetFileName(typeof(LineCounterTask).Assembly.Location), config.AssemblyFileNames[0]);
 
             Assert.AreEqual(3, config.Stages.Count);
-            VerifyStage(config, config.Stages[0], 3, typeof(LineCounterTask).Name, typeof(LineCounterTask), null, typeof(LineRecordReader), null, ChannelType.File, ChannelConnectivity.Full, typeof(HashPartitioner<Int32Writable>), typeof(MultiRecordReader<Int32Writable>), typeof(EmptyTask<Int32Writable>).Name);
-            VerifyStage(config, config.Stages[1], 4, typeof(EmptyTask<Int32Writable>).Name, typeof(EmptyTask<Int32Writable>), null, null, null, ChannelType.File, ChannelConnectivity.Full, typeof(FakePartitioner), typeof(MultiRecordReader<Int32Writable>), typeof(LineAdderTask).Name);
-            VerifyStage(config, config.Stages[2], 4, typeof(LineAdderTask).Name, typeof(LineAdderTask), null, null, typeof(TextRecordWriter<Int32Writable>), ChannelType.File, ChannelConnectivity.Full, null, null, null);
+            VerifyStage(config, config.Stages[0], 3, typeof(LineCounterTask).Name, typeof(LineCounterTask), null, typeof(LineRecordReader), null, ChannelType.File, ChannelConnectivity.Full, typeof(HashPartitioner<int>), typeof(MultiRecordReader<int>), typeof(EmptyTask<int>).Name);
+            VerifyStage(config, config.Stages[1], 4, typeof(EmptyTask<int>).Name, typeof(EmptyTask<int>), null, null, null, ChannelType.File, ChannelConnectivity.Full, typeof(FakePartitioner), typeof(MultiRecordReader<int>), typeof(LineAdderTask).Name);
+            VerifyStage(config, config.Stages[2], 4, typeof(LineAdderTask).Name, typeof(LineAdderTask), null, null, typeof(TextRecordWriter<int>), ChannelType.File, ChannelConnectivity.Full, null, null, null);
         }
 
         [Test]
@@ -301,11 +301,11 @@ namespace Tkl.Jumbo.Test.Jet
             JobBuilder builder = new JobBuilder(_dfsClient, _jetClient);
 
             var input = builder.CreateRecordReader<StringWritable>(_inputPath, typeof(LineRecordReader));
-            var output = builder.CreateRecordWriter<Int32Writable>(_outputPath, typeof(TextRecordWriter<Int32Writable>));
-            var collector1 = new RecordCollector<Int32Writable>(ChannelType.Pipeline, null, 4);
-            var collector2 = new RecordCollector<Int32Writable>(null, null, 4);
+            var output = builder.CreateRecordWriter<int>(_outputPath, typeof(TextRecordWriter<int>));
+            var collector1 = new RecordCollector<int>(ChannelType.Pipeline, null, 4);
+            var collector2 = new RecordCollector<int>(null, null, 4);
             builder.ProcessRecords(input, collector1.CreateRecordWriter(), typeof(LineCounterTask));
-            builder.ProcessRecords(collector1.CreateRecordReader(), collector2.CreateRecordWriter(), typeof(EmptyTask<Int32Writable>));
+            builder.ProcessRecords(collector1.CreateRecordReader(), collector2.CreateRecordWriter(), typeof(EmptyTask<int>));
             // Replacement is not possible because partition count doesn't match.
             builder.ProcessRecords(collector2.CreateRecordReader(), output, typeof(LineAdderTask));
 
@@ -314,9 +314,9 @@ namespace Tkl.Jumbo.Test.Jet
             Assert.AreEqual(Path.GetFileName(typeof(LineCounterTask).Assembly.Location), config.AssemblyFileNames[0]);
 
             Assert.AreEqual(2, config.Stages.Count);
-            VerifyStage(config, config.Stages[0], 3, typeof(LineCounterTask).Name, typeof(LineCounterTask), null, typeof(LineRecordReader), null, ChannelType.Pipeline, ChannelConnectivity.Full, typeof(HashPartitioner<Int32Writable>), typeof(MultiRecordReader<Int32Writable>), typeof(EmptyTask<Int32Writable>).Name);
-            VerifyStage(config, config.Stages[0].ChildStage, 4, typeof(EmptyTask<Int32Writable>).Name, typeof(EmptyTask<Int32Writable>), null, null, null, ChannelType.File, ChannelConnectivity.Full, typeof(HashPartitioner<Int32Writable>), typeof(MultiRecordReader<Int32Writable>), typeof(LineAdderTask).Name);
-            VerifyStage(config, config.Stages[1], 4, typeof(LineAdderTask).Name, typeof(LineAdderTask), null, null, typeof(TextRecordWriter<Int32Writable>), ChannelType.File, ChannelConnectivity.Full, null, null, null);
+            VerifyStage(config, config.Stages[0], 3, typeof(LineCounterTask).Name, typeof(LineCounterTask), null, typeof(LineRecordReader), null, ChannelType.Pipeline, ChannelConnectivity.Full, typeof(HashPartitioner<int>), typeof(MultiRecordReader<int>), typeof(EmptyTask<int>).Name);
+            VerifyStage(config, config.Stages[0].ChildStage, 4, typeof(EmptyTask<int>).Name, typeof(EmptyTask<int>), null, null, null, ChannelType.File, ChannelConnectivity.Full, typeof(HashPartitioner<int>), typeof(MultiRecordReader<int>), typeof(LineAdderTask).Name);
+            VerifyStage(config, config.Stages[1], 4, typeof(LineAdderTask).Name, typeof(LineAdderTask), null, null, typeof(TextRecordWriter<int>), ChannelType.File, ChannelConnectivity.Full, null, null, null);
         }
 
         [Test]
@@ -325,9 +325,9 @@ namespace Tkl.Jumbo.Test.Jet
             JobBuilder builder = new JobBuilder(_dfsClient, _jetClient);
 
             var input = builder.CreateRecordReader<StringWritable>(_inputPath, typeof(LineRecordReader));
-            var output = builder.CreateRecordWriter<Int32Writable>(_outputPath, typeof(TextRecordWriter<Int32Writable>));
-            var collector1 = new RecordCollector<Int32Writable>(ChannelType.Pipeline, null, 4);
-            var collector2 = new RecordCollector<Int32Writable>(null, null, null);
+            var output = builder.CreateRecordWriter<int>(_outputPath, typeof(TextRecordWriter<int>));
+            var collector1 = new RecordCollector<int>(ChannelType.Pipeline, null, 4);
+            var collector2 = new RecordCollector<int>(null, null, null);
             builder.ProcessRecords(input, collector1.CreateRecordWriter(), typeof(LineCounterTask));
             builder.ProcessRecords(collector1.CreateRecordReader(), collector2.CreateRecordWriter(), typeof(LineAdderTask));
             builder.ProcessRecords(collector2.CreateRecordReader(), output, typeof(LineAdderTask));
@@ -337,10 +337,10 @@ namespace Tkl.Jumbo.Test.Jet
             Assert.AreEqual(Path.GetFileName(typeof(LineCounterTask).Assembly.Location), config.AssemblyFileNames[0]);
 
             Assert.AreEqual(2, config.Stages.Count);
-            VerifyStage(config, config.Stages[0], 3, typeof(LineCounterTask).Name, typeof(LineCounterTask), null, typeof(LineRecordReader), null, ChannelType.Pipeline, ChannelConnectivity.Full, typeof(HashPartitioner<Int32Writable>), typeof(MultiRecordReader<Int32Writable>), typeof(LineAdderTask).Name);
-            VerifyStage(config, config.Stages[0].ChildStage, 4, typeof(LineAdderTask).Name, typeof(LineAdderTask), null, null, null, ChannelType.File, ChannelConnectivity.Full, typeof(HashPartitioner<Int32Writable>), typeof(MultiRecordReader<Int32Writable>), typeof(LineAdderTask).Name);
+            VerifyStage(config, config.Stages[0], 3, typeof(LineCounterTask).Name, typeof(LineCounterTask), null, typeof(LineRecordReader), null, ChannelType.Pipeline, ChannelConnectivity.Full, typeof(HashPartitioner<int>), typeof(MultiRecordReader<int>), typeof(LineAdderTask).Name);
+            VerifyStage(config, config.Stages[0].ChildStage, 4, typeof(LineAdderTask).Name, typeof(LineAdderTask), null, null, null, ChannelType.File, ChannelConnectivity.Full, typeof(HashPartitioner<int>), typeof(MultiRecordReader<int>), typeof(LineAdderTask).Name);
             // Partition count should be four because it should match the internal partitioning of the compound input stage
-            VerifyStage(config, config.Stages[1], 4, typeof(LineAdderTask).Name, typeof(LineAdderTask), null, null, typeof(TextRecordWriter<Int32Writable>), ChannelType.File, ChannelConnectivity.Full, null, null, null);
+            VerifyStage(config, config.Stages[1], 4, typeof(LineAdderTask).Name, typeof(LineAdderTask), null, null, typeof(TextRecordWriter<int>), ChannelType.File, ChannelConnectivity.Full, null, null, null);
         }
 
         [Test]
@@ -485,8 +485,8 @@ namespace Tkl.Jumbo.Test.Jet
             JobBuilder builder = new JobBuilder(_dfsClient, _jetClient);
 
             var input = builder.CreateRecordReader<StringWritable>(_inputPath, typeof(LineRecordReader));
-            var collector = new RecordCollector<Int32Writable>(null, typeof(FakePartitioner), 2);
-            var output = builder.CreateRecordWriter<Int32Writable>(_outputPath, typeof(TextRecordWriter<Int32Writable>));
+            var collector = new RecordCollector<int>(null, typeof(FakePartitioner), 2);
+            var output = builder.CreateRecordWriter<int>(_outputPath, typeof(TextRecordWriter<int>));
             builder.ProcessRecords(input, collector.CreateRecordWriter(), typeof(LineCounterTask));
             builder.SortRecords(collector.CreateRecordReader(), output);
 
@@ -496,8 +496,8 @@ namespace Tkl.Jumbo.Test.Jet
             Assert.AreEqual(2, config.Stages.Count);
 
             VerifyStage(config, config.Stages[0], 3, typeof(LineCounterTask).Name, typeof(LineCounterTask), null, typeof(LineRecordReader), null, ChannelType.Pipeline, ChannelConnectivity.Full, typeof(FakePartitioner), null, "SortStage");
-            VerifyStage(config, config.Stages[0].ChildStage, 2, "SortStage", typeof(SortTask<Int32Writable>), null, null, null, ChannelType.File, ChannelConnectivity.Full, typeof(FakePartitioner), typeof(MergeRecordReader<Int32Writable>), "MergeStage");
-            VerifyStage(config, config.Stages[1], 2, "MergeStage", typeof(EmptyTask<Int32Writable>), null, null, typeof(TextRecordWriter<Int32Writable>), ChannelType.File, ChannelConnectivity.Full, null, null, null);
+            VerifyStage(config, config.Stages[0].ChildStage, 2, "SortStage", typeof(SortTask<int>), null, null, null, ChannelType.File, ChannelConnectivity.Full, typeof(FakePartitioner), typeof(MergeRecordReader<int>), "MergeStage");
+            VerifyStage(config, config.Stages[1], 2, "MergeStage", typeof(EmptyTask<int>), null, null, typeof(TextRecordWriter<int>), ChannelType.File, ChannelConnectivity.Full, null, null, null);
         }
 
         [Test]
@@ -506,9 +506,9 @@ namespace Tkl.Jumbo.Test.Jet
             JobBuilder builder = new JobBuilder(_dfsClient, _jetClient);
 
             var input = builder.CreateRecordReader<StringWritable>(_inputPath, typeof(LineRecordReader));
-            var collector = new RecordCollector<Int32Writable>(null, null, 1);
-            var collector2 = new RecordCollector<Int32Writable>(null, null, 2);
-            var output = builder.CreateRecordWriter<Int32Writable>(_outputPath, typeof(TextRecordWriter<Int32Writable>));
+            var collector = new RecordCollector<int>(null, null, 1);
+            var collector2 = new RecordCollector<int>(null, null, 2);
+            var output = builder.CreateRecordWriter<int>(_outputPath, typeof(TextRecordWriter<int>));
             builder.ProcessRecords(input, collector.CreateRecordWriter(), typeof(LineCounterTask));
             builder.ProcessRecords(collector.CreateRecordReader(), collector2.CreateRecordWriter(), typeof(LineAdderTask));
             builder.SortRecords(collector2.CreateRecordReader(), output);
@@ -518,7 +518,7 @@ namespace Tkl.Jumbo.Test.Jet
 
             Assert.AreEqual(2, config.Stages.Count);
 
-            VerifyStage(config, config.Stages[1].ChildStage, 2, "SortStage", typeof(SortTask<Int32Writable>), null, null, typeof(TextRecordWriter<Int32Writable>), ChannelType.File, ChannelConnectivity.Full, null, null, null);
+            VerifyStage(config, config.Stages[1].ChildStage, 2, "SortStage", typeof(SortTask<int>), null, null, typeof(TextRecordWriter<int>), ChannelType.File, ChannelConnectivity.Full, null, null, null);
         }
 
         [Test]
@@ -526,7 +526,7 @@ namespace Tkl.Jumbo.Test.Jet
         {
             JobBuilder builder = new JobBuilder(_dfsClient, _jetClient);
 
-            var output = builder.CreateRecordWriter<Int32Writable>(_outputPath, typeof(TextRecordWriter<Int32Writable>));
+            var output = builder.CreateRecordWriter<int>(_outputPath, typeof(TextRecordWriter<int>));
             builder.GenerateRecords(output, typeof(LineCounterTask), 2);
 
             JobConfiguration config = builder.JobConfiguration;
@@ -534,7 +534,7 @@ namespace Tkl.Jumbo.Test.Jet
 
             Assert.AreEqual(1, config.Stages.Count);
             StageConfiguration stage = config.Stages[0];
-            VerifyStage(config, stage, 2, typeof(LineCounterTask).Name, typeof(LineCounterTask), null, null, typeof(TextRecordWriter<Int32Writable>), ChannelType.File, ChannelConnectivity.Full, null, null, null);
+            VerifyStage(config, stage, 2, typeof(LineCounterTask).Name, typeof(LineCounterTask), null, null, typeof(TextRecordWriter<int>), ChannelType.File, ChannelConnectivity.Full, null, null, null);
         }
 
         [Test]
@@ -542,8 +542,8 @@ namespace Tkl.Jumbo.Test.Jet
         {
             JobBuilder builder = new JobBuilder(_dfsClient, _jetClient);
 
-            var output = builder.CreateRecordWriter<Int32Writable>(_outputPath, typeof(TextRecordWriter<Int32Writable>));
-            var collector = new RecordCollector<Int32Writable>();
+            var output = builder.CreateRecordWriter<int>(_outputPath, typeof(TextRecordWriter<int>));
+            var collector = new RecordCollector<int>();
             builder.GenerateRecords(collector.CreateRecordWriter(), typeof(LineCounterTask), 2);
             builder.ProcessRecords(collector.CreateRecordReader(), output, typeof(LineAdderTask));
 
@@ -552,8 +552,8 @@ namespace Tkl.Jumbo.Test.Jet
 
             Assert.AreEqual(2, config.Stages.Count);
 
-            VerifyStage(config, config.Stages[0], 2, typeof(LineCounterTask).Name, typeof(LineCounterTask), null, null, null, ChannelType.File, ChannelConnectivity.Full, typeof(HashPartitioner<Int32Writable>), typeof(MultiRecordReader<Int32Writable>), typeof(LineAdderTask).Name);
-            VerifyStage(config, config.Stages[1], 1, typeof(LineAdderTask).Name, typeof(LineAdderTask), null, null, typeof(TextRecordWriter<Int32Writable>), ChannelType.File, ChannelConnectivity.Full, null, null, null);
+            VerifyStage(config, config.Stages[0], 2, typeof(LineCounterTask).Name, typeof(LineCounterTask), null, null, null, ChannelType.File, ChannelConnectivity.Full, typeof(HashPartitioner<int>), typeof(MultiRecordReader<int>), typeof(LineAdderTask).Name);
+            VerifyStage(config, config.Stages[1], 1, typeof(LineAdderTask).Name, typeof(LineAdderTask), null, null, typeof(TextRecordWriter<int>), ChannelType.File, ChannelConnectivity.Full, null, null, null);
         }
 
         [Test]

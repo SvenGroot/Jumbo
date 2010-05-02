@@ -23,7 +23,6 @@ namespace Tkl.Jumbo.Jet.Jobs
         #region Nested types
 
         private sealed class RecordReaderReference<T> : RecordReader<T>
-            where T : IWritable, new()
         {
             public RecordReaderReference(JobBuilder jobBuilder, string input, Type recordReaderType)
             {
@@ -50,8 +49,7 @@ namespace Tkl.Jumbo.Jet.Jobs
         }
 
         private sealed class RecordWriterReference<T> : RecordWriter<T>
-            where T : IWritable, new()
-        {
+       {
             public RecordWriterReference(JobBuilder jobBuilder, string output, Type recordWriterType, int blockSize, int replicationFactor)
             {
                 JobBuilder = jobBuilder;
@@ -163,7 +161,6 @@ namespace Tkl.Jumbo.Jet.Jobs
         /// so do not try to cast it.</returns>
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1004:GenericMethodsShouldProvideTypeParameter")]
         public RecordReader<T> CreateRecordReader<T>(string input, Type recordReaderType)
-            where T : IWritable, new()
         {
             if( input == null )
                 throw new ArgumentNullException("input");
@@ -186,7 +183,6 @@ namespace Tkl.Jumbo.Jet.Jobs
         /// so do not try to cast it.</returns>
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1004:GenericMethodsShouldProvideTypeParameter")]
         public RecordWriter<T> CreateRecordWriter<T>(string output, Type recordWriterType)
-            where T : IWritable, new()
         {
             return CreateRecordWriter<T>(output, recordWriterType, 0, 0);
         }
@@ -203,7 +199,6 @@ namespace Tkl.Jumbo.Jet.Jobs
         /// so do not try to cast it.</returns>
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1004:GenericMethodsShouldProvideTypeParameter")]
         public RecordWriter<T> CreateRecordWriter<T>(string output, Type recordWriterType, int blockSize, int replicationFactor)
-            where T : IWritable, new()
         {
             if( output == null )
                 throw new ArgumentNullException("output");
@@ -228,8 +223,6 @@ namespace Tkl.Jumbo.Jet.Jobs
         /// <param name="output">The record writer to write the result to.</param>
         /// <param name="taskType">The type of the task.</param>
         public void ProcessRecords<TInput, TOutput>(RecordReader<TInput> input, RecordWriter<TOutput> output, Type taskType)
-            where TInput : IWritable, new()
-            where TOutput : IWritable, new()
         {
             ProcessRecords(input, output, taskType, null, null);
         }
@@ -244,8 +237,6 @@ namespace Tkl.Jumbo.Jet.Jobs
         /// <param name="taskType">The type of the task.</param>
         /// <param name="stageId">The ID of this processing stage in the job, or <see langword="null"/> to use the name of the task type.</param>
         public void ProcessRecords<TInput, TOutput>(RecordReader<TInput> input, RecordWriter<TOutput> output, Type taskType, string stageId)
-            where TInput : IWritable, new()
-            where TOutput : IWritable, new()
         {
             ProcessRecords(input, output, taskType, stageId, null);
         }
@@ -261,8 +252,6 @@ namespace Tkl.Jumbo.Jet.Jobs
         /// <param name="stageId">The ID of this processing stage in the job, or <see langword="null"/> to use the name of the task type.</param>
         /// <param name="stageSettings">A dictionary containing settings to use for the stage. May be <see langword="null"/>.</param>
         public void ProcessRecords<TInput, TOutput>(RecordReader<TInput> input, RecordWriter<TOutput> output, Type taskType, string stageId, IDictionary<string, string> stageSettings)
-            where TInput : IWritable, new()
-            where TOutput : IWritable, new()
         {
             if( input == null )
                 throw new ArgumentNullException("input");
@@ -283,9 +272,7 @@ namespace Tkl.Jumbo.Jet.Jobs
         /// <param name="output">The record writer to write the result to.</param>
         /// <param name="task">The task function.</param>
         public void ProcessRecords<TInput, TOutput>(RecordReader<TInput> input, RecordWriter<TOutput> output, TaskFunction<TInput, TOutput> task)
-            where TInput : IWritable, new()
-            where TOutput : IWritable, new()
-        {
+         {
             if( input == null )
                 throw new ArgumentNullException("input");
             if( output == null )
@@ -306,9 +293,7 @@ namespace Tkl.Jumbo.Jet.Jobs
         /// <param name="task">The task function.</param>
         /// <param name="stageSettings">A dictionary containing settings to use for the stage. May be <see langword="null"/>.</param>
         public void ProcessRecords<TInput, TOutput>(RecordReader<TInput> input, RecordWriter<TOutput> output, TaskFunctionWithConfiguration<TInput, TOutput> task, IDictionary<string, string> stageSettings)
-            where TInput : IWritable, new()
-            where TOutput : IWritable, new()
-        {
+         {
             if( input == null )
                 throw new ArgumentNullException("input");
             if( output == null )
@@ -464,7 +449,6 @@ namespace Tkl.Jumbo.Jet.Jobs
         /// <param name="input">The input records to sort.</param>
         /// <param name="output">The record writer receiving the sorted result.</param>
         public void SortRecords<T>(RecordReader<T> input, RecordWriter<T> output)
-            where T : IWritable, new()
         {
             SortRecords(input, output, null);
         }
@@ -477,7 +461,6 @@ namespace Tkl.Jumbo.Jet.Jobs
         /// <param name="output">The record writer receiving the sorted result.</param>
         /// <param name="comparerType">The <see cref="IComparer{T}"/> to use to compare elements while sorting, or <see langword="null"/> to use <see cref="Comparer{T}.Default"/>.</param>
         public void SortRecords<T>(RecordReader<T> input, RecordWriter<T> output, Type comparerType)
-            where T : IWritable, new()
         {
             SortRecordsInternal<T>(input, output, comparerType, false);
         }
@@ -489,7 +472,6 @@ namespace Tkl.Jumbo.Jet.Jobs
         /// <param name="input">The input records to partition.</param>
         /// <param name="output">The output to write the partitions to.</param>
         public void PartitionRecords<T>(RecordReader<T> input, RecordWriter<T> output)
-            where T : IWritable, new()
         {
             PartitionRecords(input, output, null);
         }
@@ -502,7 +484,6 @@ namespace Tkl.Jumbo.Jet.Jobs
         /// <param name="output">The output to write the partitions to.</param>
         /// <param name="stageId">The ID of the stage.</param>
         public void PartitionRecords<T>(RecordReader<T> input, RecordWriter<T> output, string stageId)
-            where T : IWritable, new()
         {
             if( RecordCollector<T>.GetCollector(output) == null )
                 throw new ArgumentException("The output of a partitioning operation must be a RecordCollector.", "output");
@@ -517,7 +498,6 @@ namespace Tkl.Jumbo.Jet.Jobs
         /// <param name="taskType">The type of the task.</param>
         /// <param name="taskCount">The number of task instances to create when running the job.</param>
         public void GenerateRecords<T>(RecordWriter<T> output, Type taskType, int taskCount)
-            where T : IWritable, new()
         {
             GenerateRecords(output, taskType, taskCount, null, null);
         }
@@ -532,7 +512,6 @@ namespace Tkl.Jumbo.Jet.Jobs
         /// <param name="stageId">The ID of this processing stage in the job, or <see langword="null"/> to use the name of the task type.</param>
         /// <param name="stageSettings">A dictionary containing settings to use for the stage. May be <see langword="null"/>.</param>
         public void GenerateRecords<T>(RecordWriter<T> output, Type taskType, int taskCount, string stageId, IDictionary<string, string> stageSettings)
-            where T : IWritable, new()
         {
             if( output == null )
                 throw new ArgumentNullException("output");
@@ -556,7 +535,6 @@ namespace Tkl.Jumbo.Jet.Jobs
         /// <param name="task">The task function.</param>
         /// <param name="taskCount">The number of task instances to create when running the job.</param>
         public void GenerateRecords<T>(RecordWriter<T> output, OutputOnlyTaskFunction<T> task, int taskCount)
-            where T : IWritable, new()
         {
             if( task == null )
                 throw new ArgumentNullException("task");
@@ -577,7 +555,6 @@ namespace Tkl.Jumbo.Jet.Jobs
         /// <param name="taskCount">The number of task instances to create when running the job.</param>
         /// <param name="stageSettings">A dictionary containing settings to use for the stage. May be <see langword="null"/>.</param>
         public void GenerateRecords<T>(RecordWriter<T> output, OutputOnlyTaskFunctionWithConfiguration<T> task, int taskCount, IDictionary<string, string> stageSettings)
-            where T : IWritable, new()
         {
             if( task == null )
                 throw new ArgumentNullException("task");
@@ -602,9 +579,9 @@ namespace Tkl.Jumbo.Jet.Jobs
         /// <param name="outerComparer"></param>
         /// <param name="innerComparer"></param>
         public void JoinRecords<TOuter, TInner, TResult>(RecordReader<TOuter> outerInput, RecordReader<TInner> innerInput, RecordWriter<TResult> output, Type joinRecordReader, Type outerComparer, Type innerComparer)
-            where TOuter : class, IWritable, new()
-            where TInner : class, IWritable, new()
-            where TResult : IWritable, new()
+            where TOuter : class
+            where TInner : class
+            where TResult : new()
         {
             if( outerInput == null )
                 throw new ArgumentNullException("outerInput");
@@ -654,7 +631,7 @@ namespace Tkl.Jumbo.Jet.Jobs
             }
         }
 
-        private static void ConfigureInputCollectorForJoin<T>(RecordCollector<T> inputCollector, Type comparer) where T : class, IWritable, new()
+        private static void ConfigureInputCollectorForJoin<T>(RecordCollector<T> inputCollector, Type comparer)
         {
             if( inputCollector != null )
             {
@@ -681,8 +658,6 @@ namespace Tkl.Jumbo.Jet.Jobs
         }
 
         private void ProcessRecordsInternal<TInput, TOutput>(RecordReader<TInput> input, RecordWriter<TOutput> output, Type taskType, string stageId, IDictionary<string, string> stageSettings, int taskCount)
-            where TInput : IWritable, new()
-            where TOutput : IWritable, new()
         {
             if( stageId == null )
                 stageId = taskType.Name;
@@ -794,7 +769,7 @@ namespace Tkl.Jumbo.Jet.Jobs
                 _assemblies.Add(taskType.Assembly);
         }
 
-        private int DetermineTaskCount<TInput>(int taskCount, RecordCollector<TInput> inputCollector) where TInput : IWritable, new()
+        private int DetermineTaskCount<TInput>(int taskCount, RecordCollector<TInput> inputCollector)
         {
             if( taskCount == 0 )
             {
@@ -810,7 +785,7 @@ namespace Tkl.Jumbo.Jet.Jobs
             return taskCount;
         }
 
-        private bool CanReplaceEmptyTask<TInput>(int taskCount, RecordCollector<TInput> inputCollector) where TInput : IWritable, new()
+        private bool CanReplaceEmptyTask<TInput>(int taskCount, RecordCollector<TInput> inputCollector)
         {
             // We can replace an empty task if:
             // - The channel type is pipeline and taskCount is one.
@@ -822,8 +797,6 @@ namespace Tkl.Jumbo.Jet.Jobs
         }
 
         private void ProcessRecords<TInput, TOutput>(RecordReader<TInput> input, RecordWriter<TOutput> output, MethodInfo taskMethod, IDictionary<string, string> stageSettings, int taskCount, bool useConfiguration, bool useInput)
-            where TInput : IWritable, new()
-            where TOutput : IWritable, new()
         {
             if( !(taskMethod.IsStatic && taskMethod.IsPublic) )
                 throw new ArgumentException("The task method specified must be public and static.", "taskMethod");
@@ -906,7 +879,6 @@ namespace Tkl.Jumbo.Jet.Jobs
         }
 
         private void SortRecordsInternal<T>(RecordReader<T> input, RecordWriter<T> output, Type comparerType, bool forceNoMergeStage)
-            where T : IWritable, new()
         {
             if( input == null )
                 throw new ArgumentNullException("input");

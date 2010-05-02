@@ -14,7 +14,6 @@ namespace Tkl.Jumbo.Jet.Samples.Tasks
     /// <typeparam name="TInput">The type of input record.</typeparam>
     [AllowRecordReuse]
     public class RecordCountTask<TInput> : IPullTask<TInput, Int32Writable>
-        where TInput : IWritable, new()
     {
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(RecordCountTask<TInput>));
 

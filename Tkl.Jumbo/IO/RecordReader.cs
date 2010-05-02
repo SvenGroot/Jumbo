@@ -13,7 +13,6 @@ namespace Tkl.Jumbo.IO
     /// </summary>
     /// <typeparam name="T">The type of the record</typeparam>
     public abstract class RecordReader<T> : IRecordReader, IDisposable
-        where T : new()
     {
         private int _recordsRead;
         private bool _hasRecords = true;

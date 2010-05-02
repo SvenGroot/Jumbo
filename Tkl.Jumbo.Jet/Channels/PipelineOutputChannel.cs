@@ -26,7 +26,6 @@ namespace Tkl.Jumbo.Jet.Channels
         #region Nested types
 
         private sealed class PipelineRecordWriter<TRecord, TPipelinedTaskOutput> : RecordWriter<TRecord>
-            where TRecord : new()
         {
             private IPushTask<TRecord, TPipelinedTaskOutput> _task;
             private RecordWriter<TPipelinedTaskOutput> _output;
@@ -123,7 +122,6 @@ namespace Tkl.Jumbo.Jet.Channels
 #pragma warning disable 169
 
         private static RecordWriter<TRecord> CreateRecordWriterInternal<TRecord, TPipelinedTaskOutput>(TaskExecutionUtility pipelinedTask)
-            where TRecord : new()
         {
             RecordWriter<TPipelinedTaskOutput> output = pipelinedTask.GetOutputWriter<TPipelinedTaskOutput>();
 

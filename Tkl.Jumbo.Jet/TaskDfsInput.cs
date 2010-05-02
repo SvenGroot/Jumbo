@@ -121,7 +121,6 @@ namespace Tkl.Jumbo.Jet
         /// </remarks>
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1004:GenericMethodsShouldProvideTypeParameter")]
         public static RecordReader<T> CreateRecordReader<T>(this TaskDfsInput input, DfsClient dfsClient, TaskExecutionUtility taskExecution)
-            where T : new()
         {
             if( input == null )
                 throw new ArgumentNullException("input");

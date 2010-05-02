@@ -7,11 +7,11 @@ using System.Text;
 using Tkl.Jumbo.IO;
 using System.Net.Sockets;
 using System.IO;
+using System.Runtime.Serialization;
 
 namespace Tkl.Jumbo.Jet.Channels
 {
     sealed class NetworkRecordReader<T> : RecordReader<T>
-        where T : new()
     {
         private readonly TcpClient _client;
         private readonly NetworkStream _stream;
@@ -36,7 +36,7 @@ namespace Tkl.Jumbo.Jet.Channels
             _allowRecordReuse = allowRecordReuse;
             SourceName = _reader.ReadString();
             if( allowRecordReuse )
-                _record = new T();
+                _record = (T)FormatterServices.GetUninitializedObject(typeof(T));
         }
 
         protected override bool ReadRecordInternal()
@@ -61,7 +61,7 @@ namespace Tkl.Jumbo.Jet.Channels
                 if( _allowRecordReuse )
                     record = _record;
                 else
-                    record = new T();
+                    record = (T)FormatterServices.GetUninitializedObject(typeof(T));
                 ((IWritable)record).Read(_reader);
             }
             CurrentRecord = record;

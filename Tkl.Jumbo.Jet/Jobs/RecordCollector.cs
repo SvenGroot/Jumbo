@@ -26,7 +26,6 @@ namespace Tkl.Jumbo.Jet.Jobs
     /// </remarks>
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1001:TypesThatOwnDisposableFieldsShouldBeDisposable")]
     public class RecordCollector<T>
-        where T : IWritable, new()
     {
         #region Nested types
 

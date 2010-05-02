@@ -14,7 +14,6 @@ namespace Tkl.Jumbo.Jet
     /// <typeparam name="TInput">The input type of the task.</typeparam>
     /// <typeparam name="TOutput">The output type of the task.</typeparam>
     public interface IPullTask<TInput, TOutput> : ITask<TInput, TOutput>
-        where TInput : new()
     {
         /// <summary>
         /// Runs the task.

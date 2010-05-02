@@ -131,7 +131,6 @@ namespace TaskHost
 #pragma warning disable 0169 // Disable private member not used warning in Mono C# compiler; it's used with reflection.
 
         private static void DoRunTask<TInput, TOutput>(TaskExecutionUtility taskExecution) 
-            where TInput : new()
         {
             _log.Debug("DoRunTask invoked.");
             ITask<TInput, TOutput> task = taskExecution.GetTaskInstance<TInput, TOutput>();
@@ -176,7 +175,6 @@ namespace TaskHost
 #pragma warning restore 0169
 
         private static void CallTaskRunMethod<TInput, TOutput>(RecordReader<TInput> input, RecordWriter<TOutput> output, Stopwatch taskStopwatch, IPullTask<TInput, TOutput> pullTask, IPushTask<TInput, TOutput> pushTask)
-            where TInput : new()
         {
             if( pullTask != null )
             {

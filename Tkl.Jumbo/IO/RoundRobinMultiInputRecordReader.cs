@@ -20,7 +20,6 @@ namespace Tkl.Jumbo.IO
     /// </para>
     /// </remarks>
     public sealed class RoundRobinMultiInputRecordReader<T> : MultiInputRecordReader<T>
-        where T : new()
     {
         private readonly List<RecordReader<T>> _readers = new List<RecordReader<T>>();
         private int _previousInputsAvailable;

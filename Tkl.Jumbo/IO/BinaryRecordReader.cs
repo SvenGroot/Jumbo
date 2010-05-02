@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text;
 using Tkl.Jumbo.IO;
 using System.IO;
+using System.Runtime.Serialization;
 
 namespace Tkl.Jumbo.IO
 {
@@ -24,7 +25,6 @@ namespace Tkl.Jumbo.IO
     /// </para>
     /// </remarks>
     public class BinaryRecordReader<T> : StreamRecordReader<T>
-        where T : new()
     {
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(BinaryRecordReader<T>));
 
@@ -73,7 +73,7 @@ namespace Tkl.Jumbo.IO
         {
             _reader = new BinaryReader(stream);
             if( allowRecordReuse )
-                _record = new T();
+                _record = (T)FormatterServices.GetUninitializedObject(typeof(T));
             _allowRecordReuse = allowRecordReuse;
         }
 
@@ -102,7 +102,7 @@ namespace Tkl.Jumbo.IO
                 if( _allowRecordReuse )
                     record = _record;
                 else
-                    record = new T();
+                    record = (T)FormatterServices.GetUninitializedObject(typeof(T));
 
                 ((IWritable)record).Read(_reader);
             }

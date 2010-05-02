@@ -20,9 +20,7 @@ namespace Tkl.Jumbo.Jet.Jobs
     /// <typeparam name="TOutput">The type of the output records.</typeparam>
     /// <param name="input">The record reader providing the input records.</param>
     /// <param name="output">The record writer collecting the output records.</param>
-    public delegate void TaskFunction<TInput, TOutput>(RecordReader<TInput> input, RecordWriter<TOutput> output)
-        where TInput : IWritable, new()
-        where TOutput : IWritable, new();
+    public delegate void TaskFunction<TInput, TOutput>(RecordReader<TInput> input, RecordWriter<TOutput> output);
 
     /// <summary>
     /// Delegate for tasks.
@@ -32,9 +30,7 @@ namespace Tkl.Jumbo.Jet.Jobs
     /// <param name="input">The record reader providing the input records.</param>
     /// <param name="output">The record writer collecting the output records.</param>
     /// <param name="configuration">The configuration for the task.</param>
-    public delegate void TaskFunctionWithConfiguration<TInput, TOutput>(RecordReader<TInput> input, RecordWriter<TOutput> output, TaskAttemptConfiguration configuration)
-        where TInput : IWritable, new()
-        where TOutput : IWritable, new();
+    public delegate void TaskFunctionWithConfiguration<TInput, TOutput>(RecordReader<TInput> input, RecordWriter<TOutput> output, TaskAttemptConfiguration configuration);
 
     /// <summary>
     /// Delegate for accumulator tasks
@@ -53,8 +49,7 @@ namespace Tkl.Jumbo.Jet.Jobs
     /// </summary>
     /// <typeparam name="T">The type of the output records.</typeparam>
     /// <param name="output">The record writer collecting the output records.</param>
-    public delegate void OutputOnlyTaskFunction<T>(RecordWriter<T> output)
-        where T : IWritable, new();
+    public delegate void OutputOnlyTaskFunction<T>(RecordWriter<T> output);
 
     /// <summary>
     /// Delegate for tasks with no input.
@@ -62,8 +57,7 @@ namespace Tkl.Jumbo.Jet.Jobs
     /// <typeparam name="T">The type of the output records.</typeparam>
     /// <param name="output">The record writer collecting the output records.</param>
     /// <param name="configuration">The configuration for the task.</param>
-    public delegate void OutputOnlyTaskFunctionWithConfiguration<T>(RecordWriter<T> output, TaskAttemptConfiguration configuration)
-        where T : IWritable, new();
+    public delegate void OutputOnlyTaskFunctionWithConfiguration<T>(RecordWriter<T> output, TaskAttemptConfiguration configuration);
 
 #pragma warning restore 1587
 #pragma warning restore 1591
