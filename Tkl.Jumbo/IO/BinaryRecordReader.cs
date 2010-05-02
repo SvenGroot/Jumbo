@@ -33,7 +33,7 @@ namespace Tkl.Jumbo.IO
         private bool _allowRecordReuse;
         private string _fileName;
         private bool _deleteFile;
-        private static readonly IValueWriter<T> _valueWriter = (IValueWriter<T>)DefaultValueWriter.GetWriter(typeof(T));
+        private static readonly IValueWriter<T> _valueWriter = ValueWriter<T>.Writer;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="BinaryRecordReader{T}"/> class that reads from the specified file.

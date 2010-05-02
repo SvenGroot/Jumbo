@@ -22,7 +22,7 @@ namespace Tkl.Jumbo.IO
         private BinaryWriter _writer;
         private readonly RecordFileHeader _header;
         private long _lastRecordMarkerPosition;
-        private static readonly IValueWriter<T> _valueWriter = (IValueWriter<T>)DefaultValueWriter.GetWriter(typeof(T));
+        private static readonly IValueWriter<T> _valueWriter = ValueWriter<T>.Writer;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="RecordFileWriter{T}"/> class that writes to the specified stream.

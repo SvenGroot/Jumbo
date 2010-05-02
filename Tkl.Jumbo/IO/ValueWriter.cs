@@ -12,7 +12,13 @@ namespace Tkl.Jumbo.IO
     /// <summary>
     /// Provides access to <see cref="IValueWriter{T}"/> implementations for various basic framework types.
     /// </summary>
-    public static class DefaultValueWriter
+    /// <remarks>
+    /// <para>
+    ///   If you attempt to access this class for a type <typeparam name="T" /> that does not implement <see cref="IWritable"/> and that does not have a implementation of <see cref="IValueWriter{T}"/>,
+    ///   an <see cref="NotSupportedException"/> is thrown by the static type initializer of the <see cref="ValueWriter{T}"/> class.
+    /// </para>
+    /// </remarks>
+    public static class ValueWriter<T>
     {
         #region Nested types
 
@@ -174,56 +180,51 @@ namespace Tkl.Jumbo.IO
 
         #endregion
 
-        private static Hashtable _writers = new Hashtable(); // Using hashtable (not Dictionary<T>) because it doesn't need a lock on reads, only writes.
+        private static readonly IValueWriter<T> _writer = (IValueWriter<T>)GetWriter();
 
         /// <summary>
-        /// Gets a writer for the specified type.
+        /// Gets the writer for the type, or <see langword="null"/> if it implements <see cref="IWritable"/>.
         /// </summary>
-        /// <param name="type">The type.</param>
-        /// <returns>An implementation of <see cref="IValueWriter{T}"/> for the specified type, or <see langword="null"/> if the type implements <see cref="IWritable"/>.</returns>
-        /// <exception cref="ArgumentException">There is not writer for <paramref name="type"/> and the type does not implement <see cref="IWritable"/>.</exception>
-        /// <exception cref="ArgumentNullException"><paramref name="type"/> is <see langword="null"/>.</exception>
-        public static object GetWriter(Type type)
+        /// <value>
+        /// An implementation of <see cref="IValueWriter{T}"/>, or <see langword="null"/> if it implements <see cref="IWritable"/>.
+        /// </value>
+        public static IValueWriter<T> Writer
         {
-            if( type == null )
-                throw new ArgumentNullException("type");
+            get { return _writer; }
+        }
+
+        private static object GetWriter()
+        {
+            Type type = typeof(T);
             if( type.GetInterfaces().Contains(typeof(IWritable)) )
                 return null;
 
-            object writer = _writers[type];
-            if( writer == null )
-            {
-                if( type == typeof(int) )
-                    writer = new Int32Writer();
-                else if( type == typeof(long) )
-                    writer = new Int64Writer();
-                else if( type == typeof(String) )
-                    writer = new StringWriter();
-                else if( type == typeof(Single) )
-                    writer = new SingleWriter();
-                else if( type == typeof(Double) )
-                    writer = new DoubleWriter();
-                else if( type == typeof(SByte) )
-                    writer = new SByteWriter();
-                else if( type == typeof(Int16) )
-                    writer = new Int16Writer();
-                else if( type == typeof(Byte) )
-                    writer = new ByteWriter();
-                else if( type == typeof(UInt16) )
-                    writer = new UInt16Writer();
-                else if( type == typeof(UInt32) )
-                    writer = new UInt32Writer();
-                else if( type == typeof(UInt64) )
-                    writer = new UInt64Writer();
-                else if( type == typeof(Decimal) )
-                    writer = new DecimalWriter();
-                else
-                    throw new ArgumentException(string.Format(System.Globalization.CultureInfo.InvariantCulture, "Could not find the writer for type {0} and the type does not implement IWritable.", type));
-
-                _writers.Add(type, writer);
-            }
-
-            return writer;
+            if( type == typeof(int) )
+                return new Int32Writer();
+            else if( type == typeof(long) )
+                return new Int64Writer();
+            else if( type == typeof(String) )
+                return new StringWriter();
+            else if( type == typeof(Single) )
+                return new SingleWriter();
+            else if( type == typeof(Double) )
+                return new DoubleWriter();
+            else if( type == typeof(SByte) )
+                return new SByteWriter();
+            else if( type == typeof(Int16) )
+                return new Int16Writer();
+            else if( type == typeof(Byte) )
+                return new ByteWriter();
+            else if( type == typeof(UInt16) )
+                return new UInt16Writer();
+            else if( type == typeof(UInt32) )
+                return new UInt32Writer();
+            else if( type == typeof(UInt64) )
+                return new UInt64Writer();
+            else if( type == typeof(Decimal) )
+                return new DecimalWriter();
+            else
+                throw new NotSupportedException(string.Format(System.Globalization.CultureInfo.InvariantCulture, "Could not find the writer for type {0} and the type does not implement IWritable.", type));
         }
     }
 }

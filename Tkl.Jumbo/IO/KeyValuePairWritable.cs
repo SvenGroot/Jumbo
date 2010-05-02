@@ -19,8 +19,8 @@ namespace Tkl.Jumbo.IO
         where TKey : IComparable<TKey>
     {
         private static readonly IComparer<TKey> _keyComparer = Comparer<TKey>.Default;
-        private static readonly IValueWriter<TKey> _keyWriter = (IValueWriter<TKey>)DefaultValueWriter.GetWriter(typeof(TKey));
-        private static readonly IValueWriter<TValue> _valueWriter = (IValueWriter<TValue>)DefaultValueWriter.GetWriter(typeof(TValue));
+        private static readonly IValueWriter<TKey> _keyWriter = ValueWriter<TKey>.Writer;
+        private static readonly IValueWriter<TValue> _valueWriter = ValueWriter<TValue>.Writer;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="KeyValuePairWritable{TKey,TValue}"/> class.

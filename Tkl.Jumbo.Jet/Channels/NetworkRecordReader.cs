@@ -27,7 +27,7 @@ namespace Tkl.Jumbo.Jet.Channels
                 throw new ArgumentNullException("client");
             if( !typeof(T).GetInterfaces().Contains(typeof(IWritable)) )
             {
-                _valueWriter = (IValueWriter<T>)DefaultValueWriter.GetWriter(typeof(T));
+                _valueWriter = ValueWriter<T>.Writer;
             }
 
             _client = client;

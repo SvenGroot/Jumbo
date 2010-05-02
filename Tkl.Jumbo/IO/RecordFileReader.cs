@@ -27,7 +27,7 @@ namespace Tkl.Jumbo.IO
         private long _lastRecordMarkerPosition;
         private readonly long _end;
         private readonly bool _allowRecordReuse;
-        private static readonly IValueWriter<T> _valueWriter = (IValueWriter<T>)DefaultValueWriter.GetWriter(typeof(T));
+        private static readonly IValueWriter<T> _valueWriter = ValueWriter<T>.Writer;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="RecordFileReader{T}"/> class that reads from the specified stream.
