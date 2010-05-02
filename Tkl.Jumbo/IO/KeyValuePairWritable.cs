@@ -218,9 +218,13 @@ namespace Tkl.Jumbo.IO
         object ICloneable.Clone()
         {
             KeyValuePairWritable<TKey, TValue> clone = new KeyValuePairWritable<TKey, TValue>();
-            if( Key != null )
+            if( typeof(TKey).IsValueType )
+                clone.Key = Key;
+            else if( Key != null )
                 clone.Key = (TKey)((ICloneable)Key).Clone();
-            if( Value != null )
+            if( typeof(TValue).IsValueType )
+                clone.Value = Value;
+            else if( Value != null )
                 clone.Value = (TValue)((ICloneable)Value).Clone();
             return clone;
         }

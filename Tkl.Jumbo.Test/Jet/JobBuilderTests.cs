@@ -50,7 +50,7 @@ namespace Tkl.Jumbo.Test.Jet
 
         public class FakeAccumulatorTask : AccumulatorTask<StringWritable, Int32Writable>
         {
-            protected override void Accumulate(StringWritable key, Int32Writable value, Int32Writable newValue)
+            protected override Int32Writable Accumulate(StringWritable key, Int32Writable value, Int32Writable newValue)
             {
                 throw new NotImplementedException();
             }

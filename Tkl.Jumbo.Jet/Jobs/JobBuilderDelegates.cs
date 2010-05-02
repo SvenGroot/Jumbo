@@ -38,11 +38,17 @@ namespace Tkl.Jumbo.Jet.Jobs
     /// <typeparam name="TKey">The type of the keys.</typeparam>
     /// <typeparam name="TValue">The type of the values.</typeparam>
     /// <param name="key">The key of the record.</param>
-    /// <param name="value">The value associated with the key in the accumulator that must be updated.</param>
+    /// <param name="currentValue">The value associated with the key in the accumulator that must be updated.</param>
     /// <param name="newValue">The new value associated with the key.</param>
-    public delegate void AccumulatorFunction<TKey, TValue>(TKey key, TValue value, TValue newValue)
-        where TKey : IWritable, IComparable<TKey>, new()
-        where TValue : class, IWritable, new();
+    /// <returns>The new value.</returns>
+    /// <remarks>
+    /// <para>
+    ///   If <typeparamref name="TValue"/> is a mutable reference type, it is recommended for performance reasons to update the
+    ///   existing instance passed in <paramref name="currentValue"/> and then return that same instance from this method.
+    /// </para>
+    /// </remarks>
+    public delegate TValue AccumulatorFunction<TKey, TValue>(TKey key, TValue currentValue, TValue newValue)
+        where TKey : IComparable<TKey>;
 
     /// <summary>
     /// Delegate for tasks with no input.

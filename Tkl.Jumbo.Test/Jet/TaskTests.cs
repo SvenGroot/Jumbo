@@ -17,11 +17,20 @@ namespace Tkl.Jumbo.Test.Jet
     {
         #region Nested types
 
-        private class TestAccumulator : AccumulatorTask<Utf8StringWritable, Int32Writable>
+        private class TestAccumulator : AccumulatorTask<Utf8StringWritable, int>
         {
-            protected override void Accumulate(Utf8StringWritable key, Int32Writable value, Int32Writable newValue)
+            protected override int Accumulate(Utf8StringWritable key, int currentValue, int newValue)
             {
-                value.Value += newValue.Value;
+                return currentValue + newValue;
+            }
+        }
+
+        [AllowRecordReuse]
+        private class TestRecordReuseAccumulator : AccumulatorTask<Utf8StringWritable, int>
+        {
+            protected override int Accumulate(Utf8StringWritable key, int currentValue, int newValue)
+            {
+                return currentValue + newValue;
             }
         }
 
@@ -70,29 +79,76 @@ namespace Tkl.Jumbo.Test.Jet
             StageConfiguration stageConfig = jobConfig.AddStage("Accumulate", typeof(TestAccumulator), 1, null, null, null);
             TaskAttemptConfiguration config = new TaskAttemptConfiguration(Guid.NewGuid(), jobConfig, new TaskId("Accumulate", 1), stageConfig, Utilities.TestOutputPath, "/JumboJet/fake", 1, null);
 
-            IPushTask<KeyValuePairWritable<Utf8StringWritable, Int32Writable>, KeyValuePairWritable<Utf8StringWritable, Int32Writable>> task = new TestAccumulator();
+            IPushTask<KeyValuePairWritable<Utf8StringWritable, int>, KeyValuePairWritable<Utf8StringWritable, int>> task = new TestAccumulator();
             JetActivator.ApplyConfiguration(task, null, null, config);
-            ListRecordWriter<KeyValuePairWritable<Utf8StringWritable, Int32Writable>> output = new ListRecordWriter<KeyValuePairWritable<Utf8StringWritable, Int32Writable>>(true);
+            ListRecordWriter<KeyValuePairWritable<Utf8StringWritable, int>> output = new ListRecordWriter<KeyValuePairWritable<Utf8StringWritable, int>>(true);
 
-            task.ProcessRecord(new KeyValuePairWritable<Utf8StringWritable, Int32Writable>(new Utf8StringWritable("hello"), 1), output);
-            task.ProcessRecord(new KeyValuePairWritable<Utf8StringWritable, Int32Writable>(new Utf8StringWritable("bye"), 2), output);
-            task.ProcessRecord(new KeyValuePairWritable<Utf8StringWritable, Int32Writable>(new Utf8StringWritable("bye"), 3), output);
-            task.ProcessRecord(new KeyValuePairWritable<Utf8StringWritable, Int32Writable>(new Utf8StringWritable("hello"), 4), output);
-            task.ProcessRecord(new KeyValuePairWritable<Utf8StringWritable, Int32Writable>(new Utf8StringWritable("hello"), 5), output);
-            task.ProcessRecord(new KeyValuePairWritable<Utf8StringWritable, Int32Writable>(new Utf8StringWritable("bye"), 1), output);
-            task.ProcessRecord(new KeyValuePairWritable<Utf8StringWritable, Int32Writable>(new Utf8StringWritable("foo"), 1), output);
-            task.ProcessRecord(new KeyValuePairWritable<Utf8StringWritable, Int32Writable>(new Utf8StringWritable("bye"), 1), output);
+            task.ProcessRecord(new KeyValuePairWritable<Utf8StringWritable, int>(new Utf8StringWritable("hello"), 1), output);
+            task.ProcessRecord(new KeyValuePairWritable<Utf8StringWritable, int>(new Utf8StringWritable("bye"), 2), output);
+            task.ProcessRecord(new KeyValuePairWritable<Utf8StringWritable, int>(new Utf8StringWritable("bye"), 3), output);
+            task.ProcessRecord(new KeyValuePairWritable<Utf8StringWritable, int>(new Utf8StringWritable("hello"), 4), output);
+            task.ProcessRecord(new KeyValuePairWritable<Utf8StringWritable, int>(new Utf8StringWritable("hello"), 5), output);
+            task.ProcessRecord(new KeyValuePairWritable<Utf8StringWritable, int>(new Utf8StringWritable("bye"), 1), output);
+            task.ProcessRecord(new KeyValuePairWritable<Utf8StringWritable, int>(new Utf8StringWritable("foo"), 1), output);
+            task.ProcessRecord(new KeyValuePairWritable<Utf8StringWritable, int>(new Utf8StringWritable("bye"), 1), output);
 
             task.Finish(output);
 
             var result = output.List;
             Assert.AreEqual(3, result.Count);
-            Assert.Contains(new KeyValuePairWritable<Utf8StringWritable, Int32Writable>(new Utf8StringWritable("hello"), 10), result);
-            Assert.Contains(new KeyValuePairWritable<Utf8StringWritable, Int32Writable>(new Utf8StringWritable("bye"), 7), result);
-            Assert.Contains(new KeyValuePairWritable<Utf8StringWritable, Int32Writable>(new Utf8StringWritable("foo"), 1), result);
-            Assert.Contains(new KeyValuePairWritable<Utf8StringWritable, Int32Writable>(new Utf8StringWritable("hello"), 10), result);
-            CollectionAssert.DoesNotContain(result, new KeyValuePairWritable<Utf8StringWritable, Int32Writable>(new Utf8StringWritable("hello"), 9));
-            CollectionAssert.DoesNotContain(result, new KeyValuePairWritable<Utf8StringWritable, Int32Writable>(new Utf8StringWritable("bar"), 1));
+            Assert.Contains(new KeyValuePairWritable<Utf8StringWritable, int>(new Utf8StringWritable("hello"), 10), result);
+            Assert.Contains(new KeyValuePairWritable<Utf8StringWritable, int>(new Utf8StringWritable("bye"), 7), result);
+            Assert.Contains(new KeyValuePairWritable<Utf8StringWritable, int>(new Utf8StringWritable("foo"), 1), result);
+            Assert.Contains(new KeyValuePairWritable<Utf8StringWritable, int>(new Utf8StringWritable("hello"), 10), result);
+            CollectionAssert.DoesNotContain(result, new KeyValuePairWritable<Utf8StringWritable, int>(new Utf8StringWritable("hello"), 9));
+            CollectionAssert.DoesNotContain(result, new KeyValuePairWritable<Utf8StringWritable, int>(new Utf8StringWritable("bar"), 1));
+        }
+
+        [Test]
+        public void TestAccumulatorTaskRecordReuse()
+        {
+            JobConfiguration jobConfig = new JobConfiguration();
+            StageConfiguration stageConfig = jobConfig.AddStage("Accumulate", typeof(TestAccumulator), 1, null, null, null);
+            TaskAttemptConfiguration config = new TaskAttemptConfiguration(Guid.NewGuid(), jobConfig, new TaskId("Accumulate", 1), stageConfig, Utilities.TestOutputPath, "/JumboJet/fake", 1, null);
+
+            IPushTask<KeyValuePairWritable<Utf8StringWritable, int>, KeyValuePairWritable<Utf8StringWritable, int>> task = new TestRecordReuseAccumulator();
+            JetActivator.ApplyConfiguration(task, null, null, config);
+            ListRecordWriter<KeyValuePairWritable<Utf8StringWritable, int>> output = new ListRecordWriter<KeyValuePairWritable<Utf8StringWritable, int>>(true);
+
+            KeyValuePairWritable<Utf8StringWritable, int> record = new KeyValuePairWritable<Utf8StringWritable, int>(new Utf8StringWritable("hello"), 1);
+            task.ProcessRecord(record, output);
+            record.Key.Set("bye");
+            record.Value = 2;
+            task.ProcessRecord(record, output);
+            record.Key.Set("bye");
+            record.Value = 3;
+            task.ProcessRecord(record, output);
+            record.Key.Set("hello");
+            record.Value = 4;
+            task.ProcessRecord(record, output);
+            record.Key.Set("hello");
+            record.Value = 5;
+            task.ProcessRecord(record, output);
+            record.Key.Set("bye");
+            record.Value = 1;
+            task.ProcessRecord(record, output);
+            record.Key.Set("foo");
+            record.Value = 1;
+            task.ProcessRecord(record, output);
+            record.Key.Set("bye");
+            record.Value = 1;
+            task.ProcessRecord(record, output);
+
+            task.Finish(output);
+
+            var result = output.List;
+            Assert.AreEqual(3, result.Count);
+            Assert.Contains(new KeyValuePairWritable<Utf8StringWritable, int>(new Utf8StringWritable("hello"), 10), result);
+            Assert.Contains(new KeyValuePairWritable<Utf8StringWritable, int>(new Utf8StringWritable("bye"), 7), result);
+            Assert.Contains(new KeyValuePairWritable<Utf8StringWritable, int>(new Utf8StringWritable("foo"), 1), result);
+            Assert.Contains(new KeyValuePairWritable<Utf8StringWritable, int>(new Utf8StringWritable("hello"), 10), result);
+            CollectionAssert.DoesNotContain(result, new KeyValuePairWritable<Utf8StringWritable, int>(new Utf8StringWritable("hello"), 9));
+            CollectionAssert.DoesNotContain(result, new KeyValuePairWritable<Utf8StringWritable, int>(new Utf8StringWritable("bar"), 1));
         }
     }
 }

@@ -19,19 +19,32 @@ namespace Tkl.Jumbo.Jet.Tasks
     /// </para>
     /// </remarks>
     public abstract class AccumulatorTask<TKey, TValue> : Configurable, IPushTask<KeyValuePairWritable<TKey, TValue>, KeyValuePairWritable<TKey, TValue>>
-        where TKey : IWritable, IComparable<TKey>, new()
-        where TValue : class, IWritable, new()
+        where TKey : IComparable<TKey>
     {
-        private readonly Dictionary<TKey, TValue> _acculumatedValues = new Dictionary<TKey, TValue>();
+        #region Nested types
 
-        private readonly bool _clone;
+        private sealed class ValueContainer
+        {
+            public TValue Value { get; set; }
+        }
+
+        #endregion
+
+        private readonly Dictionary<TKey, ValueContainer> _acculumatedValues = new Dictionary<TKey, ValueContainer>();
+
+        private readonly bool _cloneKey;
+        private readonly bool _cloneValue;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="AccumulatorTask{TKey,TValue}"/> class.
         /// </summary>
         protected AccumulatorTask()
         {
-            _clone = Attribute.IsDefined(GetType(), typeof(AllowRecordReuseAttribute));
+            if( Attribute.IsDefined(GetType(), typeof(AllowRecordReuseAttribute)) )
+            {
+                _cloneKey = !typeof(TKey).IsValueType;
+                _cloneValue = !typeof(TValue).IsValueType;
+            }
         }
 
         #region IPushTask<KeyValuePairWritable<TKey,TValue>,KeyValuePairWritable<TKey,TValue>> Members
@@ -44,22 +57,23 @@ namespace Tkl.Jumbo.Jet.Tasks
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1062:Validate arguments of public methods", MessageId = "0")]
         public void ProcessRecord(KeyValuePairWritable<TKey, TValue> record, RecordWriter<KeyValuePairWritable<TKey, TValue>> output)
         {
-            TKey key;
-            TValue value;
+            ValueContainer value;
             if( _acculumatedValues.TryGetValue(record.Key, out value) )
-                Accumulate(record.Key, value, record.Value);
+                value.Value = Accumulate(record.Key, value.Value, record.Value);
             else
             {
-                if( _clone )
-                {
+                TKey key;
+                if( _cloneKey )
                     key = (TKey)((ICloneable)record.Key).Clone();
-                    value = (TValue)((ICloneable)record.Value).Clone();
-                }
                 else
-                {
                     key = record.Key;
-                    value = record.Value;
-                }
+
+                value = new ValueContainer();
+                if( _cloneValue )
+                    value.Value = (TValue)((ICloneable)record.Value).Clone();
+                else
+                    value.Value = record.Value;
+
                 _acculumatedValues.Add(key, value);
             }
         }
@@ -79,12 +93,12 @@ namespace Tkl.Jumbo.Jet.Tasks
             KeyValuePairWritable<TKey, TValue> record = null;
             if( allowRecordReuse )
                 record = new KeyValuePairWritable<TKey, TValue>();
-            foreach( KeyValuePair<TKey, TValue> item in _acculumatedValues )
+            foreach( KeyValuePair<TKey, ValueContainer> item in _acculumatedValues )
             {
                 if( !allowRecordReuse )
                     record = new KeyValuePairWritable<TKey, TValue>();
                 record.Key = item.Key;
-                record.Value = item.Value;
+                record.Value = item.Value.Value;
                 output.WriteRecord(record);
             }
         }
@@ -95,14 +109,15 @@ namespace Tkl.Jumbo.Jet.Tasks
         /// When implemented in a derived class, accumulates the values of the records.
         /// </summary>
         /// <param name="key">The key of the record.</param>
-        /// <param name="value">The value associated with the key in the accumulator that must be updated.</param>
+        /// <param name="currentValue">The current value associated with the key.</param>
         /// <param name="newValue">The new value associated with the key.</param>
+        /// <returns>The new value.</returns>
         /// <remarks>
         /// <para>
-        ///   Implementers should use this function to perform whatever accumulator action they need to perform, and
-        ///   update <paramref name="value"/> with the new value.
+        ///   If <typeparamref name="TValue"/> is a mutable reference type, it is recommended for performance reasons to update the
+        ///   existing instance passed in <paramref name="currentValue"/> and then return that same instance from this method.
         /// </para>
         /// </remarks>
-        protected abstract void Accumulate(TKey key, TValue value, TValue newValue);
+        protected abstract TValue Accumulate(TKey key, TValue currentValue, TValue newValue);
     }
 }

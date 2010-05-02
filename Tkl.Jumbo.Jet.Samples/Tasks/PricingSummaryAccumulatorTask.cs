@@ -19,16 +19,19 @@ namespace Tkl.Jumbo.Jet.Samples.Tasks
         /// When implemented in a derived class, accumulates the values of the records.
         /// </summary>
         /// <param name="key">The key of the record.</param>
-        /// <param name="value">The value associated with the key in the accumulator that must be updated.</param>
+        /// <param name="currentValue">The value associated with the key in the accumulator that must be updated.</param>
         /// <param name="newValue">The new value associated with the key.</param>
-        protected override void Accumulate(PricingSummaryKey key, PricingSummaryValue value, PricingSummaryValue newValue)
+        /// <returns>The new value.</returns>
+        protected override PricingSummaryValue Accumulate(PricingSummaryKey key, PricingSummaryValue currentValue, PricingSummaryValue newValue)
         {
-            value.SumQuantity += newValue.SumQuantity;
-            value.SumBasePrice += newValue.SumBasePrice;
-            value.SumDiscountPrice += newValue.SumDiscountPrice;
-            value.SumCharge += newValue.SumCharge;
-            value.SumDiscount += newValue.SumDiscount;
-            value.OrderCount += newValue.OrderCount;
+            currentValue.SumQuantity += newValue.SumQuantity;
+            currentValue.SumBasePrice += newValue.SumBasePrice;
+            currentValue.SumDiscountPrice += newValue.SumDiscountPrice;
+            currentValue.SumCharge += newValue.SumCharge;
+            currentValue.SumDiscount += newValue.SumDiscount;
+            currentValue.OrderCount += newValue.OrderCount;
+
+            return currentValue;
         }
     }
 }

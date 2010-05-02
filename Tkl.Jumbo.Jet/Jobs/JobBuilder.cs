@@ -315,8 +315,7 @@ namespace Tkl.Jumbo.Jet.Jobs
         /// <param name="accumulatorTaskType">The accumulator task type.</param>
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1006:DoNotNestGenericTypesInMemberSignatures")]
         public void AccumulateRecords<TKey, TValue>(RecordReader<KeyValuePairWritable<TKey, TValue>> input, RecordWriter<KeyValuePairWritable<TKey, TValue>> output, Type accumulatorTaskType)
-            where TKey : IWritable, IComparable<TKey>, new()
-            where TValue : class, IWritable, new()
+            where TKey : IComparable<TKey>
         {
             if( input == null )
                 throw new ArgumentNullException("input");
@@ -405,8 +404,7 @@ namespace Tkl.Jumbo.Jet.Jobs
         /// <param name="accumulator">The accumulator function.</param>
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1006:DoNotNestGenericTypesInMemberSignatures")]
         public void AccumulateRecords<TKey, TValue>(RecordReader<KeyValuePairWritable<TKey, TValue>> input, RecordWriter<KeyValuePairWritable<TKey, TValue>> output, AccumulatorFunction<TKey, TValue> accumulator)
-            where TKey : IWritable, IComparable<TKey>, new()
-            where TValue : class, IWritable, new()
+            where TKey : IComparable<TKey>
         {
             if( input == null )
                 throw new ArgumentNullException("input");
@@ -427,7 +425,7 @@ namespace Tkl.Jumbo.Jet.Jobs
 
             MethodBuilder accumulateMethod = taskTypeBuilder.DefineMethod("Accumulate", MethodAttributes.Public | MethodAttributes.Virtual, null, new[] { typeof(TKey), typeof(TValue), typeof(TValue) });
             accumulateMethod.DefineParameter(1, ParameterAttributes.None, "key");
-            accumulateMethod.DefineParameter(2, ParameterAttributes.None, "value");
+            accumulateMethod.DefineParameter(2, ParameterAttributes.None, "currentValue");
             accumulateMethod.DefineParameter(3, ParameterAttributes.None, "newValue");
 
             ILGenerator generator = accumulateMethod.GetILGenerator();

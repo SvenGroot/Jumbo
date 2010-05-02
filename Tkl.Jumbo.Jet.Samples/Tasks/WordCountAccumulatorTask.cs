@@ -18,12 +18,14 @@ namespace Tkl.Jumbo.Jet.Samples.Tasks
         /// <summary>
         /// Overrides <see cref="AccumulatorTask{TKey,TValue}.Accumulate"/>.
         /// </summary>
-        /// <param name="key"></param>
-        /// <param name="value"></param>
-        /// <param name="newValue"></param>
-        protected override void Accumulate(Utf8StringWritable key, Int32Writable value, Int32Writable newValue)
+        /// <param name="key">The key.</param>
+        /// <param name="currentValue">The current value.</param>
+        /// <param name="newValue">The new value.</param>
+        /// <returns></returns>
+        protected override Int32Writable Accumulate(Utf8StringWritable key, Int32Writable currentValue, Int32Writable newValue)
         {
-            value.Value += newValue.Value;
+            currentValue.Value += newValue.Value;
+            return currentValue;
         }
     }
 }
