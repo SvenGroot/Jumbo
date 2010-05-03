@@ -1,0 +1,385 @@
+﻿<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+<head>
+    <!-- $Id$ -->
+    <title>Jumbo Jet documentation</title>
+    <style type="text/css">
+        body
+        {
+	        font-family: Calibri, sans-serif;
+	        background: white;
+	        color: black;
+        }
+        a:link, a:visited, a:active
+        {
+	        color: #00008B;
+        }
+        h1
+        {
+	        font-weight: bold;
+	        font-size: xx-large;
+        }
+        h2
+        {
+	        color: #00008B;
+	        font-weight: bold;
+	        font-style: italic;
+	        font-size: large;
+        }
+        h3
+        {
+	        font-size: medium;
+        }
+        img
+        {
+	        border: none;
+        }
+        code
+        {
+            font-family: Consolas, monospace;
+        }
+        .copyright
+        {
+            font-style: italic;
+        }
+        abbr
+        {
+            border-bottom: dotted 1px blue;
+        }
+        dt
+        {
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <h1>Jumbo Jet documentation</h1>
+    <h2>Job structure</h2>
+    <p>
+        A job is a sequence of stages connected by channels. Each stage processes its input data and produces some output data. Input data is received from the
+        DFS or the stage's input channel. Output data is written to the DFS or the stage's output channel. Each stage contains one or more tasks that each
+        process a different portion of the input data. For DFS input, the data is divided amongst tasks by splitting it linearly using DFS blocks as the boundary.
+        For channel input, the data is partitioned across the tasks using a user-specified partitioning function.
+    </p>
+    <p>
+        Channels control how intermediate data is transferred between tasks. Three types of channels are currently supported: File, TCP, and in-process (pipeline).
+    </p>
+    <p>
+        The file channel saves intermediate data on the local disk, and these files are transferred over the network. This offers the highest level of fault-tolerance.
+    </p>
+    <p>
+        The TCP channel establishes a direct TCP connection between the tasks. This uses less disk I/O, but it requires that all the tasks in the channel's receiving stage
+        can be executed simultaneously on the cluster. A single task failure will cause the entire job to fail if the TCP channel is used.
+    </p>
+    <p>
+        The in-process channel is used to combine two (or more) tasks into a single compound task. This compound task will be treated as a unit by the scheduler
+        and is executed on one node in one process. Output records from a sending task on the channel are passed directly to its receiving task in the same process.
+        Each receiving task therefore receives data from only one sending task, rather than all of them as is the case with file and TCP channels.
+    </p>
+    <p>
+        The output data of a task is partitioned using a user-specified partitioning function. By default the <code>HashPartitioner&lt;T&gt;</code> is used. Each receiving
+        task of a channel receives one of the partitions (unless the partitions per task option is set). In a compound task, the partitioning can happen in the final task
+        of the compound task, or it can be done by one of the in-process channels in the compound task. In that case, this partitioning is used by the compound task's output
+        channel as well. Partitioning may happen only once in a compound task.
+    </p>
+    <p>
+        A receiving task on a file or TCP channel receives data from all of the channel's sending tasks. These input pieces all contain data for the same partition, but
+        otherwise no guarantees are made by Jumbo about the structure of the data. The channel determines how the input pieces for the receiving tasks are merged
+        by using a user-specified multi-input record reader. By default the <code>MultiRecordReader&lt;T&gt;</code> is used, which processes the pieces sequentially
+        as they arrive. Several other multi-input record readers are also provided by Jumbo, including the <code>MergeRecordReader&lt;T&gt;</code> which performs a merge-sort
+        on the input pieces. This requires that each individual piece is already sorted. Jumbo Jet doesn't check that; it is up to the job creator to ensure that the
+        partitions are sorted before being written to the channel (Jumbo Jet provides built-in functionality to do this).
+    </p>
+    <p>
+        A channel can have more than one sending stage. In this case, one multi-input record reader is used to merge the input of the pieces of each sending stage, and
+        then another multi-input record reader is used to merge the data from the stages into one sequence of data. In this case, unlike with regular multi-input record
+        readers, the inputs typically will not use the same record data type. A multi-input record reader that performs a join on the data is provided for this purpose,
+        <code>InnerJoinRecordReader&lt;TOuter, TInner, TResult&gt;</code>. This record reader supports at most two input stages, however.
+    </p>
+    <p>
+        Tasks are not (and don't need to be) aware of where there input data comes from or where it is going to. They simply get a record reader and record writer which
+        they will use, and it doesn't matter if the record writer writes to a channel or the DFS, the procedure is the same for the task.
+    </p>
+    <h2>
+        Tasks
+    </h2>
+    <p>
+        Tasks are created by implementing a class that implements either the <code>IPushTask&lt;T&gt;</code> or the <code>IPullTask&lt;T&gt;</code> interface. One offers
+        a push-model interface, with a function that is called for every record, while the other offers a pull-model interface with a function that is called once with
+        the input record reader from which it can read the records.
+    </p>
+    <p>
+        Only push tasks can be used as the receiving task type for an in-process channel. As such, if you're creating a task type that you intend to be reusable in multiple
+        scenarios, it is recommended that you use a push task.
+    </p>
+    <p>
+        Jumbo Jet makes no guarantees about the input data. If your task requires input data to be sorted, or to be partitioned a certain way, or anything else, it is up
+        to the job creator to ensure that this is the case. If you create a reusable task type, clearly document your requirements.
+    </p>
+    <p>
+        If your task needs to access the job configuration or settings, implement the <code>IConfigurable</code> interface, or inherit from <code>Configurable</code>
+        which provides a convenient default implementation of this interface.
+    </p>
+    <p>
+        If you're using the <code>JobBuilder</code> to create your job, you don't need to create a class; <code>JobBuilder</code> allows you to use public static methods
+        that use a specific method signature as tasks.
+    </p>
+    <p>
+        Jumbo Jet has several built-in task types. <code>EmptyTask&lt;T&gt;</code> simply passes its input to the output record writer without modifying it. It is
+        useful if you need a stage just to partition the data rather than do any processing on it. <code>SortTask&lt;T&gt;</code> sorts its input data (note: all of the
+        task's input data is kept in memory while sorting, so do not use this for very large amounts of data). The <code>AccumulatorTask&lt;TKey, TValue&gt;</code>
+        is a base class for tasks that accumulate values associated with a key. This is useful to implement aggregation operations such as sum or average. The
+        values are accumulated in an in-memory hash table so don't use this class if the number of keys is extremely large or if the size of the values is large.
+    </p>
+    <h3>
+        Record reuse
+    </h3>
+    <p>
+        For performance reasons, Jumbo Jet wants to reuse record object instances whenever possible. This means that each record uses the same object instance,
+        rather than creating a new object for each record.
+    </p>
+    <p>
+        The input record reader for a task will reuse records only when the task indicates this is allowed. In order to indicate that your task classes support
+        record reuse, apply the <code>AllowRecordReuse</code> attribute to the task class. If this is the case, then each record you receive from the record reader
+        will be the same object instance. It is therefore not safe to allow record reuse if you store the record instances anywhere (for instance in an array or collection).
+    </p>
+    <p>
+        If your class passes input record object instances directly to the output record writer, you should set the <code>AllowRecordReuseAttribute.Passthrough</code> property to
+        true.
+    </p>
+    <p>
+        It is allowed to specify to the <code>AllowRecordReuse</code> attribute on a class that inherits from <code>AccumulatorTask&lt;TKey, TValue&gt;</code>, but
+        this requires that the key and value types are value types or implement <code>ICloneable</code>, because the <code>KeyValuePairWritable</code> class will
+        also reuse key and value instances.
+    </p>
+    <p>
+        It's recommended to specify the <code>AllowRecordReuse</code> attribute unless you have a good reason not to do so.
+    </p>
+    <p>
+        If you are using task methods instead of classes with <code>JobBuilder</code>, you can apply the <code>AllowRecordReuse</code> attribute to those methods.
+    </p>
+    <p>
+        A task may also reuse the same object instance for records it passes to the output record writer. This is guaranteed to be safe with all record writers
+        that can be used as output of a stage (including those that write to channels and those that write to the DFS). The only exception is a compound task.
+        A task that is part of a compound task may only reuse the instance if the next task type in the pipeline allows record reuse.
+    </p>
+    <p>
+        For task types that you intend to be reusable for multiple jobs (so you don't know if it will be used in a compound task or note) you should implement
+        <code>IConfigurable</code> (or inherit from <code>Configurable</code>) and check the <code>TaskAttemptConfiguration.StageConfiguration.AllowOutputRecordReuse</code>
+        property to see if you can reuse the same output record instance.
+    </p>
+    <p>
+        Record reuse has no impact if the record type is a value type.
+    </p>
+    <p>
+        Because the <code>String</code> class is immutable, it is not a candidate for record reuse. It is therefore recommended to use Jumbo's <code>Utf8String</code>
+        class instead, which does support record reuse and uses a more compact in-memory representation of the strings (this may not be true for all character sets however).
+    </p>
+    <h2>
+        Creating jobs
+    </h2>
+    <p>
+        To create a job you must create a job configuration for that job, and then submit this configuration to the job server. There are several ways to create your
+        job configuration.
+    </p>
+    <p>
+        The recommended method is to use the <code>JobBuilder</code>. It abstracts the details of job creation by providing methods for specific types of processing,
+        such as <code>ProcessRecords</code>, <code>AccumulateRecords</code>, <code>SortRecords</code>, etc. These methods ensure that the appropriate job structure
+        is created for the specified operation. It also allows you to use public static methods for tasks rather than having to create task types.
+    </p>
+    <p>
+        You can also use the <code>JobConfiguration</code> class to create the configuration. You add stages by calling the <code>AddStage</code> and <code>AddInputStage</code>
+        methods.
+    </p>
+    <p>
+        Finally you could write the XML configuration file manually, but this is not recommended.
+    </p>
+    <p>
+        To execute a job, you could create an executable assembly that creates a configuration and then uses the <code>JetClient</code> to submit it to the job server.
+        However, it's more convenient to create a job runner. Job runners can be executed using the JetShell.exe utility.
+    </p>
+    <p>
+        Create a job runner by implementing the <code>IJobRunner</code> interface on a class. You can add properties or constructor arguments to this class
+        to create arguments that the user can pass on the command line using JetShell.exe. Typically, rather than implementing <code>IJobRunner</code>
+        directly, you should inherit from one of the job runner base classes. <code>BaseJobRunner</code> provides basic properties such as specifying
+        the replication factor and block size of the DFS output. All other built-in job runner base types inherit from <code>BaseJobRunner</code>.
+    </p>
+    <p>
+        Typically, you should inherit from <code>JobBuilderJob</code> which allows you to easily create a job using the <code>JobBuilder</code> and then
+        runs it for you.
+    </p>
+    <h2>
+        Custom record types
+    </h2>
+    <p>
+        In theory, any <abbr title="Common Type System">CTS</abbr> type can be a record type. However, in practice the record readers and writers impose some restrictions.
+        In particular, all record types should be usable with the <code>BinaryRecordWriter&lt;T&gt;</code> (and <code>BinaryRecordReader&lt;T&gt;</code>) which are
+        used for intermediate data on the file and TCP channels. This requires that the types implement Jumbo's light-weight binary serialization protocol.
+    </p>
+    <p>
+        Jumbo's binary serialization protocol requires that a type is either supported by the <code>ValueWriter&lt;T&gt;</code> class, or that it implements the <code>IWritable</code>
+        interface. Only basic built-in framework types (<code>SByte</code>, <code>Byte</code>, <code>UInt16</code>, <code>Int16</code>, <code>UInt32</code>, <code>Int32</code>,
+        <code>UInt64</code>, <code>Int64</code>, <code>Single</code>, <code>Double</code>, <code>Decimal</code>, and <code>String</code>) are supported by <code>ValueWriter&lt;T&gt;</code>,
+        all other types must implement <code>IWritable</code>.
+    </p>
+    <p>
+        The <code>IWritable</code> interface provides two methods, one to read the record data from a binary stream, and one to write it. How the data is serialized is
+        left entirely up to the implementor. Because of record reuse, the <code>Read</code> method can be called multiple times on the same instance; for this reason it
+        should completely replace the state of the object regardless of what state is currently in. <code>IWritable</code> objects will be constructed by the record
+        readers using <code>System.Runtime.Serialization.FormatterServices.GetUninitializedObject</code>, so their constructors will not be called. The <code>Read</code>
+        method must therefore make no assumptions about the state of the object.
+    </p>
+    <p>
+        Types implementing <code>IWritable</code> must always be reference types (classes). If they are value types (structures) the deserialization process will not function correctly.
+    </p>
+    <p>
+        You can inherit from <code>Writable&lt;T&gt;</code> to automatically generate an <code>IWritable</code> implementation for your class.
+    </p>
+    <p>
+        The <code>IWritable</code> based serialization system does not contain the usual checks that are provided by .Net's <code>System.Runtime.Serialization</code> namespace.
+        It is assumed that the binary layout of the input data matches the record type without checking if this true. This means you must be careful to maintain binary compatibility
+        if you modify any type if you want to persist its data. This is not much of an issue for intermediate data in Jumbo Jet as it's short lived, but <code>IWritable</code>
+        can also be used for more permanent storage, e.g. on the DFS. For example, the <code>RecordFileWriter&lt;T&gt;</code> also uses it.
+    </p>
+    <p>
+        Particular care must be taken with types that use <code>Writable&lt;T&gt;</code>. If you modify the layout of such a type (add, remove or re-order fields) it can break binary compatibility.
+        Therefore it's a good rule of thumb to never modify these types after you have persisted any data with them.
+    </p>
+    <p>
+        In some circumstances additional requirements must be met. To use any type as the key in a <code>KeyValuePairWritable&lt;TKey, TValue&gt;</code>, it must implement <code>IComparable&lt;T&gt;</code>.
+        The <code>AccumulatorTask&lt;TKey, TValue&gt;</code> requires that the key type has properly implemented <code>object.Equals</code> and <code>object.GetHashCode</code>, and if
+        record reuse is enabled it also requires <code>ICloneable</code>. And because <code>AccumulatorTask&lt;TKey, TValue&gt;</code> uses <code>KeyValuePairWritable&lt;TKey, TValue&gt;</code> it
+        naturally also requires <code>IComparable&lt;T&gt;</code> by proxy. If you want to output the record type with <code>TextRecordWriter&lt;T&gt;</code> you should also implement <code>object.ToString</code>.
+    </p>
+    <p>
+        It is good practice to implement <code>IComparable&lt;T&gt;</code>, <code>IEquatable&lt;T&gt;</code>, <code>object.Equals</code>, <code>object.GetHashCode</code>, <code>object.ToString</code> and <code>ICloneable</code>
+        on all custom record types (as well as <code>IWritable</code> of course).
+    </p>
+    <h2>
+        Custom partitioners
+    </h2>
+    <p>
+        You can create a custom partitioner by creating a class that implements the <code>IPartitioner&lt;T&gt;</code> interface. In general, you should follow the rule that
+        if <code>object.Equals(a, b) == true</code> or if <code>Comparer&lt;T&gt;.Default.Compare(a, b) == 0</code> then <code>IPartitioner&lt;T&gt;.GetPartition(a) == IPartitioner&lt;T&gt;.GetPartition(b)</code>.
+        The results before and after a change of the <code>Partitions</code> property do not need to be consistent (Jumbo Jet will set that property only once, before the first call to <code>GetPartition</code>),
+        but they need to be consistent as long as the value of <code>Partitions</code> stays the same. Two instances of a custom partitioner class with the same value of <code>Partitions</code> should produce
+        the same result (i.e. the partitioner needs to be completely deterministic).
+    </p>
+    <h2>
+        Custom record readers and writers
+    </h2>
+    <p>
+        Record readers and writers control the file format used to store records. Most of the time the built-in record readers and writers should suffice, but you can create your own ones.
+    </p>
+    <h3>
+        Custom record writers
+    </h3>
+    <p>
+        A custom record writer should inherit from the <code>RecordWriter&lt;T&gt;</code> class. It is <strong>not</strong> sufficient to only implement the <code>IRecordWriter</code> interface,
+        you <strong>must</strong> inherit from <code>RecordWriter&lt;T&gt;</code>. If your record writer writes records to a stream, you probably want to inherit from the <code>StreamRecordWriter&lt;T&gt;</code>
+        class.
+    </p>
+    <p>
+        A record writer may use any format it wants for the records. It is not required to use <code>IWritable</code> serialization (for example, the <code>TextRecordWriter&lt;T&gt;</code> simply uses <code>ToString()</code>).
+        It is not even required that it is possible to read the format back with a record reader (though this is usually recommended).
+    </p>
+    <p>
+        If you wish to use the record writer for DFS output from a Jumbo Jet job, it must conform to the following rules:
+    </p>
+    <ol>
+        <li>
+            It must have a constructor that takes a single parameter of type <code>System.IO.Stream</code> (even if it doesn't inherit from <code>StreamRecordWriter&lt;T&gt;</code>). It must write
+            the records to that stream.
+        </li>
+        <li>
+            It must support record reuse. This means that it must not be a problem if the record instance passed to <code>WriteRecord</code> is the same instance for every call.
+        </li>
+    </ol>
+    <h3>
+        Custom record readers
+    </h3>
+    <p>
+        A custom record reader should inherit from the <code>RecordReader&lt;T&gt</code> class. It is <strong>not</strong> sufficient to only implement the <code>IRecordReader</code> interface,
+        you <strong>must</strong> inherit from <code>RecordReader&lt;T&gt;</code>. If your record reader reads records from a stream, you probably want to inherit from the <code>StreamRecordReader&lt;T&gt;</code>
+        class.
+    </p>
+    <p>
+        As with record writers, the format of the input doesn't matter to Jumbo. You don't need to use <code>IWritable</code>, and it is not necessary that there is a corresponding record writer (though this is
+        usually recommended).
+    </p>
+    <p>
+        A record reader that can be used for DFS input to a Jumbo Jet job must conform to the following additional requirements:
+    </p>
+    <ol>
+        <li>
+            <p>
+                It must have a constructor that takes the following parameters:
+            </p>
+            <dl>
+                <dt>inputStream</dt>
+                <dd>A <strong><code>System.IO.Stream</code></strong> from which the input records are read.</dd>
+            </dl>
+            <dl>
+                <dt>offset</dt>
+                <dd>A <strong><code>System.Int64</code></strong> (long) that is the offset, in bytes, at which to start reading from the stream.</dd>
+            </dl>
+            <dl>
+                <dt>size</dt>
+                <dd>A <strong><code>System.Int64</code></strong> (long) that is the number of bytes to read from the stream, starting at <em>offset</em>.</dd>
+            </dl>
+            <dl>
+                <dt>allowRecordReuse</dt>
+                <dd>A <strong><code>System.Boolean</code></strong> that indicates whether record reuse is allowed.</dd>
+            </dl>
+        </li>
+        <li>
+            It must read records from the stream specified in <em>inputStream</em>.
+        </li>
+        <li>
+            Before reading starts, it must seek to <em>offset</em>, and then search ahead from there to the start of the first record on or after <em>offset</em>.
+        </li>
+        <li>
+            It must continue reading until the start of the next record falls after <em>offset</em> + <em>size</em>, or until the end of the stream if <em>offset</em> + <em>size</em>
+            is beyond the stream length.
+        </li>
+        <li>
+            Given a particular <em>offset</em> and <em>size</em>, and two record readers <code><em>a</em> = new YourRecordReader(stream, <em>offset</em>, <em>size</em>, allowRecordReuse)</code>
+            and <code><em>b</em> = new YourRecordReader(stream, <em>offset</em> + <em>size</em>, <em>size</em>, allowRecordReuse)</code> there must be no record in the stream that is read by
+            both <em>a</em> and <em>b</em>.
+        </li>
+        <li>
+            It should attempt to minimize the amount of data read beyond <em>offset</em> + <em>size</em> to find the end of the current record, because that data typically is typically
+            in the next DFS block and may reside on a different node in the cluster.
+        </li>
+        <li>
+            If and only if <em>allowRecordReuse</em> is <code>true</code>, it is allowed for each call to <code>ReadRecord</code> to reuse the same object instance. If <em>allowRecordReuse</em>
+            is <code>false</code> it must create a new instance and assign it to <code>CurrentRecord</code> for every record. It is not required (but strongly recommended) to reuse record instances
+            if <em>allowRecordReuse</em> is true.
+        </li>
+    </ol>
+    <p>
+        Because of these requirements, a record reader that cannot determine the starting point of the next record given an arbitrary starting position in the stream cannot be used
+        as DFS input for a Jumbo Jet job. For example the <code>BinaryRecordReader&lt;T&gt;</code> does not meet these requirements.
+    </p>
+    <h3>
+        Custom multi-input record readers
+    </h3>
+    <p>
+        A multi-input record reader is used by a channel to combine the data from all sending tasks for a single receiving task. You can create a custom multi-input record reader
+        by inheriting from <code>MultiInputRecordReader&lt;T&gt;</code>. It is again not sufficient to implement <code>IMultiInputRecordReader</code>.
+    </p>
+    <p>
+        Multi-input record readers don't need to concern themselves with the format of the input data because they receive data from other record readers that have
+        already created the record instances.
+    </p>
+    <p>
+        Inputs will be added to this record reader gradually over time as more input tasks finish their work and their data becomes available. The inputs will not
+        be added in any particular order. If the order is important, use the <code>RecordReader&lt;T&gt;.SourceName</code> property to determine the task that
+        generated the input piece.
+    </p>
+    <p>
+        Multi-input record readers that are used to combine input pieces from the same sending stage can assume that all inputs use the same record type.
+        A multi-input record reader that is used to join data from more than stage cannot make this assumption.
+    </p>
+</body>
+</html>
