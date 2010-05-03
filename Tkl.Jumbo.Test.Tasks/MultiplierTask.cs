@@ -9,17 +9,17 @@ using Tkl.Jumbo.IO;
 
 namespace Tkl.Jumbo.Test.Tasks
 {
-    public class MultiplierTask : Configurable, IPullTask<StringWritable, Int32Writable>
+    public class MultiplierTask : Configurable, IPullTask<Utf8StringWritable, Int32Writable>
     {
-        #region IPullTask<StringWritable,Int32Writable> Members
+        #region IPullTask<Utf8StringWritable,Int32Writable> Members
 
-        public void Run(RecordReader<StringWritable> input, RecordWriter<Int32Writable> output)
+        public void Run(RecordReader<Utf8StringWritable> input, RecordWriter<Int32Writable> output)
         {
             int factor = TaskAttemptConfiguration.JobConfiguration.GetTypedSetting("factor", 0);
 
-            foreach( StringWritable record in input.EnumerateRecords() )
+            foreach( Utf8StringWritable record in input.EnumerateRecords() )
             {
-                int value = Convert.ToInt32(record.Value);
+                int value = Convert.ToInt32(record.ToString());
                 output.WriteRecord(value * factor);
             }
         }

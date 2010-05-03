@@ -9,15 +9,15 @@ using Tkl.Jumbo.IO;
 
 namespace Tkl.Jumbo.Test.Tasks
 {
-    public class StringConversionTask : IPullTask<StringWritable, Int32Writable>
+    public class StringConversionTask : IPullTask<Utf8StringWritable, Int32Writable>
     {
-        #region IPullTask<StringWritable,Int32Writable> Members
+        #region IPullTask<Utf8StringWritable,Int32Writable> Members
 
-        public void Run(RecordReader<StringWritable> input, RecordWriter<Int32Writable> output)
+        public void Run(RecordReader<Utf8StringWritable> input, RecordWriter<Int32Writable> output)
         {
             foreach( var record in input.EnumerateRecords() )
             {
-                output.WriteRecord(Convert.ToInt32(record.Value));
+                output.WriteRecord(Convert.ToInt32(record.ToString()));
             }
         }
 

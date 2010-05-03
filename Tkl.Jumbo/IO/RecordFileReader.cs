@@ -46,7 +46,7 @@ namespace Tkl.Jumbo.IO
         /// <param name="stream">The <see cref="Stream"/> to read from.</param>
         /// <param name="offset">The position in the stream to start reading.</param>
         /// <param name="size">The number of bytes to read from the stream.</param>
-        /// <param name="allowRecordReuse"><see langword="true"/> if the record reader may re-use the same <see cref="StringWritable"/> instance for every
+        /// <param name="allowRecordReuse"><see langword="true"/> if the record reader may re-use the same record instance for every
         /// record; <see langword="false"/> if it must create a new instance for every record.</param>
         /// <remarks>
         /// <para>

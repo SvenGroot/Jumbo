@@ -23,7 +23,7 @@ namespace Tkl.Jumbo.Jet.Samples.Tasks
 
         #endregion
 
-        #region IPullTask<StringWritable,KeyValuePairWritable<StringWritable,Int32Writable>> Members
+        #region IPullTask<Utf8StringWritable,KeyValuePairWritable<Utf8StringWritable,Int32Writable>> Members
 
         /// <summary>
         /// Runs the task.

@@ -89,7 +89,7 @@ namespace Tkl.Jumbo.IO
         /// </summary>
         public int Capacity
         {
-            get { return _utf8Bytes.Length; }
+            get { return _utf8Bytes == null ? 0 : _utf8Bytes.Length; }
             set
             {
                 if( value < _byteLength )

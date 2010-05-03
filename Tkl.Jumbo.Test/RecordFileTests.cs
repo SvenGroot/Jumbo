@@ -23,18 +23,18 @@ namespace Tkl.Jumbo.Test
             long headerSize;
             using( MemoryStream stream = new MemoryStream() )
             {
-                using( RecordFileWriter<StringWritable> writer = new RecordFileWriter<StringWritable>(stream) )
+                using( RecordFileWriter<Utf8StringWritable> writer = new RecordFileWriter<Utf8StringWritable>(stream) )
                 {
-                    Assert.AreEqual(typeof(StringWritable), writer.Header.RecordType);
-                    Assert.AreEqual(typeof(StringWritable).FullName + ", " + typeof(StringWritable).Assembly.GetName().Name, writer.Header.RecordTypeName);
+                    Assert.AreEqual(typeof(Utf8StringWritable), writer.Header.RecordType);
+                    Assert.AreEqual(typeof(Utf8StringWritable).FullName + ", " + typeof(Utf8StringWritable).Assembly.GetName().Name, writer.Header.RecordTypeName);
                     Assert.AreEqual(1, writer.Header.Version);
                     Assert.AreEqual(0, writer.RecordsWritten);
                     Assert.AreNotEqual(0, writer.BytesWritten); // Because it must've written the header this isn't 0.
                     headerSize = writer.BytesWritten;
-                    StringWritable record = new StringWritable();
+                    Utf8StringWritable record = new Utf8StringWritable();
                     foreach( string item in records )
                     {
-                        record.Value = item;
+                        record.Set(item);
                         writer.WriteRecord(record);
                     }
 
@@ -55,14 +55,14 @@ namespace Tkl.Jumbo.Test
             for( int offset = 0; offset < data.Length; offset += stepSize )
             {
                 using( MemoryStream stream = new MemoryStream(data) )
-                using( RecordFileReader<StringWritable> reader = new RecordFileReader<StringWritable>(stream, offset, Math.Min(stepSize, stream.Length - offset), true) )
+                using( RecordFileReader<Utf8StringWritable> reader = new RecordFileReader<Utf8StringWritable>(stream, offset, Math.Min(stepSize, stream.Length - offset), true) )
                 {
-                    Assert.AreEqual(typeof(StringWritable), reader.Header.RecordType);
-                    Assert.AreEqual(typeof(StringWritable).FullName + ", " + typeof(StringWritable).Assembly.GetName().Name, reader.Header.RecordTypeName);
+                    Assert.AreEqual(typeof(Utf8StringWritable), reader.Header.RecordType);
+                    Assert.AreEqual(typeof(Utf8StringWritable).FullName + ", " + typeof(Utf8StringWritable).Assembly.GetName().Name, reader.Header.RecordTypeName);
                     Assert.AreEqual(1, reader.Header.Version);
-                    foreach( StringWritable record in reader.EnumerateRecords() )
+                    foreach( Utf8StringWritable record in reader.EnumerateRecords() )
                     {
-                        result.Add(record.Value);
+                        result.Add(record.ToString());
                     }
                     totalRecordsRead += reader.RecordsRead;
                 }

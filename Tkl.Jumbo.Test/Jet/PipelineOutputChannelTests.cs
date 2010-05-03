@@ -62,9 +62,9 @@ namespace Tkl.Jumbo.Test.Jet
             using( TaskExecutionUtility taskExecution = new TaskExecutionUtility(new JetClient(), new FakeUmbilical(), Guid.NewGuid(), config, new TaskId("Task-001"), new DfsClient(), path, "/foo", 1) )
             {
                 RecordWriter<int> output = taskExecution.GetOutputWriter<int>(); // this will call PipelineOutputChannel.CreateRecordWriter
-                IPushTask<StringWritable, int> task = (IPushTask<StringWritable, int>)taskExecution.GetTaskInstance<StringWritable, int>();
-                task.ProcessRecord("Foo", output);
-                task.ProcessRecord("Bar", output);
+                IPushTask<Utf8StringWritable, int> task = (IPushTask<Utf8StringWritable, int>)taskExecution.GetTaskInstance<Utf8StringWritable, int>();
+                task.ProcessRecord(new Utf8StringWritable("Foo"), output);
+                task.ProcessRecord(new Utf8StringWritable("Bar"), output);
 
                 taskExecution.FinishTask();
             }

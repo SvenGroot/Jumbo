@@ -52,7 +52,7 @@ namespace Tkl.Jumbo.Jet.Samples
         /// </summary>
         /// <param name="input"></param>
         /// <param name="output"></param>
-        public static void RecordCounterTask(RecordReader<GenSortRecord> input, RecordWriter<Int64Writable> output)
+        public static void RecordCounterTask(RecordReader<GenSortRecord> input, RecordWriter<long> output)
         {
             long recordCount = 0;
             foreach( GenSortRecord record in input.EnumerateRecords() )
@@ -72,7 +72,7 @@ namespace Tkl.Jumbo.Jet.Samples
             CheckAndCreateOutputPath(dfsClient, _outputPath);
 
             var input = builder.CreateRecordReader<GenSortRecord>(_inputPath, typeof(GenSortRecordReader));
-            var output = builder.CreateRecordWriter<Int64Writable>(_outputPath, typeof(TextRecordWriter<Int64Writable>), (int)BlockSize.Value, ReplicationFactor);
+            var output = builder.CreateRecordWriter<long>(_outputPath, typeof(TextRecordWriter<long>), (int)BlockSize.Value, ReplicationFactor);
             RecordCollector<GenSortRecord> collector = new RecordCollector<GenSortRecord>(ChannelType.Pipeline, typeof(RangePartitioner), _mergeTasks);
             RecordCollector<GenSortRecord> collector2 = new RecordCollector<GenSortRecord>(ChannelType.File, typeof(RangePartitioner), _mergeTasks);
 

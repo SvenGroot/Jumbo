@@ -423,7 +423,7 @@ namespace Tkl.Jumbo.Jet.Jobs
 
             SetAllowRecordReuseAttribute(accumulatorMethod, taskTypeBuilder);
 
-            MethodBuilder accumulateMethod = taskTypeBuilder.DefineMethod("Accumulate", MethodAttributes.Public | MethodAttributes.Virtual, null, new[] { typeof(TKey), typeof(TValue), typeof(TValue) });
+            MethodBuilder accumulateMethod = taskTypeBuilder.DefineMethod("Accumulate", MethodAttributes.Public | MethodAttributes.Virtual, typeof(TValue), new[] { typeof(TKey), typeof(TValue), typeof(TValue) });
             accumulateMethod.DefineParameter(1, ParameterAttributes.None, "key");
             accumulateMethod.DefineParameter(2, ParameterAttributes.None, "currentValue");
             accumulateMethod.DefineParameter(3, ParameterAttributes.None, "newValue");
@@ -541,7 +541,7 @@ namespace Tkl.Jumbo.Jet.Jobs
             if( taskCount < 1 )
                 throw new ArgumentOutOfRangeException("taskCount");
 
-            ProcessRecords<StringWritable, T>(null, output, task.Method, null, taskCount, false, false);
+            ProcessRecords<int, T>(null, output, task.Method, null, taskCount, false, false);
         }
 
         /// <summary>
@@ -561,7 +561,7 @@ namespace Tkl.Jumbo.Jet.Jobs
             if( taskCount < 1 )
                 throw new ArgumentOutOfRangeException("taskCount");
 
-            ProcessRecords<StringWritable, T>(null, output, task.Method, stageSettings, taskCount, true, false);
+            ProcessRecords<int, T>(null, output, task.Method, stageSettings, taskCount, true, false);
         }
 
         /// <summary>

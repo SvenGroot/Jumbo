@@ -105,7 +105,6 @@
     <Compile Include="IO\IMultiInputRecordReader.cs" />
     <Compile Include="IO\InnerJoinRecordReader.cs" />
     <Compile Include="IO\InputTypeAttribute.cs" />
-    <Compile Include="IO\Int64Writable.cs" />
     <Compile Include="IO\IValueWriter.cs" />
     <Compile Include="IO\RecordInput.cs" />
     <Compile Include="IO\RoundRobinMultiInputRecordReader.cs" />
@@ -159,7 +158,6 @@
     <Compile Include="IO\RecordWriter.cs" />
     <Compile Include="IO\StreamRecordReader.cs" />
     <Compile Include="IO\StreamRecordWriter.cs" />
-    <Compile Include="IO\StringWritable.cs" />
     <Compile Include="IO\TextRecordWriter.cs" />
     <Compile Include="IO\WritableComparable.cs" />
     <Compile Include="IO\MultiRecordWriter.cs" />
