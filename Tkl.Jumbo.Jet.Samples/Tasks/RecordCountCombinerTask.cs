@@ -11,23 +11,23 @@ namespace Tkl.Jumbo.Jet.Samples.Tasks
     /// <summary>
     /// Task that adds up the individual counts from a <see cref="RecordCountTask{T}"/>.
     /// </summary>
-    public class RecordCountCombinerTask : IPullTask<Int32Writable, Int32Writable>
+    public class RecordCountCombinerTask : IPullTask<int, int>
     {
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(RecordCountCombinerTask));
 
-        #region IPullTask<Int32Writable, Int32Writable> Members
+        #region IPullTask<int, int> Members
 
         /// <summary>
         /// Runs the task.
         /// </summary>
         /// <param name="input">A <see cref="RecordReader{T}"/> from which the task's input can be read.</param>
         /// <param name="output">A <see cref="RecordWriter{T}"/> to which the task's output should be written.</param>
-        public void Run(RecordReader<Int32Writable> input, RecordWriter<Int32Writable> output)
+        public void Run(RecordReader<int> input, RecordWriter<int> output)
         {
             int totalRecords = 0;
-            foreach( Int32Writable value in input.EnumerateRecords() )
+            foreach( int value in input.EnumerateRecords() )
             {
-                totalRecords += value.Value;
+                totalRecords += value;
             }
             _log.InfoFormat("Total: {0} records", totalRecords);
             output.WriteRecord(totalRecords);

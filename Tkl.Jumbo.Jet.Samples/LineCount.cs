@@ -24,7 +24,7 @@ namespace Tkl.Jumbo.Jet.Samples
         /// <param name="outputPath">The directory on the DFS to which to write the output.</param>
         public LineCount([Description("The input file or directory on the Jumbo DFS containing the text to perform the line count on.")] string inputPath, 
                          [Description("The output directory on the DFS where the results will be written.")] string outputPath)
-            : base(inputPath, outputPath, 1, typeof(RecordCountTask<Utf8StringWritable>), "RecordCountTask", typeof(RecordCountCombinerTask), null, typeof(LineRecordReader), typeof(TextRecordWriter<Int32Writable>), null, false)
+            : base(inputPath, outputPath, 1, typeof(RecordCountTask<Utf8StringWritable>), "RecordCountTask", typeof(RecordCountCombinerTask), null, typeof(LineRecordReader), typeof(TextRecordWriter<int>), null, false)
         {
             if( inputPath == null )
                 throw new ArgumentNullException("inputPath");

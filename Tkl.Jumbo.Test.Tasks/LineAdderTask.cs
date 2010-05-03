@@ -14,7 +14,7 @@ namespace Tkl.Jumbo.Test.Tasks
     {
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(LineAdderTask));
 
-        #region ITask<Int32Writable,Int32Writable> Members
+        #region ITask<int,int> Members
 
         public void Run(RecordReader<int> input, RecordWriter<int> output)
         {

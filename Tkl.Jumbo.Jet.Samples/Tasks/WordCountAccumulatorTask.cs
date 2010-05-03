@@ -13,7 +13,7 @@ namespace Tkl.Jumbo.Jet.Samples.Tasks
     /// Accumulates the output of one or more <see cref="WordCountTask"/> instances.
     /// </summary>
     [AllowRecordReuse]
-    public sealed class WordCountAccumulatorTask : AccumulatorTask<Utf8StringWritable, Int32Writable>
+    public sealed class WordCountAccumulatorTask : AccumulatorTask<Utf8StringWritable, int>
     {
         /// <summary>
         /// Overrides <see cref="AccumulatorTask{TKey,TValue}.Accumulate"/>.
@@ -22,10 +22,9 @@ namespace Tkl.Jumbo.Jet.Samples.Tasks
         /// <param name="currentValue">The current value.</param>
         /// <param name="newValue">The new value.</param>
         /// <returns></returns>
-        protected override Int32Writable Accumulate(Utf8StringWritable key, Int32Writable currentValue, Int32Writable newValue)
+        protected override int Accumulate(Utf8StringWritable key, int currentValue, int newValue)
         {
-            currentValue.Value += newValue.Value;
-            return currentValue;
+            return currentValue + newValue;
         }
     }
 }

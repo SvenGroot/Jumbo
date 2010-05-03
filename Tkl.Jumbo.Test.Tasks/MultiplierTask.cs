@@ -9,11 +9,11 @@ using Tkl.Jumbo.IO;
 
 namespace Tkl.Jumbo.Test.Tasks
 {
-    public class MultiplierTask : Configurable, IPullTask<Utf8StringWritable, Int32Writable>
+    public class MultiplierTask : Configurable, IPullTask<Utf8StringWritable, int>
     {
-        #region IPullTask<Utf8StringWritable,Int32Writable> Members
+        #region IPullTask<Utf8StringWritable,int> Members
 
-        public void Run(RecordReader<Utf8StringWritable> input, RecordWriter<Int32Writable> output)
+        public void Run(RecordReader<Utf8StringWritable> input, RecordWriter<int> output)
         {
             int factor = TaskAttemptConfiguration.JobConfiguration.GetTypedSetting("factor", 0);
 

@@ -270,8 +270,8 @@ namespace Tkl.Jumbo.Test.Jet
         //    {
         //        Assert.IsNotNull(stage.DfsOutput);
         //        Assert.AreEqual(DfsPath.Combine(outputPath, stage.StageId + "{0:000}"), stage.DfsOutput.PathFormat);
-        //        Assert.AreEqual(typeof(TextRecordWriter<Int32Writable>).AssemblyQualifiedName, stage.DfsOutput.RecordWriterTypeName);
-        //        Assert.AreEqual(typeof(TextRecordWriter<Int32Writable>), stage.DfsOutput.RecordWriterType);
+        //        Assert.AreEqual(typeof(TextRecordWriter<int>).AssemblyQualifiedName, stage.DfsOutput.RecordWriterTypeName);
+        //        Assert.AreEqual(typeof(TextRecordWriter<int>), stage.DfsOutput.RecordWriterType);
         //    }
         //    else
         //        Assert.IsNull(stage.DfsOutput);
@@ -282,10 +282,10 @@ namespace Tkl.Jumbo.Test.Jet
         //    Assert.AreEqual(ChannelType.File, channel.ChannelType);
         //    Assert.AreEqual(ChannelConnectivity.PointToPoint, channel.Connectivity);
         //    Assert.IsFalse(channel.ForceFileDownload);
-        //    Assert.AreEqual(typeof(HashPartitioner<Int32Writable>).AssemblyQualifiedName, channel.PartitionerType.TypeName); // not important but anyway
-        //    Assert.AreEqual(typeof(HashPartitioner<Int32Writable>), channel.PartitionerType.ReferencedType); // not important but anyway
-        //    Assert.AreEqual(typeof(MultiRecordReader<Int32Writable>), channel.MultiInputRecordReaderType.ReferencedType);
-        //    Assert.AreEqual(typeof(MultiRecordReader<Int32Writable>).AssemblyQualifiedName, channel.MultiInputRecordReaderType.TypeName);
+        //    Assert.AreEqual(typeof(HashPartitioner<int>).AssemblyQualifiedName, channel.PartitionerType.TypeName); // not important but anyway
+        //    Assert.AreEqual(typeof(HashPartitioner<int>), channel.PartitionerType.ReferencedType); // not important but anyway
+        //    Assert.AreEqual(typeof(MultiRecordReader<int>), channel.MultiInputRecordReaderType.ReferencedType);
+        //    Assert.AreEqual(typeof(MultiRecordReader<int>).AssemblyQualifiedName, channel.MultiInputRecordReaderType.TypeName);
         //    Assert.AreEqual(stage.StageId, channel.OutputStage);
         //}
 

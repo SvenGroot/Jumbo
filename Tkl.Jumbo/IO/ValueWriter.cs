@@ -178,6 +178,19 @@ namespace Tkl.Jumbo.IO
             }
         }
 
+        private class DateTimeWriter : IValueWriter<DateTime>
+        {
+            public void Write(DateTime value, System.IO.BinaryWriter writer)
+            {
+                writer.Write(value.Ticks);
+            }
+
+            public DateTime Read(BinaryReader reader)
+            {
+                return new DateTime(reader.ReadInt64());
+            }
+        }
+
         #endregion
 
         private static readonly IValueWriter<T> _writer = (IValueWriter<T>)GetWriter();
@@ -223,6 +236,8 @@ namespace Tkl.Jumbo.IO
                 return new UInt64Writer();
             else if( type == typeof(Decimal) )
                 return new DecimalWriter();
+            else if( type == typeof(DateTime) )
+                return new DateTimeWriter();
             else
                 throw new NotSupportedException(string.Format(System.Globalization.CultureInfo.InvariantCulture, "Could not find the writer for type {0} and the type does not implement IWritable.", type));
         }

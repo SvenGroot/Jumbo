@@ -12,7 +12,7 @@ namespace Tkl.Jumbo.Test.Tasks
     [AllowRecordReuse]
     public class LineCounterPushTask : IPushTask<Utf8StringWritable, int>
     {
-        #region IPushTask<Utf8StringWritable,Int32Writable> Members
+        #region IPushTask<Utf8StringWritable,int> Members
 
         public void ProcessRecord(Utf8StringWritable record, RecordWriter<int> output)
         {

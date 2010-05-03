@@ -146,7 +146,6 @@
     <Compile Include="IO\BinaryRecordReader.cs" />
     <Compile Include="IO\BinaryRecordWriter.cs" />
     <Compile Include="IO\EnumerableRecordReader.cs" />
-    <Compile Include="IO\Int32Writable.cs" />
     <Compile Include="IO\IPartitioner.cs" />
     <Compile Include="IO\IRecordWriter.cs" />
     <Compile Include="IO\IWritable.cs" />

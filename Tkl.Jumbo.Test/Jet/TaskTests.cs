@@ -54,16 +54,16 @@ namespace Tkl.Jumbo.Test.Jet
             const int recordCountMax = 10000;
             Random rnd = new Random();
             int recordCount = rnd.Next(recordCountMin, recordCountMax);
-            List<Int32Writable> records = new List<Int32Writable>(recordCount);
+            List<int> records = new List<int>(recordCount);
             for( int record = 0; record < recordCount; ++record )
             {
                 int value = rnd.Next();
                 records.Add(value);
             }
-            ListRecordWriter<Int32Writable> output = new ListRecordWriter<Int32Writable>();
+            ListRecordWriter<int> output = new ListRecordWriter<int>();
 
-            SortTask<Int32Writable> target = new SortTask<Int32Writable>();
-            foreach( Int32Writable record in records )
+            SortTask<int> target = new SortTask<int>();
+            foreach( int record in records )
                 target.ProcessRecord(record, output);
             target.Finish(output);
 

@@ -13,7 +13,7 @@ namespace Tkl.Jumbo.Test.Tasks
     {
         private int _lines;
 
-        #region IPushTask<Int32Writable,Int32Writable> Members
+        #region IPushTask<int,int> Members
 
         public void ProcessRecord(int record, RecordWriter<int> output)
         {

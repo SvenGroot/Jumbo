@@ -12,7 +12,7 @@ namespace Tkl.Jumbo.Jet.Samples.Tasks
     /// Task that counts the number of occurrences of each word in the specified input.
     /// </summary>
     [AllowRecordReuse]
-    public class WordCountTask : IPullTask<Utf8StringWritable, KeyValuePairWritable<Utf8StringWritable, Int32Writable>>
+    public class WordCountTask : IPullTask<Utf8StringWritable, KeyValuePairWritable<Utf8StringWritable, int>>
     {
         #region Nested types
 
@@ -23,16 +23,16 @@ namespace Tkl.Jumbo.Jet.Samples.Tasks
 
         #endregion
 
-        #region IPullTask<Utf8StringWritable,KeyValuePairWritable<Utf8StringWritable,Int32Writable>> Members
+        #region IPullTask<Utf8StringWritable,KeyValuePairWritable<Utf8StringWritable,int>> Members
 
         /// <summary>
         /// Runs the task.
         /// </summary>
         /// <param name="input">A <see cref="RecordReader{T}"/> from which the task's input can be read.</param>
         /// <param name="output">A <see cref="RecordWriter{T}"/> to which the task's output should be written.</param>
-        public void Run(RecordReader<Utf8StringWritable> input, RecordWriter<KeyValuePairWritable<Utf8StringWritable, Int32Writable>> output)
+        public void Run(RecordReader<Utf8StringWritable> input, RecordWriter<KeyValuePairWritable<Utf8StringWritable, int>> output)
         {
-            KeyValuePairWritable<Utf8StringWritable, Int32Writable> record = new KeyValuePairWritable<Utf8StringWritable,Int32Writable>(null, new Int32Writable(1));
+            KeyValuePairWritable<Utf8StringWritable, int> record = new KeyValuePairWritable<Utf8StringWritable,int>(null, 1);
             foreach( var word in input.EnumerateRecords() )
             {
                 record.Key = word;

@@ -48,9 +48,9 @@ namespace Tkl.Jumbo.Test.Jet
 
             JobConfiguration config = new JobConfiguration(typeof(StringConversionTask).Assembly);
             StageConfiguration conversionStage = config.AddInputStage("ConversionStage", dfsClient.NameServer.GetFileInfo("/sortinput"), typeof(StringConversionTask), typeof(LineRecordReader));
-            StageConfiguration sortStage = config.AddStage("SortStage", typeof(SortTask<Int32Writable>), 2, new InputStageInfo(conversionStage) { ChannelType = ChannelType.Pipeline }, null, null);
-            StageConfiguration innerMergeStage = config.AddStage("InnerMergeStage", typeof(EmptyTask<Int32Writable>), 2, new InputStageInfo(sortStage) { MultiInputRecordReaderType = typeof(MergeRecordReader<Int32Writable>) }, null, null);
-            config.AddStage("MergeStage", typeof(EmptyTask<Int32Writable>), 1, new InputStageInfo(innerMergeStage) { MultiInputRecordReaderType = typeof(MergeRecordReader<Int32Writable>) }, outputPath, typeof(BinaryRecordWriter<Int32Writable>));
+            StageConfiguration sortStage = config.AddStage("SortStage", typeof(SortTask<int>), 2, new InputStageInfo(conversionStage) { ChannelType = ChannelType.Pipeline }, null, null);
+            StageConfiguration innerMergeStage = config.AddStage("InnerMergeStage", typeof(EmptyTask<int>), 2, new InputStageInfo(sortStage) { MultiInputRecordReaderType = typeof(MergeRecordReader<int>) }, null, null);
+            config.AddStage("MergeStage", typeof(EmptyTask<int>), 1, new InputStageInfo(innerMergeStage) { MultiInputRecordReaderType = typeof(MergeRecordReader<int>) }, outputPath, typeof(BinaryRecordWriter<int>));
 
             RunJob(dfsClient, config);
 
@@ -65,7 +65,7 @@ namespace Tkl.Jumbo.Test.Jet
             List<int> expected = new List<int>(recordCount);
 
             using( DfsOutputStream stream = dfsClient.CreateFile(inputFileName) )
-            using( TextRecordWriter<Int32Writable> writer = new TextRecordWriter<Int32Writable>(stream) )
+            using( TextRecordWriter<int> writer = new TextRecordWriter<int>(stream) )
             {
                 for( int x = 0; x < recordCount; ++x )
                 {
@@ -90,11 +90,11 @@ namespace Tkl.Jumbo.Test.Jet
         {
             List<int> actual = new List<int>();
             using( DfsInputStream stream = dfsClient.OpenFile(outputFileName) )
-            using( BinaryRecordReader<Int32Writable> reader = new BinaryRecordReader<Int32Writable>(stream) )
+            using( BinaryRecordReader<int> reader = new BinaryRecordReader<int>(stream) )
             {
                 while( reader.ReadRecord() )
                 {
-                    actual.Add(reader.CurrentRecord.Value);
+                    actual.Add(reader.CurrentRecord);
                 }
             }
 

@@ -29,8 +29,8 @@ namespace Tkl.Jumbo.Test
             public string AnotherStringProperty { get; set; }
             public int IntProperty { get; private set; }
             public bool BooleanProperty { get; set; }
-            public Int32Writable WritableProperty { get; set; }
-            public Int32Writable AnotherWritableProperty { get; set; }
+            public Utf8StringWritable WritableProperty { get; set; }
+            public Utf8StringWritable AnotherWritableProperty { get; set; }
             public DateTime DateProperty { get; set; }
             public byte[] ByteArrayProperty { get; set; }
             public int[] IntArrayProperty { get; set; }
@@ -49,7 +49,7 @@ namespace Tkl.Jumbo.Test
                 StringProperty = "Hello",
                 AnotherStringProperty = null,
                 BooleanProperty = true,
-                WritableProperty = 47,
+                WritableProperty = new Utf8StringWritable("47"),
                 AnotherWritableProperty = null,
                 DateProperty = DateTime.UtcNow,
                 ByteArrayProperty = new byte[] { 1, 2, 3, 4 },

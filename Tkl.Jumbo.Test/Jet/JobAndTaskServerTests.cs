@@ -108,7 +108,7 @@ namespace Tkl.Jumbo.Test.Jet
             List<int> expected = CreateNumberListInputFile(10000, "/settingsinput", dfsClient);
 
             JobConfiguration config = new JobConfiguration(typeof(MultiplierTask).Assembly);
-            config.AddInputStage("MultiplyStage", dfsClient.NameServer.GetFileInfo("/settingsinput"), typeof(MultiplierTask), typeof(LineRecordReader), outputPath, typeof(BinaryRecordWriter<Int32Writable>));
+            config.AddInputStage("MultiplyStage", dfsClient.NameServer.GetFileInfo("/settingsinput"), typeof(MultiplierTask), typeof(LineRecordReader), outputPath, typeof(BinaryRecordWriter<int>));
             int factor = new Random().Next(2, 100);
             config.AddTypedSetting("factor", factor);
 
@@ -271,8 +271,8 @@ namespace Tkl.Jumbo.Test.Jet
 
             JobConfiguration config = new JobConfiguration(typeof(StringConversionTask).Assembly);
             StageConfiguration conversionStage = config.AddInputStage("ConversionStage", dfsClient.NameServer.GetFileInfo(inputFileName), typeof(StringConversionTask), typeof(LineRecordReader));
-            StageConfiguration sortStage = config.AddStage("SortStage", typeof(SortTask<Int32Writable>), mergeTasks * partitionsPerTask, new InputStageInfo(conversionStage) { ChannelType = ChannelType.Pipeline }, null, null);
-            config.AddStage("MergeStage", typeof(EmptyTask<Int32Writable>), mergeTasks, new InputStageInfo(sortStage) { MultiInputRecordReaderType = typeof(MergeRecordReader<Int32Writable>), PartitionsPerTask = partitionsPerTask }, outputPath, typeof(BinaryRecordWriter<Int32Writable>));
+            StageConfiguration sortStage = config.AddStage("SortStage", typeof(SortTask<int>), mergeTasks * partitionsPerTask, new InputStageInfo(conversionStage) { ChannelType = ChannelType.Pipeline }, null, null);
+            config.AddStage("MergeStage", typeof(EmptyTask<int>), mergeTasks, new InputStageInfo(sortStage) { MultiInputRecordReaderType = typeof(MergeRecordReader<int>), PartitionsPerTask = partitionsPerTask }, outputPath, typeof(BinaryRecordWriter<int>));
             sortStage.OutputChannel.ForceFileDownload = forceFileDownload;
 
             RunJob(dfsClient, config);
@@ -324,11 +324,11 @@ namespace Tkl.Jumbo.Test.Jet
             {
                 actual.Clear();
                 using( DfsInputStream stream = dfsClient.OpenFile(outputFileName) )
-                using( BinaryRecordReader<Int32Writable> reader = new BinaryRecordReader<Int32Writable>(stream) )
+                using( BinaryRecordReader<int> reader = new BinaryRecordReader<int>(stream) )
                 {
                     while( reader.ReadRecord() )
                     {
-                        actual.Add(reader.CurrentRecord.Value);
+                        actual.Add(reader.CurrentRecord);
                     }
                 }
                 Assert.IsTrue(Utilities.CompareList(partitions[partition], actual));
@@ -352,7 +352,7 @@ namespace Tkl.Jumbo.Test.Jet
             List<int> expected = new List<int>(recordCount);
 
             using( DfsOutputStream stream = dfsClient.CreateFile(inputFileName) )
-            using( TextRecordWriter<Int32Writable> writer = new TextRecordWriter<Int32Writable>(stream) )
+            using( TextRecordWriter<int> writer = new TextRecordWriter<int>(stream) )
             {
                 for( int x = 0; x < recordCount; ++x )
                 {
