@@ -10,7 +10,7 @@ using System.Collections;
 namespace Tkl.Jumbo.IO
 {
     /// <summary>
-    /// Provides access to <see cref="IValueWriter{T}"/> implementations for various basic framework types.
+    /// Provides access to <see cref="IValueWriter{T}"/> implementations for various basic framework types and types that specify the <see cref="ValueWriterAttribute"/> attribute.
     /// </summary>
     /// <remarks>
     /// <para>
@@ -182,12 +182,15 @@ namespace Tkl.Jumbo.IO
         {
             public void Write(DateTime value, System.IO.BinaryWriter writer)
             {
+                writer.Write((int)value.Kind);
                 writer.Write(value.Ticks);
             }
 
             public DateTime Read(BinaryReader reader)
             {
-                return new DateTime(reader.ReadInt64());
+                DateTimeKind kind = (DateTimeKind)reader.ReadInt32();
+                long ticks = reader.ReadInt64();
+                return new DateTime(ticks, kind);
             }
         }
 
@@ -211,6 +214,12 @@ namespace Tkl.Jumbo.IO
             Type type = typeof(T);
             if( type.GetInterfaces().Contains(typeof(IWritable)) )
                 return null;
+            ValueWriterAttribute attribute = (ValueWriterAttribute)Attribute.GetCustomAttribute(type, typeof(ValueWriterAttribute));
+            if( attribute != null && !string.IsNullOrEmpty(attribute.ValueWriterTypeName) )
+            {
+                Type writerType = Type.GetType(attribute.ValueWriterTypeName, true);
+                return (IValueWriter<T>)Activator.CreateInstance(writerType);
+            }
 
             if( type == typeof(int) )
                 return new Int32Writer();

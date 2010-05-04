@@ -4,12 +4,14 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using Tkl.Jumbo.IO;
 
 namespace Tkl.Jumbo.Jet.Samples.IO
 {
     /// <summary>
     /// A 128 bit unsigned integer, based on the code provided with gensort, see http://www.hpl.hp.com/hosted/sortbenchmark/.
     /// </summary>
+    [ValueWriter(typeof(UInt128Writer))]
     public struct UInt128
     {
         private readonly ulong _high64;

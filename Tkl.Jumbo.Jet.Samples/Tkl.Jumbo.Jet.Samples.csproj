@@ -81,6 +81,7 @@
     <Compile Include="FileChannelTest.cs" />
     <Compile Include="GenSort2.cs" />
     <Compile Include="GraySort2.cs" />
+    <Compile Include="IO\UInt128Writer.cs" />
     <Compile Include="ValSort2.cs" />
     <Compile Include="WordCount2.cs" />
     <Compile Include="GenSort.cs" />
