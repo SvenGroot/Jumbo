@@ -218,9 +218,11 @@
     </p>
     <p>
         Jumbo's binary serialization protocol requires that a type is either supported by the <code>ValueWriter&lt;T&gt;</code> class, or that it implements the <code>IWritable</code>
-        interface. Only basic built-in framework types (<code>SByte</code>, <code>Byte</code>, <code>UInt16</code>, <code>Int16</code>, <code>UInt32</code>, <code>Int32</code>,
+        interface. Basic built-in framework types (<code>SByte</code>, <code>Byte</code>, <code>UInt16</code>, <code>Int16</code>, <code>UInt32</code>, <code>Int32</code>,
         <code>UInt64</code>, <code>Int64</code>, <code>Single</code>, <code>Double</code>, <code>Decimal</code>, <code>DateTime</code> and <code>String</code>) are supported by <code>ValueWriter&lt;T&gt;</code>,
-        all other types must implement <code>IWritable</code>.
+        automatically; all other types must implement <code>IWritable</code> or specify the value writer to use using the <code>ValueWriterAttribute</code>.
+        It's recommended to use <code>IWritable</code> in most cases; the use of <code>IValueWriter&lt;T&gt;</code> classes is only necessary for immutable types
+        or value types.
     </p>
     <p>
         The <code>IWritable</code> interface provides two methods, one to read the record data from a binary stream, and one to write it. How the data is serialized is
@@ -231,9 +233,13 @@
     </p>
     <p>
         Types implementing <code>IWritable</code> must always be reference types (classes). If they are value types (structures) the deserialization process will not function correctly.
+        For value types, create a class implementing <code>IValueWriter&lt;T&gt;</code> for the type, and apply the <code>ValueWriterAttribute</code> to the type.
     </p>
     <p>
-        You can inherit from <code>Writable&lt;T&gt;</code> to automatically generate an <code>IWritable</code> implementation for your class.
+        You can inherit from <code>Writable&lt;T&gt;</code> to automatically generate an <code>IWritable</code> implementation for your class. Please take care that
+        that <code>Writable&lt;T&gt;</code> serializes properties; it must be safe to do this even when the class's constructor has not been called. If you have a class A
+        that inherits from <code>Writable&lt;T&gt;</code> and a class B that inherits from A, type B will not serialize correctly. You can manually override the <code>Read</code>
+        and <code>Write</code> methods to fix this. Classes that inherit from <code>Writable&lt;T&gt;</code> may not contain circular references.
     </p>
     <p>
         The <code>IWritable</code> based serialization system does not contain the usual checks that are provided by .Net's <code>System.Runtime.Serialization</code> namespace.

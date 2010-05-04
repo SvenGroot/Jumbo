@@ -91,6 +91,17 @@ namespace Tkl.Jumbo.IO
                         generator.Emit(OpCodes.Ldarg_1); // Put the writer on the stack
                         generator.Emit(OpCodes.Callvirt, valueWriterType.GetMethod("Write")); // Call the IValueWriter<T>.Write method.
                     }
+                    else if( property.PropertyType.IsEnum )
+                    {
+                        MethodInfo writeMethod = typeof(BinaryWriter).GetMethod("Write", new[] { Enum.GetUnderlyingType(property.PropertyType) });
+                        if( writeMethod == null )
+                            throw new NotSupportedException(string.Format(System.Globalization.CultureInfo.CurrentCulture, "Cannot generate an IWritable.Write implementation for type {0} because property {1} has enum type {2} with unsupported underlying type {3}.", typeof(T), property.Name, property.PropertyType, Enum.GetUnderlyingType(property.PropertyType)));
+
+                        generator.Emit(OpCodes.Ldarg_1);
+                        generator.Emit(OpCodes.Ldarg_0);
+                        generator.Emit(OpCodes.Callvirt, getMethod);
+                        generator.Emit(OpCodes.Callvirt, writeMethod);
+                    }
                     else if( property.PropertyType == typeof(DateTime) )
                     {
                         // For DateTimes we need to write the DateTimeKind and the ticks.
@@ -346,7 +357,7 @@ namespace Tkl.Jumbo.IO
                     }
                     else
                     {
-                        MethodInfo readMethod = _readMethods[property.PropertyType];
+                        MethodInfo readMethod = property.PropertyType.IsEnum ? _readMethods[Enum.GetUnderlyingType(property.PropertyType)] : _readMethods[property.PropertyType];
                         generator.Emit(OpCodes.Ldarg_0); // load the object.
                         generator.Emit(OpCodes.Ldarg_1); // load the reader.
                         generator.Emit(OpCodes.Callvirt, readMethod);
