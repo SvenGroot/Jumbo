@@ -10,11 +10,11 @@ using Tkl.Jumbo.IO;
 namespace Tkl.Jumbo.Test.Tasks
 {
     [AllowRecordReuse]
-    public class LineCounterPushTask : IPushTask<Utf8StringWritable, int>
+    public class LineCounterPushTask : IPushTask<Utf8String, int>
     {
         #region IPushTask<Utf8StringWritable,int> Members
 
-        public void ProcessRecord(Utf8StringWritable record, RecordWriter<int> output)
+        public void ProcessRecord(Utf8String record, RecordWriter<int> output)
         {
             // Naive way to do primarily so we test outputting from here (output from Finish is tested in the adder).
             output.WriteRecord(1);

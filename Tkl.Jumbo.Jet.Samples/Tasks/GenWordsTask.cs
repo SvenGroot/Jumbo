@@ -12,7 +12,7 @@ namespace Tkl.Jumbo.Jet.Samples.Tasks
     /// <summary>
     /// Task that generates input data for word count.
     /// </summary>
-    public class GenWordsTask : Configurable, IPullTask<string, Utf8StringWritable>
+    public class GenWordsTask : Configurable, IPullTask<string, Utf8String>
     {
         #region Nested types
 
@@ -50,7 +50,7 @@ namespace Tkl.Jumbo.Jet.Samples.Tasks
         /// </summary>
         /// <param name="input">A <see cref="RecordReader{T}"/> from which the task's input can be read.</param>
         /// <param name="output">A <see cref="RecordWriter{T}"/> to which the task's output should be written.</param>
-        public void Run(RecordReader<string> input, RecordWriter<Utf8StringWritable> output)
+        public void Run(RecordReader<string> input, RecordWriter<Utf8String> output)
         {
             List<WordInfo> words = GetWordList();
 
@@ -66,7 +66,7 @@ namespace Tkl.Jumbo.Jet.Samples.Tasks
             int lineLength = 0;
             int newLineLength = Environment.NewLine.Length;
             int prevGenerated = 0;
-            Utf8StringWritable record = new Utf8StringWritable();
+            Utf8String record = new Utf8String();
             while( generated + newLineLength < size )
             {
                 prevGenerated = generated;

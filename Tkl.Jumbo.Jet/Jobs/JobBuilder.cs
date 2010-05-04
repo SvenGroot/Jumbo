@@ -314,7 +314,7 @@ namespace Tkl.Jumbo.Jet.Jobs
         /// <param name="output">The record writer to write the result to.</param>
         /// <param name="accumulatorTaskType">The accumulator task type.</param>
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1006:DoNotNestGenericTypesInMemberSignatures")]
-        public void AccumulateRecords<TKey, TValue>(RecordReader<KeyValuePairWritable<TKey, TValue>> input, RecordWriter<KeyValuePairWritable<TKey, TValue>> output, Type accumulatorTaskType)
+        public void AccumulateRecords<TKey, TValue>(RecordReader<Pair<TKey, TValue>> input, RecordWriter<Pair<TKey, TValue>> output, Type accumulatorTaskType)
             where TKey : IComparable<TKey>
         {
             if( input == null )
@@ -330,14 +330,14 @@ namespace Tkl.Jumbo.Jet.Jobs
             // If connecting directly to DFS input, we will therefore gather all into a single partition.
             // We will always connect an accumulator task to the input. If the input is another task, we pipeline it.
 
-            RecordCollector<KeyValuePairWritable<TKey, TValue>> collector = RecordCollector<KeyValuePairWritable<TKey, TValue>>.GetCollector(input);
+            RecordCollector<Pair<TKey, TValue>> collector = RecordCollector<Pair<TKey, TValue>>.GetCollector(input);
             if( collector == null )
             {
                 // Note: as per research diary 16-10-2009, we cannot decide to match the output channel's partition count here because
                 // depending on the partitioner that might change the semantics of the operation.
 
                 // Connecting directly to DFS input, so we're creating a single partition.
-                RecordCollector<KeyValuePairWritable<TKey, TValue>> intermediateCollector = new RecordCollector<KeyValuePairWritable<TKey, TValue>>(null, null, 1);
+                RecordCollector<Pair<TKey, TValue>> intermediateCollector = new RecordCollector<Pair<TKey, TValue>>(null, null, 1);
                 ProcessRecords(input, intermediateCollector.CreateRecordWriter(), accumulatorTaskType, "Input" + accumulatorTaskType.Name);
                 // TODO: Optimize for input with only one block (in which case this second step isn't necessary).
                 ProcessRecords(intermediateCollector.CreateRecordReader(), output, accumulatorTaskType);
@@ -349,18 +349,18 @@ namespace Tkl.Jumbo.Jet.Jobs
                     // TODO: With an unspecified partition count on the input stage, we could try to match the output channel partitions if the partitioner type is the same.
                     // See research diary 16-10-2009
 
-                    RecordWriter<KeyValuePairWritable<TKey, TValue>> outputWriter = output;
-                    RecordCollector<KeyValuePairWritable<TKey, TValue>> intermediateCollector = null;
+                    RecordWriter<Pair<TKey, TValue>> outputWriter = output;
+                    RecordCollector<Pair<TKey, TValue>> intermediateCollector = null;
                     // We'll need a second step unless:
                     // - The input channel is explicitly a pipeline channel.
                     // - There is only one input task and the output is to the DFS (in this case, if partitioning was specified it'll use internal partitioning)
                     //   We use a second step when writing to a channel because we don't want to use internal partitioning in this case.
                     //   Note we use a second step when writing to a channel even if there is only one input task and no partitioning.The second step will use
                     //   EmptyTask (no aggregation needed with one input) so it can be replaced later.
-                    if( !(collector.ChannelType == ChannelType.Pipeline || (collector.InputStage.TaskCount == 1 && output is RecordWriterReference<KeyValuePairWritable<TKey, TValue>>)) )
+                    if( !(collector.ChannelType == ChannelType.Pipeline || (collector.InputStage.TaskCount == 1 && output is RecordWriterReference<Pair<TKey, TValue>>)) )
                     {
                         // We'll need a second step, so create an intermedate collector and modify the original input channel
-                        intermediateCollector = new RecordCollector<KeyValuePairWritable<TKey, TValue>>(collector.ChannelType, collector.PartitionerType, collector.Partitions);
+                        intermediateCollector = new RecordCollector<Pair<TKey, TValue>>(collector.ChannelType, collector.PartitionerType, collector.Partitions);
                         collector.Partitions = 1;
                         collector.ChannelType = ChannelType.Pipeline;
                         outputWriter = intermediateCollector.CreateRecordWriter();
@@ -378,7 +378,7 @@ namespace Tkl.Jumbo.Jet.Jobs
                     {
                         // Create the second step.
                         // If the input stage has only one task, then we don't need to aggregate the results so we can use EmptyTask. 
-                        Type taskType = collector.InputStage.TaskCount == 1 ? typeof(EmptyTask<KeyValuePairWritable<TKey, TValue>>) : accumulatorTaskType;
+                        Type taskType = collector.InputStage.TaskCount == 1 ? typeof(EmptyTask<Pair<TKey, TValue>>) : accumulatorTaskType;
                         ProcessRecords(intermediateCollector.CreateRecordReader(), output, taskType);
                     }
                 }
@@ -403,7 +403,7 @@ namespace Tkl.Jumbo.Jet.Jobs
         /// <param name="output">The record writer to write the result to.</param>
         /// <param name="accumulator">The accumulator function.</param>
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1006:DoNotNestGenericTypesInMemberSignatures")]
-        public void AccumulateRecords<TKey, TValue>(RecordReader<KeyValuePairWritable<TKey, TValue>> input, RecordWriter<KeyValuePairWritable<TKey, TValue>> output, AccumulatorFunction<TKey, TValue> accumulator)
+        public void AccumulateRecords<TKey, TValue>(RecordReader<Pair<TKey, TValue>> input, RecordWriter<Pair<TKey, TValue>> output, AccumulatorFunction<TKey, TValue> accumulator)
             where TKey : IComparable<TKey>
         {
             if( input == null )

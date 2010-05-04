@@ -136,7 +136,7 @@
     <Compile Include="IO\RecordFileHeader.cs" />
     <Compile Include="IO\RecordFileReader.cs" />
     <Compile Include="IO\RecordFileWriter.cs" />
-    <Compile Include="IO\Utf8StringWritable.cs" />
+    <Compile Include="IO\Utf8String.cs" />
     <Compile Include="IO\Writable.cs" />
     <Compile Include="IO\WritableUtility.cs" />
     <Compile Include="ListExtensions.cs" />
@@ -149,7 +149,7 @@
     <Compile Include="IO\IPartitioner.cs" />
     <Compile Include="IO\IRecordWriter.cs" />
     <Compile Include="IO\IWritable.cs" />
-    <Compile Include="IO\KeyValuePairWritable.cs" />
+    <Compile Include="IO\Pair.cs" />
     <Compile Include="IO\LineRecordReader.cs" />
     <Compile Include="IO\ListRecordWriter.cs" />
     <Compile Include="IO\MultiRecordReader.cs" />

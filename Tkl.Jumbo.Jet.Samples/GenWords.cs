@@ -35,7 +35,7 @@ namespace Tkl.Jumbo.Jet.Samples
                         [Description("The directory on the Jumbo DFS where the dictionary files are stored.")] string dictionaryPath, 
                         [Description("The number of generator tasks to use.")] int taskCount,
                         [Description("The size, in megabytes, of the data to generate per task. Specify zero to use the DFS block size."), Optional, DefaultParameterValue(0)] int sizePerTaskMB)
-            : base(null, outputPath, 0, typeof(GenWordsTask), null, null, null, null, typeof(TextRecordWriter<Utf8StringWritable>), null, false)
+            : base(null, outputPath, 0, typeof(GenWordsTask), null, null, null, null, typeof(TextRecordWriter<Utf8String>), null, false)
         {
             if( dictionaryPath == null )
                 throw new ArgumentNullException("dictionaryPath");

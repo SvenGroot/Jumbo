@@ -57,9 +57,9 @@ namespace Tkl.Jumbo.Jet.Samples
 
             CheckAndCreateOutputPath(dfsClient, _outputPath);
 
-            var input = builder.CreateRecordReader<Utf8StringWritable>(_inputPath, typeof(WordRecordReader));
-            var collector = new RecordCollector<KeyValuePairWritable<Utf8StringWritable, int>>(null, null, _combinerTasks == 0 ? null : (int?)_combinerTasks);
-            var output = builder.CreateRecordWriter<KeyValuePairWritable<Utf8StringWritable, int>>(_outputPath, typeof(TextRecordWriter<KeyValuePairWritable<Utf8StringWritable, int>>), (int)BlockSize.Value, ReplicationFactor);
+            var input = builder.CreateRecordReader<Utf8String>(_inputPath, typeof(WordRecordReader));
+            var collector = new RecordCollector<Pair<Utf8String, int>>(null, null, _combinerTasks == 0 ? null : (int?)_combinerTasks);
+            var output = builder.CreateRecordWriter<Pair<Utf8String, int>>(_outputPath, typeof(TextRecordWriter<Pair<Utf8String, int>>), (int)BlockSize.Value, ReplicationFactor);
 
             builder.ProcessRecords(input, collector.CreateRecordWriter(), WordCount);
 
@@ -72,10 +72,10 @@ namespace Tkl.Jumbo.Jet.Samples
         /// <param name="input"></param>
         /// <param name="output"></param>
         [AllowRecordReuse]
-        public static void WordCount(RecordReader<Utf8StringWritable> input, RecordWriter<KeyValuePairWritable<Utf8StringWritable, int>> output)
+        public static void WordCount(RecordReader<Utf8String> input, RecordWriter<Pair<Utf8String, int>> output)
         {
             _log.Info("Starting count.");
-            KeyValuePairWritable<Utf8StringWritable, int> record = new KeyValuePairWritable<Utf8StringWritable, int>(null, 1);
+            Pair<Utf8String, int> record = new Pair<Utf8String, int>(null, 1);
             foreach( var word in input.EnumerateRecords() )
             {
                 record.Key = word;
@@ -90,7 +90,7 @@ namespace Tkl.Jumbo.Jet.Samples
         /// <param name="value"></param>
         /// <param name="newValue"></param>
         [AllowRecordReuse]
-        public static int WordCountAccumulator(Utf8StringWritable key, int value, int newValue)
+        public static int WordCountAccumulator(Utf8String key, int value, int newValue)
         {
             return value + newValue;
         }

@@ -149,21 +149,21 @@ namespace Tkl.Jumbo.Test.Jet
             JobConfiguration target = new JobConfiguration();
             DfsFile file1 = CreateFakeTestFile("test1");
 
-            StageConfiguration inputStage = target.AddInputStage("InputStage", file1, typeof(SortTask<Utf8StringWritable>), typeof(LineRecordReader));
+            StageConfiguration inputStage = target.AddInputStage("InputStage", file1, typeof(SortTask<Utf8String>), typeof(LineRecordReader));
 
             const int taskCount = 3;
             const int partitionsPerTask = 5;
 
-            StageConfiguration stage = target.AddStage("SecondStage", typeof(EmptyTask<Utf8StringWritable>), taskCount, new InputStageInfo(inputStage) { PartitionsPerTask = partitionsPerTask }, "/output", typeof(TextRecordWriter<Utf8StringWritable>));
+            StageConfiguration stage = target.AddStage("SecondStage", typeof(EmptyTask<Utf8String>), taskCount, new InputStageInfo(inputStage) { PartitionsPerTask = partitionsPerTask }, "/output", typeof(TextRecordWriter<Utf8String>));
 
             ChannelConfiguration channel = inputStage.OutputChannel;
             Assert.AreEqual(ChannelType.File, channel.ChannelType);
             Assert.AreEqual(ChannelConnectivity.Full, channel.Connectivity);
             Assert.IsFalse(channel.ForceFileDownload);
-            Assert.AreEqual(typeof(HashPartitioner<Utf8StringWritable>).AssemblyQualifiedName, channel.PartitionerType.TypeName);
-            Assert.AreEqual(typeof(HashPartitioner<Utf8StringWritable>), channel.PartitionerType.ReferencedType);
-            Assert.AreEqual(typeof(MultiRecordReader<Utf8StringWritable>), channel.MultiInputRecordReaderType.ReferencedType);
-            Assert.AreEqual(typeof(MultiRecordReader<Utf8StringWritable>).AssemblyQualifiedName, channel.MultiInputRecordReaderType.TypeName);
+            Assert.AreEqual(typeof(HashPartitioner<Utf8String>).AssemblyQualifiedName, channel.PartitionerType.TypeName);
+            Assert.AreEqual(typeof(HashPartitioner<Utf8String>), channel.PartitionerType.ReferencedType);
+            Assert.AreEqual(typeof(MultiRecordReader<Utf8String>), channel.MultiInputRecordReaderType.ReferencedType);
+            Assert.AreEqual(typeof(MultiRecordReader<Utf8String>).AssemblyQualifiedName, channel.MultiInputRecordReaderType.TypeName);
             Assert.AreEqual(stage.StageId, channel.OutputStage);
             Assert.AreEqual(partitionsPerTask, channel.PartitionsPerTask);
         }
@@ -177,19 +177,19 @@ namespace Tkl.Jumbo.Test.Jet
             const int taskCount = 3;
             const int partitionsPerTask = 5;
 
-            StageConfiguration inputStage = target.AddInputStage("InputStage", file1, typeof(EmptyTask<Utf8StringWritable>), typeof(LineRecordReader));
-            StageConfiguration sortStage = target.AddStage("SortStage", typeof(SortTask<Utf8StringWritable>), taskCount * partitionsPerTask, new InputStageInfo(inputStage) { ChannelType = ChannelType.Pipeline }, null, null);
+            StageConfiguration inputStage = target.AddInputStage("InputStage", file1, typeof(EmptyTask<Utf8String>), typeof(LineRecordReader));
+            StageConfiguration sortStage = target.AddStage("SortStage", typeof(SortTask<Utf8String>), taskCount * partitionsPerTask, new InputStageInfo(inputStage) { ChannelType = ChannelType.Pipeline }, null, null);
 
-            StageConfiguration stage = target.AddStage("SecondStage", typeof(EmptyTask<Utf8StringWritable>), taskCount, new InputStageInfo(sortStage) { PartitionsPerTask = partitionsPerTask }, "/output", typeof(TextRecordWriter<Utf8StringWritable>));
+            StageConfiguration stage = target.AddStage("SecondStage", typeof(EmptyTask<Utf8String>), taskCount, new InputStageInfo(sortStage) { PartitionsPerTask = partitionsPerTask }, "/output", typeof(TextRecordWriter<Utf8String>));
 
             ChannelConfiguration channel = sortStage.OutputChannel;
             Assert.AreEqual(ChannelType.File, channel.ChannelType);
             Assert.AreEqual(ChannelConnectivity.Full, channel.Connectivity);
             Assert.IsFalse(channel.ForceFileDownload);
-            Assert.AreEqual(typeof(HashPartitioner<Utf8StringWritable>).AssemblyQualifiedName, channel.PartitionerType.TypeName);
-            Assert.AreEqual(typeof(HashPartitioner<Utf8StringWritable>), channel.PartitionerType.ReferencedType);
-            Assert.AreEqual(typeof(MultiRecordReader<Utf8StringWritable>), channel.MultiInputRecordReaderType.ReferencedType);
-            Assert.AreEqual(typeof(MultiRecordReader<Utf8StringWritable>).AssemblyQualifiedName, channel.MultiInputRecordReaderType.TypeName);
+            Assert.AreEqual(typeof(HashPartitioner<Utf8String>).AssemblyQualifiedName, channel.PartitionerType.TypeName);
+            Assert.AreEqual(typeof(HashPartitioner<Utf8String>), channel.PartitionerType.ReferencedType);
+            Assert.AreEqual(typeof(MultiRecordReader<Utf8String>), channel.MultiInputRecordReaderType.ReferencedType);
+            Assert.AreEqual(typeof(MultiRecordReader<Utf8String>).AssemblyQualifiedName, channel.MultiInputRecordReaderType.TypeName);
             Assert.AreEqual(stage.StageId, channel.OutputStage);
             Assert.AreEqual(partitionsPerTask, channel.PartitionsPerTask);
         }

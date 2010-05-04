@@ -149,7 +149,7 @@
     </p>
     <p>
         It is allowed to specify to the <code>AllowRecordReuse</code> attribute on a class that inherits from <code>AccumulatorTask&lt;TKey, TValue&gt;</code>, but
-        this requires that the key and value types are value types or implement <code>ICloneable</code>, because the <code>KeyValuePairWritable</code> class will
+        this requires that the key and value types are value types or implement <code>ICloneable</code>, because the <code>Pair</code> class will
         also reuse key and value instances.
     </p>
     <p>
@@ -246,9 +246,9 @@
         Therefore it's a good rule of thumb to never modify these types after you have persisted any data with them.
     </p>
     <p>
-        In some circumstances additional requirements must be met. To use any type as the key in a <code>KeyValuePairWritable&lt;TKey, TValue&gt;</code>, it must implement <code>IComparable&lt;T&gt;</code>.
+        In some circumstances additional requirements must be met. To use any type as the key in a <code>Pair&lt;TKey, TValue&gt;</code>, it must implement <code>IComparable&lt;T&gt;</code>.
         The <code>AccumulatorTask&lt;TKey, TValue&gt;</code> requires that the key type has properly implemented <code>object.Equals</code> and <code>object.GetHashCode</code>, and if
-        record reuse is enabled it also requires <code>ICloneable</code>. And because <code>AccumulatorTask&lt;TKey, TValue&gt;</code> uses <code>KeyValuePairWritable&lt;TKey, TValue&gt;</code> it
+        record reuse is enabled it also requires <code>ICloneable</code>. And because <code>AccumulatorTask&lt;TKey, TValue&gt;</code> uses <code>Pair&lt;TKey, TValue&gt;</code> it
         naturally also requires <code>IComparable&lt;T&gt;</code> by proxy. If you want to output the record type with <code>TextRecordWriter&lt;T&gt;</code> you should also implement <code>object.ToString</code>.
     </p>
     <p>

@@ -15,7 +15,7 @@ namespace Tkl.Jumbo.IO
     /// Because this object is mutable you must take care when using it scenarios where immutability is expected, e.g. as a key
     /// in a <see cref="Dictionary{TKey,TValue}"/>.
     /// </remarks>
-    public class Utf8StringWritable : IWritable, IEquatable<Utf8StringWritable>, IComparable<Utf8StringWritable>, IComparable, ICloneable
+    public class Utf8String : IWritable, IEquatable<Utf8String>, IComparable<Utf8String>, IComparable, ICloneable
     {
         private static readonly Encoding _encoding = Encoding.UTF8;
         private static readonly byte[] _emptyArray = new byte[0];
@@ -23,47 +23,47 @@ namespace Tkl.Jumbo.IO
         private int _byteLength;
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="Utf8StringWritable"/> class.
+        /// Initializes a new instance of the <see cref="Utf8String"/> class.
         /// </summary>
-        public Utf8StringWritable()
+        public Utf8String()
         {
             _utf8Bytes = _emptyArray;
         }
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="Utf8StringWritable"/> class using the specified string.
+        /// Initializes a new instance of the <see cref="Utf8String"/> class using the specified string.
         /// </summary>
         /// <param name="value">The <see cref="String"/> to set the value to. May be <see langword="null"/>.</param>
-        public Utf8StringWritable(string value)
+        public Utf8String(string value)
         {
             Set(value);
         }
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="Utf8StringWritable"/> class using the specified utf-8 byte array.
+        /// Initializes a new instance of the <see cref="Utf8String"/> class using the specified utf-8 byte array.
         /// </summary>
         /// <param name="value">A byte array containing a utf-8 encoded string.</param>
-        public Utf8StringWritable(byte[] value)
+        public Utf8String(byte[] value)
         {
             Set(value);
         }
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="Utf8StringWritable"/> class using the specified utf-8 byte array, index and count.
+        /// Initializes a new instance of the <see cref="Utf8String"/> class using the specified utf-8 byte array, index and count.
         /// </summary>
         /// <param name="value">A byte array containing a utf-8 encoded string.</param>
         /// <param name="index">The index in <paramref name="value"/> to start copying.</param>
         /// <param name="count">The number of bytes from <paramref name="value"/> to copy.</param>
-        public Utf8StringWritable(byte[] value, int index, int count)
+        public Utf8String(byte[] value, int index, int count)
         {
             Set(value, index, count);
         }
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="Utf8StringWritable"/> class that is a copy of the specified <see cref="Utf8StringWritable"/>.
+        /// Initializes a new instance of the <see cref="Utf8String"/> class that is a copy of the specified <see cref="Utf8String"/>.
         /// </summary>
-        /// <param name="value">The <see cref="Utf8StringWritable"/> to copy.</param>
-        public Utf8StringWritable(Utf8StringWritable value)
+        /// <param name="value">The <see cref="Utf8String"/> to copy.</param>
+        public Utf8String(Utf8String value)
         {
             Set(value);
         }
@@ -113,7 +113,7 @@ namespace Tkl.Jumbo.IO
         }
 
         /// <summary>
-        /// Sets the value of this <see cref="Utf8StringWritable"/> to the specified <see cref="String"/>.
+        /// Sets the value of this <see cref="Utf8String"/> to the specified <see cref="String"/>.
         /// </summary>
         /// <param name="value">The <see cref="String"/> to set the value to. May be <see langword="null"/>.</param>
         public void Set(string value)
@@ -132,7 +132,7 @@ namespace Tkl.Jumbo.IO
         }
 
         /// <summary>
-        /// Sets the value of this <see cref="Utf8StringWritable"/> to the specified byte array.
+        /// Sets the value of this <see cref="Utf8String"/> to the specified byte array.
         /// </summary>
         /// <param name="value">A byte array containing a utf-8 encoded string.</param>
         public void Set(byte[] value)
@@ -143,7 +143,7 @@ namespace Tkl.Jumbo.IO
         }
 
         /// <summary>
-        /// Sets the value of this <see cref="Utf8StringWritable"/> to the specified region of the specified byte array.
+        /// Sets the value of this <see cref="Utf8String"/> to the specified region of the specified byte array.
         /// </summary>
         /// <param name="value">A byte array containing a utf-8 encoded string.</param>
         /// <param name="index">The index in <paramref name="value"/> to start copying.</param>
@@ -160,10 +160,10 @@ namespace Tkl.Jumbo.IO
         }
 
         /// <summary>
-        /// Sets the value of this <see cref="Utf8StringWritable"/> to the value of the specified <see cref="Utf8StringWritable"/>.
+        /// Sets the value of this <see cref="Utf8String"/> to the value of the specified <see cref="Utf8String"/>.
         /// </summary>
-        /// <param name="value">The <see cref="Utf8StringWritable"/> to copy.</param>
-        public void Set(Utf8StringWritable value)
+        /// <param name="value">The <see cref="Utf8String"/> to copy.</param>
+        public void Set(Utf8String value)
         {
             if( value == null )
                 throw new ArgumentNullException("value");
@@ -202,18 +202,18 @@ namespace Tkl.Jumbo.IO
         }
 
         /// <summary>
-        /// Gets a string representation of the current <see cref="Utf8StringWritable"/>.
+        /// Gets a string representation of the current <see cref="Utf8String"/>.
         /// </summary>
-        /// <returns>A string representation of the current <see cref="Utf8StringWritable"/>.</returns>
+        /// <returns>A string representation of the current <see cref="Utf8String"/>.</returns>
         public override string ToString()
         {
             return _encoding.GetString(_utf8Bytes, 0, _byteLength);
         }
 
         /// <summary>
-        /// Gets a hash code for this <see cref="Utf8StringWritable"/>.
+        /// Gets a hash code for this <see cref="Utf8String"/>.
         /// </summary>
-        /// <returns>A 32-bit hash code for this <see cref="Utf8StringWritable"/>.</returns>
+        /// <returns>A 32-bit hash code for this <see cref="Utf8String"/>.</returns>
         public override int GetHashCode()
         {
             int hash = 1;
@@ -223,67 +223,67 @@ namespace Tkl.Jumbo.IO
         }
 
         /// <summary>
-        /// Tests this <see cref="Utf8StringWritable"/> for equality with the specified object.
+        /// Tests this <see cref="Utf8String"/> for equality with the specified object.
         /// </summary>
         /// <param name="obj">The <see cref="Object"/> to test for equality.</param>
         /// <returns><see langword="true"/> if this instance is equal to <paramref name="obj"/>; otherwise, <see langword="false"/>.</returns>
         public override bool Equals(object obj)
         {
-            return Equals(obj as Utf8StringWritable);
+            return Equals(obj as Utf8String);
         }
 
         /// <summary>
-        /// Determines whether two specified <see cref="Utf8StringWritable"/> objects have the same value.
+        /// Determines whether two specified <see cref="Utf8String"/> objects have the same value.
         /// </summary>
-        /// <param name="left">A <see cref="Utf8StringWritable"/> or <see langword="null"/>.</param>
-        /// <param name="right">A <see cref="Utf8StringWritable"/> or <see langword="null"/>.</param>
+        /// <param name="left">A <see cref="Utf8String"/> or <see langword="null"/>.</param>
+        /// <param name="right">A <see cref="Utf8String"/> or <see langword="null"/>.</param>
         /// <returns><see langword="true"/> if the value of <paramref name="left"/> is equal to <paramref name="right"/>; otherwise, <see langword="false"/>.</returns>
-        public static bool operator ==(Utf8StringWritable left, Utf8StringWritable right)
+        public static bool operator ==(Utf8String left, Utf8String right)
         {
             return object.Equals(left, right);
         }
 
         /// <summary>
-        /// Determines whether two specified <see cref="Utf8StringWritable"/> objects have different values.
+        /// Determines whether two specified <see cref="Utf8String"/> objects have different values.
         /// </summary>
-        /// <param name="left">A <see cref="Utf8StringWritable"/> or <see langword="null"/>.</param>
-        /// <param name="right">A <see cref="Utf8StringWritable"/> or <see langword="null"/>.</param>
+        /// <param name="left">A <see cref="Utf8String"/> or <see langword="null"/>.</param>
+        /// <param name="right">A <see cref="Utf8String"/> or <see langword="null"/>.</param>
         /// <returns><see langword="true"/> if the value of <paramref name="left"/> is different from <paramref name="right"/>; otherwise, <see langword="false"/>.</returns>
-        public static bool operator !=(Utf8StringWritable left, Utf8StringWritable right)
+        public static bool operator !=(Utf8String left, Utf8String right)
         {
             return !object.Equals(left, right);
         }
 
         /// <summary>
-        /// Determines whether one specified <see cref="Utf8StringWritable"/> is less than another specified <see cref="Utf8StringWritable"/>
+        /// Determines whether one specified <see cref="Utf8String"/> is less than another specified <see cref="Utf8String"/>
         /// </summary>
-        /// <param name="left">A <see cref="Utf8StringWritable"/> or <see langword="null"/>.</param>
-        /// <param name="right">A <see cref="Utf8StringWritable"/> or <see langword="null"/>.</param>
+        /// <param name="left">A <see cref="Utf8String"/> or <see langword="null"/>.</param>
+        /// <param name="right">A <see cref="Utf8String"/> or <see langword="null"/>.</param>
         /// <returns><see langword="true"/> if <paramref name="left"/> is less than <paramref name="right"/>; otherwise, <see langword="false"/>.</returns>
-        public static bool operator <(Utf8StringWritable left, Utf8StringWritable right)
+        public static bool operator <(Utf8String left, Utf8String right)
         {
-            return Comparer<Utf8StringWritable>.Default.Compare(left, right) < 0;
+            return Comparer<Utf8String>.Default.Compare(left, right) < 0;
         }
 
         /// <summary>
-        /// Determines whether one specified <see cref="Utf8StringWritable"/> is greater than another specified <see cref="Utf8StringWritable"/>
+        /// Determines whether one specified <see cref="Utf8String"/> is greater than another specified <see cref="Utf8String"/>
         /// </summary>
-        /// <param name="left">A <see cref="Utf8StringWritable"/> or <see langword="null"/>.</param>
-        /// <param name="right">A <see cref="Utf8StringWritable"/> or <see langword="null"/>.</param>
+        /// <param name="left">A <see cref="Utf8String"/> or <see langword="null"/>.</param>
+        /// <param name="right">A <see cref="Utf8String"/> or <see langword="null"/>.</param>
         /// <returns><see langword="true"/> if <paramref name="left"/> is greater than <paramref name="right"/>; otherwise, <see langword="false"/>.</returns>
-        public static bool operator >(Utf8StringWritable left, Utf8StringWritable right)
+        public static bool operator >(Utf8String left, Utf8String right)
         {
-            return Comparer<Utf8StringWritable>.Default.Compare(left, right) > 0;
+            return Comparer<Utf8String>.Default.Compare(left, right) > 0;
         }
 
         #region IEquatable<Utf8StringWritable> Members
 
         /// <summary>
-        /// Tests this <see cref="Utf8StringWritable"/> for equality with the specified <see cref="Utf8StringWritable"/>.
+        /// Tests this <see cref="Utf8String"/> for equality with the specified <see cref="Utf8String"/>.
         /// </summary>
-        /// <param name="other">The <see cref="Utf8StringWritable"/> to test for equality.</param>
+        /// <param name="other">The <see cref="Utf8String"/> to test for equality.</param>
         /// <returns><see langword="true"/> if this instance is equal to <paramref name="other"/>; otherwise, <see langword="false"/>.</returns>
-        public bool Equals(Utf8StringWritable other)
+        public bool Equals(Utf8String other)
         {
             if( other == null || other._byteLength != _byteLength )
                 return false;
@@ -307,7 +307,7 @@ namespace Tkl.Jumbo.IO
         /// </summary>
         /// <param name="other">An object to compare with this instance.</param>
         /// <returns>A 32-bit signed integer that indicates the relative order of the objects being compared.</returns>
-        public int CompareTo(Utf8StringWritable other)
+        public int CompareTo(Utf8String other)
         {
             if( other == null )
                 return 1;
@@ -338,7 +338,7 @@ namespace Tkl.Jumbo.IO
         /// <returns>A 32-bit signed integer that indicates the relative order of the objects being compared.</returns>
         public int CompareTo(object obj)
         {
-            return CompareTo(obj as Utf8StringWritable);
+            return CompareTo(obj as Utf8String);
         }
 
         #endregion
@@ -387,12 +387,12 @@ namespace Tkl.Jumbo.IO
         #region ICloneable Members
 
         /// <summary>
-        /// Creates a clone of the current <see cref="Utf8StringWritable"/>.
+        /// Creates a clone of the current <see cref="Utf8String"/>.
         /// </summary>
-        /// <returns>A new <see cref="Utf8StringWritable"/> with the same value as the current instance.</returns>
+        /// <returns>A new <see cref="Utf8String"/> with the same value as the current instance.</returns>
         public object Clone()
         {
-            return new Utf8StringWritable(this);
+            return new Utf8String(this);
         }
 
         #endregion

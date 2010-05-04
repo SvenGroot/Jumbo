@@ -23,15 +23,15 @@ namespace Tkl.Jumbo.Test
             long headerSize;
             using( MemoryStream stream = new MemoryStream() )
             {
-                using( RecordFileWriter<Utf8StringWritable> writer = new RecordFileWriter<Utf8StringWritable>(stream) )
+                using( RecordFileWriter<Utf8String> writer = new RecordFileWriter<Utf8String>(stream) )
                 {
-                    Assert.AreEqual(typeof(Utf8StringWritable), writer.Header.RecordType);
-                    Assert.AreEqual(typeof(Utf8StringWritable).FullName + ", " + typeof(Utf8StringWritable).Assembly.GetName().Name, writer.Header.RecordTypeName);
+                    Assert.AreEqual(typeof(Utf8String), writer.Header.RecordType);
+                    Assert.AreEqual(typeof(Utf8String).FullName + ", " + typeof(Utf8String).Assembly.GetName().Name, writer.Header.RecordTypeName);
                     Assert.AreEqual(1, writer.Header.Version);
                     Assert.AreEqual(0, writer.RecordsWritten);
                     Assert.AreNotEqual(0, writer.BytesWritten); // Because it must've written the header this isn't 0.
                     headerSize = writer.BytesWritten;
-                    Utf8StringWritable record = new Utf8StringWritable();
+                    Utf8String record = new Utf8String();
                     foreach( string item in records )
                     {
                         record.Set(item);
@@ -55,12 +55,12 @@ namespace Tkl.Jumbo.Test
             for( int offset = 0; offset < data.Length; offset += stepSize )
             {
                 using( MemoryStream stream = new MemoryStream(data) )
-                using( RecordFileReader<Utf8StringWritable> reader = new RecordFileReader<Utf8StringWritable>(stream, offset, Math.Min(stepSize, stream.Length - offset), true) )
+                using( RecordFileReader<Utf8String> reader = new RecordFileReader<Utf8String>(stream, offset, Math.Min(stepSize, stream.Length - offset), true) )
                 {
-                    Assert.AreEqual(typeof(Utf8StringWritable), reader.Header.RecordType);
-                    Assert.AreEqual(typeof(Utf8StringWritable).FullName + ", " + typeof(Utf8StringWritable).Assembly.GetName().Name, reader.Header.RecordTypeName);
+                    Assert.AreEqual(typeof(Utf8String), reader.Header.RecordType);
+                    Assert.AreEqual(typeof(Utf8String).FullName + ", " + typeof(Utf8String).Assembly.GetName().Name, reader.Header.RecordTypeName);
                     Assert.AreEqual(1, reader.Header.Version);
-                    foreach( Utf8StringWritable record in reader.EnumerateRecords() )
+                    foreach( Utf8String record in reader.EnumerateRecords() )
                     {
                         result.Add(record.ToString());
                     }

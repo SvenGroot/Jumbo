@@ -15,10 +15,10 @@ namespace Tkl.Jumbo.Jet.Tasks
     /// <typeparam name="TValue">The type of the values.</typeparam>
     /// <remarks>
     /// <para>
-    ///   It is safe to reuse the same <see cref="KeyValuePairWritable{TKey,TValue}"/> in every call to
+    ///   It is safe to reuse the same <see cref="Pair{TKey,TValue}"/> in every call to
     /// </para>
     /// </remarks>
-    public abstract class AccumulatorTask<TKey, TValue> : Configurable, IPushTask<KeyValuePairWritable<TKey, TValue>, KeyValuePairWritable<TKey, TValue>>
+    public abstract class AccumulatorTask<TKey, TValue> : Configurable, IPushTask<Pair<TKey, TValue>, Pair<TKey, TValue>>
         where TKey : IComparable<TKey>
     {
         #region Nested types
@@ -55,7 +55,7 @@ namespace Tkl.Jumbo.Jet.Tasks
         /// <param name="record">The record to process.</param>
         /// <param name="output">The <see cref="RecordWriter{T}"/> to which the task's output should be written.</param>
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1062:Validate arguments of public methods", MessageId = "0")]
-        public void ProcessRecord(KeyValuePairWritable<TKey, TValue> record, RecordWriter<KeyValuePairWritable<TKey, TValue>> output)
+        public void ProcessRecord(Pair<TKey, TValue> record, RecordWriter<Pair<TKey, TValue>> output)
         {
             ValueContainer value;
             if( _acculumatedValues.TryGetValue(record.Key, out value) )
@@ -85,18 +85,18 @@ namespace Tkl.Jumbo.Jet.Tasks
         /// <remarks>
         /// This enables the task to finish up its processing and write any further records it may have collected during processing.
         /// </remarks>
-        public void Finish(RecordWriter<KeyValuePairWritable<TKey, TValue>> output)
+        public void Finish(RecordWriter<Pair<TKey, TValue>> output)
         {
             if( output == null )
                 throw new ArgumentNullException("output");
             bool allowRecordReuse = TaskAttemptConfiguration.StageConfiguration.AllowOutputRecordReuse;
-            KeyValuePairWritable<TKey, TValue> record = null;
+            Pair<TKey, TValue> record = null;
             if( allowRecordReuse )
-                record = new KeyValuePairWritable<TKey, TValue>();
+                record = new Pair<TKey, TValue>();
             foreach( KeyValuePair<TKey, ValueContainer> item in _acculumatedValues )
             {
                 if( !allowRecordReuse )
-                    record = new KeyValuePairWritable<TKey, TValue>();
+                    record = new Pair<TKey, TValue>();
                 record.Key = item.Key;
                 record.Value = item.Value.Value;
                 output.WriteRecord(record);
