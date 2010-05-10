@@ -72,7 +72,7 @@ namespace Tkl.Jumbo.IO
             : base(stream)
         {
             _reader = new BinaryReader(stream);
-            if( allowRecordReuse )
+            if( allowRecordReuse && _valueWriter == null )
                 _record = (T)FormatterServices.GetUninitializedObject(typeof(T));
             _allowRecordReuse = allowRecordReuse;
         }

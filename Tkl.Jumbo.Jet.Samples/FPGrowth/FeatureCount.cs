@@ -46,10 +46,10 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
 
             var input = builder.CreateRecordReader<Utf8String>(_inputPath, typeof(LineRecordReader));
             var collector = new RecordCollector<Pair<Utf8String, int>>(null, null, AccumulatorTaskCount);
-            var output = CreateRecordWriter<Pair<Utf8String, int>>(builder, _outputPath, typeof(TextRecordWriter<>));
+            var output = CreateRecordWriter<Pair<Utf8String, int>>(builder, _outputPath, typeof(BinaryRecordWriter<>));
 
             builder.ProcessRecords(input, collector.CreateRecordWriter(), CountFeatures);
-            builder.AccumulateRecords(collector.CreateRecordReader(), output, AccumulatorFeatureCounts);
+            builder.AccumulateRecords(collector.CreateRecordReader(), output, AccumulateFeatureCounts);
         }
 
         /// <summary>
@@ -88,7 +88,7 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
         /// <param name="newValue">The new value.</param>
         /// <returns>The updated value.</returns>
         [AllowRecordReuse]
-        public static int AccumulatorFeatureCounts(Utf8String key, int currentValue, int newValue)
+        public static int AccumulateFeatureCounts(Utf8String key, int currentValue, int newValue)
         {
             return currentValue + newValue;
         }
