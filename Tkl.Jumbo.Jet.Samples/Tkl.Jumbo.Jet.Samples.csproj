@@ -79,6 +79,7 @@
       <Link>Properties\Version.cs</Link>
     </Compile>
     <Compile Include="FileChannelTest.cs" />
+    <Compile Include="FPGrowth\FeatureCount.cs" />
     <Compile Include="GenSort2.cs" />
     <Compile Include="GraySort2.cs" />
     <Compile Include="IO\UInt128Writer.cs" />
