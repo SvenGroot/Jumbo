@@ -25,7 +25,7 @@
         <include name="Properties/AssemblyInfo.cs"/>
         <include name="Tasks/*.cs"/>
         <include name="IO/*.cs"/>
-        <include name="FPGrowth/*.cs"
+        <include name="FPGrowth/*.cs" />
         <include name="*.cs"/>
         <include name="../Version.cs"/>
       </sources>
