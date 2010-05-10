@@ -993,10 +993,10 @@ namespace Tkl.Jumbo.Jet.Jobs
         private static bool IsFrameworkOrJumboAssembly(AssemblyName name)
         {
             return name.GetPublicKeyToken() != null && name.GetPublicKeyToken().SequenceEqual(_frameworkPublicKey) ||
-                AssemblyName.ReferenceMatchesDefinition(_jumboAssemblyName, name) ||
-                AssemblyName.ReferenceMatchesDefinition(_jumboJetAssemblyName, name) ||
-                AssemblyName.ReferenceMatchesDefinition(_jumboDfsAssemblyName, name) ||
-                AssemblyName.ReferenceMatchesDefinition(_log4netAssemblyName, name);
+                _jumboAssemblyName.FullName == name.FullName ||
+                _jumboJetAssemblyName.FullName == name.FullName ||
+                _jumboDfsAssemblyName.FullName == name.FullName ||
+                _log4netAssemblyName.FullName == name.FullName;
         }
     }
 }
