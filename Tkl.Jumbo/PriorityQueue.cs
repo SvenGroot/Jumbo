@@ -245,7 +245,7 @@ namespace Tkl.Jumbo
         public void Enqueue(T item)
         {
             _heap.Add(item);
-            UpHeap();
+            UpHeap(_heap.Count - 1);
         }
 
         /// <summary>
@@ -407,6 +407,48 @@ namespace Tkl.Jumbo
         }
 
         /// <summary>
+        /// Removes the specified item from the <see cref="PriorityQueue{T}"/>.
+        /// </summary>
+        /// <param name="item">The item.</param>
+        /// <returns><see langword="true"/> if the item was removed; <see langword="false"/> if it was not found.</returns>
+        public bool Remove(T item)
+        {
+            int index = _heap.IndexOf(item);
+            if( index < 0 )
+                return false;
+
+            int lastIndex = _heap.Count - 1;
+            if( index == lastIndex )
+                _heap.RemoveAt(lastIndex);
+            else
+            {
+                _heap[index] = _heap[lastIndex];
+                _heap.RemoveAt(lastIndex);
+                DownHeap(index);
+                UpHeap(index);
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// Checks the heap. Used for debug purposes.
+        /// </summary>
+        /// <returns></returns>
+        public bool CheckHeap()
+        {
+            for( int x = 0; x < _heap.Count; ++x )
+            {
+                int firstChild = (x << 1) + 1;
+                int secondChild = firstChild + 1;
+                if( !((firstChild >= _heap.Count || Comparer.Compare(_heap[x], _heap[firstChild]) <= 0) &&
+                      (secondChild >= _heap.Count || Comparer.Compare(_heap[x], _heap[secondChild]) <= 0)) )
+                    return false;
+            }
+            return true;
+        }
+
+        /// <summary>
         /// Copies the <see cref="PriorityQueue{T}"/> elements to a new array. 
         /// </summary>
         /// <returns>A new array containing elements copied from the <see cref="PriorityQueue{T}"/>.</returns>
@@ -457,9 +499,8 @@ namespace Tkl.Jumbo
             Array.Sort(array, arrayIndex, _heap.Count, Comparer);
         }
 
-        private void UpHeap()
+        private void UpHeap(int index)
         {
-            int index = _heap.Count - 1;
             T item = _heap[index];
             int parentIndex = (index - 1) >> 1;
             // Because we can't easily tell when parentIndex goes beyond 0, we check index instead; if that was already zero, then we're at the top
@@ -572,7 +613,7 @@ namespace Tkl.Jumbo
 
         object System.Collections.ICollection.SyncRoot
         {
-            get 
+            get
             {
                 if( _syncRoot == null )
                     System.Threading.Interlocked.CompareExchange(ref _syncRoot, new object(), null);
