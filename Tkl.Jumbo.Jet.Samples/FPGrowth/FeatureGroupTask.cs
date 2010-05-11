@@ -43,7 +43,7 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
 
             IComparer<int> intComparer = Comparer<int>.Default;
             // Sort the list by descending support
-            _fgList.Sort((x, y) => intComparer.Compare(y.Support, x.Support));
+            _fgList.Sort();
 
             int numGroups = TaskAttemptConfiguration.StageConfiguration.GetTypedSetting(NumGroupsSettingKey, 50);
             int maxPerGroup = _fgList.Count / numGroups;

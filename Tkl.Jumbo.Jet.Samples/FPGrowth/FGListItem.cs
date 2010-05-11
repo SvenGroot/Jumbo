@@ -10,7 +10,7 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
     /// <summary>
     /// Item in the feature and group list.
     /// </summary>
-    public class FGListItem : Writable<FGListItem>
+    public class FGListItem : Writable<FGListItem>, IComparable<FGListItem>
     {
         /// <summary>
         /// Gets or sets the feature.
@@ -37,6 +37,24 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
         public override string ToString()
         {
             return string.Format(CultureInfo.InvariantCulture, "[{0}, Support={1}, Group ID={2}]", Feature, Support, GroupId);
+        }
+
+        /// <summary>
+        /// Compares to.
+        /// </summary>
+        /// <param name="other">The other.</param>
+        /// <returns></returns>
+        public int CompareTo(FGListItem other)
+        {
+            if( other == null )
+                return 1;
+
+            int result = other.Support.CompareTo(Support); // Sort on support descending
+            if( result == 0 )
+            {
+                result = Feature.CompareTo(other.Feature); // And feature ascending
+            }
+            return result;
         }
     }
 }
