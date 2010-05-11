@@ -120,13 +120,13 @@ namespace Tkl.Jumbo.IO
         {
             if( string.IsNullOrEmpty(value) )
             {
-                _utf8Bytes = _emptyArray;
                 _byteLength = 0;
             }
             else
             {
                 _byteLength = _encoding.GetByteCount(value);
-                _utf8Bytes = new byte[GetCapacityNeeded(_byteLength)];
+                if( Capacity < _byteLength )
+                    _utf8Bytes = new byte[GetCapacityNeeded(_byteLength)];
                 _encoding.GetBytes(value, 0, value.Length, _utf8Bytes, 0);
             }
         }
