@@ -49,6 +49,13 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
         public int MinSupport { get; set; }
 
         /// <summary>
+        /// Gets or sets the number of groups.
+        /// </summary>
+        /// <value>The number of groups.</value>
+        [NamedCommandLineArgument("g", DefaultValue = 50), Description("The number of groups to create.")]
+        public int Groups { get; set; }
+
+        /// <summary>
         /// Constructs the job configuration using the specified job builder.
         /// </summary>
         /// <param name="builder">The job builer.</param>
@@ -61,16 +68,21 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
             var input = builder.CreateRecordReader<Utf8String>(_inputPath, typeof(LineRecordReader));
             var featureCollector = new RecordCollector<Pair<Utf8String, int>>(null, null, AccumulatorTaskCount);
             var countCollector = new RecordCollector<Pair<Utf8String, int>>(ChannelType.Pipeline, null, null);
-            var output = CreateRecordWriter<Pair<Utf8String, int>>(builder, _outputPath, typeof(BinaryRecordWriter<>));
+            var fListCollector = new RecordCollector<Pair<Utf8String, int>>(null, null, 1); // Has to have 1 partition, we should never group with more than one task.
+            var output = CreateRecordWriter<FGListItem>(builder, _outputPath, typeof(BinaryRecordWriter<>));
 
             // Generate (feature,1) pairs for each feature in the transaction DB
             builder.ProcessRecords(input, featureCollector.CreateRecordWriter(), CountFeatures);
             // Count the frequency of each feature.
             builder.AccumulateRecords(featureCollector.CreateRecordReader(), countCollector.CreateRecordWriter(), AccumulateFeatureCounts);
-            // Remove those feature with support less than the minimum.
+            // Remove non-frequent features
             SettingsDictionary settings = new SettingsDictionary();
             settings.AddTypedSetting(FeatureFilterTask.MinSupportSettingKey, MinSupport);
-            builder.ProcessRecords(countCollector.CreateRecordReader(), output, typeof(FeatureFilterTask), null, settings);
+            builder.ProcessRecords(countCollector.CreateRecordReader(), fListCollector.CreateRecordWriter(), typeof(FeatureFilterTask), null, settings);
+            // Sort and group the features.
+            SettingsDictionary groupSettings = new SettingsDictionary();
+            groupSettings.AddTypedSetting(FeatureGroupTask.NumGroupsSettingKey, Groups);
+            builder.ProcessRecords(fListCollector.CreateRecordReader(), output, typeof(FeatureGroupTask), null, groupSettings);
         }
 
         /// <summary>

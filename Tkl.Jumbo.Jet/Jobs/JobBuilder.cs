@@ -772,8 +772,19 @@ namespace Tkl.Jumbo.Jet.Jobs
                 }
                 else
                 {
-                    // We default to the File channel if not specified.
-                    ChannelType channelType = inputCollector.ChannelType == null ? ChannelType.File : inputCollector.ChannelType.Value;
+                    // We can pipeline if:
+                    // - The channel is pipeline (duh)
+                    // - The channel type is not specified, the input total task count is 1, and the new stage task count is also 1.
+                    ChannelType channelType;
+                    if( inputCollector.ChannelType == null )
+                    {
+                        if( inputCollector.InputStage.TotalTaskCount == 1 && taskCount == 1 )
+                            channelType = ChannelType.Pipeline;
+                        else
+                            channelType = ChannelType.File; // Default to File otherwise
+                    }
+                    else
+                        channelType = inputCollector.ChannelType.Value;
 
                     InputStageInfo[] inputStages;
                     if( inputCollector.InputStage != null )

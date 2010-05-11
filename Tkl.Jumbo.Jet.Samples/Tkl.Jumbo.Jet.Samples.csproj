@@ -80,6 +80,8 @@
     </Compile>
     <Compile Include="FileChannelTest.cs" />
     <Compile Include="FPGrowth\FeatureFilterTask.cs" />
+    <Compile Include="FPGrowth\FeatureGroupTask.cs" />
+    <Compile Include="FPGrowth\FGListItem.cs" />
     <Compile Include="FPGrowth\GenFGList.cs" />
     <Compile Include="GenSort2.cs" />
     <Compile Include="GraySort2.cs" />
