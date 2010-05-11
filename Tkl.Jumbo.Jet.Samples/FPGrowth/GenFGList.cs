@@ -16,23 +16,37 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
     /// <summary>
     /// Job runner for PFP feature count
     /// </summary>
-    [Description("Creates the frequency list for Parallel FP-Growth.")]
-    public class FeatureCount : JobBuilderJob
+    [Description("Creates the frequency list and group list for Parallel FP-Growth.")]
+    public class GenFGList : JobBuilderJob
     {
         private readonly string _inputPath;
         private readonly string _outputPath;
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="FeatureCount"/> class.
+        /// Initializes a new instance of the <see cref="GenFGList"/> class.
         /// </summary>
         /// <param name="inputPath">The input path.</param>
         /// <param name="outputPath">The output path.</param>
-        public FeatureCount([Description("The input file or directory on the DFS containing the transaction database.")] string inputPath,
+        public GenFGList([Description("The input file or directory on the DFS containing the transaction database.")] string inputPath,
                             [Description("The output directory on the DFS where the result will be written.")] string outputPath)
         {
             _inputPath = inputPath;
             _outputPath = outputPath;
         }
+
+        /// <summary>
+        /// Gets or sets the number of accumulator tasks.
+        /// </summary>
+        /// <value>The number of accumulator tasks.</value>
+        [NamedCommandLineArgument("a", DefaultValue = 0), Description("The number of accumulator tasks to use. Defaults to the number of nodes in the cluster.")]
+        public int AccumulatorTaskCount { get; set; }
+
+        /// <summary>
+        /// Gets or sets the min support.
+        /// </summary>
+        /// <value>The min support.</value>
+        [NamedCommandLineArgument("m", DefaultValue = 2), Description("The minimum support of the items to return.")]
+        public int MinSupport { get; set; }
 
         /// <summary>
         /// Constructs the job configuration using the specified job builder.
@@ -45,19 +59,19 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
             CheckAndCreateOutputPath(dfsClient, _outputPath);
 
             var input = builder.CreateRecordReader<Utf8String>(_inputPath, typeof(LineRecordReader));
-            var collector = new RecordCollector<Pair<Utf8String, int>>(null, null, AccumulatorTaskCount);
+            var featureCollector = new RecordCollector<Pair<Utf8String, int>>(null, null, AccumulatorTaskCount);
+            var countCollector = new RecordCollector<Pair<Utf8String, int>>(ChannelType.Pipeline, null, null);
             var output = CreateRecordWriter<Pair<Utf8String, int>>(builder, _outputPath, typeof(BinaryRecordWriter<>));
 
-            builder.ProcessRecords(input, collector.CreateRecordWriter(), CountFeatures);
-            builder.AccumulateRecords(collector.CreateRecordReader(), output, AccumulateFeatureCounts);
+            // Generate (feature,1) pairs for each feature in the transaction DB
+            builder.ProcessRecords(input, featureCollector.CreateRecordWriter(), CountFeatures);
+            // Count the frequency of each feature.
+            builder.AccumulateRecords(featureCollector.CreateRecordReader(), countCollector.CreateRecordWriter(), AccumulateFeatureCounts);
+            // Remove those feature with support less than the minimum.
+            SettingsDictionary settings = new SettingsDictionary();
+            settings.AddTypedSetting(FeatureFilterTask.MinSupportSettingKey, MinSupport);
+            builder.ProcessRecords(countCollector.CreateRecordReader(), output, typeof(FeatureFilterTask), null, settings);
         }
-
-        /// <summary>
-        /// Gets or sets the number of accumulator tasks.
-        /// </summary>
-        /// <value>The number of accumulator tasks.</value>
-        [NamedCommandLineArgument("a", DefaultValue=0), Description("The number of accumulator tasks to use. Defaults to the number of nodes in the cluster.")]
-        public int AccumulatorTaskCount { get; set; }
 
         /// <summary>
         /// Counts the features.

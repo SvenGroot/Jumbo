@@ -33,6 +33,25 @@ namespace Tkl.Jumbo.Jet.Jobs
     public delegate void TaskFunctionWithConfiguration<TInput, TOutput>(RecordReader<TInput> input, RecordWriter<TOutput> output, TaskAttemptConfiguration configuration);
 
     /// <summary>
+    /// Delegate for push tasks.
+    /// </summary>
+    /// <typeparam name="TInput">The type of the input records.</typeparam>
+    /// <typeparam name="TOutput">The type of the output records.</typeparam>
+    /// <param name="record">The input record to process.</param>
+    /// <param name="output">The record writer collecting the output records.</param>
+    public delegate void PushTaskFunction<TInput, TOutput>(TInput record, RecordWriter<TOutput> output);
+
+    /// <summary>
+    /// Delegate for push tasks.
+    /// </summary>
+    /// <typeparam name="TInput">The type of the input records.</typeparam>
+    /// <typeparam name="TOutput">The type of the output records.</typeparam>
+    /// <param name="record">The input record to process.</param>
+    /// <param name="output">The record writer collecting the output records.</param>
+    /// <param name="configuration">The configuration for the task.</param>
+    public delegate void PushTaskFunctionWithConfiguration<TInput, TOutput>(TInput record, RecordWriter<TOutput> output, TaskAttemptConfiguration configuration);
+
+    /// <summary>
     /// Delegate for accumulator tasks
     /// </summary>
     /// <typeparam name="TKey">The type of the keys.</typeparam>

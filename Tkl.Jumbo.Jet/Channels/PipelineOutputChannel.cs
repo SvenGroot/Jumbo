@@ -54,8 +54,11 @@ namespace Tkl.Jumbo.Jet.Channels
                 {
                     if( disposing )
                     {
-                        _output.Dispose();
-                        _output = null;
+                        if( _output != null )
+                        {
+                            _output.Dispose();
+                            _output = null;
+                        }
                     }
                 }
                 finally

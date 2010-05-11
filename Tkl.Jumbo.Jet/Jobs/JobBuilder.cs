@@ -306,6 +306,46 @@ namespace Tkl.Jumbo.Jet.Jobs
             ProcessRecords<TInput, TOutput>(input, output, task.Method, stageSettings, 0, true, true);
         }
 
+        /// <summary>
+        /// Processes records using the specified push task function.
+        /// </summary>
+        /// <typeparam name="TInput">The input record type.</typeparam>
+        /// <typeparam name="TOutput">The output record type.</typeparam>
+        /// <param name="input">The record reader to read records to process from.</param>
+        /// <param name="output">The record writer to write the result to.</param>
+        /// <param name="task">The task function.</param>
+        public void ProcessRecords<TInput, TOutput>(RecordReader<TInput> input, RecordWriter<TOutput> output, PushTaskFunction<TInput, TOutput> task)
+        {
+            if( input == null )
+                throw new ArgumentNullException("input");
+            if( output == null )
+                throw new ArgumentNullException("output");
+            if( task == null )
+                throw new ArgumentNullException("task");
+
+            ProcessRecordsPushTask<TInput, TOutput>(input, output, task.Method, null, 0, false);
+        }
+
+        /// <summary>
+        /// Processes records using the specified push task function with configuration.
+        /// </summary>
+        /// <typeparam name="TInput">The input record type.</typeparam>
+        /// <typeparam name="TOutput">The output record type.</typeparam>
+        /// <param name="input">The record reader to read records to process from.</param>
+        /// <param name="output">The record writer to write the result to.</param>
+        /// <param name="task">The task function.</param>
+        /// <param name="stageSettings">A dictionary containing settings to use for the stage. May be <see langword="null"/>.</param>
+        public void ProcessRecords<TInput, TOutput>(RecordReader<TInput> input, RecordWriter<TOutput> output, PushTaskFunctionWithConfiguration<TInput, TOutput> task, IDictionary<string, string> stageSettings)
+        {
+            if( input == null )
+                throw new ArgumentNullException("input");
+            if( output == null )
+                throw new ArgumentNullException("output");
+            if( task == null )
+                throw new ArgumentNullException("task");
+
+            ProcessRecordsPushTask<TInput, TOutput>(input, output, task.Method, stageSettings, 0, true);
+        }
 
         /// <summary>
         /// Processes records using the specified accumulator function.
@@ -355,11 +395,11 @@ namespace Tkl.Jumbo.Jet.Jobs
                     RecordCollector<Pair<TKey, TValue>> intermediateCollector = null;
                     // We'll need a second step unless:
                     // - The input channel is explicitly a pipeline channel.
-                    // - There is only one input task and the output is to the DFS (in this case, if partitioning was specified it'll use internal partitioning)
+                    // - There is only one input task and the output is to the DFS or the number of partitions is 1 (in this case, if partitioning was specified it'll use internal partitioning)
                     //   We use a second step when writing to a channel because we don't want to use internal partitioning in this case.
                     //   Note we use a second step when writing to a channel even if there is only one input task and no partitioning.The second step will use
                     //   EmptyTask (no aggregation needed with one input) so it can be replaced later.
-                    if( !(collector.ChannelType == ChannelType.Pipeline || (collector.InputStage.TaskCount == 1 && output is RecordWriterReference<Pair<TKey, TValue>>)) )
+                    if( !(collector.ChannelType == ChannelType.Pipeline || (collector.InputStage.TaskCount == 1 && (collector.Partitions == null || collector.Partitions.Value <= 1 || output is RecordWriterReference<Pair<TKey, TValue>>))) )
                     {
                         // We'll need a second step, so create an intermedate collector and modify the original input channel
                         intermediateCollector = new RecordCollector<Pair<TKey, TValue>>(collector.ChannelType, collector.PartitionerType, collector.Partitions);
@@ -832,6 +872,41 @@ namespace Tkl.Jumbo.Jet.Jobs
             AddAssemblies(taskMethod.DeclaringType.Assembly);
 
             ProcessRecordsInternal(input, output, taskType, null, stageSettings, taskCount);
+        }
+
+        private void ProcessRecordsPushTask<TInput, TOutput>(RecordReader<TInput> input, RecordWriter<TOutput> output, MethodInfo taskMethod, IDictionary<string, string> stageSettings, int taskCount, bool useConfiguration)
+        {
+            if( !(taskMethod.IsStatic && taskMethod.IsPublic) )
+                throw new ArgumentException("The task method specified must be public and static.", "taskMethod");
+
+            CreateDynamicAssembly();
+
+            TypeBuilder taskTypeBuilder = _dynamicModule.DefineType(_dynamicAssembly.GetName().Name + "." + taskMethod.Name, TypeAttributes.Class | TypeAttributes.Public | TypeAttributes.Sealed, typeof(Configurable), new[] { typeof(IPushTask<TInput, TOutput>) });
+
+            SetAllowRecordReuseAttribute(taskMethod, taskTypeBuilder);
+
+            MethodBuilder processMethod = taskTypeBuilder.DefineMethod("ProcessRecord", MethodAttributes.Public | MethodAttributes.Virtual, null, new[] { typeof(TInput), typeof(RecordWriter<TOutput>) });
+            processMethod.DefineParameter(1, ParameterAttributes.None, "record");
+            processMethod.DefineParameter(2, ParameterAttributes.None, "output");
+
+            ILGenerator generator = processMethod.GetILGenerator();
+            generator.Emit(OpCodes.Ldarg_1); // Load the record.
+            generator.Emit(OpCodes.Ldarg_2); // Load the output writer.
+            if( useConfiguration )
+            {
+                // Put the TaskAttemptConfiguration on the stack.
+                generator.Emit(OpCodes.Ldarg_0);
+                generator.Emit(OpCodes.Call, typeof(Configurable).GetProperty("TaskAttemptConfiguration").GetGetMethod());
+            }
+            generator.Emit(OpCodes.Call, taskMethod);
+            generator.Emit(OpCodes.Ret);
+
+            Type taskType = taskTypeBuilder.CreateType();
+
+            AddAssemblies(taskMethod.DeclaringType.Assembly);
+
+            ProcessRecordsInternal(input, output, taskType, null, stageSettings, taskCount);
+
         }
         
         private static void SetAllowRecordReuseAttribute(MethodInfo taskMethod, TypeBuilder taskTypeBuilder)
