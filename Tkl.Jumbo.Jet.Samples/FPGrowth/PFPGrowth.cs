@@ -252,7 +252,7 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
             {
                 int[] groupItems = new int[x];
                 Array.Copy(mappedItems, groupItems, x);
-                transactionOutput.WriteRecord(Pair.MakePair(currentGroupId, new Transaction() { Items = groupItems }));
+                transactionOutput.WriteRecord(Pair.MakePair(currentGroupId, new Transaction() { Items = groupItems, Length = groupItems.Length }));
             }
         }
 

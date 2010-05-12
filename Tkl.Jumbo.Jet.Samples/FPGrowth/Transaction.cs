@@ -27,6 +27,12 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
         }
 
         /// <summary>
+        /// Gets or sets the length.
+        /// </summary>
+        /// <value>The length.</value>
+        public int Length { get; set; }
+
+        /// <summary>
         /// Writes the object to the specified writer.
         /// </summary>
         /// <param name="writer">The <see cref="BinaryWriter"/> to serialize the object to.</param>
@@ -36,9 +42,9 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
                 WritableUtility.Write7BitEncodedInt32(writer, 0);
             else
             {
-                WritableUtility.Write7BitEncodedInt32(writer, _items.Length);
-                foreach( int item in _items )
-                    writer.Write(item);
+                WritableUtility.Write7BitEncodedInt32(writer, Length);
+                for( int x = 0; x < Length; ++x )
+                    writer.Write(_items[x]);
             }
         }
 
@@ -48,9 +54,10 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
         /// <param name="reader">The <see cref="BinaryReader"/> to deserialize the object from.</param>
         public void Read(BinaryReader reader)
         {
-            int length = WritableUtility.Read7BitEncodedInt32(reader);
-            _items = new int[length];
-            for( int x = 0; x < length; ++x )
+            Length = WritableUtility.Read7BitEncodedInt32(reader);
+            if( _items == null || _items.Length < Length )
+                _items = new int[Length];
+            for( int x = 0; x < Length; ++x )
                 _items[x] = reader.ReadInt32();
         }
 
