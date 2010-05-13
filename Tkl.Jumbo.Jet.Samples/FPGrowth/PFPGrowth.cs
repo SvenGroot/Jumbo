@@ -264,24 +264,27 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
                         ++mappedItemCount;
                     }
                 }
-                
-                // Sort by item ID; this ensures the items have the same order as they have in the FGList.
-                Array.Sort(mappedItems, 0, mappedItemCount);
 
-                int currentGroupId = -1;
-                for( int x = 0; x < mappedItemCount; ++x )
+                if( mappedItemCount > 0 )
                 {
-                    int groupId = fgList[mappedItems[x]].GroupId;
-                    if( currentGroupId != groupId )
+                    // Sort by item ID; this ensures the items have the same order as they have in the FGList.
+                    Array.Sort(mappedItems, 0, mappedItemCount);
+
+                    int currentGroupId = -1;
+                    for( int x = 0; x < mappedItemCount; ++x )
                     {
-                        if( currentGroupId != -1 )
+                        int groupId = fgList[mappedItems[x]].GroupId;
+                        if( currentGroupId != groupId )
                         {
-                            OutputGroupTransaction(transactionOutput, groups, mappedItems, currentGroupId, x);
+                            if( currentGroupId != -1 )
+                            {
+                                OutputGroupTransaction(transactionOutput, groups, mappedItems, currentGroupId, x);
+                            }
+                            currentGroupId = groupId;
                         }
-                        currentGroupId = groupId;
                     }
+                    OutputGroupTransaction(transactionOutput, groups, mappedItems, currentGroupId, mappedItemCount);
                 }
-                OutputGroupTransaction(transactionOutput, groups, mappedItems, currentGroupId, mappedItemCount);
             }
 
             if( treeOutput != null )
@@ -308,8 +311,6 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
             {
                 int[] groupItems = new int[x];
                 Array.Copy(mappedItems, groupItems, x);
-                if( groupItems[0] == groupItems[1] )
-                    System.Diagnostics.Debugger.Break();
                 transactionOutput.WriteRecord(Pair.MakePair(currentGroupId, new Transaction() { Items = groupItems, Length = groupItems.Length }));
             }
         }
