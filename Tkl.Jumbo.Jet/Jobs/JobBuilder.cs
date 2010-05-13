@@ -774,11 +774,11 @@ namespace Tkl.Jumbo.Jet.Jobs
                 {
                     // We can pipeline if:
                     // - The channel is pipeline (duh)
-                    // - The channel type is not specified, the input total task count is 1, and the new stage task count is also 1.
+                    // - The channel type is not specified, the input total task count is 1, and the new stage task count is also 1, and the task is a push task.
                     ChannelType channelType;
                     if( inputCollector.ChannelType == null )
                     {
-                        if( inputCollector.InputStage.TotalTaskCount == 1 && taskCount == 1 )
+                        if( inputCollector.InputStage.TotalTaskCount == 1 && taskCount == 1 && taskType.FindGenericInterfaceType(typeof(IPushTask<,>), false) != null )
                             channelType = ChannelType.Pipeline;
                         else
                             channelType = ChannelType.File; // Default to File otherwise
@@ -961,7 +961,9 @@ namespace Tkl.Jumbo.Jet.Jobs
             if( inputStages.Length == 1 )
             {
                 StageConfiguration inputStage = inputStages[0];
-                return (partitionerType == null || inputStage.OutputChannel.PartitionerType.ReferencedType == partitionerType) && inputStage.OutputChannel.MultiInputRecordReaderType.ReferencedType == multiInputRecordReaderType;
+                return (partitionerType == null || inputStage.OutputChannel.PartitionerType.ReferencedType == partitionerType) && 
+                       ((multiInputRecordReaderType.IsGenericType && multiInputRecordReaderType.GetGenericTypeDefinition() == typeof(MultiRecordReader<>)) ||
+                        inputStage.OutputChannel.MultiInputRecordReaderType.ReferencedType == multiInputRecordReaderType);
             }
             else
                 return false;

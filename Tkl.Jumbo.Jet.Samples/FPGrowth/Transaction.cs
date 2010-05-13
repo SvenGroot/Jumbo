@@ -12,7 +12,7 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
     /// <summary>
     /// Used as intermediate type for the PFP growth job.
     /// </summary>
-    public class Transaction : IWritable
+    public class Transaction : IWritable, ITransaction
     {
         private int[] _items;
 
@@ -69,7 +69,17 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
         /// </returns>
         public override string ToString()
         {
-            return "{ " + _items.ToDelimitedString() + " }";
+            return "{ " + Items.Take(Length).ToDelimitedString() + " }";
+        }
+
+        IEnumerable<int> ITransaction.Items
+        {
+            get { return _items.Take(Length);  }
+        }
+
+        int ITransaction.Count
+        {
+            get { return 1; }
         }
     }
 }

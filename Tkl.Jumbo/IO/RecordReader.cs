@@ -74,6 +74,17 @@ namespace Tkl.Jumbo.IO
         }
 
         /// <summary>
+        /// Gets a value indicating whether this instance has read all records.
+        /// </summary>
+        /// <value>
+        /// 	<see langword="true"/> if this instance has finished; otherwise, <see langword="false"/>.
+        /// </value>
+        public bool HasFinished
+        {
+            get { return !_hasRecords; }  // _hasRecords caches the result of the last ReadRecordInternal call, so we can use it for this.
+        }
+
+        /// <summary>
         /// Reads a record.
         /// </summary>
         /// <returns><see langword="true"/> if an object was successfully read from the stream; <see langword="false"/> if the end of the stream or stream fragment was reached.</returns>

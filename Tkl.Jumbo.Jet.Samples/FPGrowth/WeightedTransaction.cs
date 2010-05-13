@@ -11,7 +11,7 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
     /// <summary>
     /// Transaction with count.
     /// </summary>
-    public class WeightedTransaction
+    public class WeightedTransaction : ITransaction
     {
         /// <summary>
         /// Gets or sets the count.
@@ -33,6 +33,11 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
         public override string ToString()
         {
             return string.Format(CultureInfo.InvariantCulture, "{0}:{1}", Items.ToDelimitedString(), Count);
+        }
+
+        IEnumerable<int> ITransaction.Items
+        {
+            get { return Items; }
         }
     }
 }

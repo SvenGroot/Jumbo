@@ -11,6 +11,7 @@ using System.IO;
 using Tkl.Jumbo.CommandLine;
 using Tkl.Jumbo.Dfs;
 using Tkl.Jumbo.Jet.Tasks;
+using Tkl.Jumbo.Jet.Channels;
 
 namespace Tkl.Jumbo.Jet.Samples.FPGrowth
 {
@@ -20,6 +21,9 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
     [Description("Runs the parallel FP-growth algorithm against a database of transactions.")]
     public class PFPGrowth : JobBuilderJob
     {
+        private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(PFPGrowth));
+        private const string _itemCountSettingKey = "FPGrowth.ItemCount";
+        private const string _patternsSettingKey = "FPGrowth.Patterns";
         private readonly string _inputPath;
         private readonly string _outputPath;
         private string _fgListPath;
@@ -40,13 +44,6 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
             _fgListPath = fgListPath;
         }
 
-        /// <summary>
-        /// Gets or sets the number of groups.
-        /// </summary>
-        /// <value>The number of groups.</value>
-        [NamedCommandLineArgument("g", DefaultValue = 50), Description("The number of groups created in the fglist.")]
-        public int Groups { get; set; }
-        
         /// <summary>
         /// Gets or sets the min support.
         /// </summary>
@@ -69,6 +66,13 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
         public bool UseTransactionTree { get; set; }
 
         /// <summary>
+        /// Gets or sets the pattern count.
+        /// </summary>
+        /// <value>The pattern count.</value>
+        [NamedCommandLineArgument("k", DefaultValue = 50), Description("The number of patterns to return for each item.")]
+        public int PatternCount { get; set; }
+
+        /// <summary>
         /// Constructs the job configuration using the specified job builder.
         /// </summary>
         /// <param name="builder">The <see cref="JobBuilder"/>.</param>
@@ -84,45 +88,11 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
 
             if( UseTransactionTree )
             {
-                var input = builder.CreateRecordReader<Utf8String>(_inputPath, typeof(LineRecordReader));
-                var groupCollector = new RecordCollector<Pair<int, TransactionTree>>(null, null, FPGrowthTaskCount);
-                var output = CreateRecordWriter<Pair<int, TransactionTree>>(builder, _outputPath, typeof(TextRecordWriter<>));
-
-                // Generate group-dependent transactions
-                builder.ProcessRecords(input, groupCollector.CreateRecordWriter(), GenerateGroupTransactionTrees, null);
-
-                // Interesting observation: if the number of groups equals or is smaller than the number of partitions, we don't need to sort, because each
-                // partition will get exactly one group.
-                if( FPGrowthTaskCount != Groups )
-                {
-                    // Sort each partition by group ID.
-                    builder.SortRecords(groupCollector.CreateRecordReader(), output);
-                }
-                else
-                {
-                    builder.ProcessRecords(groupCollector.CreateRecordReader(), output, typeof(EmptyTask<Pair<int, TransactionTree>>));
-                }
+                BuildJob<TransactionTree>(builder, GenerateGroupTransactionTrees, MineTransactionTrees);
             }
             else
             {
-                var input = builder.CreateRecordReader<Utf8String>(_inputPath, typeof(LineRecordReader));
-                var groupCollector = new RecordCollector<Pair<int, Transaction>>(null, null, FPGrowthTaskCount);
-                var output = CreateRecordWriter<Pair<int, Transaction>>(builder, _outputPath, typeof(TextRecordWriter<>));
-
-                // Generate group-dependent transactions
-                builder.ProcessRecords(input, groupCollector.CreateRecordWriter(), GenerateGroupTransactions, null);
-
-                // Interesting observation: if the number of groups equals or is smaller than the number of partitions, we don't need to sort, because each
-                // partition will get exactly one group.
-                if( FPGrowthTaskCount != Groups )
-                {
-                    // Sort each partition by group ID.
-                    builder.SortRecords(groupCollector.CreateRecordReader(), output);
-                }
-                else
-                {
-                    builder.ProcessRecords(groupCollector.CreateRecordReader(), output, typeof(EmptyTask<Pair<int, Transaction>>));
-                }
+                BuildJob<Transaction>(builder, GenerateGroupTransactions, MineTransactions);
             }
         }
 
@@ -176,6 +146,92 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
             GenerateGroupTransactionsInternal(input, output, null, config);
         }
 
+        /// <summary>
+        /// Mines the transactions.
+        /// </summary>
+        /// <param name="input">The input.</param>
+        /// <param name="output">The output.</param>
+        /// <param name="config">The config.</param>
+        [AllowRecordReuse]
+        public static void MineTransactions(RecordReader<Pair<int, Transaction>> input, RecordWriter<MappedFrequentPatternCollection> output, TaskAttemptConfiguration config)
+        {
+            if( input.ReadRecord() )
+            {
+                MineTransactionsInternal(input, null, output, config);
+            }
+        }
+
+        /// <summary>
+        /// Mines the transactions.
+        /// </summary>
+        /// <param name="input">The input.</param>
+        /// <param name="output">The output.</param>
+        /// <param name="config">The config.</param>
+        [AllowRecordReuse]
+        public static void MineTransactionTrees(RecordReader<Pair<int, TransactionTree>> input, RecordWriter<MappedFrequentPatternCollection> output, TaskAttemptConfiguration config)
+        {
+            if( input.ReadRecord() )
+            {
+                MineTransactionsInternal(null, input, output, config);
+            }
+        }
+
+        private static void MineTransactionsInternal(RecordReader<Pair<int, Transaction>> transactionInput, RecordReader<Pair<int, TransactionTree>> treeInput, RecordWriter<MappedFrequentPatternCollection> output, TaskAttemptConfiguration config)
+        {
+            int minSupport = config.StageConfiguration.GetTypedSetting(FeatureFilterTask.MinSupportSettingKey, 2);
+            int numGroups = config.StageConfiguration.GetTypedSetting(FeatureGroupTask.NumGroupsSettingKey, 50);
+            int itemCount = config.StageConfiguration.GetTypedSetting(_itemCountSettingKey, 0);
+            int k = config.StageConfiguration.GetTypedSetting(_patternsSettingKey, 50);
+
+            int maxPerGroup = itemCount / numGroups;
+            if( itemCount % numGroups != 0 )
+                maxPerGroup++;            
+            while( true )
+            {
+                FPTree tree;
+                int groupId;
+                if( transactionInput != null )
+                {
+                    if( transactionInput.HasFinished )
+                        break;
+                    groupId = transactionInput.CurrentRecord.Key;
+                    _log.InfoFormat("Building tree for group {0}.", groupId);
+                    tree = new FPTree(EnumerateGroup(transactionInput), minSupport, Math.Min((groupId + 1) * maxPerGroup, itemCount));
+                }
+                else
+                {
+                    if( treeInput.HasFinished )
+                        break;
+                    groupId = transactionInput.CurrentRecord.Key;
+                    _log.InfoFormat("Building tree for group {0}.", groupId);
+                    tree = new FPTree(EnumerateGroup(treeInput), minSupport, Math.Min((groupId + 1) * maxPerGroup, itemCount));
+                }
+
+                // The tree needs to do mining only for the items in its group.
+                tree.Mine(output, k, false, groupId * maxPerGroup);
+            }
+        }
+
+        private static IEnumerable<ITransaction> EnumerateGroup(RecordReader<Pair<int, Transaction>> reader)
+        {
+            int groupId = reader.CurrentRecord.Key;
+            do
+            {
+                //_log.Debug(reader.CurrentRecord);
+                yield return reader.CurrentRecord.Value;
+            } while( reader.ReadRecord() && reader.CurrentRecord.Key == groupId );
+        }
+
+        private static IEnumerable<ITransaction> EnumerateGroup(RecordReader<Pair<int, TransactionTree>> reader)
+        {
+            int groupId = reader.CurrentRecord.Key;
+            do
+            {
+                foreach( WeightedTransaction transaction in reader.CurrentRecord.Value )
+                    yield return transaction;
+            } while( reader.ReadRecord() && reader.CurrentRecord.Key == groupId );
+        }
+
         private static void GenerateGroupTransactionsInternal(RecordReader<Utf8String> input, RecordWriter<Pair<int, Transaction>> transactionOutput, RecordWriter<Pair<int, TransactionTree>> treeOutput, TaskAttemptConfiguration config)
         {
             Dictionary<string, int> itemMapping;
@@ -210,7 +266,7 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
                 }
                 
                 // Sort by item ID; this ensures the items have the same order as they have in the FGList.
-                Array.Sort(mappedItems);
+                Array.Sort(mappedItems, 0, mappedItemCount);
 
                 int currentGroupId = -1;
                 for( int x = 0; x < mappedItemCount; ++x )
@@ -252,26 +308,36 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
             {
                 int[] groupItems = new int[x];
                 Array.Copy(mappedItems, groupItems, x);
+                if( groupItems[0] == groupItems[1] )
+                    System.Diagnostics.Debugger.Break();
                 transactionOutput.WriteRecord(Pair.MakePair(currentGroupId, new Transaction() { Items = groupItems, Length = groupItems.Length }));
             }
         }
 
         private static List<FGListItem> LoadFGList(TaskAttemptConfiguration config, out Dictionary<string, int> itemMapping)
         {
-            List<FGListItem> fgList = new List<FGListItem>();
             itemMapping = new Dictionary<string, int>();
 
             // fglist is stored in the local job directory.
             string fglistPath = Path.Combine(config.LocalJobDirectory, "fglist");
 
             using( FileStream stream = File.OpenRead(fglistPath) )
+            {
+                return LoadFGList(itemMapping, stream);
+            }
+        }
+
+        private static List<FGListItem> LoadFGList(Dictionary<string, int> itemMapping, Stream stream)
+        {
+            List<FGListItem> fgList = new List<FGListItem>();
             using( BinaryRecordReader<FGListItem> reader = new BinaryRecordReader<FGListItem>(stream, false) )
             {
                 int x = 0;
                 foreach( FGListItem item in reader.EnumerateRecords() )
                 {
                     fgList.Add(item);
-                    itemMapping.Add(item.Feature.ToString(), x);
+                    if( itemMapping != null )
+                        itemMapping.Add(item.Feature.ToString(), x);
                     ++x;
                 }
             }
@@ -296,6 +362,42 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
                     throw new InvalidOperationException("The specified FG list path doesn't contain any files.");
                 _fgListPath = file.FullPath;
             }
+        }
+
+        private void BuildJob<T>(JobBuilder builder, TaskFunctionWithConfiguration<Utf8String, Pair<int, T>> generateFunction, TaskFunctionWithConfiguration<Pair<int, T>, MappedFrequentPatternCollection> mineFunction)
+        {
+            DfsClient client = new DfsClient(DfsConfiguration);
+            List<FGListItem> fgList;
+            using( DfsInputStream stream = client.OpenFile(_fgListPath) )
+            {
+                fgList = LoadFGList(null, stream);
+            }
+
+            int groups = fgList[fgList.Count - 1].GroupId + 1;
+
+            var input = builder.CreateRecordReader<Utf8String>(_inputPath, typeof(LineRecordReader));
+            var groupCollector = new RecordCollector<Pair<int, T>>(null, null, FPGrowthTaskCount);
+            var output = CreateRecordWriter<MappedFrequentPatternCollection>(builder, _outputPath, typeof(TextRecordWriter<>));
+
+            // Generate group-dependent transactions
+            builder.ProcessRecords(input, groupCollector.CreateRecordWriter(), generateFunction, null);
+
+            // Interesting observation: if the number of groups equals or is smaller than the number of partitions, we don't need to sort, because each
+            // partition will get exactly one group.
+            if( FPGrowthTaskCount < groups )
+            {
+                var sortCollector = new RecordCollector<Pair<int, T>>(null, null, FPGrowthTaskCount);
+                // Sort each partition by group ID.
+                builder.SortRecords(groupCollector.CreateRecordReader(), sortCollector.CreateRecordWriter());
+                groupCollector = sortCollector;
+            }
+
+            SettingsDictionary settings = new SettingsDictionary();
+            settings.AddTypedSetting(FeatureFilterTask.MinSupportSettingKey, MinSupport);
+            settings.AddTypedSetting(FeatureGroupTask.NumGroupsSettingKey, groups);
+            settings.AddTypedSetting(_itemCountSettingKey, fgList.Count);
+            settings.AddTypedSetting(_patternsSettingKey, PatternCount);
+            builder.ProcessRecords(groupCollector.CreateRecordReader(), output, mineFunction, settings);
         }
     }
 }
