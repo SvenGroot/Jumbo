@@ -21,13 +21,13 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
         private readonly int[] _perfectExtensionCount;
         private readonly int[] _perfectExtensions;
         private int _perfectExtensionItemIndex;
-        private readonly RecordWriter<MappedFrequentPatternCollection> _output;
+        private readonly RecordWriter<Pair<int, WritableCollection<MappedFrequentPattern>>> _output;
         private readonly FrequentPatternMaxHeap[] _itemHeaps;
         private readonly int _minSupport;
         private readonly bool _expandPerfectExtensions;
         private readonly int _heapSize;
 
-        public FrequentPatternCollector(int itemCount, int weight, RecordWriter<MappedFrequentPatternCollection> output, bool expandPerfectExtensions, int minSupport, int k)
+        public FrequentPatternCollector(int itemCount, int weight, RecordWriter<Pair<int, WritableCollection<MappedFrequentPattern>>> output, bool expandPerfectExtensions, int minSupport, int k)
         {
             _items = new int[itemCount];
             _perfectExtensions = new int[itemCount];
@@ -110,16 +110,15 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
                 FrequentPatternMaxHeap heap = _itemHeaps[item];
                 if( heap != null )
                 {
-                    MappedFrequentPatternCollection record = new MappedFrequentPatternCollection();
-                    record.ItemId = item;
+                    WritableCollection<MappedFrequentPattern> patterns = new WritableCollection<MappedFrequentPattern>();
                     PriorityQueue<MappedFrequentPattern> queue = heap.Queue;
                     _log.InfoFormat("{2}: Found {0} frequent items with min support {1}.", queue.Count, queue.Peek().Support, item);
                     while( queue.Count > 0 )
                     {
-                        record.Patterns.Add(queue.Dequeue());
+                        patterns.Add(queue.Dequeue());
                     }
 
-                    _output.WriteRecord(record);
+                    _output.WriteRecord(Pair.MakePair(item, patterns));
 
                     _itemHeaps[item] = null;
                 }

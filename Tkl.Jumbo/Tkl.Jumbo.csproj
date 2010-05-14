@@ -109,6 +109,7 @@
     <Compile Include="IO\RecordInput.cs" />
     <Compile Include="IO\RoundRobinMultiInputRecordReader.cs" />
     <Compile Include="IO\ValueWriterAttribute.cs" />
+    <Compile Include="IO\WritableCollection.cs" />
     <Compile Include="IO\WritableNotNullAttribute.cs" />
     <Compile Include="IO\WritableIgnoreAttribute.cs" />
     <Compile Include="JumboConfiguration.cs" />

@@ -17,14 +17,41 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
         private readonly bool _subPatternCheck;
         private int _addCount;
 
-        public FrequentPatternMaxHeap(int maxSize, int minSupport, bool subPatternCheck)
+        public FrequentPatternMaxHeap(int maxSize, int minSupport, bool subPatternCheck, IEnumerable<MappedFrequentPattern> collection)
         {
             _minSupport = minSupport;
             _maxSize = maxSize;
-            _queue = new PriorityQueue<MappedFrequentPattern>(maxSize + 1, null);
+            if( collection == null )
+                _queue = new PriorityQueue<MappedFrequentPattern>(maxSize + 1, null);
+            else
+            {
+                _queue = new PriorityQueue<MappedFrequentPattern>(collection);
+                if( _queue.Capacity < maxSize )
+                    _queue.Capacity = maxSize + 1;
+            }
             _subPatternCheck = subPatternCheck;
             if( subPatternCheck )
+            {
                 _patternIndex = new Dictionary<int, HashSet<MappedFrequentPattern>>();
+                if( collection != null )
+                {
+                    foreach( MappedFrequentPattern pattern in collection )
+                    {
+                        HashSet<MappedFrequentPattern> index;
+                        if( !_patternIndex.TryGetValue(pattern.Support, out index) )
+                        {
+                            index = new HashSet<MappedFrequentPattern>();
+                            _patternIndex.Add(pattern.Support, index);
+                        }
+                        index.Add(pattern);
+                    }
+                }
+            }
+        }
+
+        public FrequentPatternMaxHeap(int maxSize, int minSupport, bool subPatternCheck)
+            : this(maxSize, minSupport, subPatternCheck, null)
+        {
         }
 
         public int MinSupport

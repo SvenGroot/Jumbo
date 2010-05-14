@@ -13,7 +13,7 @@ using System.IO;
 namespace Tkl.Jumbo.Jet.Samples.FPGrowth
 {
     /// <summary>
-    /// A frequent pattern consisting of sorted item IDs.
+    /// A frequent pattern consisting of sorted item IDs. Used as intermediate data format.
     /// </summary>
     public class MappedFrequentPattern : IWritable, IComparable<MappedFrequentPattern>, IEquatable<MappedFrequentPattern>
     {
@@ -147,6 +147,7 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
             WritableUtility.Write7BitEncodedInt32(writer, _items.Length);
             foreach( int item in _items )
                 writer.Write(item);
+            writer.Write(Support);
         }
 
         /// <summary>
@@ -161,6 +162,8 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
             {
                 _items[x] = reader.ReadInt32();
             }
+            _itemsReadOnlyWrapper = new ReadOnlyCollection<int>(_items);
+            Support = reader.ReadInt32();
         }
 
         internal bool IsSubpatternOf(MappedFrequentPattern pattern2)

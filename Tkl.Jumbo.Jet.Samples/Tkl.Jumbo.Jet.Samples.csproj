@@ -84,12 +84,12 @@
     <Compile Include="FPGrowth\FGListItem.cs" />
     <Compile Include="FPGrowth\FPTree.cs" />
     <Compile Include="FPGrowth\FPTreeNode.cs" />
+    <Compile Include="FPGrowth\FrequentPattern.cs" />
     <Compile Include="FPGrowth\MappedFrequentPattern.cs" />
     <Compile Include="FPGrowth\FrequentPatternCollector.cs" />
     <Compile Include="FPGrowth\FrequentPatternMaxHeap.cs" />
     <Compile Include="FPGrowth\GenFGList.cs" />
     <Compile Include="FPGrowth\ITransaction.cs" />
-    <Compile Include="FPGrowth\MappedFrequentPatternCollection.cs" />
     <Compile Include="FPGrowth\PFPGrowth.cs" />
     <Compile Include="FPGrowth\Transaction.cs" />
     <Compile Include="FPGrowth\TransactionTree.cs" />

@@ -90,7 +90,7 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
 
         public static int TotalTrees { get { return _totalTrees; } }
 
-        public void Mine(RecordWriter<MappedFrequentPatternCollection> output, int k, bool expandPerfectExtensions, int mineUntilItem)
+        public void Mine(RecordWriter<Pair<int, WritableCollection<MappedFrequentPattern>>> output, int k, bool expandPerfectExtensions, int mineUntilItem)
         {
             if( output == null )
                 throw new ArgumentNullException("output");
