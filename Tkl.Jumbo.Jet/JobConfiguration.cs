@@ -611,7 +611,14 @@ namespace Tkl.Jumbo.Jet
         /// <param name="value">The value of the setting.</param>
         public void AddTypedSetting<T>(string key, T value)
         {
-            AddSetting(key, Convert.ToString(value, System.Globalization.CultureInfo.InvariantCulture));
+            AddSetting(key, value);
+        }
+
+        internal void AddSetting(string key, object value)
+        {
+            if( JobSettings == null )
+                JobSettings = new SettingsDictionary();
+            JobSettings.AddSetting(key, value);
         }
     }
 }

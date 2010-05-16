@@ -22,8 +22,6 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
     public class PFPGrowth : JobBuilderJob
     {
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(PFPGrowth));
-        private const string _itemCountSettingKey = "FPGrowth.ItemCount";
-        private const string _patternsSettingKey = "FPGrowth.Patterns";
         private readonly string _inputPath;
         private readonly string _outputPath;
         private string _fgListPath;
@@ -48,7 +46,7 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
         /// Gets or sets the min support.
         /// </summary>
         /// <value>The min support.</value>
-        [NamedCommandLineArgument("m", DefaultValue = 2), Description("The minimum support of the patterns to mine.")]
+        [NamedCommandLineArgument("m", DefaultValue = 2), JobSetting, Description("The minimum support of the patterns to mine.")]
         public int MinSupport { get; set; }
 
         /// <summary>
@@ -69,7 +67,7 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
         /// Gets or sets the pattern count.
         /// </summary>
         /// <value>The pattern count.</value>
-        [NamedCommandLineArgument("k", DefaultValue = 50), Description("The number of patterns to return for each item.")]
+        [NamedCommandLineArgument("k", DefaultValue = 50), JobSetting, Description("The number of patterns to return for each item.")]
         public int PatternCount { get; set; }
 
         /// <summary>
@@ -91,7 +89,7 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
             
             // We need to determine this rather than let the JobBuilder do this because we need that information before the JobBuilder would calculate it.
             if( FPGrowthTaskCount == 0 )
-                FPGrowthTaskCount = new JetClient(JetConfiguration).JobServer.GetMetrics().TaskServers.Count;
+                FPGrowthTaskCount = new JetClient(JetConfiguration).JobServer.GetMetrics().NonInputTaskCapacity;
 
             if( UseTransactionTree )
             {
@@ -195,8 +193,8 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
         /// </remarks>
         public static void AggregateTransactions(RecordReader<Pair<int, WritableCollection<MappedFrequentPattern>>> input, RecordWriter<Pair<Utf8String, WritableCollection<FrequentPattern>>> output, TaskAttemptConfiguration config)
         {
-            int k = config.StageConfiguration.GetTypedSetting(_patternsSettingKey, 50);
-            int minSupport = config.StageConfiguration.GetTypedSetting(FeatureFilterTask.MinSupportSettingKey, 2);
+            int k = config.JobConfiguration.GetTypedSetting("PFPGrowth.PatternCount", 50);
+            int minSupport = config.JobConfiguration.GetTypedSetting("PFPGrowth.MinSupport", 2);
 
             List<FGListItem> fgList = LoadFGList(config, null);
             FrequentPatternMaxHeap[] heaps = new FrequentPatternMaxHeap[fgList.Count]; // TODO: Create a smaller list based on the number of partitions.
@@ -242,10 +240,12 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
 
         private static void MineTransactionsInternal(RecordReader<Pair<int, Transaction>> transactionInput, RecordReader<Pair<int, TransactionTree>> treeInput, RecordWriter<Pair<int, WritableCollection<MappedFrequentPattern>>> output, TaskAttemptConfiguration config)
         {
-            int minSupport = config.StageConfiguration.GetTypedSetting(FeatureFilterTask.MinSupportSettingKey, 2);
-            int numGroups = config.StageConfiguration.GetTypedSetting(FeatureGroupTask.NumGroupsSettingKey, 50);
-            int itemCount = config.StageConfiguration.GetTypedSetting(_itemCountSettingKey, 0);
-            int k = config.StageConfiguration.GetTypedSetting(_patternsSettingKey, 50);
+            // job settings
+            int minSupport = config.JobConfiguration.GetTypedSetting("PFPGrowth.MinSupport", 2);
+            int k = config.JobConfiguration.GetTypedSetting("PFPGrowth.PatternCount", 50);
+            // stage settings
+            int numGroups = config.StageConfiguration.GetTypedSetting("PFPGrowth.Groups", 50);
+            int itemCount = config.StageConfiguration.GetTypedSetting("PFPGrowth.ItemCount", 0);
 
             int maxPerGroup = itemCount / numGroups;
             if( itemCount % numGroups != 0 )
@@ -457,10 +457,8 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
             }
 
             SettingsDictionary settings = new SettingsDictionary();
-            settings.AddTypedSetting(FeatureFilterTask.MinSupportSettingKey, MinSupport);
-            settings.AddTypedSetting(FeatureGroupTask.NumGroupsSettingKey, groups);
-            settings.AddTypedSetting(_itemCountSettingKey, fgList.Count);
-            settings.AddTypedSetting(_patternsSettingKey, PatternCount);
+            settings.AddTypedSetting("PFPGrowth.Groups", groups);
+            settings.AddTypedSetting("PFPGrowth.ItemCount", fgList.Count);
             builder.ProcessRecords(groupCollector.CreateRecordReader(), patternCollector.CreateRecordWriter(), mineFunction, settings);
             builder.ProcessRecords(patternCollector.CreateRecordReader(), output, AggregateTransactions, settings);
         }

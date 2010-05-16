@@ -45,14 +45,14 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
         /// Gets or sets the min support.
         /// </summary>
         /// <value>The min support.</value>
-        [NamedCommandLineArgument("m", DefaultValue = 2), Description("The minimum support of the items to return.")]
+        [NamedCommandLineArgument("m", DefaultValue = 2), JobSetting, Description("The minimum support of the items to return.")]
         public int MinSupport { get; set; }
 
         /// <summary>
         /// Gets or sets the number of groups.
         /// </summary>
         /// <value>The number of groups.</value>
-        [NamedCommandLineArgument("g", DefaultValue = 50), Description("The number of groups to create.")]
+        [NamedCommandLineArgument("g", DefaultValue = 50), JobSetting, Description("The number of groups to create.")]
         public int Groups { get; set; }
 
         /// <summary>
@@ -76,13 +76,9 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
             // Count the frequency of each feature.
             builder.AccumulateRecords(featureCollector.CreateRecordReader(), countCollector.CreateRecordWriter(), AccumulateFeatureCounts);
             // Remove non-frequent features
-            SettingsDictionary settings = new SettingsDictionary();
-            settings.AddTypedSetting(FeatureFilterTask.MinSupportSettingKey, MinSupport);
-            builder.ProcessRecords(countCollector.CreateRecordReader(), fListCollector.CreateRecordWriter(), typeof(FeatureFilterTask), null, settings);
+            builder.ProcessRecords(countCollector.CreateRecordReader(), fListCollector.CreateRecordWriter(), typeof(FeatureFilterTask));
             // Sort and group the features.
-            SettingsDictionary groupSettings = new SettingsDictionary();
-            groupSettings.AddTypedSetting(FeatureGroupTask.NumGroupsSettingKey, Groups);
-            builder.ProcessRecords(fListCollector.CreateRecordReader(), output, typeof(FeatureGroupTask), null, groupSettings);
+            builder.ProcessRecords(fListCollector.CreateRecordReader(), output, typeof(FeatureGroupTask));
         }
 
         /// <summary>

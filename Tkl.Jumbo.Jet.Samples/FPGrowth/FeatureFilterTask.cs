@@ -16,11 +16,6 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
     {
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(FeatureFilterTask));
 
-        /// <summary>
-        /// Key for the minimum support in the stage settings.
-        /// </summary>
-        public const string MinSupportSettingKey = "FPGrowth.MinSupport";
-
         private int _minSupport;
         private int _records;
 
@@ -52,7 +47,7 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
         public override void NotifyConfigurationChanged()
         {
             base.NotifyConfigurationChanged();
-            _minSupport = TaskAttemptConfiguration.StageConfiguration.GetTypedSetting(MinSupportSettingKey, 2);
+            _minSupport = TaskAttemptConfiguration.JobConfiguration.GetTypedSetting("GenFGList.MinSupport", 2);
         }
     }
 }

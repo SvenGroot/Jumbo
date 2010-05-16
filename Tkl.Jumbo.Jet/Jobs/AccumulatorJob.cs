@@ -179,6 +179,8 @@ namespace Tkl.Jumbo.Jet.Jobs
             StageConfiguration outputStage = config.AddStage(AccumulatorStageName, AccumulatorTaskType, AccumulatorTaskCount, info, OutputPath, OutputWriterType);
             ConfigureDfsOutput(outputStage);
 
+            AddJobSettings(config);
+
             JetClient jetClient = new JetClient(JetConfiguration);
             Job job = jetClient.JobServer.CreateJob();
             _log.InfoFormat("Created job {{{0}}}", job.JobId);

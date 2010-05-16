@@ -18,11 +18,6 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
     {
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(FeatureGroupTask));
 
-        /// <summary>
-        /// The key for the number of groups in the stage settings.
-        /// </summary>
-        public const string NumGroupsSettingKey = "FPGrowth.NumGroups";
-
         private readonly List<FGListItem> _fgList = new List<FGListItem>();
 
         /// <summary>
@@ -47,7 +42,7 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
             // Sort the list by descending support
             _fgList.Sort();
 
-            int numGroups = TaskAttemptConfiguration.StageConfiguration.GetTypedSetting(NumGroupsSettingKey, 50);
+            int numGroups = TaskAttemptConfiguration.JobConfiguration.GetTypedSetting("GenFGList.Groups", 50);
             int maxPerGroup = _fgList.Count / numGroups;
             if( _fgList.Count % numGroups != 0 )
                 maxPerGroup++;
