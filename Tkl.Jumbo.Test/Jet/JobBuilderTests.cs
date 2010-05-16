@@ -148,7 +148,7 @@ namespace Tkl.Jumbo.Test.Jet
 
             var input = builder.CreateRecordReader<Utf8String>(_inputPath, typeof(LineRecordReader));
             var output = builder.CreateRecordWriter<int>(_outputPath, typeof(TextRecordWriter<int>));
-            var collector = new RecordCollector<int>(ChannelType.Pipeline, null, null);
+            var collector = new RecordCollector<int>() { ChannelType = ChannelType.Pipeline };
             builder.ProcessRecords(input, collector.CreateRecordWriter(), typeof(LineCounterTask));
             builder.ProcessRecords(collector.CreateRecordReader(), output, typeof(LineAdderTask));
 
@@ -169,12 +169,12 @@ namespace Tkl.Jumbo.Test.Jet
 
             var input = builder.CreateRecordReader<Utf8String>(_inputPath, typeof(LineRecordReader));
             var output = builder.CreateRecordWriter<int>(_outputPath, typeof(TextRecordWriter<int>));
-            var collector = new RecordCollector<int>(ChannelType.Tcp, typeof(FakePartitioner), 2);
+            var collector = new RecordCollector<int>() { ChannelType = ChannelType.Tcp, PartitionerType = typeof(FakePartitioner), PartitionCount = 2 };
             builder.ProcessRecords(input, collector.CreateRecordWriter(), typeof(LineCounterTask));
             builder.ProcessRecords(collector.CreateRecordReader(), output, typeof(LineAdderTask));
 
             JobConfiguration config = builder.JobConfiguration;
-            Assert.AreEqual(2, config.AssemblyFileNames.Count);
+            Assert.AreEqual(8, config.AssemblyFileNames.Count);
 
             Assert.AreEqual(2, config.Stages.Count);
 
@@ -189,7 +189,7 @@ namespace Tkl.Jumbo.Test.Jet
 
             var input = builder.CreateRecordReader<Utf8String>(_inputPath, typeof(LineRecordReader));
             var output = builder.CreateRecordWriter<int>(_outputPath, typeof(TextRecordWriter<int>));
-            var collector = new RecordCollector<Utf8String>(ChannelType.Pipeline, null, null);
+            var collector = new RecordCollector<Utf8String>() { ChannelType = ChannelType.Pipeline };
             builder.ProcessRecords(input, collector.CreateRecordWriter(), typeof(EmptyTask<Utf8String>));
             builder.ProcessRecords(collector.CreateRecordReader(), output, typeof(LineCounterTask));
 
@@ -210,7 +210,7 @@ namespace Tkl.Jumbo.Test.Jet
             var input = builder.CreateRecordReader<Utf8String>(_inputPath, typeof(LineRecordReader));
             var output = builder.CreateRecordWriter<int>(_outputPath, typeof(TextRecordWriter<int>));
             // Empty task replacement is not possible because the output of the empty task is being partitioned.
-            var collector = new RecordCollector<Utf8String>(ChannelType.Pipeline, null, 4);
+            var collector = new RecordCollector<Utf8String>() { ChannelType = ChannelType.Pipeline, PartitionCount = 4 };
             builder.ProcessRecords(input, collector.CreateRecordWriter(), typeof(EmptyTask<Utf8String>));
             builder.ProcessRecords(collector.CreateRecordReader(), output, typeof(LineCounterTask));
 
@@ -231,8 +231,8 @@ namespace Tkl.Jumbo.Test.Jet
 
             var input = builder.CreateRecordReader<Utf8String>(_inputPath, typeof(LineRecordReader));
             var output = builder.CreateRecordWriter<int>(_outputPath, typeof(TextRecordWriter<int>));
-            var collector1 = new RecordCollector<int>(null, null, 4);
-            var collector2 = new RecordCollector<int>(null, null, 4);
+            var collector1 = new RecordCollector<int>() { PartitionCount = 4 };
+            var collector2 = new RecordCollector<int>() { PartitionCount = 4 };
             builder.ProcessRecords(input, collector1.CreateRecordWriter(), typeof(LineCounterTask));
             builder.ProcessRecords(collector1.CreateRecordReader(), collector2.CreateRecordWriter(), typeof(EmptyTask<int>));
             // Replacement is possible because partitioner type and partition count match.
@@ -254,8 +254,8 @@ namespace Tkl.Jumbo.Test.Jet
 
             var input = builder.CreateRecordReader<Utf8String>(_inputPath, typeof(LineRecordReader));
             var output = builder.CreateRecordWriter<int>(_outputPath, typeof(TextRecordWriter<int>));
-            var collector1 = new RecordCollector<int>(null, null, 4);
-            var collector2 = new RecordCollector<int>(null, null, 2);
+            var collector1 = new RecordCollector<int>() { PartitionCount = 4 };
+            var collector2 = new RecordCollector<int>() { PartitionCount = 2 };
             builder.ProcessRecords(input, collector1.CreateRecordWriter(), typeof(LineCounterTask));
             builder.ProcessRecords(collector1.CreateRecordReader(), collector2.CreateRecordWriter(), typeof(EmptyTask<int>));
             // Replacement is not possible because partition count doesn't match.
@@ -278,15 +278,15 @@ namespace Tkl.Jumbo.Test.Jet
 
             var input = builder.CreateRecordReader<Utf8String>(_inputPath, typeof(LineRecordReader));
             var output = builder.CreateRecordWriter<int>(_outputPath, typeof(TextRecordWriter<int>));
-            var collector1 = new RecordCollector<int>(null, null, 4);
-            var collector2 = new RecordCollector<int>(null, typeof(FakePartitioner), 4);
+            var collector1 = new RecordCollector<int>() { PartitionCount = 4 };
+            var collector2 = new RecordCollector<int>() { PartitionerType = typeof(FakePartitioner), PartitionCount = 4 };
             builder.ProcessRecords(input, collector1.CreateRecordWriter(), typeof(LineCounterTask));
             builder.ProcessRecords(collector1.CreateRecordReader(), collector2.CreateRecordWriter(), typeof(EmptyTask<int>));
             // Replacement is not possible because partitioner type doesn't match.
             builder.ProcessRecords(collector2.CreateRecordReader(), output, typeof(LineAdderTask));
 
             JobConfiguration config = builder.JobConfiguration;
-            Assert.AreEqual(2, config.AssemblyFileNames.Count);
+            Assert.AreEqual(8, config.AssemblyFileNames.Count);
             Assert.AreEqual(Path.GetFileName(typeof(LineCounterTask).Assembly.Location), config.AssemblyFileNames[0]);
 
             Assert.AreEqual(3, config.Stages.Count);
@@ -302,8 +302,8 @@ namespace Tkl.Jumbo.Test.Jet
 
             var input = builder.CreateRecordReader<Utf8String>(_inputPath, typeof(LineRecordReader));
             var output = builder.CreateRecordWriter<int>(_outputPath, typeof(TextRecordWriter<int>));
-            var collector1 = new RecordCollector<int>(ChannelType.Pipeline, null, 4);
-            var collector2 = new RecordCollector<int>(null, null, 4);
+            var collector1 = new RecordCollector<int>() { ChannelType = ChannelType.Pipeline, PartitionCount = 4 };
+            var collector2 = new RecordCollector<int>() { PartitionCount = 4 };
             builder.ProcessRecords(input, collector1.CreateRecordWriter(), typeof(LineCounterTask));
             builder.ProcessRecords(collector1.CreateRecordReader(), collector2.CreateRecordWriter(), typeof(EmptyTask<int>));
             // Replacement is not possible because partition count doesn't match.
@@ -326,8 +326,8 @@ namespace Tkl.Jumbo.Test.Jet
 
             var input = builder.CreateRecordReader<Utf8String>(_inputPath, typeof(LineRecordReader));
             var output = builder.CreateRecordWriter<int>(_outputPath, typeof(TextRecordWriter<int>));
-            var collector1 = new RecordCollector<int>(ChannelType.Pipeline, null, 4);
-            var collector2 = new RecordCollector<int>(null, null, null);
+            var collector1 = new RecordCollector<int>() { ChannelType = ChannelType.Pipeline, PartitionCount = 4 };
+            var collector2 = new RecordCollector<int>();
             builder.ProcessRecords(input, collector1.CreateRecordWriter(), typeof(LineCounterTask));
             builder.ProcessRecords(collector1.CreateRecordReader(), collector2.CreateRecordWriter(), typeof(LineAdderTask));
             builder.ProcessRecords(collector2.CreateRecordReader(), output, typeof(LineAdderTask));
@@ -353,7 +353,7 @@ namespace Tkl.Jumbo.Test.Jet
             builder.AccumulateRecords(input, output, typeof(FakeAccumulatorTask));
 
             JobConfiguration config = builder.JobConfiguration;
-            Assert.AreEqual(1, config.AssemblyFileNames.Count);
+            Assert.AreEqual(8, config.AssemblyFileNames.Count);
 
             // When you want to accumulate directly on DFS input, it will treat that as being a single input range that should be accumulated in its entirety, not as a pre-partitioned
             // file. As a result, it will assume you want one partition and create two stages, one to accumulate locally and one to combine the results.
@@ -370,13 +370,13 @@ namespace Tkl.Jumbo.Test.Jet
 
             var input = builder.CreateRecordReader<Utf8String>(_inputPath, typeof(LineRecordReader));
             var output = builder.CreateRecordWriter<Pair<Utf8String, int>>(_outputPath, typeof(TextRecordWriter<Pair<Utf8String, int>>));
-            RecordCollector<Pair<Utf8String, int>> collector = new RecordCollector<Pair<Utf8String, int>>(null, null, 2);
+            RecordCollector<Pair<Utf8String, int>> collector = new RecordCollector<Pair<Utf8String, int>>() { PartitionCount = 2 };
 
             builder.ProcessRecords(input, collector.CreateRecordWriter(), typeof(FakeKvpProducingTask));
             builder.AccumulateRecords(collector.CreateRecordReader(), output, typeof(FakeAccumulatorTask));
 
             JobConfiguration config = builder.JobConfiguration;
-            Assert.AreEqual(1, config.AssemblyFileNames.Count);
+            Assert.AreEqual(8, config.AssemblyFileNames.Count); // Includes all the stuff Tkl.Jumbo.Test references, including NameServer.exe, etc. which isn't a problem because we're not executing it.
 
             Assert.AreEqual(2, config.Stages.Count);
 
@@ -392,8 +392,8 @@ namespace Tkl.Jumbo.Test.Jet
 
             var input = builder.CreateRecordReader<Utf8String>(_inputPath, typeof(LineRecordReader));
             var output = builder.CreateRecordWriter<Pair<Utf8String, int>>(_outputPath, typeof(TextRecordWriter<Pair<Utf8String, int>>));
-            RecordCollector<Utf8String> collector1 = new RecordCollector<Utf8String>(null, null, 1);
-            RecordCollector<Pair<Utf8String, int>> collector2 = new RecordCollector<Pair<Utf8String, int>>(null, null, 2);
+            RecordCollector<Utf8String> collector1 = new RecordCollector<Utf8String>() { PartitionCount = 1 };
+            RecordCollector<Pair<Utf8String, int>> collector2 = new RecordCollector<Pair<Utf8String, int>>() { PartitionCount = 2 };
 
             builder.ProcessRecords(input, collector1.CreateRecordWriter(), typeof(EmptyTask<Utf8String>)); // empty task can't be replaced because it has no input channel
             // This second stage will have only one task
@@ -402,7 +402,7 @@ namespace Tkl.Jumbo.Test.Jet
             builder.AccumulateRecords(collector2.CreateRecordReader(), output, typeof(FakeAccumulatorTask));
 
             JobConfiguration config = builder.JobConfiguration;
-            Assert.AreEqual(1, config.AssemblyFileNames.Count);
+            Assert.AreEqual(8, config.AssemblyFileNames.Count);
 
             Assert.AreEqual(2, config.Stages.Count);
 
@@ -418,9 +418,9 @@ namespace Tkl.Jumbo.Test.Jet
 
             var input = builder.CreateRecordReader<Utf8String>(_inputPath, typeof(LineRecordReader));
             var output = builder.CreateRecordWriter<Pair<Utf8String, int>>(_outputPath, typeof(TextRecordWriter<Pair<Utf8String, int>>));
-            RecordCollector<Utf8String> collector1 = new RecordCollector<Utf8String>(null, null, 1);
-            RecordCollector<Pair<Utf8String, int>> collector2 = new RecordCollector<Pair<Utf8String, int>>(null, null, 2);
-            RecordCollector<Pair<Utf8String, int>> collector3 = new RecordCollector<Pair<Utf8String, int>>(null, null, 1);
+            RecordCollector<Utf8String> collector1 = new RecordCollector<Utf8String>() { PartitionCount = 1 };
+            RecordCollector<Pair<Utf8String, int>> collector2 = new RecordCollector<Pair<Utf8String, int>>() { PartitionCount = 2 };
+            RecordCollector<Pair<Utf8String, int>> collector3 = new RecordCollector<Pair<Utf8String, int>>() { PartitionCount = 1 };
 
             builder.ProcessRecords(input, collector1.CreateRecordWriter(), typeof(EmptyTask<Utf8String>)); // empty task can't be replaced because it has no input channel
             // This second stage will have only one task
@@ -431,7 +431,7 @@ namespace Tkl.Jumbo.Test.Jet
             builder.ProcessRecords(collector3.CreateRecordReader(), output, typeof(EmptyTask<Pair<Utf8String, int>>));
 
             JobConfiguration config = builder.JobConfiguration;
-            Assert.AreEqual(1, config.AssemblyFileNames.Count);
+            Assert.AreEqual(8, config.AssemblyFileNames.Count);
 
             Assert.AreEqual(4, config.Stages.Count);
 
@@ -448,12 +448,12 @@ namespace Tkl.Jumbo.Test.Jet
 
             var input = builder.CreateRecordReader<Pair<Utf8String, int>>(_inputPath, typeof(RecordFileReader<Pair<Utf8String, int>>));
             var output = builder.CreateRecordWriter<Pair<Utf8String, int>>(_outputPath, typeof(TextRecordWriter<Pair<Utf8String, int>>));
-            RecordCollector<Pair<Utf8String, int>> collector = new RecordCollector<Pair<Utf8String, int>>(null, null, 1);
+            RecordCollector<Pair<Utf8String, int>> collector = new RecordCollector<Pair<Utf8String, int>>() { PartitionCount = 1 };
             builder.ProcessRecords(input, collector.CreateRecordWriter(), typeof(EmptyTask<Pair<Utf8String, int>>)); // empty task well be replaced because followup explicitly pipeline
             builder.AccumulateRecords(collector.CreateRecordReader(), output, typeof(FakeAccumulatorTask));
 
             JobConfiguration config = builder.JobConfiguration;
-            Assert.AreEqual(1, config.AssemblyFileNames.Count);
+            Assert.AreEqual(8, config.AssemblyFileNames.Count);
 
             Assert.AreEqual(2, config.Stages.Count);
 
@@ -485,13 +485,13 @@ namespace Tkl.Jumbo.Test.Jet
             JobBuilder builder = new JobBuilder(_dfsClient, _jetClient);
 
             var input = builder.CreateRecordReader<Utf8String>(_inputPath, typeof(LineRecordReader));
-            var collector = new RecordCollector<int>(null, typeof(FakePartitioner), 2);
+            var collector = new RecordCollector<int>() { PartitionerType = typeof(FakePartitioner), PartitionCount = 2 };
             var output = builder.CreateRecordWriter<int>(_outputPath, typeof(TextRecordWriter<int>));
             builder.ProcessRecords(input, collector.CreateRecordWriter(), typeof(LineCounterTask));
             builder.SortRecords(collector.CreateRecordReader(), output);
 
             JobConfiguration config = builder.JobConfiguration;
-            Assert.AreEqual(2, config.AssemblyFileNames.Count);
+            Assert.AreEqual(8, config.AssemblyFileNames.Count);
 
             Assert.AreEqual(2, config.Stages.Count);
 
@@ -506,8 +506,8 @@ namespace Tkl.Jumbo.Test.Jet
             JobBuilder builder = new JobBuilder(_dfsClient, _jetClient);
 
             var input = builder.CreateRecordReader<Utf8String>(_inputPath, typeof(LineRecordReader));
-            var collector = new RecordCollector<int>(null, null, 1);
-            var collector2 = new RecordCollector<int>(null, null, 2);
+            var collector = new RecordCollector<int>() { PartitionCount = 1 };
+            var collector2 = new RecordCollector<int>() { PartitionCount = 2 };
             var output = builder.CreateRecordWriter<int>(_outputPath, typeof(TextRecordWriter<int>));
             builder.ProcessRecords(input, collector.CreateRecordWriter(), typeof(LineCounterTask));
             builder.ProcessRecords(collector.CreateRecordReader(), collector2.CreateRecordWriter(), typeof(LineAdderTask));
@@ -584,9 +584,9 @@ namespace Tkl.Jumbo.Test.Jet
 
             var customerInput = builder.CreateRecordReader<Customer>(_inputPath, typeof(RecordFileReader<Customer>));
             var orderInput = builder.CreateRecordReader<Order>(_inputPath, typeof(RecordFileReader<Order>));
-            var customerCollector = new RecordCollector<Customer>(null, null, 2);
-            var orderCollector = new RecordCollector<Order>(null, null, 2);
-            var outputCollector = new RecordCollector<CustomerOrder>(null, null, 2);
+            var customerCollector = new RecordCollector<Customer>() { PartitionCount = 2 };
+            var orderCollector = new RecordCollector<Order>() { PartitionCount = 2 };
+            var outputCollector = new RecordCollector<CustomerOrder>() { PartitionCount = 2 };
             var output = builder.CreateRecordWriter<CustomerOrder>(_outputPath, typeof(RecordFileWriter<CustomerOrder>));
 
             builder.PartitionRecords(customerInput, customerCollector.CreateRecordWriter());

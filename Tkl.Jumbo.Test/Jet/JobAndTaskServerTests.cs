@@ -225,8 +225,8 @@ namespace Tkl.Jumbo.Test.Jet
 
             var customerInput = builder.CreateRecordReader<Customer>("/testjbjoin/customers", typeof(RecordFileReader<Customer>));
             var orderInput = builder.CreateRecordReader<Order>("/testjbjoin/orders", typeof(RecordFileReader<Order>));
-            var customerCollector = new RecordCollector<Customer>(null, null, joinTasks);
-            var orderCollector = new RecordCollector<Order>(null, null, joinTasks);
+            var customerCollector = new RecordCollector<Customer>() { PartitionCount = joinTasks };
+            var orderCollector = new RecordCollector<Order>() { PartitionCount = joinTasks };
             var output = builder.CreateRecordWriter<CustomerOrder>(outputPath, typeof(RecordFileWriter<CustomerOrder>));
 
             builder.PartitionRecords(customerInput, customerCollector.CreateRecordWriter(), "CustomerInputStage");

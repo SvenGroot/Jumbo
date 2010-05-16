@@ -66,9 +66,9 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
             CheckAndCreateOutputPath(dfsClient, _outputPath);
 
             var input = builder.CreateRecordReader<Utf8String>(_inputPath, typeof(LineRecordReader));
-            var featureCollector = new RecordCollector<Pair<Utf8String, int>>(null, null, AccumulatorTaskCount);
-            var countCollector = new RecordCollector<Pair<Utf8String, int>>(ChannelType.Pipeline, null, null);
-            var fListCollector = new RecordCollector<Pair<Utf8String, int>>(null, null, 1); // Has to have 1 partition, we should never group with more than one task.
+            var featureCollector = new RecordCollector<Pair<Utf8String, int>>() { PartitionCount = AccumulatorTaskCount };
+            var countCollector = new RecordCollector<Pair<Utf8String, int>>() { ChannelType = ChannelType.Pipeline };
+            var fListCollector = new RecordCollector<Pair<Utf8String, int>>() { PartitionCount = 1 }; // Has to have 1 partition, we should never group with more than one task.
             var output = CreateRecordWriter<FGListItem>(builder, _outputPath, typeof(BinaryRecordWriter<>));
 
             // Generate (feature,1) pairs for each feature in the transaction DB

@@ -64,46 +64,80 @@ namespace Tkl.Jumbo.Jet.Jobs
         #endregion
 
         private CollectorRecordWriter _writer;
+        private ChannelType? _channelType;
+        private int _partitionCount;
+        private Type _partitionerType;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="RecordCollector{T}"/> class.
         /// </summary>
         public RecordCollector()
-            : this(null, null, null)
         {
-        }
-
-        /// <summary>
-        /// Initializes a new instance of the <see cref="RecordCollector{T}"/> class.
-        /// </summary>
-        /// <param name="channelType">The channel type to use to transfer the records between tasks, or <see langword="null"/> to let the runtime decide.</param>
-        /// <param name="partitionerType">The type of the partitioner to use to spread the records across the output tasks, or <see langword="null"/> to use the default hash partitioner.</param>
-        /// <param name="partitions">The number of partitions to use, or <see langword="null"/> or 0 to let the runtime decide.</param>
-        public RecordCollector(Channels.ChannelType? channelType, Type partitionerType, int? partitions)
-        {
-            if( partitions < 0 )
-                throw new ArgumentOutOfRangeException("partitions", "Partition count cannot be less than zero.");
-            ChannelType = channelType;
-            PartitionerType = partitionerType;
-            // Treat 0 the same as null.
-            Partitions = partitions == 0 ? null : partitions;
             MultiInputRecordReaderType = typeof(MultiRecordReader<T>);
         }
 
         /// <summary>
-        /// Gets the partitioner to use to spread the records across the output tasks. This is not used during debugging.
+        /// Gets or sets the partitioner to use to spread the records across the output tasks.
         /// </summary>
-        public Type PartitionerType { get; internal set; }
+        /// <value>
+        /// The <see cref="Type"/> of the partitioner to use, or <see langword="null"/> to use to the default hash partitioner. The default value is <see langword="null"/>.
+        /// </value>
+        public Type PartitionerType
+        {
+            get { return _partitionerType; }
+            set
+            {
+                if( _writer != null )
+                    throw new InvalidOperationException("You cannot set the partitioner type after the RecordCollector's RecordWriter has been created.");
+
+                if( value != null )
+                {
+                    if( value.IsGenericTypeDefinition )
+                        value = value.MakeGenericType(typeof(T));
+                    if( !value.GetInterfaces().Contains(typeof(IPartitioner<T>)) )
+                        throw new ArgumentException("The specified type does not implement the IPartitioner<T> interface.");
+                }
+                _partitionerType = value;
+            }
+        }
 
         /// <summary>
-        /// Gets the channel type.
+        /// Gets or sets the channel type.
         /// </summary>
-        public Channels.ChannelType? ChannelType { get; internal set; }
+        /// <value>
+        /// The channel type, or <see langword="null"/> to let the <see cref="JobBuilder"/> decide. The default value is <see langword="null"/>.
+        /// </value>
+        public Channels.ChannelType? ChannelType
+        {
+            get { return _channelType; }
+            set
+            {
+                if( _writer != null )
+                    throw new InvalidOperationException("You cannot set the channel type after the RecordCollector's RecordWriter has been created.");
+
+                _channelType = value;
+            }
+        }
 
         /// <summary>
-        /// Gets the number of partitions.
+        /// Gets or sets the number of partitions to create
         /// </summary>
-        public int? Partitions { get; internal set; }
+        /// <value>
+        /// The number of partitions to create, or zero to let the <see cref="JobBuilder"/> decide. The default value is zero.
+        /// </value>
+        public int PartitionCount
+        {
+            get { return _partitionCount; }
+            set
+            {
+                if( _writer != null )
+                    throw new InvalidOperationException("You cannot set the partition count after the RecordCollector's RecordWriter has been created.");
+
+                if( value < 0 )
+                    throw new ArgumentOutOfRangeException("value", "The partition count must be 0 or higher.");
+                _partitionCount = value;
+            }
+        }
 
         internal StageConfiguration InputStage { get; set; }
 
@@ -133,6 +167,26 @@ namespace Tkl.Jumbo.Jet.Jobs
             if( _writer == null && InputChannels == null )
                 throw new InvalidOperationException("You must create a record writer before you can create a record reader.");
             return new CollectorRecordReader(this);
+        }
+
+        internal void SetPartitionCount(int value)
+        {
+            // Allows JobBuilder to set it even after the writer has been created.
+            if( value < 0 )
+                throw new ArgumentOutOfRangeException("value", "The partition count must be 0 or higher.");
+            _partitionCount = value;
+        }
+
+        internal void SetChannelType(ChannelType? value)
+        {
+            // Allows JobBuilder to set it even after the writer has been created.
+            _channelType = value;
+        }
+
+        internal void SetPartitionerType(Type value)
+        {
+            // Allows JobBuilder to set it even after the writer has been created.
+            _partitionerType = value;
         }
 
         internal static RecordCollector<T> GetCollector(RecordWriter<T> writer)

@@ -58,7 +58,7 @@ namespace Tkl.Jumbo.Jet.Samples
             CheckAndCreateOutputPath(dfsClient, _outputPath);
 
             var input = builder.CreateRecordReader<Utf8String>(_inputPath, typeof(WordRecordReader));
-            var collector = new RecordCollector<Pair<Utf8String, int>>(null, null, _combinerTasks == 0 ? null : (int?)_combinerTasks);
+            var collector = new RecordCollector<Pair<Utf8String, int>>() { PartitionCount = _combinerTasks };
             var output = builder.CreateRecordWriter<Pair<Utf8String, int>>(_outputPath, typeof(TextRecordWriter<Pair<Utf8String, int>>), (int)BlockSize.Value, ReplicationFactor);
 
             builder.ProcessRecords(input, collector.CreateRecordWriter(), WordCount);

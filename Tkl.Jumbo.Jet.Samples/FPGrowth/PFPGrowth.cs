@@ -439,8 +439,8 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
             int groups = fgList[fgList.Count - 1].GroupId + 1;
 
             var input = builder.CreateRecordReader<Utf8String>(_inputPath, typeof(LineRecordReader));
-            var groupCollector = new RecordCollector<Pair<int, T>>(null, null, FPGrowthTaskCount);
-            var patternCollector = new RecordCollector<Pair<int, WritableCollection<MappedFrequentPattern>>>(null, null, AggregateTaskCount);
+            var groupCollector = new RecordCollector<Pair<int, T>>() { PartitionCount = FPGrowthTaskCount };
+            var patternCollector = new RecordCollector<Pair<int, WritableCollection<MappedFrequentPattern>>>() { PartitionCount = AggregateTaskCount };
             var output = CreateRecordWriter<Pair<Utf8String, WritableCollection<FrequentPattern>>>(builder, _outputPath, typeof(TextRecordWriter<>));
 
             // Generate group-dependent transactions
@@ -450,7 +450,7 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
             // partition will get exactly one group.
             if( FPGrowthTaskCount < groups )
             {
-                var sortCollector = new RecordCollector<Pair<int, T>>(null, null, FPGrowthTaskCount);
+                var sortCollector = new RecordCollector<Pair<int, T>>() { PartitionCount = FPGrowthTaskCount };
                 // Sort each partition by group ID.
                 builder.SortRecords(groupCollector.CreateRecordReader(), sortCollector.CreateRecordWriter());
                 groupCollector = sortCollector;

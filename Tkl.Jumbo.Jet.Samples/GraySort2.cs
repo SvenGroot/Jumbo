@@ -69,7 +69,7 @@ namespace Tkl.Jumbo.Jet.Samples
 
             var input = builder.CreateRecordReader<GenSortRecord>(_inputPath, typeof(GenSortRecordReader));
             var output = builder.CreateRecordWriter<GenSortRecord>(_outputPath, typeof(GenSortRecordWriter), (int)BlockSize.Value, ReplicationFactor);
-            RecordCollector<GenSortRecord> collector = new RecordCollector<GenSortRecord>(null, typeof(RangePartitioner), _mergeTasks);
+            RecordCollector<GenSortRecord> collector = new RecordCollector<GenSortRecord>() { PartitionerType = typeof(RangePartitioner), PartitionCount = _mergeTasks };
 
             builder.PartitionRecords(input, collector.CreateRecordWriter());
             builder.SortRecords(collector.CreateRecordReader(), output);
