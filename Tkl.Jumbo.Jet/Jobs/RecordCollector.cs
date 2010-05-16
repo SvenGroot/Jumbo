@@ -67,6 +67,7 @@ namespace Tkl.Jumbo.Jet.Jobs
         private ChannelType? _channelType;
         private int _partitionCount;
         private Type _partitionerType;
+        private int _partitionsPerTask = 1;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="RecordCollector{T}"/> class.
@@ -135,7 +136,30 @@ namespace Tkl.Jumbo.Jet.Jobs
 
                 if( value < 0 )
                     throw new ArgumentOutOfRangeException("value", "The partition count must be 0 or higher.");
+                if( value > 0 && value % _partitionsPerTask != 0 )
+                    throw new InvalidOperationException("The total number of partitions must be divisible by the partition count.");
                 _partitionCount = value;
+            }
+        }
+
+        /// <summary>
+        /// Gets or sets the number of partitions per task.
+        /// </summary>
+        /// <value>The number of partitions per task. The default value is one.</value>
+        public int PartitionsPerTask
+        {
+            get { return _partitionsPerTask; }
+            set
+            {
+                if( _writer != null )
+                    throw new InvalidOperationException("You cannot set the number of partitions per task after the RecordCollector's RecordWriter has been created.");
+
+                if( value < 1 )
+                    throw new ArgumentOutOfRangeException("The partition count must be 1 or higher.");
+                if( _partitionCount > 0 && _partitionCount % value != 0 )
+                    throw new InvalidOperationException("The total number of partitions must be divisible by the partition count.");
+
+                _partitionsPerTask = value;
             }
         }
 
@@ -174,6 +198,8 @@ namespace Tkl.Jumbo.Jet.Jobs
             // Allows JobBuilder to set it even after the writer has been created.
             if( value < 0 )
                 throw new ArgumentOutOfRangeException("value", "The partition count must be 0 or higher.");
+            if( value > 0 && value % _partitionsPerTask != 0 )
+                throw new InvalidOperationException("The total number of partitions must be divisible by the partition count.");
             _partitionCount = value;
         }
 
@@ -187,6 +213,17 @@ namespace Tkl.Jumbo.Jet.Jobs
         {
             // Allows JobBuilder to set it even after the writer has been created.
             _partitionerType = value;
+        }
+
+        internal void SetPartitionsPerTask(int value)
+        {
+            // Allows JobBuilder to set it even after the writer has been created.
+            if( value < 1 )
+                throw new ArgumentOutOfRangeException("The partition count must be 1 or higher.");
+            if( _partitionCount > 0 && _partitionCount % value != 0 )
+                throw new InvalidOperationException("The total number of partitions must be divisible by the partition count.");
+
+            _partitionsPerTask = value;
         }
 
         internal static RecordCollector<T> GetCollector(RecordWriter<T> writer)
@@ -213,7 +250,8 @@ namespace Tkl.Jumbo.Jet.Jobs
             {
                 ChannelType = realChannelType,
                 MultiInputRecordReaderType = MultiInputRecordReaderType,
-                PartitionerType = PartitionerType ?? typeof(HashPartitioner<T>)
+                PartitionerType = PartitionerType ?? typeof(HashPartitioner<T>),
+                PartitionsPerTask = PartitionsPerTask
             };
         }
     }

@@ -169,7 +169,7 @@ namespace Tkl.Jumbo.Test.Jet
 
             var input = builder.CreateRecordReader<Utf8String>(_inputPath, typeof(LineRecordReader));
             var output = builder.CreateRecordWriter<int>(_outputPath, typeof(TextRecordWriter<int>));
-            var collector = new RecordCollector<int>() { ChannelType = ChannelType.Tcp, PartitionerType = typeof(FakePartitioner), PartitionCount = 2 };
+            var collector = new RecordCollector<int>() { ChannelType = ChannelType.Tcp, PartitionerType = typeof(FakePartitioner), PartitionCount = 4, PartitionsPerTask = 2 };
             builder.ProcessRecords(input, collector.CreateRecordWriter(), typeof(LineCounterTask));
             builder.ProcessRecords(collector.CreateRecordReader(), output, typeof(LineAdderTask));
 
@@ -179,7 +179,7 @@ namespace Tkl.Jumbo.Test.Jet
             Assert.AreEqual(2, config.Stages.Count);
 
             VerifyStage(config, config.Stages[0], 3, typeof(LineCounterTask).Name, typeof(LineCounterTask), null, typeof(LineRecordReader), null, ChannelType.Tcp, ChannelConnectivity.Full, typeof(FakePartitioner), typeof(MultiRecordReader<int>), typeof(LineAdderTask).Name);
-            VerifyStage(config, config.Stages[1], 2, typeof(LineAdderTask).Name, typeof(LineAdderTask), null, null, typeof(TextRecordWriter<int>), ChannelType.File, ChannelConnectivity.Full, null, null, null);
+            VerifyStage(config, config.Stages[1], 2, 2, typeof(LineAdderTask).Name, typeof(LineAdderTask), null, null, typeof(TextRecordWriter<int>), ChannelType.File, ChannelConnectivity.Full, null, null, null);
         }
 
         [Test]
@@ -607,6 +607,11 @@ namespace Tkl.Jumbo.Test.Jet
 
         private static void VerifyStage(JobConfiguration config, StageConfiguration stage, int taskCount, string stageId, Type taskType, Type stageMultiInputRecordReader, Type recordReaderType, Type recordWriterType, ChannelType channelType, ChannelConnectivity channelConnectivity, Type partitionerType, Type multiInputRecordReader, string outputStageId)
         {
+            VerifyStage(config, stage, taskCount, 1, stageId, taskType, stageMultiInputRecordReader, recordReaderType, recordWriterType, channelType, channelConnectivity, partitionerType, multiInputRecordReader, outputStageId);
+        }
+
+        private static void VerifyStage(JobConfiguration config, StageConfiguration stage, int taskCount, int partitionsPerTask, string stageId, Type taskType, Type stageMultiInputRecordReader, Type recordReaderType, Type recordWriterType, ChannelType channelType, ChannelConnectivity channelConnectivity, Type partitionerType, Type multiInputRecordReader, string outputStageId)
+        {
             Assert.AreEqual(stageId, stage.StageId);
             Assert.AreEqual(taskCount, stage.TaskCount);
             Assert.AreEqual(taskType, stage.TaskType);
@@ -626,6 +631,10 @@ namespace Tkl.Jumbo.Test.Jet
             }
             else
             {
+                var inputStages = config.GetInputStagesForStage(stage.StageId);
+                foreach( StageConfiguration inputStage in inputStages )
+                    Assert.AreEqual(partitionsPerTask, inputStage.OutputChannel.PartitionsPerTask);
+
                 Assert.IsEmpty(stage.DfsInputs);
             }
 

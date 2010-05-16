@@ -323,7 +323,7 @@ namespace Tkl.Jumbo.Jet.Jobs
             if( task == null )
                 throw new ArgumentNullException("task");
 
-            ProcessRecordsPushTask<TInput, TOutput>(input, output, task.Method, null, 0, false);
+            ProcessRecordsPushTask<TInput, TOutput>(input, output, task.Method, null, false);
         }
 
         /// <summary>
@@ -344,7 +344,7 @@ namespace Tkl.Jumbo.Jet.Jobs
             if( task == null )
                 throw new ArgumentNullException("task");
 
-            ProcessRecordsPushTask<TInput, TOutput>(input, output, task.Method, stageSettings, 0, true);
+            ProcessRecordsPushTask<TInput, TOutput>(input, output, task.Method, stageSettings, true);
         }
 
         /// <summary>
@@ -406,10 +406,12 @@ namespace Tkl.Jumbo.Jet.Jobs
                             {
                                 ChannelType = collector.ChannelType,
                                 PartitionerType = collector.PartitionerType,
-                                PartitionCount = collector.PartitionCount
+                                PartitionCount = collector.PartitionCount,
+                                PartitionsPerTask = collector.PartitionsPerTask
                             };
                         collector.SetPartitionCount(1);
                         collector.SetChannelType(ChannelType.Pipeline);
+                        collector.SetPartitionsPerTask(1);
                         outputWriter = intermediateCollector.CreateRecordWriter();
                     }
                     else if( collector.ChannelType == null )
@@ -712,7 +714,7 @@ namespace Tkl.Jumbo.Jet.Jobs
             }
         }
 
-        private void ProcessRecordsInternal<TInput, TOutput>(RecordReader<TInput> input, RecordWriter<TOutput> output, Type taskType, string stageId, IDictionary<string, string> stageSettings, int taskCount)
+        private void ProcessRecordsInternal<TInput, TOutput>(RecordReader<TInput> input, RecordWriter<TOutput> output, Type taskType, string stageId, IDictionary<string, string> stageSettings, int noInputTaskCount)
         {
             if( stageId == null )
                 stageId = taskType.Name;
@@ -763,14 +765,14 @@ namespace Tkl.Jumbo.Jet.Jobs
                     throw new ArgumentException("Cannot read from the specified record reader because the associated RecordCollector isn't being written to.");
 
                 // Determine the number of partitions to use on the input channel
-                taskCount = DetermineTaskCount<TInput>(taskCount, inputCollector);
+                int partitionCount = DeterminePartitionCount<TInput>(inputCollector);
 
 
                 // We can replace an empty task if:
                 // - The channel type is pipeline and taskCount is one.
                 // - The channel type is not specified, the input stage is not a child stage, and the task count, partitioner type and multi input record 
                 //   reader type are the same as the EmptyTask's input.
-                if( CanReplaceEmptyTask<TInput>(taskCount, inputCollector) )
+                if( CanReplaceEmptyTask<TInput>(partitionCount, inputCollector) )
                 {
                     // TODO: Under these circumstances, if the input stage task is something other than EmptyTask we could still pipeline this stage rather than use file or TCP.
 
@@ -791,7 +793,7 @@ namespace Tkl.Jumbo.Jet.Jobs
                     ChannelType channelType;
                     if( inputCollector.ChannelType == null )
                     {
-                        if( inputCollector.InputStage != null && inputCollector.InputStage.TotalTaskCount == 1 && taskCount == 1 && taskType.FindGenericInterfaceType(typeof(IPushTask<,>), false) != null )
+                        if( inputCollector.InputStage != null && inputCollector.InputStage.TotalTaskCount == 1 && partitionCount == 1 && taskType.FindGenericInterfaceType(typeof(IPushTask<,>), false) != null )
                             channelType = ChannelType.Pipeline;
                         else
                             channelType = ChannelType.File; // Default to File otherwise
@@ -805,16 +807,20 @@ namespace Tkl.Jumbo.Jet.Jobs
                         inputStages = new[] { inputCollector.ToInputStageInfo(channelType) };
                     }
                     else
+                    {
+                        if( inputCollector.PartitionsPerTask > 1 )
+                            throw new InvalidOperationException("Cannot use multiple partitions per task on a stage with multiple input stages.");
                         inputStages = inputCollector.InputChannels;
+                    }
                     // If there is only one input, the stageMultiInputRecordReaderType parameter won't be used so it doesn't matter what we pass.
                     // If there are more than one, the multi input record reader type of this inputCollector indicates what reader to use to combine
                     // the input from the stages so we must pass that.
-                    stage = _job.AddStage(stageId, taskType, taskCount, inputStages, inputCollector.MultiInputRecordReaderType, outputPath, outputWriterType);
+                    stage = _job.AddStage(stageId, taskType, partitionCount / inputCollector.PartitionsPerTask, inputStages, inputCollector.MultiInputRecordReaderType, outputPath, outputWriterType);
                 }
             }
             else // no input
             {
-                stage = _job.AddStage(stageId, taskType, taskCount, null, outputPath, outputWriterType);
+                stage = _job.AddStage(stageId, taskType, noInputTaskCount, null, outputPath, outputWriterType);
             }
 
             if( outputRef != null )
@@ -834,19 +840,17 @@ namespace Tkl.Jumbo.Jet.Jobs
             AddAssemblies(taskType.Assembly);
         }
 
-        private int DetermineTaskCount<TInput>(int taskCount, RecordCollector<TInput> inputCollector)
+        private int DeterminePartitionCount<TInput>(RecordCollector<TInput> inputCollector)
         {
-            if( taskCount == 0 )
-            {
-                if( inputCollector.PartitionCount > 0 )
-                    taskCount = inputCollector.PartitionCount; // Use specified amount
-                else if( inputCollector.ChannelType == ChannelType.Pipeline )
-                    taskCount = 1; // Pipeline channel always uses one if unspecified
-                else if( inputCollector.InputStage != null && inputCollector.InputStage.InternalPartitionCount > 1 )
-                    taskCount = inputCollector.InputStage.InternalPartitionCount; // Connecting to a compound stage with internal partitioning we must use the same number of tasks.
-                else
-                    taskCount = _jetClient.JobServer.GetMetrics().TaskServers.Count; // Otherwise default to the number of nodes in the cluster
-            }
+            int taskCount;
+            if( inputCollector.PartitionCount > 0 )
+                taskCount = inputCollector.PartitionCount; // Use specified amount
+            else if( inputCollector.ChannelType == ChannelType.Pipeline )
+                taskCount = 1; // Pipeline channel always uses one if unspecified
+            else if( inputCollector.InputStage != null && inputCollector.InputStage.InternalPartitionCount > 1 )
+                taskCount = inputCollector.InputStage.InternalPartitionCount; // Connecting to a compound stage with internal partitioning we must use the same number of tasks.
+            else
+                taskCount = _jetClient.JobServer.GetMetrics().NonInputTaskCapacity * inputCollector.PartitionsPerTask; // Otherwise default to the capacity of the cluster
             return taskCount;
         }
 
@@ -861,7 +865,7 @@ namespace Tkl.Jumbo.Jet.Jobs
                                  (inputCollector.ChannelType == null && inputCollector.InputStage.Parent == null && taskCount == inputCollector.InputStage.TaskCount && MatchInputChannelSettings(inputCollector.InputStage, inputCollector.PartitionerType, inputCollector.MultiInputRecordReaderType)));
         }
 
-        private void ProcessRecords<TInput, TOutput>(RecordReader<TInput> input, RecordWriter<TOutput> output, MethodInfo taskMethod, IDictionary<string, string> stageSettings, int taskCount, bool useConfiguration, bool useInput)
+        private void ProcessRecords<TInput, TOutput>(RecordReader<TInput> input, RecordWriter<TOutput> output, MethodInfo taskMethod, IDictionary<string, string> stageSettings, int noInputTaskCount, bool useConfiguration, bool useInput)
         {
             if( !(taskMethod.IsStatic && taskMethod.IsPublic) )
                 throw new ArgumentException("The task method specified must be public and static.", "taskMethod");
@@ -895,10 +899,10 @@ namespace Tkl.Jumbo.Jet.Jobs
 
             AddAssemblies(taskMethod.DeclaringType.Assembly);
 
-            ProcessRecordsInternal(input, output, taskType, null, stageSettings, taskCount);
+            ProcessRecordsInternal(input, output, taskType, null, stageSettings, noInputTaskCount);
         }
 
-        private void ProcessRecordsPushTask<TInput, TOutput>(RecordReader<TInput> input, RecordWriter<TOutput> output, MethodInfo taskMethod, IDictionary<string, string> stageSettings, int taskCount, bool useConfiguration)
+        private void ProcessRecordsPushTask<TInput, TOutput>(RecordReader<TInput> input, RecordWriter<TOutput> output, MethodInfo taskMethod, IDictionary<string, string> stageSettings, bool useConfiguration)
         {
             if( !(taskMethod.IsStatic && taskMethod.IsPublic) )
                 throw new ArgumentException("The task method specified must be public and static.", "taskMethod");
@@ -929,7 +933,7 @@ namespace Tkl.Jumbo.Jet.Jobs
 
             AddAssemblies(taskMethod.DeclaringType.Assembly);
 
-            ProcessRecordsInternal(input, output, taskType, null, stageSettings, taskCount);
+            ProcessRecordsInternal(input, output, taskType, null, stageSettings, 0);
 
         }
         
@@ -1049,10 +1053,12 @@ namespace Tkl.Jumbo.Jet.Jobs
                         {
                             ChannelType = inputCollector.ChannelType,
                             PartitionerType = inputCollector.PartitionerType,
-                            PartitionCount = inputCollector.PartitionCount
+                            PartitionCount = inputCollector.PartitionCount,
+                            PartitionsPerTask = inputCollector.PartitionsPerTask
                         };
                         intermediateCollector.MultiInputRecordReaderType = mergeReaderType;
                         inputCollector.SetChannelType(ChannelType.Pipeline);
+                        inputCollector.SetPartitionsPerTask(1); // Can't use partitions per task on a pipeline channel
                         outputWriter = intermediateCollector.CreateRecordWriter();
                     }
                     else if( inputCollector.ChannelType == null )
