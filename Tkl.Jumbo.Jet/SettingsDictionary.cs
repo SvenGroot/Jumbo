@@ -116,6 +116,29 @@ namespace Tkl.Jumbo.Jet
         }
 
         /// <summary>
+        /// Tries to get a setting with the specified type.
+        /// </summary>
+        /// <typeparam name="T">The type of the setting.</typeparam>
+        /// <param name="key">The name of the setting..</param>
+        /// <param name="value">If the function returns <see langword="true"/>, receives the value of the setting.</param>
+        /// <returns><see langword="true"/> if the settings dictionary contained the specified setting; otherwise, <see langword="false"/>.</returns>
+        public bool TryGetTypedSetting<T>(string key, out T value)
+        {
+            string stringValue;
+            if( TryGetValue(key, out stringValue) )
+            {
+                value = (T)TypeDescriptor.GetConverter(typeof(T)).ConvertFrom(null, System.Globalization.CultureInfo.InvariantCulture, stringValue);
+                return true;
+            }
+            else
+            {
+                value = default(T);
+                return false;
+            }
+
+        }
+
+        /// <summary>
         /// Gets a string setting with the specified default value.
         /// </summary>
         /// <param name="key">The name of the setting.</param>

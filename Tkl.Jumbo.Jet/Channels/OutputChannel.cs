@@ -15,7 +15,7 @@ namespace Tkl.Jumbo.Jet.Channels
     public abstract class OutputChannel : IOutputChannel
     {
         /// <summary>
-        /// The name of the setting in <see cref="JobConfiguration.JobSettings"/> that overrides the global compression setting.
+        /// The name of the setting in <see cref="JobConfiguration.JobSettings"/> or <see cref="StageConfiguration.StageSettings"/> that overrides the global compression setting.
         /// </summary>
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Naming", "CA1702:CompoundWordsShouldBeCasedCorrectly", MessageId = "TypeSetting")]
         public const string CompressionTypeSetting = "FileChannel.CompressionType";
@@ -71,7 +71,7 @@ namespace Tkl.Jumbo.Jet.Channels
                 }
             }
 
-            CompressionType = taskExecution.Configuration.JobConfiguration.GetTypedSetting(CompressionTypeSetting, taskExecution.JetClient.Configuration.FileChannel.CompressionType);
+            CompressionType = taskExecution.Configuration.GetTypedSetting(CompressionTypeSetting, taskExecution.JetClient.Configuration.FileChannel.CompressionType);
         }
 
         /// <summary>

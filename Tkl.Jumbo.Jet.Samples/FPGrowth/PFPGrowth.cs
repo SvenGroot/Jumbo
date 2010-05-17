@@ -78,6 +78,20 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
         public int AggregateTaskCount { get; set; }
 
         /// <summary>
+        /// Gets or sets the size of the write buffer.
+        /// </summary>
+        /// <value>The size of the write buffer.</value>
+        [NamedCommandLineArgument("buffer"), Description("The size of the write buffer for the output channel of the GenerateGroupTransactions stage.")]
+        public ByteSize WriteBufferSize { get; set; }
+
+        /// <summary>
+        /// Gets or sets the type of the compression.
+        /// </summary>
+        /// <value>The type of the compression.</value>
+        [NamedCommandLineArgument("compression"), Description("The type of compression to use for the output of the GenerateGroupTransactions stage.")]
+        public CompressionType CompressionType { get; set; }
+
+        /// <summary>
         /// Constructs the job configuration using the specified job builder.
         /// </summary>
         /// <param name="builder">The <see cref="JobBuilder"/>.</param>
@@ -444,7 +458,10 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
             var output = CreateRecordWriter<Pair<Utf8String, WritableCollection<FrequentPattern>>>(builder, _outputPath, typeof(TextRecordWriter<>));
 
             // Generate group-dependent transactions
-            builder.ProcessRecords(input, groupCollector.CreateRecordWriter(), generateFunction, null);
+            SettingsDictionary settings = new SettingsDictionary();
+            settings.AddTypedSetting(OutputChannel.CompressionTypeSetting, CompressionType);
+            settings.AddTypedSetting(FileOutputChannel.WriteBufferSizeSettingKey, WriteBufferSize);
+            builder.ProcessRecords(input, groupCollector.CreateRecordWriter(), generateFunction, settings);
 
             // Interesting observation: if the number of groups equals or is smaller than the number of partitions, we don't need to sort, because each
             // partition will get exactly one group.
@@ -456,7 +473,7 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
                 groupCollector = sortCollector;
             }
 
-            SettingsDictionary settings = new SettingsDictionary();
+            settings = new SettingsDictionary();
             settings.AddTypedSetting("PFPGrowth.Groups", groups);
             settings.AddTypedSetting("PFPGrowth.ItemCount", fgList.Count);
             builder.ProcessRecords(groupCollector.CreateRecordReader(), patternCollector.CreateRecordWriter(), mineFunction, settings);

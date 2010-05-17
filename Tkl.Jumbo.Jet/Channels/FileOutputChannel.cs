@@ -21,6 +21,11 @@ namespace Tkl.Jumbo.Jet.Channels
         private IEnumerable<IRecordWriter> _writers;
 
         /// <summary>
+        /// The key to use in the stage or job settings to override the default write buffer size. Stage settings take precedence over job settings. The setting should have type <see cref="ByteSize"/>.
+        /// </summary>
+        public const string WriteBufferSizeSettingKey = "FileOutputChannel.WriteBufferSize";
+
+        /// <summary>
         /// Initializes a new instance of the <see cref="FileOutputChannel"/> class.
         /// </summary>
         /// <param name="taskExecution">The task execution utility for the task that this channel is for.</param>
@@ -84,16 +89,18 @@ namespace Tkl.Jumbo.Jet.Channels
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Reliability", "CA2000:Dispose objects before losing scope"), System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1004:GenericMethodsShouldProvideTypeParameter")]
         public override RecordWriter<T> CreateRecordWriter<T>()
         {
+            ByteSize bufferSize = TaskExecution.Configuration.GetTypedSetting(WriteBufferSizeSettingKey, TaskExecution.JetClient.Configuration.FileChannel.WriteBufferSize);
+
             if( _fileNames.Count == 1 )
             {
-                RecordWriter<T> result = new BinaryRecordWriter<T>(File.Create(Path.Combine(_localJobDirectory, _fileNames[0])).CreateCompressor(CompressionType));
+                RecordWriter<T> result = new BinaryRecordWriter<T>(File.Create(Path.Combine(_localJobDirectory, _fileNames[0]), (int)bufferSize.Value).CreateCompressor(CompressionType));
                 _writers = new[] { result };
                 return result;
             }
             else
             {
                 var writers = from file in _fileNames
-                              select (RecordWriter<T>)new BinaryRecordWriter<T>(File.Create(Path.Combine(_localJobDirectory, file)).CreateCompressor(CompressionType));
+                              select (RecordWriter<T>)new BinaryRecordWriter<T>(File.Create(Path.Combine(_localJobDirectory, file), (int)bufferSize.Value).CreateCompressor(CompressionType));
                 _writers = writers.Cast<IRecordWriter>();
                 return CreateMultiRecordWriter<T>(writers);
             }

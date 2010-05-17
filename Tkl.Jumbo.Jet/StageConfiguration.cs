@@ -356,6 +356,24 @@ namespace Tkl.Jumbo.Jet
         }
 
         /// <summary>
+        /// Tries to get a setting with the specified type from the stage settings.
+        /// </summary>
+        /// <typeparam name="T">The type of the setting.</typeparam>
+        /// <param name="key">The name of the setting..</param>
+        /// <param name="value">If the function returns <see langword="true"/>, receives the value of the setting.</param>
+        /// <returns><see langword="true"/> if the settings dictionary contained the specified setting; otherwise, <see langword="false"/>.</returns>
+        public bool TryGetTypedSetting<T>(string key, out T value)
+        {
+            if( StageSettings == null )
+            {
+                value = default(T);
+                return false;
+            }
+            else
+                return StageSettings.TryGetTypedSetting(key, out value);
+        }
+
+        /// <summary>
         /// Gets a string setting with the specified default value.
         /// </summary>
         /// <param name="key">The name of the setting.</param>

@@ -102,5 +102,22 @@ namespace Tkl.Jumbo.Jet
                 return _taskAttemptId;
             }
         }
+
+        /// <summary>
+        /// Gets a setting with the specified type and default value, checking first in the stage settings and then in the job settings.
+        /// </summary>
+        /// <typeparam name="T">The type of the setting.</typeparam>
+        /// <param name="key">The name of the setting.</param>
+        /// <param name="defaultValue">The value to use if the setting is not present in the <see cref="SettingsDictionary"/>.</param>
+        /// <returns>The value of the setting, or <paramref name="defaultValue"/> if the setting was not present in the <see cref="SettingsDictionary"/>.</returns>
+        public T GetTypedSetting<T>(string key, T defaultValue)
+        {
+            T value;
+            if( !StageConfiguration.TryGetTypedSetting(key, out value) && !JobConfiguration.TryGetTypedSetting(key, out value) )
+                return defaultValue;
+            else
+                return value;
+        }
+
     }
 }

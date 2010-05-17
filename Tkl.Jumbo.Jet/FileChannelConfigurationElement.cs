@@ -32,6 +32,17 @@ namespace Tkl.Jumbo.Jet
             get { return (ByteSize)this["mergeTaskReadBufferSize"]; }
             set { this["mergeTaskReadBufferSize"] = value; }
         }
+
+        /// <summary>
+        /// Gets or sets the buffer size used by the file output channel to write to intermediate files.
+        /// </summary>
+        [ConfigurationProperty("writeBufferSize", DefaultValue = "64KB", IsRequired = false, IsKey = false)]
+        public ByteSize WriteBufferSize
+        {
+            get { return (ByteSize)this["writeBufferSize"]; }
+            set { this["writeBufferSize"] = value; }
+        }
+
         /// <summary>
         /// Gets or sets a value that indicates whether intermediate files should be deleted after the task or job is finished.
         /// </summary>
