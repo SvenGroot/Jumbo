@@ -25,6 +25,7 @@ namespace Tkl.Jumbo.Test.Jet
         {
             Pull,
             Push,
+            NoOutput
         }
 
         private TestJetCluster _cluster;
@@ -78,6 +79,18 @@ namespace Tkl.Jumbo.Test.Jet
         public void TestJobExecutionTcpChannel()
         {
             RunJob(false, "/joboutput5", TaskKind.Pull, ChannelType.Tcp);
+        }
+
+        [Test]
+        public void TestJobExecutionEmptyIntermediateData()
+        {
+            RunJob(false, "/joboutputempty", TaskKind.NoOutput, ChannelType.File);
+        }
+
+        [Test]
+        public void TestJobExecutionEmptyIntermediateDataTcpFileDownload()
+        {
+            RunJob(true, "/joboutputempty2", TaskKind.NoOutput, ChannelType.File);
         }
 
         [Test]
@@ -369,6 +382,7 @@ namespace Tkl.Jumbo.Test.Jet
             DfsClient dfsClient = new DfsClient(Dfs.TestDfsCluster.CreateClientConfig());
             dfsClient.NameServer.CreateDirectory(outputPath);
 
+            int lines = _lines;
             Type counterTask = null;
             Type adderTask = null;
             switch( taskKind )
@@ -380,6 +394,11 @@ namespace Tkl.Jumbo.Test.Jet
             case TaskKind.Push:
                 counterTask = typeof(LineCounterPushTask);
                 adderTask = typeof(LineAdderPushTask);
+                break;
+            case TaskKind.NoOutput:
+                counterTask = typeof(NoOutputTask);
+                adderTask = typeof(LineAdderTask);
+                lines = 0;
                 break;
             }
 
@@ -397,7 +416,7 @@ namespace Tkl.Jumbo.Test.Jet
             using( DfsInputStream stream = dfsClient.OpenFile(outputFileName) )
             using( StreamReader reader = new StreamReader(stream) )
             {
-                Assert.AreEqual(_lines, Convert.ToInt32(reader.ReadLine()));
+                Assert.AreEqual(lines, Convert.ToInt32(reader.ReadLine()));
             }
 
             Console.WriteLine(config);

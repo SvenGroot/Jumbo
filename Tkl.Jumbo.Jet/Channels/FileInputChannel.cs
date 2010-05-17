@@ -18,6 +18,24 @@ namespace Tkl.Jumbo.Jet.Channels
     /// </summary>
     public class FileInputChannel : InputChannel, IDisposable
     {
+        #region Nested types
+
+        // Used if an input piece is zero-length.
+        private sealed class EmptyRecordReader<T> : RecordReader<T>
+        {
+            public override float Progress
+            {
+                get { return 1.0f; }
+            }
+
+            protected override bool ReadRecordInternal()
+            {
+                return false;
+            }
+        }
+
+        #endregion
+
         /// <summary>
         /// The name of the setting in <see cref="JobConfiguration.JobSettings"/> that overrides the global memory storage size setting.
         /// </summary>
@@ -281,17 +299,27 @@ namespace Tkl.Jumbo.Jet.Channels
                     string outputFileName = FileOutputChannel.CreateChannelFileName(task.TaskId, TaskId.CreateTaskIdString(_outputStageId, partition));
                     fileName = Path.Combine(taskOutputDirectory, outputFileName);
                     long size = new FileInfo(fileName).Length;
-                    _log.InfoFormat("Using local file {0} as input.", fileName);
-                    uncompressedSize = TaskExecution.Umbilical.GetUncompressedTemporaryFileSize(task.JobId, outputFileName);
-                    if( uncompressedSize != -1 )
+                    if( size == 0 )
                     {
-                        LocalBytesRead += uncompressedSize;
-                        CompressedLocalBytesRead += size;
+                        _log.InfoFormat("Local input file {0} is empty.", fileName);
+                        IRecordReader taskReader = (IRecordReader)JetActivator.CreateInstance(typeof(EmptyRecordReader<>).MakeGenericType(InputRecordType), TaskExecution);
+                        taskReader.SourceName = task.TaskId;
+                        inputs.Add(new RecordInput(taskReader));
                     }
                     else
-                        LocalBytesRead += size;
-                    // We don't delete output files; if this task fails they might still be needed
-                    inputs.Add(new RecordInput(_inputReaderType, fileName, task.TaskId, uncompressedSize, false));
+                    {
+                        _log.InfoFormat("Using local file {0} as input.", fileName);
+                        uncompressedSize = TaskExecution.Umbilical.GetUncompressedTemporaryFileSize(task.JobId, outputFileName);
+                        if( uncompressedSize != -1 )
+                        {
+                            LocalBytesRead += uncompressedSize;
+                            CompressedLocalBytesRead += size;
+                        }
+                        else
+                            LocalBytesRead += size;
+                        // We don't delete output files; if this task fails they might still be needed
+                        inputs.Add(new RecordInput(_inputReaderType, fileName, task.TaskId, uncompressedSize, false));
+                    }
                 }
             }
             else
@@ -345,7 +373,7 @@ namespace Tkl.Jumbo.Jet.Channels
                 {
                     long size = reader.ReadInt64();
                     long uncompressedSize = reader.ReadInt64();
-                    if( size >= 0 )
+                    if( size > 0 )
                     {
                         string targetFile = null;
                         Stream memoryStream = _memoryStorage.AddStreamIfSpaceAvailable((int)size);
@@ -369,6 +397,13 @@ namespace Tkl.Jumbo.Jet.Channels
                             downloadedFiles.Add(new RecordInput(taskReader));
                         }
                         NetworkBytesRead += size;
+                    }
+                    else if( size == 0 )
+                    {
+                        _log.InfoFormat("Input file {0} is empty.", fileToDownload);
+                        IRecordReader taskReader = (IRecordReader)JetActivator.CreateInstance(typeof(EmptyRecordReader<>).MakeGenericType(InputRecordType), TaskExecution);
+                        taskReader.SourceName = task.TaskId;
+                        downloadedFiles.Add(new RecordInput(taskReader));
                     }
                     else
                         throw new InvalidOperationException(); // TODO: Recover from this.
