@@ -9,6 +9,7 @@ using System.ComponentModel;
 using System.Runtime.InteropServices;
 using System.IO;
 using Tkl.Jumbo.Dfs;
+using Tkl.Jumbo;
 
 namespace DfsShell.Commands
 {
@@ -31,7 +32,7 @@ namespace DfsShell.Commands
         }
 
         [NamedCommandLineArgument("b"), Description("The block size of the DFS file.")]
-        public int BlockSize { get; set; }
+        public ByteSize BlockSize { get; set; }
 
         [NamedCommandLineArgument("r"), Description("The replication factor of the DFS file.")]
         public int ReplicationFactor { get; set; }
@@ -43,8 +44,11 @@ namespace DfsShell.Commands
         {
             if( !File.Exists(_localPath) && !Directory.Exists(_localPath) )
                 Console.Error.WriteLine("Local path {0} does not exist.", _localPath);
+            else if( BlockSize.Value < 0 || BlockSize.Value >= Int32.MaxValue )
+                Console.Error.WriteLine("Invalid block size.");
             else
             {
+                
                 ProgressCallback progressCallback = Quiet ? null : new ProgressCallback(PrintProgress);
                 try
                 {
@@ -53,7 +57,7 @@ namespace DfsShell.Commands
                     {
                         if( !Quiet )
                             Console.WriteLine("Copying local directory \"{0}\" to DFS directory \"{1}\"...", _localPath, _dfsPath);
-                        Client.UploadDirectory(_localPath, _dfsPath, BlockSize, ReplicationFactor, progressCallback);
+                        Client.UploadDirectory(_localPath, _dfsPath, (int)BlockSize.Value, ReplicationFactor, progressCallback);
                     }
                     else
                     {
@@ -66,7 +70,7 @@ namespace DfsShell.Commands
                         }
                         if( !Quiet )
                             Console.WriteLine("Copying local file \"{0}\" to DFS file \"{1}\"...", _localPath, dfsPath);
-                        Client.UploadFile(_localPath, dfsPath, BlockSize, ReplicationFactor, progressCallback);
+                        Client.UploadFile(_localPath, dfsPath, (int)BlockSize.Value, ReplicationFactor, progressCallback);
                     }
                     if( !Quiet )
                         Console.WriteLine();

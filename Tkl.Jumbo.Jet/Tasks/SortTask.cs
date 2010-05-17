@@ -19,7 +19,6 @@ namespace Tkl.Jumbo.Jet.Tasks
     /// </note>
     /// </remarks>
     public class SortTask<T> : Configurable, IPushTask<T, T>
-        where T : IWritable, new()
     {
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(SortTask<T>));
         private List<T> _records = new List<T>();

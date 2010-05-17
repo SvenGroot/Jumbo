@@ -62,9 +62,9 @@ namespace Tkl.Jumbo.Jet.Samples
             CheckAndCreateOutputPath(_outputPath);
 
             var input = builder.CreateRecordReader<GenSortRecord>(_inputPath, typeof(GenSortRecordReader));
-            var collector1 = new RecordCollector<ValSortRecord>(null, null, 1);
-            var collector2 = new RecordCollector<ValSortRecord>(ChannelType.Pipeline, null, 1);
-            var output = builder.CreateRecordWriter<StringWritable>(_outputPath, typeof(TextRecordWriter<StringWritable>), (int)BlockSize.Value, ReplicationFactor);
+            var collector1 = new RecordCollector<ValSortRecord>() { PartitionCount = 1 };
+            var collector2 = new RecordCollector<ValSortRecord>() { ChannelType = ChannelType.Pipeline, PartitionCount = 1 };
+            var output = builder.CreateRecordWriter<string>(_outputPath, typeof(TextRecordWriter<string>), (int)BlockSize.Value, ReplicationFactor);
 
             builder.ProcessRecords(input, collector1.CreateRecordWriter(), typeof(ValSortTask), "ValSortStage");
             // Not using SortRecords because each ValSortTask produces only one output record, so there's no sense to the merge sort strategy.

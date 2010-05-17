@@ -15,8 +15,6 @@ namespace Tkl.Jumbo.Jet
     /// <typeparam name="TOutput">The output type of the task.</typeparam>
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1040:AvoidEmptyInterfaces")]
     public interface ITask<TInput, TOutput>
-        where TInput : IWritable, new()
-        where TOutput : IWritable
     {
     }
 }

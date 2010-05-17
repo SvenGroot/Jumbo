@@ -13,16 +13,16 @@ namespace Tkl.Jumbo.Jet.Samples.Tasks
     /// <summary>
     /// A task that generates a specific range of GenSort records.
     /// </summary>
-    public class GenSortTask : Configurable, IPullTask<StringWritable, GenSortRecord>
+    public class GenSortTask : Configurable, IPullTask<int, GenSortRecord>
     {
-        #region IPullTask<StringWritable,ByteArrayWritable> Members
+        #region IPullTask<int,GenSortRecord> Members
 
         /// <summary>
         /// Runs the task.
         /// </summary>
         /// <param name="input">Not used; this task does not use input.</param>
         /// <param name="output">A <see cref="RecordWriter{T}"/> to which the task's output should be written.</param>
-        public void Run(RecordReader<StringWritable> input, RecordWriter<GenSortRecord> output)
+        public void Run(RecordReader<int> input, RecordWriter<GenSortRecord> output)
         {
             ulong startRecord = TaskAttemptConfiguration.StageConfiguration.GetTypedSetting(TaskAttemptConfiguration.TaskId.ToString() + "_startRecord", 0UL);
             ulong count = TaskAttemptConfiguration.StageConfiguration.GetTypedSetting(TaskAttemptConfiguration.TaskId.ToString() + "_count", 0UL);

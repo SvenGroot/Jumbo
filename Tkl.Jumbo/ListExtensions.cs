@@ -84,5 +84,25 @@ namespace Tkl.Jumbo
         {
             return list.ToDelimitedString(", ");
         }
+
+        /// <summary>
+        /// Gets the hash code for the specified sequence of elements.
+        /// </summary>
+        /// <typeparam name="T">The type of the lements</typeparam>
+        /// <param name="list">A list.</param>
+        /// <returns>A hash code for the entire sequence.</returns>
+        public static int GetSequenceHashCode<T>(this IEnumerable<T> list)
+        {
+            if( list == null )
+                throw new ArgumentNullException("list");
+            int hash = 0x218A9B2C;
+            foreach( var item in list )
+            {
+                int itemHash = item.GetHashCode();
+                //mix up the bits. 
+                hash = itemHash ^ ((hash << 5) + hash);
+            }
+            return hash;
+        } 
     }
 }

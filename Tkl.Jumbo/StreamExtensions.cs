@@ -73,7 +73,7 @@ namespace Tkl.Jumbo
                 throw new ArgumentNullException("destination");
             byte[] buffer = new byte[bufferSize];
             long bytesLeft = size;
-            do
+            while( bytesLeft > 0 )
             {
                 int bytesRead = source.Read(buffer, 0, (int)Math.Min(buffer.Length, bytesLeft));
                 if( bytesRead == 0 )
@@ -82,7 +82,7 @@ namespace Tkl.Jumbo
                 }
                 destination.Write(buffer, 0, bytesRead);
                 bytesLeft -= bytesRead;
-            } while( bytesLeft > 0 );
+            }
         }
     }
 }

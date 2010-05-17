@@ -13,6 +13,17 @@ namespace Tkl.Jumbo.IO
     /// of <see cref="IWritable"/> based on reflection and code generation.
     /// </summary>
     /// <typeparam name="T">The type of the writable type; this should be the type inheriting from <see cref="Writable{T}"/>.</typeparam>
+    /// <remarks>
+    /// <para>
+    ///   The generated <see cref="IWritable"/> implementation will serialize all properties of the type. Because <see cref="IWritable"/> types
+    ///   may be created uninitialized (without calling the constructor), you must be sure it's safe to deserialize a type by simply setting
+    ///   all its properties, even if the constructor hasn't been run.
+    /// </para>
+    /// <para>
+    ///   Because the serializer and deserializer are generated from the type <typeparamref name="T"/>, it is not safe to derive other classes from
+    ///   that type unless you override the <see cref="IWritable.Read"/> and <see cref="IWritable.Write"/> implementations.
+    /// </para>
+    /// </remarks>
     public abstract class Writable<T> : IWritable
         where T : Writable<T>
     {

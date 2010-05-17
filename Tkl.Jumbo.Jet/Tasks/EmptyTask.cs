@@ -17,7 +17,6 @@ namespace Tkl.Jumbo.Jet.Tasks
     /// </remarks>
     [AllowRecordReuse(PassThrough=true)]
     public class EmptyTask<T> : IPullTask<T, T>
-        where T : IWritable, new()
     {
         #region IPullTask<T,T> Members
 

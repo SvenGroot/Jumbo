@@ -7,6 +7,8 @@ using System.Text;
 using Tkl.Jumbo.Dfs;
 using Tkl.Jumbo.CommandLine;
 using System.ComponentModel;
+using System.Reflection;
+using System.Globalization;
 
 namespace Tkl.Jumbo.Jet.Jobs
 {
@@ -154,6 +156,30 @@ namespace Tkl.Jumbo.Jet.Jobs
             if( input == null )
                 throw new ArgumentException("The specified input path doesn't exist.", "inputPath");
             return input;
+        }
+
+        /// <summary>
+        /// Adds the values of properties marked with the <see cref="JobSettingAttribute"/> to the <see cref="JobConfiguration.JobSettings"/> dictionary.
+        /// </summary>
+        /// <param name="jobConfiguration">The job configuration.</param>
+        protected void AddJobSettings(JobConfiguration jobConfiguration)
+        {
+            if( jobConfiguration == null )
+                throw new ArgumentNullException("jobConfiguration");
+
+            PropertyInfo[] props = GetType().GetProperties();
+            foreach( PropertyInfo prop in props )
+            {
+                JobSettingAttribute attribute = (JobSettingAttribute)Attribute.GetCustomAttribute(prop, typeof(JobSettingAttribute));
+                if( attribute != null )
+                {
+                    string key = attribute.Key;
+                    if( key == null )
+                        key = string.Format(CultureInfo.InvariantCulture, "{0}.{1}", prop.DeclaringType.Name, prop.Name);
+
+                    jobConfiguration.AddSetting(key, prop.GetValue(this, null));
+                }
+            }
         }
     }
 }

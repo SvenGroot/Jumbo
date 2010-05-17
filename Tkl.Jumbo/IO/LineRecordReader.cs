@@ -12,7 +12,7 @@ namespace Tkl.Jumbo.IO
     /// <summary>
     /// Reads records from a stream using line breaks as the record boundary.
     /// </summary>
-    public class LineRecordReader : StreamRecordReader<StringWritable>
+    public class LineRecordReader : StreamRecordReader<Utf8String>
     {
         #region Nested types
 
@@ -22,16 +22,20 @@ namespace Tkl.Jumbo.IO
         {
             private Stream _stream;
             private byte[] _buffer;
-            private char[] _charBuffer;
             private int _bufferPos;
             private int _bufferLength;
             private Decoder _decoder = Encoding.UTF8.GetDecoder();
+            private readonly Utf8String _line = new Utf8String();
 
             public LineReader(Stream stream, int bufferSize)
             {
                 _stream = stream;
                 _buffer = new byte[bufferSize];
-                _charBuffer = new char[Encoding.UTF8.GetMaxCharCount(bufferSize) + 1];
+             }
+
+            public Utf8String Line
+            {
+                get { return _line; }
             }
 
             private bool ReadBuffer()
@@ -41,10 +45,10 @@ namespace Tkl.Jumbo.IO
                 return _bufferLength > 0;
             }
 
-            public string ReadLine(out int bytesProcessed)
+            public void ReadLine(out int bytesProcessed)
             {
                 bytesProcessed = 0;
-                StringBuilder builder = null;
+                _line.ByteLength = 0;
                 int length;
                 while( true )
                 {
@@ -65,15 +69,7 @@ namespace Tkl.Jumbo.IO
                         case (byte)'\n':
                             length = _bufferPos - start;
                             bytesProcessed += length;
-                            int charCount = _decoder.GetChars(_buffer, start, length, _charBuffer, 0);
-                            string result;
-                            if( builder != null )
-                            {
-                                builder.Append(_charBuffer, 0, charCount);
-                                result = builder.ToString();
-                            }
-                            else
-                                result = new string(_charBuffer, 0, charCount);
+                            _line.Append(_buffer, start, length);
                             ++_bufferPos;
                             ++bytesProcessed;
                             if( b == '\r' && (_bufferPos < _bufferLength || ReadBuffer()) && _buffer[_bufferPos] == '\n' )
@@ -81,24 +77,17 @@ namespace Tkl.Jumbo.IO
                                 ++bytesProcessed;
                                 ++_bufferPos;
                             }
-                            return result;
+                            return;
                         }
                     }
 
                     length = _bufferPos - start;
                     bytesProcessed += length;
-                    if( builder == null )
-                        builder = new StringBuilder(length + 80);
                     if( length > 0 )
                     {
-                        int charCount = _decoder.GetChars(_buffer, start,  length, _charBuffer, 0);
-                        if( charCount > 0 )
-                        {
-                            builder.Append(_charBuffer, 0, charCount);
-                        }
+                        _line.Append(_buffer, start, length);
                     }
                 }
-                return builder.ToString();
             }
         }
 
@@ -126,7 +115,7 @@ namespace Tkl.Jumbo.IO
         /// <param name="stream">The stream to read from.</param>
         /// <param name="offset">The position in the stream to start reading.</param>
         /// <param name="size">The number of bytes to read from the stream.</param>
-        /// <param name="allowRecordReuse"><see langword="true"/> if the record reader may re-use the same <see cref="StringWritable"/> instance for every
+        /// <param name="allowRecordReuse"><see langword="true"/> if the record reader may re-use the same <see cref="Utf8String"/> instance for every
         /// record; <see langword="false"/> if it must create a new instance for every record.</param>
         /// <remarks>
         /// The reader will read a whole number of records until the start of the next record falls
@@ -165,9 +154,13 @@ namespace Tkl.Jumbo.IO
                 return false;
             }
             int bytesProcessed;
-            if( !_allowRecordReuse || CurrentRecord == null )
-                CurrentRecord = new StringWritable();
-            CurrentRecord.Value = _reader.ReadLine(out bytesProcessed);
+            _reader.ReadLine(out bytesProcessed);
+
+            if( _allowRecordReuse )
+                CurrentRecord = _reader.Line;
+            else
+                CurrentRecord = new Utf8String(_reader.Line);
+
             _position += bytesProcessed;
             return true;
         }

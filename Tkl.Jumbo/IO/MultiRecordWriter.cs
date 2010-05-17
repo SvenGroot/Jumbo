@@ -12,7 +12,6 @@ namespace Tkl.Jumbo.IO
     /// </summary>
     /// <typeparam name="T">The type of the records.</typeparam>
     public class MultiRecordWriter<T> : RecordWriter<T>
-        where T : IWritable
     {
         private RecordWriter<T>[] _writers;
         private IPartitioner<T> _partitioner;

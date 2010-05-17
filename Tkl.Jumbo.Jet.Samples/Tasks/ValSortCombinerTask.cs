@@ -17,7 +17,7 @@ namespace Tkl.Jumbo.Jet.Samples.Tasks
     /// <remarks>
     /// The input <see cref="ValSortRecord"/> records need to be sorted.
     /// </remarks>
-    public class ValSortCombinerTask : IPushTask<ValSortRecord, StringWritable>
+    public class ValSortCombinerTask : IPushTask<ValSortRecord, string>
     {
         private ValSortRecord _prev;
         private UInt128 _checksum = UInt128.Zero;
@@ -26,14 +26,14 @@ namespace Tkl.Jumbo.Jet.Samples.Tasks
         private UInt128 _records = UInt128.Zero;
         private UInt128? _firstUnsorted;
 
-        #region IPushTask<ValSortRecord,StringWritable> Members
+        #region IPushTask<ValSortRecord,string> Members
 
         /// <summary>
         /// Method called for each record in the task's input.
         /// </summary>
         /// <param name="record">The record to process.</param>
         /// <param name="output">The <see cref="RecordWriter{T}"/> to which the task's output should be written.</param>
-        public void ProcessRecord(ValSortRecord record, RecordWriter<StringWritable> output)
+        public void ProcessRecord(ValSortRecord record, RecordWriter<string> output)
         {
             if( _prev != null )
             {
@@ -66,7 +66,7 @@ namespace Tkl.Jumbo.Jet.Samples.Tasks
         /// <remarks>
         /// This enables the task to finish up its processing and write any further records it may have collected during processing.
         /// </remarks>
-        public void Finish(RecordWriter<StringWritable> output)
+        public void Finish(RecordWriter<string> output)
         {
             if( _unsortedRecords != UInt128.Zero )
             {

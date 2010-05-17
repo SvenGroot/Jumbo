@@ -262,24 +262,25 @@ namespace Tkl.Jumbo
 
         private static string GetOSDescriptionUnix()
         {
-            try
-            {
-                // This will only work on Linux, but that's ok.
-                ProcessStartInfo psi = new ProcessStartInfo("lsb_release", "-d -s")
-                {
-                    UseShellExecute = false,
-                    RedirectStandardOutput = true
-                };
+            return null;
+            //try
+            //{
+            //    // This will only work on Linux, but that's ok.
+            //    ProcessStartInfo psi = new ProcessStartInfo("lsb_release", "-d -s")
+            //    {
+            //        UseShellExecute = false,
+            //        RedirectStandardOutput = true
+            //    };
 
-                using( Process p = Process.Start(psi) )
-                {
-                    return p.StandardOutput.ReadToEnd().Trim();
-                }
-            }
-            catch( Win32Exception )
-            {
-                return null;
-            }
+            //    using( Process p = Process.Start(psi) )
+            //    {
+            //        return p.StandardOutput.ReadToEnd().Trim();
+            //    }
+            //}
+            //catch( Win32Exception )
+            //{
+            //    return null;
+            //}
         }
 
         private static string GetProcessorNameWindows()

@@ -79,8 +79,24 @@
       <Link>Properties\Version.cs</Link>
     </Compile>
     <Compile Include="FileChannelTest.cs" />
+    <Compile Include="FPGrowth\FeatureFilterTask.cs" />
+    <Compile Include="FPGrowth\FeatureGroupTask.cs" />
+    <Compile Include="FPGrowth\FGListItem.cs" />
+    <Compile Include="FPGrowth\FPTree.cs" />
+    <Compile Include="FPGrowth\FPTreeNode.cs" />
+    <Compile Include="FPGrowth\FrequentPattern.cs" />
+    <Compile Include="FPGrowth\MappedFrequentPattern.cs" />
+    <Compile Include="FPGrowth\FrequentPatternCollector.cs" />
+    <Compile Include="FPGrowth\FrequentPatternMaxHeap.cs" />
+    <Compile Include="FPGrowth\GenFGList.cs" />
+    <Compile Include="FPGrowth\ITransaction.cs" />
+    <Compile Include="FPGrowth\PFPGrowth.cs" />
+    <Compile Include="FPGrowth\Transaction.cs" />
+    <Compile Include="FPGrowth\TransactionTree.cs" />
+    <Compile Include="FPGrowth\WeightedTransaction.cs" />
     <Compile Include="GenSort2.cs" />
     <Compile Include="GraySort2.cs" />
+    <Compile Include="IO\UInt128Writer.cs" />
     <Compile Include="ValSort2.cs" />
     <Compile Include="WordCount2.cs" />
     <Compile Include="GenSort.cs" />
@@ -94,7 +110,6 @@
     <Compile Include="IO\PricingSummaryKey.cs" />
     <Compile Include="IO\PricingSummaryValue.cs" />
     <Compile Include="IO\WordRecordReader.cs" />
-    <Compile Include="OldWordCount.cs" />
     <Compile Include="Tasks\GenSortTask.cs" />
     <Compile Include="Tasks\GenSortGenerator.cs" />
     <Compile Include="IO\Random128.cs" />
@@ -103,8 +118,6 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="IO\RangePartitioner.cs" />
     <Compile Include="Tasks\GenWordsTask.cs" />
-    <Compile Include="Tasks\OldWordCountCombinerTask.cs" />
-    <Compile Include="Tasks\OldWordCountTask.cs" />
     <Compile Include="Tasks\PricingSummaryTask.cs" />
     <Compile Include="Tasks\PricingSummaryAccumulatorTask.cs" />
     <Compile Include="Tasks\RecordCountCombinerTask.cs" />

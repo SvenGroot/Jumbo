@@ -22,9 +22,9 @@ namespace Tkl.Jumbo.IO
     /// </remarks>
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1005:AvoidExcessiveParametersOnGenericTypes")]
     public abstract class InnerJoinRecordReader<TOuter, TInner, TResult> : MultiInputRecordReader<TResult>
-        where TOuter : class, IWritable, new()
-        where TInner : class, IWritable, new()
-        where TResult : IWritable, new()
+        where TOuter : class
+        where TInner : class
+        where TResult : new()
     {
         private RecordReader<TOuter> _outer;
         private RecordReader<TInner> _inner;

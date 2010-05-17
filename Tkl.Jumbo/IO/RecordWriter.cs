@@ -14,7 +14,6 @@ namespace Tkl.Jumbo.IO
     /// </summary>
     /// <typeparam name="T">The type of the record.</typeparam>
     public abstract class RecordWriter<T> : IRecordWriter, IDisposable
-        where T : IWritable
     {
         private int _recordsWritten;
 

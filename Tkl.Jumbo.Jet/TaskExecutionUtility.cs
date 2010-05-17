@@ -29,8 +29,6 @@ namespace Tkl.Jumbo.Jet
         }
 
         private class TaskContainer<TInput, TOutput> : ITaskContainer
-            where TInput : IWritable, new()
-            where TOutput : IWritable, new()
         {
             private ITask<TInput, TOutput> _task;
             private RecordWriter<TOutput> _output;
@@ -62,7 +60,6 @@ namespace Tkl.Jumbo.Jet
         // in which case we want to name output files after partitions rather than task numbers. Since there can be more than one partition,
         // this writer keeps an eye on 
         private sealed class PartitionDfsOutputRecordWriter<T> : RecordWriter<T>
-            where T : IWritable, new()
         {
             private readonly TaskExecutionUtility _task;
             private readonly TaskExecutionUtility _rootTask;
@@ -344,8 +341,7 @@ namespace Tkl.Jumbo.Jet
         /// <returns>A <see cref="RecordWriter{T}"/> that writes to the task's output channel or DFS output.</returns>
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1004:GenericMethodsShouldProvideTypeParameter")]
         public RecordWriter<T> GetOutputWriter<T>()
-            where T : IWritable, new()
-        {
+       {
             CheckDisposed();
             if( _outputWriter == null )
                 _outputWriter = CreateOutputRecordWriter<T>();
@@ -359,7 +355,6 @@ namespace Tkl.Jumbo.Jet
         /// <returns>A <see cref="RecordReader{T}"/> that reads from the task's input channel or DFS input.</returns>
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1004:GenericMethodsShouldProvideTypeParameter")]
         public RecordReader<T> GetInputReader<T>()
-            where T : IWritable, new()
         {
             CheckDisposed();
             if( _inputReader == null )
@@ -394,8 +389,6 @@ namespace Tkl.Jumbo.Jet
         /// <returns>An instance of <see cref="TaskType"/>.</returns>
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1004:GenericMethodsShouldProvideTypeParameter")]
         public ITask<TInput, TOutput> GetTaskInstance<TInput, TOutput>()
-            where TInput : IWritable, new()
-            where TOutput : IWritable, new()
         {
             if( _task == null )
             {
@@ -602,7 +595,6 @@ namespace Tkl.Jumbo.Jet
         }
 
         private RecordWriter<T> CreateOutputRecordWriter<T>()
-            where T : IWritable, new()
         {
             if( Configuration.StageConfiguration.DfsOutput != null )
             {
@@ -626,7 +618,7 @@ namespace Tkl.Jumbo.Jet
                 return null;
         }
 
-        private RecordWriter<T> CreateDfsOutputRecordWriter<T>(int partition) where T : IWritable, new()
+        private RecordWriter<T> CreateDfsOutputRecordWriter<T>(int partition)
         {
             string file = DfsPath.Combine(DfsPath.Combine(Configuration.DfsJobDirectory, "temp"), Configuration.TaskAttemptId + "_part" + partition.ToString(System.Globalization.CultureInfo.InvariantCulture));
             _log.DebugFormat("Opening output file {0}", file);
@@ -640,7 +632,6 @@ namespace Tkl.Jumbo.Jet
         }
 
         private RecordReader<T> CreateInputRecordReader<T>()
-            where T : IWritable, new()
         {
             if( Configuration.StageConfiguration.DfsInputs != null && Configuration.StageConfiguration.DfsInputs.Count > 0 )
             {

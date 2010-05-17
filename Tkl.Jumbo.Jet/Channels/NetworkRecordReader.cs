@@ -7,11 +7,11 @@ using System.Text;
 using Tkl.Jumbo.IO;
 using System.Net.Sockets;
 using System.IO;
+using System.Runtime.Serialization;
 
 namespace Tkl.Jumbo.Jet.Channels
 {
     sealed class NetworkRecordReader<T> : RecordReader<T>
-        where T : IWritable, new()
     {
         private readonly TcpClient _client;
         private readonly NetworkStream _stream;
@@ -19,11 +19,16 @@ namespace Tkl.Jumbo.Jet.Channels
         private bool _disposed;
         private readonly bool _allowRecordReuse;
         private T _record;
+        private readonly IValueWriter<T> _valueWriter;
 
         public NetworkRecordReader(TcpClient client, bool allowRecordReuse)
         {
             if( client == null )
                 throw new ArgumentNullException("client");
+            if( !typeof(T).GetInterfaces().Contains(typeof(IWritable)) )
+            {
+                _valueWriter = ValueWriter<T>.Writer;
+            }
 
             _client = client;
             _stream = client.GetStream();
@@ -31,7 +36,7 @@ namespace Tkl.Jumbo.Jet.Channels
             _allowRecordReuse = allowRecordReuse;
             SourceName = _reader.ReadString();
             if( allowRecordReuse )
-                _record = new T();
+                _record = (T)FormatterServices.GetUninitializedObject(typeof(T));
         }
 
         protected override bool ReadRecordInternal()
@@ -47,11 +52,18 @@ namespace Tkl.Jumbo.Jet.Channels
             }
 
             T record;
-            if( _allowRecordReuse )
-                record = _record;
+            if( _valueWriter != null )
+            {
+                record = _valueWriter.Read(_reader);
+            }
             else
-                record = new T();
-            record.Read(_reader);
+            {
+                if( _allowRecordReuse )
+                    record = _record;
+                else
+                    record = (T)FormatterServices.GetUninitializedObject(typeof(T));
+                ((IWritable)record).Read(_reader);
+            }
             CurrentRecord = record;
             return true;
         }

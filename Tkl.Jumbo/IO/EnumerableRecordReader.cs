@@ -12,7 +12,6 @@ namespace Tkl.Jumbo.IO
     /// </summary>
     /// <typeparam name="T">The type of record.</typeparam>
     public class EnumerableRecordReader<T> : RecordReader<T>
-        where T : IWritable, new()
     {
         private IEnumerator<T> _enumerator;
         private int _count;

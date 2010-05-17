@@ -14,7 +14,6 @@ namespace Tkl.Jumbo.IO
     /// </summary>
     /// <typeparam name="T">The type of the records.</typeparam>
     public class TextRecordWriter<T> : StreamRecordWriter<T>
-        where T : IWritable
     {
         private readonly string _recordSeparator;
         private StreamWriter _writer;

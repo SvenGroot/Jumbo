@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text;
 using System.IO;
 using System.Diagnostics;
+using System.Runtime.Serialization;
 
 namespace Tkl.Jumbo.IO
 {
@@ -19,7 +20,6 @@ namespace Tkl.Jumbo.IO
     /// </para>
     /// </remarks>
     public class RecordFileReader<T> : StreamRecordReader<T>
-        where T : IWritable, new()
     {
         private BinaryReader _reader;
         private readonly RecordFileHeader _header = new RecordFileHeader();
@@ -27,6 +27,7 @@ namespace Tkl.Jumbo.IO
         private long _lastRecordMarkerPosition;
         private readonly long _end;
         private readonly bool _allowRecordReuse;
+        private static readonly IValueWriter<T> _valueWriter = ValueWriter<T>.Writer;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="RecordFileReader{T}"/> class that reads from the specified stream.
@@ -45,7 +46,7 @@ namespace Tkl.Jumbo.IO
         /// <param name="stream">The <see cref="Stream"/> to read from.</param>
         /// <param name="offset">The position in the stream to start reading.</param>
         /// <param name="size">The number of bytes to read from the stream.</param>
-        /// <param name="allowRecordReuse"><see langword="true"/> if the record reader may re-use the same <see cref="StringWritable"/> instance for every
+        /// <param name="allowRecordReuse"><see langword="true"/> if the record reader may re-use the same record instance for every
         /// record; <see langword="false"/> if it must create a new instance for every record.</param>
         /// <remarks>
         /// <para>
@@ -62,6 +63,7 @@ namespace Tkl.Jumbo.IO
         {
             if( stream == null )
                 throw new ArgumentNullException("stream");
+            
             _reader = new BinaryReader(stream);
             ((IWritable)_header).Read(_reader);
 
@@ -111,9 +113,17 @@ namespace Tkl.Jumbo.IO
                 else
                 {
                     Debug.Assert(recordPrefix == RecordFile.RecordPrefix);
-                    if( !_allowRecordReuse || CurrentRecord == null )
-                        CurrentRecord = new T();
-                    CurrentRecord.Read(_reader);
+
+                    if( _valueWriter != null )
+                    {
+                        CurrentRecord = _valueWriter.Read(_reader);
+                    }
+                    else
+                    {
+                        if( !_allowRecordReuse || CurrentRecord == null )
+                            CurrentRecord = (T)FormatterServices.GetUninitializedObject(typeof(T));
+                        ((IWritable)CurrentRecord).Read(_reader);
+                    }
                     return true;
                 }
             }

@@ -81,17 +81,17 @@ namespace Tkl.Jumbo.Jet.Samples.IO
         /// <summary>
         /// L_SHIPINSTRUCT, fixed text, size 25
         /// </summary>
-        public Utf8StringWritable ShipInstruct { get; set; }
+        public Utf8String ShipInstruct { get; set; }
 
         /// <summary>
         /// L_SHIPMODE, fixed text, size 10
         /// </summary>
-        public Utf8StringWritable ShipMode { get; set; }
+        public Utf8String ShipMode { get; set; }
 
         /// <summary>
         /// L_COMMENT, variable text, size 44
         /// </summary>
-        public Utf8StringWritable Comment { get; set; }
+        public Utf8String Comment { get; set; }
 
         /// <summary>
         /// Reads the <see cref="LineItem"/> from a record produced by dbgen.
@@ -120,15 +120,15 @@ namespace Tkl.Jumbo.Jet.Samples.IO
             CommitDate = DateTime.ParseExact(fields[11], dateFormat, System.Globalization.CultureInfo.InvariantCulture);
             ReceiptDate = DateTime.ParseExact(fields[12], dateFormat, System.Globalization.CultureInfo.InvariantCulture);
             if( ShipInstruct == null )
-                ShipInstruct = new Utf8StringWritable(fields[13]);
+                ShipInstruct = new Utf8String(fields[13]);
             else
                 ShipInstruct.Set(fields[13]);
             if( ShipMode == null )
-                ShipMode = new Utf8StringWritable(fields[14]);
+                ShipMode = new Utf8String(fields[14]);
             else
                 ShipMode.Set(fields[14]);
             if( Comment == null )
-                Comment = new Utf8StringWritable(fields[15]);
+                Comment = new Utf8String(fields[15]);
             else
                 Comment.Set(fields[15]);
         }

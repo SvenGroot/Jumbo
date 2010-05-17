@@ -11,13 +11,13 @@ using System.IO;
 namespace Tkl.Jumbo.Jet.Channels
 {
     sealed class NetworkRecordWriter<T> : RecordWriter<T>
-        where T : IWritable, new()
     {
         private readonly TcpClient _client;
         private readonly NetworkStream _stream;
         //private readonly WriteBufferedStream _bufferedStream;
         private readonly BinaryWriter _writer;
         private bool _disposed;
+        private static readonly IValueWriter<T> _valueWriter = ValueWriter<T>.Writer;
 
         public NetworkRecordWriter(TcpClient client, string taskId)
         {
@@ -39,7 +39,10 @@ namespace Tkl.Jumbo.Jet.Channels
             CheckDisposed();
 
             _writer.Write(true);
-            record.Write(_writer);
+            if( _valueWriter == null )
+                ((IWritable)record).Write(_writer);
+            else
+                _valueWriter.Write(record, _writer);
         }
 
         protected override void Dispose(bool disposing)

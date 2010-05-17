@@ -36,7 +36,7 @@ namespace Tkl.Jumbo.Jet.Samples.IO
         /// </summary>
         public const int KeySize = 10;
 
-        private readonly byte[] _recordBuffer = new byte[RecordSize];
+        private byte[] _recordBuffer = new byte[RecordSize];
 
         /// <summary>
         /// Gets the 100 byte buffer containing the entire record.
@@ -118,6 +118,9 @@ namespace Tkl.Jumbo.Jet.Samples.IO
         /// <param name="reader">The <see cref="System.IO.BinaryReader"/> to deserialize the object from.</param>
         public void Read(System.IO.BinaryReader reader)
         {
+            // _recordBuffer can be null because the ctor isn't called if this instance was created by a record reader.
+            if( _recordBuffer == null )
+                _recordBuffer = new byte[RecordSize];
             reader.Read(_recordBuffer, 0, RecordSize);
         }
 

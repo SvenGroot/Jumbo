@@ -94,7 +94,7 @@ namespace Tkl.Jumbo.Jet
         /// <param name="value">The value of the setting.</param>
         public void AddTypedSetting<T>(string key, T value)
         {
-            Add(key, (string)TypeDescriptor.GetConverter(value).ConvertTo(null, System.Globalization.CultureInfo.InvariantCulture, value, typeof(string)));
+            AddSetting(key, value);
         }
 
         /// <summary>
@@ -128,6 +128,15 @@ namespace Tkl.Jumbo.Jet
                 return value;
             else
                 return defaultValue;
+        }
+
+        internal void AddSetting(string key, object value)
+        {
+            if( key == null )
+                throw new ArgumentNullException("key");
+            if( value == null )
+                throw new ArgumentNullException("value");
+            Add(key, (string)TypeDescriptor.GetConverter(value).ConvertTo(null, System.Globalization.CultureInfo.InvariantCulture, value, typeof(string)));
         }
     }
 }

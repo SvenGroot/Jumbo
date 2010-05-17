@@ -13,7 +13,7 @@ namespace Tkl.Jumbo.Jet.Samples.IO
     /// Reads records from a stream using line breaks as the record
     /// boundary.
     /// </summary>
-    public class WordRecordReader : StreamRecordReader<Utf8StringWritable>
+    public class WordRecordReader : StreamRecordReader<Utf8String>
     {
         // Unfortunately we cannot use StreamReader because with the
         // buffering it does we cannot
@@ -24,7 +24,7 @@ namespace Tkl.Jumbo.Jet.Samples.IO
             private byte[] _buffer;
             private int _bufferPos;
             private int _bufferLength;
-            private readonly Utf8StringWritable _word = new Utf8StringWritable();
+            private readonly Utf8String _word = new Utf8String();
 
             public WordReader(Stream stream, int bufferSize)
             {
@@ -32,7 +32,7 @@ namespace Tkl.Jumbo.Jet.Samples.IO
                 _buffer = new byte[bufferSize];
             }
 
-            public Utf8StringWritable Word
+            public Utf8String Word
             {
                 get { return _word; }
             }
@@ -93,7 +93,7 @@ namespace Tkl.Jumbo.Jet.Samples.IO
 
         private const int _bufferSize = 4096;
         private WordReader _reader;
-        private Utf8StringWritable _word;
+        private Utf8String _word;
         private long _position;
         private long _end;
 
@@ -118,7 +118,7 @@ namespace Tkl.Jumbo.Jet.Samples.IO
         /// reading.</param>
         /// <param name="size">The number of bytes to read from the
         /// stream.</param>
-        /// <param name="allowRecordReuse"><see langword="true"/> if the record reader may re-use the same <see cref="StringWritable"/> instance for every
+        /// <param name="allowRecordReuse"><see langword="true"/> if the record reader may re-use the same record instance for every
         /// record; <see langword="false"/> if it must create a new instance for every record.</param>
         /// <remarks>
         /// The reader will read a whole number of records until the

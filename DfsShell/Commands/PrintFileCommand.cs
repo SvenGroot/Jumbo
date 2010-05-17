@@ -8,6 +8,8 @@ using Tkl.Jumbo.CommandLine;
 using System.ComponentModel;
 using Tkl.Jumbo.Dfs;
 using System.IO;
+using Tkl.Jumbo;
+using Tkl.Jumbo.IO;
 
 namespace DfsShell.Commands
 {
@@ -115,24 +117,88 @@ namespace DfsShell.Commands
         [NamedCommandLineArgument("tail"), Description("Prints the end rather than the start of the file up to the specified size.")]
         public bool Tail { get; set; }
 
+        [NamedCommandLineArgument("rr"), Description("Specified the type of record reader to use to read the contents of the file. This must be the assembly-qualified mangled name.")]
+        public string RecordReaderType { get; set; }
+
         public override void Run()
         {
-            Encoding encoding = System.Text.Encoding.GetEncoding(Encoding);
+            if( RecordReaderType != null )
+                PrintRecordReader();
+            else
+            {
+                Encoding encoding = System.Text.Encoding.GetEncoding(Encoding);
+
+                using( DfsInputStream stream = Client.OpenFile(_path) )
+                {
+                    if( Tail )
+                    {
+                        long newPosition = stream.Length - Size;
+                        if( newPosition > 0 )
+                            stream.Position = newPosition;
+                    }
+                    using( SizeLimitedStream limitedStream = new SizeLimitedStream(stream, Tail ? long.MaxValue : Size) )
+                    using( StreamReader reader = new StreamReader(limitedStream, encoding) )
+                    {
+                        string line;
+                        while( (line = reader.ReadLine()) != null )
+                            Console.WriteLine(line);
+                    }
+                }
+            }
+        }
+
+        private void PrintRecordReader()
+        {
+            Type recordReaderType = Type.GetType(RecordReaderType);
+            if( recordReaderType == null )
+            {
+                Console.Error.WriteLine("Could not load the record reader type.");
+                return;
+            }
+
+            Type recordReaderBaseType = recordReaderType.FindGenericBaseType(typeof(RecordReader<>), false);
+            if( recordReaderBaseType == null )
+            {
+                Console.Error.WriteLine("The specified type is not a record reader.");
+                return;
+            }
 
             using( DfsInputStream stream = Client.OpenFile(_path) )
             {
-                if( Tail )
+                IRecordReader reader = null;
+                if( Size < stream.Length )
                 {
-                    long newPosition = stream.Length - Size;
-                    if( newPosition > 0 )
-                        stream.Position = newPosition;
+                    if( recordReaderType.GetConstructor(new[] { typeof(Stream), typeof(long), typeof(long), typeof(bool) }) == null )
+                    {
+                        Console.Error.WriteLine("No constructor found on the specified record reader type that could be used when the size argument is specified (need constructor with arguments (Stream input, long offset, long size, bool allowRecordReuse)).");
+                        return;
+                    }
+
+                    long offset = Tail ? 0 : stream.Length - Size;
+                    if( offset < 0 )
+                        offset = 0;
+                    reader = (IRecordReader)Activator.CreateInstance(recordReaderType, stream, offset, Size, true);
                 }
-                using( SizeLimitedStream limitedStream = new SizeLimitedStream(stream, Tail ? long.MaxValue : Size) )
-                using( StreamReader reader = new StreamReader(limitedStream, encoding) )
+                else
                 {
-                    string line;
-                    while( (line = reader.ReadLine()) != null )
-                        Console.WriteLine(line);
+                    if( recordReaderType.GetConstructor(new[] { typeof(Stream), typeof(bool) }) != null )
+                    {
+                        reader = (IRecordReader)Activator.CreateInstance(recordReaderType, stream, true);
+                    }
+                    else if( recordReaderType.GetConstructor(new[] { typeof(Stream) }) != null )
+                    {
+                        reader = (IRecordReader)Activator.CreateInstance(recordReaderType, stream);
+                    }
+                    else
+                    {
+                        Console.Error.WriteLine("No suitable constructor found on the specified record reader type (need constructor with Stream argument).");
+                        return;
+                    }
+                }
+
+                while( reader.ReadRecord() )
+                {
+                    Console.WriteLine(reader.CurrentRecord);
                 }
             }
         }

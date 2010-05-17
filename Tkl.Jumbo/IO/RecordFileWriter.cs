@@ -18,11 +18,11 @@ namespace Tkl.Jumbo.IO
     /// </para>
     /// </remarks>
     public class RecordFileWriter<T> : StreamRecordWriter<T>
-        where T : IWritable
     {
         private BinaryWriter _writer;
         private readonly RecordFileHeader _header;
         private long _lastRecordMarkerPosition;
+        private static readonly IValueWriter<T> _valueWriter = ValueWriter<T>.Writer;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="RecordFileWriter{T}"/> class that writes to the specified stream.
@@ -33,6 +33,7 @@ namespace Tkl.Jumbo.IO
         {
             if( stream == null )
                 throw new ArgumentNullException("stream");
+
             _writer = new BinaryWriter(stream);
             _header = new RecordFileHeader(typeof(T), false); // TODO: Make the value of useStrongName configurable.
 
@@ -63,7 +64,10 @@ namespace Tkl.Jumbo.IO
 
             // In the future we might write a record size or something instead, but at the moment we don't really need that.
             _writer.Write(RecordFile.RecordPrefix);
-            record.Write(_writer);
+            if( _valueWriter == null )
+                ((IWritable)record).Write(_writer);
+            else
+                _valueWriter.Write(record, _writer);
         }
 
         /// <summary>

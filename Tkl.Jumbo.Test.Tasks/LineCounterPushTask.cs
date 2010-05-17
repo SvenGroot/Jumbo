@@ -9,17 +9,18 @@ using Tkl.Jumbo.IO;
 
 namespace Tkl.Jumbo.Test.Tasks
 {
-    public class LineCounterPushTask : IPushTask<StringWritable, Int32Writable>
+    [AllowRecordReuse]
+    public class LineCounterPushTask : IPushTask<Utf8String, int>
     {
-        #region IPushTask<StringWritable,Int32Writable> Members
+        #region IPushTask<Utf8StringWritable,int> Members
 
-        public void ProcessRecord(StringWritable record, RecordWriter<Int32Writable> output)
+        public void ProcessRecord(Utf8String record, RecordWriter<int> output)
         {
             // Naive way to do primarily so we test outputting from here (output from Finish is tested in the adder).
             output.WriteRecord(1);
         }
 
-        public void Finish(RecordWriter<Int32Writable> output)
+        public void Finish(RecordWriter<int> output)
         {
         }
 

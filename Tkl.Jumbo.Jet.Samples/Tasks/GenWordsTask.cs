@@ -12,7 +12,7 @@ namespace Tkl.Jumbo.Jet.Samples.Tasks
     /// <summary>
     /// Task that generates input data for word count.
     /// </summary>
-    public class GenWordsTask : Configurable, IPullTask<StringWritable, StringWritable>
+    public class GenWordsTask : Configurable, IPullTask<string, Utf8String>
     {
         #region Nested types
 
@@ -21,11 +21,11 @@ namespace Tkl.Jumbo.Jet.Samples.Tasks
             public WordInfo(string word)
             {
                 Word = word;
-                Utf8ByteLength = Encoding.UTF8.GetByteCount(word);
+                Utf8Word = Encoding.UTF8.GetBytes(word);
             }
 
             public string Word { get; private set; }
-            public int Utf8ByteLength { get; private set; }
+            public byte[] Utf8Word { get; private set; }
         }
 
         #endregion
@@ -43,14 +43,14 @@ namespace Tkl.Jumbo.Jet.Samples.Tasks
         /// </summary>
         public const string SizePerTaskSetting = "SizePerTask";
 
-        #region IPullTask<StringWritable,StringWritable> Members
+        #region IPullTask<string,Utf8StringWritable> Members
 
         /// <summary>
         /// Runs the task.
         /// </summary>
         /// <param name="input">A <see cref="RecordReader{T}"/> from which the task's input can be read.</param>
         /// <param name="output">A <see cref="RecordWriter{T}"/> to which the task's output should be written.</param>
-        public void Run(RecordReader<StringWritable> input, RecordWriter<StringWritable> output)
+        public void Run(RecordReader<string> input, RecordWriter<Utf8String> output)
         {
             List<WordInfo> words = GetWordList();
 
@@ -66,31 +66,28 @@ namespace Tkl.Jumbo.Jet.Samples.Tasks
             int lineLength = 0;
             int newLineLength = Environment.NewLine.Length;
             int prevGenerated = 0;
-            StringBuilder line = new StringBuilder(_lineLength);
-            StringWritable record = new StringWritable();
+            Utf8String record = new Utf8String();
             while( generated + newLineLength < size )
             {
                 prevGenerated = generated;
                 WordInfo word = words[rnd.Next(words.Count)];
-                generated += word.Utf8ByteLength + 1;
-                lineLength += word.Utf8ByteLength + 1;
+                generated += word.Utf8Word.Length + 1;
+                lineLength += word.Utf8Word.Length + 1;
                 if( generated + newLineLength < size )
                 {
                     if( lineLength > _lineLength )
                     {
-                        record.Value = line.ToString();
                         output.WriteRecord(record);
-                        line.Length = 0;
+                        record.ByteLength = 0;
                         generated += newLineLength;
-                        lineLength = word.Utf8ByteLength + 1;
+                        lineLength = word.Utf8Word.Length + 1;
                     }
-                    line.Append(word.Word);
-                    line.Append(' ');
+                    record.Append(word.Utf8Word, 0, word.Utf8Word.Length);
+                    record.Append(new byte[] { (byte)' ' }, 0, 1);
                 }
             }
-            if( line.Length > 0 )
+            if( record.ByteLength > 0 )
             {
-                record.Value = line.ToString();
                 output.WriteRecord(record);
             }
 

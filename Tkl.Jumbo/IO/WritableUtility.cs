@@ -50,6 +50,8 @@ namespace Tkl.Jumbo.IO
 
             MethodInfo writeBooleanMethod = typeof(BinaryWriter).GetMethod("Write", new[] { typeof(bool) });
 
+            Dictionary<Type, LocalBuilder> valueWriterLocals = null;
+
             foreach( PropertyInfo property in properties )
             {
                 if( property.CanRead && property.CanWrite && !property.IsSpecialName && !Attribute.IsDefined(property, typeof(WritableIgnoreAttribute)) )
@@ -66,6 +68,39 @@ namespace Tkl.Jumbo.IO
                         {
                             generator.MarkLabel(endLabel.Value);
                         }
+                    }
+                    else if( Attribute.IsDefined(property.PropertyType, typeof(ValueWriterAttribute)) )
+                    {
+                        Type valueWriterType = typeof(IValueWriter<>).MakeGenericType(property.PropertyType);
+                        LocalBuilder valueWriterLocal = null;
+                        if( valueWriterLocals == null )
+                            valueWriterLocals = new Dictionary<Type, LocalBuilder>();
+
+                        if( !valueWriterLocals.TryGetValue(property.PropertyType, out valueWriterLocal) )
+                        {
+                            // First time using this value writer
+                            valueWriterLocal = generator.DeclareLocal(valueWriterType);
+                            generator.Emit(OpCodes.Call, typeof(ValueWriter<>).MakeGenericType(property.PropertyType).GetProperty("Writer").GetGetMethod()); // Get the ValueWriter<T>.Writer property value
+                            generator.Emit(OpCodes.Stloc_S, valueWriterLocal); // Store the writer in the local.
+                            valueWriterLocals.Add(property.PropertyType, valueWriterLocal);
+                        }
+
+                        generator.Emit(OpCodes.Ldloc_S, valueWriterLocal); // Load the value writer from the local
+                        generator.Emit(OpCodes.Ldarg_0); // put the object on the stack
+                        generator.Emit(OpCodes.Callvirt, property.GetGetMethod()); // Get the property value
+                        generator.Emit(OpCodes.Ldarg_1); // Put the writer on the stack
+                        generator.Emit(OpCodes.Callvirt, valueWriterType.GetMethod("Write")); // Call the IValueWriter<T>.Write method.
+                    }
+                    else if( property.PropertyType.IsEnum )
+                    {
+                        MethodInfo writeMethod = typeof(BinaryWriter).GetMethod("Write", new[] { Enum.GetUnderlyingType(property.PropertyType) });
+                        if( writeMethod == null )
+                            throw new NotSupportedException(string.Format(System.Globalization.CultureInfo.CurrentCulture, "Cannot generate an IWritable.Write implementation for type {0} because property {1} has enum type {2} with unsupported underlying type {3}.", typeof(T), property.Name, property.PropertyType, Enum.GetUnderlyingType(property.PropertyType)));
+
+                        generator.Emit(OpCodes.Ldarg_1);
+                        generator.Emit(OpCodes.Ldarg_0);
+                        generator.Emit(OpCodes.Callvirt, getMethod);
+                        generator.Emit(OpCodes.Callvirt, writeMethod);
                     }
                     else if( property.PropertyType == typeof(DateTime) )
                     {
@@ -204,6 +239,8 @@ namespace Tkl.Jumbo.IO
             MethodInfo readBooleanMethod = typeof(BinaryReader).GetMethod("ReadBoolean");
             PropertyInfo[] properties = type.GetProperties(BindingFlags.Public | BindingFlags.Instance);
 
+            Dictionary<Type, LocalBuilder> valueWriterLocals = null;
+
             foreach( PropertyInfo property in properties )
             {
                 if( property.CanWrite && property.CanRead && !property.IsSpecialName && !Attribute.IsDefined(property, typeof(WritableIgnoreAttribute)) )
@@ -244,6 +281,28 @@ namespace Tkl.Jumbo.IO
                         generator.Emit(OpCodes.Ldloc, local); // load tjhe property value.
                         generator.Emit(OpCodes.Ldarg_1); // load the reader.
                         generator.Emit(OpCodes.Callvirt, typeof(IWritable).GetMethod("Read", new[] { typeof(BinaryReader) })); // Read the property from the reader.
+                    }
+                    else if( Attribute.IsDefined(property.PropertyType, typeof(ValueWriterAttribute)) )
+                    {
+                        Type valueWriterType = typeof(IValueWriter<>).MakeGenericType(property.PropertyType);
+                        LocalBuilder valueWriterLocal = null;
+                        if( valueWriterLocals == null )
+                            valueWriterLocals = new Dictionary<Type, LocalBuilder>();
+
+                        if( !valueWriterLocals.TryGetValue(property.PropertyType, out valueWriterLocal) )
+                        {
+                            // First time using this value writer
+                            valueWriterLocal = generator.DeclareLocal(valueWriterType);
+                            generator.Emit(OpCodes.Call, typeof(ValueWriter<>).MakeGenericType(property.PropertyType).GetProperty("Writer").GetGetMethod()); // Get the ValueWriter<T>.Writer property value
+                            generator.Emit(OpCodes.Stloc_S, valueWriterLocal); // Store the writer in the local.
+                            valueWriterLocals.Add(property.PropertyType, valueWriterLocal);
+                        }
+
+                        generator.Emit(OpCodes.Ldarg_0); // put the object on the stack.
+                        generator.Emit(OpCodes.Ldloc_S, valueWriterLocal); // put the value writer on the stack.
+                        generator.Emit(OpCodes.Ldarg_1); // put the writer on the stack.
+                        generator.Emit(OpCodes.Callvirt, valueWriterType.GetMethod("Read")); // call the IValueWriter<T>.Read method
+                        generator.Emit(OpCodes.Callvirt, property.GetSetMethod()); // set the property value
                     }
                     else if( property.PropertyType == typeof(DateTime) )
                     {
@@ -298,7 +357,7 @@ namespace Tkl.Jumbo.IO
                     }
                     else
                     {
-                        MethodInfo readMethod = _readMethods[property.PropertyType];
+                        MethodInfo readMethod = property.PropertyType.IsEnum ? _readMethods[Enum.GetUnderlyingType(property.PropertyType)] : _readMethods[property.PropertyType];
                         generator.Emit(OpCodes.Ldarg_0); // load the object.
                         generator.Emit(OpCodes.Ldarg_1); // load the reader.
                         generator.Emit(OpCodes.Callvirt, readMethod);

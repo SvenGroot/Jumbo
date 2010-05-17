@@ -11,6 +11,7 @@ using Tkl.Jumbo.IO;
 using Tkl.Jumbo.Jet.Channels;
 using Tkl.Jumbo.Dfs;
 using System.Reflection;
+using System.IO;
 
 namespace Tkl.Jumbo.Test.Jet
 {
@@ -60,21 +61,21 @@ namespace Tkl.Jumbo.Test.Jet
             // call GetInputReader that won't happen.
             using( TaskExecutionUtility taskExecution = new TaskExecutionUtility(new JetClient(), new FakeUmbilical(), Guid.NewGuid(), config, new TaskId("Task-001"), new DfsClient(), path, "/foo", 1) )
             {
-                RecordWriter<Int32Writable> output = taskExecution.GetOutputWriter<Int32Writable>(); // this will call PipelineOutputChannel.CreateRecordWriter
-                IPushTask<StringWritable, Int32Writable> task = (IPushTask<StringWritable, Int32Writable>)taskExecution.GetTaskInstance<StringWritable, Int32Writable>();
-                task.ProcessRecord("Foo", output);
-                task.ProcessRecord("Bar", output);
+                RecordWriter<int> output = taskExecution.GetOutputWriter<int>(); // this will call PipelineOutputChannel.CreateRecordWriter
+                IPushTask<Utf8String, int> task = (IPushTask<Utf8String, int>)taskExecution.GetTaskInstance<Utf8String, int>();
+                task.ProcessRecord(new Utf8String("Foo"), output);
+                task.ProcessRecord(new Utf8String("Bar"), output);
 
                 taskExecution.FinishTask();
             }
             
             // If this file contains the correct value is means that the first stage task wrote output to the pipeline channel, which invoked the second stage task which
             // wrote to the file, thus proving that pipelining works.
-            using( System.IO.FileStream stream = System.IO.File.OpenRead(System.IO.Path.Combine(path, "Task-001.OutputTask-001_DummyTask.output")) )
-            using( BinaryRecordReader<Int32Writable> reader = new BinaryRecordReader<Int32Writable>(stream) )
+            using( System.IO.FileStream stream = System.IO.File.OpenRead(Path.Combine(Path.Combine(path, "Task-001"), "DummyTask.output")) )
+            using( BinaryRecordReader<int> reader = new BinaryRecordReader<int>(stream) )
             {
                 Assert.IsTrue(reader.ReadRecord());
-                Assert.AreEqual(2, reader.CurrentRecord.Value);
+                Assert.AreEqual(2, reader.CurrentRecord);
             }
         }
 
@@ -93,7 +94,7 @@ namespace Tkl.Jumbo.Test.Jet
             ChannelConfiguration channel = new ChannelConfiguration()
             {
                 ChannelType = ChannelType.File,
-                PartitionerType = typeof(HashPartitioner<Int32Writable>),
+                PartitionerType = typeof(HashPartitioner<int>),
             };
             stage.OutputChannel = channel;
 

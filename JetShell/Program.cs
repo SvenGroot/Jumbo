@@ -88,7 +88,7 @@ namespace JetShell
                         }
                         catch( Exception ex )
                         {
-                            Console.Error.WriteLine(ex.Message);
+						  Console.Error.WriteLine(ex.ToString());
                         }
                     }
                 }
@@ -101,7 +101,7 @@ namespace JetShell
 
         private static void PrintUsage()
         {
-            Console.WriteLine("Usage: DfsShell <command> [args...]");
+            Console.WriteLine("Usage: JetShell <command> [args...]");
             Console.WriteLine();
             Console.WriteLine("The following commands are available:");
             Console.WriteLine();

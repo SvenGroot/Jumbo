@@ -44,7 +44,6 @@ namespace Tkl.Jumbo.Jet.Channels
         }
 
         private List<RecordWriter<T>> CreateOutputWriters<T>()
-            where T : IWritable, new()
         {
             List<RecordWriter<T>> writers = new List<RecordWriter<T>>(OutputIds.Count);
 

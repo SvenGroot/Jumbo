@@ -83,6 +83,7 @@
     <Compile Include="LineCounterPushTask.cs" />
     <Compile Include="LineCounterTask.cs" />
     <Compile Include="MultiplierTask.cs" />
+    <Compile Include="NoOutputTask.cs" />
     <Compile Include="Order.cs" />
     <Compile Include="OrderJoinComparer.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

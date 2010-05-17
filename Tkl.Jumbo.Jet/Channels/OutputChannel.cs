@@ -105,7 +105,6 @@ namespace Tkl.Jumbo.Jet.Channels
         /// <returns>A <see cref="MultiRecordWriter{T}"/> that serves as the record writer for the channel.</returns>
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1006:DoNotNestGenericTypesInMemberSignatures")]
         protected MultiRecordWriter<T> CreateMultiRecordWriter<T>(IEnumerable<RecordWriter<T>> writers)
-            where T : IWritable, new()
         {
             IPartitioner<T> partitioner = (IPartitioner<T>)JetActivator.CreateInstance(TaskExecution.Configuration.StageConfiguration.OutputChannel.PartitionerType.ReferencedType, TaskExecution);
             return new MultiRecordWriter<T>(writers, partitioner);
@@ -146,7 +145,7 @@ namespace Tkl.Jumbo.Jet.Channels
         /// <typeparam name="T">The type of the records.</typeparam>
         /// <returns>A <see cref="RecordWriter{T}"/> for the channel.</returns>
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1004:GenericMethodsShouldProvideTypeParameter")]
-        public abstract Tkl.Jumbo.IO.RecordWriter<T> CreateRecordWriter<T>() where T : Tkl.Jumbo.IO.IWritable, new();
+        public abstract Tkl.Jumbo.IO.RecordWriter<T> CreateRecordWriter<T>();
 
         #endregion
     }

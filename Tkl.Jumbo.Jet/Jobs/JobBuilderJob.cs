@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using Tkl.Jumbo.Dfs;
+using Tkl.Jumbo.IO;
 
 namespace Tkl.Jumbo.Jet.Jobs
 {
@@ -33,11 +34,13 @@ namespace Tkl.Jumbo.Jet.Jobs
             if( config.JobName == null )
                 config.JobName = GetType().Name; // Use the class name as the job's friendly name, if it hasn't been set explicitly.
 
+            AddJobSettings(config);
+
             Job job = jetClient.JobServer.CreateJob();
 
             OnJobCreated(job, config);
 
-            jetClient.RunJob(job, config, dfsClient, builder.AssemblyFiles.ToArray());
+            jetClient.RunJob(job, config, dfsClient, builder.GetAssemblyFiles().ToArray());
 
             return job.JobId;
         }
@@ -58,6 +61,22 @@ namespace Tkl.Jumbo.Jet.Jobs
         /// </remarks>
         protected virtual void OnJobCreated(Job job, JobConfiguration jobConfiguration)
         {
+        }
+
+        /// <summary>
+        /// Creates a record writer that uses <see cref="BaseJobRunner.BlockSize"/> and <see cref="BaseJobRunner.ReplicationFactor"/>.
+        /// </summary>
+        /// <typeparam name="T">The type of the records.</typeparam>
+        /// <param name="builder">The builder to use to create the record writer.</param>
+        /// <param name="output">The output path.</param>
+        /// <param name="recordWriterType">The type of the record writer to use.</param>
+        /// <returns>A record writer.</returns>
+        protected RecordWriter<T> CreateRecordWriter<T>(JobBuilder builder, string output, Type recordWriterType)
+        {
+            if( builder == null )
+                throw new ArgumentNullException("builder");
+
+            return builder.CreateRecordWriter<T>(output, recordWriterType, (int)BlockSize.Value, ReplicationFactor);
         }
     }
 }

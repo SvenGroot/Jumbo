@@ -12,7 +12,7 @@ namespace Tkl.Jumbo.Jet.Samples.IO
     /// <summary>
     /// Represents an intermediate record used by the ValSort job.
     /// </summary>
-    public class ValSortRecord : IWritable, IComparable<ValSortRecord>
+    public sealed class ValSortRecord : Writable<ValSortRecord>, IComparable<ValSortRecord>
     {
         /// <summary>
         /// Gets or sets a string that identifies the fragments of the input 
@@ -49,47 +49,6 @@ namespace Tkl.Jumbo.Jet.Samples.IO
         /// </summary>
         public UInt128 Duplicates { get; set; }
 
-        #region IWritable Members
-
-        /// <summary>
-        /// Writes the object to the specified writer.
-        /// </summary>
-        /// <param name="writer">The <see cref="BinaryWriter"/> to serialize the object to.</param>
-        public void Write(BinaryWriter writer)
-        {
-            writer.Write(InputId);
-            writer.Write(FirstKey);
-            writer.Write(LastKey);
-            writer.Write(Records.High64);
-            writer.Write(Records.Low64);
-            writer.Write(FirstUnsorted.High64);
-            writer.Write(FirstUnsorted.Low64);
-            writer.Write(Checksum.High64);
-            writer.Write(Checksum.Low64);
-            writer.Write(UnsortedRecords.High64);
-            writer.Write(UnsortedRecords.Low64);
-            writer.Write(Duplicates.High64);
-            writer.Write(Duplicates.Low64);
-        }
-
-        /// <summary>
-        /// Reads the object from the specified reader.
-        /// </summary>
-        /// <param name="reader">The <see cref="BinaryReader"/> to deserialize the object from.</param>
-        public void Read(BinaryReader reader)
-        {
-            InputId = reader.ReadString();
-            FirstKey = reader.ReadBytes(GenSortRecord.KeySize);
-            LastKey = reader.ReadBytes(GenSortRecord.KeySize);
-            Records = ReadUInt128(reader);
-            FirstUnsorted = ReadUInt128(reader);
-            Checksum = ReadUInt128(reader);
-            UnsortedRecords = ReadUInt128(reader);
-            Duplicates = ReadUInt128(reader);
-        }
-
-        #endregion
-
         #region IComparable<ValSortRecord> Members
 
         /// <summary>
@@ -107,13 +66,6 @@ namespace Tkl.Jumbo.Jet.Samples.IO
         }
 
         #endregion
-
-        private static UInt128 ReadUInt128(System.IO.BinaryReader reader)
-        {
-            ulong high = reader.ReadUInt64();
-            ulong low = reader.ReadUInt64();
-            return new UInt128(high, low);
-        }
 
     }
 }
