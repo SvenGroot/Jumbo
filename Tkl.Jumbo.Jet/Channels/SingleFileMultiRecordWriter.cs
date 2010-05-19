@@ -6,6 +6,8 @@ using System.Linq;
 using System.Text;
 using Tkl.Jumbo.IO;
 using System.IO;
+using System.Diagnostics;
+using System.Threading;
 
 namespace Tkl.Jumbo.Jet.Channels
 {
@@ -15,12 +17,14 @@ namespace Tkl.Jumbo.Jet.Channels
 
         private sealed class CircularBufferStream : Stream
         {
-            private readonly UnmanagedBuffer _buffer;
+            private readonly byte[] _buffer;
             private int _bufferPos;
+            private volatile int _boundary;
+            private readonly AutoResetEvent _boundaryEvent = new AutoResetEvent(false);
 
             public CircularBufferStream(int size)
             {
-                _buffer = new UnmanagedBuffer(size);
+                _buffer = new byte[size];
             }
 
             public int BufferPos
@@ -30,8 +34,24 @@ namespace Tkl.Jumbo.Jet.Channels
 
             public int Size
             {
-                get { return _buffer.Size; }
+                get { return _buffer.Length; }
             }
+
+            public byte[] Buffer
+            {
+                get { return _buffer; }
+            }
+
+            public int Boundary
+            {
+                get { return _boundary; }
+                set 
+                {
+                    _boundary = value;
+                    _boundaryEvent.Set();
+                }
+            }
+            
 
             public override bool CanRead
             {
@@ -86,21 +106,60 @@ namespace Tkl.Jumbo.Jet.Channels
 
             public override void Write(byte[] buffer, int offset, int count)
             {
-                _bufferPos = UnmanagedBuffer.CopyCircular(buffer, offset, _buffer, _bufferPos, count);
+                while( (_bufferPos + count) % _buffer.Length > _boundary )
+                {
+                    _boundaryEvent.WaitOne();
+                }
+                _bufferPos = CopyCircular(buffer, offset, _buffer, _bufferPos, count);
             }
 
-            protected override void Dispose(bool disposing)
+            private static int CopyCircular(byte[] source, int sourceIndex, byte[] destination, int destinationIndex, int count)
             {
-                base.Dispose(disposing);
-                _buffer.Dispose();
+                if( source == null )
+                    throw new ArgumentNullException("source");
+                if( destination == null )
+                    throw new ArgumentNullException("destination");
+                if( sourceIndex < 0 )
+                    throw new ArgumentOutOfRangeException("sourceIndex");
+                if( destinationIndex < 0 )
+                    throw new ArgumentOutOfRangeException("destinationIndex");
+                if( count < 0 )
+                    throw new ArgumentOutOfRangeException("count");
+                if( sourceIndex + count > source.Length )
+                    throw new ArgumentException("sourceIndex + count is larger than the source array.");
+                int end = destinationIndex + count;
+                if( end > destination.Length )
+                {
+                    end %= destination.Length;
+                    if( end > destinationIndex )
+                        throw new ArgumentException("count is larger than the destination array.");
+                }
+
+
+                if( end >= destinationIndex )
+                {
+                    Array.Copy(source, sourceIndex, destination, destinationIndex, count);
+                }
+                else
+                {
+                    int firstCount = destination.Length - destinationIndex;
+                    Array.Copy(source, sourceIndex, destination, destinationIndex, firstCount);
+                    Array.Copy(source, sourceIndex + firstCount, destination, 0, end);
+                }
+                return end % destination.Length;
             }
         }
 
         private struct PartitionIndexEntry
         {
-            public int Partition { get; set; }
-            public int StartOffset { get; set; }
-            public int Size { get; set; }
+            public PartitionIndexEntry(int offset, int size)
+            {
+                Offset = offset;
+                Size = size;
+            }
+
+            public int Offset;
+            public int Size;
         }
 
         #endregion
@@ -109,16 +168,40 @@ namespace Tkl.Jumbo.Jet.Channels
         private readonly IPartitioner<T> _partitioner;
         private readonly CircularBufferStream _buffer;
         private readonly BinaryWriter _bufferWriter;
+        private readonly List<PartitionIndexEntry>[] _indices;
+        private int _lastPartition = -1;
+        private int _bufferRemaining;
+        private int _bytesWritten;
+        private int _writeBufferSize;
 
-        public SingleFileMultiRecordWriter(IPartitioner<T> partitioner, int bufferSize)
+        private readonly PartitionIndexEntry[][] _outputIndices;
+        private readonly object _outputLock = new object();
+        private int _outputStart;
+        private int _outputEnd;
+        private bool _outputInProgress;
+        private string _outputPath;
+        private Thread _outputThread;
+        private volatile bool _finished;
+
+        public SingleFileMultiRecordWriter(string outputPath, IPartitioner<T> partitioner, int bufferSize, int limit, int writeBufferSize)
         {
+            _outputPath = outputPath;
             _partitioner = partitioner;
             _buffer = new CircularBufferStream(bufferSize);
             _bufferWriter = new BinaryWriter(_buffer);
+            _indices = new List<PartitionIndexEntry>[partitioner.Partitions];
+            _bufferRemaining = limit;
+            _outputIndices = new PartitionIndexEntry[partitioner.Partitions][];
+            _writeBufferSize = writeBufferSize;
         }
 
         protected override void WriteRecordInternal(T record)
         {
+            if( _bufferRemaining <= 0 )
+            {
+                StartOutput();
+            }
+
             int oldBufferPos = _buffer.BufferPos;
 
             // TODO: Make sure the entire record fits in the buffer.
@@ -133,13 +216,152 @@ namespace Tkl.Jumbo.Jet.Channels
                 bytesWritten = newBufferPos - oldBufferPos;
             else
                 bytesWritten = _buffer.Size - oldBufferPos + newBufferPos;
+
+            int partition = _partitioner.GetPartition(record);
+            List<PartitionIndexEntry> index = _indices[partition];
+            if( partition == _lastPartition )
+            {
+                // If the new record was the same partition as the last record, we just update that one.
+                int lastEntry = index.Count - 1;
+                PartitionIndexEntry entry = index[lastEntry];
+                index[lastEntry] = new PartitionIndexEntry(entry.Offset, entry.Size + bytesWritten);
+            }
+            else
+            {
+                // Add the new record to the relevant index.
+                if( index == null )
+                {
+                    index = new List<PartitionIndexEntry>(100);
+                    _indices[partition] = index;
+                }
+                index.Add(new PartitionIndexEntry(oldBufferPos, bytesWritten));
+            }
+            _lastPartition = partition;
+
+            _bufferRemaining -= bytesWritten;
+            _bytesWritten += bytesWritten;
+        }
+
+        public override long BytesWritten
+        {
+            get
+            {
+                return _bytesWritten;
+            }
         }
 
         protected override void Dispose(bool disposing)
         {
+            // Taking the lock causes it to wait until the current output is finished.
+            lock( _outputLock )
+            {
+                _finished = true;
+                if( _outputEnd != _buffer.BufferPos ) // It can never reach that by looping around because the limit would be reached before that point triggering another output.
+                {
+                    StartOutput();
+                }
+                else
+                {
+                    _outputStart = _outputEnd;
+                    Monitor.Pulse(_outputLock);
+                }
+            }
+
+            if( _outputThread != null )
+                _outputThread.Join();
+
             base.Dispose(disposing);
-            ((IDisposable)_bufferWriter).Dispose();
-            _buffer.Dispose();
+            if( disposing )
+            {
+                ((IDisposable)_bufferWriter).Dispose();
+                _buffer.Dispose();
+            }
+
+        }
+
+        private void StartOutput()
+        {
+            if( !_outputInProgress )
+            {
+                lock( _outputLock )
+                {
+                    for( int x = 0; x < _indices.Length; ++x )
+                    {
+                        List<PartitionIndexEntry> index = _indices[x];
+                        if( index != null && index.Count > 0 )
+                        {
+                            _outputIndices[x] = index.ToArray();
+                            index.Clear();
+                        }
+                        else
+                            _outputIndices[x] = null;
+                    }
+
+                    _outputStart = _outputEnd; // _outputEnd contains the place where the last output stopped.
+                    _outputEnd = _buffer.BufferPos; // End at the current buffer position.
+                    _outputInProgress = true;
+                    Monitor.Pulse(_outputLock);
+                }
+
+                if( _outputThread == null )
+                {
+                    _outputThread = new Thread(OutputThread) { Name = "SingleFileMultiRecordWriter.OutputThread", IsBackground = true };
+                    _outputThread.Start();
+                }
+            }
+        }
+
+        private void OutputThread()
+        {
+            while( true )
+            {
+                lock( _outputLock )
+                {
+                    if( !_outputInProgress )
+                        Monitor.Wait(_outputLock);
+
+                    if( _outputStart != _outputEnd )
+                    {
+                        DoOutput();
+
+                        _buffer.Boundary = _outputEnd;
+                    }
+
+                    _outputInProgress = false;
+
+                    // Check this inside the lock.
+                    if( _finished )
+                        return;
+                }
+            }
+        }
+
+        private void DoOutput()
+        {
+            using( FileStream stream = new FileStream(_outputPath, FileMode.Append, FileAccess.Write, FileShare.None, _writeBufferSize) )
+            using( FileStream indexStream = new FileStream(_outputPath + ".index", FileMode.Append, FileAccess.Write, FileShare.None, _writeBufferSize) )
+            using( BinaryRecordWriter<PartitionFileIndexEntry> indexWriter = new BinaryRecordWriter<PartitionFileIndexEntry>(indexStream) )
+            {
+                PartitionFileIndexEntry indexEntry = new PartitionFileIndexEntry();
+                for( int partition = 0; partition < _outputIndices.Length; ++partition )
+                {
+                    PartitionIndexEntry[] index = _outputIndices[partition];
+                    if( index != null )
+                    {
+                        indexEntry.Partition = partition;
+                        indexEntry.Offset = stream.Position;
+
+                        for( int x = 0; x < index.Length; ++x )
+                        {
+                            stream.Write(_buffer.Buffer, index[0].Offset, index[0].Size);
+                        }
+
+                        indexEntry.Count = stream.Position - indexEntry.Offset;
+
+                        indexWriter.WriteRecord(indexEntry);
+                    }
+                }
+            }
         }
     }
 }
