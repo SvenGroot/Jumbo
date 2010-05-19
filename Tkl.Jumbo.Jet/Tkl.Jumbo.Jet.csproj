@@ -98,6 +98,7 @@
     <Compile Include="Channels\NetworkRecordWriter.cs" />
     <Compile Include="Channels\OutputChannel.cs" />
     <Compile Include="Channels\PipelineOutputChannel.cs" />
+    <Compile Include="Channels\SingleFileMultiRecordWriter.cs" />
     <Compile Include="Channels\TcpInputChannel.cs" />
     <Compile Include="Channels\TcpOutputChannel.cs" />
     <Compile Include="CleanupJobJetHeartbeatResponse.cs" />

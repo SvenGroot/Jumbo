@@ -112,6 +112,7 @@
     <Compile Include="Dfs\TestDfsCluster.cs" />
     <Compile Include="Dfs\TestSetup.cs" />
     <Compile Include="RecordFileTests.cs" />
+    <Compile Include="UnmanagedBufferTests.cs" />
     <Compile Include="Utilities.cs" />
     <Compile Include="WritableUtilityTests.cs" />
   </ItemGroup>
