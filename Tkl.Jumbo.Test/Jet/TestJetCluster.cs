@@ -47,6 +47,7 @@ namespace Tkl.Jumbo.Test.Jet
             jetConfig.FileChannel.CompressionType = compressionType;
             jetConfig.FileChannel.DownloadThreads = 2;
             jetConfig.TaskServer.MultithreadedTaskFinish = multiThreadedTaskFinish;
+            jetConfig.FileChannel.DeleteIntermediateFiles = false;
             if( Environment.OSVersion.Platform == PlatformID.Unix )
                 jetConfig.TaskServer.ListenIPv4AndIPv6 = false;
             DfsConfiguration dfsConfig = Dfs.TestDfsCluster.CreateClientConfig();

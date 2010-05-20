@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text;
 using System.IO;
 using Tkl.Jumbo.IO;
+using System.Configuration;
 
 namespace Tkl.Jumbo.Jet.Channels
 {
@@ -19,11 +20,27 @@ namespace Tkl.Jumbo.Jet.Channels
         private readonly string _localJobDirectory;
         private readonly List<string> _fileNames;
         private IEnumerable<IRecordWriter> _writers;
+        private readonly bool _singleFileOutput;
 
         /// <summary>
         /// The key to use in the stage or job settings to override the default write buffer size. Stage settings take precedence over job settings. The setting should have type <see cref="ByteSize"/>.
         /// </summary>
         public const string WriteBufferSizeSettingKey = "FileOutputChannel.WriteBufferSize";
+        /// <summary>
+        /// The key to use in the job or stage settings to override the default single file output behaviour specified in <see cref="FileChannelConfigurationElement.SingleFileOutput"/>.
+        /// Stage settings take precedence over job settings. The setting should have type <see cref="System.Boolean"/>.
+        /// </summary>
+        public const string SingleFileOutputSettingKey = "FileOutputChannel.SingleFileOutput";
+        /// <summary>
+        /// The key to use in the job or stage settings to override the default single file output buffer size specified in <see cref="FileChannelConfigurationElement.SingleFileOutputBufferSize"/>.
+        /// Stage settings take precedence over job settings. The setting should have type <see cref="ByteSize"/>.
+        /// </summary>
+        public const string SingleFileOutputBufferSizeSettingKey = "FileOutputChannel.SingleFileOutputBufferSize";
+        /// <summary>
+        /// The key to use in the job or stage settings to override the default single file output buffer size specified in <see cref="FileChannelConfigurationElement.SingleFileOutputBufferLimit"/>.
+        /// Stage settings take precedence over job settings. The setting should have type <see cref="Single"/>.
+        /// </summary>
+        public const string SingleFileOutputBufferLimitSettingKey = "FileOutputChannel.SingleFileOutputBufferLimit";
 
         /// <summary>
         /// Initializes a new instance of the <see cref="FileOutputChannel"/> class.
@@ -46,15 +63,25 @@ namespace Tkl.Jumbo.Jet.Channels
             if( !Directory.Exists(directory) )
                 Directory.CreateDirectory(directory);
 
-
-            _fileNames = (from taskId in OutputIds
-                          select CreateChannelFileName(inputTaskId, taskId)).ToList();
-
-            if( _fileNames.Count == 0 )
+            _singleFileOutput = taskExecution.Configuration.GetTypedSetting(SingleFileOutputSettingKey, TaskExecution.JetClient.Configuration.FileChannel.SingleFileOutput);
+            if( _singleFileOutput )
             {
-                // This is allowed for debugging and testing purposes so you don't have to have an output task.
-                _log.Warn("The file channel has no output tasks; writing channel output to a dummy file.");
-                _fileNames.Add(CreateChannelFileName(inputTaskId, "DummyTask"));
+                if( taskExecution.Configuration.StageConfiguration.InternalPartitionCount > 1 )
+                    throw new NotSupportedException("Cannot use single file output with internal partitioning.");
+                _log.Debug("The file output channel is using a single partition file for output.");
+                _fileNames = new List<string>() { CreateChannelFileName(inputTaskId, null) };
+            }
+            else
+            {
+                _fileNames = (from taskId in OutputIds
+                              select CreateChannelFileName(inputTaskId, taskId)).ToList();
+
+                if( _fileNames.Count == 0 )
+                {
+                    // This is allowed for debugging and testing purposes so you don't have to have an output task.
+                    _log.Warn("The file channel has no output tasks; writing channel output to a dummy file.");
+                    _fileNames.Add(CreateChannelFileName(inputTaskId, "DummyTask"));
+                }
             }
         }
 
@@ -76,7 +103,10 @@ namespace Tkl.Jumbo.Jet.Channels
 
         internal static string CreateChannelFileName(string inputTaskID, string outputTaskID)
         {
-            return Path.Combine(inputTaskID, outputTaskID + ".output");
+            if( outputTaskID == null ) // for single-file output
+                return Path.Combine(inputTaskID, inputTaskID + ".output");
+            else
+                return Path.Combine(inputTaskID, outputTaskID + ".output");
         }
 
         #region IOutputChannel members
@@ -89,18 +119,37 @@ namespace Tkl.Jumbo.Jet.Channels
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Reliability", "CA2000:Dispose objects before losing scope"), System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1004:GenericMethodsShouldProvideTypeParameter")]
         public override RecordWriter<T> CreateRecordWriter<T>()
         {
-            ByteSize bufferSize = TaskExecution.Configuration.GetTypedSetting(WriteBufferSizeSettingKey, TaskExecution.JetClient.Configuration.FileChannel.WriteBufferSize);
+            ByteSize writeBufferSize = TaskExecution.Configuration.GetTypedSetting(WriteBufferSizeSettingKey, TaskExecution.JetClient.Configuration.FileChannel.WriteBufferSize);
 
-            if( _fileNames.Count == 1 )
+            if( _singleFileOutput )
             {
-                RecordWriter<T> result = new BinaryRecordWriter<T>(File.Create(Path.Combine(_localJobDirectory, _fileNames[0]), (int)bufferSize.Value).CreateCompressor(CompressionType));
+                // We're using single file output
+
+                ByteSize outputBufferSize = TaskExecution.Configuration.GetTypedSetting(SingleFileOutputBufferSizeSettingKey, TaskExecution.JetClient.Configuration.FileChannel.SingleFileOutputBufferSize);
+                float outputBufferLimit = TaskExecution.Configuration.GetTypedSetting(SingleFileOutputBufferLimitSettingKey, TaskExecution.JetClient.Configuration.FileChannel.SingleFileOutputBufferLimit);
+                if( outputBufferSize.Value < 0 || outputBufferSize.Value > Int32.MaxValue )
+                    throw new ConfigurationErrorsException("Invalid output buffer size: " + outputBufferSize.Value);
+                if( outputBufferLimit < 0.1f || outputBufferLimit > 1.0f )
+                    throw new ConfigurationErrorsException("Invalid output buffer limit: " + outputBufferLimit);
+                int outputBufferLimitSize = (int)(outputBufferLimit * outputBufferSize.Value);
+
+                _log.DebugFormat("Creating single file output writer with buffer size {0}, limit size {1} and write buffer size {2}.", outputBufferSize.Value, outputBufferLimitSize, writeBufferSize.Value);
+
+                IPartitioner<T> partitioner = CreatePartitioner<T>();
+                RecordWriter<T> result = new SingleFileMultiRecordWriter<T>(Path.Combine(_localJobDirectory, _fileNames[0]), partitioner, (int)outputBufferSize.Value, outputBufferLimitSize, (int)writeBufferSize.Value);
+                _writers = new[] { result };
+                return result;
+            }
+            else if( _fileNames.Count == 1 )
+            {
+                RecordWriter<T> result = new BinaryRecordWriter<T>(File.Create(Path.Combine(_localJobDirectory, _fileNames[0]), (int)writeBufferSize.Value).CreateCompressor(CompressionType));
                 _writers = new[] { result };
                 return result;
             }
             else
             {
                 var writers = from file in _fileNames
-                              select (RecordWriter<T>)new BinaryRecordWriter<T>(File.Create(Path.Combine(_localJobDirectory, file), (int)bufferSize.Value).CreateCompressor(CompressionType));
+                              select (RecordWriter<T>)new BinaryRecordWriter<T>(File.Create(Path.Combine(_localJobDirectory, file), (int)writeBufferSize.Value).CreateCompressor(CompressionType));
                 _writers = writers.Cast<IRecordWriter>();
                 return CreateMultiRecordWriter<T>(writers);
             }

@@ -89,6 +89,17 @@ namespace Tkl.Jumbo.Jet
         }
 
         /// <summary>
+        /// Gets or sets the maximum number of partition file index entries to keep in the index cache.
+        /// </summary>
+        /// <value>The file server max index cache size.</value>
+        [ConfigurationProperty("fileServerMaxIndexCacheSize", DefaultValue = 25, IsRequired = false, IsKey = false)]
+        public int FileServerMaxIndexCacheSize
+        {
+            get { return (int)this["fileServerMaxIndexCacheSize"]; }
+            set { this["fileServerMaxIndexCacheSize"] = value; }
+        }
+
+        /// <summary>
         /// Gets or sets the number of milliseconds to wait between creating TaskHost processes.
         /// </summary>
         [ConfigurationProperty("processCreationDelay", DefaultValue = 0, IsRequired = false, IsKey = false)]

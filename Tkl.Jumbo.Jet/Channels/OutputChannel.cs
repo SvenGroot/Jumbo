@@ -106,8 +106,20 @@ namespace Tkl.Jumbo.Jet.Channels
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1006:DoNotNestGenericTypesInMemberSignatures")]
         protected MultiRecordWriter<T> CreateMultiRecordWriter<T>(IEnumerable<RecordWriter<T>> writers)
         {
-            IPartitioner<T> partitioner = (IPartitioner<T>)JetActivator.CreateInstance(TaskExecution.Configuration.StageConfiguration.OutputChannel.PartitionerType.ReferencedType, TaskExecution);
+            IPartitioner<T> partitioner = CreatePartitioner<T>();
             return new MultiRecordWriter<T>(writers, partitioner);
+        }
+
+        /// <summary>
+        /// Creates the partitioner for the output channel.
+        /// </summary>
+        /// <typeparam name="T">The type of the records.</typeparam>
+        /// <returns>An object implementing <see cref="IPartitioner{T}"/> that will partition the channel's output.</returns>
+        protected IPartitioner<T> CreatePartitioner<T>()
+        {
+            IPartitioner<T> partitioner = (IPartitioner<T>)JetActivator.CreateInstance(TaskExecution.Configuration.StageConfiguration.OutputChannel.PartitionerType.ReferencedType, TaskExecution);
+            partitioner.Partitions = _outputIds.Count;
+            return partitioner;
         }
 
         private int GetOutputTaskNumber()

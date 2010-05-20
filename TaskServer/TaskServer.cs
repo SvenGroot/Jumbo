@@ -306,7 +306,7 @@ namespace TaskServerApplication
                 addresses = new[] { IPAddress.IPv6Any };
             }
 
-            _fileServer = new FileChannelServer(this, addresses, Configuration.TaskServer.FileServerPort, Configuration.TaskServer.FileServerMaxConnections);
+            _fileServer = new FileChannelServer(this, addresses, Configuration.TaskServer.FileServerPort, Configuration.TaskServer.FileServerMaxConnections, Configuration.TaskServer.FileServerMaxIndexCacheSize);
             _fileServer.Start();
 
             while( _running )

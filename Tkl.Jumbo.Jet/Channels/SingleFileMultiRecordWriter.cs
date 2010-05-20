@@ -106,7 +106,10 @@ namespace Tkl.Jumbo.Jet.Channels
 
             public override void Write(byte[] buffer, int offset, int count)
             {
-                while( (_bufferPos + count) % _buffer.Length > _boundary )
+                // If our current writing position is before the boundary, we can simply check if we cross it.
+                // If our current writing position is after the boundary (suggesting that we are also after the current output end) then
+                // we add _buffer.Length to the boundary to make sure we don't cross it after wrapping around.
+                while( _bufferPos < _boundary ? _bufferPos + count >= _boundary : _bufferPos + count >= _boundary + _buffer.Length )
                 {
                     _boundaryEvent.WaitOne();
                 }
@@ -164,6 +167,8 @@ namespace Tkl.Jumbo.Jet.Channels
 
         #endregion
 
+        private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(SingleFileMultiRecordWriter<T>));
+
         private static readonly IValueWriter<T> _valueWriter = ValueWriter<T>.Writer;
         private readonly IPartitioner<T> _partitioner;
         private readonly CircularBufferStream _buffer;
@@ -173,6 +178,7 @@ namespace Tkl.Jumbo.Jet.Channels
         private int _bufferRemaining;
         private int _bytesWritten;
         private int _writeBufferSize;
+        private readonly int _bufferLimit;
 
         private readonly PartitionIndexEntry[][] _outputIndices;
         private readonly object _outputLock = new object();
@@ -182,6 +188,9 @@ namespace Tkl.Jumbo.Jet.Channels
         private string _outputPath;
         private Thread _outputThread;
         private volatile bool _finished;
+        private int _outputSegments;
+
+        //private StreamWriter _debugWriter;
 
         public SingleFileMultiRecordWriter(string outputPath, IPartitioner<T> partitioner, int bufferSize, int limit, int writeBufferSize)
         {
@@ -191,8 +200,10 @@ namespace Tkl.Jumbo.Jet.Channels
             _bufferWriter = new BinaryWriter(_buffer);
             _indices = new List<PartitionIndexEntry>[partitioner.Partitions];
             _bufferRemaining = limit;
+            _bufferLimit = limit;
             _outputIndices = new PartitionIndexEntry[partitioner.Partitions][];
             _writeBufferSize = writeBufferSize;
+            //_debugWriter = new StreamWriter(outputPath + ".debug.txt");
         }
 
         protected override void WriteRecordInternal(T record)
@@ -210,14 +221,24 @@ namespace Tkl.Jumbo.Jet.Channels
             else
                 _valueWriter.Write(record, _bufferWriter);
 
+
             int newBufferPos = _buffer.BufferPos;
             int bytesWritten;
-            if( newBufferPos >= _buffer.BufferPos )
+            if( newBufferPos >= oldBufferPos )
                 bytesWritten = newBufferPos - oldBufferPos;
             else
-                bytesWritten = _buffer.Size - oldBufferPos + newBufferPos;
+                bytesWritten = (_buffer.Size - oldBufferPos) + newBufferPos;
 
             int partition = _partitioner.GetPartition(record);
+
+            if( oldBufferPos >= _outputStart && oldBufferPos < _outputEnd )
+                Debugger.Break();
+
+            //lock( _debugWriter )
+            //{
+            //    _debugWriter.WriteLine("{0} {1} {2}", partition, record, oldBufferPos);
+            //}
+            
             List<PartitionIndexEntry> index = _indices[partition];
             if( partition == _lastPartition )
             {
@@ -297,8 +318,10 @@ namespace Tkl.Jumbo.Jet.Channels
                             _outputIndices[x] = null;
                     }
 
+                    _lastPartition = -1;
                     _outputStart = _outputEnd; // _outputEnd contains the place where the last output stopped.
                     _outputEnd = _buffer.BufferPos; // End at the current buffer position.
+                    _bufferRemaining += _bufferLimit;
                     _outputInProgress = true;
                     Monitor.Pulse(_outputLock);
                 }
@@ -324,6 +347,7 @@ namespace Tkl.Jumbo.Jet.Channels
                     {
                         DoOutput();
 
+                        _outputStart = _outputEnd;
                         _buffer.Boundary = _outputEnd;
                     }
 
@@ -338,11 +362,21 @@ namespace Tkl.Jumbo.Jet.Channels
 
         private void DoOutput()
         {
+            ++_outputSegments;
+            _log.DebugFormat("Writing output segment {0}.", _outputSegments);
+            //lock( _debugWriter )
+            //    _debugWriter.WriteLine("Starting output from {0} to {1}.", _outputStart, _outputEnd);
             using( FileStream stream = new FileStream(_outputPath, FileMode.Append, FileAccess.Write, FileShare.None, _writeBufferSize) )
             using( FileStream indexStream = new FileStream(_outputPath + ".index", FileMode.Append, FileAccess.Write, FileShare.None, _writeBufferSize) )
             using( BinaryRecordWriter<PartitionFileIndexEntry> indexWriter = new BinaryRecordWriter<PartitionFileIndexEntry>(indexStream) )
             {
                 PartitionFileIndexEntry indexEntry = new PartitionFileIndexEntry();
+                if( indexStream.Length == 0 )
+                {
+                    // Write a faux first entry indicating the number of partitions.
+                    indexEntry.Partition = _partitioner.Partitions;
+                    indexWriter.WriteRecord(indexEntry);
+                }
                 for( int partition = 0; partition < _outputIndices.Length; ++partition )
                 {
                     PartitionIndexEntry[] index = _outputIndices[partition];
@@ -353,7 +387,14 @@ namespace Tkl.Jumbo.Jet.Channels
 
                         for( int x = 0; x < index.Length; ++x )
                         {
-                            stream.Write(_buffer.Buffer, index[0].Offset, index[0].Size);
+                            if( index[x].Offset + index[x].Size > _buffer.Size )
+                            {
+                                int firstCount = _buffer.Size - index[x].Offset;
+                                stream.Write(_buffer.Buffer, index[x].Offset, firstCount);
+                                stream.Write(_buffer.Buffer, 0, index[x].Size - firstCount);
+                            }
+                            else
+                                stream.Write(_buffer.Buffer, index[x].Offset, index[x].Size);
                         }
 
                         indexEntry.Count = stream.Position - indexEntry.Offset;
@@ -362,6 +403,7 @@ namespace Tkl.Jumbo.Jet.Channels
                     }
                 }
             }
+            _log.DebugFormat("Finished writing output segment {0}.", _outputSegments);
         }
     }
 }
