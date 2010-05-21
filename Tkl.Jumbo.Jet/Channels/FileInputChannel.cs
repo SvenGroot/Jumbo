@@ -316,6 +316,7 @@ namespace Tkl.Jumbo.Jet.Channels
                         else
                         {
                             PartitionFileStream stream = new PartitionFileStream(fileName, reader.BufferSize, indexEntries);
+                            LocalBytesRead += stream.Length;
                             IRecordReader taskReader = (IRecordReader)Activator.CreateInstance(_inputReaderType, stream, reader.AllowRecordReuse);
                             inputs.Add(new RecordInput(taskReader));
                         }

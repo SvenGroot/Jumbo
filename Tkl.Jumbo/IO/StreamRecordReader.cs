@@ -16,7 +16,7 @@ namespace Tkl.Jumbo.IO
     public abstract class StreamRecordReader<T> : RecordReader<T>
     {
         private bool _disposed;
-        private long? _bytesRead;
+        private long _bytesRead;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="StreamRecordReader{T}"/> class with the specified stream.
@@ -96,9 +96,22 @@ namespace Tkl.Jumbo.IO
         {
             get
             {
-                if( _bytesRead != null )
-                    return _bytesRead.Value;
-                return Stream.Position - Offset;
+                // Progress needs to be thread safe, so BytesRead must be as well. But we don't want to lock each usage of Stream.
+                // It still might not be entirely safe because Stream isn't thread safe, but it'll have to do for now.
+                Stream s = Stream;
+                if( s == null )
+                    return _bytesRead;
+                else
+                {
+                    try
+                    {
+                        return s.Position - Offset;
+                    }
+                    catch( ObjectDisposedException )
+                    {
+                        return _bytesRead;
+                    }
+                }
             }
         }
 
@@ -128,8 +141,9 @@ namespace Tkl.Jumbo.IO
                     if( Stream != null )
                     {
                         _bytesRead = BytesRead; // Store so that property can be used after the object is disposed.
-                        Stream.Dispose();
+                        Stream s = Stream;
                         Stream = null;
+                        s.Dispose();
                     }
                 }
                 _disposed = true;
