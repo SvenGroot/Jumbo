@@ -305,9 +305,20 @@ namespace Tkl.Jumbo.Jet.Channels
                     PartitionFileIndex index = new PartitionFileIndex(fileName);
                     foreach( int partition in Partitions )
                     {
-                        PartitionFileStream stream = new PartitionFileStream(fileName, reader.BufferSize, index.GetEntriesForPartition(partition));
-                        IRecordReader taskReader = (IRecordReader)Activator.CreateInstance(_inputReaderType, stream, reader.AllowRecordReuse);
-                        inputs.Add(new RecordInput(taskReader));
+                        IEnumerable<PartitionFileIndexEntry> indexEntries = index.GetEntriesForPartition(partition);
+                        if( indexEntries == null )
+                        {
+                            _log.InfoFormat("Local input file {0} partition {1} is empty.", fileName, partition);
+                            IRecordReader taskReader = (IRecordReader)JetActivator.CreateInstance(typeof(EmptyRecordReader<>).MakeGenericType(InputRecordType), TaskExecution);
+                            taskReader.SourceName = task.TaskId;
+                            inputs.Add(new RecordInput(taskReader));
+                        }
+                        else
+                        {
+                            PartitionFileStream stream = new PartitionFileStream(fileName, reader.BufferSize, indexEntries);
+                            IRecordReader taskReader = (IRecordReader)Activator.CreateInstance(_inputReaderType, stream, reader.AllowRecordReuse);
+                            inputs.Add(new RecordInput(taskReader));
+                        }
                     }
                 }
                 else
