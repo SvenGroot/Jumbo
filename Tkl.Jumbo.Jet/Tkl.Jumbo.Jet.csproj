@@ -97,7 +97,9 @@
     <Compile Include="Channels\NetworkRecordReader.cs" />
     <Compile Include="Channels\NetworkRecordWriter.cs" />
     <Compile Include="Channels\OutputChannel.cs" />
+    <Compile Include="Channels\PartitionFileIndex.cs" />
     <Compile Include="Channels\PartitionFileIndexEntry.cs" />
+    <Compile Include="Channels\PartitionFileStream.cs" />
     <Compile Include="Channels\PipelineOutputChannel.cs" />
     <Compile Include="Channels\SingleFileMultiRecordWriter.cs" />
     <Compile Include="Channels\TcpInputChannel.cs" />

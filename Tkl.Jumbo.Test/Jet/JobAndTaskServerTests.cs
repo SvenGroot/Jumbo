@@ -112,9 +112,15 @@ namespace Tkl.Jumbo.Test.Jet
         }
 
         [Test]
+        public void TestJobExecutionSortSingleFileOutput()
+        {
+            TestJobExecutionSort("/sortinput4", "/sortoutput4", 2, 1, false, true);
+        }
+
+        [Test]
         public void TestJobExecutionSortSingleFileOutputTcpFileDownload()
         {
-            TestJobExecutionSort("/sortinput4", "/sortoutput4", 2, 1, true, true);
+            TestJobExecutionSort("/sortinput5", "/sortoutput5", 2, 1, true, true);
         }
 
         [Test]

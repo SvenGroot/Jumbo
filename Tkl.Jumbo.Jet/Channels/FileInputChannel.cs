@@ -291,41 +291,53 @@ namespace Tkl.Jumbo.Jet.Channels
 
             IList<RecordInput> inputs;
 
-            string fileName = null;
             long uncompressedSize = -1L;
             if( !InputStage.OutputChannel.ForceFileDownload && task.TaskServer.HostName == Dns.GetHostName() )
             {
                 inputs = new List<RecordInput>(Partitions.Count);
                 ITaskServerClientProtocol taskServer = JetClient.CreateTaskServerClient(task.TaskServer);
                 string taskOutputDirectory = taskServer.GetOutputFileDirectory(task.JobId, task.TaskId);
-                foreach( int partition in Partitions )
+
+                if( _inputUsesSingleFileFormat )
                 {
-                    string outputFileName = FileOutputChannel.CreateChannelFileName(task.TaskId, TaskId.CreateTaskIdString(_outputStageId, partition));
-                    fileName = Path.Combine(taskOutputDirectory, outputFileName);
-                    long size = new FileInfo(fileName).Length;
-                    if( size == 0 )
+                    string outputFileName = FileOutputChannel.CreateChannelFileName(task.TaskId, null);
+                    string fileName = Path.Combine(taskOutputDirectory, outputFileName);
+                    PartitionFileIndex index = new PartitionFileIndex(fileName);
+                    foreach( int partition in Partitions )
                     {
-                        _log.InfoFormat("Local input file {0} is empty.", fileName);
-                        IRecordReader taskReader = (IRecordReader)JetActivator.CreateInstance(typeof(EmptyRecordReader<>).MakeGenericType(InputRecordType), TaskExecution);
-                        taskReader.SourceName = task.TaskId;
+                        PartitionFileStream stream = new PartitionFileStream(fileName, reader.BufferSize, index.GetEntriesForPartition(partition));
+                        IRecordReader taskReader = (IRecordReader)Activator.CreateInstance(_inputReaderType, stream, reader.AllowRecordReuse);
                         inputs.Add(new RecordInput(taskReader));
                     }
-                    else
+                }
+                else
+                {
+                    foreach( int partition in Partitions )
                     {
-                        if( _inputUsesSingleFileFormat )
-                            throw new NotImplementedException();
-
-                        _log.InfoFormat("Using local file {0} as input.", fileName);
-                        uncompressedSize = TaskExecution.Umbilical.GetUncompressedTemporaryFileSize(task.JobId, outputFileName);
-                        if( uncompressedSize != -1 )
+                        string outputFileName = FileOutputChannel.CreateChannelFileName(task.TaskId, TaskId.CreateTaskIdString(_outputStageId, partition));
+                        string fileName = Path.Combine(taskOutputDirectory, outputFileName);
+                        long size = new FileInfo(fileName).Length;
+                        if( size == 0 )
                         {
-                            LocalBytesRead += uncompressedSize;
-                            CompressedLocalBytesRead += size;
+                            _log.InfoFormat("Local input file {0} is empty.", fileName);
+                            IRecordReader taskReader = (IRecordReader)JetActivator.CreateInstance(typeof(EmptyRecordReader<>).MakeGenericType(InputRecordType), TaskExecution);
+                            taskReader.SourceName = task.TaskId;
+                            inputs.Add(new RecordInput(taskReader));
                         }
                         else
-                            LocalBytesRead += size;
-                        // We don't delete output files; if this task fails they might still be needed
-                        inputs.Add(new RecordInput(_inputReaderType, fileName, task.TaskId, uncompressedSize, false));
+                        {
+                            _log.InfoFormat("Using local file {0} as input.", fileName);
+                            uncompressedSize = TaskExecution.Umbilical.GetUncompressedTemporaryFileSize(task.JobId, outputFileName);
+                            if( uncompressedSize != -1 )
+                            {
+                                LocalBytesRead += uncompressedSize;
+                                CompressedLocalBytesRead += size;
+                            }
+                            else
+                                LocalBytesRead += size;
+                            // We don't delete output files; if this task fails they might still be needed
+                            inputs.Add(new RecordInput(_inputReaderType, fileName, task.TaskId, uncompressedSize, false));
+                        }
                     }
                 }
             }
@@ -341,7 +353,6 @@ namespace Tkl.Jumbo.Jet.Channels
             if( !_isReady )
             {
                 // When we're using a MultiRecordReader we should become ready after the first downloaded file.
-                // If we're using a list of readers, we should become ready after all files are downloaded so we don't set the event yet.
                 _log.Info("Input channel is now ready.");
                 _isReady = true;
                 _readyEvent.Set();

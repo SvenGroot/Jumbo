@@ -21,9 +21,11 @@ namespace Tkl.Jumbo.Jet.Channels
             private int _bufferPos;
             private volatile int _boundary;
             private readonly AutoResetEvent _boundaryEvent = new AutoResetEvent(false);
+            private readonly SingleFileMultiRecordWriter<T> _writer;
 
-            public CircularBufferStream(int size)
+            public CircularBufferStream(SingleFileMultiRecordWriter<T> writer, int size)
             {
+                _writer = writer;
                 _buffer = new byte[size];
             }
 
@@ -111,7 +113,10 @@ namespace Tkl.Jumbo.Jet.Channels
                 // we add _buffer.Length to the boundary to make sure we don't cross it after wrapping around.
                 while( _bufferPos < _boundary ? _bufferPos + count >= _boundary : _bufferPos + count >= _boundary + _buffer.Length )
                 {
+                    _log.WarnFormat("Waiting for boundary, buffer pos {0}, boundary {1}", _bufferPos, _boundary);
+                    _writer.StartOutput();
                     _boundaryEvent.WaitOne();
+                    //_log.WarnFormat("Boundary event signalled, buffer pos {0}, boundary {1}", _bufferPos, _boundary);
                 }
                 _bufferPos = CopyCircular(buffer, offset, _buffer, _bufferPos, count);
             }
@@ -196,7 +201,7 @@ namespace Tkl.Jumbo.Jet.Channels
         {
             _outputPath = outputPath;
             _partitioner = partitioner;
-            _buffer = new CircularBufferStream(bufferSize);
+            _buffer = new CircularBufferStream(this, bufferSize);
             _bufferWriter = new BinaryWriter(_buffer);
             _indices = new List<PartitionIndexEntry>[partitioner.Partitions];
             _bufferRemaining = limit;

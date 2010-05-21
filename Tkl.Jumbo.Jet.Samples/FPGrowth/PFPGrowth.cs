@@ -92,6 +92,15 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
         public CompressionType CompressionType { get; set; }
 
         /// <summary>
+        /// Gets or sets a value indicating whether the intermediate data should be stored in partition file format.
+        /// </summary>
+        /// <value>
+        /// 	<see langword="true"/> if the intermediate data should be stored in partition file format; otherwise, <see langword="false"/>.
+        /// </value>
+        [NamedCommandLineArgument("pf"), Description("When set, the job will use the single-file partition file format for the intermediate data.")]
+        public bool UsePartitionFile { get; set; }
+
+        /// <summary>
         /// Constructs the job configuration using the specified job builder.
         /// </summary>
         /// <param name="builder">The <see cref="JobBuilder"/>.</param>
@@ -461,6 +470,7 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
             SettingsDictionary settings = new SettingsDictionary();
             settings.AddTypedSetting(OutputChannel.CompressionTypeSetting, CompressionType);
             settings.AddTypedSetting(FileOutputChannel.WriteBufferSizeSettingKey, WriteBufferSize);
+            settings.AddTypedSetting(FileOutputChannel.SingleFileOutputSettingKey, UsePartitionFile);
             builder.ProcessRecords(input, groupCollector.CreateRecordWriter(), generateFunction, settings);
 
             // Interesting observation: if the number of groups equals or is smaller than the number of partitions, we don't need to sort, because each

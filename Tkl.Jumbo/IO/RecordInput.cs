@@ -57,6 +57,8 @@ namespace Tkl.Jumbo.IO
             _deleteFile = deleteFile;
         }
 
+
+
         internal string FileName { get; private set; }
 
         internal IMultiInputRecordReader Input { get; set; }
