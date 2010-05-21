@@ -97,11 +97,11 @@ namespace Tkl.Jumbo.Jet
         /// Gets or sets the size of the single file output buffer.
         /// </summary>
         /// <value>The size of the single file output buffer.</value>
-        [ConfigurationProperty("singleFileOutputBuferSize", DefaultValue = "100MB", IsRequired = false, IsKey = false)]
+        [ConfigurationProperty("singleFileOutputBufferSize", DefaultValue = "100MB", IsRequired = false, IsKey = false)]
         public ByteSize SingleFileOutputBufferSize
         {
-            get { return (ByteSize)this["singleFileOutputBuferSize"]; }
-            set { this["singleFileOutputBuferSize"] = value; }
+            get { return (ByteSize)this["singleFileOutputBufferSize"]; }
+            set { this["singleFileOutputBufferSize"] = value; }
         }
 
         /// <summary>
