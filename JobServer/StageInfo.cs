@@ -6,21 +6,23 @@ using System.Linq;
 using System.Text;
 using Tkl.Jumbo.Jet;
 using Tkl.Jumbo;
+using System.Collections.ObjectModel;
 
 namespace JobServerApplication
 {
     sealed class StageInfo
     {
-        private readonly List<TaskInfo> _tasks = new List<TaskInfo>();
+        private readonly ReadOnlyCollection<TaskInfo> _tasks;
 
-        public StageInfo(string stageId)
+        public StageInfo(string stageId, List<TaskInfo> tasks)
         {
             StageId = stageId;
+            _tasks = tasks.AsReadOnly();
         }
 
         public string StageId { get; private set; }
 
-        public List<TaskInfo> Tasks
+        public ReadOnlyCollection<TaskInfo> Tasks
         {
             get { return _tasks; }
         }

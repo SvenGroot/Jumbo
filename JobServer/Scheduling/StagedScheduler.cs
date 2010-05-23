@@ -85,7 +85,7 @@ namespace JobServerApplication.Scheduling
                                 if( !newServers.Contains(taskServer) )
                                     newServers.Add(taskServer);
                                 inputBlockSet.Remove(localBlocks[block]);
-                                _log.InfoFormat("Task {0} has been assigned to server {1} (data local).", task.GlobalID, taskServer.Address);
+                                _log.InfoFormat("Task {0} has been assigned to server {1} (data local).", task.FullTaskId, taskServer.Address);
                                 --capacity;
                             }
                             ++block;
@@ -115,7 +115,7 @@ namespace JobServerApplication.Scheduling
                         // One way to do that would be to change NameServer.GetDataServerBlocks to return blocks within a certain distance, and then retry with increasing distance.
                         TaskInfo task = eligibleTasks[_random.Next(eligibleTasks.Count)];
                         taskServer.SchedulerInfo.AssignTask(job, task);
-                        _log.InfoFormat("Task {0} has been assigned to server {1} (NOT data local).", task.GlobalID, taskServer.Address);
+                        _log.InfoFormat("Task {0} has been assigned to server {1} (NOT data local).", task.FullTaskId, taskServer.Address);
                         if( !newServers.Contains(taskServer) )
                             newServers.Add(taskServer);
                         --capacity;
@@ -155,7 +155,7 @@ namespace JobServerApplication.Scheduling
                         taskServer.SchedulerInfo.AssignTask(job, task, false);
                         if( !newServers.Contains(taskServer) )
                             newServers.Add(taskServer);
-                        _log.InfoFormat("Task {0} has been assigned to server {1}.", task.GlobalID, taskServer.Address);
+                        _log.InfoFormat("Task {0} has been assigned to server {1}.", task.FullTaskId, taskServer.Address);
                         outOfSlots = false;
                     }
                     ++taskIndex;

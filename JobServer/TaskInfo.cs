@@ -8,17 +8,29 @@ using Tkl.Jumbo.Jet;
 using System.IO;
 using Tkl.Jumbo.Dfs;
 using System.Threading;
+using System.Collections.ObjectModel;
 
 namespace JobServerApplication
 {
+    /// <summary>
+    /// Information about a task of a running job. All properties of this object must be accessed only inside the scheduler lock, except for <see cref="State"/>, <see cref="Attempts"/> and <see cref="Server"/> which may be
+    /// read without locking (but may only be set inside the scheduler lock), and <see cref="StartTimeUtc"/>, <see cref="EndTimeUtc"/> and <see cref="Progress"/> which may be read and set without locking.
+    /// </summary>
     class TaskInfo
     {
-        private readonly ManualResetEvent _taskCompletedEvent;
+        private readonly StageConfiguration _stage;
+        private readonly TaskId _taskId;
+        private readonly string _fullTaskId;
+        private readonly JobInfo _job;
+        private readonly ReadOnlyCollection<int> _partitions;
+
+        private readonly TaskInfo _owner;
         private TaskServerInfo _server;
-        private TaskInfo _owner;
         private List<TaskServerInfo> _badServers;
         private TaskState _state;
         private Guid? _inputBlock;
+        private long _startTimeUtcTicks;
+        private long _endTimeUtcTicks;
 
         public TaskInfo(JobInfo job, StageConfiguration stage, IList<StageConfiguration> inputStages, int taskNumber)
         {
@@ -26,26 +38,28 @@ namespace JobServerApplication
                 throw new ArgumentNullException("stage");
             if( job == null )
                 throw new ArgumentNullException("job");
-            Stage = stage;
-            TaskId = new TaskId(stage.StageId, taskNumber);
-            Job = job;
-            _taskCompletedEvent = new ManualResetEvent(false);
+            _stage = stage;
+            _taskId = new TaskId(stage.StageId, taskNumber);
+            _job = job;
+            _fullTaskId = Tkl.Jumbo.Jet.Job.CreateFullTaskId(job.Job.JobId, _taskId.ToString());
 
+            List<int> partitions = null;
             if( inputStages != null )
             {
                 foreach( StageConfiguration inputStage in inputStages )
                 {
-                    if( Partitions == null )
+                    if( partitions == null )
                     {
                         int partitionsPerTask = inputStage.OutputChannel.PartitionsPerTask;
-                        Partitions = new List<int>(partitionsPerTask < 1 ? 1 : partitionsPerTask);
+                        partitions = new List<int>(partitionsPerTask < 1 ? 1 : partitionsPerTask);
                         if( partitionsPerTask <= 1 )
-                            Partitions.Add(taskNumber);
+                            partitions.Add(taskNumber);
                         else
                         {
                             int begin = ((taskNumber - 1) * partitionsPerTask) + 1;
-                            Partitions.AddRange(Enumerable.Range(begin, partitionsPerTask));
+                            partitions.AddRange(Enumerable.Range(begin, partitionsPerTask));
                         }
+                        _partitions = partitions.AsReadOnly();
                     }
                     else if( inputStage.OutputChannel.PartitionsPerTask > 1 || Partitions.Count > 1 )
                         throw new InvalidOperationException("Cannot use multiple partitions per task when there are multiple input channels.");
@@ -59,20 +73,31 @@ namespace JobServerApplication
                 throw new ArgumentNullException("owner");
             if( stage == null )
                 throw new ArgumentNullException("stage");
-            Job = owner.Job;
-            Stage = stage;
-            TaskId = new TaskId(owner.TaskId, stage.StageId, taskNumber);
-            _taskCompletedEvent = owner.TaskCompletedEvent;
+            _job = owner.Job;
+            _stage = stage;
+            _taskId = new TaskId(owner.TaskId, stage.StageId, taskNumber);
             _owner = owner;
         }
 
-        public StageConfiguration Stage { get; private set; }
+        public StageConfiguration Stage
+        {
+            get { return _stage; }
+        }
 
-        public TaskId TaskId { get; private set; }
+        public TaskId TaskId
+        {
+            get { return _taskId; }
+        }
 
-        public JobInfo Job { get; private set; }
+        public JobInfo Job
+        {
+            get { return _job; }
+        }
 
-        public List<int> Partitions { get; set; }
+        public ReadOnlyCollection<int> Partitions
+        {
+            get { return _partitions; }
+        }
 
         public TaskState State
         {
@@ -107,9 +132,7 @@ namespace JobServerApplication
                 else
                 {
                     if( _badServers == null )
-                    {
-                        Interlocked.CompareExchange(ref _badServers, new List<TaskServerInfo>(), null);
-                    }
+                        _badServers = new List<TaskServerInfo>();
                     return _badServers;
                 }
             }
@@ -117,23 +140,25 @@ namespace JobServerApplication
 
         public int Attempts { get; set; }
 
-        public DateTime StartTimeUtc { get; set; }
+        public DateTime StartTimeUtc
+        {
+            get { return new DateTime(_startTimeUtcTicks, DateTimeKind.Utc); }
+            set { Interlocked.Exchange(ref _startTimeUtcTicks, value.Ticks); }
+        }
 
-        public DateTime EndTimeUtc { get; set; }
+        public DateTime EndTimeUtc
+        {
+            get { return new DateTime(_endTimeUtcTicks, DateTimeKind.Utc); }
+            set { Interlocked.Exchange(ref _endTimeUtcTicks, value.Ticks); }
+        }
 
         public float Progress { get; set; }
 
-        // TODO: This even should be reset if the task server dies or other tasks cannot download the task's output data.
-        public ManualResetEvent TaskCompletedEvent
-        {
-            get { return _taskCompletedEvent; }
-        }
-
-        public string GlobalID
+        public string FullTaskId
         {
             get
             {
-                return string.Format("{{{0}}}_{1}", Job.Job.JobId, TaskId);
+                return _fullTaskId;
             }
         }
 
@@ -155,15 +180,18 @@ namespace JobServerApplication
 
         public TaskStatus ToTaskStatus()
         {
+            // making a local copy of stuff we need more than once for thread safety.
+            TaskServerInfo server = Server;
+            DateTime startTimeUtc = StartTimeUtc;
             return new TaskStatus()
             {
                 TaskId = TaskId.ToString(),
                 State = State,
-                TaskServer = Server == null ? null : Server.Address,
+                TaskServer = server == null ? null : server.Address,
                 Attempts = Attempts,
-                StartTime = StartTimeUtc,
+                StartTime = startTimeUtc,
                 EndTime = EndTimeUtc,
-                StartOffset = StartTimeUtc - StartTimeUtc,
+                StartOffset = startTimeUtc - _job.StartTimeUtc,
                 Progress = Progress
             };
         }
