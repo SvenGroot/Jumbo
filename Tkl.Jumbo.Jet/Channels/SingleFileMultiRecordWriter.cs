@@ -353,10 +353,11 @@ namespace Tkl.Jumbo.Jet.Channels
                         DoOutput();
 
                         _outputStart = _outputEnd;
+                        _outputInProgress = false;
                         _buffer.Boundary = _outputEnd;
                     }
-
-                    _outputInProgress = false;
+                    else
+                        _outputInProgress = false;
 
                     // Check this inside the lock.
                     if( _finished )

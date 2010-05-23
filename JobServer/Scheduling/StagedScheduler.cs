@@ -11,7 +11,7 @@ using System.Diagnostics;
 
 namespace JobServerApplication.Scheduling
 {
-
+    // There is no need for explicit locking inside a scheduler because a scheduler's methods are always called inside the scheduler lock.
     class StagedScheduler : IScheduler
     {
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(StagedScheduler));
@@ -19,7 +19,7 @@ namespace JobServerApplication.Scheduling
 
         #region IScheduler Members
 
-        public IEnumerable<TaskServerInfo> ScheduleTasks(Dictionary<Tkl.Jumbo.ServerAddress, TaskServerInfo> taskServers, JobInfo job, Tkl.Jumbo.Dfs.DfsClient dfsClient)
+        public IEnumerable<TaskServerInfo> ScheduleTasks(IList<TaskServerInfo> taskServers, JobInfo job, Tkl.Jumbo.Dfs.DfsClient dfsClient)
         {
             List<TaskInfo> inputTasks = (from task in job.GetDfsInputTasks()
                                          where task.Server == null
@@ -28,8 +28,8 @@ namespace JobServerApplication.Scheduling
 
             if( inputTasks.Count > 0 )
             {
-                int capacity = (from server in taskServers.Values
-                                select server.AvailableTasks).Sum();
+                int capacity = (from server in taskServers
+                                select server.SchedulerInfo.AvailableTasks).Sum();
 
                 Guid[] inputBlocks = (from task in inputTasks
                                       select task.GetBlockId(dfsClient)).ToArray();
@@ -55,14 +55,14 @@ namespace JobServerApplication.Scheduling
 
         #endregion
 
-        private int ScheduleInputTasks(JobInfo job, Dictionary<ServerAddress, TaskServerInfo> servers, int capacity, Guid[] inputBlocks, DfsClient dfsClient, List<TaskServerInfo> newServers)
+        private int ScheduleInputTasks(JobInfo job, IList<TaskServerInfo> servers, int capacity, Guid[] inputBlocks, DfsClient dfsClient, List<TaskServerInfo> newServers)
         {
             HashSet<Guid> inputBlockSet = new HashSet<Guid>(inputBlocks);
-            foreach( TaskServerInfo taskServer in servers.Values )
+            foreach( TaskServerInfo taskServer in servers )
             {
-                if( taskServer.AvailableTasks > 0 )
+                if( taskServer.SchedulerInfo.AvailableTasks > 0 )
                 {
-                    ServerAddress[] dataServers = DataServerMap.GetDataServersForTaskServer(taskServer.Address, servers.Keys, dfsClient);
+                    ServerAddress[] dataServers = DataServerMap.GetDataServersForTaskServer(taskServer.Address, servers, dfsClient);
                     List<Guid> localBlocks = null;
                     if( dataServers != null )
                     {
@@ -76,12 +76,12 @@ namespace JobServerApplication.Scheduling
                     if( localBlocks != null && localBlocks.Count > 0 )
                     {
                         int block = 0;
-                        while( taskServer.AvailableTasks > 0 && block < localBlocks.Count )
+                        while( taskServer.SchedulerInfo.AvailableTasks > 0 && block < localBlocks.Count )
                         {
                             TaskInfo task = job.GetTaskForInputBlock(localBlocks[block], dfsClient);
                             if( !task.BadServers.Contains(taskServer) )
                             {
-                                taskServer.AssignTask(job, task);
+                                taskServer.SchedulerInfo.AssignTask(job, task);
                                 if( !newServers.Contains(taskServer) )
                                     newServers.Add(taskServer);
                                 inputBlockSet.Remove(localBlocks[block]);
@@ -99,22 +99,22 @@ namespace JobServerApplication.Scheduling
             return capacity;
         }
 
-        private int ScheduleInputTasksNonLocal(JobInfo job, Dictionary<ServerAddress, TaskServerInfo> servers, int capacity, IList<TaskInfo> unscheduledTasks, IList<TaskServerInfo> newServers)
+        private int ScheduleInputTasksNonLocal(JobInfo job, IList<TaskServerInfo> servers, int capacity, IList<TaskInfo> unscheduledTasks, IList<TaskServerInfo> newServers)
         {
-            foreach( TaskServerInfo taskServer in servers.Values )
+            foreach( TaskServerInfo taskServer in servers )
             {
-                if( taskServer.AvailableTasks > 0 )
+                if( taskServer.SchedulerInfo.AvailableTasks > 0 )
                 {
                     var eligibleTasks = (from task in unscheduledTasks
                                          where !task.BadServers.Contains(taskServer) && task.Server == null
                                          select task).ToList();
 
-                    while( taskServer.AvailableTasks > 0 )
+                    while( taskServer.SchedulerInfo.AvailableTasks > 0 )
                     {
                         // TODO: This should try to schedule a task with input that's at least on the same rack.
                         // One way to do that would be to change NameServer.GetDataServerBlocks to return blocks within a certain distance, and then retry with increasing distance.
                         TaskInfo task = eligibleTasks[_random.Next(eligibleTasks.Count)];
-                        taskServer.AssignTask(job, task);
+                        taskServer.SchedulerInfo.AssignTask(job, task);
                         _log.InfoFormat("Task {0} has been assigned to server {1} (NOT data local).", task.GlobalID, taskServer.Address);
                         if( !newServers.Contains(taskServer) )
                             newServers.Add(taskServer);
@@ -127,7 +127,7 @@ namespace JobServerApplication.Scheduling
             return capacity;
         }
 
-        public void ScheduleNonInputTasks(Dictionary<ServerAddress, TaskServerInfo> taskServers, JobInfo job, IList<TaskInfo> tasks, DfsClient dfsClient, List<TaskServerInfo> newServers)
+        public void ScheduleNonInputTasks(IList<TaskServerInfo> taskServers, JobInfo job, IList<TaskInfo> tasks, DfsClient dfsClient, List<TaskServerInfo> newServers)
         {
             int taskIndex = 0;
             bool outOfSlots = false;
@@ -140,9 +140,9 @@ namespace JobServerApplication.Scheduling
                 if( taskIndex == tasks.Count )
                     break;
                 TaskInfo task = tasks[taskIndex];
-                var availableServers = from server in taskServers.Values
-                                       where server.AvailableNonInputTasks > 0
-                                       orderby server.AvailableNonInputTasks descending, rnd.Next()
+                var availableServers = from server in taskServers
+                                       where server.SchedulerInfo.AvailableNonInputTasks > 0
+                                       orderby server.SchedulerInfo.AvailableNonInputTasks descending, rnd.Next()
                                        select server;
                 outOfSlots = availableServers.Count() == 0;
                 if( !outOfSlots )
@@ -152,7 +152,7 @@ namespace JobServerApplication.Scheduling
                                                  select server).FirstOrDefault();
                     if( taskServer != null )
                     {
-                        taskServer.AssignTask(job, task, false);
+                        taskServer.SchedulerInfo.AssignTask(job, task, false);
                         if( !newServers.Contains(taskServer) )
                             newServers.Add(taskServer);
                         _log.InfoFormat("Task {0} has been assigned to server {1}.", task.GlobalID, taskServer.Address);

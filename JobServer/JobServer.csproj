@@ -87,6 +87,7 @@
     <Compile Include="StageInfo.cs" />
     <Compile Include="TaskInfo.cs" />
     <Compile Include="TaskServerInfo.cs" />
+    <Compile Include="TaskServerSchedulerInfo.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\dfs.config">

@@ -13,6 +13,9 @@ namespace Tkl.Jumbo
     [Serializable]
     public class ServerAddress : IComparable<ServerAddress>
     {
+        private readonly string _hostName;
+        private readonly int _port;
+
         /// <summary>
         /// Initializes a new instance of the <see cref="ServerAddress"/> class.
         /// </summary>
@@ -34,8 +37,8 @@ namespace Tkl.Jumbo
                 throw new ArgumentNullException("hostName");
             if( port <= 0 || port > 0xFFFF )
                 throw new ArgumentOutOfRangeException("port");
-            HostName = hostName;
-            Port = port;
+            _hostName = hostName;
+            _port = port;
         }
 
         /// <summary>
@@ -50,8 +53,8 @@ namespace Tkl.Jumbo
             if( parts.Length != 2 )
                 throw new ArgumentException("Invalid server address string.", "address");
 
-            HostName = parts[0];
-            Port = Convert.ToInt32(parts[1], System.Globalization.CultureInfo.InvariantCulture);
+            _hostName = parts[0];
+            _port = Convert.ToInt32(parts[1], System.Globalization.CultureInfo.InvariantCulture);
 
             if( Port <= 0 || Port > 0xFFFF )
                 throw new ArgumentOutOfRangeException("address", "Invalid port number in server address string");
@@ -60,11 +63,17 @@ namespace Tkl.Jumbo
         /// <summary>
         /// Gets the host name of the server.
         /// </summary>
-        public string HostName { get; private set; }
+        public string HostName
+        {
+            get { return _hostName; }
+        }
         /// <summary>
         /// Gets the port number of the server.
         /// </summary>
-        public int Port { get; private set; }
+        public int Port
+        {
+            get { return _port; }
+        }
 
         /// <summary>
         /// Returns a string representation of the current <see cref="ServerAddress"/>.

@@ -9,6 +9,7 @@ using System.Runtime.CompilerServices;
 using Tkl.Jumbo;
 using Tkl.Jumbo.Dfs;
 using System.Threading;
+using System.Collections;
 
 namespace JobServerApplication
 {
@@ -16,12 +17,15 @@ namespace JobServerApplication
     {
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(JobServer));
 
-        private readonly Dictionary<ServerAddress, TaskServerInfo> _taskServers = new Dictionary<ServerAddress,TaskServerInfo>();
+        private readonly Hashtable _taskServers = new Hashtable(); // Using hashtable rather than Dictionary for its concurrency properties
         private readonly Dictionary<Guid, JobInfo> _jobs = new Dictionary<Guid, JobInfo>();
         private readonly Dictionary<Guid, JobInfo> _finishedJobs = new Dictionary<Guid, JobInfo>();
         private readonly List<JobInfo> _jobsNeedingCleanup = new List<JobInfo>();
         private readonly DfsClient _dfsClient;
         private readonly Scheduling.IScheduler _scheduler;
+        private readonly object _schedulerLock = new object();
+        // A list of task servers that only the scheduler can access. Setting or getting this field should be done inside the _taskServers lock. You should never modify the collection after storing it in this field.
+        private List<TaskServerInfo> _schedulerTaskServers;
 
         private JobServer(JetConfiguration configuration, DfsConfiguration dfsConfiguration)
         {
@@ -224,9 +228,11 @@ namespace JobServerApplication
                                            where job.Value.State == JobState.Failed
                                            select job.Key);
             }
+            // Lock _taskServers because enumerating is not thread safe.
             lock( _taskServers )
             {
-                result.TaskServers.AddRange(from server in _taskServers.Values
+                var taskServers = _taskServers.Values.Cast<TaskServerInfo>();
+                result.TaskServers.AddRange(from server in taskServers
                                             select new TaskServerMetrics()
                                             {
                                                 Address = server.Address,
@@ -234,11 +240,9 @@ namespace JobServerApplication
                                                 MaxTasks = server.MaxTasks,
                                                 MaxNonInputTasks = server.MaxNonInputTasks
                                             });
-                result.Capacity = (from server in _taskServers.Values
-                                   select server.MaxTasks).Sum();
-                result.NonInputTaskCapacity = (from server in _taskServers.Values
-                                               select server.MaxNonInputTasks).Sum();
             }
+            result.Capacity = result.TaskServers.Sum(s => s.MaxTasks);
+            result.NonInputTaskCapacity = result.TaskServers.Sum(s => s.MaxNonInputTasks);
             result.Scheduler = _scheduler.GetType().Name;
             return result;
         }
@@ -275,48 +279,59 @@ namespace JobServerApplication
             if( address == null )
                 throw new ArgumentNullException("address");
 
-            lock( _taskServers )
+            // Reading from a hashtable is safe without locking as long as writes are serialized.
+            TaskServerInfo server = (TaskServerInfo)_taskServers[address];
+            List<JetHeartbeatResponse> responses = null;
+            if( server == null )
             {
-                TaskServerInfo server;
-                List<JetHeartbeatResponse> responses = null;
-                if( !_taskServers.TryGetValue(address, out server) )
+                // Lock for adding
+                lock( _taskServers )
                 {
-                    if( data == null || (from d in data where d is StatusJetHeartbeatData select d).Count() == 0 )
+                    // Check again after locking to prevent two threads adding the same task server.
+                    server = (TaskServerInfo)_taskServers[address];
+                    if( server == null )
                     {
-                        _log.WarnFormat("Task server {0} reported for the first time but didn't send status data.", address);
-                        return new[] { new JetHeartbeatResponse(TaskServerHeartbeatCommand.ReportStatus) };
-                    }
-                    else
-                    {
-                        _log.InfoFormat("Task server {0} reported for the first time.", address);
-                        server = new TaskServerInfo(address);
-                        _taskServers.Add(address, server);
-                    }
-                }
-
-                server.LastContactUtc = DateTime.UtcNow;
-
-                if( data != null )
-                {
-                    foreach( JetHeartbeatData item in data )
-                    {
-                        JetHeartbeatResponse response = ProcessHeartbeat(server, item);
-                        if( response != null )
+                        if( data == null || (from d in data where d is StatusJetHeartbeatData select d).Count() == 0 )
                         {
-                            if( responses == null )
-                                responses = new List<JetHeartbeatResponse>();
-                            responses.Add(response);
+                            _log.WarnFormat("Task server {0} reported for the first time but didn't send status data.", address);
+                            return new[] { new JetHeartbeatResponse(TaskServerHeartbeatCommand.ReportStatus) };
+                        }
+                        else
+                        {
+                            _log.InfoFormat("Task server {0} reported for the first time.", address);
+                            server = new TaskServerInfo(address);
+                            _taskServers.Add(address, server);
+                            _schedulerTaskServers = null; // The list of task servers has changed, so the scheduler needs to make a new copy next time around.
                         }
                     }
                 }
+            }
 
-                if( server.AssignedTasks.Count > 0 || server.AssignedNonInputTasks.Count > 0 )
+            server.LastContactUtc = DateTime.UtcNow;
+
+            if( data != null )
+            {
+                foreach( JetHeartbeatData item in data )
+                {
+                    JetHeartbeatResponse response = ProcessHeartbeat(server, item);
+                    if( response != null )
+                    {
+                        if( responses == null )
+                            responses = new List<JetHeartbeatResponse>();
+                        responses.Add(response);
+                    }
+                }
+            }
+
+            lock( _schedulerLock )
+            {
+                if( server.SchedulerInfo.AssignedTasks.Count > 0 || server.SchedulerInfo.AssignedNonInputTasks.Count > 0 )
                 {
                     // It is not necessary to lock _jobs because I don't think there's a potential for deadlock here,
                     // none of the other places where task.State is modified can possibly execute at the same time
                     // as this code (ScheduleTasks is done inside taskserver lock, and NotifyFinishedTasks can only happen
                     // after this has happened).
-                    var tasks = server.AssignedTasks.Concat(server.AssignedNonInputTasks);
+                    var tasks = server.SchedulerInfo.AssignedTasks.Concat(server.SchedulerInfo.AssignedNonInputTasks);
                     foreach( TaskInfo task in tasks )
                     {
                         if( task.State == TaskState.Scheduled )
@@ -330,12 +345,12 @@ namespace JobServerApplication
                         }
                     }
                 }
+            }
 
-                PerformCleanup(server, ref responses);
+            PerformCleanup(server, ref responses);
 
-                return responses == null ? null : responses.ToArray();
-            } // lock( _taskServers )
-        }
+            return responses == null ? null : responses.ToArray();
+        } // lock( _taskServers )
 
         #endregion
 
@@ -355,8 +370,9 @@ namespace JobServerApplication
                     {
                         foreach( TaskInfo task in job.Tasks.Values )
                         {
-                            server.AssignedTasks.Remove(task);
-                            server.AssignedNonInputTasks.Remove(task);
+                            // No need to use the scheduler lock for a job in _jobsNeedingCleanup
+                            server.SchedulerInfo.AssignedTasks.Remove(task);
+                            server.SchedulerInfo.AssignedNonInputTasks.Remove(task);
                         }
                         _log.InfoFormat("Sending cleanup command for job {{{0}}} to server {1}.", job.Job.JobId, server.Address);
                         if( responses == null )
@@ -422,67 +438,71 @@ namespace JobServerApplication
 
                     if( data.Status > TaskAttemptStatus.Running )
                     {
-                        server.AssignedTasks.Remove(task);
-                        server.AssignedNonInputTasks.Remove(task);
-                        // We don't set task.Server to null because output tasks can still query that information!
-
-                        switch( data.Status )
+                        // This access schedulerinfo in the task server info so must be done inside the scheduler lock
+                        lock( _schedulerLock )
                         {
-                        case TaskAttemptStatus.Completed:
-                            task.EndTimeUtc = DateTime.UtcNow;
-                            task.State = TaskState.Finished;
-                            task.TaskCompletedEvent.Set();
-                            _log.InfoFormat("Task {0} completed successfully.", Job.CreateFullTaskId(data.JobId, data.TaskId));
-                            ++job.FinishedTasks;
-                            break;
-                        case TaskAttemptStatus.Error:
-                            task.State = TaskState.Error;
-                            _log.WarnFormat("Task {0} encountered an error.", Job.CreateFullTaskId(data.JobId, data.TaskId));
-                            TaskStatus failedAttempt = task.ToTaskStatus();
-                            failedAttempt.EndTime = DateTime.UtcNow;
-                            job.FailedTaskAttempts.Add(failedAttempt);
-                            if( task.Attempts < Configuration.JobServer.MaxTaskAttempts )
-                            {
-                                // Reschedule
-                                task.Server.UnassignTask(job, task);
-                                if( task.BadServers.Count == _taskServers.Count )
-                                    task.BadServers.Clear(); // we've failed on all servers so try again anywhere.
-                            }
-                            else
-                            {
-                                _log.ErrorFormat("Task {0} failed more than {1} times; aborting the job.", Job.CreateFullTaskId(data.JobId, data.TaskId), Configuration.JobServer.MaxTaskAttempts);
-                                job.State = JobState.Failed;
-                            }
-                            ++job.Errors;
-                            break;
-                        }
+                            server.SchedulerInfo.AssignedTasks.Remove(task);
+                            server.SchedulerInfo.AssignedNonInputTasks.Remove(task);
+                            // We don't set task.Server to null because output tasks can still query that information!
 
-                        if( job.FinishedTasks == job.SchedulingTasksById.Count || job.State == JobState.Failed )
-                        {
-                            if( job.State != JobState.Failed )
+                            switch( data.Status )
                             {
-                                _log.InfoFormat("Job {0}: all tasks in the job have finished.", data.JobId);
-                                job.State = JobState.Finished;
-                            }
-                            else
-                            {
-                                _log.ErrorFormat("Job {0} failed.", data.JobId);
-                                foreach( TaskInfo jobTask in job.Tasks.Values )
+                            case TaskAttemptStatus.Completed:
+                                task.EndTimeUtc = DateTime.UtcNow;
+                                task.State = TaskState.Finished;
+                                task.TaskCompletedEvent.Set();
+                                _log.InfoFormat("Task {0} completed successfully.", Job.CreateFullTaskId(data.JobId, data.TaskId));
+                                ++job.FinishedTasks;
+                                break;
+                            case TaskAttemptStatus.Error:
+                                task.State = TaskState.Error;
+                                _log.WarnFormat("Task {0} encountered an error.", Job.CreateFullTaskId(data.JobId, data.TaskId));
+                                TaskStatus failedAttempt = task.ToTaskStatus();
+                                failedAttempt.EndTime = DateTime.UtcNow;
+                                job.FailedTaskAttempts.Add(failedAttempt);
+                                if( task.Attempts < Configuration.JobServer.MaxTaskAttempts )
                                 {
-                                    if( jobTask.State <= TaskState.Running )
-                                        jobTask.State = TaskState.Aborted;
+                                    // Reschedule
+                                    task.Server.SchedulerInfo.UnassignFailedTask(job, task);
+                                    if( task.BadServers.Count == _taskServers.Count )
+                                        task.BadServers.Clear(); // we've failed on all servers so try again anywhere.
                                 }
+                                else
+                                {
+                                    _log.ErrorFormat("Task {0} failed more than {1} times; aborting the job.", Job.CreateFullTaskId(data.JobId, data.TaskId), Configuration.JobServer.MaxTaskAttempts);
+                                    job.State = JobState.Failed;
+                                }
+                                ++job.Errors;
+                                break;
                             }
 
-                            _jobs.Remove(data.JobId);
-                            lock( _finishedJobs )
-                                _finishedJobs.Add(job.Job.JobId, job);
-                            jobFinished = true;
-                            job.EndTimeUtc = DateTime.UtcNow;
-                            job.JobCompletedEvent.Set();
+                            if( job.FinishedTasks == job.SchedulingTasksById.Count || job.State == JobState.Failed )
+                            {
+                                if( job.State != JobState.Failed )
+                                {
+                                    _log.InfoFormat("Job {0}: all tasks in the job have finished.", data.JobId);
+                                    job.State = JobState.Finished;
+                                }
+                                else
+                                {
+                                    _log.ErrorFormat("Job {0} failed.", data.JobId);
+                                    foreach( TaskInfo jobTask in job.Tasks.Values )
+                                    {
+                                        if( jobTask.State <= TaskState.Running )
+                                            jobTask.State = TaskState.Aborted;
+                                    }
+                                }
+
+                                _jobs.Remove(data.JobId);
+                                lock( _finishedJobs )
+                                    _finishedJobs.Add(job.Job.JobId, job);
+                                jobFinished = true;
+                                job.EndTimeUtc = DateTime.UtcNow;
+                                job.JobCompletedEvent.Set();
+                            }
+                            else if( job.UnscheduledTasks > 0 )
+                                ScheduleTasks(job); // TODO: Once multiple jobs at once are supported, this shouldn't just consider that job
                         }
-                        else if( job.UnscheduledTasks > 0 )
-                            ScheduleTasks(job); // TODO: Once multiple jobs at once are supported, this shouldn't just consider that job
                     }
                 }
                 if( jobFinished )
@@ -503,9 +523,24 @@ namespace JobServerApplication
         {
             System.Diagnostics.Stopwatch sw = new System.Diagnostics.Stopwatch();
             sw.Start();
+            List<TaskServerInfo> taskServers;
+            // Lock because enumerating over a Hashtable is not thread safe
             lock( _taskServers )
             {
-                _scheduler.ScheduleTasks(_taskServers, job, _dfsClient);
+                taskServers = _schedulerTaskServers;
+                if( taskServers == null )
+                {
+                    // Make a copy of the list of servers that the scheduler can use without needing to keep _taskServers locked.
+                    taskServers = new List<TaskServerInfo>(_taskServers.Count);
+                    foreach( TaskServerInfo taskServer in _taskServers.Values )
+                        taskServers.Add(taskServer);
+                    _schedulerTaskServers = taskServers;
+                }
+            }
+
+            lock( _schedulerLock )
+            {
+                _scheduler.ScheduleTasks(taskServers, job, _dfsClient);
             }
             sw.Stop();
             _log.DebugFormat("Scheduling run took {0}", sw.Elapsed.TotalSeconds);

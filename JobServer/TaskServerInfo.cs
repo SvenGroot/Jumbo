@@ -10,77 +10,49 @@ using System.Threading;
 
 namespace JobServerApplication
 {
-    class TaskServerInfo
+    /// <summary>
+    /// Information about a task server. This class is safe to access without locking, except for the <see cref="SchedulerInfo"/> property
+    /// which may only be accessed inside the scheduler lock.
+    /// </summary>
+    sealed class TaskServerInfo
     {
-        private readonly List<TaskInfo> _assignedTasks = new List<TaskInfo>();
-        private readonly List<TaskInfo> _assignedNonInputTasks = new List<TaskInfo>();
+        private readonly ServerAddress _address;
+        private readonly TaskServerSchedulerInfo _schedulerInfo;
+        private long _lastContactUtcTicks;
 
         public TaskServerInfo(ServerAddress address)
         {
             if( address == null )
                 throw new ArgumentNullException("address");
-            Address = address;
+            _address = address;
+            _schedulerInfo = new TaskServerSchedulerInfo(this);
         }
 
-        public ServerAddress Address { get; private set; }
+        public ServerAddress Address
+        {
+            get { return _address; }
+        }
+
+        // Atomicity of setting int values is guaranteed by ECMA spec; no locking needed since we never increment etc. those values, we always outright replcae them
         public int MaxTasks { get; set; }
         public int MaxNonInputTasks { get; set; }
-        public DateTime LastContactUtc { get; set; }
         public int FileServerPort { get; set; }
 
-        /// <summary>
-        /// Not safe to call without lock.
-        /// </summary>
-        public int AvailableTasks
+        // Setting a DateTime isn't atomic so we keep the value as a long so we can use Interlocked.Exchange to make it atomic.
+        public DateTime LastContactUtc
         {
-            get { return MaxTasks - _assignedTasks.Count; }
+            get { return new DateTime(_lastContactUtcTicks, DateTimeKind.Utc); }
+            set
+            {
+                // Atomic update of the last contact time.
+                Interlocked.Exchange(ref _lastContactUtcTicks, value.Ticks);
+            }
         }
 
-        /// <summary>
-        /// Not safe to call without lock.
-        /// </summary>
-        public int AvailableNonInputTasks
+        // Do not access except inside the scheduler lock.
+        public TaskServerSchedulerInfo SchedulerInfo
         {
-            get { return MaxNonInputTasks - _assignedNonInputTasks.Count; }
-        }
-
-
-        public List<TaskInfo> AssignedTasks
-        {
-            get { return _assignedTasks; }
-        }
-
-        public List<TaskInfo> AssignedNonInputTasks
-        {
-            get { return _assignedNonInputTasks; }
-        }
-
-        public void AssignTask(JobInfo job, TaskInfo task)
-        {
-            AssignTask(job, task, true);
-        }
-
-        public void AssignTask(JobInfo job, TaskInfo task, bool isInputTask)
-        {
-            if( isInputTask )
-                AssignedTasks.Add(task);
-            else
-                AssignedNonInputTasks.Add(task);
-            task.Server = this;
-            task.State = TaskState.Scheduled;
-            --job.UnscheduledTasks;
-            job.TaskServers.Add(Address); // Record all servers involved with the task to give them cleanup instructions later.
-        }
-
-        public void UnassignTask(JobInfo job, TaskInfo task)
-        {
-            // This is used if a task has failed and needs to be rescheduled.
-            AssignedTasks.Remove(task);
-            AssignedNonInputTasks.Remove(task);
-            task.Server = null;
-            task.BadServers.Add(this);
-            task.State = TaskState.Created;
-            ++job.UnscheduledTasks;
+            get { return _schedulerInfo; }
         }
     }
 }
