@@ -87,8 +87,8 @@ namespace JobServerApplication.Scheduling
                                 inputBlockSet.Remove(localBlocks[block]);
                                 _log.InfoFormat("Task {0} has been assigned to server {1} (data local).", task.GlobalID, taskServer.Address);
                                 --capacity;
-                                ++block;
                             }
+                            ++block;
                         }
                         if( capacity > 0 )
                             inputBlocks = inputBlockSet.ToArray();
