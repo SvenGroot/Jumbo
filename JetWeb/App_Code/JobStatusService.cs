@@ -26,7 +26,7 @@ public class JobStatusService : System.Web.Services.WebService
     }
 
     [WebMethod]
-    public JobStatus GetJobStatus(Guid jobId, DateTime lastUpdateTime)
+    public JobStatusData GetJobStatus(Guid jobId, DateTime lastUpdateTime)
     {
         JetClient client = new JetClient();
         JobStatus job = client.JobServer.GetJobStatus(jobId);
@@ -45,7 +45,7 @@ public class JobStatusService : System.Web.Services.WebService
             stage.Tasks.Clear();
             stage.Tasks.AddRange(tasks);
         }
-        return job;
+        return new JobStatusData(job);
     }
 
 }
