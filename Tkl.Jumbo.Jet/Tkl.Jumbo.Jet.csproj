@@ -81,6 +81,9 @@
     <Compile Include="..\Version.cs">
       <Link>Properties\Version.cs</Link>
     </Compile>
+    <Compile Include="AdditionalProgressCounter.cs" />
+    <Compile Include="AdditionalProgressCounterAttribute.cs" />
+    <Compile Include="AdditionalProgressValue.cs" />
     <Compile Include="AllowRecordReuseAttribute.cs" />
     <Compile Include="AssemblyResolver.cs" />
     <Compile Include="Channels\ChannelConfiguration.cs" />
@@ -110,6 +113,7 @@
     <Compile Include="FileChannelConfigurationElement.cs" />
     <Compile Include="GlobalSuppressions.cs" />
     <Compile Include="HashPartitioner.cs" />
+    <Compile Include="IHasAdditionalProgress.cs" />
     <Compile Include="Jobs\JobSettingAttribute.cs" />
     <Compile Include="PartitionerConstants.cs" />
     <Compile Include="IConfigurable.cs" />
@@ -155,6 +159,7 @@
     <Compile Include="TaskExecutionUtility.cs" />
     <Compile Include="TaskId.cs" />
     <Compile Include="TaskMetrics.cs" />
+    <Compile Include="TaskProgress.cs" />
     <Compile Include="TaskServerConfigurationElement.cs" />
     <Compile Include="TaskServerHeartbeatCommand.cs" />
     <Compile Include="TaskServerMetrics.cs" />

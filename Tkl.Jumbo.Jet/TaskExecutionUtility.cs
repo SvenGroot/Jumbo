@@ -12,6 +12,7 @@ using System.Collections;
 using System.Threading;
 using System.Net.Sockets;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 
 namespace Tkl.Jumbo.Jet
 {
@@ -165,6 +166,7 @@ namespace Tkl.Jumbo.Jet
         private List<DfsOutputInfo> _dfsOutputs;
         private readonly List<StageConfiguration> _inputStages = new List<StageConfiguration>();
         private readonly TaskExecutionUtility _baseTask;
+        private Dictionary<string, List<IHasAdditionalProgress>> _additionalProgressSources;
 
         /// <summary>
         /// Event raised when the input record reader is creatd
@@ -361,7 +363,6 @@ namespace Tkl.Jumbo.Jet
             {
                 _inputReader = CreateInputRecordReader<T>();
                 OnInputRecordReaderCreated(EventArgs.Empty);
-                StartProgressThread();
             }
             return (RecordReader<T>)_inputReader;
         }
@@ -381,19 +382,14 @@ namespace Tkl.Jumbo.Jet
             return associatedTask;
         }
 
-        /// <summary>
-        /// Creates an instance of <see cref="TaskType"/>.
-        /// </summary>
-        /// <typeparam name="TInput">The input record type of the task.</typeparam>
-        /// <typeparam name="TOutput">The output record type of the task.</typeparam>
-        /// <returns>An instance of <see cref="TaskType"/>.</returns>
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1004:GenericMethodsShouldProvideTypeParameter")]
-        public ITask<TInput, TOutput> GetTaskInstance<TInput, TOutput>()
+        internal ITask<TInput, TOutput> GetTaskInstance<TInput, TOutput>()
         {
             if( _task == null )
             {
                 _log.DebugFormat("Creating {0} task instance.", TaskType.AssemblyQualifiedName);
                 _task = new TaskContainer<TInput, TOutput>((ITask<TInput, TOutput>)JetActivator.CreateInstance(TaskType, this), GetOutputWriter<TOutput>());
+                AddAdditionalProgressSource(_task);
             }
             return (ITask<TInput, TOutput>)_task.Task;
         }
@@ -471,6 +467,75 @@ namespace Tkl.Jumbo.Jet
             TaskMetrics metrics = new TaskMetrics();
             CalculateMetrics(metrics);
             return metrics;
+        }
+
+        /// <summary>
+        /// Runs the task.
+        /// </summary>
+        /// <typeparam name="TInput">The type of the input.</typeparam>
+        /// <typeparam name="TOutput">The type of the output.</typeparam>
+        public void RunTask<TInput, TOutput>()
+        {
+            ITask<TInput, TOutput> task = GetTaskInstance<TInput, TOutput>();
+            // Lifetime is managed by the TaskExecutionUtility class, no need to put them in a using block.
+            RecordReader<TInput> input = GetInputReader<TInput>();
+            // Lifetime is managed by the TaskExecutionUtility class, no need to put them in a using block.
+            RecordWriter<TOutput> output = GetOutputWriter<TOutput>();
+            Stopwatch taskStopwatch = new Stopwatch();
+
+            StartProgressThread();
+
+            IMultiInputRecordReader multiInputReader = input as IMultiInputRecordReader;
+            if( multiInputReader != null )
+            {
+                foreach( int partition in multiInputReader.Partitions )
+                {
+                    _log.InfoFormat("Running task for partition {0}.", partition);
+                    multiInputReader.CurrentPartition = partition;
+                    CallTaskRunMethod<TInput, TOutput>(input, output, taskStopwatch, task);
+                    _log.InfoFormat("Finished running task for partition {0}.", partition);
+                }
+            }
+            else
+                CallTaskRunMethod<TInput, TOutput>(input, output, taskStopwatch, task);
+            TimeSpan timeWaiting;
+
+            MultiRecordReader<TInput> multiReader = input as MultiRecordReader<TInput>;
+            if( multiReader != null )
+                timeWaiting = multiReader.TimeWaiting;
+            else
+                timeWaiting = TimeSpan.Zero;
+            _log.InfoFormat("Task finished execution, execution time: {0}s; time spent waiting for input: {1}s.", taskStopwatch.Elapsed.TotalSeconds, timeWaiting.TotalSeconds);
+
+            FinishTask();
+
+            // TODO: Proper metrics for pipelined tasks.
+            TaskMetrics metrics = CalculateMetrics();
+            _log.Info(metrics);
+        }
+
+        private static void CallTaskRunMethod<TInput, TOutput>(RecordReader<TInput> input, RecordWriter<TOutput> output, Stopwatch taskStopwatch, ITask<TInput, TOutput> task)
+        {
+            IPullTask<TInput, TOutput> pullTask = task as IPullTask<TInput, TOutput>;
+            if( pullTask != null )
+            {
+                _log.Info("Running pull task.");
+                taskStopwatch.Start();
+                pullTask.Run(input, output);
+                taskStopwatch.Stop();
+            }
+            else
+            {
+                IPushTask<TInput, TOutput> pushTask = (IPushTask<TInput, TOutput>)task;
+                _log.Info("Running push task.");
+                taskStopwatch.Start();
+                foreach( TInput record in input.EnumerateRecords() )
+                {
+                    pushTask.ProcessRecord(record, output);
+                }
+                // Finish is called by taskExecution.FinishTask below.
+                taskStopwatch.Stop();
+            }
         }
 
         #region IDisposable Members
@@ -554,17 +619,20 @@ namespace Tkl.Jumbo.Jet
                 ExtendedCollection<IInputChannel> result = new ExtendedCollection<IInputChannel>();
                 foreach( StageConfiguration inputStage in _inputStages )
                 {
+                    IInputChannel channel;
                     switch( inputStage.OutputChannel.ChannelType )
                     {
                     case ChannelType.File:
-                        result.Add(new FileInputChannel(this, inputStage));
+                        channel = new FileInputChannel(this, inputStage);
                         break;
                     case ChannelType.Tcp:
-                        result.Add(new TcpInputChannel(this, inputStage));
+                        channel = new TcpInputChannel(this, inputStage);
                         break;
                     default:
                         throw new InvalidOperationException("Invalid channel type.");
                     }
+                    result.Add(channel);
+                    AddAdditionalProgressSource(channel);
                 }
                 return result;
             }
@@ -642,8 +710,11 @@ namespace Tkl.Jumbo.Jet
             else if( InputChannels != null )
             {
                 //_log.Debug("Creating input channel record reader.");
+                RecordReader<T> result;
                 if( InputChannels.Count == 1 )
-                    return (RecordReader<T>)InputChannels[0].CreateRecordReader();
+                {
+                    result = (RecordReader<T>)InputChannels[0].CreateRecordReader();
+                }
                 else
                 {
                     Type multiInputRecordReaderType = Configuration.StageConfiguration.MultiInputRecordReaderType.ReferencedType;
@@ -652,10 +723,14 @@ namespace Tkl.Jumbo.Jet
                     MultiInputRecordReader<T> reader = (MultiInputRecordReader<T>)JetActivator.CreateInstance(multiInputRecordReaderType, this, new int[] { 0 }, InputChannels.Count, AllowRecordReuse, bufferSize, compressionType);
                     foreach( IInputChannel inputChannel in InputChannels )
                     {
-                        reader.AddInput(new[] { new RecordInput(inputChannel.CreateRecordReader()) });
+                        IRecordReader channelReader = inputChannel.CreateRecordReader();
+                        AddAdditionalProgressSource(channelReader);
+                        reader.AddInput(new[] { new RecordInput(channelReader) });
                     }
-                    return reader;
+                    result = reader;
                 }
+                AddAdditionalProgressSource(result);
+                return result;
             }
             else
                 return null;
@@ -718,23 +793,57 @@ namespace Tkl.Jumbo.Jet
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Reliability", "CA2000:Dispose objects before losing scope")]
         private void ProgressThread()
         {
+            TaskProgress progress = null;
+
             using( MemoryStatus memStatus = JetClient.Configuration.TaskServer.LogSystemStatus ? new MemoryStatus() : null )
             using( ProcessorStatus procStatus = JetClient.Configuration.TaskServer.LogSystemStatus ? new ProcessorStatus() : null )
             {
 
                 _log.Info("Progress thread has started.");
                 // Thread that reports progress
-                float previousProgress = -1;
                 while( !(_finished || _disposed) )
                 {
-                    float progress = 0;
-                    if( _inputReader != null )
-                        progress = _inputReader.Progress;
-                    if( progress != previousProgress )
+                    bool progressChanged = false;
+                    if( progress == null )
+                    {
+                        progressChanged = true;
+                        progress = new TaskProgress();
+                        progress.Progress = _inputReader.Progress;
+                        foreach( KeyValuePair<string, List<IHasAdditionalProgress>> progressSource in _additionalProgressSources )
+                        {
+                            float value = progressSource.Value.Average(i => i.AdditionalProgress);
+                            progress.AddAdditionalProgressValue(progressSource.Key, value);
+                        }
+                    }
+                    else
+                    {
+                        // Reuse the instance.
+                        float newProgress = _inputReader.Progress;
+                        if( newProgress != progress.Progress )
+                        {
+                            progress.Progress = newProgress;
+                            progressChanged = true;
+                        }
+
+                        // These are always in the same order so we can do this.
+                        int x = 0;
+                        foreach( KeyValuePair<string, List<IHasAdditionalProgress>> progressSource in _additionalProgressSources )
+                        {
+                            float value = progressSource.Value.Average(i => i.AdditionalProgress);
+                            AdditionalProgressValue additionalProgress = progress.AdditionalProgressValues[x];
+                            if( additionalProgress.Progress != value )
+                            {
+                                additionalProgress.Progress = value;
+                                progressChanged = true;
+                            }
+                        }
+                    }
+
+                    if( progressChanged )
                     {
                         try
                         {
-                            _log.InfoFormat("Reporting progress: {0}%", (int)(progress * 100));
+                            _log.InfoFormat("Reporting progress: {0}", progress);
                             if( procStatus != null )
                             {
                                 procStatus.Refresh();
@@ -743,7 +852,6 @@ namespace Tkl.Jumbo.Jet
                                 _log.DebugFormat("Memory: {0}", memStatus);
                             }
                             Umbilical.ReportProgress(Configuration.JobId, Configuration.TaskId.ToString(), progress);
-                            previousProgress = progress;
                         }
                         catch( SocketException ex )
                         {
@@ -761,6 +869,28 @@ namespace Tkl.Jumbo.Jet
             EventHandler handler = InputRecordReaderCreated;
             if( handler != null )
                 handler(this, e);
+        }
+
+        private void AddAdditionalProgressSource(object obj)
+        {
+            if( _isAssociatedTask )
+                _baseTask.AddAdditionalProgressSource(obj);
+            else
+            {
+                if( _additionalProgressSources == null )
+                    _additionalProgressSources = new Dictionary<string, List<IHasAdditionalProgress>>();
+                IHasAdditionalProgress progressObj = obj as IHasAdditionalProgress;
+                if( progressObj != null )
+                {
+                    List<IHasAdditionalProgress> sources;
+                    if( !_additionalProgressSources.TryGetValue(obj.GetType().FullName, out sources) )
+                    {
+                        sources = new List<IHasAdditionalProgress>();
+                        _additionalProgressSources.Add(obj.GetType().FullName, sources);
+                    }
+                    sources.Add(progressObj);
+                }
+            }
         }
     }
 }

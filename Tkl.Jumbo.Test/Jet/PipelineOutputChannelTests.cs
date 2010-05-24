@@ -28,7 +28,7 @@ namespace Tkl.Jumbo.Test.Jet
             {
             }
 
-            public void ReportProgress(Guid jobId, string taskId, float progress)
+            public void ReportProgress(Guid jobId, string taskId, TaskProgress progress)
             {
             }
 

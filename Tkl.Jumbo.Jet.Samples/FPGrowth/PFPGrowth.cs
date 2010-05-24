@@ -469,7 +469,8 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
             // Generate group-dependent transactions
             SettingsDictionary settings = new SettingsDictionary();
             settings.AddTypedSetting(OutputChannel.CompressionTypeSetting, CompressionType);
-            settings.AddTypedSetting(FileOutputChannel.WriteBufferSizeSettingKey, WriteBufferSize);
+            if( WriteBufferSize.Value > 0 )
+                settings.AddTypedSetting(FileOutputChannel.WriteBufferSizeSettingKey, WriteBufferSize);
             settings.AddTypedSetting(FileOutputChannel.SingleFileOutputSettingKey, UsePartitionFile);
             builder.ProcessRecords(input, groupCollector.CreateRecordWriter(), generateFunction, settings);
 

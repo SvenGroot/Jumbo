@@ -133,68 +133,10 @@ namespace TaskHost
         private static void DoRunTask<TInput, TOutput>(TaskExecutionUtility taskExecution) 
         {
             _log.Debug("DoRunTask invoked.");
-            ITask<TInput, TOutput> task = taskExecution.GetTaskInstance<TInput, TOutput>();
-            // Lifetime is managed by the TaskExecutionUtility class, no need to put them in a using block.
-            RecordReader<TInput> input = taskExecution.GetInputReader<TInput>();
-            // Lifetime is managed by the TaskExecutionUtility class, no need to put them in a using block.
-            RecordWriter<TOutput> output = taskExecution.GetOutputWriter<TOutput>();
-            Stopwatch taskStopwatch = new Stopwatch();
-
-            IPullTask<TInput, TOutput> pullTask = task as IPullTask<TInput, TOutput>;
-            IPushTask<TInput, TOutput> pushTask = task as IPushTask<TInput, TOutput>;
-            IMultiInputRecordReader multiInputReader = input as IMultiInputRecordReader;
-            if( multiInputReader != null )
-            {
-                foreach( int partition in multiInputReader.Partitions )
-                {
-                    _log.InfoFormat("Running task for partition {0}.", partition);
-                    multiInputReader.CurrentPartition = partition;
-                    CallTaskRunMethod<TInput, TOutput>(input, output, taskStopwatch, pullTask, pushTask);
-                    _log.InfoFormat("Finished running task for partition {0}.", partition);
-                }
-            }
-            else
-                CallTaskRunMethod<TInput, TOutput>(input, output, taskStopwatch, pullTask, pushTask);
-            TimeSpan timeWaiting;
-
-            MultiRecordReader<TInput> multiReader = input as MultiRecordReader<TInput>;
-            if( multiReader != null )
-                timeWaiting = multiReader.TimeWaiting;
-            else
-                timeWaiting = TimeSpan.Zero;
-            _log.InfoFormat("Task finished execution, execution time: {0}s; time spent waiting for input: {1}s.", taskStopwatch.Elapsed.TotalSeconds, timeWaiting.TotalSeconds);
-
-            taskExecution.FinishTask();
-
-
-            // TODO: Proper metrics for pipelined tasks.
-            TaskMetrics metrics = taskExecution.CalculateMetrics();
-            _log.Info(metrics);
+            taskExecution.RunTask<TInput, TOutput>();
         }
 
 #pragma warning restore 0169
-
-        private static void CallTaskRunMethod<TInput, TOutput>(RecordReader<TInput> input, RecordWriter<TOutput> output, Stopwatch taskStopwatch, IPullTask<TInput, TOutput> pullTask, IPushTask<TInput, TOutput> pushTask)
-        {
-            if( pullTask != null )
-            {
-                _log.Info("Running pull task.");
-                taskStopwatch.Start();
-                pullTask.Run(input, output);
-                taskStopwatch.Stop();
-            }
-            else
-            {
-                _log.Info("Running push task.");
-                taskStopwatch.Start();
-                foreach( TInput record in input.EnumerateRecords() )
-                {
-                    pushTask.ProcessRecord(record, output);
-                }
-                // Finish is called by taskExecution.FinishTask below.
-                taskStopwatch.Stop();
-            }
-        }
 
          private static void CurrentDomain_UnhandledException(object sender, UnhandledExceptionEventArgs e)
         {

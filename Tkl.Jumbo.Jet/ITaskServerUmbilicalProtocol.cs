@@ -24,8 +24,8 @@ namespace Tkl.Jumbo.Jet
         /// </summary>
         /// <param name="jobId">The job ID of the job containing the task.</param>
         /// <param name="taskId">The task ID.</param>
-        /// <param name="progress">The progress value, between 0 and 1.</param>
-        void ReportProgress(Guid jobId, string taskId, float progress);
+        /// <param name="progress">The progress data.</param>
+        void ReportProgress(Guid jobId, string taskId, TaskProgress progress);
 
         /// <summary>
         /// Informs the task server of the uncompressed size of a temporary file used by the file channel.

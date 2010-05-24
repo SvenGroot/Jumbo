@@ -84,7 +84,7 @@ namespace TaskServerApplication
             }
         }
 
-        public void NotifyTaskStatusChanged(Guid jobID, string taskID, TaskAttemptStatus newStatus, float progress)
+        public void NotifyTaskStatusChanged(Guid jobID, string taskID, TaskAttemptStatus newStatus, TaskProgress progress)
         {
             AddDataForNextHeartbeat(new TaskStatusChangedJetHeartbeatData(jobID, taskID, newStatus, progress));
             if( newStatus == TaskAttemptStatus.Completed )
@@ -107,9 +107,9 @@ namespace TaskServerApplication
             _taskRunner.ReportCompletion(fullTaskID);
         }
 
-        public void ReportProgress(Guid jobId, string taskId, float progress)
+        public void ReportProgress(Guid jobId, string taskId, TaskProgress progress)
         {
-            _log.InfoFormat("Task {0} progress: {1}%", Job.CreateFullTaskId(jobId, taskId), (int)(progress * 100));
+            _log.InfoFormat("Task {0} progress: {1}", Job.CreateFullTaskId(jobId, taskId), progress);
             NotifyTaskStatusChanged(jobId, taskId, TaskAttemptStatus.Running, progress);
         }
 

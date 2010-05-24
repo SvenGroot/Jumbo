@@ -16,7 +16,8 @@ namespace Tkl.Jumbo.Jet.Channels
     /// <summary>
     /// Represents the reading end of a file channel.
     /// </summary>
-    public class FileInputChannel : InputChannel, IDisposable
+    [AdditionalProgressCounter("File channel download progress")]
+    public class FileInputChannel : InputChannel, IDisposable, IHasAdditionalProgress
     {
         #region Nested types
 
@@ -61,6 +62,7 @@ namespace Tkl.Jumbo.Jet.Channels
         private volatile bool _allInputTasksCompleted;
         private readonly Type _inputReaderType;
         private readonly bool _inputUsesSingleFileFormat;
+        private int _filesRetrieved;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="FileInputChannel"/> class.
@@ -361,6 +363,7 @@ namespace Tkl.Jumbo.Jet.Channels
             }
 
             reader.AddInput(inputs);
+            Interlocked.Increment(ref _filesRetrieved);
 
             if( !_isReady )
             {
@@ -473,6 +476,16 @@ namespace Tkl.Jumbo.Jet.Channels
                 throw new InvalidOperationException(); // TODO: Recover from this.
         }
 
-
+        /// <summary>
+        /// Gets the additional progress value.
+        /// </summary>
+        /// <value>The additional progress value.</value>
+        /// <remarks>
+        /// This property is thread safe.
+        /// </remarks>
+        public float AdditionalProgress
+        {
+            get { return _filesRetrieved / (float)InputTaskIds.Count; }
+        }
     }
 }

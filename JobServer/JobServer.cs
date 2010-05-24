@@ -416,9 +416,12 @@ namespace JobServerApplication
                     return;
                 }
                 TaskInfo task = job.GetSchedulingTask(data.TaskId);
-                task.Progress = data.Progress;
-                if( data.Status == TaskAttemptStatus.Running )
-                    _log.InfoFormat("Task {0} reported progress: {1}%", task.FullTaskId, (int)(data.Progress * 100));
+                if( data.Progress != null )
+                {
+                    task.Progress = data.Progress;
+                    if( data.Status == TaskAttemptStatus.Running )
+                        _log.InfoFormat("Task {0} reported progress: {1}", task.FullTaskId, data.Progress);
+                }
 
                 if( data.Status > TaskAttemptStatus.Running )
                 {
@@ -436,10 +439,16 @@ namespace JobServerApplication
                             task.EndTimeUtc = DateTime.UtcNow;
                             task.State = TaskState.Finished;
                             _log.InfoFormat("Task {0} completed successfully.", Job.CreateFullTaskId(data.JobId, data.TaskId));
+                            if( task.Progress == null )
+                                task.Progress = new TaskProgress() { Progress = 1.0f };
+                            else
+                                task.Progress.SetFinished();
+
                             ++job.FinishedTasks;
                             break;
                         case TaskAttemptStatus.Error:
                             task.State = TaskState.Error;
+                            task.Progress = null;
                             _log.WarnFormat("Task {0} encountered an error.", Job.CreateFullTaskId(data.JobId, data.TaskId));
                             TaskStatus failedAttempt = task.ToTaskStatus();
                             failedAttempt.EndTime = DateTime.UtcNow;

@@ -94,7 +94,7 @@ public partial class stage : System.Web.UI.Page
                 row.Cells.Add(new HtmlTableCell() { InnerText = "" });
             }
             if( includeProgress )
-                row.Cells.Add(new HtmlTableCell() { InnerText = (task.Progress * 100).ToString("0.0'%'") });
+                row.Cells.Add(new HtmlTableCell() { InnerText = task.TaskProgress == null ? "0.0 %" : task.TaskProgress.ToString() });
             row.Cells.Add(new HtmlTableCell() { InnerHtml = string.Format("<a href=\"logfile.aspx?taskServer={0}&amp;port={1}&amp;job={2}&amp;task={3}&amp;attempt={4}\">View</a>", task.TaskServer.HostName, task.TaskServer.Port, job.JobId, task.TaskId, task.Attempts) });
         }
         else

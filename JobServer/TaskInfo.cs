@@ -152,7 +152,7 @@ namespace JobServerApplication
             set { Interlocked.Exchange(ref _endTimeUtcTicks, value.Ticks); }
         }
 
-        public float Progress { get; set; }
+        public TaskProgress Progress { get; set; }
 
         public string FullTaskId
         {
@@ -192,7 +192,7 @@ namespace JobServerApplication
                 StartTime = startTimeUtc,
                 EndTime = EndTimeUtc,
                 StartOffset = startTimeUtc - _job.StartTimeUtc,
-                Progress = Progress
+                TaskProgress = Progress
             };
         }
     }

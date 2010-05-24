@@ -28,6 +28,7 @@ namespace Tkl.Jumbo.Jet
         private static readonly XmlSerializer _serializer = new XmlSerializer(typeof(JobConfiguration));
         private readonly ExtendedCollection<string> _assemblyFileNames = new ExtendedCollection<string>();
         private readonly ExtendedCollection<StageConfiguration> _stages = new ExtendedCollection<StageConfiguration>();
+        private readonly ExtendedCollection<AdditionalProgressCounter> _additionalProgressCounters = new ExtendedCollection<AdditionalProgressCounter>();
 
         /// <summary>
         /// Initializes a new instance of the <see cref="JobConfiguration"/> class.
@@ -76,6 +77,15 @@ namespace Tkl.Jumbo.Jet
         public Collection<StageConfiguration> Stages
         {
             get { return _stages; }
+        }
+
+        /// <summary>
+        /// Gets the additional progress counters.
+        /// </summary>
+        /// <value>The additional progress counters.</value>
+        public Collection<AdditionalProgressCounter> AdditionalProgressCounters
+        {
+            get { return _additionalProgressCounters; }
         }
 
         /// <summary>
@@ -220,7 +230,10 @@ namespace Tkl.Jumbo.Jet
                 if( hasInputs )
                 {
                     if( inputStages.Count() > 1 )
+                    {
                         stage.MultiInputRecordReaderType = stageMultiInputRecordReaderType;
+                        AddAdditionalProgressCounter(stageMultiInputRecordReaderType);
+                    }
 
                     ValidateChannelConnectivityConstraints(inputStages, stage);
 
@@ -246,6 +259,8 @@ namespace Tkl.Jumbo.Jet
                             PartitionsPerTask = info.PartitionsPerTask,
                         };
                         info.InputStage.OutputChannel = channel;
+                        AddAdditionalProgressCounter(info.ChannelType == ChannelType.Tcp ? typeof(TcpInputChannel) : typeof(FileInputChannel));
+                        AddAdditionalProgressCounter(info.MultiInputRecordReaderType);
                     }
                 }
                 Stages.Add(stage);
@@ -308,7 +323,7 @@ namespace Tkl.Jumbo.Jet
             parentStage.ChildStagePartitionerType = partitionerType ?? typeof(HashPartitioner<>).MakeGenericType(inputType);
         }
 
-        private static StageConfiguration CreateStage(string stageId, Type taskType, int taskCount, string outputPath, Type recordWriterType, IEnumerable<DfsFile> inputs, Type recordReaderType)
+        private StageConfiguration CreateStage(string stageId, Type taskType, int taskCount, string outputPath, Type recordWriterType, IEnumerable<DfsFile> inputs, Type recordReaderType)
         {
             StageConfiguration stage = new StageConfiguration()
             {
@@ -335,6 +350,9 @@ namespace Tkl.Jumbo.Jet
                     }
                 }
             }
+
+            AddAdditionalProgressCounter(taskType);
+
             return stage;
         }
 
@@ -539,6 +557,31 @@ namespace Tkl.Jumbo.Jet
             {
                 return LoadXml(stream);
             }
+        }
+
+        /// <summary>
+        /// Adds an additional progress counter for the specified type.
+        /// </summary>
+        /// <param name="type">The type.</param>
+        /// <returns><see langword="true"/> if the additional counter was added; <see langword="false"/> if <paramref name="type"/> was already added or didn't
+        /// define an additional progress counter.</returns>
+        public bool AddAdditionalProgressCounter(Type type)
+        {
+            if( type == null )
+                throw new ArgumentNullException("type");
+            if( type.GetInterfaces().Contains(typeof(IHasAdditionalProgress)) )
+            {
+                AdditionalProgressCounter counter = new AdditionalProgressCounter() { TypeName = type.FullName };
+                // DisplayName isn't used in comparied AdditionalProgressCounter objects so we can postpone setting it.
+                if( !_additionalProgressCounters.Contains(counter) )
+                {
+                    AdditionalProgressCounterAttribute attribute = (AdditionalProgressCounterAttribute)Attribute.GetCustomAttribute(type, typeof(AdditionalProgressCounterAttribute));
+                    counter.DisplayName = attribute == null ? type.Name : attribute.DisplayName;
+                    _additionalProgressCounters.Add(counter);
+                    return true;
+                }
+            }
+            return false;
         }
 
         private StageConfiguration AddInputStage(string stageId, IEnumerable<DfsFile> inputFiles, Type taskType, Type recordReaderType, string outputPath, Type recordWriterType)
