@@ -25,8 +25,14 @@ namespace JobServerApplication
         private readonly DfsClient _dfsClient;
         private readonly Scheduling.IScheduler _scheduler;
         private readonly object _schedulerLock = new object();
+        private volatile bool _running;
         // A list of task servers that only the scheduler can access. Setting or getting this field should be done inside the _taskServers lock. You should never modify the collection after storing it in this field.
         private List<TaskServerInfo> _schedulerTaskServers;
+        private readonly Queue<JobInfo> _schedulerJobQueue = new Queue<JobInfo>();
+        private Thread _schedulerThread;
+        private object _schedulerThreadLock = new object();
+        private readonly ManualResetEvent _schedulerWaitingEvent = new ManualResetEvent(false);
+        private const int _schedulerTimeoutMilliseconds = 30000;
 
         private JobServer(JetConfiguration configuration, DfsConfiguration dfsConfiguration)
         {
@@ -37,6 +43,7 @@ namespace JobServerApplication
             _dfsClient = new DfsClient(dfsConfiguration);
 
             _scheduler = (Scheduling.IScheduler)Activator.CreateInstance(Type.GetType("JobServerApplication.Scheduling." + configuration.JobServer.Scheduler));
+            _running = true;
         }
 
         public static JobServer Instance { get; private set; }
@@ -69,6 +76,7 @@ namespace JobServerApplication
         {
             _log.Info("-----Job server is shutting down-----");
             RpcHelper.UnregisterServerChannels(Instance.Configuration.JobServer.Port);
+            Instance.ShutdownInternal();
             Instance = null;
         }
 
@@ -402,7 +410,6 @@ namespace JobServerApplication
             if( data.Status >= TaskAttemptStatus.Running )
             {
                 JobInfo job = (JobInfo)_jobs[data.JobId];
-                bool jobFinished = false;
                 if( job == null )
                 {
                     _log.WarnFormat("Data server {0} reported status for unknown job {1} (this may be the aftermath of a failed job).", server.Address, data.JobId);
@@ -415,6 +422,7 @@ namespace JobServerApplication
 
                 if( data.Status > TaskAttemptStatus.Running )
                 {
+                    bool schedule = false;
                     // This access schedulerinfo in the task server info and various job and task state so must be done inside the scheduler lock
                     lock( _schedulerLock )
                     {
@@ -454,85 +462,171 @@ namespace JobServerApplication
 
                         if( job.FinishedTasks == job.SchedulingTaskCount || job.State == JobState.Failed )
                         {
-                            if( job.State != JobState.Failed )
-                            {
-                                _log.InfoFormat("Job {0}: all tasks in the job have finished.", data.JobId);
-                                job.State = JobState.Finished;
-                            }
-                            else
-                            {
-                                _log.ErrorFormat("Job {0} failed.", data.JobId);
-                                job.AbortTasks();
-                            }
-
-                            _jobs.Remove(data.JobId);
-                            lock( _finishedJobs )
-                                _finishedJobs.Add(job.Job.JobId, job);
-                            jobFinished = true;
-                            job.EndTimeUtc = DateTime.UtcNow;
+                            FinishOrFailJob(job);
                         }
                         else if( job.UnscheduledTasks > 0 )
-                            ScheduleTasks(job); // TODO: Once multiple jobs at once are supported, this shouldn't just consider that job
+                            schedule = true;
                     } // lock( _schedulerLock )
-                }
 
-                if( jobFinished )
-                {
-                    lock( _jobsNeedingCleanup )
-                    {
-                        _jobsNeedingCleanup.Add(job);
-                    }
+                    if( schedule )
+                        ScheduleTasks(job); // TODO: Once multiple jobs at once are supported, this shouldn't just consider that job
                 }
             }
         }
 
         /// <summary>
-        /// NOTE: Must be called inside the _jobs lock
+        /// NOTE: Must be called inside the scheduler lock.
+        /// </summary>
+        /// <param name="data"></param>
+        /// <param name="job"></param>
+        private void FinishOrFailJob(JobInfo job)
+        {
+            if( job.State != JobState.Failed )
+            {
+                _log.InfoFormat("Job {0}: all tasks in the job have finished.", job.Job.JobId);
+                job.State = JobState.Finished;
+            }
+            else
+            {
+                _log.ErrorFormat("Job {0} failed.", job.Job.JobId);
+                job.AbortTasks();
+            }
+
+            lock( _jobs )
+            {
+                _jobs.Remove(job.Job.JobId);
+            }
+            lock( _finishedJobs )
+            {
+                _finishedJobs.Add(job.Job.JobId, job);
+            }
+            lock( _jobsNeedingCleanup )
+            {
+                _jobsNeedingCleanup.Add(job);
+            }
+
+            job.EndTimeUtc = DateTime.UtcNow;
+        }
+
+        /// <summary>
+        /// NOTE: Don't call inside the scheduler lock, will lead to deadlock.
         /// </summary>
         /// <param name="job"></param>
         private void ScheduleTasks(JobInfo job)
         {
             System.Diagnostics.Stopwatch sw = new System.Diagnostics.Stopwatch();
             sw.Start();
-            List<TaskServerInfo> taskServers;
-            // Lock because enumerating over a Hashtable is not thread safe
-            lock( _taskServers )
+            lock( _schedulerJobQueue )
             {
-                taskServers = _schedulerTaskServers;
-                if( taskServers == null )
+                if( !_schedulerJobQueue.Contains(job) )
+                    _schedulerJobQueue.Enqueue(job);
+                _schedulerWaitingEvent.Reset(); // We know that the scheduler queue contains items at this point and since we're holding the lock there's no way this can cross with the SchedulerThread
+                Monitor.Pulse(_schedulerJobQueue);
+            }
+
+            lock( _schedulerThreadLock )
+            {
+                if( _schedulerThread == null )
                 {
-                    // Make a copy of the list of servers that the scheduler can use without needing to keep _taskServers locked.
-                    taskServers = new List<TaskServerInfo>(_taskServers.Count);
-                    foreach( TaskServerInfo taskServer in _taskServers.Values )
-                        taskServers.Add(taskServer);
-                    _schedulerTaskServers = taskServers;
+                    _schedulerThread = new Thread(SchedulerThread) { Name = "SchedulerThread", IsBackground = true };
+                    _schedulerThread.Start();
                 }
             }
 
-            lock( _schedulerLock )
+            if( !_schedulerWaitingEvent.WaitOne(_schedulerTimeoutMilliseconds) )
             {
-                _scheduler.ScheduleTasks(taskServers, job, _dfsClient);
+                // Scheduler timed out
+                _log.DebugFormat("The scheduler timed out while waiting for scheduling of job {{{0}}}.", job.Job.JobId);
+                lock( _schedulerThreadLock )
+                {
+                    _schedulerThread.Abort();
+                    _schedulerThread = null;
+                }
+                lock( _schedulerLock )
+                {
+                    job.State = JobState.Failed;
+                    FinishOrFailJob(job);
+                }
             }
+
             sw.Stop();
             _log.DebugFormat("Scheduling run took {0}", sw.Elapsed.TotalSeconds);
+        }
+
+        private void ShutdownInternal()
+        {
+            lock( _schedulerJobQueue )
+            {
+                _running = false;
+                Monitor.Pulse(_schedulerJobQueue);
+            }
         }
 
         private JobInfo GetRunningOrFinishedJob(Guid jobId)
         {
             JobInfo job = (JobInfo)_jobs[jobId];
-            bool found = true;
             if( job == null )
             {
                 lock( _finishedJobs )
                 {
-                    found = _finishedJobs.TryGetValue(jobId, out job);
+                    if( !_finishedJobs.TryGetValue(jobId, out job) )
+                        throw new ArgumentException("Job not found.", "jobId");
                 }
             }
-
-            if( !found )
-                throw new ArgumentException("Job not found.", "jobId");
+                
             return job;
         }
-   
+
+        private void SchedulerThread()
+        {
+            while( _running )
+            {
+                JobInfo job = null;
+                lock( _schedulerJobQueue )
+                {
+                    if( _schedulerJobQueue.Count == 0 )
+                    {
+                        _schedulerWaitingEvent.Set();
+                        Monitor.Wait(_schedulerJobQueue, 10000);
+                    }
+                    else
+                    {
+                        job = _schedulerJobQueue.Dequeue();
+                    }
+                }
+
+                if( job != null )
+                {
+                    List<TaskServerInfo> taskServers;
+                    // Lock because enumerating over a Hashtable is not thread safe
+                    lock( _taskServers )
+                    {
+                        taskServers = _schedulerTaskServers;
+                        if( taskServers == null )
+                        {
+                            // Make a copy of the list of servers that the scheduler can use without needing to keep _taskServers locked.
+                            taskServers = new List<TaskServerInfo>(_taskServers.Count);
+                            foreach( TaskServerInfo taskServer in _taskServers.Values )
+                                taskServers.Add(taskServer);
+                            _schedulerTaskServers = taskServers;
+                        }
+                    }
+
+                    lock( _schedulerLock )
+                    {
+                        try
+                        {
+                            _scheduler.ScheduleTasks(taskServers, job, _dfsClient);
+                        }
+                        catch( Exception ex )
+                        {
+                            _log.Error(string.Format("The scheduler encountered an error scheduling job {{{0}}}.", job.Job.JobId), ex);
+                            job.State = JobState.Failed;
+                            FinishOrFailJob(job);
+                        }
+                    }
+                }
+            }
+        }
     }
 }

@@ -142,13 +142,13 @@ namespace JobServerApplication
 
         public DateTime StartTimeUtc
         {
-            get { return new DateTime(_startTimeUtcTicks, DateTimeKind.Utc); }
+            get { return new DateTime(Interlocked.Read(ref _startTimeUtcTicks), DateTimeKind.Utc); }
             set { Interlocked.Exchange(ref _startTimeUtcTicks, value.Ticks); }
         }
 
         public DateTime EndTimeUtc
         {
-            get { return new DateTime(_endTimeUtcTicks, DateTimeKind.Utc); }
+            get { return new DateTime(Interlocked.Read(ref _endTimeUtcTicks), DateTimeKind.Utc); }
             set { Interlocked.Exchange(ref _endTimeUtcTicks, value.Ticks); }
         }
 

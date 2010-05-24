@@ -41,7 +41,7 @@ namespace JobServerApplication
         // Setting a DateTime isn't atomic so we keep the value as a long so we can use Interlocked.Exchange to make it atomic.
         public DateTime LastContactUtc
         {
-            get { return new DateTime(_lastContactUtcTicks, DateTimeKind.Utc); }
+            get { return new DateTime(Interlocked.Read(ref _lastContactUtcTicks), DateTimeKind.Utc); }
             set
             {
                 // Atomic update of the last contact time.

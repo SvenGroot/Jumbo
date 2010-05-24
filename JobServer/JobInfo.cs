@@ -105,7 +105,7 @@ namespace JobServerApplication
 
         public DateTime EndTimeUtc
         {
-            get { return new DateTime(_endTimeUtcTicks, DateTimeKind.Utc); }
+            get { return new DateTime(Interlocked.Read(ref _endTimeUtcTicks), DateTimeKind.Utc); }
             set { Interlocked.Exchange(ref _endTimeUtcTicks, value.Ticks); }
         }
 
