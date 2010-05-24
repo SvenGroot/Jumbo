@@ -480,6 +480,41 @@ namespace Tkl.Jumbo.Jet
         }
 
         /// <summary>
+        /// Gets the top-level stages of the task in dependency order (if stage B depends on the output of stage A, then B will come after A in the order).
+        /// </summary>
+        /// <returns>The ordered list of stages.</returns>
+        public IEnumerable<StageConfiguration> GetDependencyOrderedStages()
+        {
+            List<StageConfiguration> result = new List<StageConfiguration>(Stages.Count);
+
+            // Start with the DFS input stages.
+            var inputStages = from stage in Stages
+                              where stage.DfsInputs != null && stage.DfsInputs.Count > 0
+                              select stage;
+
+            foreach( StageConfiguration stage in inputStages )
+            {
+                StageConfiguration nextStage = stage;
+                while( nextStage != null )
+                {
+                    // If a stage has multiple input stages it might already be in the list. In that case we must remove it and re-add it at the end.
+                    result.Remove(nextStage);
+                    result.Add(nextStage);
+
+                    while( nextStage.ChildStage != null )
+                        nextStage = nextStage.ChildStage;
+
+                    if( nextStage.OutputChannel == null )
+                        nextStage = null;
+                    else
+                        nextStage = GetStage(nextStage.OutputChannel.OutputStage);
+                }
+            }
+
+            return result;
+        }
+
+        /// <summary>
         /// Loads job configuration from an XML source.
         /// </summary>
         /// <param name="stream">The stream containing the XML.</param>

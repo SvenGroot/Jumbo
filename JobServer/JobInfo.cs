@@ -28,7 +28,9 @@ namespace JobServerApplication
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(JobInfo));
 
         private readonly Dictionary<string, TaskInfo> _tasks = new Dictionary<string, TaskInfo>();
-        private readonly SortedDictionary<string, TaskInfo> _schedulingTasksById = new SortedDictionary<string, TaskInfo>();
+        private readonly Dictionary<string, TaskInfo> _schedulingTasksById = new Dictionary<string, TaskInfo>();
+        private readonly List<TaskInfo> _orderedSchedulingDfsInputTasks = new List<TaskInfo>();
+        private readonly List<TaskInfo> _orderedSchedulingNonInputTasks = new List<TaskInfo>();
         private readonly HashSet<ServerAddress> _taskServers = new HashSet<ServerAddress>();
         private readonly ManualResetEvent _jobCompletedEvent = new ManualResetEvent(false);
         private Dictionary<Guid, TaskInfo> _inputBlockMap;
@@ -52,17 +54,23 @@ namespace JobServerApplication
 
             List<StageInfo> stages = new List<StageInfo>();
             _stages = stages.AsReadOnly();
-            foreach( StageConfiguration stage in config.Stages )
+            foreach( StageConfiguration stage in config.GetDependencyOrderedStages() )
             {
+                bool nonInputStage = (stage.DfsInputs == null || stage.DfsInputs.Count == 0);
                 List<TaskInfo> stageTasks = new List<TaskInfo>(); 
                 for( int x = 1; x <= stage.TaskCount; ++x )
                 {
                     TaskInfo taskInfo;
 
                     // Don't do the work trying to find the input stages if the stage has dfs inputs.
-                    StageConfiguration[] inputStages = (stage.DfsInputs == null || stage.DfsInputs.Count == 0) ? config.GetInputStagesForStage(stage.StageId).ToArray() : null;
+                    StageConfiguration[] inputStages = nonInputStage ? config.GetInputStagesForStage(stage.StageId).ToArray() : null;
                     taskInfo = new TaskInfo(this, stage, inputStages, x);
                     _schedulingTasksById.Add(taskInfo.TaskId.ToString(), taskInfo);
+                    if( nonInputStage )
+                        _orderedSchedulingNonInputTasks.Add(taskInfo);
+                    else
+                        _orderedSchedulingDfsInputTasks.Add(taskInfo);
+
                     _tasks.Add(taskInfo.TaskId.ToString(), taskInfo);
                     stageTasks.Add(taskInfo);
                     CreateChildTasks(taskInfo, stage);
@@ -167,16 +175,12 @@ namespace JobServerApplication
 
         public IEnumerable<TaskInfo> GetDfsInputTasks()
         {
-            return from task in _schedulingTasksById.Values
-                   where task.Stage.DfsInputs != null && task.Stage.DfsInputs.Count > 0
-                   select task;
+            return _orderedSchedulingDfsInputTasks;
         }
 
         public IEnumerable<TaskInfo> GetNonInputSchedulingTasks()
         {
-            return from task in _schedulingTasksById.Values
-                   where task.Stage.DfsInputs == null || task.Stage.DfsInputs.Count == 0
-                   select task;
+            return _orderedSchedulingNonInputTasks;
         }
 
         public DfsFile GetFileInfo(DfsClient dfsClient, string path)
