@@ -806,9 +806,10 @@ namespace Tkl.Jumbo.Jet
                     bool progressChanged = false;
                     if( progress == null )
                     {
+                        if( _inputReader != null )
+                            progress.Progress = _inputReader.Progress;
                         progressChanged = true;
                         progress = new TaskProgress();
-                        progress.Progress = _inputReader.Progress;
                         foreach( KeyValuePair<string, List<IHasAdditionalProgress>> progressSource in _additionalProgressSources )
                         {
                             float value = progressSource.Value.Average(i => i.AdditionalProgress);
@@ -818,11 +819,14 @@ namespace Tkl.Jumbo.Jet
                     else
                     {
                         // Reuse the instance.
-                        float newProgress = _inputReader.Progress;
-                        if( newProgress != progress.Progress )
+                        if( _inputReader != null )
                         {
-                            progress.Progress = newProgress;
-                            progressChanged = true;
+                            float newProgress = _inputReader.Progress;
+                            if( newProgress != progress.Progress )
+                            {
+                                progress.Progress = newProgress;
+                                progressChanged = true;
+                            }
                         }
 
                         // These are always in the same order so we can do this.
@@ -839,6 +843,10 @@ namespace Tkl.Jumbo.Jet
                             ++x;
                         }
                     }
+
+                    // If there's no input reader but there are additional progress values, we use their average as the base progress.
+                    if( _inputReader == null && progressChanged && progress.AdditionalProgressValues != null )
+                        progress.Progress = progress.AdditionalProgressValues.Average(v => v.Progress);
 
                     if( progressChanged )
                     {

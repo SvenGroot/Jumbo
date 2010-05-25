@@ -7,14 +7,19 @@ using System.Text;
 using Tkl.Jumbo.Jet;
 using Tkl.Jumbo.IO;
 using Tkl.Jumbo.Jet.Samples.IO;
+using System.Threading;
 
 namespace Tkl.Jumbo.Jet.Samples.Tasks
 {
     /// <summary>
     /// A task that generates a specific range of GenSort records.
     /// </summary>
-    public class GenSortTask : Configurable, IPullTask<int, GenSortRecord>
+    [AdditionalProgressCounter("GenSort")]
+    public class GenSortTask : Configurable, IPullTask<int, GenSortRecord>, IHasAdditionalProgress
     {
+        private ulong _count;
+        private long _generated;
+
         #region IPullTask<int,GenSortRecord> Members
 
         /// <summary>
@@ -29,12 +34,29 @@ namespace Tkl.Jumbo.Jet.Samples.Tasks
             if( count == 0UL )
                 throw new InvalidOperationException("Count not specified.");
             GenSortGenerator generator = new GenSortGenerator();
+            _count = count;
             foreach( GenSortRecord record in generator.GenerateRecords(new UInt128(0, startRecord), count) )
             {
                 output.WriteRecord(record);
+                Interlocked.Increment(ref _generated);
             }
         }
 
         #endregion
+
+        /// <summary>
+        /// Gets the additional progress value.
+        /// </summary>
+        /// <value>The additional progress value.</value>
+        /// <remarks>
+        /// This property must be thread safe.
+        /// </remarks>
+        public float AdditionalProgress
+        {
+            get
+            { 
+                return Interlocked.Read(ref _generated) / (float)_count;
+            }
+        }
     }
 }

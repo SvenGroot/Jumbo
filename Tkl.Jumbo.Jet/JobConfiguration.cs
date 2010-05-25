@@ -507,7 +507,7 @@ namespace Tkl.Jumbo.Jet
 
             // Start with the DFS input stages.
             var inputStages = from stage in Stages
-                              where stage.DfsInputs != null && stage.DfsInputs.Count > 0
+                              where GetInputStagesForStage(stage.StageId).Count() == 0
                               select stage;
 
             foreach( StageConfiguration stage in inputStages )
