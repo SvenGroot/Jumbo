@@ -17,7 +17,7 @@ namespace Tkl.Jumbo.Jet.Samples.Tasks
     [AdditionalProgressCounter("GenSort")]
     public class GenSortTask : Configurable, IPullTask<int, GenSortRecord>, IHasAdditionalProgress
     {
-        private ulong _count;
+        private long _count;
         private long _generated;
 
         #region IPullTask<int,GenSortRecord> Members
@@ -34,7 +34,7 @@ namespace Tkl.Jumbo.Jet.Samples.Tasks
             if( count == 0UL )
                 throw new InvalidOperationException("Count not specified.");
             GenSortGenerator generator = new GenSortGenerator();
-            _count = count;
+            _count = (long)count;
             foreach( GenSortRecord record in generator.GenerateRecords(new UInt128(0, startRecord), count) )
             {
                 output.WriteRecord(record);
@@ -54,8 +54,12 @@ namespace Tkl.Jumbo.Jet.Samples.Tasks
         public float AdditionalProgress
         {
             get
-            { 
-                return Interlocked.Read(ref _generated) / (float)_count;
+            {
+                long count = Interlocked.Read(ref _count);
+                if( count == 0 )
+                    return 0.0f;
+                else
+                    return Interlocked.Read(ref _generated) / (float)_count;
             }
         }
     }
