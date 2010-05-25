@@ -806,10 +806,10 @@ namespace Tkl.Jumbo.Jet
                     bool progressChanged = false;
                     if( progress == null )
                     {
-                        if( _inputReader != null )
-                            progress.Progress = _inputReader.Progress;
                         progressChanged = true;
                         progress = new TaskProgress();
+                        if( _inputReader != null )
+                            progress.Progress = _inputReader.Progress;
                         foreach( KeyValuePair<string, List<IHasAdditionalProgress>> progressSource in _additionalProgressSources )
                         {
                             float value = progressSource.Value.Average(i => i.AdditionalProgress);
