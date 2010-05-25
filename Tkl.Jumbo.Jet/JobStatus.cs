@@ -16,8 +16,9 @@ namespace Tkl.Jumbo.Jet
     [Serializable]
     public class JobStatus
     {
-        private ExtendedCollection<TaskStatus> _failedTaskAttempts = new ExtendedCollection<TaskStatus>();
+        private readonly ExtendedCollection<TaskStatus> _failedTaskAttempts = new ExtendedCollection<TaskStatus>();
         private readonly ExtendedCollection<StageStatus> _stages = new ExtendedCollection<StageStatus>();
+        private readonly ExtendedCollection<AdditionalProgressCounter> _additionalProgressCounters = new ExtendedCollection<AdditionalProgressCounter>();
 
         internal const string DatePattern = "yyyy'-'MM'-'dd' 'HH':'mm':'ss'.'fff'Z'";
 
@@ -45,6 +46,15 @@ namespace Tkl.Jumbo.Jet
         public Collection<TaskStatus> FailedTaskAttempts
         {
             get { return _failedTaskAttempts; }
+        }
+
+        /// <summary>
+        /// Gets the additional progress counters.
+        /// </summary>
+        /// <value>The additional progress counters.</value>
+        public Collection<AdditionalProgressCounter> AdditionalProgressCounters
+        {
+            get { return _additionalProgressCounters; }
         }
 
         /// <summary>
@@ -140,6 +150,18 @@ namespace Tkl.Jumbo.Jet
         public override string ToString()
         {
             return string.Format(System.Globalization.CultureInfo.CurrentCulture, "{6:0.0}%, tasks: {0}, running: {1}, pending {2}, finished: {3}, errors: {4}, not local: {5}", TaskCount, RunningTaskCount, UnscheduledTaskCount, FinishedTaskCount, ErrorTaskCount, NonDataLocalTaskCount, Progress * 100);
+        }
+
+        /// <summary>
+        /// Gets the friendly name for an additional progress counter.
+        /// </summary>
+        /// <param name="sourceName">Name of the source of the counter.</param>
+        /// <returns>The friendly name of the counter.</returns>
+        public string GetFriendlyNameForAdditionalProgressCounter(string sourceName)
+        {
+            return (from counter in _additionalProgressCounters
+                    where counter.TypeName == sourceName
+                    select counter.DisplayName ?? counter.TypeName).Single();
         }
 
         /// <summary>

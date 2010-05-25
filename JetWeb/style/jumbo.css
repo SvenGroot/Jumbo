@@ -139,8 +139,22 @@ ul#FileSystem img, ul#FileSystem span
     border: solid 1px #ADD8E6;
     background-color: white;
 }
+.additionalProgress
+{
+    margin-left: 1em;
+    font-size: 80%;
+    clear: both;
+}
+.additionalProgress .progressBar
+{
+    height: 0.4em;
+}
 .progressBarValue
 {
     height: 100%;
     background-color: #0000FF;
+}
+.additionalProgress .progressBarValue
+{
+    background-color: #A3FFAA;
 }

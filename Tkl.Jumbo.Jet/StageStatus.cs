@@ -90,6 +90,53 @@ namespace Tkl.Jumbo.Jet
         }
 
         /// <summary>
+        /// Gets the total progress of this stage, including additional progress values.
+        /// </summary>
+        /// <value>The stage progress.</value>
+        [XmlIgnore]
+        public TaskProgress StageProgress
+        {
+            get
+            {
+                TaskProgress result = new TaskProgress();
+                foreach( TaskStatus task in Tasks )
+                {
+                    if( task.TaskProgress != null )
+                    {
+                        result.Progress += task.TaskProgress.Progress;
+                        if( task.TaskProgress.AdditionalProgressValues != null )
+                        {
+                            if( result.AdditionalProgressValues == null )
+                            {
+                                foreach( AdditionalProgressValue value in task.TaskProgress.AdditionalProgressValues )
+                                    result.AddAdditionalProgressValue(value.SourceName, value.Progress);
+                            }
+                            else
+                            {
+                                for( int x = 0; x < result.AdditionalProgressValues.Count; ++x )
+                                    result.AdditionalProgressValues[x].Progress += task.TaskProgress.AdditionalProgressValues[x].Progress;
+                            }
+                        }
+                        else if( result.AdditionalProgressValues != null && task.TaskProgress.OverallProgress >= 1.0f )
+                        {
+                            foreach( AdditionalProgressValue value in result.AdditionalProgressValues )
+                                value.Progress += 1.0f;
+                        }
+                    }
+                }
+
+                result.Progress /= Tasks.Count;
+                if( result.AdditionalProgressValues != null )
+                {
+                    foreach( AdditionalProgressValue value in result.AdditionalProgressValues )
+                        value.Progress /= Tasks.Count;
+                }
+
+                return result;
+            }
+        }
+
+        /// <summary>
         /// Gets the number of running tasks in this stage.
         /// </summary>
         [XmlIgnore]

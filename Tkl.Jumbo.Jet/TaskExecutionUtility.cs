@@ -389,7 +389,7 @@ namespace Tkl.Jumbo.Jet
             {
                 _log.DebugFormat("Creating {0} task instance.", TaskType.AssemblyQualifiedName);
                 _task = new TaskContainer<TInput, TOutput>((ITask<TInput, TOutput>)JetActivator.CreateInstance(TaskType, this), GetOutputWriter<TOutput>());
-                AddAdditionalProgressSource(_task);
+                AddAdditionalProgressSource(_task.Task);
             }
             return (ITask<TInput, TOutput>)_task.Task;
         }
@@ -836,6 +836,7 @@ namespace Tkl.Jumbo.Jet
                                 additionalProgress.Progress = value;
                                 progressChanged = true;
                             }
+                            ++x;
                         }
                     }
 

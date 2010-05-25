@@ -120,7 +120,7 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
             }
             else
             {
-                BuildJob<Transaction>(builder, GenerateGroupTransactions, MineTransactions);
+                BuildJob<Transaction>(builder, GenerateGroupTransactions, null);
             }
         }
 
@@ -145,9 +145,9 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
         /// <param name="success"><see langword="true"/> if the job completed successfully; <see langword="false"/> if the job failed.</param>
         public override void FinishJob(bool success)
         {
-            base.FinishJob(success);
             DfsClient client = new DfsClient(DfsConfiguration);
             client.NameServer.Move(_dfsFGListPath, _fgListPath); // Move the fglist file back.
+            base.FinishJob(success);
         }
 
         /// <summary>
@@ -487,7 +487,11 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
             settings = new SettingsDictionary();
             settings.AddTypedSetting("PFPGrowth.Groups", groups);
             settings.AddTypedSetting("PFPGrowth.ItemCount", fgList.Count);
-            builder.ProcessRecords(groupCollector.CreateRecordReader(), patternCollector.CreateRecordWriter(), mineFunction, settings);
+            settings.AddTypedSetting("PFPGrowth.Partitions", FPGrowthTaskCount);
+            if( mineFunction == null )
+                builder.ProcessRecords(groupCollector.CreateRecordReader(), patternCollector.CreateRecordWriter(), typeof(TransactionMiningTask), "MineTransactions", settings);
+            else
+                builder.ProcessRecords(groupCollector.CreateRecordReader(), patternCollector.CreateRecordWriter(), mineFunction, settings);
             builder.ProcessRecords(patternCollector.CreateRecordReader(), output, AggregateTransactions, settings);
         }
     }

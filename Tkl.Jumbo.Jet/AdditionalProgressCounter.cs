@@ -11,6 +11,7 @@ namespace Tkl.Jumbo.Jet
     /// <summary>
     /// Provides information about additional progress counters in the <see cref="JobConfiguration"/>.
     /// </summary>
+    [Serializable]
     [XmlType(Namespace=JobConfiguration.XmlNamespace)]
     public class AdditionalProgressCounter
     {

@@ -16,7 +16,7 @@ namespace Tkl.Jumbo.Jet.Channels
     /// <summary>
     /// Represents the reading end of a file channel.
     /// </summary>
-    [AdditionalProgressCounter("File channel download progress")]
+    [AdditionalProgressCounter("Shuffle")]
     public class FileInputChannel : InputChannel, IDisposable, IHasAdditionalProgress
     {
         #region Nested types

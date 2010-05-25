@@ -41,6 +41,7 @@ namespace JobServerApplication
         private readonly DateTime _startTimeUtc;
         private readonly string _jobName;
         private long _endTimeUtcTicks;
+        private readonly JobConfiguration _config;
 
         public JobInfo(Job job, JobConfiguration config)
         {
@@ -49,6 +50,7 @@ namespace JobServerApplication
             if( config == null )
                 throw new ArgumentNullException("config");
             _job = job;
+            _config = config;
 
             _jobName = config.JobName;
 
@@ -259,6 +261,10 @@ namespace JobServerApplication
                 {
                     result.FailedTaskAttempts.AddRange(_failedTaskAttempts);
                 }
+            }
+            if( _config.AdditionalProgressCounters != null )
+            {
+                result.AdditionalProgressCounters.AddRange(_config.AdditionalProgressCounters);
             }
             return result;
         }

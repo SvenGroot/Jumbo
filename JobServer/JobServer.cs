@@ -418,9 +418,11 @@ namespace JobServerApplication
                 TaskInfo task = job.GetSchedulingTask(data.TaskId);
                 if( data.Progress != null )
                 {
-                    task.Progress = data.Progress;
-                    if( data.Status == TaskAttemptStatus.Running )
+                    if( task.State == TaskState.Running )
+                    {
+                        task.Progress = data.Progress;
                         _log.InfoFormat("Task {0} reported progress: {1}", task.FullTaskId, data.Progress);
+                    }
                 }
 
                 if( data.Status > TaskAttemptStatus.Running )

@@ -11,10 +11,9 @@ using Tkl.Jumbo.IO;
 
 namespace Tkl.Jumbo.Jet.Samples.FPGrowth
 {
-    class FPTree
+    sealed class FPTree
     {
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(FPTree));
-        private static int _totalTrees;
 
         #region Nested types
 
@@ -61,12 +60,13 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
         private int _weight;
         private int _mineUntilItem;
 
+        public event EventHandler ProgressChanged;
+
         public FPTree(IEnumerable<ITransaction> transactions, int minSupport, int itemCount)
         {
             // The transactions passed to this constructor must already be mapped and sorted by frequent item list order.
             // The itemCount indicates how many of the items from the frequent item list are in the subdatabase.
             // The highest item ID in the subdatabase should be itemCount - 1.
-            ++_totalTrees;
             int size = Math.Max(itemCount, _minSize);
             _nodes = new FPTreeNode[size];
             _nodeChildren = new NodeChildList[size];
@@ -80,7 +80,6 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
 
         private FPTree(int size, int headerSize, int minSupport)
         {
-            ++_totalTrees;
             // This is used only for conditional trees, so we don't need to create the _nodeChildren array.
             _nodes = new FPTreeNode[size];
             _headerTable = new HeaderTableItem[headerSize];
@@ -88,7 +87,7 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
             _nodes[_rootNode].Id = -1;
         }
 
-        public static int TotalTrees { get { return _totalTrees; } }
+        public float Progress { get; private set; }
 
         public void Mine(RecordWriter<Pair<int, WritableCollection<MappedFrequentPattern>>> output, int k, bool expandPerfectExtensions, int mineUntilItem)
         {
@@ -130,6 +129,13 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
             for( int x = _headerTable.Length - 1; x >= lower; --x )
             {
                 MineItem(currentItem, collector, x);
+                if( currentItem == null )
+                {
+                    int total = _headerTable.Length - lower;
+                    int processed = _headerTable.Length - x;
+                    Progress = processed / (float)total;
+                    OnProgressChanged(EventArgs.Empty);
+                }
             }
         }
 
@@ -477,6 +483,13 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
             int newSize = (int)(_nodes.Length * _growthRate);
             Array.Resize(ref _nodes, newSize);
             Array.Resize(ref _nodeChildren, newSize);
+        }
+
+        private void OnProgressChanged(EventArgs e)
+        {
+            EventHandler handler = ProgressChanged;
+            if( handler != null )
+                handler(this, e);
         }
 
         //private static List<Pattern> Combine(List<Pattern> first, List<Pattern> second)
