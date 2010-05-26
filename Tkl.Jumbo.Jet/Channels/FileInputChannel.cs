@@ -47,6 +47,7 @@ namespace Tkl.Jumbo.Jet.Channels
         private const int _downloadRetryIntervalRandomization = 2000;
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(FileInputChannel));
 
+        private readonly int _writeBufferSize;
         private string _jobDirectory;
         private Guid _jobID;
         private Thread _inputPollThread;
@@ -86,6 +87,7 @@ namespace Tkl.Jumbo.Jet.Channels
             // The type of the records in the intermediate files will be the output type of the input stage, which usually matches the input type of the output stage but
             // in the case of a join it may not.
             _inputReaderType = typeof(BinaryRecordReader<>).MakeGenericType(InputRecordType);
+            _writeBufferSize = (int)taskExecution.JetClient.Configuration.FileChannel.WriteBufferSize;
 
             if( !inputStage.TryGetTypedSetting(FileOutputChannel.SingleFileOutputSettingKey, out _inputUsesSingleFileFormat) )
                 _inputUsesSingleFileFormat = taskExecution.Configuration.JobConfiguration.GetTypedSetting(FileOutputChannel.SingleFileOutputSettingKey, taskExecution.JetClient.Configuration.FileChannel.SingleFileOutput);
@@ -447,9 +449,9 @@ namespace Tkl.Jumbo.Jet.Channels
                 if( memoryStream == null )
                 {
                     targetFile = Path.Combine(_inputDirectory, string.Format(System.Globalization.CultureInfo.InvariantCulture, "{0}_part{1}.input", task.TaskId, partition));
-                    using( FileStream fileStream = File.Create(targetFile) )
+                    using( FileStream fileStream = File.Create(targetFile, _writeBufferSize) )
                     {
-                        stream.CopySize(fileStream, size);
+                        stream.CopySize(fileStream, size, _writeBufferSize);
                     }
                     downloadedFiles.Add(new RecordInput(_inputReaderType, targetFile, task.TaskId, uncompressedSize, TaskExecution.JetClient.Configuration.FileChannel.DeleteIntermediateFiles));
                     _log.InfoFormat("File stored in {0}.", targetFile);
