@@ -81,9 +81,9 @@ namespace TaskHost
 
                 try
                 {
-                    using( TaskExecutionUtility taskExecution = new TaskExecutionUtility(_jetClient, umbilical, jobId, config, new TaskId(taskId), _dfsClient, jobDirectory, dfsJobDirectory, attempt) )
+                    using( TaskExecutionUtility taskExecution = TaskExecutionUtility.Create(_dfsClient, _jetClient, umbilical, jobId, config, new TaskId(taskId), dfsJobDirectory, jobDirectory, attempt) )
                     {
-                        RunTask(taskExecution);
+                        taskExecution.RunTask();
                     }
 
                     sw.Stop();
@@ -117,26 +117,6 @@ namespace TaskHost
             log4net.Config.BasicConfigurator.Configure(appender);
             
         }
-
-        private static void RunTask(TaskExecutionUtility taskExecution)
-        {
-            _log.Debug("Creating generic method to run task.");
-            MethodInfo doRunTaskMethod = typeof(Program)
-                                            .GetMethod("DoRunTask", BindingFlags.NonPublic | BindingFlags.Static)
-                                            .MakeGenericMethod(taskExecution.InputRecordType, taskExecution.OutputRecordType);
-            _log.Debug("Invoking generic method.");
-            doRunTaskMethod.Invoke(null, new object[] { taskExecution });
-        }
-
-#pragma warning disable 0169 // Disable private member not used warning in Mono C# compiler; it's used with reflection.
-
-        private static void DoRunTask<TInput, TOutput>(TaskExecutionUtility taskExecution) 
-        {
-            _log.Debug("DoRunTask invoked.");
-            taskExecution.RunTask<TInput, TOutput>();
-        }
-
-#pragma warning restore 0169
 
          private static void CurrentDomain_UnhandledException(object sender, UnhandledExceptionEventArgs e)
         {

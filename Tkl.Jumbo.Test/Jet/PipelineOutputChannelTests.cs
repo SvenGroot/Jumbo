@@ -48,36 +48,36 @@ namespace Tkl.Jumbo.Test.Jet
             #endregion
         }
 
-        [Test]
-        public void TestPipelineChannel()
-        {
-            JobConfiguration config = CreateConfiguration();
+        //[Test]
+        //public void TestPipelineChannel()
+        //{
+        //    JobConfiguration config = CreateConfiguration();
 
-            string path = System.IO.Path.Combine(Utilities.TestOutputPath, "PipelineChannelTest");
-            if( System.IO.Directory.Exists(path) )
-                System.IO.Directory.Delete(path, true);
-            System.IO.Directory.CreateDirectory(path);
-            // This depends on the fact that TaskExecutionUtility will not use the JetClient and DfsClient unless a DfsInput or DfsOutput is used. Since we will never
-            // call GetInputReader that won't happen.
-            using( TaskExecutionUtility taskExecution = new TaskExecutionUtility(new JetClient(), new FakeUmbilical(), Guid.NewGuid(), config, new TaskId("Task-001"), new DfsClient(), path, "/foo", 1) )
-            {
-                RecordWriter<int> output = taskExecution.GetOutputWriter<int>(); // this will call PipelineOutputChannel.CreateRecordWriter
-                IPushTask<Utf8String, int> task = (IPushTask<Utf8String, int>)taskExecution.GetTaskInstance<Utf8String, int>();
-                task.ProcessRecord(new Utf8String("Foo"), output);
-                task.ProcessRecord(new Utf8String("Bar"), output);
+        //    string path = System.IO.Path.Combine(Utilities.TestOutputPath, "PipelineChannelTest");
+        //    if( System.IO.Directory.Exists(path) )
+        //        System.IO.Directory.Delete(path, true);
+        //    System.IO.Directory.CreateDirectory(path);
+        //    // This depends on the fact that TaskExecutionUtility will not use the JetClient and DfsClient unless a DfsInput or DfsOutput is used. Since we will never
+        //    // call GetInputReader that won't happen.
+        //    using( TaskExecutionUtility taskExecution = new TaskExecutionUtility(new JetClient(), new FakeUmbilical(), Guid.NewGuid(), config, new TaskId("Task-001"), new DfsClient(), path, "/foo", 1) )
+        //    {
+        //        RecordWriter<int> output = taskExecution.GetOutputWriter<int>(); // this will call PipelineOutputChannel.CreateRecordWriter
+        //        IPushTask<Utf8String, int> task = (IPushTask<Utf8String, int>)taskExecution.GetTaskInstance<Utf8String, int>();
+        //        task.ProcessRecord(new Utf8String("Foo"), output);
+        //        task.ProcessRecord(new Utf8String("Bar"), output);
 
-                taskExecution.FinishTask();
-            }
+        //        taskExecution.FinishTask();
+        //    }
             
-            // If this file contains the correct value is means that the first stage task wrote output to the pipeline channel, which invoked the second stage task which
-            // wrote to the file, thus proving that pipelining works.
-            using( System.IO.FileStream stream = System.IO.File.OpenRead(Path.Combine(Path.Combine(path, "Task-001"), "DummyTask.output")) )
-            using( BinaryRecordReader<int> reader = new BinaryRecordReader<int>(stream) )
-            {
-                Assert.IsTrue(reader.ReadRecord());
-                Assert.AreEqual(2, reader.CurrentRecord);
-            }
-        }
+        //    // If this file contains the correct value is means that the first stage task wrote output to the pipeline channel, which invoked the second stage task which
+        //    // wrote to the file, thus proving that pipelining works.
+        //    using( System.IO.FileStream stream = System.IO.File.OpenRead(Path.Combine(Path.Combine(path, "Task-001"), "DummyTask.output")) )
+        //    using( BinaryRecordReader<int> reader = new BinaryRecordReader<int>(stream) )
+        //    {
+        //        Assert.IsTrue(reader.ReadRecord());
+        //        Assert.AreEqual(2, reader.CurrentRecord);
+        //    }
+        //}
 
         private static JobConfiguration CreateConfiguration()
         {

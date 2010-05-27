@@ -157,6 +157,7 @@
     <Compile Include="TaskDfsInput.cs" />
     <Compile Include="TaskDfsOutput.cs" />
     <Compile Include="TaskExecutionUtility.cs" />
+    <Compile Include="TaskExecutionUtilityGeneric.cs" />
     <Compile Include="TaskId.cs" />
     <Compile Include="TaskMetrics.cs" />
     <Compile Include="TaskProgress.cs" />

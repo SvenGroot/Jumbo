@@ -51,9 +51,7 @@ namespace Tkl.Jumbo.Jet.Channels
         {
             if( taskExecution == null )
                 throw new ArgumentNullException("taskExecution");
-            TaskExecutionUtility root = taskExecution;
-            while( root.BaseTask != null )
-                root = root.BaseTask;
+            TaskExecutionUtility root = taskExecution.RootTask;
 
             // We don't include child task IDs in the output file name because internal partitioning can happen only once
             // so the number always matches the output partition number anyway.

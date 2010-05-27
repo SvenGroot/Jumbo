@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Xml.Serialization;
 using Tkl.Jumbo.Dfs;
+using Tkl.Jumbo.IO;
 
 namespace Tkl.Jumbo.Jet
 {
@@ -86,6 +87,21 @@ namespace Tkl.Jumbo.Jet
         public string GetPath(int taskNumber)
         {
             return string.Format(System.Globalization.CultureInfo.InvariantCulture, PathFormat, taskNumber);
+        }
+
+
+        /// <summary>
+        /// Creates the DFS output record writer.
+        /// </summary>
+        /// <param name="taskExecution">The task execution utility for the task.</param>
+        /// <param name="fileName">Name of the file.</param>
+        /// <returns>A record writer of the type specified in <see cref="RecordWriterType"/></returns>
+        public IRecordWriter CreateRecordWriter(TaskExecutionUtility taskExecution, string fileName)
+        {
+            // It's the record writer's job to dispose the stream.
+            DfsOutputStream outputStream = taskExecution.DfsClient.CreateFile(fileName, BlockSize, ReplicationFactor);
+            //_log.DebugFormat("Creating record writer of type {0}", Configuration.StageConfiguration.DfsOutput.RecordWriterTypeName);
+            return (IRecordWriter)JetActivator.CreateInstance(RecordWriterType, taskExecution, outputStream);
         }
 
         #region ICloneable Members

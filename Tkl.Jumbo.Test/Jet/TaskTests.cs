@@ -77,7 +77,7 @@ namespace Tkl.Jumbo.Test.Jet
         {
             JobConfiguration jobConfig = new JobConfiguration();
             StageConfiguration stageConfig = jobConfig.AddStage("Accumulate", typeof(TestAccumulator), 1, null, null, null);
-            TaskAttemptConfiguration config = new TaskAttemptConfiguration(Guid.NewGuid(), jobConfig, new TaskId("Accumulate", 1), stageConfig, Utilities.TestOutputPath, "/JumboJet/fake", 1, null);
+            TaskAttemptConfiguration config = new TaskAttemptConfiguration(Guid.NewGuid(), jobConfig, new TaskId("Accumulate", 1), stageConfig, Utilities.TestOutputPath, "/JumboJet/fake", 1);
 
             IPushTask<Pair<Utf8String, int>, Pair<Utf8String, int>> task = new TestAccumulator();
             JetActivator.ApplyConfiguration(task, null, null, config);
@@ -109,7 +109,7 @@ namespace Tkl.Jumbo.Test.Jet
         {
             JobConfiguration jobConfig = new JobConfiguration();
             StageConfiguration stageConfig = jobConfig.AddStage("Accumulate", typeof(TestAccumulator), 1, null, null, null);
-            TaskAttemptConfiguration config = new TaskAttemptConfiguration(Guid.NewGuid(), jobConfig, new TaskId("Accumulate", 1), stageConfig, Utilities.TestOutputPath, "/JumboJet/fake", 1, null);
+            TaskAttemptConfiguration config = new TaskAttemptConfiguration(Guid.NewGuid(), jobConfig, new TaskId("Accumulate", 1), stageConfig, Utilities.TestOutputPath, "/JumboJet/fake", 1);
 
             IPushTask<Pair<Utf8String, int>, Pair<Utf8String, int>> task = new TestRecordReuseAccumulator();
             JetActivator.ApplyConfiguration(task, null, null, config);

@@ -12,7 +12,6 @@ namespace Tkl.Jumbo.Jet
     /// </summary>
     public class TaskAttemptConfiguration
     {
-        private TaskExecutionUtility _taskExecution;
         private string _taskAttemptId;
 
         /// <summary>
@@ -24,9 +23,8 @@ namespace Tkl.Jumbo.Jet
         /// <param name="stageConfiguration">The configuration for the stage that the task belongs to.</param>
         /// <param name="localJobDirectory">The local directory where files related to the job are stored.</param>
         /// <param name="dfsJobDirectory">The DFS directory where files related to the job are stored.</param>
-        /// <param name="taskExecution">The task execution utility for this task attempt.</param>
         /// <param name="attempt">The attempt number for this task attempt.</param>
-        public TaskAttemptConfiguration(Guid jobId, JobConfiguration jobConfiguration, TaskId taskId, StageConfiguration stageConfiguration, string localJobDirectory, string dfsJobDirectory, int attempt, TaskExecutionUtility taskExecution)
+        public TaskAttemptConfiguration(Guid jobId, JobConfiguration jobConfiguration, TaskId taskId, StageConfiguration stageConfiguration, string localJobDirectory, string dfsJobDirectory, int attempt)
         {
             if( jobConfiguration == null )
                 throw new ArgumentNullException("jobConfiguration");
@@ -44,7 +42,6 @@ namespace Tkl.Jumbo.Jet
             LocalJobDirectory = localJobDirectory;
             DfsJobDirectory = dfsJobDirectory;
             Attempt = attempt;
-            _taskExecution = taskExecution;
         }
 
         /// <summary>
@@ -82,7 +79,7 @@ namespace Tkl.Jumbo.Jet
         /// </summary>
         public bool AllowRecordReuse
         {
-            get { return _taskExecution == null ? false : _taskExecution.AllowRecordReuse; }
+            get { return TaskExecution == null ? false : TaskExecution.AllowRecordReuse; }
         }
 
         /// <summary>
@@ -119,5 +116,6 @@ namespace Tkl.Jumbo.Jet
                 return value;
         }
 
+        internal TaskExecutionUtility TaskExecution { get; set; }
     }
 }

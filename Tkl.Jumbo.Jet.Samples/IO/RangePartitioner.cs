@@ -139,7 +139,7 @@ namespace Tkl.Jumbo.Jet.Samples.IO
 
             for( int sample = 0; sample < samples; ++sample )
             {
-                using( RecordReader<GenSortRecord> reader = inputs[sample * sampleStep].CreateRecordReader<GenSortRecord>(dfsClient, null) )
+                using( RecordReader<GenSortRecord> reader = (RecordReader<GenSortRecord>)inputs[sample * sampleStep].CreateRecordReader(dfsClient, null) )
                 {
                     int records = 0;
                     while( records++ < recordsPerSample && reader.ReadRecord() )

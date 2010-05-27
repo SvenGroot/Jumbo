@@ -25,7 +25,7 @@ namespace Tkl.Jumbo.Jet.Channels
     {
         #region Nested types
 
-        private sealed class PipelineRecordWriter<TRecord, TPipelinedTaskOutput> : RecordWriter<TRecord>
+        internal sealed class PipelineRecordWriter<TRecord, TPipelinedTaskOutput> : RecordWriter<TRecord>
         {
             private IPushTask<TRecord, TPipelinedTaskOutput> _task;
             private RecordWriter<TPipelinedTaskOutput> _output;
@@ -92,11 +92,11 @@ namespace Tkl.Jumbo.Jet.Channels
         /// <typeparam name="T">The type of record.</typeparam>
         /// <returns>A record writer for the channel.</returns>
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1004:GenericMethodsShouldProvideTypeParameter")]
-        public Tkl.Jumbo.IO.RecordWriter<T> CreateRecordWriter<T>()
+        public RecordWriter<T> CreateRecordWriter<T>()
         {
             StageConfiguration childStage = _taskExecution.Configuration.StageConfiguration.ChildStage;
             if( childStage.TaskCount == 1 )
-                return CreateRecordWriter<T>(_taskExecution.CreateAssociatedTask(childStage, 1));
+                return (RecordWriter<T>)_taskExecution.CreateAssociatedTask(childStage, 1).CreatePipelineRecordWriter();
             else
             {
                 List<RecordWriter<T>> writers = new List<RecordWriter<T>>();
@@ -105,35 +105,13 @@ namespace Tkl.Jumbo.Jet.Channels
                 for( int x = 1; x <= childStage.TaskCount; ++x )
                 {
                     TaskExecutionUtility childTaskExecution = _taskExecution.CreateAssociatedTask(childStage, x);
-                    writers.Add(CreateRecordWriter<T>(childTaskExecution));
+                    writers.Add((RecordWriter<T>)childTaskExecution.CreatePipelineRecordWriter());
                 }
                 return new MultiRecordWriter<T>(writers, partitioner);
             }
         }
 
         #endregion
-
-        private RecordWriter<T> CreateRecordWriter<T>(TaskExecutionUtility pipelinedTask)
-        {
-            MethodInfo createWriterMethod = typeof(PipelineOutputChannel)
-                                                .GetMethod("CreateRecordWriterInternal", BindingFlags.NonPublic | BindingFlags.Static)
-                                                .MakeGenericMethod(typeof(T), pipelinedTask.OutputRecordType);
-            return (RecordWriter<T>)createWriterMethod.Invoke(this, new object[] { pipelinedTask });
-        }
-
-// disable Mono C# compile warning about unused method; it's used via reflection.
-#pragma warning disable 169
-
-        private static RecordWriter<TRecord> CreateRecordWriterInternal<TRecord, TPipelinedTaskOutput>(TaskExecutionUtility pipelinedTask)
-        {
-            RecordWriter<TPipelinedTaskOutput> output = pipelinedTask.GetOutputWriter<TPipelinedTaskOutput>();
-
-            IPushTask<TRecord, TPipelinedTaskOutput> task = (IPushTask<TRecord, TPipelinedTaskOutput>)pipelinedTask.GetTaskInstance<TRecord, TPipelinedTaskOutput>();
-
-            return new PipelineRecordWriter<TRecord, TPipelinedTaskOutput>(task, output);
-        }
-
-#pragma warning restore 169
 
     }
 }

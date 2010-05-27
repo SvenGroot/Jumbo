@@ -125,7 +125,7 @@ namespace Tkl.Jumbo.Jet.Channels
         {
             Type multiInputRecordReaderType = InputStage.OutputChannel.MultiInputRecordReaderType.ReferencedType;
             _log.InfoFormat(System.Globalization.CultureInfo.CurrentCulture, "Creating MultiRecordReader of type {3} for {0} inputs, allow record reuse = {1}, buffer size = {2}.", InputTaskIds.Count, TaskExecution.AllowRecordReuse, TaskExecution.JetClient.Configuration.FileChannel.ReadBufferSize, multiInputRecordReaderType);
-            int bufferSize = multiInputRecordReaderType.GetGenericTypeDefinition() == typeof(MergeRecordReader<>) ? (int)TaskExecution.JetClient.Configuration.FileChannel.MergeTaskReadBufferSize : (int)TaskExecution.JetClient.Configuration.FileChannel.ReadBufferSize;
+            int bufferSize = (multiInputRecordReaderType.IsGenericType && multiInputRecordReaderType.GetGenericTypeDefinition() == typeof(MergeRecordReader<>)) ? (int)TaskExecution.JetClient.Configuration.FileChannel.MergeTaskReadBufferSize : (int)TaskExecution.JetClient.Configuration.FileChannel.ReadBufferSize;
             // We're not using JetActivator to create the object because we need to delay calling NotifyConfigurationChanged until after InputStage was set.
             int[] partitions = GetPartitions();
             _partitions.AddRange(partitions);
