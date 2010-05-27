@@ -349,6 +349,16 @@ namespace Tkl.Jumbo.Test.Jet
                     partitions[partitioner.GetPartition(x)].Add(x);
             }
 
+            int p = 0;
+            foreach( IList<int> part in partitions )
+            {
+                using( StreamWriter writer = File.CreateText(Path.Combine(Utilities.TestOutputPath, string.Format("partition{0}.txt", p))) )
+                {
+                    foreach( int item in part )
+                        writer.WriteLine(item);
+                }
+                ++p;
+            }
 
             int partition = 0;
             foreach( string outputFileName in fileNames )

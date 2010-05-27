@@ -278,9 +278,11 @@ namespace Tkl.Jumbo.Jet.Channels
 
         protected override void Dispose(bool disposing)
         {
+            //_log.Debug("Disposing");
             // Taking the lock causes it to wait until the current output is finished.
             lock( _outputLock )
             {
+                Debug.Assert(!_outputInProgress);
                 _finished = true;
                 if( _outputEnd != _buffer.BufferPos ) // It can never reach that by looping around because the limit would be reached before that point triggering another output.
                 {
@@ -341,9 +343,9 @@ namespace Tkl.Jumbo.Jet.Channels
 
         private void OutputThread()
         {
-            while( true )
+            lock( _outputLock )
             {
-                lock( _outputLock )
+                while( true )
                 {
                     if( !_outputInProgress )
                         Monitor.Wait(_outputLock);
@@ -369,7 +371,7 @@ namespace Tkl.Jumbo.Jet.Channels
         private void DoOutput()
         {
             ++_outputSegments;
-            _log.DebugFormat("Writing output segment {0}.", _outputSegments);
+            _log.DebugFormat("Writing output segment {0}, offset {1} to {2}.", _outputSegments, _outputStart, _outputEnd);
             //lock( _debugWriter )
             //    _debugWriter.WriteLine("Starting output from {0} to {1}.", _outputStart, _outputEnd);
             using( FileStream stream = new FileStream(_outputPath, FileMode.Append, FileAccess.Write, FileShare.None, _writeBufferSize) )
