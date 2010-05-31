@@ -52,6 +52,11 @@ namespace JobServerApplication
             return JobServer.Instance.GetJobStatus(jobId);
         }
 
+        public JobStatus[] GetRunningJobs()
+        {
+            return JobServer.Instance.GetRunningJobs();
+        }
+
         public JetMetrics GetMetrics()
         {
             return JobServer.Instance.GetMetrics();

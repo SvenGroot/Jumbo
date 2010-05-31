@@ -203,6 +203,16 @@ namespace JobServerApplication
             return job.ToJobStatus();
         }
 
+        public JobStatus[] GetRunningJobs()
+        {
+            // Locking because enumeration is not thread-safe
+            lock( _jobs )
+            {
+                return (from job in _jobs.Values.Cast<JobInfo>()
+                        select job.ToJobStatus()).ToArray();
+            }
+        }
+
         public JetMetrics GetMetrics()
         {
             JetMetrics result = new JetMetrics();

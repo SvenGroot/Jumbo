@@ -57,6 +57,12 @@ namespace Tkl.Jumbo.Jet
         JobStatus GetJobStatus(Guid jobId);
 
         /// <summary>
+        /// Gets the status for all currently running jobs.
+        /// </summary>
+        /// <returns>An array of status objects for each running job.</returns>
+        JobStatus[] GetRunningJobs();
+
+        /// <summary>
         /// Gets current metrics for the distributed execution engine.
         /// </summary>
         /// <returns>An object holding the metrics for the job server.</returns>

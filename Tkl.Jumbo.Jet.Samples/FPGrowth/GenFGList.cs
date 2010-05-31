@@ -79,6 +79,8 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
             builder.ProcessRecords(countCollector.CreateRecordReader(), fListCollector.CreateRecordWriter(), typeof(FeatureFilterTask));
             // Sort and group the features.
             builder.ProcessRecords(fListCollector.CreateRecordReader(), output, typeof(FeatureGroupTask));
+
+            builder.JobConfiguration.JobName = "Parallel counting and grouping";
         }
 
         /// <summary>

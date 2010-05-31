@@ -122,6 +122,8 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
             {
                 BuildJob<Transaction>(builder, GenerateGroupTransactions, null);
             }
+
+            builder.JobConfiguration.JobName = "PFP Growth and Aggregation";
         }
 
         /// <summary>
