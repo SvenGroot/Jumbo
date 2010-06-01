@@ -52,6 +52,29 @@ namespace Tkl.Jumbo.Test.Jet
         }
 
         [Test]
+        public void TestJobAbort()
+        {
+            DfsClient dfsClient = new DfsClient(Dfs.TestDfsCluster.CreateClientConfig());
+            DfsFile file = dfsClient.NameServer.GetFileInfo(_fileName);
+            JobConfiguration config = CreateConfiguration(dfsClient, file, "/abort", false, typeof(LineCounterTask), typeof(LineAdderTask), ChannelType.File);
+
+            JetClient target = new JetClient(TestJetCluster.CreateClientConfig());
+            Job job = target.RunJob(config, dfsClient, typeof(LineCounterTask).Assembly.Location);
+
+            JobStatus status;
+            do
+            {
+                Thread.Sleep(1000);
+                status = target.JobServer.GetJobStatus(job.JobId);
+            } while( status.RunningTaskCount == 0 );
+            Thread.Sleep(1000);
+            target.JobServer.AbortJob(job.JobId);
+            bool finished = target.WaitForJobCompletion(job.JobId, Timeout.Infinite, 1000);
+            Assert.IsTrue(finished);
+            Assert.IsFalse(target.JobServer.GetJobStatus(job.JobId).IsSuccessful);
+        }
+
+        [Test]
         public void TestJobExecution()
         {
             RunJob(false, "/joboutput", TaskKind.Pull, ChannelType.File);

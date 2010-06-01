@@ -31,6 +31,7 @@ namespace JetShell.Commands
 
         public override void Run()
         {
+            ExitStatus = 1; // Assume failure unless we can successfully run a job.
             if( _args.Length - _argIndex == 0 )
                 Console.WriteLine("Usage: JetShell.exe job <assemblyName> [jobName] [job arguments...]");
             else
@@ -65,6 +66,7 @@ namespace JetShell.Commands
                             Guid jobId = jobRunner.RunJob();
                             bool success = WaitForJobCompletion(JetClient, _jobStatusPollInterval, jobId);
                             jobRunner.FinishJob(success);
+                            ExitStatus = success ? 0 : 1;
                         }
                     }
                 }

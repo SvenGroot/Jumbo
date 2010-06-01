@@ -140,6 +140,38 @@ namespace JobServerApplication
             ScheduleTasks(jobInfo);
         }
 
+        public bool AbortJob(Guid jobId)
+        {
+            lock( _pendingJobs )
+            {
+                Job job;
+                if( _pendingJobs.TryGetValue(jobId, out job) )
+                {
+                    _pendingJobs.Remove(jobId);
+                    _log.InfoFormat("Removed pending job {0} from the job queue.", jobId);
+                    return true;
+                }
+            }
+
+            lock( _schedulerLock )
+            {
+                JobInfo job = (JobInfo)_jobs[jobId];
+                if( job == null )
+                    _log.InfoFormat("Didn't abort job {0} because it wasn't found in the running job list.", jobId);
+                else if( job.State == JobState.Running )
+                {
+                    _log.InfoFormat("Aborting job {0}.", jobId);
+                    job.State = JobState.Failed;
+                    FinishOrFailJob(job);
+                    return true;
+                }
+                else
+                    _log.InfoFormat("Didn't abort job {0} because it was not running.", jobId);
+            }
+
+            return false;
+        }
+
         public ServerAddress GetTaskServerForTask(Guid jobID, string taskID)
         {
             _log.DebugFormat("GetTaskServerForTask, jobID = {{{0}}}, taskID = \"{1}\"", jobID, taskID);
@@ -509,7 +541,7 @@ namespace JobServerApplication
             }
             else
             {
-                _log.ErrorFormat("Job {0} failed.", job.Job.JobId);
+                _log.ErrorFormat("Job {0} failed or was killed.", job.Job.JobId);
                 job.AbortTasks();
             }
 
@@ -618,32 +650,37 @@ namespace JobServerApplication
 
                 if( job != null )
                 {
-                    List<TaskServerInfo> taskServers;
-                    // Lock because enumerating over a Hashtable is not thread safe
-                    lock( _taskServers )
+                    if( job.State != JobState.Running )
+                        _log.WarnFormat("Scheduler was asked to schedule job {{{0}}} that isn't running (this could be the aftermath of a failed or aborted job).", job.Job.JobId);
+                    else
                     {
-                        taskServers = _schedulerTaskServers;
-                        if( taskServers == null )
+                        List<TaskServerInfo> taskServers;
+                        // Lock because enumerating over a Hashtable is not thread safe
+                        lock( _taskServers )
                         {
-                            // Make a copy of the list of servers that the scheduler can use without needing to keep _taskServers locked.
-                            taskServers = new List<TaskServerInfo>(_taskServers.Count);
-                            foreach( TaskServerInfo taskServer in _taskServers.Values )
-                                taskServers.Add(taskServer);
-                            _schedulerTaskServers = taskServers;
+                            taskServers = _schedulerTaskServers;
+                            if( taskServers == null )
+                            {
+                                // Make a copy of the list of servers that the scheduler can use without needing to keep _taskServers locked.
+                                taskServers = new List<TaskServerInfo>(_taskServers.Count);
+                                foreach( TaskServerInfo taskServer in _taskServers.Values )
+                                    taskServers.Add(taskServer);
+                                _schedulerTaskServers = taskServers;
+                            }
                         }
-                    }
 
-                    lock( _schedulerLock )
-                    {
-                        try
+                        lock( _schedulerLock )
                         {
-                            _scheduler.ScheduleTasks(taskServers, job, _dfsClient);
-                        }
-                        catch( Exception ex )
-                        {
-                            _log.Error(string.Format("The scheduler encountered an error scheduling job {{{0}}}.", job.Job.JobId), ex);
-                            job.State = JobState.Failed;
-                            FinishOrFailJob(job);
+                            try
+                            {
+                                _scheduler.ScheduleTasks(taskServers, job, _dfsClient);
+                            }
+                            catch( Exception ex )
+                            {
+                                _log.Error(string.Format("The scheduler encountered an error scheduling job {{{0}}}.", job.Job.JobId), ex);
+                                job.State = JobState.Failed;
+                                FinishOrFailJob(job);
+                            }
                         }
                     }
                 }

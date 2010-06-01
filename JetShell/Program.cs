@@ -24,7 +24,7 @@ namespace JetShell
         private static readonly AssemblyResolver _resolver = new AssemblyResolver();
 #pragma warning restore 414
 
-        public static void Main(string[] args)
+        public static int Main(string[] args)
         {
             log4net.Config.BasicConfigurator.Configure();
             log4net.LogManager.GetRepository().Threshold = log4net.Core.Level.Info;
@@ -67,6 +67,7 @@ namespace JetShell
                         {
                             command.JetClient = new JetClient();
                             command.Run();
+                            return command.ExitStatus;
                         }
                         catch( SocketException ex )
                         {
@@ -94,6 +95,8 @@ namespace JetShell
                 else
                     PrintUsage();
             }
+
+            return 1;
         }
 
         private static void PrintUsage()

@@ -26,6 +26,19 @@ namespace Tkl.Jumbo.Jet
         void RunJob(Guid jobId);
 
         /// <summary>
+        /// Aborts execution of a job.
+        /// </summary>
+        /// <param name="jobId">The ID of the job to abort.</param>
+        /// <returns>
+        ///   <see langword="true"/> if the job was aborted; otherwise, <see langword="false"/>.
+        /// </returns>
+        /// <remarks>
+        /// If the job was created but not started, calling this method will remove the job from the pending queue, and the
+        /// method will return <see langword="true"/>.
+        /// </remarks>
+        bool AbortJob(Guid jobId);
+
+        /// <summary>
         /// Gets the address of the task server that is running the specified task.
         /// </summary>
         /// <param name="jobId">The ID of the job containing the task.</param>

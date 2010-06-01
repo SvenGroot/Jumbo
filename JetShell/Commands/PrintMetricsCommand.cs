@@ -16,7 +16,16 @@ namespace JetShell.Commands
         public override void Run()
         {
             JetMetrics metrics = JetClient.JobServer.GetMetrics();
-            metrics.PrintMetrics(Console.Out);
+            if( RunningJobs )
+            {
+                foreach( Guid jobId in metrics.RunningJobs )
+                    Console.WriteLine(jobId);
+            }
+            else
+                metrics.PrintMetrics(Console.Out);
         }
+
+        [NamedCommandLineArgument("r")]
+        public bool RunningJobs { get; set; }
     }
 }

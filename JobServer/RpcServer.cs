@@ -31,6 +31,11 @@ namespace JobServerApplication
         {
             JobServer.Instance.RunJob(jobID);
         }
+
+        public bool AbortJob(Guid jobId)
+        {
+            return JobServer.Instance.AbortJob(jobId);
+        }
         
         public ServerAddress GetTaskServerForTask(Guid jobID, string taskID)
         {

@@ -108,10 +108,22 @@ namespace TaskServerApplication
 
             public void Kill()
             {
-                if( Debugger.IsAttached )
-                    _appDomainThread.Abort();
-                else
-                    _process.Kill();
+                _log.WarnFormat("Killing task {0}.", FullTaskID);
+                try
+                {
+                    if( Debugger.IsAttached )
+                        _appDomainThread.Abort();
+                    else
+                        _process.Kill();
+                }
+                catch( InvalidOperationException ex )
+                {
+                    _log.Error("Could not kill task.", ex);
+                }
+                catch( Win32Exception ex )
+                {
+                    _log.Error("Could not kill task.", ex);
+                }
             }
 
             private void OnProcessExited(EventArgs e)
