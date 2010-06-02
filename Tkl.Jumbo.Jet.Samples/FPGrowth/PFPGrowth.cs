@@ -101,6 +101,15 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
         public bool UsePartitionFile { get; set; }
 
         /// <summary>
+        /// Gets or sets a value indicating whether the output format is binary.
+        /// </summary>
+        /// <value>
+        /// 	<see langword="true"/> if the output format is binary; otherwise, <see langword="false"/>.
+        /// </value>
+        [NamedCommandLineArgument("binaryOutput"), Description("When set, the output will written using a BinaryRecordWriter rather than as text.")]
+        public bool BinaryOutput { get; set; }
+
+        /// <summary>
         /// Constructs the job configuration using the specified job builder.
         /// </summary>
         /// <param name="builder">The <see cref="JobBuilder"/>.</param>
@@ -207,7 +216,7 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
         }
 
         /// <summary>
-        /// Aggregates the transactions.
+        /// Aggregates the patterns.
         /// </summary>
         /// <param name="input">The input.</param>
         /// <param name="output">The output.</param>
@@ -216,7 +225,7 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
         /// Does not allow record reuse (technically it could because WritableCollection doesn't reuse item instances
         /// but because that might change in the future we don't set the option here).
         /// </remarks>
-        public static void AggregateTransactions(RecordReader<Pair<int, WritableCollection<MappedFrequentPattern>>> input, RecordWriter<Pair<Utf8String, WritableCollection<FrequentPattern>>> output, TaskAttemptConfiguration config)
+        public static void AggregatePatterns(RecordReader<Pair<int, WritableCollection<MappedFrequentPattern>>> input, RecordWriter<Pair<Utf8String, WritableCollection<FrequentPattern>>> output, TaskAttemptConfiguration config)
         {
             int k = config.JobConfiguration.GetTypedSetting("PFPGrowth.PatternCount", 50);
             int minSupport = config.JobConfiguration.GetTypedSetting("PFPGrowth.MinSupport", 2);
@@ -466,7 +475,7 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
             var input = builder.CreateRecordReader<Utf8String>(_inputPath, typeof(LineRecordReader));
             var groupCollector = new RecordCollector<Pair<int, T>>() { PartitionCount = FPGrowthTaskCount };
             var patternCollector = new RecordCollector<Pair<int, WritableCollection<MappedFrequentPattern>>>() { PartitionCount = AggregateTaskCount };
-            var output = CreateRecordWriter<Pair<Utf8String, WritableCollection<FrequentPattern>>>(builder, _outputPath, typeof(TextRecordWriter<>));
+            var output = CreateRecordWriter<Pair<Utf8String, WritableCollection<FrequentPattern>>>(builder, _outputPath, BinaryOutput ? typeof(BinaryRecordWriter<>) : typeof(TextRecordWriter<>));
 
             // Generate group-dependent transactions
             SettingsDictionary settings = new SettingsDictionary();
@@ -494,7 +503,7 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
                 builder.ProcessRecords(groupCollector.CreateRecordReader(), patternCollector.CreateRecordWriter(), typeof(TransactionMiningTask), "MineTransactions", settings);
             else
                 builder.ProcessRecords(groupCollector.CreateRecordReader(), patternCollector.CreateRecordWriter(), mineFunction, settings);
-            builder.ProcessRecords(patternCollector.CreateRecordReader(), output, AggregateTransactions, settings);
+            builder.ProcessRecords(patternCollector.CreateRecordReader(), output, AggregatePatterns, settings);
         }
     }
 }
