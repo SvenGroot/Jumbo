@@ -149,7 +149,16 @@ namespace Tkl.Jumbo.Jet
         /// <returns>A string representation of this <see cref="JobStatus"/>.</returns>
         public override string ToString()
         {
-            return string.Format(System.Globalization.CultureInfo.CurrentCulture, "{6:0.0}%, tasks: {0}, running: {1}, pending {2}, finished: {3}, errors: {4}, not local: {5}", TaskCount, RunningTaskCount, UnscheduledTaskCount, FinishedTaskCount, ErrorTaskCount, NonDataLocalTaskCount, Progress * 100);
+            StringBuilder result = new StringBuilder(100);
+            result.AppendFormat("{0:P1}; finished: {1}/{2} tasks", Progress, FinishedTaskCount, TaskCount);
+            foreach( StageStatus stage in Stages )
+            {
+                result.AppendFormat("; {0}: {1:P1}", stage.StageId, stage.Progress);
+            }
+            if( ErrorTaskCount > 0 )
+                result.AppendFormat(" ({0} errors)", ErrorTaskCount);
+
+            return result.ToString();
         }
 
         /// <summary>
