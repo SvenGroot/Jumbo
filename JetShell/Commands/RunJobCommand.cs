@@ -83,7 +83,10 @@ namespace JetShell.Commands
                 status = jetClient.JobServer.GetJobStatus(jobId);
                 string statusString = status.ToString();
                 if( statusString != previousStatus )
-                    Console.WriteLine(previousStatus);
+                {
+                    Console.WriteLine(statusString);
+                    previousStatus = statusString;
+                }
             } while( !status.IsFinished );
 
             Console.WriteLine();
