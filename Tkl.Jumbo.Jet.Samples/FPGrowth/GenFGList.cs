@@ -74,7 +74,7 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
             // Generate (feature,1) pairs for each feature in the transaction DB
             builder.ProcessRecords(input, featureCollector.CreateRecordWriter(), CountFeatures, null);
             // Count the frequency of each feature.
-            builder.AccumulateRecords(featureCollector.CreateRecordReader(), countCollector.CreateRecordWriter(), typeof(AccumulateFeatureCounts));
+            builder.AccumulateRecords(featureCollector.CreateRecordReader(), countCollector.CreateRecordWriter(), AccumulateFeatureCounts);
             // Remove non-frequent features
             builder.ProcessRecords(countCollector.CreateRecordReader(), fListCollector.CreateRecordWriter(), typeof(FeatureFilterTask));
             // Sort and group the features.
@@ -88,11 +88,13 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
         /// </summary>
         /// <param name="input">The input.</param>
         /// <param name="output">The output.</param>
+        /// <param name="config">The configuration</param>
         [AllowRecordReuse]
         public static void CountFeatures(RecordReader<Utf8String> input, RecordWriter<Pair<Utf8String, int>> output, TaskAttemptConfiguration config)
         {
             var record = Pair.MakePair(new Utf8String(), 1);
             char[] separator = { ' ' };
+            config.StatusMessage = "Extracting features.";
             foreach( Utf8String transaction in input.EnumerateRecords() )
             {
                 string[] items = transaction.ToString().Split(separator, StringSplitOptions.RemoveEmptyEntries);
@@ -100,9 +102,21 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
                 {
                     record.Key.Set(item);
                     output.WriteRecord(record);
-                    config.StatusMessage = "Extracted feature: " + item;
                 }
             }
+        }
+
+        /// <summary>
+        /// Accumulates the feature counts.
+        /// </summary>
+        /// <param name="key">The key.</param>
+        /// <param name="currentValue">The current value.</param>
+        /// <param name="newValue">The new value.</param>
+        /// <returns>The updated value.</returns>
+        [AllowRecordReuse]
+        public static int AccumulateFeatureCounts(Utf8String key, int currentValue, int newValue)
+        {
+            return currentValue + newValue;
         }
     }
 }
