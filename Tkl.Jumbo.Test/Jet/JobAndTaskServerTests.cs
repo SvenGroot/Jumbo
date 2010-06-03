@@ -72,6 +72,7 @@ namespace Tkl.Jumbo.Test.Jet
             bool finished = target.WaitForJobCompletion(job.JobId, Timeout.Infinite, 1000);
             Assert.IsTrue(finished);
             Assert.IsFalse(target.JobServer.GetJobStatus(job.JobId).IsSuccessful);
+            Thread.Sleep(5000);
         }
 
         [Test]

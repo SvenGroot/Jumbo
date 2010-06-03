@@ -109,15 +109,17 @@ namespace JobServerApplication.Scheduling
                                          where !task.BadServers.Contains(taskServer) && task.Server == null
                                          select task).ToList();
 
-                    while( taskServer.SchedulerInfo.AvailableTasks > 0 )
+                    while( taskServer.SchedulerInfo.AvailableTasks > 0 && eligibleTasks.Count > 0 )
                     {
                         // TODO: This should try to schedule a task with input that's at least on the same rack.
                         // One way to do that would be to change NameServer.GetDataServerBlocks to return blocks within a certain distance, and then retry with increasing distance.
-                        TaskInfo task = eligibleTasks[_random.Next(eligibleTasks.Count)];
+                        int index = _random.Next(eligibleTasks.Count);
+                        TaskInfo task = eligibleTasks[index];
                         taskServer.SchedulerInfo.AssignTask(job, task);
                         _log.InfoFormat("Task {0} has been assigned to server {1} (NOT data local).", task.FullTaskId, taskServer.Address);
                         if( !newServers.Contains(taskServer) )
                             newServers.Add(taskServer);
+                        eligibleTasks.RemoveAt(index);
                         --capacity;
                         ++job.NonDataLocal;
                     }

@@ -354,19 +354,28 @@ namespace TaskServerApplication
             _log.InfoFormat("Running task {{{0}}}_{1}.", task.Job.JobId, task.TaskId);
             string jobDirectory = _taskServer.GetJobDirectory(task.Job.JobId);
             JobConfiguration config;
-            if( !IO.Directory.Exists(jobDirectory) )
+            try
             {
-                IO.Directory.CreateDirectory(jobDirectory);
-                _dfsClient.DownloadDirectory(task.Job.Path, jobDirectory);
-                string configPath = IO.Path.Combine(jobDirectory, "config");
-                IO.Directory.CreateDirectory(configPath);
-                _taskServer.Configuration.ToXml(IO.Path.Combine(configPath, "jet.config"));
-                _taskServer.DfsConfiguration.ToXml(IO.Path.Combine(configPath, "dfs.config"));
-                config = JobConfiguration.LoadXml(IO.Path.Combine(jobDirectory, Job.JobConfigFileName));
-                _jobConfigurations.Add(task.Job.JobId, config);
+                if( !(IO.Directory.Exists(jobDirectory) && _jobConfigurations.ContainsKey(task.Job.JobId)) )
+                {
+                    IO.Directory.CreateDirectory(jobDirectory);
+                    _dfsClient.DownloadDirectory(task.Job.Path, jobDirectory);
+                    string configPath = IO.Path.Combine(jobDirectory, "config");
+                    IO.Directory.CreateDirectory(configPath);
+                    _taskServer.Configuration.ToXml(IO.Path.Combine(configPath, "jet.config"));
+                    _taskServer.DfsConfiguration.ToXml(IO.Path.Combine(configPath, "dfs.config"));
+                    config = JobConfiguration.LoadXml(IO.Path.Combine(jobDirectory, Job.JobConfigFileName));
+                    _jobConfigurations.Add(task.Job.JobId, config);
+                }
+                else
+                    config = _jobConfigurations[task.Job.JobId];
             }
-            else
-                config = _jobConfigurations[task.Job.JobId];
+            catch( Exception ex )
+            {
+                _log.Error("Could not load job configuration.", ex);
+                _taskServer.NotifyTaskStatusChanged(task.Job.JobId, task.TaskId, TaskAttemptStatus.Error, null);
+                return;
+            }
             TaskId taskId = new TaskId(task.TaskId);
             StageConfiguration stageConfig = config.GetStage(taskId.StageId);
             RunningTask runningTask;
