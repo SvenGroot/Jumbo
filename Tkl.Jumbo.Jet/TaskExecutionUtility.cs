@@ -94,6 +94,7 @@ namespace Tkl.Jumbo.Jet
                     parentTask._associatedTasks = new List<TaskExecutionUtility>();
                 parentTask._associatedTasks.Add(this);
                 _statusMessageLevel = parentTask._statusMessageLevel + 1;
+                _rootTask.EnsureStatusLevels(_statusMessageLevel);
             }
 
             OutputChannel = CreateOutputChannel();
