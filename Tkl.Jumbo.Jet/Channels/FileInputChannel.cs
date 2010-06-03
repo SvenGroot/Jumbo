@@ -10,6 +10,7 @@ using System.Net;
 using System.IO;
 using System.Diagnostics;
 using System.Net.Sockets;
+using System.Globalization;
 
 namespace Tkl.Jumbo.Jet.Channels
 {
@@ -283,6 +284,8 @@ namespace Tkl.Jumbo.Jet.Channels
                 }
             }
 
+            TaskExecution.ChannelStatusMessage = null; // Clear the status message when we're finished.
+
             if( _disposed )
                 _log.Info("Download thread aborted because the object was disposed.");
             else
@@ -365,7 +368,8 @@ namespace Tkl.Jumbo.Jet.Channels
             }
 
             reader.AddInput(inputs);
-            Interlocked.Increment(ref _filesRetrieved);
+            int files = Interlocked.Increment(ref _filesRetrieved);
+            TaskExecution.ChannelStatusMessage = string.Format(CultureInfo.InvariantCulture, "Downloaded {0} of {1} input files.", files, InputTaskIds.Count);
 
             if( !_isReady )
             {

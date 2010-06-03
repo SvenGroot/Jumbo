@@ -24,6 +24,11 @@ namespace Tkl.Jumbo.Jet
         public float Progress { get; set; }
 
         /// <summary>
+        /// Gets or sets a status message for the task.
+        /// </summary>
+        public string StatusMessage { get; set; }
+
+        /// <summary>
         /// Gets the overall progress, which is the average of all the other progress values.
         /// </summary>
         /// <value>The overall progress.</value>

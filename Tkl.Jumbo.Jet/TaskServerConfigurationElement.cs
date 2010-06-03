@@ -143,5 +143,27 @@ namespace Tkl.Jumbo.Jet
             get { return (bool)this["logSystemStatus"]; }
             set { this["logSystemStatus"] = value; }
         }
+
+        /// <summary>
+        /// Gets or sets the progress interval.
+        /// </summary>
+        /// <value>The progress interval.</value>
+        [ConfigurationProperty("progressInterval", DefaultValue = 3000, IsRequired = false, IsKey = false)]
+        public int ProgressInterval
+        {
+            get { return (int)this["progressInterval"]; }
+            set { this["progressInterval"] = value; }
+        }
+
+        /// <summary>
+        /// Gets or sets the heartbeat interval.
+        /// </summary>
+        /// <value>The heartbeat interval.</value>
+        [ConfigurationProperty("heartbeatInterval", DefaultValue = 3000, IsRequired = false, IsKey = false)]
+        public int HeartbeatInterval
+        {
+            get { return (int)this["heartbeatInterval"]; }
+            set { this["heartbeatInterval"] = value; }
+        }
     }
 }

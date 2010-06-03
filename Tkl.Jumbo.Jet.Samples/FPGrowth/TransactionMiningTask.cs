@@ -57,8 +57,10 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
                     if( input.HasFinished )
                         break;
                     groupId = input.CurrentRecord.Key;
-                    _log.InfoFormat("Building tree for group {0}.", groupId);
-                    tree = new FPTree(EnumerateGroup(input), minSupport, Math.Min((groupId + 1) * maxPerGroup, itemCount));
+                    string message = string.Format("Building tree for group {0}.", groupId);
+                    _log.Info(message);
+                    TaskAttemptConfiguration.StatusMessage = message;
+                    tree = new FPTree(EnumerateGroup(input), minSupport, Math.Min((groupId + 1) * maxPerGroup, itemCount), TaskAttemptConfiguration);
                     tree.ProgressChanged += new EventHandler(FPTree_ProgressChanged);
 
                     // The tree needs to do mining only for the items in its group.

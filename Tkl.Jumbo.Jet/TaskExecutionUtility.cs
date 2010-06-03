@@ -32,7 +32,7 @@ namespace Tkl.Jumbo.Jet
         #endregion
 
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(TaskExecutionUtility));
-        private const int _progressInterval = 5000;
+        private readonly int _progressInterval = 5000;
 
         private readonly DfsClient _dfsClient;
         private readonly JetClient _jetClient;
@@ -41,6 +41,7 @@ namespace Tkl.Jumbo.Jet
         private readonly TaskExecutionUtility _rootTask;
         private readonly Type _taskType;
         private readonly List<IInputChannel> _inputChannels;
+        private readonly List<string> _statusMessages;
         private readonly bool _isAssociatedTask;
         private List<DfsOutputInfo> _dfsOutputs;
         private volatile bool _finished;
@@ -54,6 +55,7 @@ namespace Tkl.Jumbo.Jet
         private int _recordsWritten;
         private long _dfsBytesWritten;
         private object _task;
+        private readonly int _statusMessageLevel;
 
         internal TaskExecutionUtility(DfsClient dfsClient, JetClient jetClient, ITaskServerUmbilicalProtocol umbilical, TaskExecutionUtility parentTask, TaskAttemptConfiguration configuration)
         {
@@ -71,12 +73,18 @@ namespace Tkl.Jumbo.Jet
             _configuration = configuration;
             _umbilical = umbilical;
             _taskType = _configuration.StageConfiguration.TaskType;
+            configuration.TaskExecution = this;
+            _progressInterval = _jetClient.Configuration.TaskServer.ProgressInterval;
 
 
             if( parentTask == null ) // that means it's not a child task
             {
                 _rootTask = this;
                 _inputChannels = CreateInputChannels(configuration.JobConfiguration.GetInputStagesForStage(configuration.TaskId.StageId));
+
+                // Create the status message array with room for the channel message and this task's message.
+                _statusMessageLevel = 1;                
+                _statusMessages = new List<string>() { null, null };
             }
             else
             {
@@ -85,6 +93,7 @@ namespace Tkl.Jumbo.Jet
                 if( parentTask._associatedTasks == null )
                     parentTask._associatedTasks = new List<TaskExecutionUtility>();
                 parentTask._associatedTasks.Add(this);
+                _statusMessageLevel = parentTask._statusMessageLevel + 1;
             }
 
             OutputChannel = CreateOutputChannel();
@@ -170,6 +179,55 @@ namespace Tkl.Jumbo.Jet
             get { return _inputChannels; } 
         }
 
+        internal string ChannelStatusMessage
+        {
+            get { return _rootTask._statusMessages[0]; }
+            set 
+            {
+                lock( _rootTask._statusMessages )
+                {
+                    _rootTask._statusMessages[0] = value;
+                }
+            }
+        }
+
+        internal string TaskStatusMessage
+        {
+            get { return _rootTask._statusMessages[_statusMessageLevel]; }
+            set 
+            {
+                lock( _rootTask._statusMessages )
+                {
+                    _rootTask._statusMessages[_statusMessageLevel] = value;
+                }
+            }
+        }
+
+        private string CurrentStatus
+        {
+            get
+            {
+                lock( _rootTask._statusMessages )
+                {
+                    StringBuilder status = new StringBuilder(100);
+                    bool first = true;
+                    foreach( string message in _rootTask._statusMessages )
+                    {
+                        if( message != null )
+                        {
+                            if( first )
+                                first = false;
+                            else
+                                status.Append(" > ");
+                            status.Append(message);
+                        }
+                    }
+
+                    return status.ToString();
+                }
+            }
+        }
+
         /// <summary>
         /// Creates a <see cref="TaskExecutionUtility"/> instance for the specified task.
         /// </summary>
@@ -239,6 +297,18 @@ namespace Tkl.Jumbo.Jet
         /// </summary>
         /// <returns>A record writer.</returns>
         internal abstract IRecordWriter CreatePipelineRecordWriter();
+
+        internal void EnsureStatusLevels(int maxLevel)
+        {
+            // Only call this on the root task!
+            while( _statusMessages.Count < maxLevel + 1 )
+                _statusMessages.Add(null);
+        }
+
+        private void SetStatusMessage(int level, string message)
+        {
+            _statusMessages[level] = message;
+        }
 
         private static Type DetermineTaskExecutionType(TaskAttemptConfiguration configuration)
         {
@@ -539,6 +609,7 @@ namespace Tkl.Jumbo.Jet
                     {
                         progressChanged = true;
                         progress = new TaskProgress();
+                        progress.StatusMessage = CurrentStatus;
                         if( InputReader != null )
                             progress.Progress = InputReader.Progress;
                         foreach( KeyValuePair<string, List<IHasAdditionalProgress>> progressSource in _additionalProgressSources )
@@ -558,6 +629,13 @@ namespace Tkl.Jumbo.Jet
                                 progress.Progress = newProgress;
                                 progressChanged = true;
                             }
+                        }
+
+                        string status = CurrentStatus;
+                        if( progress.StatusMessage != status )
+                        {
+                            progress.StatusMessage = status;
+                            progressChanged = true;
                         }
 
                         // These are always in the same order so we can do this.

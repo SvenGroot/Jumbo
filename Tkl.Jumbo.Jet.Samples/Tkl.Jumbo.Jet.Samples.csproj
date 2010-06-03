@@ -79,6 +79,7 @@
       <Link>Properties\Version.cs</Link>
     </Compile>
     <Compile Include="FileChannelTest.cs" />
+    <Compile Include="FPGrowth\FeatureAccumulatorTask.cs" />
     <Compile Include="FPGrowth\FeatureFilterTask.cs" />
     <Compile Include="FPGrowth\FeatureGroupTask.cs" />
     <Compile Include="FPGrowth\FGListItem.cs" />

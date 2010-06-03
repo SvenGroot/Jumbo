@@ -12,6 +12,7 @@ using Tkl.Jumbo.CommandLine;
 using Tkl.Jumbo.Dfs;
 using Tkl.Jumbo.Jet.Tasks;
 using Tkl.Jumbo.Jet.Channels;
+using System.Globalization;
 
 namespace Tkl.Jumbo.Jet.Samples.FPGrowth
 {
@@ -235,6 +236,7 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
 
             foreach( Pair<int, WritableCollection<MappedFrequentPattern>> record in input.EnumerateRecords() )
             {
+                config.StatusMessage = "Aggregating for item id: " + record.Key.ToString(CultureInfo.InvariantCulture);
                 FrequentPatternMaxHeap heap = heaps[record.Key];
                 if( heap == null )
                 {
@@ -294,7 +296,7 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
                         break;
                     groupId = transactionInput.CurrentRecord.Key;
                     _log.InfoFormat("Building tree for group {0}.", groupId);
-                    tree = new FPTree(EnumerateGroup(transactionInput), minSupport, Math.Min((groupId + 1) * maxPerGroup, itemCount));
+                    tree = new FPTree(EnumerateGroup(transactionInput), minSupport, Math.Min((groupId + 1) * maxPerGroup, itemCount), config);
                 }
                 else
                 {
@@ -302,7 +304,7 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
                         break;
                     groupId = treeInput.CurrentRecord.Key;
                     _log.InfoFormat("Building tree for group {0}.", groupId);
-                    tree = new FPTree(EnumerateGroup(treeInput), minSupport, Math.Min((groupId + 1) * maxPerGroup, itemCount));
+                    tree = new FPTree(EnumerateGroup(treeInput), minSupport, Math.Min((groupId + 1) * maxPerGroup, itemCount), config);
                 }
 
                 // The tree needs to do mining only for the items in its group.
@@ -376,12 +378,12 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
                         {
                             if( currentGroupId != -1 )
                             {
-                                OutputGroupTransaction(transactionOutput, groups, mappedItems, currentGroupId, x);
+                                OutputGroupTransaction(transactionOutput, groups, mappedItems, currentGroupId, x, config);
                             }
                             currentGroupId = groupId;
                         }
                     }
-                    OutputGroupTransaction(transactionOutput, groups, mappedItems, currentGroupId, mappedItemCount);
+                    OutputGroupTransaction(transactionOutput, groups, mappedItems, currentGroupId, mappedItemCount, config);
                 }
             }
 
@@ -397,8 +399,9 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
             }
         }
 
-        private static void OutputGroupTransaction(RecordWriter<Pair<int, Transaction>> transactionOutput, TransactionTree[] groups, int[] mappedItems, int currentGroupId, int x)
+        private static void OutputGroupTransaction(RecordWriter<Pair<int, Transaction>> transactionOutput, TransactionTree[] groups, int[] mappedItems, int currentGroupId, int x, TaskAttemptConfiguration config)
         {
+            config.StatusMessage = "Generating group dependent transactions for group: " + currentGroupId.ToString(CultureInfo.InvariantCulture);
             if( transactionOutput == null )
             {
                 if( groups[currentGroupId] == null )

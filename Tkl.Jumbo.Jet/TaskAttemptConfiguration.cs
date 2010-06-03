@@ -88,6 +88,28 @@ namespace Tkl.Jumbo.Jet
         public int Attempt { get; private set; }
 
         /// <summary>
+        /// Gets or sets the status message for the current task attempt.
+        /// </summary>
+        /// <remarks>
+        /// Set this status message from task classes. This status message will be sent to the task server as part of a progress update.
+        /// </remarks>
+        public string StatusMessage
+        {
+            get
+            {
+                if( TaskExecution == null )
+                    throw new InvalidOperationException("No task execution utility available.");
+                return TaskExecution.TaskStatusMessage;
+            }
+            set
+            {
+                if( TaskExecution == null )
+                    throw new InvalidOperationException("No task execution utility available.");
+                TaskExecution.TaskStatusMessage = value;
+            }
+        }
+
+        /// <summary>
         /// Gets the task attempt ID for this task attempt.
         /// </summary>
         public string TaskAttemptId

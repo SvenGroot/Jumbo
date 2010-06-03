@@ -59,10 +59,11 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
         private const int _minSize = 8;
         private int _weight;
         private int _mineUntilItem;
+        private readonly TaskAttemptConfiguration _config;
 
         public event EventHandler ProgressChanged;
 
-        public FPTree(IEnumerable<ITransaction> transactions, int minSupport, int itemCount)
+        public FPTree(IEnumerable<ITransaction> transactions, int minSupport, int itemCount, TaskAttemptConfiguration config)
         {
             // The transactions passed to this constructor must already be mapped and sorted by frequent item list order.
             // The itemCount indicates how many of the items from the frequent item list are in the subdatabase.
@@ -76,6 +77,7 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
             _log.DebugFormat("Length: {0}; Capacity: {1}; Memory: {2}", _nodeCount, _nodes.Length, Process.GetCurrentProcess().PrivateMemorySize64);
             _minSupport = minSupport;
             _nodes[_rootNode].Id = -1;
+            _config = config;
         }
 
         private FPTree(int size, int headerSize, int minSupport)
@@ -150,7 +152,11 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
         private void MineItem(int? currentItem, FrequentPatternCollector collector, int item)
         {
             if( currentItem == null )
-                _log.InfoFormat("Mining for patterns with item {0}", item);
+            {
+                string message = string.Format("Mining for patterns with item id: {0}", item);
+                _log.InfoFormat(message);
+                _config.StatusMessage = message;
+            }
             int minSupport = collector.GetMinSupportForItem(currentItem == null ? item : currentItem.Value);
             if( _headerTable[item].Support >= minSupport )
             {

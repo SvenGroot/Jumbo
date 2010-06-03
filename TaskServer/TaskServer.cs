@@ -18,7 +18,7 @@ namespace TaskServerApplication
     {
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(TaskServer));
 
-        private const int _heartbeatInterval = 3000;
+        private readonly int _heartbeatInterval = 3000;
 
         private IJobServerHeartbeatProtocol _jobServer;
         private volatile bool _running;
@@ -45,6 +45,7 @@ namespace TaskServerApplication
                 System.IO.Directory.CreateDirectory(config.TaskServer.TaskDirectory);
 
             _jobServer = JetClient.CreateJobServerHeartbeatClient(config);
+            _heartbeatInterval = config.TaskServer.HeartbeatInterval;
         }
 
         public static TaskServer Instance { get; private set; }
