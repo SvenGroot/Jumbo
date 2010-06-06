@@ -109,8 +109,9 @@
         the input record reader from which it can read the records.
     </p>
     <p>
-        Only push tasks can be used as the receiving task type for an in-process channel. As such, if you're creating a task type that you intend to be reusable in multiple
-        scenarios, it is recommended that you use a push task.
+        Push tasks are recommended as the receiving task type for an in-process channel. As such, if you're creating a task type that you intend to be reusable in multiple
+        scenarios, it is recommended that you use a push task. Although the in-process channel supports using pull tasks, this is slower and prevents record reuse
+        for the sending task. If internal partitioning is used, using a pull task for the receiving stage also creates many threads, causing further overhead.
     </p>
     <p>
         Jumbo Jet makes no guarantees about the input data. If your task requires input data to be sorted, or to be partitioned a certain way, or anything else, it is up

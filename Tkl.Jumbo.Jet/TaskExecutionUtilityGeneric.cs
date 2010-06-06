@@ -87,6 +87,7 @@ namespace Tkl.Jumbo.Jet
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(TaskExecutionUtility)); // Intentionally not using the generic type as the log source.
 
         private bool _hasTaskRun;
+        private PipelinePullTaskRecordWriter<TInput, TOutput> _pipelinePullTaskRecordWriter; // Needed to finish pipelined pull tasks.
 
         public TaskExecutionUtilityGeneric(DfsClient dfsClient, JetClient jetClient, ITaskServerUmbilicalProtocol umbilical, TaskExecutionUtility parentTask, TaskAttemptConfiguration configuration)
             : base(dfsClient, jetClient, umbilical, parentTask, configuration)
@@ -165,9 +166,15 @@ namespace Tkl.Jumbo.Jet
 
             RecordWriter<TOutput> output = (RecordWriter<TOutput>)OutputWriter;
 
-            IPushTask<TInput, TOutput> task = (IPushTask<TInput, TOutput>)Task;
-
-            return new PipelineOutputChannel.PipelineRecordWriter<TInput, TOutput>(task, output);            
+            object task = Task;
+            IPushTask<TInput, TOutput> pushTask = Task as IPushTask<TInput, TOutput>;
+            if( pushTask != null )
+                return new PipelinePushTaskRecordWriter<TInput, TOutput>(pushTask, output);
+            else
+            {
+                _pipelinePullTaskRecordWriter = new PipelinePullTaskRecordWriter<TInput, TOutput>((IPullTask<TInput, TOutput>)task, output, Configuration.TaskId);
+                return _pipelinePullTaskRecordWriter;
+            }
         }
 
         private static void CallTaskRunMethod(RecordReader<TInput> input, RecordWriter<TOutput> output, Stopwatch taskStopwatch, ITask<TInput, TOutput> task)
@@ -199,6 +206,8 @@ namespace Tkl.Jumbo.Jet
             IPushTask<TInput, TOutput> task = Task as IPushTask<TInput, TOutput>;
             if( task != null )
                 task.Finish((RecordWriter<TOutput>)OutputWriter);
+            else if( _pipelinePullTaskRecordWriter != null )
+                _pipelinePullTaskRecordWriter.Finish();
         }
     }
 }

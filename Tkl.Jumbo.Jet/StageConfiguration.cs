@@ -200,13 +200,19 @@ namespace Tkl.Jumbo.Jet
             {
                 if( _allowRecordReuse == null )
                 {
-                    AllowRecordReuseAttribute attribute = (AllowRecordReuseAttribute)Attribute.GetCustomAttribute(TaskType, typeof(AllowRecordReuseAttribute));
-                    if( attribute == null )
+                    // If this is a child stage and the task is a pull task then record reuse is not allowed, because the PipelinePullTaskRecordWriter doesn't support it.
+                    if( Parent != null && TaskType.FindGenericInterfaceType(typeof(IPullTask<,>), false) != null )
                         _allowRecordReuse = false;
-                    else if( attribute.PassThrough )
-                        _allowRecordReuse = AllowOutputRecordReuse;
                     else
-                        _allowRecordReuse = true;
+                    {
+                        AllowRecordReuseAttribute attribute = (AllowRecordReuseAttribute)Attribute.GetCustomAttribute(TaskType, typeof(AllowRecordReuseAttribute));
+                        if( attribute == null )
+                            _allowRecordReuse = false;
+                        else if( attribute.PassThrough )
+                            _allowRecordReuse = AllowOutputRecordReuse;
+                        else
+                            _allowRecordReuse = true;
+                    }
                 }
                 return _allowRecordReuse.Value;
             }
