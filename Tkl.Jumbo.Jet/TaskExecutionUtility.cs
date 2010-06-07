@@ -296,8 +296,9 @@ namespace Tkl.Jumbo.Jet
         /// <summary>
         /// Creates the record writer that writes data to this child task.
         /// </summary>
+        /// <param name="partitioner">The partitioner to use for the <see cref="PrepartitionedRecordWriter{T}"/> if the child stage uses the <see cref="IPrepartitionedPushTask{TInput,TOutput}"/> interface. Otherwise, ignored.</param>
         /// <returns>A record writer.</returns>
-        internal abstract IRecordWriter CreatePipelineRecordWriter();
+        internal abstract IRecordWriter CreatePipelineRecordWriter(object partitioner);
 
         internal void EnsureStatusLevels(int maxLevel)
         {

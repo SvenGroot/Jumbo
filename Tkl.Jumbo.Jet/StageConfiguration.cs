@@ -304,6 +304,15 @@ namespace Tkl.Jumbo.Jet
             }
         }
 
+        [XmlIgnore]
+        internal bool IsOutputPrepartitioned
+        {
+            get
+            {
+                return TaskType.FindGenericInterfaceType(typeof(IPrepartitionedPushTask<,>), false) != null;
+            }
+        }
+
         /// <summary>
         /// Gets a child stage of this stage.
         /// </summary>

@@ -11,10 +11,10 @@ namespace Tkl.Jumbo.IO
     /// A record writer that paritions the records over multiple record writers.
     /// </summary>
     /// <typeparam name="T">The type of the records.</typeparam>
-    public class MultiRecordWriter<T> : RecordWriter<T>
+    public sealed class MultiRecordWriter<T> : RecordWriter<T>, IMultiRecordWriter<T>
     {
         private RecordWriter<T>[] _writers;
-        private IPartitioner<T> _partitioner;
+        private readonly IPartitioner<T> _partitioner;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="MultiRecordWriter{T}"/> class.
@@ -48,6 +48,15 @@ namespace Tkl.Jumbo.IO
         public IEnumerable<RecordWriter<T>> Writers
         {
             get { return _writers; }
+        }
+
+        /// <summary>
+        /// Gets the partitioner.
+        /// </summary>
+        /// <value>The partitioner.</value>
+        public IPartitioner<T> Partitioner
+        {
+            get { return _partitioner; }
         }
 
         /// <summary>

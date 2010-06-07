@@ -40,10 +40,10 @@ namespace Tkl.Jumbo.Jet.Channels
                 if( channelConfig.OutputStage != null )
                 {
                     StageConfiguration outputStage = taskExecution.Configuration.JobConfiguration.GetStage(channelConfig.OutputStage);
-                    if( taskExecution.Configuration.StageConfiguration.InternalPartitionCount == 1 )
+                    if( taskExecution.Configuration.StageConfiguration.InternalPartitionCount == 1 || taskExecution.Configuration.StageConfiguration.IsOutputPrepartitioned )
                     {
                         // If this task is not a child of a compound task, or there is no partitioning done inside the compound,
-                        // full connectivity means we partition the output into as many pieces as there are output tasks.
+                        // or the parent task uses prepartitioned output, full connectivity means we partition the output into as many pieces as there are output tasks.
                         int partitionCount = outputStage.TaskCount * channelConfig.PartitionsPerTask;
                         for( int x = 1; x <= partitionCount; ++x )
                         {
@@ -117,8 +117,11 @@ namespace Tkl.Jumbo.Jet.Channels
         /// <returns>An object implementing <see cref="IPartitioner{T}"/> that will partition the channel's output.</returns>
         protected IPartitioner<T> CreatePartitioner<T>()
         {
-            IPartitioner<T> partitioner = (IPartitioner<T>)JetActivator.CreateInstance(TaskExecution.Configuration.StageConfiguration.OutputChannel.PartitionerType.ReferencedType, TaskExecution);
-            partitioner.Partitions = _outputIds.Count;
+            IPartitioner<T> partitioner;
+            if( TaskExecution.Configuration.StageConfiguration.InternalPartitionCount > 1 && TaskExecution.Configuration.StageConfiguration.IsOutputPrepartitioned )
+                partitioner = new PrepartitionedPartitioner<T>();
+            else
+                partitioner = (IPartitioner<T>)JetActivator.CreateInstance(TaskExecution.Configuration.StageConfiguration.OutputChannel.PartitionerType.ReferencedType, TaskExecution);
             return partitioner;
         }
 

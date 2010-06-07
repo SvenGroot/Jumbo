@@ -18,10 +18,10 @@ namespace Tkl.Jumbo.Jet.Tasks
     ///   may not reuse the <see cref="IWritable"/> instances for the records.
     /// </note>
     /// </remarks>
-    public class SortTask<T> : Configurable, IPushTask<T, T>
+    public class SortTask<T> : Configurable, IPrepartitionedPushTask<T, T>
     {
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(SortTask<T>));
-        private List<T> _records = new List<T>();
+        private List<T>[] _partitions;
         private IComparer<T> _comparer;
 
         /// <summary>
@@ -36,7 +36,13 @@ namespace Tkl.Jumbo.Jet.Tasks
                 string comparerTypeName = TaskAttemptConfiguration.StageConfiguration.GetSetting(SortTaskConstants.ComparerSetting, null);
                 if( !string.IsNullOrEmpty(comparerTypeName) )
                     _comparer = (IComparer<T>)JetActivator.CreateInstance(Type.GetType(comparerTypeName, true), DfsConfiguration, JetConfiguration, TaskAttemptConfiguration);
+                _partitions = new List<T>[TaskAttemptConfiguration.StageConfiguration.InternalPartitionCount];
             }
+            else
+                _partitions = new List<T>[1];
+
+            for( int x = 0; x < _partitions.Length; ++x )
+                _partitions[x] = new List<T>();
 
             if( _comparer == null )
                 _comparer = Comparer<T>.Default;
@@ -48,26 +54,31 @@ namespace Tkl.Jumbo.Jet.Tasks
         /// Method called for each record in the task's input.
         /// </summary>
         /// <param name="record">The record to process.</param>
+        /// <param name="partition">The partition of the record</param>
         /// <param name="output">The <see cref="RecordWriter{T}"/> to which the task's output should be written.</param>
-        public void ProcessRecord(T record, Tkl.Jumbo.IO.RecordWriter<T> output)
+        public void ProcessRecord(T record, int partition, PrepartitionedRecordWriter<T> output)
         {
-            _records.Add(record);
+            _partitions[partition].Add(record);
         }
 
         /// <summary>
         /// Method called after the last record was processed.
         /// </summary>
         /// <param name="output">The <see cref="RecordWriter{T}"/> to which the task's output should be written.</param>
-        public void Finish(Tkl.Jumbo.IO.RecordWriter<T> output)
+        public void Finish(PrepartitionedRecordWriter<T> output)
         {
             if( output == null )
                 throw new ArgumentNullException("output");
-            _log.InfoFormat("Sorting {0} records.", _records.Count);
-            _records.Sort(_comparer);
-            _log.Info("Sort complete.");
-            foreach( T record in _records )
+            for( int partition = 0; partition < _partitions.Length; ++partition )
             {
-                output.WriteRecord(record);
+                List<T> records = _partitions[partition];
+                _log.InfoFormat("Sorting {0} records for partition {1}.", records.Count, partition);
+                records.Sort(_comparer);
+                _log.Info("Sort complete.");
+                foreach( T record in records )
+                {
+                    output.WriteRecord(record, partition);
+                }
             }
         }
 

@@ -61,11 +61,14 @@ namespace Tkl.Jumbo.Test.Jet
                 records.Add(value);
             }
             ListRecordWriter<int> output = new ListRecordWriter<int>();
+            MultiRecordWriter<int> multiOutput = new MultiRecordWriter<int>(new[] { output }, new PrepartitionedPartitioner<int>());
+            PrepartitionedRecordWriter<int> prepartitionedOutput = new PrepartitionedRecordWriter<int>(multiOutput);
 
             SortTask<int> target = new SortTask<int>();
+            target.NotifyConfigurationChanged();
             foreach( int record in records )
-                target.ProcessRecord(record, output);
-            target.Finish(output);
+                target.ProcessRecord(record, 0, prepartitionedOutput);
+            target.Finish(prepartitionedOutput);
 
             records.Sort();
             Assert.AreNotSame(records, output.List);

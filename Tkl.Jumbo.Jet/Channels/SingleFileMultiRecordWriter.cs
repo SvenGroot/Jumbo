@@ -11,7 +11,7 @@ using System.Threading;
 
 namespace Tkl.Jumbo.Jet.Channels
 {
-    sealed class SingleFileMultiRecordWriter<T> : RecordWriter<T>
+    sealed class SingleFileMultiRecordWriter<T> : RecordWriter<T>, IMultiRecordWriter<T>
     {
         #region Nested types
 
@@ -274,6 +274,11 @@ namespace Tkl.Jumbo.Jet.Channels
             {
                 return _bytesWritten;
             }
+        }
+
+        public IPartitioner<T> Partitioner
+        {
+            get { return _partitioner; }
         }
 
         protected override void Dispose(bool disposing)
