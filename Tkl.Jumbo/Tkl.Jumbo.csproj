@@ -95,6 +95,7 @@
     <Compile Include="CommandLine\PositionalCommandLineArgument.cs" />
     <Compile Include="CommandLine\ShellCommandAttribute.cs" />
     <Compile Include="CommandLine\StringExtensions.cs" />
+    <Compile Include="CountdownEvent.cs" />
     <Compile Include="ExtendedCollection.cs" />
     <Compile Include="CompressionUtility.cs" />
     <Compile Include="CompressionType.cs" />

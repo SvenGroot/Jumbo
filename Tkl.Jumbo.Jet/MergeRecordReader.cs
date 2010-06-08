@@ -16,7 +16,7 @@ namespace Tkl.Jumbo.Jet
     /// <typeparam name="T">The type of the records.</typeparam>
     /// <remarks>
     /// <para>
-    ///   If <see cref="InputStage"/> is not <see langword="null"/>, the <see cref="MergeRecordReader{T}"/> will using the <see cref="Tasks.SortTaskConstants.ComparerSetting"/>
+    ///   If <see cref="InputStage"/> is not <see langword="null"/>, the <see cref="MergeRecordReader{T}"/> will using the <see cref="Tasks.SortTaskConstants.ComparerSettingKey"/>
     ///   on the <see cref="StageConfiguration.StageSettings"/> of the input stage to determine the comparer to use. Otherwise, it will use the 
     ///   <see cref="MergeRecordReaderConstants.ComparerSetting"/> of the current stage. If neither is specified, <see cref="Comparer{T}.Default"/> will be used.
     /// </para>
@@ -181,7 +181,7 @@ namespace Tkl.Jumbo.Jet
             if( InputStage == null )
                 comparerTypeName = TaskAttemptConfiguration.StageConfiguration.GetSetting(MergeRecordReaderConstants.ComparerSetting, null);
             else
-                comparerTypeName = InputStage.GetSetting(Tasks.SortTaskConstants.ComparerSetting, null);
+                comparerTypeName = InputStage.GetSetting(Tasks.SortTaskConstants.ComparerSettingKey, null);
             
             if( !string.IsNullOrEmpty(comparerTypeName) )
                 recordComparer = (IComparer<T>)JetActivator.CreateInstance(Type.GetType(comparerTypeName, true), DfsConfiguration, JetConfiguration, TaskAttemptConfiguration);

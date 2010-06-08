@@ -208,7 +208,7 @@ namespace Tkl.Jumbo.Test.Jet
             StageConfiguration orderSort = config.AddStage("OrderSort", typeof(SortTask<Order>), joinTasks, new InputStageInfo(orderInput) { ChannelType = ChannelType.Pipeline }, null, null);
 
             orderInput.AddSetting(PartitionerConstants.EqualityComparerSetting, typeof(OrderJoinComparer).AssemblyQualifiedName);
-            orderSort.AddSetting(SortTaskConstants.ComparerSetting, typeof(OrderJoinComparer).AssemblyQualifiedName);
+            orderSort.AddSetting(SortTaskConstants.ComparerSettingKey, typeof(OrderJoinComparer).AssemblyQualifiedName);
             orderSort.AddSetting(MergeRecordReaderConstants.ComparerSetting, typeof(OrderJoinComparer).AssemblyQualifiedName);
 
             const string outputPath = "/testjoinoutput";

@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using Tkl.Jumbo.IO;
+using System.Threading;
 
 namespace Tkl.Jumbo.Jet.Tasks
 {
@@ -33,7 +34,7 @@ namespace Tkl.Jumbo.Jet.Tasks
             _comparer = null;
             if( TaskAttemptConfiguration != null )
             {
-                string comparerTypeName = TaskAttemptConfiguration.StageConfiguration.GetSetting(SortTaskConstants.ComparerSetting, null);
+                string comparerTypeName = TaskAttemptConfiguration.StageConfiguration.GetSetting(SortTaskConstants.ComparerSettingKey, null);
                 if( !string.IsNullOrEmpty(comparerTypeName) )
                     _comparer = (IComparer<T>)JetActivator.CreateInstance(Type.GetType(comparerTypeName, true), DfsConfiguration, JetConfiguration, TaskAttemptConfiguration);
                 _partitions = new List<T>[TaskAttemptConfiguration.StageConfiguration.InternalPartitionCount];
@@ -69,17 +70,61 @@ namespace Tkl.Jumbo.Jet.Tasks
         {
             if( output == null )
                 throw new ArgumentNullException("output");
+
+            bool parallelSort = TaskAttemptConfiguration.GetTypedSetting(SortTaskConstants.UseParallelSortSettingKey, true);
+
+            // Don't do parallel sort if we've been told not do, or if it doesn't make sense (1 partition or 1 CPU).
+            if( parallelSort && _partitions.Length > 1 && Environment.ProcessorCount > 1 )
+            {
+                SortAndOutputPartitionsParallel(output);
+            }
+            else
+            {
+                SortAndOutputPartitionsNonParallel(output);
+            }
+        }
+
+        private void SortAndOutputPartitionsNonParallel(PrepartitionedRecordWriter<T> output)
+        {
+            _log.DebugFormat("Sorting {0} partitions using non-parallel sort.", _partitions.Length);
             for( int partition = 0; partition < _partitions.Length; ++partition )
             {
                 List<T> records = _partitions[partition];
-                _log.InfoFormat("Sorting {0} records for partition {1}.", records.Count, partition);
                 records.Sort(_comparer);
-                _log.Info("Sort complete.");
                 foreach( T record in records )
                 {
                     output.WriteRecord(record, partition);
                 }
             }
+            _log.Debug("Done sorting.");
+        }
+
+        private void SortAndOutputPartitionsParallel(PrepartitionedRecordWriter<T> output)
+        {
+            _log.DebugFormat("Sorting {0} partitions using parallel sort.", _partitions.Length);
+
+            using( CountdownEvent evt = new CountdownEvent(_partitions.Length) )
+            {
+                foreach( List<T> partition in _partitions )
+                {
+                    List<T> localPartition = partition; // Don't use iteration variable directly in lambda.
+                    ThreadPool.QueueUserWorkItem(state =>
+                    {
+                        localPartition.Sort(_comparer);
+                        evt.Signal();
+                    });
+                }
+                evt.Wait();
+            }
+
+            // Writing records is not done as part of the parallel sort because the recordwriter doesn't need to be thread safe.
+            _log.Debug("Done sorting.");
+            for( int partition = 0; partition < _partitions.Length; ++partition )
+            {
+                foreach( T record in _partitions[partition] )
+                    output.WriteRecord(record, partition);
+            }
+            _log.Debug("Done writing partitions.");
         }
 
         #endregion

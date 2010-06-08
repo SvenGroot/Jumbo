@@ -1020,7 +1020,7 @@ namespace Tkl.Jumbo.Jet.Jobs
                 // specify anything else for that.
                 AddAssemblies(comparerType.Assembly);
                 sortStageSettings = new SettingsDictionary();
-                sortStageSettings.Add(SortTaskConstants.ComparerSetting, comparerType.AssemblyQualifiedName);
+                sortStageSettings.Add(SortTaskConstants.ComparerSettingKey, comparerType.AssemblyQualifiedName);
             }
 
             if( inputCollector == null )
