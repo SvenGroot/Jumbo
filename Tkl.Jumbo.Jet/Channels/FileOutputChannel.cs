@@ -55,9 +55,9 @@ namespace Tkl.Jumbo.Jet.Channels
 
             // We don't include child task IDs in the output file name because internal partitioning can happen only once
             // so the number always matches the output partition number anyway.
-            string inputTaskId = root.Configuration.TaskId.ToString();
+            string inputTaskAttemptId = root.Configuration.TaskAttemptId.ToString();
             _localJobDirectory = taskExecution.Configuration.LocalJobDirectory;
-            string directory = Path.Combine(_localJobDirectory, inputTaskId);
+            string directory = Path.Combine(_localJobDirectory, inputTaskAttemptId);
             if( !Directory.Exists(directory) )
                 Directory.CreateDirectory(directory);
 
@@ -67,18 +67,18 @@ namespace Tkl.Jumbo.Jet.Channels
                 if( taskExecution.Configuration.StageConfiguration.InternalPartitionCount > 1 )
                     throw new NotSupportedException("Cannot use single file output with internal partitioning.");
                 _log.Debug("The file output channel is using a single partition file for output.");
-                _fileNames = new List<string>() { CreateChannelFileName(inputTaskId, null) };
+                _fileNames = new List<string>() { CreateChannelFileName(inputTaskAttemptId, null) };
             }
             else
             {
                 _fileNames = (from taskId in OutputIds
-                              select CreateChannelFileName(inputTaskId, taskId)).ToList();
+                              select CreateChannelFileName(inputTaskAttemptId, taskId)).ToList();
 
                 if( _fileNames.Count == 0 )
                 {
                     // This is allowed for debugging and testing purposes so you don't have to have an output task.
                     _log.Warn("The file channel has no output tasks; writing channel output to a dummy file.");
-                    _fileNames.Add(CreateChannelFileName(inputTaskId, "DummyTask"));
+                    _fileNames.Add(CreateChannelFileName(inputTaskAttemptId, "DummyTask"));
                 }
             }
         }
@@ -99,12 +99,12 @@ namespace Tkl.Jumbo.Jet.Channels
             }
         }
 
-        internal static string CreateChannelFileName(string inputTaskID, string outputTaskID)
+        internal static string CreateChannelFileName(string inputTaskAttemptId, string outputTaskId)
         {
-            if( outputTaskID == null ) // for single-file output
-                return Path.Combine(inputTaskID, inputTaskID + ".output");
+            if( outputTaskId == null ) // for single-file output
+                return Path.Combine(inputTaskAttemptId, inputTaskAttemptId + ".output");
             else
-                return Path.Combine(inputTaskID, outputTaskID + ".output");
+                return Path.Combine(inputTaskAttemptId, outputTaskId + ".output");
         }
 
         #region IOutputChannel members

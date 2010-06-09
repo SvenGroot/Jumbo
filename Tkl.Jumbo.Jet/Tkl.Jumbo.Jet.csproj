@@ -160,6 +160,7 @@
     <Compile Include="StageStatus.cs" />
     <Compile Include="StatusJetHeartbeatData.cs" />
     <Compile Include="TaskAttemptConfiguration.cs" />
+    <Compile Include="TaskAttemptId.cs" />
     <Compile Include="TaskDfsInput.cs" />
     <Compile Include="TaskDfsOutput.cs" />
     <Compile Include="TaskExecutionUtility.cs" />

@@ -16,16 +16,16 @@ namespace Tkl.Jumbo.Jet
         /// Reports successful task completion to the task server.
         /// </summary>
         /// <param name="jobId">The job ID of the job containing the task.</param>
-        /// <param name="taskId">The task ID.</param>
-        void ReportCompletion(Guid jobId, string taskId);
+        /// <param name="taskAttemptId">The task ID.</param>
+        void ReportCompletion(Guid jobId, TaskAttemptId taskAttemptId);
 
         /// <summary>
         /// Reports progression of a task.
         /// </summary>
         /// <param name="jobId">The job ID of the job containing the task.</param>
-        /// <param name="taskId">The task ID.</param>
+        /// <param name="taskAttemptId">The task attempt id.</param>
         /// <param name="progress">The progress data.</param>
-        void ReportProgress(Guid jobId, string taskId, TaskProgress progress);
+        void ReportProgress(Guid jobId, TaskAttemptId taskAttemptId, TaskProgress progress);
 
         /// <summary>
         /// Informs the task server of the uncompressed size of a temporary file used by the file channel.
@@ -47,8 +47,8 @@ namespace Tkl.Jumbo.Jet
         /// Registers the port number that the task host is listening on for TCP channel connections.
         /// </summary>
         /// <param name="jobId">The job ID of the job containing the task.</param>
-        /// <param name="taskId">The task ID.</param>
+        /// <param name="taskAttemptId">The task attempt id.</param>
         /// <param name="port">The port number.</param>
-        void RegisterTcpChannelPort(Guid jobId, string taskId, int port);
+        void RegisterTcpChannelPort(Guid jobId, TaskAttemptId taskAttemptId, int port);
     }
 }

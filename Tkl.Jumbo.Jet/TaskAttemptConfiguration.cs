@@ -12,19 +12,16 @@ namespace Tkl.Jumbo.Jet
     /// </summary>
     public class TaskAttemptConfiguration
     {
-        private string _taskAttemptId;
-
         /// <summary>
         /// Initializes a new instance of the <see cref="TaskAttemptConfiguration"/> class.
         /// </summary>
         /// <param name="jobId">The job ID.</param>
         /// <param name="jobConfiguration">The configuration for the job.</param>
-        /// <param name="taskId">The task ID.</param>
+        /// <param name="taskAttemptId">The task attempt ID.</param>
         /// <param name="stageConfiguration">The configuration for the stage that the task belongs to.</param>
         /// <param name="localJobDirectory">The local directory where files related to the job are stored.</param>
         /// <param name="dfsJobDirectory">The DFS directory where files related to the job are stored.</param>
-        /// <param name="attempt">The attempt number for this task attempt.</param>
-        public TaskAttemptConfiguration(Guid jobId, JobConfiguration jobConfiguration, TaskId taskId, StageConfiguration stageConfiguration, string localJobDirectory, string dfsJobDirectory, int attempt)
+        public TaskAttemptConfiguration(Guid jobId, JobConfiguration jobConfiguration, TaskAttemptId taskAttemptId, StageConfiguration stageConfiguration, string localJobDirectory, string dfsJobDirectory)
         {
             if( jobConfiguration == null )
                 throw new ArgumentNullException("jobConfiguration");
@@ -37,11 +34,10 @@ namespace Tkl.Jumbo.Jet
 
             JobId = jobId;
             JobConfiguration = jobConfiguration;
-            TaskId = taskId;
             StageConfiguration = stageConfiguration;
             LocalJobDirectory = localJobDirectory;
             DfsJobDirectory = dfsJobDirectory;
-            Attempt = attempt;
+            TaskAttemptId = taskAttemptId;
         }
 
         /// <summary>
@@ -52,7 +48,10 @@ namespace Tkl.Jumbo.Jet
         /// <summary>
         /// Gets the task ID.
         /// </summary>
-        public TaskId TaskId { get; private set; }
+        public TaskId TaskId
+        {
+            get { return TaskAttemptId.TaskId; }
+        }
 
         /// <summary>
         /// Gets the configuration for the job.
@@ -85,7 +84,10 @@ namespace Tkl.Jumbo.Jet
         /// <summary>
         /// Gets the attempt number of this task attempt.
         /// </summary>
-        public int Attempt { get; private set; }
+        public int Attempt
+        {
+            get { return TaskAttemptId.Attempt; }
+        }
 
         /// <summary>
         /// Gets or sets the status message for the current task attempt.
@@ -112,15 +114,7 @@ namespace Tkl.Jumbo.Jet
         /// <summary>
         /// Gets the task attempt ID for this task attempt.
         /// </summary>
-        public string TaskAttemptId
-        {
-            get
-            {
-                if( _taskAttemptId == null )
-                    _taskAttemptId = TaskId.GetTaskAttemptId(Attempt);
-                return _taskAttemptId;
-            }
-        }
+        public TaskAttemptId TaskAttemptId { get; set; }
 
         /// <summary>
         /// Gets a setting with the specified type and default value, checking first in the stage settings and then in the job settings.

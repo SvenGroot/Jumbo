@@ -40,8 +40,8 @@ namespace JobServerApplication
                 throw new ArgumentNullException("job");
             _stage = stage;
             _taskId = new TaskId(stage.StageId, taskNumber);
+            _fullTaskId = Tkl.Jumbo.Jet.Job.CreateFullTaskId(job.Job.JobId, _taskId);
             _job = job;
-            _fullTaskId = Tkl.Jumbo.Jet.Job.CreateFullTaskId(job.Job.JobId, _taskId.ToString());
 
             List<int> partitions = null;
             if( inputStages != null )
@@ -137,6 +137,11 @@ namespace JobServerApplication
                 }
             }
         }
+
+        public TaskAttemptId CurrentAttempt { get; set; }
+
+        public TaskAttemptId SuccessfulAttempt { get; set; }
+
 
         public int Attempts { get; set; }
 

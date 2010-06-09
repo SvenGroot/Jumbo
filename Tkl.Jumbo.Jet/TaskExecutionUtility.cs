@@ -237,12 +237,11 @@ namespace Tkl.Jumbo.Jet
         /// <param name="umbilical">The umbilical.</param>
         /// <param name="jobId">The job id.</param>
         /// <param name="jobConfiguration">The job configuration.</param>
-        /// <param name="taskId">The task id.</param>
+        /// <param name="taskAttemptId">The task attempt ID.</param>
         /// <param name="dfsJobDirectory">The DFS job directory.</param>
         /// <param name="localJobDirectory">The local job directory.</param>
-        /// <param name="attempt">The attempt.</param>
         /// <returns>A <see cref="TaskExecutionUtility"/>.</returns>
-        public static TaskExecutionUtility Create(DfsClient dfsClient, JetClient jetClient, ITaskServerUmbilicalProtocol umbilical, Guid jobId, JobConfiguration jobConfiguration, TaskId taskId, string dfsJobDirectory, string localJobDirectory, int attempt)
+        public static TaskExecutionUtility Create(DfsClient dfsClient, JetClient jetClient, ITaskServerUmbilicalProtocol umbilical, Guid jobId, JobConfiguration jobConfiguration, TaskAttemptId taskAttemptId, string dfsJobDirectory, string localJobDirectory)
         {
             if( dfsClient == null )
                 throw new ArgumentNullException("dfsClient");
@@ -252,14 +251,14 @@ namespace Tkl.Jumbo.Jet
                 throw new ArgumentNullException("umbilical");
             if( jobConfiguration == null )
                 throw new ArgumentNullException("jobConfiguration");
-            if( taskId == null )
+            if( taskAttemptId == null )
                 throw new ArgumentNullException("taskId");
             if( dfsJobDirectory == null )
                 throw new ArgumentNullException("dfsJobDirectory");
             if( localJobDirectory == null )
                 throw new ArgumentNullException("localJobDirectory");
 
-            TaskAttemptConfiguration configuration = new TaskAttemptConfiguration(jobId, jobConfiguration, taskId, jobConfiguration.GetStage(taskId.StageId), localJobDirectory, dfsJobDirectory, attempt);
+            TaskAttemptConfiguration configuration = new TaskAttemptConfiguration(jobId, jobConfiguration, taskAttemptId, jobConfiguration.GetStage(taskAttemptId.TaskId.StageId), localJobDirectory, dfsJobDirectory);
             Type taskExecutionType = DetermineTaskExecutionType(configuration);
             ConstructorInfo ctor = taskExecutionType.GetConstructor(new Type[] { typeof(DfsClient), typeof(JetClient), typeof(ITaskServerUmbilicalProtocol), typeof(TaskExecutionUtility), typeof(TaskAttemptConfiguration) });
             return (TaskExecutionUtility)ctor.Invoke(new object[] { dfsClient, jetClient, umbilical, null, configuration });
@@ -284,8 +283,8 @@ namespace Tkl.Jumbo.Jet
             if( childStage == null )
                 throw new ArgumentNullException("childStage");
             
-            TaskId childTaskId = new TaskId(Configuration.TaskId, childStage.StageId, taskNumber);
-            TaskAttemptConfiguration configuration = new TaskAttemptConfiguration(Configuration.JobId, Configuration.JobConfiguration, childTaskId, childStage, Configuration.LocalJobDirectory, Configuration.DfsJobDirectory, Configuration.Attempt);
+            TaskId childTaskId = new TaskId(Configuration.TaskAttemptId.TaskId, childStage.StageId, taskNumber);
+            TaskAttemptConfiguration configuration = new TaskAttemptConfiguration(Configuration.JobId, Configuration.JobConfiguration, new TaskAttemptId(childTaskId, Configuration.TaskAttemptId.Attempt), childStage, Configuration.LocalJobDirectory, Configuration.DfsJobDirectory);
 
             Type taskExecutionType = DetermineTaskExecutionType(configuration);
 
@@ -680,7 +679,7 @@ namespace Tkl.Jumbo.Jet
                         _log.DebugFormat("CPU: {0}", procStatus.Total);
                         _log.DebugFormat("Memory: {0}", memStatus);
                     }
-                    Umbilical.ReportProgress(Configuration.JobId, Configuration.TaskId.ToString(), previousProgress);
+                    Umbilical.ReportProgress(Configuration.JobId, Configuration.TaskAttemptId, previousProgress);
                 }
                 catch( SocketException ex )
                 {

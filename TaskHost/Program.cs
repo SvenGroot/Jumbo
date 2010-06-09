@@ -81,7 +81,8 @@ namespace TaskHost
 
                 try
                 {
-                    using( TaskExecutionUtility taskExecution = TaskExecutionUtility.Create(_dfsClient, _jetClient, umbilical, jobId, config, new TaskId(taskId), dfsJobDirectory, jobDirectory, attempt) )
+                    TaskAttemptId taskAttemptId = new TaskAttemptId(new TaskId(taskId), attempt);
+                    using( TaskExecutionUtility taskExecution = TaskExecutionUtility.Create(_dfsClient, _jetClient, umbilical, jobId, config, taskAttemptId, dfsJobDirectory, jobDirectory) )
                     {
                         taskExecution.RunTask();
                     }
@@ -89,7 +90,7 @@ namespace TaskHost
                     sw.Stop();
 
                     _log.Info("Reporting completion to task server.");
-                    umbilical.ReportCompletion(jobId, taskId);
+                    umbilical.ReportCompletion(jobId, taskAttemptId);
                 }
                 catch( Exception ex )
                 {

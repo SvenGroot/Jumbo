@@ -66,7 +66,7 @@ namespace Tkl.Jumbo.Test.Jet
             stageConfig.AddTypedSetting(MergeRecordReaderConstants.MaxMergeInputsSetting, maxMergeInputs);
             stageConfig.StageId = "Merge";
             reader.JetConfiguration = new JetConfiguration();
-            reader.TaskAttemptConfiguration = new TaskAttemptConfiguration(Guid.Empty, new JobConfiguration(), new TaskId(stageConfig.StageId, 1), stageConfig, Utilities.TestOutputPath, "", 1);
+            reader.TaskAttemptConfiguration = new TaskAttemptConfiguration(Guid.Empty, new JobConfiguration(), new TaskAttemptId(new TaskId(stageConfig.StageId, 1), 1), stageConfig, Utilities.TestOutputPath, "");
             reader.NotifyConfigurationChanged();
             Random rnd = new Random();
             List<int>[] sortedLists = new List<int>[partitions];

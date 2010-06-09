@@ -48,13 +48,13 @@ public partial class logfile : System.Web.UI.Page
 
                 if( Request.QueryString["profile"] == "true" )
                 {
-                    LogFileContents.InnerText = client.GetTaskProfileOutput(jobId, taskId, attempt);
+                    LogFileContents.InnerText = client.GetTaskProfileOutput(jobId, new TaskAttemptId(new TaskId(taskId), attempt));
                     Title = string.Format("Task {{{0}}}_{1}_{2} profile output (on {3}) - Jumbo Jet", jobId, taskId, attempt, taskServer);
                     HeaderText.InnerText = string.Format("Task {{{0}}}_{1}_{2} profile output (on {3})", jobId, taskId, attempt, taskServer);
                 }
                 else
                 {
-                    LogFileContents.InnerText = client.GetTaskLogFileContents(jobId, taskId, attempt, maxSize);
+                    LogFileContents.InnerText = client.GetTaskLogFileContents(jobId, new TaskAttemptId(new TaskId(taskId), attempt), maxSize);
                     Title = string.Format("Task {{{0}}}_{1}_{2} log file (on {3}) - Jumbo Jet", jobId, taskId, attempt, taskServer);
                     HeaderText.InnerText = string.Format("Task {{{0}}}_{1}_{2} log file (on {3})", jobId, taskId, attempt, taskServer);
                 }

@@ -202,7 +202,7 @@ namespace JobServerApplication
                 if( task.State == TaskState.Finished )
                 {
                     TaskServerInfo server = task.Server; // For thread-safety, do only one read of the property
-                    result.Add(new CompletedTask() { JobId = jobId, TaskId = task.TaskId.ToString(), TaskServer = server.Address, TaskServerFileServerPort = server.FileServerPort });
+                    result.Add(new CompletedTask() { JobId = jobId, TaskAttemptId = task.SuccessfulAttempt, TaskServer = server.Address, TaskServerFileServerPort = server.FileServerPort });
                 }
             }
 
@@ -373,7 +373,9 @@ namespace JobServerApplication
                             if( responses == null )
                                 responses = new List<JetHeartbeatResponse>();
                             ++task.Attempts;
-                            responses.Add(new RunTaskJetHeartbeatResponse(task.Job.Job, task.TaskId.ToString(), task.Attempts));
+                            TaskAttemptId attemptId = new TaskAttemptId(task.TaskId, task.Attempts);
+                            task.CurrentAttempt = attemptId;
+                            responses.Add(new RunTaskJetHeartbeatResponse(task.Job.Job, attemptId));
                             task.State = TaskState.Running;
                             task.StartTimeUtc = DateTime.UtcNow;
                         }
@@ -457,7 +459,7 @@ namespace JobServerApplication
                     _log.WarnFormat("Data server {0} reported status for unknown job {1} (this may be the aftermath of a failed job).", server.Address, data.JobId);
                     return;
                 }
-                TaskInfo task = job.GetSchedulingTask(data.TaskId);
+                TaskInfo task = job.GetSchedulingTask(data.TaskAttemptId.TaskId.ToString());
                 if( data.Progress != null )
                 {
                     if( task.State == TaskState.Running )
@@ -481,8 +483,9 @@ namespace JobServerApplication
                         {
                         case TaskAttemptStatus.Completed:
                             task.EndTimeUtc = DateTime.UtcNow;
+                            task.SuccessfulAttempt = data.TaskAttemptId;
                             task.State = TaskState.Finished;
-                            _log.InfoFormat("Task {0} completed successfully.", Job.CreateFullTaskId(data.JobId, data.TaskId));
+                            _log.InfoFormat("Task {0} completed successfully.", Job.CreateFullTaskId(data.JobId, data.TaskAttemptId));
                             if( task.Progress == null )
                                 task.Progress = new TaskProgress() { Progress = 1.0f };
                             else
@@ -493,7 +496,7 @@ namespace JobServerApplication
                         case TaskAttemptStatus.Error:
                             task.State = TaskState.Error;
                             task.Progress = null;
-                            _log.WarnFormat("Task {0} encountered an error.", Job.CreateFullTaskId(data.JobId, data.TaskId));
+                            _log.WarnFormat("Task {0} encountered an error.", Job.CreateFullTaskId(data.JobId, data.TaskAttemptId));
                             TaskStatus failedAttempt = task.ToTaskStatus();
                             failedAttempt.EndTime = DateTime.UtcNow;
                             job.AddFailedTaskAttempt(failedAttempt);
@@ -506,7 +509,7 @@ namespace JobServerApplication
                             }
                             else
                             {
-                                _log.ErrorFormat("Task {0} failed more than {1} times; aborting the job.", Job.CreateFullTaskId(data.JobId, data.TaskId), Configuration.JobServer.MaxTaskAttempts);
+                                _log.ErrorFormat("Task {0} failed more than {1} times; aborting the job.", Job.CreateFullTaskId(data.JobId, data.TaskAttemptId.TaskId), Configuration.JobServer.MaxTaskAttempts);
                                 job.State = JobState.Failed;
                             }
                             ++job.Errors;

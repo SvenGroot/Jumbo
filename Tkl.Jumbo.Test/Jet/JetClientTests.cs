@@ -54,7 +54,7 @@ namespace Tkl.Jumbo.Test.Jet
         public void TestCreateTaskServerClient()
         {
             ITaskServerClientProtocol client = JetClient.CreateTaskServerClient(new ServerAddress("localhost", TestJetCluster.TaskServerPort));
-            Assert.AreEqual(TaskAttemptStatus.NotStarted, client.GetTaskStatus("bogus"));
+            Assert.AreEqual(TaskAttemptStatus.NotStarted, client.GetTaskStatus(Guid.Empty, new TaskAttemptId(new TaskId("bogus", 1), 1)));
         }
     }
 }

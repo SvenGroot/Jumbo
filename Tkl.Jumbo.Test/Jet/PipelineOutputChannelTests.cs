@@ -24,11 +24,11 @@ namespace Tkl.Jumbo.Test.Jet
         {
             #region ITaskServerUmbilicalProtocol Members
 
-            public void ReportCompletion(Guid jobID, string taskID)
+            public void ReportCompletion(Guid jobID, TaskAttemptId taskID)
             {
             }
 
-            public void ReportProgress(Guid jobId, string taskId, TaskProgress progress)
+            public void ReportProgress(Guid jobId, TaskAttemptId taskId, TaskProgress progress)
             {
             }
 
@@ -41,7 +41,7 @@ namespace Tkl.Jumbo.Test.Jet
                 return -1;
             }
 
-            public void RegisterTcpChannelPort(Guid jobId, string taskId, int port)
+            public void RegisterTcpChannelPort(Guid jobId, TaskAttemptId taskId, int port)
             {
             }
 

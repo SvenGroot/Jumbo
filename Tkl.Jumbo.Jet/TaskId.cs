@@ -13,7 +13,7 @@ namespace Tkl.Jumbo.Jet
     /// Represents a task identifier.
     /// </summary>
     [Serializable]
-    public sealed class TaskId : ISerializable
+    public sealed class TaskId : ISerializable, IEquatable<TaskId>, IComparable<TaskId>, IComparable
     {
         private readonly string _taskId;
         private readonly string _stageId;
@@ -30,12 +30,7 @@ namespace Tkl.Jumbo.Jet
         /// </summary>
         public const char TaskNumberSeparator = '-';
 
-        /// <summary>
-        /// The separator characer used to identify the task attempt number in a task attempt identifier.
-        /// </summary>
-        public const char TaskAttemptNumberSeparator = '_';
-
-        private static readonly char[] _invalidStageIdCharacters = { ChildStageSeparator, TaskNumberSeparator, TaskAttemptNumberSeparator };
+        private static readonly char[] _invalidStageIdCharacters = { ChildStageSeparator, TaskNumberSeparator, TaskAttemptId.TaskAttemptNumberSeparator };
 
         /// <summary>
         /// Initializes a new instance of the <see cref="TaskId"/> class with the specified task ID.
@@ -196,16 +191,6 @@ namespace Tkl.Jumbo.Jet
         }
 
         /// <summary>
-        /// Gets a task attempt ID for the specified task attempt.
-        /// </summary>
-        /// <param name="attempt">The attempt number.</param>
-        /// <returns>A task attempt ID for the specified task attempt.</returns>
-        public string GetTaskAttemptId(int attempt)
-        {
-            return _taskId + TaskAttemptNumberSeparator + attempt.ToString(System.Globalization.CultureInfo.InvariantCulture);
-        }
-
-        /// <summary>
         /// Creates a task ID string from the specified stage ID and task number.
         /// </summary>
         /// <param name="stageId">The stage ID.</param>
@@ -239,6 +224,80 @@ namespace Tkl.Jumbo.Jet
 
             info.AddValue("TaskId", _taskId);
         }
+
+        /// <summary>
+        /// Determines whether the specified <see cref="System.Object"/> is equal to this instance.
+        /// </summary>
+        /// <param name="obj">The <see cref="System.Object"/> to compare with this instance.</param>
+        /// <returns>
+        /// 	<see langword="true"/> if the specified <see cref="System.Object"/> is equal to this instance; otherwise, <see langword="false"/>.
+        /// </returns>
+        public override bool Equals(object obj)
+        {
+            return Equals(obj as TaskId);
+        }
+
+        /// <summary>
+        /// Returns a hash code for this instance.
+        /// </summary>
+        /// <returns>
+        /// A hash code for this instance, suitable for use in hashing algorithms and data structures like a hash table. 
+        /// </returns>
+        public override int GetHashCode()
+        {
+            return _taskId.GetHashCode();
+        }
+
+        /// <summary>
+        /// Compares this <see cref="TaskId"/> with another <see cref="TaskId"/>.
+        /// </summary>
+        /// <param name="other">The <see cref="TaskId"/> to compare to.</param>
+        /// <returns><see langword="true"/> if this <see cref="TaskId"/> is equal to <paramref name="other"/>; otherwise, <see langword="false"/>.</returns>
+        public bool Equals(TaskId other)
+        {
+            if( other == null )
+                return false;
+            if( other == this )
+                return true;
+
+            return string.Equals(_taskId, other._taskId, StringComparison.Ordinal);
+        }
+
+        /// <summary>
+        /// Compares the current instance with another object of the same type and returns an integer that indicates whether the current instance precedes, follows, or occurs in the same position
+        /// in the sort order as the other object.
+        /// </summary>
+        /// <param name="other">A <see cref="TaskId"/> to compare with this instance.</param>
+        /// <returns>
+        /// Less than zero if this instance is smaller than <paramref name="other"/>; zero if this instance is equal to <paramref name="other"/>; greater than zero if this instance is larger than <paramref name="other"/>.
+        /// </returns>
+        public int CompareTo(TaskId other)
+        {
+            if( other == null )
+                return 1;
+            if( other == this )
+                return 0;
+
+            return string.CompareOrdinal(_taskId, other._taskId);
+        }
+
+        /// <summary>
+        /// Compares the current instance with another object of the same type and returns an integer that indicates whether the current instance precedes, follows, or occurs in the same position
+        /// in the sort order as the other object.
+        /// </summary>
+        /// <param name="obj">An object to compare with this instance.</param>
+        /// <returns>
+        /// Less than zero if this instance is smaller than <paramref name="obj"/>; zero if this instance is equal to <paramref name="obj"/>; greater than zero if this instance is larger than <paramref name="obj"/>.
+        /// </returns>
+        public int CompareTo(object obj)
+        {
+            TaskId other = obj as TaskId;
+            if( other != null )
+                throw new ArgumentException("The specified object is not a TaskId.", "obj");
+
+            return CompareTo(other);
+        }
+
 
         private static void ParseStageIdAndNumber(string localTaskId, out string stageId, out int taskNumber)
         {

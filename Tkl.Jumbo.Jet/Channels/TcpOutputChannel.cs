@@ -77,7 +77,8 @@ namespace Tkl.Jumbo.Jet.Channels
             int port;
             do
             {
-                port = taskServerClient.GetTcpChannelPort(TaskExecution.Configuration.JobId, taskId);
+                // Since a task failure fails the job with the TCP channel, the attempt number will always be 1.
+                port = taskServerClient.GetTcpChannelPort(TaskExecution.Configuration.JobId, new TaskAttemptId(new TaskId(taskId), 1));
                 if( port == 0 )
                 {
                     _log.DebugFormat("Task {0} has not yet registered a port number, waiting for retry...", taskId);

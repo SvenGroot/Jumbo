@@ -19,9 +19,9 @@ namespace Tkl.Jumbo.Jet
         public Guid JobId { get; set; }
 
         /// <summary>
-        /// Gets or sets the task ID.
+        /// Gets or sets the task attempt ID that finished this task.
         /// </summary>
-        public string TaskId { get; set; }
+        public TaskAttemptId TaskAttemptId { get; set; }
 
         /// <summary>
         /// Gets the global task ID of the task.
@@ -30,7 +30,7 @@ namespace Tkl.Jumbo.Jet
         {
             get
             {
-                return Job.CreateFullTaskId(JobId, TaskId);
+                return Job.CreateFullTaskId(JobId, TaskAttemptId);
             }
         }
 

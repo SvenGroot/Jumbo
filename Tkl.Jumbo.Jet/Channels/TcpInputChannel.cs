@@ -57,7 +57,7 @@ namespace Tkl.Jumbo.Jet.Channels
                 Thread listenerThread = new Thread(ListenerThread) { IsBackground = true, Name = "TcpChannelListenerThread_" + addresses[x].ToString() };
                 listenerThread.Start(listener);
             }
-            TaskExecution.Umbilical.RegisterTcpChannelPort(TaskExecution.Configuration.JobId, TaskExecution.Configuration.TaskId.ToString(), port);
+            TaskExecution.Umbilical.RegisterTcpChannelPort(TaskExecution.Configuration.JobId, TaskExecution.Configuration.TaskAttemptId, port);
 
             return _reader;
         }

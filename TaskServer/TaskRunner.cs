@@ -27,12 +27,11 @@ namespace TaskServerApplication
 
             public event EventHandler ProcessExited;
 
-            public RunningTask(Guid jobID, string jobDirectory, TaskId taskID, int attempt, string dfsJobDirectory, StageConfiguration stageConfiguration, TaskServer taskServer)
+            public RunningTask(Guid jobID, string jobDirectory, TaskAttemptId taskAttemptId, string dfsJobDirectory, StageConfiguration stageConfiguration, TaskServer taskServer)
             {
                 JobID = jobID;
-                TaskID = taskID;
-                Attempt = attempt;
-                FullTaskID = Job.CreateFullTaskId(jobID, taskID.ToString());
+                TaskAttemptId = taskAttemptId;
+                FullTaskID = Job.CreateFullTaskId(jobID, taskAttemptId);
                 JobDirectory = jobDirectory;
                 DfsJobDirectory = dfsJobDirectory;
                 _taskServer = taskServer;
@@ -43,15 +42,13 @@ namespace TaskServerApplication
 
             public Guid JobID { get; private set; }
 
-            public TaskId TaskID { get; private set; }
+            public TaskAttemptId TaskAttemptId { get; private set; }
 
             public string JobDirectory { get; private set; }
 
             public string FullTaskID { get; private set; }
 
             public string DfsJobDirectory { get; private set; }
-
-            public int Attempt { get; private set; }
 
             public StageConfiguration StageConfiguration { get; private set; }
 
@@ -73,7 +70,7 @@ namespace TaskServerApplication
                     {
                         try
                         {
-                            ProcessStartInfo startInfo = new ProcessStartInfo("TaskHost.exe", string.Format("\"{0}\" \"{1}\" \"{2}\" \"{3}\" {4}", JobID, JobDirectory, TaskID, DfsJobDirectory, Attempt));
+                            ProcessStartInfo startInfo = new ProcessStartInfo("TaskHost.exe", string.Format("\"{0}\" \"{1}\" \"{2}\" \"{3}\" {4}", JobID, JobDirectory, TaskAttemptId.TaskId, DfsJobDirectory, TaskAttemptId.Attempt));
                             startInfo.UseShellExecute = false;
                             startInfo.CreateNoWindow = true;
                             string profileOutputFile = null;
@@ -153,7 +150,7 @@ namespace TaskServerApplication
                 AppDomain taskDomain = AppDomain.CreateDomain(FullTaskID, null, setup);
                 try
                 {
-                    taskDomain.ExecuteAssembly("TaskHost.exe", null, new string[] { JobID.ToString(), JobDirectory, TaskID.ToString(), DfsJobDirectory, Attempt.ToString() });
+                    taskDomain.ExecuteAssembly("TaskHost.exe", null, new string[] { JobID.ToString(), JobDirectory, TaskAttemptId.TaskId.ToString(), DfsJobDirectory, TaskAttemptId.Attempt.ToString() });
                 }
                 catch( Exception ex )
                 {
@@ -244,7 +241,7 @@ namespace TaskServerApplication
                 {
                     _log.InfoFormat("Task {0} has completed successfully.", task.FullTaskID);
                     task.State = TaskAttemptStatus.Completed;
-                    _taskServer.NotifyTaskStatusChanged(task.JobID, task.TaskID.ToString(), task.State, null);
+                    _taskServer.NotifyTaskStatusChanged(task.JobID, task.TaskAttemptId, task.State, null);
                 }
                 else
                     _log.WarnFormat("Task {0} was reported as completed but was not running.", fullTaskID);
@@ -286,18 +283,6 @@ namespace TaskServerApplication
                 }
                 else
                     return TaskAttemptStatus.NotStarted;
-            }
-        }
-
-        public string GetJobDirectory(string fullTaskID)
-        {
-            if( fullTaskID == null )
-                throw new ArgumentNullException("fullTaskID");
-
-            lock( _runningTasks )
-            {
-                RunningTask task = _runningTasks[fullTaskID];
-                return task.JobDirectory;
             }
         }
 
@@ -351,7 +336,7 @@ namespace TaskServerApplication
 
         private void RunTask(RunTaskJetHeartbeatResponse task)
         {
-            _log.InfoFormat("Running task {{{0}}}_{1}.", task.Job.JobId, task.TaskId);
+            _log.InfoFormat("Running task {{{0}}}_{1}.", task.Job.JobId, task.TaskAttemptId);
             string jobDirectory = _taskServer.GetJobDirectory(task.Job.JobId);
             JobConfiguration config;
             try
@@ -373,15 +358,14 @@ namespace TaskServerApplication
             catch( Exception ex )
             {
                 _log.Error("Could not load job configuration.", ex);
-                _taskServer.NotifyTaskStatusChanged(task.Job.JobId, task.TaskId, TaskAttemptStatus.Error, null);
+                _taskServer.NotifyTaskStatusChanged(task.Job.JobId, task.TaskAttemptId, TaskAttemptStatus.Error, null);
                 return;
             }
-            TaskId taskId = new TaskId(task.TaskId);
-            StageConfiguration stageConfig = config.GetStage(taskId.StageId);
+            StageConfiguration stageConfig = config.GetStage(task.TaskAttemptId.TaskId.StageId);
             RunningTask runningTask;
             lock( _runningTasks )
             {
-                runningTask = new RunningTask(task.Job.JobId, jobDirectory, taskId, task.Attempt, task.Job.Path, stageConfig, _taskServer);
+                runningTask = new RunningTask(task.Job.JobId, jobDirectory, task.TaskAttemptId, task.Job.Path, stageConfig, _taskServer);
                 runningTask.ProcessExited += new EventHandler(RunningTask_ProcessExited);
                 _runningTasks.Add(runningTask.FullTaskID, runningTask);
             }
@@ -400,7 +384,7 @@ namespace TaskServerApplication
                         _log.ErrorFormat("Task {0} did not complete sucessfully.", task.FullTaskID);
                         task.State = TaskAttemptStatus.Error;
                         _runningTasks.Remove(task.FullTaskID);
-                        _taskServer.NotifyTaskStatusChanged(task.JobID, task.TaskID.ToString(), task.State, null);
+                        _taskServer.NotifyTaskStatusChanged(task.JobID, task.TaskAttemptId, task.State, null);
                         task.Dispose();
                     }
                     _log.InfoFormat("Task {0} has finished, state = {1}.", task.FullTaskID, task.State);

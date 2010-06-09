@@ -21,17 +21,17 @@ namespace Tkl.Jumbo.Jet
         /// <summary>
         /// Gets the current status of a task.
         /// </summary>
-        /// <param name="fullTaskId">The full ID of the task.</param>
+        /// <param name="jobId">The job id.</param>
+        /// <param name="taskAttemptId">The task attempt id.</param>
         /// <returns>The status of the task.</returns>
-        TaskAttemptStatus GetTaskStatus(string fullTaskId);
+        TaskAttemptStatus GetTaskStatus(Guid jobId, TaskAttemptId taskAttemptId);
 
         /// <summary>
-        /// Gets the local directory where output files for a particular task are stored if that task uses a file output channel.
+        /// Gets the local directory where output files for a particular job are stored if that task uses a file output channel.
         /// </summary>
         /// <param name="jobId">The job ID.</param>
-        /// <param name="taskId">The task ID.</param>
         /// <returns>The output directory of the task.</returns>
-        string GetOutputFileDirectory(Guid jobId, string taskId);
+        string GetOutputFileDirectory(Guid jobId);
 
         /// <summary>
         /// Gets the contents of the diagnostic log file.
@@ -44,11 +44,12 @@ namespace Tkl.Jumbo.Jet
         /// Gets the contents of the diagnostic log file for the specified task.
         /// </summary>
         /// <param name="jobId">The job ID.</param>
-        /// <param name="taskId">The task ID.</param>
-        /// <param name="attempt">The attempt number.</param>
+        /// <param name="taskAttemptId">The task attempt id.</param>
         /// <param name="maxSize">The maximum size of the log data to return.</param>
-        /// <returns>The contents of the diagnostic log file, or <see langword="null"/> if it doesn't exist.</returns>
-        string GetTaskLogFileContents(Guid jobId, string taskId, int attempt, int maxSize);
+        /// <returns>
+        /// The contents of the diagnostic log file, or <see langword="null"/> if it doesn't exist.
+        /// </returns>
+        string GetTaskLogFileContents(Guid jobId, TaskAttemptId taskAttemptId, int maxSize);
 
         /// <summary>
         /// Gets the contents of the diagnostic log files for all tasks of the specified job that this server has run,
@@ -62,17 +63,20 @@ namespace Tkl.Jumbo.Jet
         /// Gets the profile output for the specified task.
         /// </summary>
         /// <param name="jobId">The job ID.</param>
-        /// <param name="taskId">The task ID.</param>
-        /// <param name="attempt">The attempt number.</param>
-        /// <returns>The profile output, or <see langword="null"/> if it doesn't exist.</returns>
-        string GetTaskProfileOutput(Guid jobId, string taskId, int attempt);
+        /// <param name="taskAttemptId">The task attempt id.</param>
+        /// <returns>
+        /// The profile output, or <see langword="null"/> if it doesn't exist.
+        /// </returns>
+        string GetTaskProfileOutput(Guid jobId, TaskAttemptId taskAttemptId);
 
         /// <summary>
         /// Gets the TCP server port for the specified task.
         /// </summary>
         /// <param name="jobId">The job ID.</param>
-        /// <param name="taskId">The task ID.</param>
-        /// <returns>The port number, or 0 if the task is unknown or hasn't registered a port number yet.</returns>
-        int GetTcpChannelPort(Guid jobId, string taskId);
+        /// <param name="taskAttemptId">The task attempt id.</param>
+        /// <returns>
+        /// The port number, or 0 if the task is unknown or hasn't registered a port number yet.
+        /// </returns>
+        int GetTcpChannelPort(Guid jobId, TaskAttemptId taskAttemptId);
     }
 }

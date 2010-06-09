@@ -85,9 +85,9 @@ namespace TaskServerApplication
             }
         }
 
-        public void NotifyTaskStatusChanged(Guid jobID, string taskID, TaskAttemptStatus newStatus, TaskProgress progress)
+        public void NotifyTaskStatusChanged(Guid jobID, TaskAttemptId taskAttemptId, TaskAttemptStatus newStatus, TaskProgress progress)
         {
-            AddDataForNextHeartbeat(new TaskStatusChangedJetHeartbeatData(jobID, taskID, newStatus, progress));
+            AddDataForNextHeartbeat(new TaskStatusChangedJetHeartbeatData(jobID, taskAttemptId, newStatus, progress));
             if( newStatus == TaskAttemptStatus.Completed )
                 SendHeartbeat();
         }
@@ -99,19 +99,19 @@ namespace TaskServerApplication
 
         #region ITaskServerUmbilicalProtocol Members
 
-        public void ReportCompletion(Guid jobID, string taskID)
+        public void ReportCompletion(Guid jobID, TaskAttemptId taskAttemptId)
         {
-            if( taskID == null )
+            if( taskAttemptId == null )
                 throw new ArgumentNullException("taskID");
-            string fullTaskID = Job.CreateFullTaskId(jobID, taskID);
+            string fullTaskID = Job.CreateFullTaskId(jobID, taskAttemptId);
             _log.DebugFormat("ReportCompletion, fullTaskID = \"{0}\"", fullTaskID);
             _taskRunner.ReportCompletion(fullTaskID);
         }
 
-        public void ReportProgress(Guid jobId, string taskId, TaskProgress progress)
+        public void ReportProgress(Guid jobId, TaskAttemptId taskAttemptId, TaskProgress progress)
         {
-            _log.InfoFormat("Task {0} progress: {1}", Job.CreateFullTaskId(jobId, taskId), progress);
-            NotifyTaskStatusChanged(jobId, taskId, TaskAttemptStatus.Running, progress);
+            _log.InfoFormat("Task {0} progress: {1}", Job.CreateFullTaskId(jobId, taskAttemptId), progress);
+            NotifyTaskStatusChanged(jobId, taskAttemptId, TaskAttemptStatus.Running, progress);
         }
 
         public void SetUncompressedTemporaryFileSize(Guid jobId, string fileName, long uncompressedSize)
@@ -144,14 +144,14 @@ namespace TaskServerApplication
             }
         }
 
-        public void RegisterTcpChannelPort(Guid jobId, string taskId, int port)
+        public void RegisterTcpChannelPort(Guid jobId, TaskAttemptId taskAttemptId, int port)
         {
-            if( taskId == null )
+            if( taskAttemptId == null )
                 throw new ArgumentNullException("taskId");
             if( port <= 0 )
                 throw new ArgumentOutOfRangeException("port", "Port must be greater than zero.");
 
-            string fullTaskId = Job.CreateFullTaskId(jobId, taskId);
+            string fullTaskId = Job.CreateFullTaskId(jobId, taskAttemptId);
             _log.InfoFormat("Task {0} has is registering TCP channel port {1}.", fullTaskId, port);
             _taskRunner.RegisterTcpChannelPort(fullTaskId, port);
         }
@@ -165,17 +165,18 @@ namespace TaskServerApplication
             get { return Configuration.TaskServer.FileServerPort; }
         }
 
-        public TaskAttemptStatus GetTaskStatus(string fullTaskID)
+        public TaskAttemptStatus GetTaskStatus(Guid jobId, TaskAttemptId taskAttemptId)
         {
+            string fullTaskID = Job.CreateFullTaskId(jobId, taskAttemptId);
             _log.DebugFormat("GetTaskStatus, fullTaskID = \"{0}\"", fullTaskID);
             TaskAttemptStatus status = _taskRunner.GetTaskStatus(fullTaskID);
             _log.DebugFormat("Task {0} status is {1}.", fullTaskID, status);
             return status;
         }
 
-        public string GetOutputFileDirectory(Guid jobId, string taskId)
+        public string GetOutputFileDirectory(Guid jobId)
         {
-            _log.DebugFormat("GetOutputFileDirectory, jobId = \"{0}\", taskId = \"{0}\"", jobId, taskId);
+            _log.DebugFormat("GetOutputFileDirectory, jobId = \"{0}\"", jobId);
             return GetJobDirectory(jobId);
         }
 
@@ -202,11 +203,11 @@ namespace TaskServerApplication
             return null;
         }
 
-        public string GetTaskLogFileContents(Guid jobId, string taskId, int attempt, int maxSize)
+        public string GetTaskLogFileContents(Guid jobId, TaskAttemptId taskAttemptId, int maxSize)
         {
-            _log.DebugFormat("GetTaskLogFileContents; jobId = {{{0}}}, taskId = \"{1}\", attempt = {2}, maxSize = {3}", jobId, taskId, attempt, maxSize);
+            _log.DebugFormat("GetTaskLogFileContents; jobId = {{{0}}}, taskAttemptId = \"{1}\", maxSize = {2}", jobId, taskAttemptId, maxSize);
             string jobDirectory = GetJobDirectory(jobId);
-            string logFileName = System.IO.Path.Combine(jobDirectory, taskId + "_" + attempt.ToString() + ".log");
+            string logFileName = System.IO.Path.Combine(jobDirectory, taskAttemptId.ToString() + ".log");
             if( System.IO.File.Exists(logFileName) )
             {
                 using( System.IO.FileStream stream = System.IO.File.Open(logFileName, System.IO.FileMode.Open, System.IO.FileAccess.Read, System.IO.FileShare.ReadWrite) )
@@ -256,11 +257,11 @@ namespace TaskServerApplication
             return null;
         }
 
-        public string GetTaskProfileOutput(Guid jobId, string taskId, int attempt)
+        public string GetTaskProfileOutput(Guid jobId, TaskAttemptId taskAttemptId)
         {
-            _log.DebugFormat("GetTaskProfileOutput; jobId = {{{0}}}, taskId = \"{1}\", attempt = {2}", jobId, taskId, attempt);
+            _log.DebugFormat("GetTaskProfileOutput; jobId = {{{0}}}, taskAttemptId = \"{1}\"", jobId, taskAttemptId);
             string jobDirectory = GetJobDirectory(jobId);
-            string profileOutputFileName = System.IO.Path.Combine(jobDirectory, taskId + "_" + attempt.ToString() + "_profile.txt");
+            string profileOutputFileName = System.IO.Path.Combine(jobDirectory, taskAttemptId.ToString() + "_profile.txt");
             if( System.IO.File.Exists(profileOutputFileName) )
             {
                 using( System.IO.FileStream stream = System.IO.File.Open(profileOutputFileName, System.IO.FileMode.Open, System.IO.FileAccess.Read, System.IO.FileShare.ReadWrite) )
@@ -272,12 +273,12 @@ namespace TaskServerApplication
             return null;
         }
 
-        public int GetTcpChannelPort(Guid jobId, string taskId)
+        public int GetTcpChannelPort(Guid jobId, TaskAttemptId taskAttemptId)
         {
-            if( taskId == null )
-                throw new ArgumentNullException("taskId");
-            _log.DebugFormat("GetTcpChannelPort; jobId = {{{0}}}, taskId = \"{1}\"", jobId, taskId);
-            return _taskRunner.GetTcpChannelPort(Job.CreateFullTaskId(jobId, taskId));
+            if( taskAttemptId == null )
+                throw new ArgumentNullException("taskAttemptId");
+            _log.DebugFormat("GetTcpChannelPort; jobId = {{{0}}}, taskId = \"{1}\"", jobId, taskAttemptId);
+            return _taskRunner.GetTcpChannelPort(Job.CreateFullTaskId(jobId, taskAttemptId));
         }
 
         #endregion
@@ -361,7 +362,7 @@ namespace TaskServerApplication
                     break;
                 case TaskServerHeartbeatCommand.RunTask:
                     RunTaskJetHeartbeatResponse runResponse = (RunTaskJetHeartbeatResponse)response;
-                    _log.InfoFormat("Received run task command for task {{{0}}}_{1}, attempt {2}.", runResponse.Job.JobId, runResponse.TaskId, runResponse.Attempt);
+                    _log.InfoFormat("Received run task command for task {{{0}}}_{1}.", runResponse.Job.JobId, runResponse.TaskAttemptId);
                     _taskRunner.AddTask(runResponse);
                     break;
                 case TaskServerHeartbeatCommand.CleanupJob:

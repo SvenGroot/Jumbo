@@ -205,7 +205,7 @@ namespace Tkl.Jumbo.Jet.Channels
                         }
                         foreach( CompletedTask task in completedTasks )
                         {
-                            tasksLeft.Remove(task.TaskId);
+                            tasksLeft.Remove(task.TaskAttemptId.TaskId.ToString());
                         }
                         tasksLeftArray = tasksLeft.ToArray();
                     }
@@ -294,7 +294,7 @@ namespace Tkl.Jumbo.Jet.Channels
 
         private bool DownloadCompletedFile(IMultiInputRecordReader reader, CompletedTask task)
         {
-            _log.InfoFormat("Task {0} output files are now available.", task.TaskId);
+            _log.InfoFormat("Task {0} output files are now available.", task.TaskAttemptId.TaskId);
 
             IList<RecordInput> inputs;
 
@@ -331,11 +331,11 @@ namespace Tkl.Jumbo.Jet.Channels
             long uncompressedSize = -1L;
             inputs = new List<RecordInput>(Partitions.Count);
             ITaskServerClientProtocol taskServer = JetClient.CreateTaskServerClient(task.TaskServer);
-            string taskOutputDirectory = taskServer.GetOutputFileDirectory(task.JobId, task.TaskId);
+            string taskOutputDirectory = taskServer.GetOutputFileDirectory(task.JobId);
 
             if( _inputUsesSingleFileFormat )
             {
-                string outputFileName = FileOutputChannel.CreateChannelFileName(task.TaskId, null);
+                string outputFileName = FileOutputChannel.CreateChannelFileName(task.TaskAttemptId.ToString(), null);
                 string fileName = Path.Combine(taskOutputDirectory, outputFileName);
                 using( PartitionFileIndex index = new PartitionFileIndex(fileName) )
                 {
@@ -346,7 +346,7 @@ namespace Tkl.Jumbo.Jet.Channels
                         {
                             _log.InfoFormat("Local input file {0} partition {1} is empty.", fileName, partition);
                             IRecordReader taskReader = (IRecordReader)JetActivator.CreateInstance(typeof(EmptyRecordReader<>).MakeGenericType(InputRecordType), TaskExecution);
-                            taskReader.SourceName = task.TaskId;
+                            taskReader.SourceName = task.TaskAttemptId.TaskId.ToString();
                             inputs.Add(new RecordInput(taskReader));
                         }
                         else
@@ -363,14 +363,14 @@ namespace Tkl.Jumbo.Jet.Channels
             {
                 foreach( int partition in Partitions )
                 {
-                    string outputFileName = FileOutputChannel.CreateChannelFileName(task.TaskId, TaskId.CreateTaskIdString(_outputStageId, partition));
+                    string outputFileName = FileOutputChannel.CreateChannelFileName(task.TaskAttemptId.ToString(), TaskId.CreateTaskIdString(_outputStageId, partition));
                     string fileName = Path.Combine(taskOutputDirectory, outputFileName);
                     long size = new FileInfo(fileName).Length;
                     if( size == 0 )
                     {
                         _log.InfoFormat("Local input file {0} is empty.", fileName);
                         IRecordReader taskReader = (IRecordReader)JetActivator.CreateInstance(typeof(EmptyRecordReader<>).MakeGenericType(InputRecordType), TaskExecution);
-                        taskReader.SourceName = task.TaskId;
+                        taskReader.SourceName = task.TaskAttemptId.TaskId.ToString();
                         inputs.Add(new RecordInput(taskReader));
                     }
                     else
@@ -385,7 +385,7 @@ namespace Tkl.Jumbo.Jet.Channels
                         else
                             LocalBytesRead += size;
                         // We don't delete output files; if this task fails they might still be needed
-                        inputs.Add(new RecordInput(_inputReaderType, fileName, task.TaskId, uncompressedSize, false));
+                        inputs.Add(new RecordInput(_inputReaderType, fileName, task.TaskAttemptId.TaskId.ToString(), uncompressedSize, false));
                     }
                 }
             }
@@ -401,13 +401,13 @@ namespace Tkl.Jumbo.Jet.Channels
 
             if( _inputUsesSingleFileFormat )
             {
-                singleFileToDownload = FileOutputChannel.CreateChannelFileName(task.TaskId, null);
+                singleFileToDownload = FileOutputChannel.CreateChannelFileName(task.TaskAttemptId.ToString(), null);
                 _log.InfoFormat(CultureInfo.InvariantCulture, "Downloading {0} partition(s) {1} from server {2}:{3}.", singleFileToDownload, Partitions.ToDelimitedString(), task.TaskServer.HostName, port);
             }
             else
             {
                 filesToDownload = (from partition in Partitions
-                                   select FileOutputChannel.CreateChannelFileName(task.TaskId, TaskId.CreateTaskIdString(_outputStageId, partition))).ToArray();
+                                   select FileOutputChannel.CreateChannelFileName(task.TaskAttemptId.ToString(), TaskId.CreateTaskIdString(_outputStageId, partition))).ToArray();
                 _log.InfoFormat(CultureInfo.InvariantCulture, "Downloading {0} from server {1}:{2}.", filesToDownload.ToDelimitedString(), task.TaskServer.HostName, port);
             }
 
@@ -462,12 +462,12 @@ namespace Tkl.Jumbo.Jet.Channels
                 Stream memoryStream = _memoryStorage.AddStreamIfSpaceAvailable((int)size);
                 if( memoryStream == null )
                 {
-                    targetFile = Path.Combine(_inputDirectory, string.Format(System.Globalization.CultureInfo.InvariantCulture, "{0}_part{1}.input", task.TaskId, partition));
+                    targetFile = Path.Combine(_inputDirectory, string.Format(System.Globalization.CultureInfo.InvariantCulture, "{0}_part{1}.input", task.TaskAttemptId.TaskId, partition));
                     using( FileStream fileStream = File.Create(targetFile, _writeBufferSize) )
                     {
                         stream.CopySize(fileStream, size, _writeBufferSize);
                     }
-                    downloadedFiles.Add(new RecordInput(_inputReaderType, targetFile, task.TaskId, uncompressedSize, TaskExecution.JetClient.Configuration.FileChannel.DeleteIntermediateFiles));
+                    downloadedFiles.Add(new RecordInput(_inputReaderType, targetFile, task.TaskAttemptId.TaskId.ToString(), uncompressedSize, TaskExecution.JetClient.Configuration.FileChannel.DeleteIntermediateFiles));
                     _log.InfoFormat("File stored in {0}.", targetFile);
 
                 }
@@ -476,7 +476,7 @@ namespace Tkl.Jumbo.Jet.Channels
                     stream.CopySize(memoryStream, size);
                     memoryStream.Position = 0;
                     IRecordReader taskReader = (IRecordReader)JetActivator.CreateInstance(_inputReaderType, TaskExecution, memoryStream.CreateDecompressor(CompressionType, uncompressedSize), TaskExecution.AllowRecordReuse);
-                    taskReader.SourceName = task.TaskId;
+                    taskReader.SourceName = task.TaskAttemptId.TaskId.ToString();
                     downloadedFiles.Add(new RecordInput(taskReader));
                 }
                 NetworkBytesRead += size;
@@ -485,7 +485,7 @@ namespace Tkl.Jumbo.Jet.Channels
             {
                 _log.InfoFormat("Input partition {0} is empty.", partition);
                 IRecordReader taskReader = (IRecordReader)JetActivator.CreateInstance(typeof(EmptyRecordReader<>).MakeGenericType(InputRecordType), TaskExecution);
-                taskReader.SourceName = task.TaskId;
+                taskReader.SourceName = task.TaskAttemptId.TaskId.ToString();
                 downloadedFiles.Add(new RecordInput(taskReader));
             }
             else
