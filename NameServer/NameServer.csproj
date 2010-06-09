@@ -74,6 +74,7 @@
       <Link>Properties\Version.cs</Link>
     </Compile>
     <Compile Include="BlockInfo.cs" />
+    <Compile Include="ChecksumOutputStream.cs" />
     <Compile Include="DataServerInfo.cs" />
     <Compile Include="EditLog.cs" />
     <Compile Include="FileDeletedEventArgs.cs" />

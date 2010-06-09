@@ -28,8 +28,9 @@ namespace NameServerApplication
          * 1: Initial version; no FS image, text format edit log.
          * 2: Binary edit log and support for checkpointing to FS image.
          * 3: Custom file block size and replication factor.
+         * 4: Checksummed format.
          */
-        public const int FileSystemFormatVersion = 3;
+        public const int FileSystemFormatVersion = 4;
 
         public event EventHandler<FileDeletedEventArgs> FileDeleted;
 
@@ -45,7 +46,8 @@ namespace NameServerApplication
             _configuration = configuration;
             _log.Info("++++ FileSystem created.");
             // TODO: Automatic recovery from this.
-            if( File.Exists(Path.Combine(configuration.NameServer.EditLogDirectory, _fileSystemTempImageFileName)) )
+            string tempImageFileName = Path.Combine(configuration.NameServer.EditLogDirectory, _fileSystemTempImageFileName);
+            if( File.Exists(tempImageFileName) || File.Exists(tempImageFileName + ".crc") )
                 throw new DfsException("The nameserver was previously interruped while making a checkpoint; please resolve the situation and restart.");
             string imageFile = Path.Combine(configuration.NameServer.EditLogDirectory, _fileSystemImageFileName);
             if( File.Exists(imageFile) )
@@ -455,8 +457,12 @@ namespace NameServerApplication
             string fileName = Path.Combine(_configuration.NameServer.EditLogDirectory, _fileSystemImageFileName);
             if( File.Exists(fileName) )
                 File.Delete(fileName);
+            string crcFileName = fileName + ".crc";
+            if( File.Exists(crcFileName) )
+                File.Delete(crcFileName);
             _editLog.DiscardOldLogFile();
             File.Move(tempFileName, fileName);
+            File.Move(tempFileName + ".crc", crcFileName);
             _log.Info("File system image creation complete.");
         }
 
@@ -479,7 +485,8 @@ namespace NameServerApplication
         private void SaveToFileSystemImage(string fileName)
         {
             using( FileStream stream = File.Create(fileName) )
-            using( BinaryWriter writer = new BinaryWriter(stream) )
+            using( ChecksumOutputStream crcStream = new ChecksumOutputStream(stream, fileName + ".crc", 0L) )
+            using( BinaryWriter writer = new BinaryWriter(crcStream) )
             {
                 writer.Write(FileSystemFormatVersion);
                 lock( _root )
@@ -492,12 +499,17 @@ namespace NameServerApplication
                             file.SaveToFileSystemImage(writer);
                     }
                 }
+
+                writer.Flush();
             }
         }
 
         private void LoadFromFileSystemImage(string fileName)
         {
             _log.InfoFormat("Loading file system image from '{0}'.", fileName);
+
+            ChecksumOutputStream.CheckCrc(fileName);
+
             using( FileStream stream = File.OpenRead(fileName) )
             using( BinaryReader reader = new BinaryReader(stream) )
             {

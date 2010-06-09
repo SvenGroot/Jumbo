@@ -37,13 +37,16 @@ namespace NameServerApplication
 
             public string Path { get; private set; }
 
-            public static T Load<T>(BinaryReader reader)
-                where T : EditLogEntry, new()
+            public static EditLogEntry ReadEntry(BinaryReader reader)
             {
-                T result = new T();
+                int mutation = reader.ReadInt32();
+
+                EditLogEntry result = _entryTypeMap[mutation]();
                 result.Read(reader);
                 return result;
             }
+
+            public abstract void Replay(FileSystem fileSystem);
 
             #region IWritable Members
 
@@ -75,6 +78,11 @@ namespace NameServerApplication
                 : base(FileSystemMutation.CreateDirectory, date, path)
             {
             }
+
+            public override void Replay(FileSystem fileSystem)
+            {
+                fileSystem.CreateDirectory(Path, Date);
+            }
         }
 
         private sealed class CreateFileEditLogEntry : EditLogEntry
@@ -94,6 +102,11 @@ namespace NameServerApplication
             public int BlockSize { get; private set; }
 
             public int ReplicationFactor { get; private set; }
+
+            public override void Replay(FileSystem fileSystem)
+            {
+                fileSystem.CreateFile(Path, Date, BlockSize, ReplicationFactor, false);
+            }
 
             public override void Write(BinaryWriter writer)
             {
@@ -124,6 +137,11 @@ namespace NameServerApplication
             }
 
             public Guid BlockId { get; private set; }
+
+            public override void Replay(FileSystem fileSystem)
+            {
+                fileSystem.AppendBlock(Path, BlockId, -1);
+            }
 
             public override void Write(BinaryWriter writer)
             {
@@ -156,6 +174,11 @@ namespace NameServerApplication
 
             public int Size { get; private set; }
 
+            public override void Replay(FileSystem fileSystem)
+            {
+                fileSystem.CommitBlock(Path, BlockId, Size);
+            }
+
             public override void Write(BinaryWriter writer)
             {
                 base.Write(writer);
@@ -182,6 +205,11 @@ namespace NameServerApplication
                 : base(FileSystemMutation.CommitFile, date, path)
             {
             }
+
+            public override void Replay(FileSystem fileSystem)
+            {
+                fileSystem.CloseFile(Path);
+            }
         }
 
         private sealed class DeleteEditLogEntry : EditLogEntry
@@ -198,6 +226,11 @@ namespace NameServerApplication
             }
 
             public bool IsRecursive { get; private set; }
+
+            public override void Replay(FileSystem fileSystem)
+            {
+                fileSystem.Delete(Path, IsRecursive);
+            }
 
             public override void Write(BinaryWriter writer)
             {
@@ -227,6 +260,11 @@ namespace NameServerApplication
 
             public string TargetPath { get; private set; }
 
+            public override void Replay(FileSystem fileSystem)
+            {
+                fileSystem.Move(Path, TargetPath);
+            }
+
             public override void Write(BinaryWriter writer)
             {
                 base.Write(writer);
@@ -242,14 +280,16 @@ namespace NameServerApplication
 
         #endregion
 
+        private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(EditLog));
+
+        private static readonly Func<EditLogEntry>[] _entryTypeMap = CreateEntryTypeMap();
         private const string _logFileName = "EditLog";
         private const string _newLogFileName = "EditLog.new";
-        private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(EditLog));
         private readonly object _logFileLock = new object();
         private bool _loggingEnabled = true;
         private readonly string _logFileDirectory;
         private string _logFilePath;
-        private FileStream _logFileStream;
+        private ChecksumOutputStream _logFileStream;
         private BinaryWriter _logFileWriter;
 
         public EditLog(string logFileDirectory)
@@ -272,6 +312,9 @@ namespace NameServerApplication
             if( replayLog && File.Exists(_logFilePath) )
             {
                 _log.Info("Replaying log file.");
+
+                long oldCrc = ChecksumOutputStream.CheckCrc(_logFilePath);
+
                 ReplayLog(fileSystem);
                 // A read only file system is used to create a checkpoint, and doesn't need to read the new log file.
                 if( !readOnly )
@@ -283,13 +326,16 @@ namespace NameServerApplication
                     {
                         _logFilePath = newLogFilePath;
                         _log.Info("Replaying new log file.");
+
+                        oldCrc = ChecksumOutputStream.CheckCrc(_logFilePath);
+
                         ReplayLog(fileSystem);
                     }
                 }
                 _log.Info("Replaying log file finished.");
                 _loggingEnabled = !readOnly;
                 if( !readOnly )
-                    OpenExistingLogFile();
+                    OpenExistingLogFile(oldCrc);
             }
             else
             {
@@ -386,13 +432,16 @@ namespace NameServerApplication
                 else
                 {
                     _log.Info("Discarding old edit log file, and renaming new log file.");
+                    long crc = _logFileStream.Crc;
                     CloseLogFile();
 
                     File.Delete(logFileName);
+                    File.Delete(logFileName + ".crc");
                     File.Move(newLogFileName, logFileName);
+                    File.Move(newLogFileName + ".crc", logFileName + ".crc");
 
                     _logFilePath = logFileName;
-                    OpenExistingLogFile();
+                    OpenExistingLogFile(crc);
                 }
             }
         }
@@ -421,38 +470,8 @@ namespace NameServerApplication
                     long length = stream.Length;
                     while( stream.Position < length )
                     {
-                        FileSystemMutation mutation = (FileSystemMutation)reader.ReadInt32();
-                        switch( mutation )
-                        {
-                        case FileSystemMutation.CreateDirectory:
-                            CreateDirectoryEditLogEntry createDirectoryEntry = EditLogEntry.Load<CreateDirectoryEditLogEntry>(reader);
-                            fileSystem.CreateDirectory(createDirectoryEntry.Path, createDirectoryEntry.Date);
-                            break;
-                        case FileSystemMutation.CreateFile:
-                            CreateFileEditLogEntry createFileEntry = EditLogEntry.Load<CreateFileEditLogEntry>(reader);
-                            fileSystem.CreateFile(createFileEntry.Path, createFileEntry.Date, createFileEntry.BlockSize, createFileEntry.ReplicationFactor, false);
-                            break;
-                        case FileSystemMutation.AppendBlock:
-                            AppendBlockEditLogEntry appendBlockEntry = EditLogEntry.Load<AppendBlockEditLogEntry>(reader);
-                            fileSystem.AppendBlock(appendBlockEntry.Path, appendBlockEntry.BlockId, -1);
-                            break;
-                        case FileSystemMutation.CommitBlock:
-                            CommitBlockEditLogEntry commitBlockEntry = EditLogEntry.Load<CommitBlockEditLogEntry>(reader);
-                            fileSystem.CommitBlock(commitBlockEntry.Path, commitBlockEntry.BlockId, commitBlockEntry.Size);
-                            break;
-                        case FileSystemMutation.CommitFile:
-                            CommitFileEditLogEntry commitFileEntry = EditLogEntry.Load<CommitFileEditLogEntry>(reader);
-                            fileSystem.CloseFile(commitFileEntry.Path);
-                            break;
-                        case FileSystemMutation.Delete:
-                            DeleteEditLogEntry deleteEntry = EditLogEntry.Load<DeleteEditLogEntry>(reader);
-                            fileSystem.Delete(deleteEntry.Path, deleteEntry.IsRecursive);
-                            break;
-                        case FileSystemMutation.Move:
-                            MoveEditLogEntry moveEntry = EditLogEntry.Load<MoveEditLogEntry>(reader);
-                            fileSystem.Move(moveEntry.Path, moveEntry.TargetPath);
-                            break;
-                        }
+                        EditLogEntry entry = EditLogEntry.ReadEntry(reader);
+                        entry.Replay(fileSystem);
                     }
                 }
             }
@@ -490,16 +509,16 @@ namespace NameServerApplication
         private void InitializeLogFile()
         {
             _log.InfoFormat("Initializing new edit log file at '{0}'.", _logFilePath);
-            _logFileStream = File.Open(_logFilePath, FileMode.Create, FileAccess.Write, FileShare.None);
+            _logFileStream = new ChecksumOutputStream(File.Open(_logFilePath, FileMode.Create, FileAccess.Write, FileShare.None), _logFilePath + ".crc", 0L);
             _logFileWriter = new BinaryWriter(_logFileStream);
             _logFileWriter.Write(FileSystem.FileSystemFormatVersion);
             _logFileWriter.Flush();
         }
 
-        private void OpenExistingLogFile()
+        private void OpenExistingLogFile(long oldCrc)
         {
             _log.InfoFormat("Opening existing edit log file '{0}' for writing.", _logFilePath);
-            _logFileStream = File.Open(_logFilePath, FileMode.Append, FileAccess.Write, FileShare.None);
+            _logFileStream = new ChecksumOutputStream(File.Open(_logFilePath, FileMode.Append, FileAccess.Write, FileShare.None), _logFilePath + ".crc", oldCrc);
             _logFileWriter = new BinaryWriter(_logFileStream);
         }
 
@@ -509,6 +528,21 @@ namespace NameServerApplication
                 ((IDisposable)_logFileWriter).Dispose();
             if( _logFileStream != null )
                 _logFileStream.Dispose();
+        }
+
+        private static Func<EditLogEntry>[] CreateEntryTypeMap()
+        {
+            Func<EditLogEntry>[] result = new Func<EditLogEntry>[(int)FileSystemMutation.MaxValue + 1];
+
+            result[(int)FileSystemMutation.CreateDirectory] = () => new CreateDirectoryEditLogEntry();
+            result[(int)FileSystemMutation.CreateFile] = () => new CreateFileEditLogEntry();
+            result[(int)FileSystemMutation.AppendBlock] = () => new AppendBlockEditLogEntry();
+            result[(int)FileSystemMutation.CommitBlock] = () => new CommitBlockEditLogEntry();
+            result[(int)FileSystemMutation.CommitFile] = () => new CommitFileEditLogEntry();
+            result[(int)FileSystemMutation.Delete] = () => new DeleteEditLogEntry();
+            result[(int)FileSystemMutation.Move] = () => new MoveEditLogEntry();
+
+            return result;
         }
     }
 }
