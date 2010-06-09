@@ -501,6 +501,7 @@ namespace Tkl.Jumbo.Jet
         /// Gets the top-level stages of the task in dependency order (if stage B depends on the output of stage A, then B will come after A in the order).
         /// </summary>
         /// <returns>The ordered list of stages.</returns>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1024:UsePropertiesWhereAppropriate")]
         public IEnumerable<StageConfiguration> GetDependencyOrderedStages()
         {
             List<StageConfiguration> result = new List<StageConfiguration>(Stages.Count);

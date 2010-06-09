@@ -24,19 +24,21 @@ namespace Tkl.Jumbo.IO
         /// <summary>
         /// Initializes a new instance of the <see cref="ValueWriterAttribute"/> class.
         /// </summary>
-        /// <param name="typeName">The type name of the type implementing <see cref="IValueWriter{T}"/>.</param>
-        public ValueWriterAttribute(string typeName)
+        /// <param name="valueWriterTypeName">The type name of the type implementing <see cref="IValueWriter{T}"/>.</param>
+        public ValueWriterAttribute(string valueWriterTypeName)
         {
-            _valueWriterTypeName = typeName;
+            _valueWriterTypeName = valueWriterTypeName;
         }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ValueWriterAttribute"/> class.
         /// </summary>
-        /// <param name="type">The type that implements <see cref="IValueWriter{T}"/>.</param>
-        public ValueWriterAttribute(Type type)
+        /// <param name="valueWriterTypeName">The type that implements <see cref="IValueWriter{T}"/>.</param>
+        public ValueWriterAttribute(Type valueWriterTypeName)
         {
-            _valueWriterTypeName = type.AssemblyQualifiedName;
+            if( valueWriterTypeName == null )
+                throw new ArgumentNullException("valueWriterTypeName");
+            _valueWriterTypeName = valueWriterTypeName.AssemblyQualifiedName;
         }
 
         /// <summary>

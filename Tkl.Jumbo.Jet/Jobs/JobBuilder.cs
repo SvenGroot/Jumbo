@@ -130,6 +130,7 @@ namespace Tkl.Jumbo.Jet.Jobs
         /// <summary>
         /// Gets the full paths of all the assembly files used by this job builder's job.
         /// </summary>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1024:UsePropertiesWhereAppropriate")]
         public IEnumerable<string> GetAssemblyFiles()
         {
             var files = from a in Assemblies

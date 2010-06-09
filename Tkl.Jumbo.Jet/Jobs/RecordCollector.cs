@@ -155,7 +155,7 @@ namespace Tkl.Jumbo.Jet.Jobs
                     throw new InvalidOperationException("You cannot set the number of partitions per task after the RecordCollector's RecordWriter has been created.");
 
                 if( value < 1 )
-                    throw new ArgumentOutOfRangeException("The partition count must be 1 or higher.");
+                    throw new ArgumentOutOfRangeException("value", "The partition count must be 1 or higher.");
                 if( _partitionCount > 0 && _partitionCount % value != 0 )
                     throw new InvalidOperationException("The total number of partitions must be divisible by the partition count.");
 
@@ -219,7 +219,7 @@ namespace Tkl.Jumbo.Jet.Jobs
         {
             // Allows JobBuilder to set it even after the writer has been created.
             if( value < 1 )
-                throw new ArgumentOutOfRangeException("The partition count must be 1 or higher.");
+                throw new ArgumentOutOfRangeException("value", "The partition count must be 1 or higher.");
             if( _partitionCount > 0 && _partitionCount % value != 0 )
                 throw new InvalidOperationException("The total number of partitions must be divisible by the partition count.");
 

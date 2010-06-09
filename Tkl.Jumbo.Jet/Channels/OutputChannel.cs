@@ -146,7 +146,7 @@ namespace Tkl.Jumbo.Jet.Channels
             outputTaskNumber += current.TaskNumber;
             for( int x = stages.Count - 2; x >= 0; --x )
             {
-                current = new TaskId(current.ParentTaskId);
+                current = current.ParentTaskId;
                 outputTaskNumber += (current.TaskNumber - 1) * JobConfiguration.GetTotalTaskCount(stages, x);
             }
             return outputTaskNumber;

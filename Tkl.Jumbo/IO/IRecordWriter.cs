@@ -15,7 +15,7 @@ namespace Tkl.Jumbo.IO
     ///   Record writers must inherit from <see cref="RecordWriter{T}"/>, not just implement this interface.
     /// </note>
     /// </remarks>
-    public interface IRecordWriter
+    public interface IRecordWriter : IDisposable
     {
         /// <summary>
         /// Gets the total number of records written by this record writer.

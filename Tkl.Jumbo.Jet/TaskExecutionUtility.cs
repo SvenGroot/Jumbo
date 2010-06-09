@@ -606,82 +606,88 @@ namespace Tkl.Jumbo.Jet
                 // Thread that reports progress
                 while( !(_finished || _disposed) )
                 {
-                    bool progressChanged = false;
-                    if( progress == null )
-                    {
-                        progressChanged = true;
-                        progress = new TaskProgress();
-                        progress.StatusMessage = CurrentStatus;
-                        if( InputReader != null )
-                            progress.Progress = InputReader.Progress;
-                        foreach( KeyValuePair<string, List<IHasAdditionalProgress>> progressSource in _additionalProgressSources )
-                        {
-                            float value = progressSource.Value.Average(i => i.AdditionalProgress);
-                            progress.AddAdditionalProgressValue(progressSource.Key, value);
-                        }
-                    }
-                    else
-                    {
-                        // Reuse the instance.
-                        if( InputReader != null )
-                        {
-                            float newProgress = InputReader.Progress;
-                            if( newProgress != progress.Progress )
-                            {
-                                progress.Progress = newProgress;
-                                progressChanged = true;
-                            }
-                        }
-
-                        string status = CurrentStatus;
-                        if( progress.StatusMessage != status )
-                        {
-                            progress.StatusMessage = status;
-                            progressChanged = true;
-                        }
-
-                        // These are always in the same order so we can do this.
-                        int x = 0;
-                        foreach( KeyValuePair<string, List<IHasAdditionalProgress>> progressSource in _additionalProgressSources )
-                        {
-                            float value = progressSource.Value.Average(i => i.AdditionalProgress);
-                            AdditionalProgressValue additionalProgress = progress.AdditionalProgressValues[x];
-                            if( additionalProgress.Progress != value )
-                            {
-                                additionalProgress.Progress = value;
-                                progressChanged = true;
-                            }
-                            ++x;
-                        }
-                    }
-
-                    // If there's no input reader but there are additional progress values, we use their average as the base progress.
-                    if( InputReader == null && progressChanged && progress.AdditionalProgressValues != null )
-                        progress.Progress = progress.AdditionalProgressValues.Average(v => v.Progress);
-
-                    if( progressChanged )
-                    {
-                        try
-                        {
-                            _log.InfoFormat("Reporting progress: {0}", progress);
-                            if( procStatus != null )
-                            {
-                                procStatus.Refresh();
-                                memStatus.Refresh();
-                                _log.DebugFormat("CPU: {0}", procStatus.Total);
-                                _log.DebugFormat("Memory: {0}", memStatus);
-                            }
-                            Umbilical.ReportProgress(Configuration.JobId, Configuration.TaskId.ToString(), progress);
-                        }
-                        catch( SocketException ex )
-                        {
-                            _log.Error("Failed to report progress to the task server.", ex);
-                        }
-                    }
+                    progress = ReportProgress(progress, memStatus, procStatus);
                     _finishedEvent.WaitOne(_progressInterval, false);
                 }
                 _log.Info("Progress thread has finished.");
             }
+        }
+
+        private TaskProgress ReportProgress(TaskProgress previousProgress, MemoryStatus memStatus, ProcessorStatus procStatus)
+        {
+            bool progressChanged = false;
+            if( previousProgress == null )
+            {
+                progressChanged = true;
+                previousProgress = new TaskProgress();
+                previousProgress.StatusMessage = CurrentStatus;
+                if( InputReader != null )
+                    previousProgress.Progress = InputReader.Progress;
+                foreach( KeyValuePair<string, List<IHasAdditionalProgress>> progressSource in _additionalProgressSources )
+                {
+                    float value = progressSource.Value.Average(i => i.AdditionalProgress);
+                    previousProgress.AddAdditionalProgressValue(progressSource.Key, value);
+                }
+            }
+            else
+            {
+                // Reuse the instance.
+                if( InputReader != null )
+                {
+                    float newProgress = InputReader.Progress;
+                    if( newProgress != previousProgress.Progress )
+                    {
+                        previousProgress.Progress = newProgress;
+                        progressChanged = true;
+                    }
+                }
+
+                string status = CurrentStatus;
+                if( previousProgress.StatusMessage != status )
+                {
+                    previousProgress.StatusMessage = status;
+                    progressChanged = true;
+                }
+
+                // These are always in the same order so we can do this.
+                int x = 0;
+                foreach( KeyValuePair<string, List<IHasAdditionalProgress>> progressSource in _additionalProgressSources )
+                {
+                    float value = progressSource.Value.Average(i => i.AdditionalProgress);
+                    AdditionalProgressValue additionalProgress = previousProgress.AdditionalProgressValues[x];
+                    if( additionalProgress.Progress != value )
+                    {
+                        additionalProgress.Progress = value;
+                        progressChanged = true;
+                    }
+                    ++x;
+                }
+            }
+
+            // If there's no input reader but there are additional progress values, we use their average as the base progress.
+            if( InputReader == null && progressChanged && previousProgress.AdditionalProgressValues != null )
+                previousProgress.Progress = previousProgress.AdditionalProgressValues.Average(v => v.Progress);
+
+            if( progressChanged )
+            {
+                try
+                {
+                    _log.InfoFormat("Reporting progress: {0}", previousProgress);
+                    if( procStatus != null )
+                    {
+                        procStatus.Refresh();
+                        memStatus.Refresh();
+                        _log.DebugFormat("CPU: {0}", procStatus.Total);
+                        _log.DebugFormat("Memory: {0}", memStatus);
+                    }
+                    Umbilical.ReportProgress(Configuration.JobId, Configuration.TaskId.ToString(), previousProgress);
+                }
+                catch( SocketException ex )
+                {
+                    _log.Error("Failed to report progress to the task server.", ex);
+                }
+            }
+            return previousProgress;
         }
 
         private void CalculateMetrics(TaskMetrics metrics)

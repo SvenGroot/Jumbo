@@ -189,7 +189,7 @@ namespace Tkl.Jumbo.Jet.Channels
         private readonly object _outputLock = new object();
         private int _outputStart;
         private int _outputEnd;
-        private bool _outputInProgress;
+        private volatile bool _outputInProgress;
         private string _outputPath;
         private Thread _outputThread;
         private volatile bool _finished;
@@ -285,20 +285,27 @@ namespace Tkl.Jumbo.Jet.Channels
         {
             //_log.Debug("Disposing");
             // Taking the lock causes it to wait until the current output is finished.
-            lock( _outputLock )
+
+            while( true )
             {
-                Debug.Assert(!_outputInProgress);
-                _finished = true;
-                if( _outputEnd != _buffer.BufferPos ) // It can never reach that by looping around because the limit would be reached before that point triggering another output.
+                lock( _outputLock )
                 {
-                    StartOutput();
+                    if( _outputInProgress )
+                        continue;
+                    _finished = true;
+                    if( _outputEnd != _buffer.BufferPos ) // It can never reach that by looping around because the limit would be reached before that point triggering another output.
+                    {
+                        StartOutput();
+                    }
+                    else
+                    {
+                        _outputStart = _outputEnd;
+                        Monitor.Pulse(_outputLock);
+                    }
                 }
-                else
-                {
-                    _outputStart = _outputEnd;
-                    Monitor.Pulse(_outputLock);
-                }
+                break;
             }
+
 
             if( _outputThread != null )
                 _outputThread.Join();

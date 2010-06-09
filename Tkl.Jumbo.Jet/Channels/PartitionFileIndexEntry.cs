@@ -36,6 +36,8 @@ namespace Tkl.Jumbo.Jet.Channels
         /// <param name="writer">The <see cref="BinaryWriter"/> to serialize the object to.</param>
         public void Write(BinaryWriter writer)
         {
+            if( writer == null )
+                throw new ArgumentNullException("writer");
             writer.Write(Partition);
             writer.Write(Offset);
             writer.Write(Count);
@@ -47,6 +49,8 @@ namespace Tkl.Jumbo.Jet.Channels
         /// <param name="reader">The <see cref="BinaryReader"/> to deserialize the object from.</param>
         public void Read(BinaryReader reader)
         {
+            if( reader == null )
+                throw new ArgumentNullException("reader");
             Partition = reader.ReadInt32();
             Offset = reader.ReadInt64();
             Count = reader.ReadInt64();

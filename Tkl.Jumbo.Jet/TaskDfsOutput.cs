@@ -98,6 +98,8 @@ namespace Tkl.Jumbo.Jet
         /// <returns>A record writer of the type specified in <see cref="RecordWriterType"/></returns>
         public IRecordWriter CreateRecordWriter(TaskExecutionUtility taskExecution, string fileName)
         {
+            if( taskExecution == null )
+                throw new ArgumentNullException("taskExecution");
             // It's the record writer's job to dispose the stream.
             DfsOutputStream outputStream = taskExecution.DfsClient.CreateFile(fileName, BlockSize, ReplicationFactor);
             //_log.DebugFormat("Creating record writer of type {0}", Configuration.StageConfiguration.DfsOutput.RecordWriterTypeName);

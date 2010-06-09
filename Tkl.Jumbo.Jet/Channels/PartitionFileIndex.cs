@@ -15,11 +15,12 @@ namespace Tkl.Jumbo.Jet.Channels
     /// <summary>
     /// Index data for partition files. For Jumbo internal use only.
     /// </summary>
-    public class PartitionFileIndex
+    public sealed class PartitionFileIndex : IDisposable
     {
-        private readonly ManualResetEvent _loadCompleteEvent = new ManualResetEvent(false);
+        private ManualResetEvent _loadCompleteEvent = new ManualResetEvent(false);
         private Exception _loadException = null;
         private List<PartitionFileIndexEntry>[] _index;
+        private bool _disposed;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="PartitionFileIndex"/> class.
@@ -47,9 +48,12 @@ namespace Tkl.Jumbo.Jet.Channels
             _loadCompleteEvent.WaitOne();
             if( _loadException != null )
                 throw new TargetInvocationException(_loadException);
+            if( partition < 1 || partition > _index.Length )
+                throw new ArgumentOutOfRangeException("partition");
             return _index[partition - 1];
         }
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1031:DoNotCatchGeneralExceptionTypes")]
         private void LoadIndex(object state)
         {
             try
@@ -80,6 +84,19 @@ namespace Tkl.Jumbo.Jet.Channels
                 _loadException = ex;
             }
             _loadCompleteEvent.Set();
+        }
+
+        /// <summary>
+        /// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
+        /// </summary>
+        public void Dispose()
+        {
+            if( !_disposed )
+            {
+                _disposed = true;
+                ((IDisposable)_loadCompleteEvent).Dispose();
+            }
+            GC.SuppressFinalize(this);
         }
     }
 }

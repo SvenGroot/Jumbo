@@ -41,6 +41,7 @@ namespace TaskServerApplication
                         _log.DebugFormat("Index cache MISS: {0}", outputFile);
                         if( _indices.Count == _maxSize )
                         {
+                            // We cannot safely Dispose the index we removed because some thread may still be using it, so we don't and just wait for the GC to clean up the WaitHandle.
                             PartitionFileIndex indexToRemove = _indexQueue.Dequeue();
                             _indices.Remove(indexToRemove.OutputFilePath);
                         }

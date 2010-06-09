@@ -24,7 +24,6 @@ namespace Tkl.Jumbo.IO
             private byte[] _buffer;
             private int _bufferPos;
             private int _bufferLength;
-            private Decoder _decoder = Encoding.UTF8.GetDecoder();
             private readonly Utf8String _line = new Utf8String();
 
             public LineReader(Stream stream, int bufferSize)

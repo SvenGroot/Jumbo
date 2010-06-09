@@ -75,18 +75,18 @@ namespace Tkl.Jumbo
         public bool Wait(TimeSpan timeout)
         {
             CheckDisposed();
-            return _reachedZeroEvent.WaitOne(timeout);
+            return _reachedZeroEvent.WaitOne(timeout, false);
         }
 
         /// <summary>
         /// Blocks the calling thread until the <see cref="CountdownEvent"/> is set, using a 32-bit signed integer to measure the timeout.
         /// </summary>
-        /// <param name="timeout">The timeout to wait, or <see cref="Timeout.Infinite"/> (-1) to wait indefinitely.</param>
+        /// <param name="millisecondsTimeout">The timeout to wait, or <see cref="Timeout.Infinite"/> (-1) to wait indefinitely.</param>
         /// <returns><see langword="true"/> if the <see cref="CountdownEvent"/> was set; otherwise, <see langword="false"/>.</returns>
         public bool Wait(int millisecondsTimeout)
         {
             CheckDisposed();
-            return _reachedZeroEvent.WaitOne(millisecondsTimeout);
+            return _reachedZeroEvent.WaitOne(millisecondsTimeout, false);
         }
 
         /// <summary>

@@ -22,7 +22,7 @@ namespace Tkl.Jumbo.Jet
         public AdditionalProgressCounterAttribute(string displayName)
         {
             if( displayName == null )
-                throw new ArgumentNullException("name");
+                throw new ArgumentNullException("displayName");
 
             _displayName = displayName;
         }

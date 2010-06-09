@@ -11,7 +11,7 @@ namespace Tkl.Jumbo.Jet.Channels
     {
         #region Nested types
 
-        sealed class ProducerConsumerBuffer
+        sealed class ProducerConsumerBuffer : IDisposable
         {
             private readonly TRecord[] _buffer;
             private readonly int _bufferSize;
@@ -25,6 +25,7 @@ namespace Tkl.Jumbo.Jet.Channels
             private volatile bool _cancelled;
             private readonly int _chunkSize;
             private volatile bool _finished;
+            private bool _disposed;
 
             public ProducerConsumerBuffer(int bufferSize, int chunkSize)
             {
@@ -88,10 +89,23 @@ namespace Tkl.Jumbo.Jet.Channels
                 _finished = true;
                 _cancelEvent.Set();
             }
+
+            public void Dispose()
+            {
+                if( !_disposed )
+                {
+                    _disposed = true;
+                    ((IDisposable)_cancelEvent).Dispose();
+                    ((IDisposable)_readPosChanged).Dispose();
+                    ((IDisposable)_writePosChanged).Dispose();
+                }
+                GC.SuppressFinalize(this);
+            }
         }
 
         sealed class BufferRecordReader : RecordReader<TRecord>
         {
+            // This class should NOT dispose the buffer; the record writer takes care of that.
             private readonly ProducerConsumerBuffer _buffer;
 
             public BufferRecordReader(ProducerConsumerBuffer buffer)
@@ -133,8 +147,8 @@ namespace Tkl.Jumbo.Jet.Channels
                 throw new ArgumentNullException("task");
             if( output == null )
                 throw new ArgumentNullException("output");
-            if( taskId  == null )
-                throw new ArgumentNullException("taskId ");
+            if( taskId == null )
+                throw new ArgumentNullException("taskId");
 
             _task = task;
             _output = output;
@@ -169,6 +183,12 @@ namespace Tkl.Jumbo.Jet.Channels
                 _task.Run(reader, _output);
             }
             _log.Debug("Pipelined task thread has finished.");
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            base.Dispose(disposing);
+            _buffer.Dispose();
         }
     }
 }

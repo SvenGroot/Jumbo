@@ -19,7 +19,7 @@ namespace Tkl.Jumbo.IO
     ///   You cannot add <see langword="null"/> as an item in this collection.
     /// </para>
     /// </remarks>
-    public class WritableCollection<T> : IList<T>, IWritable, IList
+    public sealed class WritableCollection<T> : IList<T>, IWritable, IList
         where T : IWritable
     {
         private List<T> _items;
@@ -253,7 +253,7 @@ namespace Tkl.Jumbo.IO
         public override bool Equals(object obj)
         {
             if( obj == null )
-                throw new ArgumentNullException("obj");
+                return false;
 
             if( obj == this )
                 return true;
