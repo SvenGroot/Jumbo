@@ -161,7 +161,7 @@ namespace JobServerApplication
                 else if( job.State == JobState.Running )
                 {
                     _log.InfoFormat("Aborting job {0}.", jobId);
-                    job.State = JobState.Failed;
+                    job.SchedulerInfo.State = JobState.Failed;
                     FinishOrFailJob(job);
                     return true;
                 }
@@ -398,11 +398,11 @@ namespace JobServerApplication
                         {
                             if( responses == null )
                                 responses = new List<JetHeartbeatResponse>();
-                            ++task.Attempts;
+                            ++task.SchedulerInfo.Attempts;
                             TaskAttemptId attemptId = new TaskAttemptId(task.TaskId, task.Attempts);
-                            task.CurrentAttempt = attemptId;
+                            task.SchedulerInfo.CurrentAttempt = attemptId;
                             responses.Add(new RunTaskJetHeartbeatResponse(task.Job.Job, attemptId));
-                            task.State = TaskState.Running;
+                            task.SchedulerInfo.State = TaskState.Running;
                             task.StartTimeUtc = DateTime.UtcNow;
                         }
                     }
@@ -422,17 +422,18 @@ namespace JobServerApplication
             {
                 for( int x = 0; x < _jobsNeedingCleanup.Count; ++x )
                 {
+                    // Although we're accessing scheduler info, there's no need to take the scheduler lock because this job is in _jobsNeedingCleanup
                     JobInfo job = _jobsNeedingCleanup[x];
-                    if( job.TaskServers.Contains(server.Address) )
+                    if( job.SchedulerInfo.TaskServers.Contains(server.Address) )
                     {
                         job.CleanupServer(server);
                         _log.InfoFormat("Sending cleanup command for job {{{0}}} to server {1}.", job.Job.JobId, server.Address);
                         if( responses == null )
                             responses = new List<JetHeartbeatResponse>();
                         responses.Add(new CleanupJobJetHeartbeatResponse(job.Job.JobId));
-                        job.TaskServers.Remove(server.Address);
+                        job.SchedulerInfo.TaskServers.Remove(server.Address);
                     }
-                    if( job.TaskServers.Count == 0 )
+                    if( job.SchedulerInfo.TaskServers.Count == 0 )
                     {
                         _log.InfoFormat("Job {{{0}}} cleanup complete.", job.Job.JobId);
                         _jobsNeedingCleanup.RemoveAt(x);
@@ -484,6 +485,7 @@ namespace JobServerApplication
                 }
                 TaskInfo task = job.GetSchedulingTask(data.TaskAttemptId.TaskId.ToString());
 
+
                 if( task.Server != server || task.CurrentAttempt == null || task.CurrentAttempt.Attempt != data.TaskAttemptId.Attempt )
                 {
                     _log.WarnFormat("Task server {0} reported status for task {{1}}_{2} which isn't an active attempt or was not assigned to that server.", server.Address, data.JobId, data.TaskAttemptId);
@@ -516,20 +518,20 @@ namespace JobServerApplication
                         {
                         case TaskAttemptStatus.Completed:
                             task.EndTimeUtc = DateTime.UtcNow;
-                            task.CurrentAttempt = null;
-                            task.SuccessfulAttempt = data.TaskAttemptId;
-                            task.State = TaskState.Finished;
+                            task.SchedulerInfo.CurrentAttempt = null;
+                            task.SchedulerInfo.SuccessfulAttempt = data.TaskAttemptId;
+                            task.SchedulerInfo.State = TaskState.Finished;
                             _log.InfoFormat("Task {0} completed successfully.", Job.CreateFullTaskId(data.JobId, data.TaskAttemptId));
                             if( task.Progress == null )
                                 task.Progress = new TaskProgress() { Progress = 1.0f };
                             else
                                 task.Progress.SetFinished();
 
-                            ++job.FinishedTasks;
+                            ++job.SchedulerInfo.FinishedTasks;
                             break;
                         case TaskAttemptStatus.Error:
-                            task.CurrentAttempt = null;
-                            task.State = TaskState.Error;
+                            task.SchedulerInfo.CurrentAttempt = null;
+                            task.SchedulerInfo.State = TaskState.Error;
                             task.Progress = null;
                             _log.WarnFormat("Task {0} encountered an error.", Job.CreateFullTaskId(data.JobId, data.TaskAttemptId));
                             TaskStatus failedAttempt = task.ToTaskStatus();
@@ -539,15 +541,15 @@ namespace JobServerApplication
                             {
                                 // Reschedule
                                 task.Server.SchedulerInfo.UnassignFailedTask(job, task);
-                                if( task.BadServers.Count == _taskServers.Count )
-                                    task.BadServers.Clear(); // we've failed on all servers so try again anywhere.
+                                if( task.SchedulerInfo.BadServers.Count == _taskServers.Count )
+                                    task.SchedulerInfo.BadServers.Clear(); // we've failed on all servers so try again anywhere.
                             }
                             else
                             {
                                 _log.ErrorFormat("Task {0} failed more than {1} times; aborting the job.", Job.CreateFullTaskId(data.JobId, data.TaskAttemptId.TaskId), Configuration.JobServer.MaxTaskAttempts);
-                                job.State = JobState.Failed;
+                                job.SchedulerInfo.State = JobState.Failed;
                             }
-                            ++job.Errors;
+                            ++job.SchedulerInfo.Errors;
                             break;
                         }
 
@@ -577,12 +579,12 @@ namespace JobServerApplication
             if( job.State != JobState.Failed )
             {
                 _log.InfoFormat("Job {0}: all tasks in the job have finished.", job.Job.JobId);
-                job.State = JobState.Finished;
+                job.SchedulerInfo.State = JobState.Finished;
             }
             else
             {
                 _log.ErrorFormat("Job {0} failed or was killed.", job.Job.JobId);
-                job.AbortTasks();
+                job.SchedulerInfo.AbortTasks();
             }
 
             lock( _jobs )
@@ -637,7 +639,7 @@ namespace JobServerApplication
                 }
                 lock( _schedulerLock )
                 {
-                    job.State = JobState.Failed;
+                    job.SchedulerInfo.State = JobState.Failed;
                     FinishOrFailJob(job);
                 }
             }
@@ -718,7 +720,7 @@ namespace JobServerApplication
                             catch( Exception ex )
                             {
                                 _log.Error(string.Format("The scheduler encountered an error scheduling job {{{0}}}.", job.Job.JobId), ex);
-                                job.State = JobState.Failed;
+                                job.SchedulerInfo.State = JobState.Failed;
                                 FinishOrFailJob(job);
                             }
                         }

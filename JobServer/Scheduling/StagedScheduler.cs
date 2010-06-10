@@ -32,7 +32,7 @@ namespace JobServerApplication.Scheduling
                                 select server.SchedulerInfo.AvailableTasks).Sum();
 
                 Guid[] inputBlocks = (from task in inputTasks
-                                      select task.GetBlockId(dfsClient)).ToArray();
+                                      select task.SchedulerInfo.GetBlockId(dfsClient)).ToArray();
 
                 capacity = ScheduleInputTasks(job, taskServers, capacity, inputBlocks, dfsClient, newServers);
                 if( capacity > 0 && job.UnscheduledTasks > 0 )
@@ -78,8 +78,8 @@ namespace JobServerApplication.Scheduling
                         int block = 0;
                         while( taskServer.SchedulerInfo.AvailableTasks > 0 && block < localBlocks.Count )
                         {
-                            TaskInfo task = job.GetTaskForInputBlock(localBlocks[block], dfsClient);
-                            if( !task.BadServers.Contains(taskServer) )
+                            TaskInfo task = job.SchedulerInfo.GetTaskForInputBlock(localBlocks[block], dfsClient);
+                            if( !task.SchedulerInfo.BadServers.Contains(taskServer) )
                             {
                                 taskServer.SchedulerInfo.AssignTask(job, task);
                                 if( !newServers.Contains(taskServer) )
@@ -106,7 +106,7 @@ namespace JobServerApplication.Scheduling
                 if( taskServer.SchedulerInfo.AvailableTasks > 0 )
                 {
                     var eligibleTasks = (from task in unscheduledTasks
-                                         where !task.BadServers.Contains(taskServer) && task.Server == null
+                                         where !task.SchedulerInfo.BadServers.Contains(taskServer) && task.Server == null
                                          select task).ToList();
 
                     while( taskServer.SchedulerInfo.AvailableTasks > 0 && eligibleTasks.Count > 0 )
@@ -121,7 +121,7 @@ namespace JobServerApplication.Scheduling
                             newServers.Add(taskServer);
                         eligibleTasks.RemoveAt(index);
                         --capacity;
-                        ++job.NonDataLocal;
+                        ++job.SchedulerInfo.NonDataLocal;
                     }
                 }
             }
@@ -150,7 +150,7 @@ namespace JobServerApplication.Scheduling
                 if( !outOfSlots )
                 {
                     TaskServerInfo taskServer = (from server in availableServers
-                                                 where !task.BadServers.Contains(server)
+                                                 where !task.SchedulerInfo.BadServers.Contains(server)
                                                  select server).FirstOrDefault();
                     if( taskServer != null )
                     {

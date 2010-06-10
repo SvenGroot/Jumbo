@@ -13,24 +13,21 @@ using System.Collections.ObjectModel;
 namespace JobServerApplication
 {
     /// <summary>
-    /// Information about a task of a running job. All properties of this object must be accessed only inside the scheduler lock, except for <see cref="State"/>, <see cref="Attempts"/> and <see cref="Server"/> which may be
-    /// read without locking (but may only be set inside the scheduler lock), and <see cref="StartTimeUtc"/>, <see cref="EndTimeUtc"/> and <see cref="Progress"/> which may be read and set without locking.
+    /// Information about a task of a running job.
     /// </summary>
-    class TaskInfo
+    sealed class TaskInfo
     {
         private readonly StageConfiguration _stage;
         private readonly TaskId _taskId;
         private readonly string _fullTaskId;
         private readonly JobInfo _job;
         private readonly ReadOnlyCollection<int> _partitions;
-
         private readonly TaskInfo _owner;
-        private TaskServerInfo _server;
-        private List<TaskServerInfo> _badServers;
-        private TaskState _state;
-        private Guid? _inputBlock;
+        private readonly TaskSchedulerInfo _schedulerInfo;
+
         private long _startTimeUtcTicks;
         private long _endTimeUtcTicks;
+        private long _lastProgressTimeUtcTicks;
 
         public TaskInfo(JobInfo job, StageConfiguration stage, IList<StageConfiguration> inputStages, int taskNumber)
         {
@@ -65,6 +62,8 @@ namespace JobServerApplication
                         throw new InvalidOperationException("Cannot use multiple partitions per task when there are multiple input channels.");
                 }
             }
+
+            _schedulerInfo = new TaskSchedulerInfo(this);
         }
 
         public TaskInfo(TaskInfo owner, StageConfiguration stage, int taskNumber)
@@ -94,6 +93,12 @@ namespace JobServerApplication
             get { return _job; }
         }
 
+        // Do not access except inside the scheduler lock.
+        public TaskSchedulerInfo SchedulerInfo
+        {
+            get { return _schedulerInfo; }
+        }
+
         public ReadOnlyCollection<int> Partitions
         {
             get { return _partitions; }
@@ -104,11 +109,10 @@ namespace JobServerApplication
             get 
             {
                 if( _owner == null )
-                    return _state;
+                    return _schedulerInfo.State;
                 else
                     return _owner.State;
             }
-            set { _state = value; }
         }
 
         public TaskServerInfo Server 
@@ -116,34 +120,33 @@ namespace JobServerApplication
             get
             {
                 if( _owner == null )
-                    return _server;
+                    return _schedulerInfo.Server;
                 else
                     return _owner.Server;
             }
-            set { _server = value; }
         }
 
-        public List<TaskServerInfo> BadServers
+        public TaskAttemptId CurrentAttempt
         {
             get
             {
-                if( _owner != null )
-                    return _owner.BadServers;
+                if( _owner == null )
+                    return _schedulerInfo.CurrentAttempt;
                 else
-                {
-                    if( _badServers == null )
-                        _badServers = new List<TaskServerInfo>();
-                    return _badServers;
-                }
+                    throw new NotSupportedException("Cannot retrieve current attempt of a non-scheduling task.");
             }
         }
 
-        public TaskAttemptId CurrentAttempt { get; set; }
-
-        public TaskAttemptId SuccessfulAttempt { get; set; }
-
-
-        public int Attempts { get; set; }
+        public TaskAttemptId SuccessfulAttempt
+        {
+            get
+            {
+                if( _owner == null )
+                    return _schedulerInfo.SuccessfulAttempt;
+                else
+                    throw new NotSupportedException("Cannot retrieve successful attempt of a non-scheduling task.");
+            }
+        }
 
         public DateTime StartTimeUtc
         {
@@ -157,7 +160,24 @@ namespace JobServerApplication
             set { Interlocked.Exchange(ref _endTimeUtcTicks, value.Ticks); }
         }
 
+        public DateTime LastProgressTimeUtc
+        {
+            get { return new DateTime(Interlocked.Read(ref _lastProgressTimeUtcTicks), DateTimeKind.Utc); }
+            set { Interlocked.Exchange(ref _lastProgressTimeUtcTicks, value.Ticks); }
+        }
+
         public TaskProgress Progress { get; set; }
+
+        public int Attempts
+        {
+            get
+            {
+                if( _owner == null )
+                    return _schedulerInfo.Attempts;
+                else
+                    return _owner.Attempts;
+            }
+        }
 
         public string FullTaskId
         {
@@ -165,22 +185,6 @@ namespace JobServerApplication
             {
                 return _fullTaskId;
             }
-        }
-
-        /// <summary>
-        /// NOTE: Only call if Stage.DfsInputs is not null, and inside the _jobs lock. The value of this function is cached, only first call uses DfsClient.
-        /// </summary>
-        /// <param name="dfsClient"></param>
-        /// <returns></returns>
-        public Guid GetBlockId(DfsClient dfsClient)
-        {
-            if( _inputBlock == null )
-            {
-                TaskDfsInput input = Stage.DfsInputs[TaskId.TaskNumber - 1];
-                Tkl.Jumbo.Dfs.DfsFile file = Job.GetFileInfo(dfsClient, input.Path);
-                _inputBlock = file.Blocks[input.Block];
-            }
-            return _inputBlock.Value;
         }
 
         public TaskStatus ToTaskStatus()

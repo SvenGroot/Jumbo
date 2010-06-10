@@ -31,17 +31,16 @@ namespace JobServerApplication
         private readonly Dictionary<string, TaskInfo> _schedulingTasksById = new Dictionary<string, TaskInfo>();
         private readonly List<TaskInfo> _orderedSchedulingDfsInputTasks = new List<TaskInfo>();
         private readonly List<TaskInfo> _orderedSchedulingNonInputTasks = new List<TaskInfo>();
-        private readonly HashSet<ServerAddress> _taskServers = new HashSet<ServerAddress>();
         private readonly ManualResetEvent _jobCompletedEvent = new ManualResetEvent(false);
-        private Dictionary<Guid, TaskInfo> _inputBlockMap;
-        private readonly Dictionary<string, DfsFile> _files = new Dictionary<string, DfsFile>();
-        private List<TaskStatus> _failedTaskAttempts;
         private readonly ReadOnlyCollection<StageInfo> _stages;
         private readonly Job _job;
         private readonly DateTime _startTimeUtc;
         private readonly string _jobName;
-        private long _endTimeUtcTicks;
         private readonly JobConfiguration _config;
+        private readonly JobSchedulerInfo _schedulerInfo;
+
+        private long _endTimeUtcTicks;
+        private volatile List<TaskStatus> _failedTaskAttempts;
 
         public JobInfo(Job job, JobConfiguration config)
         {
@@ -85,11 +84,20 @@ namespace JobServerApplication
                 stages.Add(stageInfo);
             }
 
-            UnscheduledTasks = _schedulingTasksById.Count;
-
-            State = JobState.Running;
             _startTimeUtc = DateTime.UtcNow;
+            _schedulerInfo = new JobSchedulerInfo(this)
+            {
+                UnscheduledTasks = _schedulingTasksById.Count,
+                State = JobState.Running
+            };
+        }
 
+        /// <summary>
+        /// Only access inside scheduler lock.
+        /// </summary>
+        public JobSchedulerInfo SchedulerInfo
+        {
+            get { return _schedulerInfo; }
         }
 
         public Job Job
@@ -107,11 +115,26 @@ namespace JobServerApplication
             get { return _startTimeUtc; }
         }
 
-        public JobState State { get; set; }
-        public int UnscheduledTasks { get; set; }
-        public int FinishedTasks { get; set; }
-        public int Errors { get; set; }
-        public int NonDataLocal { get; set; }
+        public JobState State
+        {
+            get { return _schedulerInfo.State; }
+        }
+        public int UnscheduledTasks
+        {
+            get { return _schedulerInfo.UnscheduledTasks; }
+        }
+        public int FinishedTasks
+        {
+            get { return _schedulerInfo.FinishedTasks; }
+        }
+        public int Errors
+        {
+            get { return _schedulerInfo.Errors; }
+        }
+        public int NonDataLocal
+        {
+            get { return _schedulerInfo.NonDataLocal; }
+        }
 
         public DateTime EndTimeUtc
         {
@@ -122,14 +145,6 @@ namespace JobServerApplication
         public ReadOnlyCollection<StageInfo> Stages
         {
             get { return _stages; }
-        }
-
-        /// <summary>
-        /// Only access this property inside the scheduler lock (or for a finished job, the _jobsNeedingCleanup lock).
-        /// </summary>
-        public HashSet<ServerAddress> TaskServers
-        {
-            get { return _taskServers; }
         }
 
         public int SchedulingTaskCount
@@ -157,23 +172,6 @@ namespace JobServerApplication
             return _schedulingTasksById[taskId];
         }
 
-        public TaskInfo GetTaskForInputBlock(Guid blockId, DfsClient dfsClient)
-        {
-            // This method will only be called with _jobs locked, so no need to do any further locking
-            if( _inputBlockMap == null )
-            {
-                _inputBlockMap = new Dictionary<Guid, TaskInfo>();
-                foreach( TaskInfo task in _tasks.Values )
-                {
-                    if( task.Stage.DfsInputs != null && task.Stage.DfsInputs.Count > 0 )
-                    {
-                        _inputBlockMap.Add(task.GetBlockId(dfsClient), task);
-                    }
-                }
-            }
-
-            return _inputBlockMap[blockId];
-        }
 
         public IEnumerable<TaskInfo> GetDfsInputTasks()
         {
@@ -183,20 +181,6 @@ namespace JobServerApplication
         public IEnumerable<TaskInfo> GetNonInputSchedulingTasks()
         {
             return _orderedSchedulingNonInputTasks;
-        }
-
-        public DfsFile GetFileInfo(DfsClient dfsClient, string path)
-        {
-            // This method will only be called with _jobs locked, so no need to do any further locking
-            DfsFile file;
-            if( !_files.TryGetValue(path, out file) )
-            {
-                file = dfsClient.NameServer.GetFileInfo(path);
-                if( file == null )
-                    throw new ArgumentException("File doesn't exist."); // TODO: Different exception type.
-                _files.Add(path, file);
-            }
-            return file;
         }
 
         /// <summary>
@@ -214,25 +198,17 @@ namespace JobServerApplication
         }
 
         /// <summary>
-        /// Mark running tasks as aborted. Only call inside the scheduler lock.
-        /// </summary>
-        public void AbortTasks()
-        {
-            foreach( TaskInfo jobTask in _tasks.Values )
-            {
-                if( jobTask.State <= TaskState.Running )
-                    jobTask.State = TaskState.Aborted;
-            }
-        }
-
-        /// <summary>
         /// Adds a failed task attempt. Doesn't need any locking (because it does its own so that ToJobStatus can be called without locking).
         /// </summary>
         /// <param name="failedTaskAttempt"></param>
         public void AddFailedTaskAttempt(TaskStatus failedTaskAttempt)
         {
+#pragma warning disable 420 // volatile field not treated as volatile warning
+
             if( _failedTaskAttempts == null )
                 Interlocked.CompareExchange(ref _failedTaskAttempts, new List<TaskStatus>(), null);
+
+#pragma warning restore 420
 
             lock( _failedTaskAttempts )
             {

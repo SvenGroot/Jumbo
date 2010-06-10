@@ -54,10 +54,10 @@ namespace JobServerApplication
                 AssignedTasks.Add(task);
             else
                 AssignedNonInputTasks.Add(task);
-            task.Server = _taskServer;
-            task.State = TaskState.Scheduled;
-            --job.UnscheduledTasks;
-            job.TaskServers.Add(_taskServer.Address); // Record all servers involved with the task to give them cleanup instructions later.
+            task.SchedulerInfo.Server = _taskServer;
+            task.SchedulerInfo.State = TaskState.Scheduled;
+            --job.SchedulerInfo.UnscheduledTasks;
+            job.SchedulerInfo.TaskServers.Add(_taskServer.Address); // Record all servers involved with the task to give them cleanup instructions later.
         }
 
         public void UnassignFailedTask(JobInfo job, TaskInfo task)
@@ -65,10 +65,10 @@ namespace JobServerApplication
             // This is used if a task has failed and needs to be rescheduled.
             AssignedTasks.Remove(task);
             AssignedNonInputTasks.Remove(task);
-            task.Server = null;
-            task.BadServers.Add(_taskServer);
-            task.State = TaskState.Created;
-            ++job.UnscheduledTasks;
+            task.SchedulerInfo.Server = null;
+            task.SchedulerInfo.BadServers.Add(_taskServer);
+            task.SchedulerInfo.State = TaskState.Created;
+            ++job.SchedulerInfo.UnscheduledTasks;
         }
 
     }
