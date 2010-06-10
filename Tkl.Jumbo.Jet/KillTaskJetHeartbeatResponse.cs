@@ -1,4 +1,6 @@
-﻿using System;
+﻿// $Id$
+//
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -17,6 +19,11 @@ namespace Tkl.Jumbo.Jet
         private readonly Guid _jobId;
         private readonly TaskAttemptId _taskAttemptId;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="KillTaskJetHeartbeatResponse"/> class.
+        /// </summary>
+        /// <param name="jobId">The job ID.</param>
+        /// <param name="taskAttemptId">The task attempt ID.</param>
         public KillTaskJetHeartbeatResponse(Guid jobId, TaskAttemptId taskAttemptId)
             : base(TaskServerHeartbeatCommand.KillTask)
         {
