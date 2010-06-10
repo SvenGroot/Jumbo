@@ -316,6 +316,7 @@ namespace JobServerApplication
             // Reading from a hashtable is safe without locking as long as writes are serialized.
             TaskServerInfo server = (TaskServerInfo)_taskServers[address];
             List<JetHeartbeatResponse> responses = null;
+            bool newServer = false;
             if( server == null )
             {
                 // Lock for adding
@@ -339,6 +340,7 @@ namespace JobServerApplication
                         }
                     }
                 }
+                newServer = true;
             }
 
             server.LastContactUtc = DateTime.UtcNow;
@@ -354,6 +356,30 @@ namespace JobServerApplication
                             responses = new List<JetHeartbeatResponse>();
                         responses.Add(response);
                     }
+                }
+            }
+
+            if( newServer )
+            {
+                // If this is a new task server and there are running jobs, we want to run the scheduler to see if we can assign any tasks to the new server.
+                // At this point we know we've gotten the StatusHeartbeat because this function would've returned above if the new server didn't send one.
+                // Locking jobs because we're enumerating
+                JobInfo jobToSchedule = null;
+                lock( _jobs )
+                {
+                    foreach( JobInfo job in _jobs.Values )
+                    {
+                        if( job.UnscheduledTasks > 0 )
+                        {
+                            jobToSchedule = job;
+                            break;
+                        }
+                    }
+                }
+
+                if( jobToSchedule != null )
+                {
+                    ScheduleTasks(jobToSchedule);
                 }
             }
 
@@ -386,15 +412,10 @@ namespace JobServerApplication
             PerformCleanup(server, ref responses);
 
             return responses == null ? null : responses.ToArray();
-        } // lock( _taskServers )
+        }
 
         #endregion
 
-        /// <summary>
-        /// NOTE: Call inside _taskServers lock.
-        /// </summary>
-        /// <param name="server"></param>
-        /// <param name="responses"></param>
         private void PerformCleanup(TaskServerInfo server, ref List<JetHeartbeatResponse> responses)
         {
             lock( _jobsNeedingCleanup )
@@ -433,8 +454,7 @@ namespace JobServerApplication
             TaskStatusChangedJetHeartbeatData taskStatusChangedData = data as TaskStatusChangedJetHeartbeatData;
             if( taskStatusChangedData != null )
             {
-                ProcessTaskStatusChangedHeartbeat(server, taskStatusChangedData);
-                return null;
+                return ProcessTaskStatusChangedHeartbeat(server, taskStatusChangedData);
             }
 
             _log.WarnFormat("Task server {0} sent unknown heartbeat type {1}.", server.Address, data.GetType());
@@ -449,17 +469,30 @@ namespace JobServerApplication
             server.FileServerPort = data.FileServerPort;
         }
 
-        private void ProcessTaskStatusChangedHeartbeat(TaskServerInfo server, TaskStatusChangedJetHeartbeatData data)
+        private JetHeartbeatResponse ProcessTaskStatusChangedHeartbeat(TaskServerInfo server, TaskStatusChangedJetHeartbeatData data)
         {
             if( data.Status >= TaskAttemptStatus.Running )
             {
                 JobInfo job = (JobInfo)_jobs[data.JobId];
                 if( job == null )
                 {
-                    _log.WarnFormat("Data server {0} reported status for unknown job {1} (this may be the aftermath of a failed job).", server.Address, data.JobId);
-                    return;
+                    _log.WarnFormat("Task server {0} reported status for unknown job {1} (this may be the aftermath of a failed job).", server.Address, data.JobId);
+                    if( data.Status == TaskAttemptStatus.Running )
+                        return new KillTaskJetHeartbeatResponse(data.JobId, data.TaskAttemptId);
+                    else
+                        return null;
                 }
                 TaskInfo task = job.GetSchedulingTask(data.TaskAttemptId.TaskId.ToString());
+
+                if( task.Server != server || task.CurrentAttempt == null || task.CurrentAttempt.Attempt != data.TaskAttemptId.Attempt )
+                {
+                    _log.WarnFormat("Task server {0} reported status for task {{1}}_{2} which isn't an active attempt or was not assigned to that server.", server.Address, data.JobId, data.TaskAttemptId);
+                    if( data.Status == TaskAttemptStatus.Running )
+                        return new KillTaskJetHeartbeatResponse(data.JobId, data.TaskAttemptId);
+                    else
+                        return null;
+                }
+
                 if( data.Progress != null )
                 {
                     if( task.State == TaskState.Running )
@@ -483,6 +516,7 @@ namespace JobServerApplication
                         {
                         case TaskAttemptStatus.Completed:
                             task.EndTimeUtc = DateTime.UtcNow;
+                            task.CurrentAttempt = null;
                             task.SuccessfulAttempt = data.TaskAttemptId;
                             task.State = TaskState.Finished;
                             _log.InfoFormat("Task {0} completed successfully.", Job.CreateFullTaskId(data.JobId, data.TaskAttemptId));
@@ -494,6 +528,7 @@ namespace JobServerApplication
                             ++job.FinishedTasks;
                             break;
                         case TaskAttemptStatus.Error:
+                            task.CurrentAttempt = null;
                             task.State = TaskState.Error;
                             task.Progress = null;
                             _log.WarnFormat("Task {0} encountered an error.", Job.CreateFullTaskId(data.JobId, data.TaskAttemptId));
@@ -528,6 +563,8 @@ namespace JobServerApplication
                         ScheduleTasks(job); // TODO: Once multiple jobs at once are supported, this shouldn't just consider that job
                 }
             }
+
+            return null;
         }
 
         /// <summary>
@@ -592,7 +629,7 @@ namespace JobServerApplication
             if( !_schedulerWaitingEvent.WaitOne(_schedulerTimeoutMilliseconds) )
             {
                 // Scheduler timed out
-                _log.DebugFormat("The scheduler timed out while waiting for scheduling of job {{{0}}}.", job.Job.JobId);
+                _log.ErrorFormat("The scheduler timed out while waiting for scheduling of job {{{0}}}.", job.Job.JobId);
                 lock( _schedulerThreadLock )
                 {
                     _schedulerThread.Abort();

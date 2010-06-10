@@ -365,6 +365,11 @@ namespace TaskServerApplication
                     _log.InfoFormat("Received run task command for task {{{0}}}_{1}.", runResponse.Job.JobId, runResponse.TaskAttemptId);
                     _taskRunner.AddTask(runResponse);
                     break;
+                case TaskServerHeartbeatCommand.KillTask:
+                    KillTaskJetHeartbeatResponse killResponse = (KillTaskJetHeartbeatResponse)response;
+                    _log.InfoFormat("Received kill task command for task {{{0}}}_{1}.", killResponse.JobId, killResponse.TaskAttemptId);
+                    _taskRunner.KillTask(killResponse);
+                    break;
                 case TaskServerHeartbeatCommand.CleanupJob:
                     CleanupJobJetHeartbeatResponse cleanupResponse = (CleanupJobJetHeartbeatResponse)response;
                     _log.InfoFormat("Received cleanup job command for job {{{0}}}.", cleanupResponse.JobId);

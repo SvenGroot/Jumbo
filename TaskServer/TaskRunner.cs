@@ -229,6 +229,28 @@ namespace TaskServerApplication
             _taskAddedEvent.Set();
         }
 
+        public void KillTask(KillTaskJetHeartbeatResponse taskHeartbeat)
+        {
+            string fullTaskId = Job.CreateFullTaskId(taskHeartbeat.JobId, taskHeartbeat.TaskAttemptId);
+            RunningTask task = null;
+            lock( _runningTasks )
+            {
+                if( _runningTasks.TryGetValue(fullTaskId, out task) )
+                {
+                    _runningTasks.Remove(fullTaskId);
+                    _log.InfoFormat("Killing task {{0}}_{1}.", taskHeartbeat.JobId, taskHeartbeat.TaskAttemptId);
+                }
+                else
+                {
+                    _log.WarnFormat("Task server received kill command for task {{0}}_{1} that wasn't running.", taskHeartbeat.JobId, taskHeartbeat.TaskAttemptId);
+                    return;
+                }
+            }
+
+            task.State = TaskAttemptStatus.Error;
+            task.Kill();
+        }
+
         public void ReportCompletion(string fullTaskID)
         {
             if( fullTaskID == null )

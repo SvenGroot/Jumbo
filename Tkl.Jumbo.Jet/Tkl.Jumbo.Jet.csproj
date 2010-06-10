@@ -118,6 +118,7 @@
     <Compile Include="IHasAdditionalProgress.cs" />
     <Compile Include="IPrepartitionedPushTask.cs" />
     <Compile Include="Jobs\JobSettingAttribute.cs" />
+    <Compile Include="KillTaskJetHeartbeatResponse.cs" />
     <Compile Include="PartitionerConstants.cs" />
     <Compile Include="IConfigurable.cs" />
     <Compile Include="InputStageInfo.cs" />
