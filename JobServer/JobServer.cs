@@ -495,6 +495,7 @@ namespace JobServerApplication
                         return null;
                 }
 
+                task.LastProgressTimeUtc = DateTime.UtcNow;
                 if( data.Progress != null )
                 {
                     if( task.State == TaskState.Running )

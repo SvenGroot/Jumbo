@@ -117,6 +117,28 @@ namespace Tkl.Jumbo.Jet
         public TaskAttemptId TaskAttemptId { get; set; }
 
         /// <summary>
+        /// Forces a progress report to be sent on the next progress interval.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        ///   Call this method periodically if your task is executing a long-running operation that doesn't cause the task's progress to be changed (no input data is read).
+        ///   This will ensure the job server doesn't think the task is hung.
+        /// </para>
+        /// <para>
+        ///   Calling this method while your task is stuck in an infinite loop will cause the job to hang indefinitely.
+        /// </para>
+        /// <para>
+        ///   If it's possible for your task to calculate progress for the long-running operation, consider implementing <see cref="IHasAdditionalProgress"/>
+        ///   instead of calling this method.
+        /// </para>
+        /// </remarks>
+        public void ReportProgress()
+        {
+            if( TaskExecution != null )
+                TaskExecution.ReportProgress();
+        }
+
+        /// <summary>
         /// Gets a setting with the specified type and default value, checking first in the stage settings and then in the job settings.
         /// </summary>
         /// <typeparam name="T">The type of the setting.</typeparam>

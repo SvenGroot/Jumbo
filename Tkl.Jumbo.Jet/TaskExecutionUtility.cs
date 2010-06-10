@@ -56,6 +56,7 @@ namespace Tkl.Jumbo.Jet
         private long _dfsBytesWritten;
         private object _task;
         private readonly int _statusMessageLevel;
+        private volatile bool _mustReportProgress;
 
         internal TaskExecutionUtility(DfsClient dfsClient, JetClient jetClient, ITaskServerUmbilicalProtocol umbilical, TaskExecutionUtility parentTask, TaskAttemptConfiguration configuration)
         {
@@ -304,6 +305,12 @@ namespace Tkl.Jumbo.Jet
             // Only call this on the root task!
             while( _statusMessages.Count < maxLevel + 1 )
                 _statusMessages.Add(null);
+        }
+
+        internal void ReportProgress()
+        {
+            // Will force a progress report to be sent, even if nothing's changed.
+            _rootTask._mustReportProgress = true;
         }
 
         private void SetStatusMessage(int level, string message)
@@ -667,7 +674,7 @@ namespace Tkl.Jumbo.Jet
             if( InputReader == null && progressChanged && previousProgress.AdditionalProgressValues != null )
                 previousProgress.Progress = previousProgress.AdditionalProgressValues.Average(v => v.Progress);
 
-            if( progressChanged )
+            if( progressChanged || _mustReportProgress )
             {
                 try
                 {
@@ -685,6 +692,8 @@ namespace Tkl.Jumbo.Jet
                 {
                     _log.Error("Failed to report progress to the task server.", ex);
                 }
+
+                _mustReportProgress = false;
             }
             return previousProgress;
         }

@@ -193,6 +193,8 @@ namespace Tkl.Jumbo.Jet.Channels
                 while( !_disposed && tasksLeft.Count > 0 )
                 {
                     Thread.Sleep(_pollingInterval);
+                    TaskExecution.ReportProgress(); // Ping the job server for progress to ensure our task doesn't time out while waiting for input.
+
                     CompletedTask[] completedTasks = _jobServer.CheckTaskCompletion(_jobID, tasksLeftArray);
                     if( completedTasks != null && completedTasks.Length > 0 )
                     {
