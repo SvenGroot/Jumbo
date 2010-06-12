@@ -52,7 +52,7 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
         private readonly HeaderTableItem[] _headerTable;
         private readonly int _minSupport;
         private FPTreeNode[] _nodes;
-        private NodeChildList[] _nodeChildren; // Children stored separately to reduce the size of FPTreeNode.
+        private int[] _nodeSiblings; // This stores the node ID of the next sibling for each node. Stores separately because we don't need it after tree construction.
         private int _nodeCount = 1;
         private const int _rootNode = 0;
         private const float _growthRate = 1.5f;
@@ -70,10 +70,14 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
             // The highest item ID in the subdatabase should be itemCount - 1.
             int size = Math.Max(itemCount, _minSize);
             _nodes = new FPTreeNode[size];
-            _nodeChildren = new NodeChildList[size];
+            _nodeSiblings = new int[size];
             _headerTable = new HeaderTableItem[itemCount];
             BuildTree(transactions);
-            _nodeChildren = null; // Not needed after tree construction, allow collection of objects.
+            _nodeSiblings = null; // Not needed after tree construction, allow collection of objects.
+            // Copy field was used to store first child ID, clear it
+            for( int x = 0; x < _nodeCount; ++x )
+                _nodes[x].Copy = 0;
+
             _log.DebugFormat("Length: {0}; Capacity: {1}; Memory: {2}", _nodeCount, _nodes.Length, Process.GetCurrentProcess().PrivateMemorySize64);
             _minSupport = minSupport;
             _nodes[_rootNode].Id = -1;
@@ -233,43 +237,6 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
                 return 0;
         }
 
-        private static List<KeyValuePair<int, int>> GetFrequentItems(IEnumerable<ITransaction> transactions, int minSupport)
-        {
-            Dictionary<int, Count> counts = new Dictionary<int, Count>();
-            int n = 0;
-            foreach( var t in transactions )
-            {
-                if( ++n % 10000 == 0 )
-                    Console.Write("\r{0} transactions counted.", n);
-
-                foreach( var item in t.Items )
-                {
-                    Count c;
-                    if( counts.TryGetValue(item, out c) )
-                        c.Value++;
-                    else
-                    {
-                        c = new Count() { Value = 1 };
-                        counts.Add(item, c);
-                    }
-                }
-            }
-
-            return (from c in counts
-                    let support = c.Value.Value
-                    where support >= minSupport
-                    orderby support descending, c.Key ascending
-                    select new KeyValuePair<int, int>(c.Key, support)).ToList();
-
-            /*return (from t in transactions
-                    from item in t.Items
-                    group t by item into itemGroup
-                    let support = (from t2 in itemGroup select t2.Count).Sum()
-                    where support >= minSupport
-                    orderby support descending, itemGroup.Key ascending
-                    select new KeyValuePair<T, int>(itemGroup.Key, support)).ToList();*/
-        }
-
         private FPTree CreateConditionalTree(int firstNode)
         {
             int conditionalNode = firstNode;
@@ -425,19 +392,12 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
 
         private int GetChild(int node, int id)
         {
-            int childCount = _nodeChildren[node].Count;
-            if( childCount > 0 )
+            int child = _nodes[node].Copy;
+            while( child != 0 && _nodes[child].Id != id )
             {
-                int[] children = _nodeChildren[node].Children;
-                for( int x = 0; x < childCount; ++x )
-                {
-                    int child = children[x];
-                    if( _nodes[child].Id == id )
-                        return child;
-                }
-
+                child = _nodeSiblings[child];
             }
-            return 0;
+            return child;
         }
 
         private int CreateNode(int parentNode, int id, int count)
@@ -449,7 +409,9 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
             _nodes[newNode].Id = id;
             _nodes[newNode].Count = count;
             _nodes[newNode].Parent = parentNode;
-            _nodeChildren[parentNode].Add(newNode);
+            // During tree construction we use the Copy field to store the first child of each node.
+            _nodeSiblings[newNode] = _nodes[parentNode].Copy; // Sibling of new child is the old first child
+            _nodes[parentNode].Copy = newNode; // new child becomes the first child
 
             return newNode;
         }
@@ -488,7 +450,8 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
         {
             int newSize = (int)(_nodes.Length * _growthRate);
             Array.Resize(ref _nodes, newSize);
-            Array.Resize(ref _nodeChildren, newSize);
+            if( _nodeSiblings != null )
+                Array.Resize(ref _nodeSiblings, newSize);
         }
 
         private void OnProgressChanged(EventArgs e)
