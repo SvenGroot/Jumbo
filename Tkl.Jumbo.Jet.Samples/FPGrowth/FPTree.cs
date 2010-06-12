@@ -23,30 +23,6 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
             public int Support { get; set; }
         }
 
-        private struct NodeChildList
-        {
-            public int Count;
-            public int[] Children;
-
-            public void Add(int node)
-            {
-                int newChild = Count++;
-                if( Children == null )
-                    Children = new int[2];
-                else if( Children.Length < Count )
-                {
-                    int newSize = (int)(Children.Length * _growthRate);
-                    Array.Resize(ref Children, newSize);
-                }
-                Children[newChild] = node;
-            }
-        }
-
-        private class Count
-        {
-            public int Value { get; set; }
-        }
-
         #endregion
 
         private readonly HeaderTableItem[] _headerTable;
