@@ -44,6 +44,7 @@
     <WarningLevel>4</WarningLevel>
     <DocumentationFile>bin\Debug\Tkl.Jumbo.Jet.Samples.XML</DocumentationFile>
     <CodeAnalysisRuleSet>AllRules.ruleset</CodeAnalysisRuleSet>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -54,6 +55,7 @@
     <WarningLevel>4</WarningLevel>
     <DocumentationFile>bin\Release\Tkl.Jumbo.Jet.Samples.XML</DocumentationFile>
     <CodeAnalysisRuleSet>AllRules.ruleset</CodeAnalysisRuleSet>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="log4net, Version=1.2.10.0, Culture=neutral, PublicKeyToken=1b44e1d426115821, processorArchitecture=MSIL">
@@ -90,6 +92,7 @@
     <Compile Include="FPGrowth\FrequentPatternMaxHeap.cs" />
     <Compile Include="FPGrowth\GenFGList.cs" />
     <Compile Include="FPGrowth\ITransaction.cs" />
+    <Compile Include="FPGrowth\NodeChildList.cs" />
     <Compile Include="FPGrowth\PFPGrowth.cs" />
     <Compile Include="FPGrowth\Transaction.cs" />
     <Compile Include="FPGrowth\TransactionMiningTask.cs" />

@@ -8,10 +8,15 @@ using System.Diagnostics;
 using Tkl.Jumbo;
 using System.IO;
 using Tkl.Jumbo.IO;
+using System.Runtime.InteropServices;
 
 namespace Tkl.Jumbo.Jet.Samples.FPGrowth
 {
-    sealed class FPTree
+    // This class stores the node list and node children lists in unmanaged arrays, allocated with Marshal.AllocHGlobal.
+    // The reason it does this is because the Mono GC (in Mono 2.6) doesn't compact and doesn't return memory to the OS,
+    // so the frequent calls to Array.Resize cause a large amount of memory to be wasted. Using unsafe code here gives us
+    // 50%+ memory savings in many cases.
+    unsafe sealed class FPTree : IDisposable
     {
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(FPTree));
 
@@ -23,31 +28,13 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
             public int Support { get; set; }
         }
 
-        private struct NodeChildList
-        {
-            public int Count;
-            public int[] Children;
-
-            public void Add(int node)
-            {
-                int newChild = Count++;
-                if( Children == null )
-                    Children = new int[2];
-                else if( Children.Length < Count )
-                {
-                    int newSize = (int)(Children.Length * _growthRate);
-                    Array.Resize(ref Children, newSize);
-                }
-                Children[newChild] = node;
-            }
-        }
-
         #endregion
 
         private readonly HeaderTableItem[] _headerTable;
         private readonly int _minSupport;
-        private FPTreeNode[] _nodes;
-        private NodeChildList[] _nodeChildren; // Children stored separately to reduce the size of FPTreeNode.
+        private FPTreeNode* _nodes;
+        private int _nodesLength;
+        private NodeChildList* _nodeChildren; // Children stored separately to reduce the size of FPTreeNode.
         private int _nodeCount = 1;
         private const int _rootNode = 0;
         private const float _growthRate = 1.5f;
@@ -55,6 +42,7 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
         private int _weight;
         private int _mineUntilItem;
         private readonly TaskAttemptConfiguration _config;
+        private bool _disposed;
 
         public event EventHandler ProgressChanged;
 
@@ -64,12 +52,16 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
             // The itemCount indicates how many of the items from the frequent item list are in the subdatabase.
             // The highest item ID in the subdatabase should be itemCount - 1.
             int size = Math.Max(itemCount, _minSize);
-            _nodes = new FPTreeNode[size];
-            _nodeChildren = new NodeChildList[size];
+            _nodes = (FPTreeNode*)Marshal.AllocHGlobal(size * sizeof(FPTreeNode));
+            _nodes[_rootNode] = new FPTreeNode();
+            _nodes[_rootNode].Id = -1;
+            _nodesLength = size;
+            _nodeChildren = (NodeChildList*)Marshal.AllocHGlobal(size * sizeof(NodeChildList));
+            _nodeChildren[_rootNode] = new NodeChildList();
             _headerTable = new HeaderTableItem[itemCount];
             BuildTree(transactions);
-            _nodeChildren = null; // Not needed after tree construction, allow collection of objects.
-            _log.DebugFormat("Length: {0}; Capacity: {1}; Memory: {2}", _nodeCount, _nodes.Length, Process.GetCurrentProcess().PrivateMemorySize64);
+            CleanupChildren(); // Children are not needed after tree construction.
+            _log.DebugFormat("Length: {0}; Capacity: {1}; Memory: {2}", _nodeCount, _nodesLength, Process.GetCurrentProcess().PrivateMemorySize64);
             _minSupport = minSupport;
             _nodes[_rootNode].Id = -1;
             _config = config;
@@ -78,10 +70,17 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
         private FPTree(int size, int headerSize, int minSupport)
         {
             // This is used only for conditional trees, so we don't need to create the _nodeChildren array.
-            _nodes = new FPTreeNode[size];
+            _nodes = (FPTreeNode*)Marshal.AllocHGlobal(size * sizeof(FPTreeNode));
+            _nodesLength = size;
             _headerTable = new HeaderTableItem[headerSize];
             _minSupport = minSupport;
+            _nodes[_rootNode] = new FPTreeNode();
             _nodes[_rootNode].Id = -1;
+        }
+
+        ~FPTree()
+        {
+            Dispose(false);
         }
 
         public float Progress { get; private set; }
@@ -118,6 +117,12 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
                     writer.WriteLine();
                 }
             }
+        }
+
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
         }
 
         private void Mine(int? currentItem, FrequentPatternCollector collector)
@@ -165,14 +170,16 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
                 }
                 else
                 {
-                    FPTree conditionalPatternTree = CreateConditionalTree(_headerTable[item].FirstNode);
-                    conditionalPatternTree.ReduceTree(minSupport);
-                    conditionalPatternTree.CollectPerfectItems(collector);
-                    conditionalPatternTree.PruneTree(minSupport);
-                    if( currentItem == null )
-                        conditionalPatternTree.MineTopDown(item, collector);
-                    else
-                        conditionalPatternTree.Mine(currentItem, collector);
+                    using( FPTree conditionalPatternTree = CreateConditionalTree(_headerTable[item].FirstNode) )
+                    {
+                        conditionalPatternTree.ReduceTree(minSupport);
+                        conditionalPatternTree.CollectPerfectItems(collector);
+                        conditionalPatternTree.PruneTree(minSupport);
+                        if( currentItem == null )
+                            conditionalPatternTree.MineTopDown(item, collector);
+                        else
+                            conditionalPatternTree.Mine(currentItem, collector);
+                    }
                 }
                 collector.Report();
                 collector.Remove(1);
@@ -386,7 +393,7 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
             int childCount = _nodeChildren[node].Count;
             if( childCount > 0 )
             {
-                int[] children = _nodeChildren[node].Children;
+                int* children = _nodeChildren[node].Children;
                 for( int x = 0; x < childCount; ++x )
                 {
                     int child = children[x];
@@ -400,24 +407,28 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
 
         private int CreateNode(int parentNode, int id, int count)
         {
-            if( _nodeCount == _nodes.Length )
+            if( _nodeCount == _nodesLength )
                 Resize();
 
             int newNode = _nodeCount++;
+            _nodes[newNode] = new FPTreeNode();
             _nodes[newNode].Id = id;
             _nodes[newNode].Count = count;
             _nodes[newNode].Parent = parentNode;
+            _nodeChildren[newNode] = new NodeChildList();
             _nodeChildren[parentNode].Add(newNode);
 
             return newNode;
+
         }
 
         private int CreateConditionalNode(int id, int count)
         {
-            if( _nodeCount == _nodes.Length )
+            if( _nodeCount == _nodesLength )
                 Resize();
 
             int newNode = _nodeCount++;
+            _nodes[newNode] = new FPTreeNode();
             _nodes[newNode].Id = id;
             _nodes[newNode].Count = count;
             _nodes[newNode].NodeLink = _headerTable[id].FirstNode;
@@ -444,10 +455,10 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
 
         private void Resize()
         {
-            int newSize = (int)(_nodes.Length * _growthRate);
-            Array.Resize(ref _nodes, newSize);
+            _nodesLength = (int)(_nodesLength * _growthRate);
+            _nodes = (FPTreeNode*)Marshal.ReAllocHGlobal((IntPtr)_nodes, new IntPtr(_nodesLength * sizeof(FPTreeNode)));
             if( _nodeChildren != null )
-                Array.Resize(ref _nodeChildren, newSize);
+                _nodeChildren = (NodeChildList*)Marshal.ReAllocHGlobal((IntPtr)_nodeChildren, new IntPtr(_nodesLength * sizeof(NodeChildList)));
         }
 
         private void OnProgressChanged(EventArgs e)
@@ -456,5 +467,34 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
             if( handler != null )
                 handler(this, e);
         }
+
+        private void CleanupChildren()
+        {
+            if( _nodeChildren != null )
+            {
+                for( int x = 0; x < _nodesLength; ++x )
+                {
+                    if( _nodeChildren[x].Children != null )
+                        Marshal.FreeHGlobal((IntPtr)_nodeChildren[x].Children);
+                }
+                Marshal.FreeHGlobal((IntPtr)_nodeChildren);
+                _nodeChildren = null;
+            }
+        }
+
+        private void Dispose(bool disposing)
+        {
+            if( !_disposed )
+            {
+                _disposed = true;
+                CleanupChildren();
+                if( _nodes != null )
+                {
+                    Marshal.FreeHGlobal((IntPtr)_nodes);
+                    _nodes = null;
+                }
+            }
+        }
+
     }
 }

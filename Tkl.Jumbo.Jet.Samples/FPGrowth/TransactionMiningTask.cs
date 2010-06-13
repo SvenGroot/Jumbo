@@ -52,7 +52,6 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
                     maxPerGroup++;
                 while( true )
                 {
-                    FPTree tree;
                     int groupId;
                     if( input.HasFinished )
                         break;
@@ -60,11 +59,13 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
                     string message = string.Format("Building tree for group {0}.", groupId);
                     _log.Info(message);
                     TaskAttemptConfiguration.StatusMessage = message;
-                    tree = new FPTree(EnumerateGroup(input), minSupport, Math.Min((groupId + 1) * maxPerGroup, itemCount), TaskAttemptConfiguration);
-                    tree.ProgressChanged += new EventHandler(FPTree_ProgressChanged);
+                    using( FPTree tree = new FPTree(EnumerateGroup(input), minSupport, Math.Min((groupId + 1) * maxPerGroup, itemCount), TaskAttemptConfiguration) )
+                    {
+                        tree.ProgressChanged += new EventHandler(FPTree_ProgressChanged);
 
-                    // The tree needs to do mining only for the items in its group.
-                    tree.Mine(output, k, false, groupId * maxPerGroup);
+                        // The tree needs to do mining only for the items in its group.
+                        tree.Mine(output, k, false, groupId * maxPerGroup);
+                    }
                     ++_groupsProcessed;
                 }
             }
