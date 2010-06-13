@@ -472,7 +472,7 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
         {
             if( _nodeChildren != null )
             {
-                for( int x = 0; x < _nodesLength; ++x )
+                for( int x = 0; x < _nodeCount; ++x )
                 {
                     if( _nodeChildren[x].Children != null )
                         Marshal.FreeHGlobal((IntPtr)_nodeChildren[x].Children);
