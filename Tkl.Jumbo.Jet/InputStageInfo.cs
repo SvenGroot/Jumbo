@@ -76,7 +76,7 @@ namespace Tkl.Jumbo.Jet
 
         private Type InputStageOutputType
         {
-            get { return InputStage.TaskType.FindGenericInterfaceType(typeof(ITask<,>), true).GetGenericArguments()[1]; }
+            get { return InputStage.TaskType.ReferencedType.FindGenericInterfaceType(typeof(ITask<,>), true).GetGenericArguments()[1]; }
         }
 
         private void ValidatePartitionerType()

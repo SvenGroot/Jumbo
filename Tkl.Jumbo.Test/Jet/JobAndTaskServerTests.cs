@@ -315,6 +315,27 @@ namespace Tkl.Jumbo.Test.Jet
 
         }
 
+        [Test]
+        public void TestJobExecutionTaskTimeout()
+        {
+            DfsClient dfsClient = new DfsClient(Dfs.TestDfsCluster.CreateClientConfig());
+            JetClient target = new JetClient(TestJetCluster.CreateClientConfig());
+            string outputPath = "/timeout";
+            dfsClient.NameServer.CreateDirectory(outputPath);
+            JobConfiguration config = CreateConfiguration(dfsClient, dfsClient.NameServer.GetFileInfo(_fileName), outputPath, false, typeof(TimeoutTask), typeof(LineAdderTask), ChannelType.File);
+            config.AddTypedSetting(TaskServerConfigurationElement.TaskTimeoutJobSettingKey, 20000); // Set timeout to 20 seconds.
+
+            Job job = target.RunJob(config, dfsClient, typeof(TimeoutTask).Assembly.Location);
+            target.WaitForJobCompletion(job.JobId, Timeout.Infinite, 1000);
+
+            JobStatus status = target.JobServer.GetJobStatus(job.JobId);
+            Assert.IsTrue(status.IsSuccessful);
+            Assert.AreEqual(1, status.ErrorTaskCount);
+            Assert.AreEqual(2, status.Stages.Where(s => s.StageId == "Task").Single().Tasks[0].Attempts);
+
+            ValidateLineCountOutput(outputPath, dfsClient, _lines);
+        }
+
         private void TestJobExecutionSort(string inputFileName, string outputPath, int mergeTasks, int partitionsPerTask, bool forceFileDownload, bool singleFileOutput)
         {
             const int recordCount = 2500000;
@@ -469,6 +490,11 @@ namespace Tkl.Jumbo.Test.Jet
             bool complete = target.WaitForJobCompletion(job.JobId, Timeout.Infinite, 1000);
             Assert.IsTrue(complete);
 
+            ValidateLineCountOutput(outputPath, dfsClient, lines);
+        }
+
+        private static void ValidateLineCountOutput(string outputPath, DfsClient dfsClient, int lines)
+        {
             string outputFileName = DfsPath.Combine(outputPath, "OutputTask001");
 
             using( DfsInputStream stream = dfsClient.OpenFile(outputFileName) )
@@ -476,8 +502,6 @@ namespace Tkl.Jumbo.Test.Jet
             {
                 Assert.AreEqual(lines, Convert.ToInt32(reader.ReadLine()));
             }
-
-            Console.WriteLine(config);
         }
 
         private static JobConfiguration CreateConfiguration(DfsClient dfsClient, Tkl.Jumbo.Dfs.DfsFile file, string outputPath, bool forceFileDownload, Type counterTask, Type adderTask, ChannelType channelType)

@@ -73,7 +73,7 @@ namespace Tkl.Jumbo.Jet
             _jetClient = jetClient;
             _configuration = configuration;
             _umbilical = umbilical;
-            _taskType = _configuration.StageConfiguration.TaskType;
+            _taskType = _configuration.StageConfiguration.TaskType.ReferencedType;
             configuration.TaskExecution = this;
             _progressInterval = _jetClient.Configuration.TaskServer.ProgressInterval;
 
@@ -320,7 +320,7 @@ namespace Tkl.Jumbo.Jet
 
         private static Type DetermineTaskExecutionType(TaskAttemptConfiguration configuration)
         {
-            Type taskType = configuration.StageConfiguration.TaskType;
+            Type taskType = configuration.StageConfiguration.TaskType.ReferencedType;
             Type interfaceType = taskType.FindGenericInterfaceType(typeof(ITask<,>), true);
             Type[] recordTypes = interfaceType.GetGenericArguments();
 

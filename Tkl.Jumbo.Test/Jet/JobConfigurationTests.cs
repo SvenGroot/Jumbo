@@ -74,8 +74,8 @@ namespace Tkl.Jumbo.Test.Jet
                 Assert.AreEqual(typeof(LineRecordReader), stage.DfsInputs[x].RecordReaderType);
             }
             Assert.IsNull(stage.DfsOutput);
-            Assert.AreEqual(typeof(Tasks.LineCounterTask).AssemblyQualifiedName, stage.TaskTypeName);
-            Assert.AreEqual(typeof(Tasks.LineCounterTask), stage.TaskType);
+            Assert.AreEqual(typeof(Tasks.LineCounterTask).AssemblyQualifiedName, stage.TaskType.TypeName);
+            Assert.AreEqual(typeof(Tasks.LineCounterTask), stage.TaskType.ReferencedType);
 
         }
 
@@ -224,8 +224,8 @@ namespace Tkl.Jumbo.Test.Jet
             else
                 Assert.IsNull(stage.DfsOutput);
 
-            Assert.AreEqual(typeof(Tasks.LineAdderTask).AssemblyQualifiedName, stage.TaskTypeName);
-            Assert.AreEqual(typeof(Tasks.LineAdderTask), stage.TaskType);
+            Assert.AreEqual(typeof(Tasks.LineAdderTask).AssemblyQualifiedName, stage.TaskType.TypeName);
+            Assert.AreEqual(typeof(Tasks.LineAdderTask), stage.TaskType.ReferencedType);
 
             ChannelConfiguration channel = inputStage1.OutputChannel;
             Assert.AreEqual(ChannelType.File, channel.ChannelType);

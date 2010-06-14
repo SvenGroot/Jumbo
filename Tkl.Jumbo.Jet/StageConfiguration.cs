@@ -19,8 +19,6 @@ namespace Tkl.Jumbo.Jet
     public class StageConfiguration
     {
         private string _stageId;
-        private string _taskTypeName;
-        private Type _taskType;
         private int _taskCount;
         private bool? _allowRecordReuse;
         private bool? _allowOutputRecordReuse;
@@ -50,37 +48,9 @@ namespace Tkl.Jumbo.Jet
         }
 
         /// <summary>
-        /// Gets or sets the name of the type that implements the task.
-        /// </summary>
-        [XmlAttribute("type")]
-        public string TaskTypeName
-        {
-            get { return _taskTypeName; }
-            set 
-            {
-                _taskType = null;
-                _taskTypeName = value; 
-            }
-        }
-
-        /// <summary>
         /// Gets or sets the type that implements the task.
         /// </summary>
-        [XmlIgnore]
-        public Type TaskType
-        {
-            get 
-            {
-                if( _taskType == null && _taskTypeName != null )
-                    _taskType = Type.GetType(_taskTypeName, true);
-                return _taskType; 
-            }
-            set 
-            { 
-                _taskType = value;
-                _taskTypeName = value == null ? null : value.AssemblyQualifiedName;
-            }
-        }
+        public TypeReference TaskType { get; set; }
 
         /// <summary>
         /// Gets or sets the number of tasks in this stage.
@@ -201,11 +171,11 @@ namespace Tkl.Jumbo.Jet
                 if( _allowRecordReuse == null )
                 {
                     // If this is a child stage and the task is a pull task then record reuse is not allowed, because the PipelinePullTaskRecordWriter doesn't support it.
-                    if( Parent != null && TaskType.FindGenericInterfaceType(typeof(IPullTask<,>), false) != null )
+                    if( Parent != null && TaskType.ReferencedType.FindGenericInterfaceType(typeof(IPullTask<,>), false) != null )
                         _allowRecordReuse = false;
                     else
                     {
-                        AllowRecordReuseAttribute attribute = (AllowRecordReuseAttribute)Attribute.GetCustomAttribute(TaskType, typeof(AllowRecordReuseAttribute));
+                        AllowRecordReuseAttribute attribute = (AllowRecordReuseAttribute)Attribute.GetCustomAttribute(TaskType.ReferencedType, typeof(AllowRecordReuseAttribute));
                         if( attribute == null )
                             _allowRecordReuse = false;
                         else if( attribute.PassThrough )
@@ -309,7 +279,7 @@ namespace Tkl.Jumbo.Jet
         {
             get
             {
-                return TaskType.FindGenericInterfaceType(typeof(IPrepartitionedPushTask<,>), false) != null;
+                return TaskType.ReferencedType.FindGenericInterfaceType(typeof(IPrepartitionedPushTask<,>), false) != null;
             }
         }
 
@@ -346,7 +316,7 @@ namespace Tkl.Jumbo.Jet
                 throw new InvalidOperationException("Cannot set output before stage ID and task type are set.");
             if( ChildStage != null || OutputChannel != null || DfsOutput != null )
                 throw new InvalidOperationException("This stage already has output.");
-            JobConfiguration.ValidateOutputType(outputPath, recordWriterType, TaskType.FindGenericInterfaceType(typeof(ITask<,>)));
+            JobConfiguration.ValidateOutputType(outputPath, recordWriterType, TaskType.ReferencedType.FindGenericInterfaceType(typeof(ITask<,>)));
 
             DfsOutput = new TaskDfsOutput()
             {

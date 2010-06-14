@@ -88,6 +88,7 @@
     <Compile Include="OrderJoinComparer.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="StringConversionTask.cs" />
+    <Compile Include="TimeoutTask.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Tkl.Jumbo.Jet\Tkl.Jumbo.Jet.csproj">

@@ -62,6 +62,9 @@ namespace TaskServerApplication
 
         public static void Run(JetConfiguration jetConfig, DfsConfiguration dfsConfig)
         {
+            // Prevent type references in job configurations from loading assemblies into the task server.
+            TypeReference.ResolveTypes = false;
+
             lock( _startupLock )
             {
                 Instance = new TaskServer(jetConfig, dfsConfig);
@@ -110,8 +113,7 @@ namespace TaskServerApplication
 
         public void ReportProgress(Guid jobId, TaskAttemptId taskAttemptId, TaskProgress progress)
         {
-            _log.InfoFormat("Task {0} progress: {1}", Job.CreateFullTaskId(jobId, taskAttemptId), progress);
-            NotifyTaskStatusChanged(jobId, taskAttemptId, TaskAttemptStatus.Running, progress);
+            _taskRunner.ReportProgress(Job.CreateFullTaskId(jobId, taskAttemptId), progress);
         }
 
         public void SetUncompressedTemporaryFileSize(Guid jobId, string fileName, long uncompressedSize)
@@ -314,6 +316,7 @@ namespace TaskServerApplication
             while( _running )
             {
                 SendHeartbeat();
+                _taskRunner.KillTimedOutTasks();
                 Thread.Sleep(_heartbeatInterval);
             }
         }

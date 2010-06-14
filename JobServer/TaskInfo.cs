@@ -27,7 +27,6 @@ namespace JobServerApplication
 
         private long _startTimeUtcTicks;
         private long _endTimeUtcTicks;
-        private long _lastProgressTimeUtcTicks;
 
         public TaskInfo(JobInfo job, StageConfiguration stage, IList<StageConfiguration> inputStages, int taskNumber)
         {
@@ -158,12 +157,6 @@ namespace JobServerApplication
         {
             get { return new DateTime(Interlocked.Read(ref _endTimeUtcTicks), DateTimeKind.Utc); }
             set { Interlocked.Exchange(ref _endTimeUtcTicks, value.Ticks); }
-        }
-
-        public DateTime LastProgressTimeUtc
-        {
-            get { return new DateTime(Interlocked.Read(ref _lastProgressTimeUtcTicks), DateTimeKind.Utc); }
-            set { Interlocked.Exchange(ref _lastProgressTimeUtcTicks, value.Ticks); }
         }
 
         public TaskProgress Progress { get; set; }

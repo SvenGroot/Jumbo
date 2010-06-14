@@ -14,6 +14,12 @@ namespace Tkl.Jumbo.Jet
     public class TaskServerConfigurationElement : ConfigurationElement
     {
         /// <summary>
+        /// The key of the setting in <see cref="JobConfiguration.JobSettings"/> used to override the default <see cref="TaskTimeout"/>.
+        /// The setting should be an <see cref="Int32"/> indicating the timeout in milliseconds.
+        /// </summary>
+        public const string TaskTimeoutJobSettingKey = "TaskServer.TaskTimeout";
+
+        /// <summary>
         /// Gets or sets the local directory for task files.
         /// </summary>
         [ConfigurationProperty("taskDirectory", DefaultValue = "", IsRequired = true, IsKey = false)]
@@ -164,6 +170,16 @@ namespace Tkl.Jumbo.Jet
         {
             get { return (int)this["heartbeatInterval"]; }
             set { this["heartbeatInterval"] = value; }
+        }
+
+        /// <summary>
+        /// Gets or sets the timeout, in milliseconds, after which a task is declared dead if it hasn't reported progress.
+        /// </summary>
+        [ConfigurationProperty("taskTimeout", DefaultValue = 600000, IsRequired = false, IsKey = false)]
+        public int TaskTimeout
+        {
+            get { return (int)this["taskTimeout"]; }
+            set { this["taskTimeout"] = value; }
         }
     }
 }
