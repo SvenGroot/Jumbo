@@ -33,6 +33,8 @@ namespace JobServerApplication
             get { return _address; }
         }
 
+        public bool HasReportedStatus { get; set; }
+
         // Atomicity of setting int values is guaranteed by ECMA spec; no locking needed since we never increment etc. those values, we always outright replcae them
         public int MaxTasks { get; set; }
         public int MaxNonInputTasks { get; set; }
@@ -53,6 +55,17 @@ namespace JobServerApplication
         public TaskServerSchedulerInfo SchedulerInfo
         {
             get { return _schedulerInfo; }
+        }
+
+        public bool IsTimedOut
+        {
+            get { return (DateTime.UtcNow - LastContactUtc).TotalMilliseconds > JobServer.Instance.Configuration.JobServer.TaskServerTimeout; }
+        }
+
+        public bool IsActive
+        {
+            // Don't schedule tasks on servers that haven't reported for a while
+            get { return HasReportedStatus && (DateTime.UtcNow - LastContactUtc).TotalSeconds <= 60; }
         }
     }
 }

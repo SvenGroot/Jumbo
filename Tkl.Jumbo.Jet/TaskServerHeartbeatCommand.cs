@@ -17,7 +17,7 @@ namespace Tkl.Jumbo.Jet
         /// </summary>
         None,
         /// <summary>
-        /// The task server should send a <see cref="StatusJetHeartbeatData"/> in the next heartbeat.
+        /// The task server should send a <see cref="InitialStatusJetHeartbeatData"/> in the next heartbeat.
         /// </summary>
         ReportStatus,
         /// <summary>

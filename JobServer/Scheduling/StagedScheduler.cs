@@ -60,7 +60,7 @@ namespace JobServerApplication.Scheduling
             HashSet<Guid> inputBlockSet = new HashSet<Guid>(inputBlocks);
             foreach( TaskServerInfo taskServer in servers )
             {
-                if( taskServer.SchedulerInfo.AvailableTasks > 0 )
+                if( taskServer.IsActive && taskServer.SchedulerInfo.AvailableTasks > 0 )
                 {
                     ServerAddress[] dataServers = DataServerMap.GetDataServersForTaskServer(taskServer.Address, servers, dfsClient);
                     List<Guid> localBlocks = null;
@@ -103,7 +103,7 @@ namespace JobServerApplication.Scheduling
         {
             foreach( TaskServerInfo taskServer in servers )
             {
-                if( taskServer.SchedulerInfo.AvailableTasks > 0 )
+                if( taskServer.IsActive && taskServer.SchedulerInfo.AvailableTasks > 0 )
                 {
                     var eligibleTasks = (from task in unscheduledTasks
                                          where !task.SchedulerInfo.BadServers.Contains(taskServer) && task.Server == null
@@ -143,7 +143,7 @@ namespace JobServerApplication.Scheduling
                     break;
                 TaskInfo task = tasks[taskIndex];
                 var availableServers = from server in taskServers
-                                       where server.SchedulerInfo.AvailableNonInputTasks > 0
+                                       where server.IsActive && server.SchedulerInfo.AvailableNonInputTasks > 0
                                        orderby server.SchedulerInfo.AvailableNonInputTasks descending, rnd.Next()
                                        select server;
                 outOfSlots = availableServers.Count() == 0;

@@ -319,7 +319,6 @@ namespace JobServerApplication
             // Reading from a hashtable is safe without locking as long as writes are serialized.
             TaskServerInfo server = (TaskServerInfo)_taskServers[address];
             List<JetHeartbeatResponse> responses = null;
-            bool newServer = false;
             if( server == null )
             {
                 // Lock for adding
@@ -327,23 +326,25 @@ namespace JobServerApplication
                 {
                     // Check again after locking to prevent two threads adding the same task server.
                     server = (TaskServerInfo)_taskServers[address];
-                    if( server == null )
+                    if( server == null || !server.HasReportedStatus )
                     {
-                        if( data == null || (from d in data where d is StatusJetHeartbeatData select d).Count() == 0 )
+                        if( data == null || (from d in data where d is InitialStatusJetHeartbeatData select d).Count() == 0 )
                         {
-                            _log.WarnFormat("Task server {0} reported for the first time but didn't send status data.", address);
+                            _log.WarnFormat("Task server {0} reported for the first time (or re-reported after being declared dead) but didn't send status data.", address);
                             return new[] { new JetHeartbeatResponse(TaskServerHeartbeatCommand.ReportStatus) };
                         }
                         else
                         {
-                            _log.InfoFormat("Task server {0} reported for the first time.", address);
+                            if( server == null )
+                                _log.InfoFormat("Task server {0} reported for the first time.", address);
+                            else
+                                _log.InfoFormat("Timed-out task server {0} reported again.", address);
                             server = new TaskServerInfo(address);
                             _taskServers.Add(address, server);
                             _schedulerTaskServers = null; // The list of task servers has changed, so the scheduler needs to make a new copy next time around.
                         }
                     }
                 }
-                newServer = true;
             }
 
             server.LastContactUtc = DateTime.UtcNow;
@@ -362,7 +363,13 @@ namespace JobServerApplication
                 }
             }
 
-            if( newServer )
+            bool hasAvailableTasks;
+            lock( _schedulerLock )
+            {
+                hasAvailableTasks = server.SchedulerInfo.AvailableTasks > 0 || server.SchedulerInfo.AvailableNonInputTasks > 0;
+            }
+
+            if( hasAvailableTasks )
             {
                 // If this is a new task server and there are running jobs, we want to run the scheduler to see if we can assign any tasks to the new server.
                 // At this point we know we've gotten the StatusHeartbeat because this function would've returned above if the new server didn't send one.
@@ -444,7 +451,7 @@ namespace JobServerApplication
 
         private JetHeartbeatResponse ProcessHeartbeat(TaskServerInfo server, JetHeartbeatData data)
         {
-            StatusJetHeartbeatData statusData = data as StatusJetHeartbeatData;
+            InitialStatusJetHeartbeatData statusData = data as InitialStatusJetHeartbeatData;
             if( statusData != null )
             {
                 ProcessStatusHeartbeat(server, statusData);
@@ -461,12 +468,24 @@ namespace JobServerApplication
             throw new ArgumentException(string.Format("Unknown heartbeat type {0}.", data.GetType()));
         }
 
-        private void ProcessStatusHeartbeat(TaskServerInfo server, StatusJetHeartbeatData data)
+        private void ProcessStatusHeartbeat(TaskServerInfo server, InitialStatusJetHeartbeatData data)
         {
-            _log.InfoFormat("Task server {0} reported status: MaxTasks = {1}, MaxNonInputTasks = {2}, FileServerPort = {3}", server.Address, data.MaxTasks, data.MaxNonInputTasks, data.FileServerPort);
+            if( server.HasReportedStatus )
+            {
+                _log.WarnFormat("Task server {0} re-reported initial status; it may have been restarted.", server.Address);
+                lock( _schedulerLock )
+                {
+                    // We have to remove all tasks because if the server restarted it might not be running those anymore.
+                    server.SchedulerInfo.UnassignAllTasks();
+                }
+            }
+
+            server.HasReportedStatus = true;
+            _log.InfoFormat("Task server {0} reported initial status: MaxTasks = {1}, MaxNonInputTasks = {2}, FileServerPort = {3}", server.Address, data.MaxTasks, data.MaxNonInputTasks, data.FileServerPort);
             server.MaxTasks = data.MaxTasks;
             server.MaxNonInputTasks = data.MaxNonInputTasks;
             server.FileServerPort = data.FileServerPort;
+
         }
 
         private JetHeartbeatResponse ProcessTaskStatusChangedHeartbeat(TaskServerInfo server, TaskStatusChangedJetHeartbeatData data)
@@ -539,7 +558,7 @@ namespace JobServerApplication
                             if( task.Attempts < Configuration.JobServer.MaxTaskAttempts )
                             {
                                 // Reschedule
-                                task.Server.SchedulerInfo.UnassignFailedTask(job, task);
+                                task.Server.SchedulerInfo.UnassignFailedTask(task);
                                 if( task.SchedulerInfo.BadServers.Count == _taskServers.Count )
                                     task.SchedulerInfo.BadServers.Clear(); // we've failed on all servers so try again anywhere.
                             }
@@ -722,6 +741,43 @@ namespace JobServerApplication
                                 job.SchedulerInfo.State = JobState.Failed;
                                 FinishOrFailJob(job);
                             }
+                        }
+                    }
+                }
+            }
+        }
+
+        private void CheckTaskServerTimeoutThread()
+        {
+            int timeout = Configuration.JobServer.TaskServerTimeout;
+            int sleepTime = timeout / 3;
+
+            while( _running )
+            {
+                List<TaskServerInfo> deadServers = null;
+                Thread.Sleep(sleepTime);
+                // Lock to enumerate
+                lock( _taskServers )
+                {
+                    foreach( TaskServerInfo server in _taskServers.Values )
+                    {
+                        if( (DateTime.UtcNow - server.LastContactUtc).TotalMilliseconds > timeout )
+                        {
+                            if( deadServers == null )
+                                deadServers = new List<TaskServerInfo>();
+                            deadServers.Add(server);
+                            server.HasReportedStatus = false;
+                        }
+                    }
+                }
+
+                if( deadServers != null )
+                {
+                    lock( _schedulerLock )
+                    {
+                        foreach( TaskServerInfo server in deadServers )
+                        {
+                            server.SchedulerInfo.UnassignAllTasks();
                         }
                     }
                 }

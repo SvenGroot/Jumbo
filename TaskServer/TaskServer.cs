@@ -295,7 +295,7 @@ namespace TaskServerApplication
 
             LocalAddress = new ServerAddress(Dns.GetHostName(), Configuration.TaskServer.Port);
 
-            AddDataForNextHeartbeat(new StatusJetHeartbeatData() { MaxTasks = Configuration.TaskServer.MaxTasks, MaxNonInputTasks = Configuration.TaskServer.MaxNonInputTasks, FileServerPort = Configuration.TaskServer.FileServerPort });
+            AddDataForNextHeartbeat(new InitialStatusJetHeartbeatData() { MaxTasks = Configuration.TaskServer.MaxTasks, MaxNonInputTasks = Configuration.TaskServer.MaxNonInputTasks, FileServerPort = Configuration.TaskServer.FileServerPort });
 
             IPAddress[] addresses;
             if( System.Net.Sockets.Socket.OSSupportsIPv6 )
@@ -361,7 +361,7 @@ namespace TaskServerApplication
                 switch( response.Command )
                 {
                 case TaskServerHeartbeatCommand.ReportStatus:
-                    AddDataForNextHeartbeat(new StatusJetHeartbeatData() { MaxTasks = Configuration.TaskServer.MaxTasks, MaxNonInputTasks = Configuration.TaskServer.MaxNonInputTasks, FileServerPort = Configuration.TaskServer.FileServerPort });
+                    AddDataForNextHeartbeat(new InitialStatusJetHeartbeatData() { MaxTasks = Configuration.TaskServer.MaxTasks, MaxNonInputTasks = Configuration.TaskServer.MaxNonInputTasks, FileServerPort = Configuration.TaskServer.FileServerPort });
                     break;
                 case TaskServerHeartbeatCommand.RunTask:
                     RunTaskJetHeartbeatResponse runResponse = (RunTaskJetHeartbeatResponse)response;

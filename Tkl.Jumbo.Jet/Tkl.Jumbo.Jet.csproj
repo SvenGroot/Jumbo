@@ -159,7 +159,7 @@
     <Compile Include="SettingsDictionary.cs" />
     <Compile Include="StageConfiguration.cs" />
     <Compile Include="StageStatus.cs" />
-    <Compile Include="StatusJetHeartbeatData.cs" />
+    <Compile Include="InitialStatusJetHeartbeatData.cs" />
     <Compile Include="TaskAttemptConfiguration.cs" />
     <Compile Include="TaskAttemptId.cs" />
     <Compile Include="TaskDfsInput.cs" />

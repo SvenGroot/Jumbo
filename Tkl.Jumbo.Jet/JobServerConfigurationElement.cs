@@ -81,5 +81,16 @@ namespace Tkl.Jumbo.Jet
             get { return (int)this["maxTaskAttempts"]; }
             set { this["maxTaskAttempts"] = value; }
         }
+
+        /// <summary>
+        /// Gets or sets the timeout, in milliseconds, after which a task server is declared dead if it has not sent a heartbeat.
+        /// </summary>
+        /// <value>The task server timeout.</value>
+        [ConfigurationProperty("taskServerTimeout", DefaultValue = 600000, IsRequired = false, IsKey = false)]
+        public int TaskServerTimeout
+        {
+            get { return (int)this["taskServerTimeout"]; }
+            set { this["taskServerTimeout"] = value; }
+        }
     }
 }

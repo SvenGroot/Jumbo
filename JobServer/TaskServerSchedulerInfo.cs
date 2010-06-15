@@ -60,7 +60,7 @@ namespace JobServerApplication
             job.SchedulerInfo.TaskServers.Add(_taskServer.Address); // Record all servers involved with the task to give them cleanup instructions later.
         }
 
-        public void UnassignFailedTask(JobInfo job, TaskInfo task)
+        public void UnassignFailedTask(TaskInfo task)
         {
             // This is used if a task has failed and needs to be rescheduled.
             AssignedTasks.Remove(task);
@@ -68,8 +68,23 @@ namespace JobServerApplication
             task.SchedulerInfo.Server = null;
             task.SchedulerInfo.BadServers.Add(_taskServer);
             task.SchedulerInfo.State = TaskState.Created;
-            ++job.SchedulerInfo.UnscheduledTasks;
+            ++task.Job.SchedulerInfo.UnscheduledTasks;
         }
 
+        public void UnassignAllTasks()
+        {
+            // This is used if a task server is restarted.
+            foreach( TaskInfo task in AssignedTasks.Concat(AssignedNonInputTasks) )
+            {
+                task.SchedulerInfo.Server = null;
+                task.SchedulerInfo.BadServers.Add(_taskServer);
+                task.SchedulerInfo.State = TaskState.Created;
+                ++task.SchedulerInfo.Attempts;
+                ++task.Job.SchedulerInfo.UnscheduledTasks;
+            }
+
+            AssignedTasks.Clear();
+            AssignedNonInputTasks.Clear();
+        }
     }
 }
