@@ -9,6 +9,7 @@ using System.IO;
 using Tkl.Jumbo.Dfs;
 using System.Threading;
 using System.Collections.ObjectModel;
+using Tkl.Jumbo.Jet.Channels;
 
 namespace JobServerApplication
 {
@@ -52,8 +53,19 @@ namespace JobServerApplication
                             partitions.Add(taskNumber);
                         else
                         {
-                            int begin = ((taskNumber - 1) * partitionsPerTask) + 1;
-                            partitions.AddRange(Enumerable.Range(begin, partitionsPerTask));
+                            if( inputStage.OutputChannel.PartitionAssignmentMethod == PartitionAssignmentMethod.Striped )
+                            {
+                                int partition = taskNumber;
+                                for( int x = 0; x < partitionsPerTask; ++x, partition += stage.TaskCount )
+                                {
+                                    partitions.Add(partition);
+                                }
+                            }
+                            else
+                            {
+                                int begin = ((taskNumber - 1) * partitionsPerTask) + 1;
+                                partitions.AddRange(Enumerable.Range(begin, partitionsPerTask));
+                            }
                         }
                         _partitions = partitions.AsReadOnly();
                     }

@@ -63,6 +63,12 @@ namespace Tkl.Jumbo.Jet
         public int PartitionsPerTask { get; set; }
 
         /// <summary>
+        /// Gets or sets the method used to assign partitions to tasks when the job is started.
+        /// </summary>
+        /// <value>The partition assignment method.</value>
+        public PartitionAssignmentMethod PartitionAssignmentMethod { get; set; }
+
+        /// <summary>
         /// Gets the type of multi input record reader to use.
         /// </summary>
         public Type MultiInputRecordReaderType

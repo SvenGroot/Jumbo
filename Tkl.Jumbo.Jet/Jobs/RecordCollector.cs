@@ -68,6 +68,7 @@ namespace Tkl.Jumbo.Jet.Jobs
         private int _partitionCount;
         private Type _partitionerType;
         private int _partitionsPerTask = 1;
+        private PartitionAssignmentMethod _partitionAssignmentMethod;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="RecordCollector{T}"/> class.
@@ -163,6 +164,23 @@ namespace Tkl.Jumbo.Jet.Jobs
             }
         }
 
+        /// <summary>
+        /// Gets or sets the method used to assign partitions to tasks when the job is started.
+        /// </summary>
+        /// <value>The partition assignment method.</value>
+        public PartitionAssignmentMethod PartitionAssignmentMethod
+        {
+            get { return _partitionAssignmentMethod; }
+            set 
+            {
+                if( _writer != null )
+                    throw new InvalidOperationException("You cannot set the partition assignment method after the RecordCollector's RecordWriter has been created.");
+
+                _partitionAssignmentMethod = value; 
+            }
+        }
+        
+
         internal StageConfiguration InputStage { get; set; }
 
         // This is used when this record collector is actually representing multiple other channels, e.g. for joins.
@@ -251,7 +269,8 @@ namespace Tkl.Jumbo.Jet.Jobs
                 ChannelType = realChannelType,
                 MultiInputRecordReaderType = MultiInputRecordReaderType,
                 PartitionerType = PartitionerType ?? typeof(HashPartitioner<T>),
-                PartitionsPerTask = PartitionsPerTask
+                PartitionsPerTask = PartitionsPerTask,
+                PartitionAssignmentMethod = PartitionAssignmentMethod
             };
         }
     }

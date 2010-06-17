@@ -45,17 +45,6 @@ namespace Tkl.Jumbo.IO
         }
 
         /// <summary>
-        /// Gets the progress of the reader.
-        /// </summary>
-        public override float Progress
-        {
-            get 
-            {
-                return Math.Min(1.0f, (_currentReaderNumber - 1 + (_currentReader == null ? 1.0f : _currentReader.Progress)) / (float)TotalInputCount);
-            }
-        }
-
-        /// <summary>
         /// Reads a record.
         /// </summary>
         /// <returns><see langword="true"/> if an object was successfully read from the stream; <see langword="false"/> if the end of the stream or stream fragment was reached.</returns>
@@ -79,6 +68,10 @@ namespace Tkl.Jumbo.IO
             return true;
         }
 
+        /// <summary>
+        /// Raises the <see cref="MultiInputRecordReader{T}.CurrentPartitionChanged"/> event.
+        /// </summary>
+        /// <param name="e">The <see cref="System.EventArgs"/> instance containing the event data.</param>
         protected override void OnCurrentPartitionChanged(EventArgs e)
         {
             _currentReader = null;

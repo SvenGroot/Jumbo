@@ -45,6 +45,13 @@ namespace Tkl.Jumbo.Jet.Channels
         }
 
         /// <summary>
+        /// Gets or sets the method used to assign partitions to tasks when the job is started.
+        /// </summary>
+        /// <value>The partition assignment method.</value>
+        [XmlAttribute("partitionAssignmentMethod")]
+        public PartitionAssignmentMethod PartitionAssignmentMethod { get; set; }
+
+        /// <summary>
         /// Gets or sets a value that indicates whether the file channel should always use TCP downloads.
         /// </summary>
         /// <value>

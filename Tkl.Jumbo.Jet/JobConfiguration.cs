@@ -257,6 +257,7 @@ namespace Tkl.Jumbo.Jet
                             MultiInputRecordReaderType = info.MultiInputRecordReaderType,
                             OutputStage = stageId,
                             PartitionsPerTask = info.PartitionsPerTask,
+                            PartitionAssignmentMethod = info.PartitionAssignmentMethod,
                         };
                         info.InputStage.OutputChannel = channel;
                         AddAdditionalProgressCounter(info.ChannelType == ChannelType.Tcp ? typeof(TcpInputChannel) : typeof(FileInputChannel));

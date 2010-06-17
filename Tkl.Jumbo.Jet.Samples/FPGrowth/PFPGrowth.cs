@@ -484,7 +484,7 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
             int groups = fgList[fgList.Count - 1].GroupId + 1;
 
             var input = builder.CreateRecordReader<Utf8String>(_inputPath, typeof(LineRecordReader));
-            var groupCollector = new RecordCollector<Pair<int, T>>() { PartitionCount = FPGrowthTaskCount * PartitionsPerTask, PartitionsPerTask = PartitionsPerTask };
+            var groupCollector = new RecordCollector<Pair<int, T>>() { PartitionCount = FPGrowthTaskCount * PartitionsPerTask, PartitionsPerTask = PartitionsPerTask, PartitionAssignmentMethod = PartitionAssignmentMethod.Striped };
             var patternCollector = new RecordCollector<Pair<int, WritableCollection<MappedFrequentPattern>>>() { PartitionCount = AggregateTaskCount };
             var output = CreateRecordWriter<Pair<Utf8String, WritableCollection<FrequentPattern>>>(builder, _outputPath, BinaryOutput ? typeof(BinaryRecordWriter<>) : typeof(TextRecordWriter<>));
 
