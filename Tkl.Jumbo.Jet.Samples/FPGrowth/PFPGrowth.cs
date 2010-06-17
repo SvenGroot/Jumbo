@@ -38,6 +38,7 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
                          [Description("The output directory on the DFS where the result will be written.")] string outputPath,
                          [Description("The path of the fglist file on the DFS.")] string fgListPath)
         {
+            PartitionsPerTask = 1;
             _inputPath = inputPath;
             _outputPath = outputPath;
             _fgListPath = fgListPath;
@@ -100,6 +101,13 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
         /// </value>
         [NamedCommandLineArgument("pf"), Description("When set, the job will use the single-file partition file format for the intermediate data.")]
         public bool UsePartitionFile { get; set; }
+
+        /// <summary>
+        /// Gets or sets a value indicating the number of partitions per task for the MineTransactions stage.
+        /// </summary>
+        /// <value>The partitions per task.</value>
+        [NamedCommandLineArgument("ppt"), Description("The number of partitions per task for the MineTransactions stage.")]
+        public int PartitionsPerTask { get; set; }
 
         /// <summary>
         /// Gets or sets a value indicating whether the output format is binary.
@@ -476,7 +484,7 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
             int groups = fgList[fgList.Count - 1].GroupId + 1;
 
             var input = builder.CreateRecordReader<Utf8String>(_inputPath, typeof(LineRecordReader));
-            var groupCollector = new RecordCollector<Pair<int, T>>() { PartitionCount = FPGrowthTaskCount };
+            var groupCollector = new RecordCollector<Pair<int, T>>() { PartitionCount = FPGrowthTaskCount * PartitionsPerTask, PartitionsPerTask = PartitionsPerTask };
             var patternCollector = new RecordCollector<Pair<int, WritableCollection<MappedFrequentPattern>>>() { PartitionCount = AggregateTaskCount };
             var output = CreateRecordWriter<Pair<Utf8String, WritableCollection<FrequentPattern>>>(builder, _outputPath, BinaryOutput ? typeof(BinaryRecordWriter<>) : typeof(TextRecordWriter<>));
 
@@ -490,7 +498,7 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
 
             // Interesting observation: if the number of groups equals or is smaller than the number of partitions, we don't need to sort, because each
             // partition will get exactly one group.
-            if( FPGrowthTaskCount < groups )
+            if( FPGrowthTaskCount * PartitionsPerTask < groups )
             {
                 var sortCollector = new RecordCollector<Pair<int, T>>() { PartitionCount = FPGrowthTaskCount };
                 // Sort each partition by group ID.

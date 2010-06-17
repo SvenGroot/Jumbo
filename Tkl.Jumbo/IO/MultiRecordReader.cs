@@ -79,6 +79,13 @@ namespace Tkl.Jumbo.IO
             return true;
         }
 
+        protected override void OnCurrentPartitionChanged(EventArgs e)
+        {
+            _currentReader = null;
+            _currentReaderNumber = 0;
+            base.OnCurrentPartitionChanged(e);
+        }
+
         private bool WaitForReaders()
         {
             if( _currentReader == null )
@@ -91,7 +98,7 @@ namespace Tkl.Jumbo.IO
                 WaitForInputs(newReaderNumber, Timeout.Infinite);
                 _timeWaitingStopwatch.Stop();
 
-                _currentReader = (RecordReader<T>)GetInputReader(CurrentPartition,_currentReaderNumber);
+                _currentReader = (RecordReader<T>)GetInputReader(CurrentPartition, _currentReaderNumber);
                 _currentReaderNumber = newReaderNumber;
             }
             return true;
