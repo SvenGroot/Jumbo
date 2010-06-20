@@ -55,18 +55,18 @@ namespace Tkl.Jumbo.Jet
         /// Gets the number of bytes written to the stream.
         /// </summary>
         /// <value></value>
-        public long BytesWritten
+        public long OutputBytes
         {
-            get { return _baseWriter.BytesWritten; }
+            get { return _baseWriter.OutputBytes; }
         }
 
         /// <summary>
         /// Gets the number of bytes written to the stream after compression, or 0 if the stream was not compressed.
         /// </summary>
         /// <value></value>
-        public long CompressedBytesWritten
+        public long BytesWritten
         {
-            get { return _baseWriter.CompressedBytesWritten; }
+            get { return _baseWriter.BytesWritten; }
         }
 
         /// <summary>

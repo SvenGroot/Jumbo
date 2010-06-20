@@ -18,7 +18,7 @@ namespace Tkl.Jumbo.Jet.Channels
     /// Represents the reading end of a file channel.
     /// </summary>
     [AdditionalProgressCounter("Shuffle")]
-    public class FileInputChannel : InputChannel, IDisposable, IHasAdditionalProgress
+    public class FileInputChannel : InputChannel, IDisposable, IHasAdditionalProgress, IHasMetrics
     {
         #region Nested types
 
@@ -98,24 +98,34 @@ namespace Tkl.Jumbo.Jet.Channels
         /// Gets the number of bytes read from the local disk.
         /// </summary>
         /// <remarks>
-        /// This property actually returns the uncompressed size of all the local input files combined; this assumes that the user
-        /// of the channel actually reads all the records.
+        /// This property returns the total amount of data read from the local disk. This includes the compressed size of any local input files, and
+        /// any downloaded input files that could not be stored in memory.
         /// </remarks>
         public long LocalBytesRead { get; private set; }
 
         /// <summary>
-        /// Gets the number of compressed bytes read from the local disk.
+        /// Gets or sets the number of bytes written to the local disk.
         /// </summary>
+        /// <value>The local bytes written.</value>
         /// <remarks>
-        /// This property actually returns the compressed size of all the local input files combined; this assumes that the user
-        /// of the channel actually reads all the records.
+        /// This property returns the total amount of data written to the local disk. This equals the combined size of any downloaded input files
+        /// that could not be stored in memory.
         /// </remarks>
-        public long CompressedLocalBytesRead { get; private set; }
+        public long LocalBytesWritten { get; private set; }
 
         /// <summary>
         /// Gets the number of bytes read from the network. This is always the compressed figure.
         /// </summary>
         public long NetworkBytesRead { get; private set; }
+
+        /// <summary>
+        /// Gets the number of bytes written over the network.
+        /// </summary>
+        /// <value>The network bytes written.</value>
+        public long NetworkBytesWritten
+        {
+            get { return 0L; }
+        }
 
         /// <summary>
         /// Creates a <see cref="RecordReader{T}"/> from which the channel can read its input.
@@ -379,13 +389,7 @@ namespace Tkl.Jumbo.Jet.Channels
                     {
                         _log.InfoFormat("Using local file {0} as input.", fileName);
                         uncompressedSize = TaskExecution.Umbilical.GetUncompressedTemporaryFileSize(task.JobId, outputFileName);
-                        if( uncompressedSize != -1 )
-                        {
-                            LocalBytesRead += uncompressedSize;
-                            CompressedLocalBytesRead += size;
-                        }
-                        else
-                            LocalBytesRead += size;
+                        LocalBytesRead += size;
                         // We don't delete output files; if this task fails they might still be needed
                         inputs.Add(new RecordInput(_inputReaderType, fileName, task.TaskAttemptId.TaskId.ToString(), uncompressedSize, false));
                     }
@@ -471,7 +475,9 @@ namespace Tkl.Jumbo.Jet.Channels
                     }
                     downloadedFiles.Add(new RecordInput(_inputReaderType, targetFile, task.TaskAttemptId.TaskId.ToString(), uncompressedSize, TaskExecution.JetClient.Configuration.FileChannel.DeleteIntermediateFiles));
                     _log.InfoFormat("File stored in {0}.", targetFile);
-
+                    // We are writing this file to disk and reading it back again, so we need to update this.
+                    LocalBytesRead += size;
+                    LocalBytesWritten += size;
                 }
                 else
                 {

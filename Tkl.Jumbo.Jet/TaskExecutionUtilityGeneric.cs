@@ -34,14 +34,14 @@ namespace Tkl.Jumbo.Jet
                 CreateOutputWriter();
             }
 
-            public override long BytesWritten
+            public override long OutputBytes
             {
                 get
                 {
                     if( _recordWriter == null )
                         return _bytesWritten;
                     else
-                        return _bytesWritten + _recordWriter.BytesWritten;
+                        return _bytesWritten + _recordWriter.OutputBytes;
                 }
             }
 
@@ -59,7 +59,7 @@ namespace Tkl.Jumbo.Jet
             {
                 if( _recordWriter != null )
                 {
-                    _bytesWritten += _recordWriter.BytesWritten;
+                    _bytesWritten += _recordWriter.OutputBytes;
                     _recordWriter.Dispose();
                 }
 
@@ -73,7 +73,7 @@ namespace Tkl.Jumbo.Jet
                 {
                     if( _recordWriter != null )
                     {
-                        _bytesWritten += _recordWriter.BytesWritten;
+                        _bytesWritten += _recordWriter.OutputBytes;
                         _recordWriter.Dispose();
                         _recordWriter = null;
                     }
@@ -134,11 +134,10 @@ namespace Tkl.Jumbo.Jet
                 timeWaiting = TimeSpan.Zero;
             _log.InfoFormat("Task finished execution, execution time: {0}s; time spent waiting for input: {1}s.", taskStopwatch.Elapsed.TotalSeconds, timeWaiting.TotalSeconds);
 
-            FinishTask();
+            TaskMetrics metrics = new TaskMetrics();
+            FinishTask(metrics);
 
-            // TODO: Proper metrics for pipelined tasks.
-            TaskMetrics metrics = CalculateMetrics();
-            _log.Info(metrics);
+            metrics.LogMetrics();
         }
 
         protected override IRecordWriter CreateOutputRecordWriter()

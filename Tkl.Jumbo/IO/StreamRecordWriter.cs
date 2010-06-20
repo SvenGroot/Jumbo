@@ -32,23 +32,27 @@ namespace Tkl.Jumbo.IO
         public Stream Stream { get; private set; }
 
         /// <summary>
-        /// Gets the number of bytes written to the stream.
+        /// Gets the size of the written records after serialization.
         /// </summary>
-        public override long BytesWritten
+        /// <value>
+        /// The number of bytes written to the output stream.
+        /// </value>
+        public override long OutputBytes
         {
             get { return Stream.Length; }
         }
 
         /// <summary>
-        /// Gets the number of bytes written to the stream after compression, or 0 if the stream was not compressed.
+        /// Gets the number of bytes that were actually written to the output.
         /// </summary>
-        public override long CompressedBytesWritten
+        /// <value>If compression was used, the number of bytes written to the output after compression; otherwise, the same value as <see cref="OutputBytes"/>.</value>
+        public override long BytesWritten
         {
             get
             {
                 ICompressor compressionStream = Stream as ICompressor;
                 if( compressionStream == null )
-                    return 0;
+                    return OutputBytes;
                 else
                     return compressionStream.CompressedBytesWritten;
             }

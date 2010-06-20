@@ -90,9 +90,12 @@ namespace Tkl.Jumbo.IO
         protected Stream Stream { get; private set; }
 
         /// <summary>
-        /// Gets the number of bytes read from the stream.
+        /// Gets the size of the records before deserialization.
         /// </summary>
-        public override long BytesRead
+        /// <value>
+        /// The number of bytes read from the stream.
+        /// </value>
+        public override long InputBytes
         {
             get
             {
@@ -116,13 +119,31 @@ namespace Tkl.Jumbo.IO
         }
 
         /// <summary>
+        /// Gets the size of the records before deserialization.
+        /// </summary>
+        /// <value>
+        /// The size of the records before deserialization, or 0 if the records were not read from a serialized source.
+        /// </value>
+        public override long BytesRead
+        {
+            get
+            {
+                ICompressor compressor = Stream as ICompressor;
+                if( compressor == null )
+                    return InputBytes;
+                else
+                    return compressor.CompressedBytesRead;
+            }
+        }
+
+        /// <summary>
         /// Gets the progress of the reader.
         /// </summary>
         public override float Progress
         {
             get
             {                    
-                return Math.Min(1.0f, BytesRead / (float)Size);
+                return Math.Min(1.0f, InputBytes / (float)Size);
             }
         }
 
@@ -140,7 +161,7 @@ namespace Tkl.Jumbo.IO
                 {
                     if( Stream != null )
                     {
-                        _bytesRead = BytesRead; // Store so that property can be used after the object is disposed.
+                        _bytesRead = InputBytes; // Store so that property can be used after the object is disposed.
                         Stream s = Stream;
                         Stream = null;
                         s.Dispose();

@@ -62,12 +62,12 @@ namespace Tkl.Jumbo.IO
         /// <summary>
         /// Gets the total number of bytes written by each writer.
         /// </summary>
-        public override long BytesWritten
+        public override long OutputBytes
         {
             get
             {
                 return (from writer in Writers
-                        select writer.BytesWritten).Sum();
+                        select writer.OutputBytes).Sum();
             }
         }
 

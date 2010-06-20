@@ -262,7 +262,7 @@ namespace Tkl.Jumbo.Jet
                     _log.InfoFormat("Partition {0} merge pass {1} complete", partition, pass);
 
                     if( currentOutput != null )
-                        currentOutput.UncompressedSize = writer.BytesWritten;
+                        currentOutput.UncompressedSize = writer.OutputBytes;
 
                     return true;
                 }

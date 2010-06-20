@@ -13,7 +13,7 @@ namespace Tkl.Jumbo.Jet.Channels
     /// <summary>
     /// Represents the writing end of a file channel between two tasks.
     /// </summary>
-    public sealed class FileOutputChannel : OutputChannel
+    public sealed class FileOutputChannel : OutputChannel, IHasMetrics
     {
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(FileOutputChannel));
 
@@ -91,7 +91,7 @@ namespace Tkl.Jumbo.Jet.Channels
                 foreach( IRecordWriter writer in _writers )
                 {
                     string fileName = _fileNames[x];
-                    TaskExecution.Umbilical.SetUncompressedTemporaryFileSize(TaskExecution.Configuration.JobId, fileName, writer.BytesWritten);
+                    TaskExecution.Umbilical.SetUncompressedTemporaryFileSize(TaskExecution.Configuration.JobId, fileName, writer.OutputBytes);
 
                     ++x;
                 }
@@ -117,6 +117,9 @@ namespace Tkl.Jumbo.Jet.Channels
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Reliability", "CA2000:Dispose objects before losing scope"), System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1004:GenericMethodsShouldProvideTypeParameter")]
         public override RecordWriter<T> CreateRecordWriter<T>()
         {
+            if( _writers != null )
+                throw new InvalidOperationException("The channel record writer has already been created.");
+
             ByteSize writeBufferSize = TaskExecution.Configuration.GetTypedSetting(WriteBufferSizeSettingKey, TaskExecution.JetClient.Configuration.FileChannel.WriteBufferSize);
 
             if( _singleFileOutput )
@@ -155,5 +158,52 @@ namespace Tkl.Jumbo.Jet.Channels
         }
 
         #endregion
+
+        /// <summary>
+        /// Gets the number of bytes read from the local disk.
+        /// </summary>
+        /// <value>The local bytes read.</value>
+        public long LocalBytesRead
+        {
+            get
+            {
+                return 0;
+            }
+        }
+
+        /// <summary>
+        /// Gets the number of bytes written to the local disk.
+        /// </summary>
+        /// <value>The local bytes written.</value>
+        public long LocalBytesWritten
+        {
+            get 
+            { 
+                if( _writers == null )
+                    return 0;
+                else
+                    return _writers.Sum(w => w.BytesWritten);
+            }
+        }
+
+        /// <summary>
+        /// Gets the number of bytes read over the network.
+        /// </summary>
+        /// <value>The network bytes read.</value>
+        /// <remarks>Only channels should normally use this property.</remarks>
+        public long NetworkBytesRead
+        {
+            get { return 0; }
+        }
+
+        /// <summary>
+        /// Gets the number of bytes written over the network.
+        /// </summary>
+        /// <value>The network bytes written.</value>
+        /// <remarks>Only channels should normally use this property.</remarks>
+        public long NetworkBytesWritten
+        {
+            get { return 0; }
+        }
     }
 }

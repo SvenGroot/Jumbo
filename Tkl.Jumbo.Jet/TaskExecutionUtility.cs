@@ -52,8 +52,6 @@ namespace Tkl.Jumbo.Jet
         private List<TaskExecutionUtility> _associatedTasks;
         private IRecordWriter _outputWriter;
         private IRecordReader _inputReader;
-        private int _recordsWritten;
-        private long _dfsBytesWritten;
         private object _task;
         private readonly int _statusMessageLevel;
         private volatile bool _mustReportProgress;
@@ -373,7 +371,7 @@ namespace Tkl.Jumbo.Jet
         /// <summary>
         /// If the task is a push task, calls <see cref="IPushTask{TInput,TOutput}.Finish"/>, then closes the output stream and moves any DFS output to its final location, for this task and all associated tasks.
         /// </summary>
-        protected void FinishTask()
+        protected void FinishTask(TaskMetrics metrics)
         {
             RunTaskFinishMethod();
 
@@ -382,26 +380,12 @@ namespace Tkl.Jumbo.Jet
                 if( _associatedTasks.Count > 1 && JetClient.Configuration.TaskServer.MultithreadedTaskFinish )
                 {
                     throw new NotImplementedException();
-                    //_log.Info("Using multi-threaded task finish for associated tasks.");
-
-                    //foreach( TaskExecutionUtility associatedTask in _associatedTasks )
-                    //{
-                    //    associatedTask.FinishTaskAsync();
-                    //}
-
-                    //WaitHandle[] events = (from associatedTask in _associatedTasks
-                    //                       select (WaitHandle)associatedTask._finishedEvent).ToArray();
-
-                    //// TODO: This will break if there are more than 64 child tasks.
-                    //WaitHandle.WaitAll(events);
-
-                    //_log.Info("All associated tasks have finished.");
                 }
                 else
                 {
                     foreach( TaskExecutionUtility associatedTask in _associatedTasks )
                     {
-                        associatedTask.FinishTask();
+                        associatedTask.FinishTask(metrics);
                     }
                 }
             }
@@ -413,13 +397,12 @@ namespace Tkl.Jumbo.Jet
             if( fileOutputChannel != null )
                 fileOutputChannel.ReportFileSizesToTaskServer();
 
+            CalculateMetrics(metrics);
+
             if( Configuration.StageConfiguration.DfsOutput != null )
             {
                 if( _outputWriter != null )
                 {
-                    _recordsWritten = _outputWriter.RecordsWritten;
-                    _dfsBytesWritten = _outputWriter.BytesWritten;
-
                     ((IDisposable)_outputWriter).Dispose();
                     // Not setting it to null so there's no chance it'll get recreated.
                 }
@@ -433,17 +416,6 @@ namespace Tkl.Jumbo.Jet
         /// Runs the task finish method if this task is a push task.
         /// </summary>
         protected abstract void RunTaskFinishMethod();
-
-        /// <summary>
-        /// Calculates metrics for the task.
-        /// </summary>
-        /// <returns>Metrics for the task.</returns>
-        protected TaskMetrics CalculateMetrics()
-        {
-            TaskMetrics metrics = new TaskMetrics();
-            CalculateMetrics(metrics);
-            return metrics;
-        }
 
         /// <summary>
         /// Throws an exception if this object was disposed.
@@ -702,47 +674,59 @@ namespace Tkl.Jumbo.Jet
         {
             // TODO: Metrics for TCP channels.
 
-            // We don't count pipeline input or output.
             if( !_isAssociatedTask )
             {
+                // This is the root stage of a compound stage (or it's not a compound stage), so we need to calculate input metrics.
                 if( _inputReader != null )
-                    metrics.RecordsRead += _inputReader.RecordsRead;
+                {
+                    metrics.InputRecords += _inputReader.RecordsRead;
+                    metrics.InputBytes += _inputReader.InputBytes;
+                }
 
                 if( Configuration.StageConfiguration.DfsInputs != null && Configuration.StageConfiguration.DfsInputs.Count > 0 )
                 {
+                    // It's currently not possible to have a multi input record reader with DFS inputs, so this is safe.
                     if( _inputReader != null )
-                        metrics.DfsBytesRead += _inputReader.BytesRead;
+                        metrics.DfsBytesRead += _inputReader.InputBytes;
                 }
                 else if( _inputChannels != null )
                 {
                     foreach( IInputChannel inputChannel in _inputChannels )
                     {
-                        FileInputChannel fileInputChannel = inputChannel as FileInputChannel;
-                        if( fileInputChannel != null )
-                        {
-                            metrics.LocalBytesRead += fileInputChannel.LocalBytesRead;
-                            metrics.NetworkBytesRead += fileInputChannel.NetworkBytesRead;
-                            metrics.CompressedLocalBytesRead += fileInputChannel.CompressedLocalBytesRead;
-                        }
+                        UpdateMetricsFromSource(metrics, inputChannel);
                     }
                 }
             }
 
-            metrics.RecordsWritten += _recordsWritten;
-            metrics.DfsBytesWritten += _dfsBytesWritten;
-            if( OutputChannel is FileOutputChannel && _outputWriter != null )
+            if( _associatedTasks == null || _associatedTasks.Count == 0 )
             {
-                metrics.LocalBytesWritten += _outputWriter.BytesWritten;
-                metrics.CompressedLocalBytesWritten += _outputWriter.CompressedBytesWritten;
-                metrics.RecordsWritten += _outputWriter.RecordsWritten;
-            }
-
-            if( _associatedTasks != null )
-            {
-                foreach( TaskExecutionUtility associatedTask in _associatedTasks )
+                // This is the final stage of a compound stage (or it's not a compound stage), so we need to calculate output metrics.
+                if( _outputWriter != null )
                 {
-                    associatedTask.CalculateMetrics(metrics);
+                    metrics.OutputRecords += _outputWriter.RecordsWritten;
+                    metrics.OutputBytes += _outputWriter.OutputBytes;
                 }
+
+                if( Configuration.StageConfiguration.DfsOutput != null )
+                {
+                    metrics.DfsBytesWritten += _outputWriter.BytesWritten;
+                }
+                else
+                {
+                    UpdateMetricsFromSource(metrics, OutputChannel);
+                }
+            }
+        }
+
+        private static void UpdateMetricsFromSource(TaskMetrics metrics, object source)
+        {
+            IHasMetrics metricsSource = source as IHasMetrics;
+            if( metricsSource != null )
+            {
+                metrics.LocalBytesRead += metricsSource.LocalBytesRead;
+                metrics.LocalBytesWritten += metricsSource.LocalBytesWritten;
+                metrics.NetworkBytesRead += metricsSource.NetworkBytesRead;
+                metrics.NetworkBytesWritten += metricsSource.NetworkBytesWritten;
             }
         }
 

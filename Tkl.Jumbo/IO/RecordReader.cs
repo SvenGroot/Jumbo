@@ -47,11 +47,26 @@ namespace Tkl.Jumbo.IO
         public abstract float Progress { get; }
 
         /// <summary>
-        /// Gets the number of bytes read, if applicable.
+        /// Gets the size of the records before deserialization.
         /// </summary>
-        public virtual long BytesRead 
+        /// <value>
+        /// The size of the records before deserialization, or 0 if the records were not read from a serialized source.
+        /// </value>
+        public virtual long InputBytes 
         {
             get { return 0; }
+        }
+
+        /// <summary>
+        /// Gets the actual number of bytes read from the input.
+        /// </summary>
+        /// <value>The number of bytes read from the input.</value>
+        /// <remarks>
+        /// This is the value of <see cref="InputBytes"/>, adjusted for compression (if applicable) and including any additional data read by the record reader (if any).
+        /// </remarks>
+        public virtual long BytesRead
+        {
+            get { return InputBytes; }
         }
 
         /// <summary>

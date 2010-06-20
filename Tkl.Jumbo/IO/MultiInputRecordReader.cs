@@ -110,6 +110,45 @@ namespace Tkl.Jumbo.IO
         }
 
         /// <summary>
+        /// Gets the size of the records before deserialization of all record readers.
+        /// </summary>
+        /// <value>
+        /// The size of the records before deserialization, or 0 if the records were not read from a serialized source.
+        /// </value>
+        public override long InputBytes
+        {
+            get
+            {
+                return (from inputList in _inputs.Values
+                        from input in inputList
+                        where input.IsReaderCreated
+                        select input.Reader.InputBytes).Sum();
+            }
+        }
+
+        /// <summary>
+        /// Gets the actual number of bytes read from the input.
+        /// </summary>
+        /// <value>
+        /// The number of bytes read from the input.
+        /// </value>
+        /// <remarks>
+        /// <para>
+        ///   This is the value of <see cref="InputBytes"/>, adjusted for compression (if applicable) and including any additional data read by the record reader (if any).
+        /// </para>
+        /// </remarks>
+        public override long BytesRead
+        {
+            get
+            {
+                return (from inputList in _inputs.Values
+                        from input in inputList
+                        where input.IsReaderCreated
+                        select input.Reader.BytesRead).Sum();                
+            }
+        }
+
+        /// <summary>
         /// Gets a value that indicates if any reader for the current partition has data available.
         /// </summary>
         public override bool RecordsAvailable

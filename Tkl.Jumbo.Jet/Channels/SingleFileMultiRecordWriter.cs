@@ -181,7 +181,8 @@ namespace Tkl.Jumbo.Jet.Channels
         private readonly List<PartitionIndexEntry>[] _indices;
         private int _lastPartition = -1;
         private int _bufferRemaining;
-        private int _bytesWritten;
+        private long _bytesWritten;
+        private long _indexBytesWritten;
         private int _writeBufferSize;
         private readonly int _bufferLimit;
 
@@ -268,11 +269,19 @@ namespace Tkl.Jumbo.Jet.Channels
             _bytesWritten += bytesWritten;
         }
 
-        public override long BytesWritten
+        public override long OutputBytes
         {
             get
             {
                 return _bytesWritten;
+            }
+        }
+
+        public override long BytesWritten
+        {
+            get
+            {
+                return _bytesWritten + _indexBytesWritten;
             }
         }
 
@@ -422,6 +431,7 @@ namespace Tkl.Jumbo.Jet.Channels
                         indexWriter.WriteRecord(indexEntry);
                     }
                 }
+                _indexBytesWritten = indexStream.Length;
             }
             _log.DebugFormat("Finished writing output segment {0}.", _outputSegments);
         }

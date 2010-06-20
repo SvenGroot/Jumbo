@@ -45,12 +45,12 @@ namespace Tkl.Jumbo.IO
         /// <summary>
         /// Gets the number of bytes written to the stream.
         /// </summary>
-        public override long BytesWritten
+        public override long OutputBytes
         {
             get
             {
                 _writer.Flush();
-                return base.BytesWritten;
+                return base.OutputBytes;
             }
         }
 

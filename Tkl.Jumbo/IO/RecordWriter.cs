@@ -26,19 +26,27 @@ namespace Tkl.Jumbo.IO
         }
 
         /// <summary>
-        /// Gets the total number of bytes written by this record reader, if applicable.
+        /// Gets the size of the written records after serialization.
         /// </summary>
-        public virtual long BytesWritten 
+        /// <value>
+        /// The size of the written records after serialization, or 0 if this writer did not serialize the records.
+        /// </value>
+        public virtual long OutputBytes 
         {
             get { return 0; }
         }
 
         /// <summary>
-        /// Gets the number of bytes written to the stream after compression, or 0 if the stream was not compressed.
+        /// Gets the number of bytes that were actually written to the output.
         /// </summary>
-        public virtual long CompressedBytesWritten
+        /// <value>The number of bytes written to the output.</value>
+        /// <remarks>
+        /// This is the value of <see cref="OutputBytes"/>, adjusted for compression (if applicable) and including any additional data written by the record writer (if any).
+        /// If this property is not overridden, the value of <see cref="OutputBytes"/> is returned.
+        /// </remarks>
+        public virtual long BytesWritten
         {
-            get { return 0; }
+            get { return OutputBytes; }
         }
 
         /// <summary>

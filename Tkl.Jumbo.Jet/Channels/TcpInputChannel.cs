@@ -14,7 +14,7 @@ namespace Tkl.Jumbo.Jet.Channels
     /// <summary>
     /// Represents the reading end of a TCP channel
     /// </summary>
-    public class TcpInputChannel : InputChannel
+    public class TcpInputChannel : InputChannel, IHasMetrics
     {
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(TcpInputChannel));
 
@@ -111,6 +111,44 @@ namespace Tkl.Jumbo.Jet.Channels
             else
                 addresses = new[] { IPAddress.Any };
             return addresses;
+        }
+
+        /// <summary>
+        /// Gets the number of bytes read from the local disk.
+        /// </summary>
+        /// <value>The local bytes read.</value>
+        public long LocalBytesRead
+        {
+            get { return 0L; }
+        }
+
+        /// <summary>
+        /// Gets the number of bytes written to the local disk.
+        /// </summary>
+        /// <value>The local bytes written.</value>
+        public long LocalBytesWritten
+        {
+            get { return 0L; }
+        }
+
+        /// <summary>
+        /// Gets the number of bytes read over the network.
+        /// </summary>
+        /// <value>The network bytes read.</value>
+        /// <remarks>Only channels should normally use this property.</remarks>
+        public long NetworkBytesRead
+        {
+            get { return _reader == null ? 0L : _reader.BytesRead; }
+        }
+
+        /// <summary>
+        /// Gets the number of bytes written over the network.
+        /// </summary>
+        /// <value>The network bytes written.</value>
+        /// <remarks>Only channels should normally use this property.</remarks>
+        public long NetworkBytesWritten
+        {
+            get { return 0L; }
         }
     }
 }

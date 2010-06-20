@@ -13,11 +13,12 @@ namespace Tkl.Jumbo.Jet.Channels
     sealed class NetworkRecordWriter<T> : RecordWriter<T>
     {
         private readonly TcpClient _client;
-        private readonly NetworkStream _stream;
+        private readonly SizeRecordingStream _stream;
         //private readonly WriteBufferedStream _bufferedStream;
         private readonly BinaryWriter _writer;
         private bool _disposed;
         private static readonly IValueWriter<T> _valueWriter = ValueWriter<T>.Writer;
+        private long _protocolBytesWritten;
 
         public NetworkRecordWriter(TcpClient client, string taskId)
         {
@@ -25,10 +26,11 @@ namespace Tkl.Jumbo.Jet.Channels
                 throw new ArgumentNullException("client");
 
             _client = client;
-            _stream = client.GetStream();
+            _stream = new SizeRecordingStream(client.GetStream());
             //_bufferedStream = new WriteBufferedStream(_stream); // TODO: Configurable buffer size.
             _writer = new BinaryWriter(_stream);
             _writer.Write(taskId);
+            _protocolBytesWritten = _stream.BytesWritten;
         }
 
         protected override void WriteRecordInternal(T record)
@@ -39,10 +41,27 @@ namespace Tkl.Jumbo.Jet.Channels
             CheckDisposed();
 
             _writer.Write(true);
+            ++_protocolBytesWritten;
             if( _valueWriter == null )
                 ((IWritable)record).Write(_writer);
             else
                 _valueWriter.Write(record, _writer);
+        }
+
+        public override long OutputBytes
+        {
+            get
+            {
+                return _stream.BytesWritten - _protocolBytesWritten;
+            }
+        }
+
+        public override long BytesWritten
+        {
+            get
+            {
+                return _stream.BytesWritten;
+            }
         }
 
         protected override void Dispose(bool disposing)
