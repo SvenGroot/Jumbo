@@ -27,15 +27,12 @@
         <include name="../Version.cs"/>
       </sources>
     </csc>
-    <copy file="App.config" tofile="nantbin/TaskHost.exe.config"/>
     <copy todir="nantbin">
       <fileset>
         <include name="../lib/log4net.dll"/>
         <include name="../Tkl.Jumbo/nantbin/*.*"/>
         <include name="../Tkl.Jumbo.Dfs/nantbin/*.*"/>
         <include name="../Tkl.Jumbo.Jet/nantbin/*.*"/>
-        <include name="../dfs.config"/>
-        <include name="../jet.config"/>
       </fileset>
     </copy>
   </target>

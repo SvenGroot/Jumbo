@@ -14,6 +14,27 @@ namespace TaskServerApplication
 {
     sealed class RunningTask : IDisposable
     {
+        #region Nested types
+
+        private sealed class AppDomainTaskHost : MarshalByRefObject
+        {
+            private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(AppDomainTaskHost));
+
+            public void Run(Guid jobId, string jobDirectory, string dfsJobDirectory, TaskAttemptId taskAttemptId)
+            {
+                AppDomain.CurrentDomain.UnhandledException += new UnhandledExceptionEventHandler(CurrentDomain_UnhandledException);
+
+                TaskExecutionUtility.RunTask(jobId, jobDirectory, dfsJobDirectory, taskAttemptId);
+            }
+
+            private void CurrentDomain_UnhandledException(object sender, UnhandledExceptionEventArgs e)
+            {
+                _log.Fatal("An unexpected error occurred running a task in an AppDomain.", (Exception)e.ExceptionObject);
+            }
+        }
+
+        #endregion
+
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(RunningTask));
 
         private Process _process;
@@ -150,6 +171,7 @@ namespace TaskServerApplication
             _log.DebugFormat("Running task {0} in an AppDomain.", FullTaskAttemptId);
             _appDomainThread = new Thread(RunTaskAppDomainThread);
             _appDomainThread.Name = FullTaskAttemptId;
+            _appDomainThread.IsBackground = true;
             _appDomainThread.Start();
         }
 
@@ -160,11 +182,12 @@ namespace TaskServerApplication
             AppDomain taskDomain = AppDomain.CreateDomain(FullTaskAttemptId, null, setup);
             try
             {
-                taskDomain.ExecuteAssembly("TaskHost.exe", null, new string[] { JobId.ToString(), JobDirectory, TaskAttemptId.TaskId.ToString(), DfsJobDirectory, TaskAttemptId.Attempt.ToString() });
+                AppDomainTaskHost host = (AppDomainTaskHost)taskDomain.CreateInstanceAndUnwrap(typeof(AppDomainTaskHost).Assembly.FullName, typeof(AppDomainTaskHost).FullName);
+                host.Run(JobId, JobDirectory, DfsJobDirectory, TaskAttemptId);
             }
             catch( Exception ex )
             {
-                _log.Error(string.Format("Error running task {0} in task domain", FullTaskAttemptId), ex);
+                _log.Error(string.Format("Error running task {0} in app domain", FullTaskAttemptId), ex);
             }
             finally
             {

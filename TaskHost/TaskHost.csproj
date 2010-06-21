@@ -93,15 +93,6 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\dfs.config">
-      <Link>dfs.config</Link>
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Include="..\jet.config">
-      <Link>jet.config</Link>
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Include="App.config" />
     <None Include="TaskHost.build" />
   </ItemGroup>
   <ItemGroup>
@@ -131,6 +122,6 @@
   -->
   <PropertyGroup>
     <PostBuildEvent>copy "$(TargetPath)" "$(SolutionDir)\TaskServer\bin\$(ConfigurationName)" &gt; nul
-copy "$(TargetPath).config" "$(SolutionDir)\TaskServer\bin\$(ConfigurationName)" &gt; nul</PostBuildEvent>
+REM copy "$(TargetPath).config" "$(SolutionDir)\TaskServer\bin\$(ConfigurationName)" &gt; nul</PostBuildEvent>
   </PropertyGroup>
 </Project>

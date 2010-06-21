@@ -13,6 +13,7 @@ using System.Threading;
 using System.Net.Sockets;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
+using System.IO;
 
 namespace Tkl.Jumbo.Jet
 {
@@ -227,6 +228,82 @@ namespace Tkl.Jumbo.Jet
                 }
             }
         }
+
+        /// <summary>
+        /// Executes a task on behalf of the task host. For Jumbo internal use only.
+        /// </summary>
+        /// <param name="jobId">The job id.</param>
+        /// <param name="jobDirectory">The job directory.</param>
+        /// <param name="dfsJobDirectory">The DFS job directory.</param>
+        /// <param name="taskAttemptId">The task attempt id.</param>
+        /// <remarks>
+        /// <para>
+        ///   This method assumes that the current AppDomain is used only for running the task, as it will override the global logging configuration and register the custom assembly resolver.
+        /// </para>
+        /// <para>
+        ///   This method should only be invoked by the TaskHost, and by the TaskServer when using AppDomain mode.
+        /// </para>
+        /// </remarks>
+        public static void RunTask(Guid jobId, string jobDirectory, string dfsJobDirectory, TaskAttemptId taskAttemptId)
+        {
+            AssemblyResolver.Register();
+
+            using( ProcessorStatus processorStatus = new ProcessorStatus() )
+            {
+                Stopwatch sw = new Stopwatch();
+                sw.Start();
+                string logFile = Path.Combine(jobDirectory, taskAttemptId.ToString() + ".log");
+                ConfigureLog(logFile);
+
+                _log.InfoFormat("Running task; job ID = \"{0}\", job directory = \"{1}\", task attempt ID = \"{2}\", DFS job directory = \"{3}\"", jobId, jobDirectory, taskAttemptId, dfsJobDirectory);
+                _log.DebugFormat("Command line: {0}", Environment.CommandLine);
+                _log.LogEnvironmentInformation();
+
+                _log.Info("Loading configuration.");
+                string configDirectory = Path.Combine(jobDirectory, "config");
+                DfsConfiguration dfsConfig = DfsConfiguration.FromXml(Path.Combine(configDirectory, "dfs.config"));
+                JetConfiguration jetConfig = JetConfiguration.FromXml(Path.Combine(configDirectory, "jet.config"));
+
+                _log.Info("Creating RPC clients.");
+                ITaskServerUmbilicalProtocol umbilical = JetClient.CreateTaskServerUmbilicalClient(jetConfig.TaskServer.Port);
+                DfsClient dfsClient = new DfsClient(dfsConfig);
+                JetClient jetClient = new JetClient(jetConfig);
+
+
+                string xmlConfigPath = Path.Combine(jobDirectory, Job.JobConfigFileName);
+                _log.DebugFormat("Loading job configuration from local file {0}.", xmlConfigPath);
+                JobConfiguration config = JobConfiguration.LoadXml(xmlConfigPath);
+                _log.Debug("Job configuration loaded.");
+
+                if( config.AssemblyFileNames != null )
+                {
+                    foreach( string assemblyFileName in config.AssemblyFileNames )
+                    {
+                        _log.DebugFormat("Loading assembly {0}.", assemblyFileName);
+                        Assembly.LoadFrom(Path.Combine(jobDirectory, assemblyFileName));
+                    }
+                }
+
+                try
+                {
+                    using( TaskExecutionUtility taskExecution = TaskExecutionUtility.Create(dfsClient, jetClient, umbilical, jobId, config, taskAttemptId, dfsJobDirectory, jobDirectory) )
+                    {
+                        taskExecution.RunTask();
+                    }
+
+                    sw.Stop();
+                }
+                catch( Exception ex )
+                {
+                    _log.Fatal("Failed to execute task.", ex);
+                }
+                _log.InfoFormat("Task host finished execution of task, execution time: {0}s", sw.Elapsed.TotalSeconds);
+                processorStatus.Refresh();
+                _log.InfoFormat("Processor usage during this task (system-wide, not process specific):");
+                _log.Info(processorStatus.Total);
+            }
+        }
+
 
         /// <summary>
         /// Creates a <see cref="TaskExecutionUtility"/> instance for the specified task.
@@ -730,5 +807,17 @@ namespace Tkl.Jumbo.Jet
             }
         }
 
+        private static void ConfigureLog(string logFile)
+        {
+            log4net.LogManager.ResetConfiguration();
+            log4net.Appender.FileAppender appender = new log4net.Appender.FileAppender()
+            {
+                File = logFile,
+                Layout = new log4net.Layout.PatternLayout("%date [%thread] %-5level %logger - %message%newline"),
+                Threshold = log4net.Core.Level.All
+            };
+            appender.ActivateOptions();
+            log4net.Config.BasicConfigurator.Configure(appender);
+        }
     }
 }
