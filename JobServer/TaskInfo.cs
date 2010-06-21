@@ -173,6 +173,8 @@ namespace JobServerApplication
 
         public TaskProgress Progress { get; set; }
 
+        public TaskMetrics Metrics { get; set; }
+
         public int Attempts
         {
             get
@@ -206,7 +208,8 @@ namespace JobServerApplication
                 StartTime = startTimeUtc,
                 EndTime = EndTimeUtc,
                 StartOffset = startTimeUtc - _job.StartTimeUtc,
-                TaskProgress = Progress
+                TaskProgress = Progress,
+                Metrics = Metrics,
             };
         }
     }

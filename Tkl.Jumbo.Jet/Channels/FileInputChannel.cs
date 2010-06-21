@@ -336,40 +336,16 @@ namespace Tkl.Jumbo.Jet.Channels
             return true;
         }
 
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Reliability", "CA2000:Dispose objects before losing scope")]
         private IList<RecordInput> UseLocalFilesForInput(IMultiInputRecordReader reader, CompletedTask task)
         {
-            IList<RecordInput> inputs;
+            IList<RecordInput> inputs = new List<RecordInput>(Partitions.Count);
             long uncompressedSize = -1L;
-            inputs = new List<RecordInput>(Partitions.Count);
             ITaskServerClientProtocol taskServer = JetClient.CreateTaskServerClient(task.TaskServer);
             string taskOutputDirectory = taskServer.GetOutputFileDirectory(task.JobId);
 
             if( _inputUsesSingleFileFormat )
             {
-                string outputFileName = FileOutputChannel.CreateChannelFileName(task.TaskAttemptId.ToString(), null);
-                string fileName = Path.Combine(taskOutputDirectory, outputFileName);
-                using( PartitionFileIndex index = new PartitionFileIndex(fileName) )
-                {
-                    foreach( int partition in Partitions )
-                    {
-                        IEnumerable<PartitionFileIndexEntry> indexEntries = index.GetEntriesForPartition(partition);
-                        if( indexEntries == null )
-                        {
-                            _log.InfoFormat("Local input file {0} partition {1} is empty.", fileName, partition);
-                            IRecordReader taskReader = (IRecordReader)JetActivator.CreateInstance(typeof(EmptyRecordReader<>).MakeGenericType(InputRecordType), TaskExecution);
-                            taskReader.SourceName = task.TaskAttemptId.TaskId.ToString();
-                            inputs.Add(new RecordInput(taskReader));
-                        }
-                        else
-                        {
-                            PartitionFileStream stream = new PartitionFileStream(fileName, reader.BufferSize, indexEntries);
-                            LocalBytesRead += stream.Length;
-                            IRecordReader taskReader = (IRecordReader)Activator.CreateInstance(_inputReaderType, stream, reader.AllowRecordReuse);
-                            inputs.Add(new RecordInput(taskReader));
-                        }
-                    }
-                }
+                UseLocalFilesForInputSingleFileFormat(reader, task, inputs, taskOutputDirectory);
             }
             else
             {
@@ -396,6 +372,34 @@ namespace Tkl.Jumbo.Jet.Channels
                 }
             }
             return inputs;
+        }
+
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Reliability", "CA2000:Dispose objects before losing scope")]
+        private void UseLocalFilesForInputSingleFileFormat(IMultiInputRecordReader reader, CompletedTask task, IList<RecordInput> inputs, string taskOutputDirectory)
+        {
+            string outputFileName = FileOutputChannel.CreateChannelFileName(task.TaskAttemptId.ToString(), null);
+            string fileName = Path.Combine(taskOutputDirectory, outputFileName);
+            using( PartitionFileIndex index = new PartitionFileIndex(fileName) )
+            {
+                foreach( int partition in Partitions )
+                {
+                    IEnumerable<PartitionFileIndexEntry> indexEntries = index.GetEntriesForPartition(partition);
+                    if( indexEntries == null )
+                    {
+                        _log.InfoFormat("Local input file {0} partition {1} is empty.", fileName, partition);
+                        IRecordReader taskReader = (IRecordReader)JetActivator.CreateInstance(typeof(EmptyRecordReader<>).MakeGenericType(InputRecordType), TaskExecution);
+                        taskReader.SourceName = task.TaskAttemptId.TaskId.ToString();
+                        inputs.Add(new RecordInput(taskReader));
+                    }
+                    else
+                    {
+                        PartitionFileStream stream = new PartitionFileStream(fileName, reader.BufferSize, indexEntries);
+                        LocalBytesRead += stream.Length;
+                        IRecordReader taskReader = (IRecordReader)Activator.CreateInstance(_inputReaderType, stream, reader.AllowRecordReuse);
+                        inputs.Add(new RecordInput(taskReader));
+                    }
+                }
+            }
         }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Maintainability", "CA1506:AvoidExcessiveClassCoupling")]

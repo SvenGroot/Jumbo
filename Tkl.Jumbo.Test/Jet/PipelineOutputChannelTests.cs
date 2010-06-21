@@ -24,7 +24,7 @@ namespace Tkl.Jumbo.Test.Jet
         {
             #region ITaskServerUmbilicalProtocol Members
 
-            public void ReportCompletion(Guid jobID, TaskAttemptId taskID)
+            public void ReportCompletion(Guid jobID, TaskAttemptId taskID, TaskMetrics metrics)
             {
             }
 

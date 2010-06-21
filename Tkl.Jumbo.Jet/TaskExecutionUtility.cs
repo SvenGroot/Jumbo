@@ -251,7 +251,7 @@ namespace Tkl.Jumbo.Jet
             if( jobConfiguration == null )
                 throw new ArgumentNullException("jobConfiguration");
             if( taskAttemptId == null )
-                throw new ArgumentNullException("taskId");
+                throw new ArgumentNullException("taskAttemptId");
             if( dfsJobDirectory == null )
                 throw new ArgumentNullException("dfsJobDirectory");
             if( localJobDirectory == null )

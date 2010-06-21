@@ -36,6 +36,42 @@
         <p>
             <a id="_allTasksLink" href="alltasks.aspx" runat="server">View details for all tasks.</a>
         </p>
+        <h3>Metrics</h3>
+        <table id="MetricsTable" runat="server">
+            <tr>
+                <td>&nbsp;</td>
+            </tr>
+            <tr>
+                <th scope="row">Input records</th>
+            </tr>
+            <tr>
+                <th scope="row">Input bytes</th>
+            </tr>
+            <tr>
+                <th scope="row">Output records</th>
+            </tr>
+            <tr>
+                <th scope="row">Output bytes</th>
+            </tr>
+            <tr>
+                <th scope="row">DFS bytes read</th>
+            </tr>
+            <tr>
+                <th scope="row">DFS bytes written</th>
+            </tr>
+            <tr>
+                <th scope="row">Local bytes read</th>
+            </tr>
+            <tr>
+                <th scope="row">Local bytes written</th>
+            </tr>
+            <tr>
+                <th scope="row">Channel network bytes read</th>
+            </tr>
+            <tr>
+                <th scope="row">Channel network bytes written</th>
+            </tr>
+        </table>
     </div>
 </asp:Content>
 

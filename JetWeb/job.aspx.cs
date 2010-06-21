@@ -95,6 +95,8 @@ public partial class job : System.Web.UI.Page
 
             _allTasksLink.HRef = "alltasks.aspx?id=" + job.JobId.ToString();
         }
+
+        CreateMetricsTable(job);
     }
 
     private HtmlTableCell CreateProgressCell(JobStatus job, StageStatus stage, bool complexProgress)
@@ -137,5 +139,26 @@ public partial class job : System.Web.UI.Page
     private static string CreateProgressBar(float progress)
     {
         return string.Format("<div class=\"progressBar\"><div class=\"progressBarValue\" style=\"width:{0}%\">&nbsp;</div></div> {1:P1}", (progress * 100).ToString("0.0", System.Globalization.CultureInfo.InvariantCulture), progress);
+    }
+
+    private void CreateMetricsTable(JobStatus job)
+    {
+        foreach( StageStatus stage in job.Stages )
+        {
+            TaskMetrics metrics = stage.Metrics;
+            HtmlTableCell headerCell = new HtmlTableCell("th") { InnerText = stage.StageId };
+            headerCell.Attributes.Add("scope", "col");
+            MetricsTable.Rows[0].Cells.Add(headerCell);
+            MetricsTable.Rows[1].Cells.Add(new HtmlTableCell() { InnerText = metrics.InputRecords.ToString("#,0", CultureInfo.InvariantCulture) });
+            MetricsTable.Rows[2].Cells.Add(new HtmlTableCell() { InnerText = metrics.InputBytes.ToString("#,0", CultureInfo.InvariantCulture) });
+            MetricsTable.Rows[3].Cells.Add(new HtmlTableCell() { InnerText = metrics.OutputRecords.ToString("#,0", CultureInfo.InvariantCulture) });
+            MetricsTable.Rows[4].Cells.Add(new HtmlTableCell() { InnerText = metrics.OutputBytes.ToString("#,0", CultureInfo.InvariantCulture) });
+            MetricsTable.Rows[5].Cells.Add(new HtmlTableCell() { InnerText = metrics.DfsBytesRead.ToString("#,0", CultureInfo.InvariantCulture) });
+            MetricsTable.Rows[6].Cells.Add(new HtmlTableCell() { InnerText = metrics.DfsBytesWritten.ToString("#,0", CultureInfo.InvariantCulture) });
+            MetricsTable.Rows[7].Cells.Add(new HtmlTableCell() { InnerText = metrics.LocalBytesRead.ToString("#,0", CultureInfo.InvariantCulture) });
+            MetricsTable.Rows[8].Cells.Add(new HtmlTableCell() { InnerText = metrics.LocalBytesWritten.ToString("#,0", CultureInfo.InvariantCulture) });
+            MetricsTable.Rows[9].Cells.Add(new HtmlTableCell() { InnerText = metrics.NetworkBytesRead.ToString("#,0", CultureInfo.InvariantCulture) });
+            MetricsTable.Rows[10].Cells.Add(new HtmlTableCell() { InnerText = metrics.NetworkBytesWritten.ToString("#,0", CultureInfo.InvariantCulture) });
+        }
     }
 }

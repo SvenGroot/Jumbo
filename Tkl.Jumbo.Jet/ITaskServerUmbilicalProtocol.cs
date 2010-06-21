@@ -17,7 +17,8 @@ namespace Tkl.Jumbo.Jet
         /// </summary>
         /// <param name="jobId">The job ID of the job containing the task.</param>
         /// <param name="taskAttemptId">The task ID.</param>
-        void ReportCompletion(Guid jobId, TaskAttemptId taskAttemptId);
+        /// <param name="metrics">Metrics collected during the task execution.</param>
+        void ReportCompletion(Guid jobId, TaskAttemptId taskAttemptId, TaskMetrics metrics);
 
         /// <summary>
         /// Reports progression of a task.

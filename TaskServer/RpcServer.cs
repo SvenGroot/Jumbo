@@ -12,9 +12,9 @@ namespace TaskServerApplication
     {
         #region ITaskServerUmbilicalProtocol Members
 
-        public void ReportCompletion(Guid jobID, TaskAttemptId taskAttemptId)
+        public void ReportCompletion(Guid jobID, TaskAttemptId taskAttemptId, TaskMetrics metrics)
         {
-            TaskServer.Instance.ReportCompletion(jobID, taskAttemptId);
+            TaskServer.Instance.ReportCompletion(jobID, taskAttemptId, metrics);
         }
 
         public void ReportProgress(Guid jobId, TaskAttemptId taskAttemptId, TaskProgress progress)

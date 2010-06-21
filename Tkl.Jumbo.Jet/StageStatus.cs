@@ -137,6 +137,37 @@ namespace Tkl.Jumbo.Jet
         }
 
         /// <summary>
+        /// Gets the combined metrics for all the tasks in the stage.
+        /// </summary>
+        /// <value>The metrics.</value>
+        [XmlIgnore]
+        public TaskMetrics Metrics
+        {
+            get 
+            {
+                TaskMetrics result = new TaskMetrics();
+                foreach( TaskStatus task in Tasks )
+                {
+                    TaskMetrics metrics = task.Metrics;
+                    if( metrics != null )
+                    {
+                        result.DfsBytesRead += metrics.DfsBytesRead;
+                        result.DfsBytesWritten += metrics.DfsBytesWritten;
+                        result.InputBytes += metrics.InputBytes;
+                        result.InputRecords += metrics.InputRecords;
+                        result.LocalBytesRead += metrics.LocalBytesRead;
+                        result.LocalBytesWritten += metrics.LocalBytesWritten;
+                        result.NetworkBytesRead += metrics.NetworkBytesRead;
+                        result.NetworkBytesWritten += metrics.NetworkBytesWritten;
+                        result.OutputBytes += metrics.OutputBytes;
+                        result.OutputRecords += metrics.OutputRecords;
+                    }
+                }
+                return result;
+            }
+        }
+
+        /// <summary>
         /// Gets the number of running tasks in this stage.
         /// </summary>
         [XmlIgnore]

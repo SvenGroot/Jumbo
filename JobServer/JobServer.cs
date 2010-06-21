@@ -522,6 +522,11 @@ namespace JobServerApplication
                     }
                 }
 
+                if( data.Metrics != null )
+                {
+                    task.Metrics = data.Metrics;
+                }
+
                 if( data.Status > TaskAttemptStatus.Running )
                 {
                     bool schedule = false;

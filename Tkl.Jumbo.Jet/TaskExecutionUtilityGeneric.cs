@@ -138,6 +138,9 @@ namespace Tkl.Jumbo.Jet
             FinishTask(metrics);
 
             metrics.LogMetrics();
+
+            _log.Debug("Reporting completion to task server.");
+            Umbilical.ReportCompletion(Configuration.JobId, Configuration.TaskAttemptId, metrics);
         }
 
         protected override IRecordWriter CreateOutputRecordWriter()

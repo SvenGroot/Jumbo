@@ -150,8 +150,8 @@ namespace Tkl.Jumbo.Jet.Channels
             }
             else
             {
-                var writers = from file in _fileNames
-                              select (RecordWriter<T>)new BinaryRecordWriter<T>(File.Create(Path.Combine(_localJobDirectory, file), (int)writeBufferSize.Value).CreateCompressor(CompressionType));
+                var writers = (from file in _fileNames
+                               select (RecordWriter<T>)new BinaryRecordWriter<T>(File.Create(Path.Combine(_localJobDirectory, file), (int)writeBufferSize.Value).CreateCompressor(CompressionType))).ToArray();
                 _writers = writers.Cast<IRecordWriter>();
                 return CreateMultiRecordWriter<T>(writers);
             }

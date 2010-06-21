@@ -88,9 +88,6 @@ namespace TaskHost
                     }
 
                     sw.Stop();
-
-                    _log.Info("Reporting completion to task server.");
-                    umbilical.ReportCompletion(jobId, taskAttemptId);
                 }
                 catch( Exception ex )
                 {

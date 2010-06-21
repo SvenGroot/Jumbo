@@ -47,7 +47,7 @@ namespace Tkl.Jumbo.Test.Jet
         public void TestCreateTaskServerUmbilicalClient()
         {
             ITaskServerUmbilicalProtocol client = JetClient.CreateTaskServerUmbilicalClient(TestJetCluster.TaskServerPort);
-            client.ReportCompletion(Guid.Empty, null);
+            client.ReportCompletion(Guid.Empty, null, null);
         }
 
         [Test]

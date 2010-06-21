@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.IO;
+using System.Globalization;
 
 namespace Tkl.Jumbo.Jet
 {
@@ -25,7 +26,7 @@ namespace Tkl.Jumbo.Jet
     /// </para>
     /// </remarks>
     [Serializable]
-    public class TaskMetrics
+    public sealed class TaskMetrics
     {
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(TaskMetrics));
 
@@ -88,18 +89,20 @@ namespace Tkl.Jumbo.Jet
         /// <returns>A string representation of the <see cref="TaskMetrics"/> object.</returns>
         public override string ToString()
         {
-            StringWriter result = new StringWriter();
-            result.WriteLine("Input records: {0}", InputRecords);
-            result.WriteLine("Output records: {0}", OutputRecords);
-            result.WriteLine("Input bytes: {0}", InputBytes);
-            result.WriteLine("Output bytes: {0}", OutputBytes);
-            result.WriteLine("DFS bytes read: {0}", DfsBytesRead);
-            result.WriteLine("DFS bytes written: {0}", DfsBytesWritten);
-            result.WriteLine("Local bytes read: {0}", LocalBytesRead);
-            result.WriteLine("Local bytes written: {0}", LocalBytesWritten);
-            result.WriteLine("Channel network bytes read: {0}", NetworkBytesRead);
-            result.WriteLine("Channel network bytes written: {0}", NetworkBytesWritten);
-            return result.ToString();
+            using( StringWriter result = new StringWriter(CultureInfo.CurrentCulture) )
+            {
+                result.WriteLine("Input records: {0}", InputRecords);
+                result.WriteLine("Output records: {0}", OutputRecords);
+                result.WriteLine("Input bytes: {0}", InputBytes);
+                result.WriteLine("Output bytes: {0}", OutputBytes);
+                result.WriteLine("DFS bytes read: {0}", DfsBytesRead);
+                result.WriteLine("DFS bytes written: {0}", DfsBytesWritten);
+                result.WriteLine("Local bytes read: {0}", LocalBytesRead);
+                result.WriteLine("Local bytes written: {0}", LocalBytesWritten);
+                result.WriteLine("Channel network bytes read: {0}", NetworkBytesRead);
+                result.WriteLine("Channel network bytes written: {0}", NetworkBytesWritten);
+                return result.ToString();
+            }
         }
 
         /// <summary>

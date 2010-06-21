@@ -88,9 +88,9 @@ namespace TaskServerApplication
             }
         }
 
-        public void NotifyTaskStatusChanged(Guid jobID, TaskAttemptId taskAttemptId, TaskAttemptStatus newStatus, TaskProgress progress)
+        public void NotifyTaskStatusChanged(Guid jobID, TaskAttemptId taskAttemptId, TaskAttemptStatus newStatus, TaskProgress progress, TaskMetrics metrics)
         {
-            AddDataForNextHeartbeat(new TaskStatusChangedJetHeartbeatData(jobID, taskAttemptId, newStatus, progress));
+            AddDataForNextHeartbeat(new TaskStatusChangedJetHeartbeatData(jobID, taskAttemptId, newStatus, progress, metrics));
             if( newStatus == TaskAttemptStatus.Completed )
                 SendHeartbeat();
         }
@@ -102,13 +102,13 @@ namespace TaskServerApplication
 
         #region ITaskServerUmbilicalProtocol Members
 
-        public void ReportCompletion(Guid jobID, TaskAttemptId taskAttemptId)
+        public void ReportCompletion(Guid jobID, TaskAttemptId taskAttemptId, TaskMetrics metrics)
         {
             if( taskAttemptId == null )
                 throw new ArgumentNullException("taskID");
             string fullTaskID = Job.CreateFullTaskId(jobID, taskAttemptId);
             _log.DebugFormat("ReportCompletion, fullTaskID = \"{0}\"", fullTaskID);
-            _taskRunner.ReportCompletion(fullTaskID);
+            _taskRunner.ReportCompletion(fullTaskID, metrics);
         }
 
         public void ReportProgress(Guid jobId, TaskAttemptId taskAttemptId, TaskProgress progress)

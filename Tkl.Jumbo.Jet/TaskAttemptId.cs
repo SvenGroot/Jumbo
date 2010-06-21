@@ -142,7 +142,10 @@ namespace Tkl.Jumbo.Jet
         /// </returns>
         public int CompareTo(object obj)
         {
-            throw new NotImplementedException();
+            TaskAttemptId other = obj as TaskAttemptId;
+            if( other == null )
+                throw new ArgumentException("obj is not a TaskAttemptId.", "obj");
+            return CompareTo(other);
         }
     }
 }

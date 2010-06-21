@@ -20,7 +20,8 @@ namespace Tkl.Jumbo.Jet
         /// <param name="taskAttemptId">The task ID.</param>
         /// <param name="status">The new status.</param>
         /// <param name="progress">The progress of the task.</param>
-        public TaskStatusChangedJetHeartbeatData(Guid jobId, TaskAttemptId taskAttemptId, TaskAttemptStatus status, TaskProgress progress)
+        /// <param name="metrics">The metrics collected during task execution.</param>
+        public TaskStatusChangedJetHeartbeatData(Guid jobId, TaskAttemptId taskAttemptId, TaskAttemptStatus status, TaskProgress progress, TaskMetrics metrics)
         {
             if( taskAttemptId == null )
                 throw new ArgumentNullException("taskAttemptId");
@@ -29,6 +30,7 @@ namespace Tkl.Jumbo.Jet
             TaskAttemptId = taskAttemptId;
             Status = status;
             Progress = progress;
+            Metrics = metrics;
         }
 
         /// <summary>
@@ -50,5 +52,11 @@ namespace Tkl.Jumbo.Jet
         /// Gets the progress of the task.
         /// </summary>
         public TaskProgress Progress { get; private set; }
+
+        /// <summary>
+        /// Gets the metrics collected during task execution.
+        /// </summary>
+        /// <value>The metrics.</value>
+        public TaskMetrics Metrics { get; private set; }
     }
 }

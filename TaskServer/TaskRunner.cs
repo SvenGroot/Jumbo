@@ -104,7 +104,7 @@ namespace TaskServerApplication
                         tasksToRemove.Add(task.FullTaskAttemptId);
                         task.State = TaskAttemptStatus.Error;
                         task.Kill();
-                        _taskServer.NotifyTaskStatusChanged(task.JobId, task.TaskAttemptId, TaskAttemptStatus.Error, null);
+                        _taskServer.NotifyTaskStatusChanged(task.JobId, task.TaskAttemptId, TaskAttemptStatus.Error, null, null);
                     }
                 }
                 if( tasksToRemove != null )
@@ -127,29 +127,29 @@ namespace TaskServerApplication
                 {
                     _log.InfoFormat("Task {0} progress: {1}", fullTaskAttemptId, progress);
                     task.LastProgressTimeUtc = DateTime.UtcNow;
-                    _taskServer.NotifyTaskStatusChanged(task.JobId, task.TaskAttemptId, task.State, progress);
+                    _taskServer.NotifyTaskStatusChanged(task.JobId, task.TaskAttemptId, task.State, progress, null);
                 }
                 else
                     _log.WarnFormat("Received progress from task attempt {0} that was unknown or not running.", fullTaskAttemptId);
             }
         }
 
-        public void ReportCompletion(string fullTaskID)
+        public void ReportCompletion(string fullTaskId, TaskMetrics metrics)
         {
-            if( fullTaskID == null )
+            if( fullTaskId == null )
                 throw new ArgumentNullException("fullTaskID");
 
             lock( _runningTasks )
             {
                 RunningTask task;
-                if( _runningTasks.TryGetValue(fullTaskID, out task) && task.State == TaskAttemptStatus.Running )
+                if( _runningTasks.TryGetValue(fullTaskId, out task) && task.State == TaskAttemptStatus.Running )
                 {
                     _log.InfoFormat("Task {0} has completed successfully.", task.FullTaskAttemptId);
                     task.State = TaskAttemptStatus.Completed;
-                    _taskServer.NotifyTaskStatusChanged(task.JobId, task.TaskAttemptId, task.State, null);
+                    _taskServer.NotifyTaskStatusChanged(task.JobId, task.TaskAttemptId, task.State, null, metrics);
                 }
                 else
-                    _log.WarnFormat("Task {0} was reported as completed but was not running.", fullTaskID);
+                    _log.WarnFormat("Task {0} was reported as completed but was not running.", fullTaskId);
             }
         }
 
@@ -264,7 +264,7 @@ namespace TaskServerApplication
             catch( Exception ex )
             {
                 _log.Error("Could not load job configuration.", ex);
-                _taskServer.NotifyTaskStatusChanged(task.Job.JobId, task.TaskAttemptId, TaskAttemptStatus.Error, null);
+                _taskServer.NotifyTaskStatusChanged(task.Job.JobId, task.TaskAttemptId, TaskAttemptStatus.Error, null, null);
                 return;
             }
             RunningTask runningTask;
@@ -289,7 +289,7 @@ namespace TaskServerApplication
                         _log.ErrorFormat("Task {0} did not complete sucessfully.", task.FullTaskAttemptId);
                         task.State = TaskAttemptStatus.Error;
                         _runningTasks.Remove(task.FullTaskAttemptId);
-                        _taskServer.NotifyTaskStatusChanged(task.JobId, task.TaskAttemptId, task.State, null);
+                        _taskServer.NotifyTaskStatusChanged(task.JobId, task.TaskAttemptId, task.State, null, null);
                         task.Dispose();
                     }
                     _log.InfoFormat("Task {0} has finished, state = {1}.", task.FullTaskAttemptId, task.State);

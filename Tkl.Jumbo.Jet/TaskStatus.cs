@@ -54,6 +54,11 @@ namespace Tkl.Jumbo.Jet
         public TaskProgress TaskProgress { get; set; }
 
         /// <summary>
+        /// Gets or sets the metrics collected during task execution.
+        /// </summary>
+        public TaskMetrics Metrics { get; set; }
+
+        /// <summary>
         /// Gets the overall progress of the task.
         /// </summary>
         /// <value>The overall progress.</value>
