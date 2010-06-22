@@ -59,7 +59,7 @@ namespace Tkl.Jumbo.Jet.Samples.Tasks
                 ++count;
             }
 
-            TaskDfsInput dfsInput = TaskAttemptConfiguration.StageConfiguration.DfsInputs[TaskAttemptConfiguration.TaskId.TaskNumber - 1];
+            TaskDfsInput dfsInput = TaskContext.StageConfiguration.DfsInputs[TaskContext.TaskId.TaskNumber - 1];
             ValSortRecord result = new ValSortRecord()
             {
                 InputId = dfsInput.Path + "_" + dfsInput.Block.ToString("00000"),

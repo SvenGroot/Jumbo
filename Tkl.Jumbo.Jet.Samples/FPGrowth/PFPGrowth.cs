@@ -177,7 +177,7 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
         /// <param name="output">The output.</param>
         /// <param name="config">The config.</param>
         [AllowRecordReuse]
-        public static void GenerateGroupTransactionTrees(RecordReader<Utf8String> input, RecordWriter<Pair<int, TransactionTree>> output, TaskAttemptConfiguration config)
+        public static void GenerateGroupTransactionTrees(RecordReader<Utf8String> input, RecordWriter<Pair<int, TransactionTree>> output, TaskContext config)
         {
             GenerateGroupTransactionsInternal(input, null, output, config);
         }
@@ -189,7 +189,7 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
         /// <param name="output">The output.</param>
         /// <param name="config">The config.</param>
         [AllowRecordReuse]
-        public static void GenerateGroupTransactions(RecordReader<Utf8String> input, RecordWriter<Pair<int, Transaction>> output, TaskAttemptConfiguration config)
+        public static void GenerateGroupTransactions(RecordReader<Utf8String> input, RecordWriter<Pair<int, Transaction>> output, TaskContext config)
         {
             GenerateGroupTransactionsInternal(input, output, null, config);
         }
@@ -201,7 +201,7 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
         /// <param name="output">The output.</param>
         /// <param name="config">The config.</param>
         [AllowRecordReuse]
-        public static void MineTransactions(RecordReader<Pair<int, Transaction>> input, RecordWriter<Pair<int, WritableCollection<MappedFrequentPattern>>> output, TaskAttemptConfiguration config)
+        public static void MineTransactions(RecordReader<Pair<int, Transaction>> input, RecordWriter<Pair<int, WritableCollection<MappedFrequentPattern>>> output, TaskContext config)
         {
             if( input.ReadRecord() )
             {
@@ -216,7 +216,7 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
         /// <param name="output">The output.</param>
         /// <param name="config">The config.</param>
         [AllowRecordReuse]
-        public static void MineTransactionTrees(RecordReader<Pair<int, TransactionTree>> input, RecordWriter<Pair<int, WritableCollection<MappedFrequentPattern>>> output, TaskAttemptConfiguration config)
+        public static void MineTransactionTrees(RecordReader<Pair<int, TransactionTree>> input, RecordWriter<Pair<int, WritableCollection<MappedFrequentPattern>>> output, TaskContext config)
         {
             if( input.ReadRecord() )
             {
@@ -234,7 +234,7 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
         /// Does not allow record reuse (technically it could because WritableCollection doesn't reuse item instances
         /// but because that might change in the future we don't set the option here).
         /// </remarks>
-        public static void AggregatePatterns(RecordReader<Pair<int, WritableCollection<MappedFrequentPattern>>> input, RecordWriter<Pair<Utf8String, WritableCollection<FrequentPattern>>> output, TaskAttemptConfiguration config)
+        public static void AggregatePatterns(RecordReader<Pair<int, WritableCollection<MappedFrequentPattern>>> input, RecordWriter<Pair<Utf8String, WritableCollection<FrequentPattern>>> output, TaskContext config)
         {
             int k = config.JobConfiguration.GetTypedSetting("PFPGrowth.PatternCount", 50);
             int minSupport = config.JobConfiguration.GetTypedSetting("PFPGrowth.MinSupport", 2);
@@ -282,7 +282,7 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
             _log.InfoFormat("Found {0} frequent patterns in total.", patternCount);
         }
 
-        private static void MineTransactionsInternal(RecordReader<Pair<int, Transaction>> transactionInput, RecordReader<Pair<int, TransactionTree>> treeInput, RecordWriter<Pair<int, WritableCollection<MappedFrequentPattern>>> output, TaskAttemptConfiguration config)
+        private static void MineTransactionsInternal(RecordReader<Pair<int, Transaction>> transactionInput, RecordReader<Pair<int, TransactionTree>> treeInput, RecordWriter<Pair<int, WritableCollection<MappedFrequentPattern>>> output, TaskContext config)
         {
             // job settings
             int minSupport = config.JobConfiguration.GetTypedSetting("PFPGrowth.MinSupport", 2);
@@ -340,7 +340,7 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
             } while( reader.ReadRecord() && reader.CurrentRecord.Key == groupId );
         }
 
-        private static void GenerateGroupTransactionsInternal(RecordReader<Utf8String> input, RecordWriter<Pair<int, Transaction>> transactionOutput, RecordWriter<Pair<int, TransactionTree>> treeOutput, TaskAttemptConfiguration config)
+        private static void GenerateGroupTransactionsInternal(RecordReader<Utf8String> input, RecordWriter<Pair<int, Transaction>> transactionOutput, RecordWriter<Pair<int, TransactionTree>> treeOutput, TaskContext config)
         {
             Dictionary<string, int> itemMapping = new Dictionary<string,int>();
             List<FGListItem> fgList = LoadFGList(config, itemMapping);
@@ -407,7 +407,7 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
             }
         }
 
-        private static void OutputGroupTransaction(RecordWriter<Pair<int, Transaction>> transactionOutput, TransactionTree[] groups, int[] mappedItems, int currentGroupId, int x, TaskAttemptConfiguration config)
+        private static void OutputGroupTransaction(RecordWriter<Pair<int, Transaction>> transactionOutput, TransactionTree[] groups, int[] mappedItems, int currentGroupId, int x, TaskContext config)
         {
             config.StatusMessage = "Generating group dependent transactions for group: " + currentGroupId.ToString(CultureInfo.InvariantCulture);
             if( transactionOutput == null )
@@ -424,7 +424,7 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
             }
         }
 
-        private static List<FGListItem> LoadFGList(TaskAttemptConfiguration config, Dictionary<string, int> itemMapping)
+        private static List<FGListItem> LoadFGList(TaskContext config, Dictionary<string, int> itemMapping)
         {
             // fglist is stored in the local job directory.
             string fglistPath = Path.Combine(config.LocalJobDirectory, "fglist");

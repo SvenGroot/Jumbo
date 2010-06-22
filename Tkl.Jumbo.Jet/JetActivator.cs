@@ -30,7 +30,7 @@ namespace Tkl.Jumbo.Jet
         ///   implements <see cref="IConfigurable"/> and if so, applies the configuration to it.
         /// </para>
         /// </remarks>
-        public static object CreateInstance(Type type, DfsConfiguration dfsConfiguration, JetConfiguration jetConfiguration, TaskAttemptConfiguration taskAttemptConfiguration, params object[] args)
+        public static object CreateInstance(Type type, DfsConfiguration dfsConfiguration, JetConfiguration jetConfiguration, TaskContext taskAttemptConfiguration, params object[] args)
         {
             if( type == null )
                 throw new ArgumentNullException("type");
@@ -75,7 +75,7 @@ namespace Tkl.Jumbo.Jet
         ///   This function checks if the object implements <see cref="IConfigurable"/> and if so, applies the configuration to it.
         /// </para>
         /// </remarks>
-        public static void ApplyConfiguration(object target, DfsConfiguration dfsConfiguration, JetConfiguration jetConfiguration, TaskAttemptConfiguration taskAttemptConfiguration)
+        public static void ApplyConfiguration(object target, DfsConfiguration dfsConfiguration, JetConfiguration jetConfiguration, TaskContext taskAttemptConfiguration)
         {
             if( target == null )
                 throw new ArgumentNullException("target");
@@ -87,7 +87,7 @@ namespace Tkl.Jumbo.Jet
                     _log.DebugFormat("Applying configuration to configurable object of type {0}.", target.GetType().AssemblyQualifiedName);
                 configurable.DfsConfiguration = dfsConfiguration;
                 configurable.JetConfiguration = jetConfiguration;
-                configurable.TaskAttemptConfiguration = taskAttemptConfiguration;
+                configurable.TaskContext = taskAttemptConfiguration;
                 configurable.NotifyConfigurationChanged();
             }
         }

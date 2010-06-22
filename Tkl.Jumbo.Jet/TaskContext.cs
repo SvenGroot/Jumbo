@@ -8,12 +8,12 @@ using System.Text;
 namespace Tkl.Jumbo.Jet
 {
     /// <summary>
-    /// Provides configuration about a specific task attempt.
+    /// Provides context for a specific task attempt.
     /// </summary>
-    public class TaskAttemptConfiguration
+    public class TaskContext
     {
         /// <summary>
-        /// Initializes a new instance of the <see cref="TaskAttemptConfiguration"/> class.
+        /// Initializes a new instance of the <see cref="TaskContext"/> class.
         /// </summary>
         /// <param name="jobId">The job ID.</param>
         /// <param name="jobConfiguration">The configuration for the job.</param>
@@ -21,7 +21,7 @@ namespace Tkl.Jumbo.Jet
         /// <param name="stageConfiguration">The configuration for the stage that the task belongs to.</param>
         /// <param name="localJobDirectory">The local directory where files related to the job are stored.</param>
         /// <param name="dfsJobDirectory">The DFS directory where files related to the job are stored.</param>
-        public TaskAttemptConfiguration(Guid jobId, JobConfiguration jobConfiguration, TaskAttemptId taskAttemptId, StageConfiguration stageConfiguration, string localJobDirectory, string dfsJobDirectory)
+        public TaskContext(Guid jobId, JobConfiguration jobConfiguration, TaskAttemptId taskAttemptId, StageConfiguration stageConfiguration, string localJobDirectory, string dfsJobDirectory)
         {
             if( jobConfiguration == null )
                 throw new ArgumentNullException("jobConfiguration");
@@ -136,6 +136,32 @@ namespace Tkl.Jumbo.Jet
         {
             if( TaskExecution != null )
                 TaskExecution.ReportProgress();
+        }
+
+        /// <summary>
+        /// Requests the task server to download a file from the DFS to make it available to all tasks.
+        /// </summary>
+        /// <param name="dfsPath">The path of the file to download.</param>
+        /// <returns>The local path where the file was downloaded to.</returns>
+        /// <remarks>
+        /// <para>
+        ///   You can use this method to download additional files from the DFS that need to be available to more than one task of a job
+        ///   but weren't included in the job data when the job was created.
+        /// </para>
+        /// <para>
+        ///   The task server will download the file only once; subsequent calls to this method (for the same job) will return the local
+        ///   path of the previously downloaded file. This prevents the need for all tasks to download the same data from the DFS.
+        /// </para>
+        /// </remarks>
+        public string DownloadDfsFile(string dfsPath)
+        {
+            if( dfsPath == null )
+                throw new ArgumentNullException("dfsPath");
+
+            if( TaskExecution == null )
+                throw new InvalidOperationException("There's no TaskExecutionUtility associated with this instance.");
+
+            return TaskExecution.Umbilical.DownloadDfsFile(JobId, dfsPath);
         }
 
         /// <summary>

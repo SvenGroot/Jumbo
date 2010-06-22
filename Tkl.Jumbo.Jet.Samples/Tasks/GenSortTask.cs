@@ -29,8 +29,8 @@ namespace Tkl.Jumbo.Jet.Samples.Tasks
         /// <param name="output">A <see cref="RecordWriter{T}"/> to which the task's output should be written.</param>
         public void Run(RecordReader<int> input, RecordWriter<GenSortRecord> output)
         {
-            ulong startRecord = TaskAttemptConfiguration.StageConfiguration.GetTypedSetting(TaskAttemptConfiguration.TaskId.ToString() + "_startRecord", 0UL);
-            ulong count = TaskAttemptConfiguration.StageConfiguration.GetTypedSetting(TaskAttemptConfiguration.TaskId.ToString() + "_count", 0UL);
+            ulong startRecord = TaskContext.StageConfiguration.GetTypedSetting(TaskContext.TaskId.ToString() + "_startRecord", 0UL);
+            ulong count = TaskContext.StageConfiguration.GetTypedSetting(TaskContext.TaskId.ToString() + "_count", 0UL);
             if( count == 0UL )
                 throw new InvalidOperationException("Count not specified.");
             GenSortGenerator generator = new GenSortGenerator();

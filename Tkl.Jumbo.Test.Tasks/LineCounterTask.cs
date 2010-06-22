@@ -21,7 +21,7 @@ namespace Tkl.Jumbo.Test.Tasks
             while( input.ReadRecord() )
             {
                 ++lines;
-                TaskAttemptConfiguration.StatusMessage = string.Format("Counted {0} lines.", lines);
+                TaskContext.StatusMessage = string.Format("Counted {0} lines.", lines);
             }
             _log.Info(lines);
             if( writer != null )

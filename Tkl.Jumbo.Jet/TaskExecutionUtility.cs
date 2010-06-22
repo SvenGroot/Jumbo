@@ -37,7 +37,7 @@ namespace Tkl.Jumbo.Jet
 
         private readonly DfsClient _dfsClient;
         private readonly JetClient _jetClient;
-        private readonly TaskAttemptConfiguration _configuration;
+        private readonly TaskContext _configuration;
         private readonly ITaskServerUmbilicalProtocol _umbilical;
         private readonly TaskExecutionUtility _rootTask;
         private readonly Type _taskType;
@@ -57,7 +57,7 @@ namespace Tkl.Jumbo.Jet
         private readonly int _statusMessageLevel;
         private volatile bool _mustReportProgress;
 
-        internal TaskExecutionUtility(DfsClient dfsClient, JetClient jetClient, ITaskServerUmbilicalProtocol umbilical, TaskExecutionUtility parentTask, TaskAttemptConfiguration configuration)
+        internal TaskExecutionUtility(DfsClient dfsClient, JetClient jetClient, ITaskServerUmbilicalProtocol umbilical, TaskExecutionUtility parentTask, TaskContext configuration)
         {
             if( dfsClient == null )
                 throw new ArgumentNullException("dfsClient");
@@ -129,7 +129,7 @@ namespace Tkl.Jumbo.Jet
             get { return _umbilical; }
         }
 
-        internal TaskAttemptConfiguration Configuration
+        internal TaskContext Configuration
         {
             get { return _configuration; }
         }
@@ -334,9 +334,9 @@ namespace Tkl.Jumbo.Jet
             if( localJobDirectory == null )
                 throw new ArgumentNullException("localJobDirectory");
 
-            TaskAttemptConfiguration configuration = new TaskAttemptConfiguration(jobId, jobConfiguration, taskAttemptId, jobConfiguration.GetStage(taskAttemptId.TaskId.StageId), localJobDirectory, dfsJobDirectory);
+            TaskContext configuration = new TaskContext(jobId, jobConfiguration, taskAttemptId, jobConfiguration.GetStage(taskAttemptId.TaskId.StageId), localJobDirectory, dfsJobDirectory);
             Type taskExecutionType = DetermineTaskExecutionType(configuration);
-            ConstructorInfo ctor = taskExecutionType.GetConstructor(new Type[] { typeof(DfsClient), typeof(JetClient), typeof(ITaskServerUmbilicalProtocol), typeof(TaskExecutionUtility), typeof(TaskAttemptConfiguration) });
+            ConstructorInfo ctor = taskExecutionType.GetConstructor(new Type[] { typeof(DfsClient), typeof(JetClient), typeof(ITaskServerUmbilicalProtocol), typeof(TaskExecutionUtility), typeof(TaskContext) });
             return (TaskExecutionUtility)ctor.Invoke(new object[] { dfsClient, jetClient, umbilical, null, configuration });
         }
 
@@ -360,11 +360,11 @@ namespace Tkl.Jumbo.Jet
                 throw new ArgumentNullException("childStage");
             
             TaskId childTaskId = new TaskId(Configuration.TaskAttemptId.TaskId, childStage.StageId, taskNumber);
-            TaskAttemptConfiguration configuration = new TaskAttemptConfiguration(Configuration.JobId, Configuration.JobConfiguration, new TaskAttemptId(childTaskId, Configuration.TaskAttemptId.Attempt), childStage, Configuration.LocalJobDirectory, Configuration.DfsJobDirectory);
+            TaskContext configuration = new TaskContext(Configuration.JobId, Configuration.JobConfiguration, new TaskAttemptId(childTaskId, Configuration.TaskAttemptId.Attempt), childStage, Configuration.LocalJobDirectory, Configuration.DfsJobDirectory);
 
             Type taskExecutionType = DetermineTaskExecutionType(configuration);
 
-            ConstructorInfo ctor = taskExecutionType.GetConstructor(new Type[] { typeof(DfsClient), typeof(JetClient), typeof(ITaskServerUmbilicalProtocol), typeof(TaskExecutionUtility), typeof(TaskAttemptConfiguration) });
+            ConstructorInfo ctor = taskExecutionType.GetConstructor(new Type[] { typeof(DfsClient), typeof(JetClient), typeof(ITaskServerUmbilicalProtocol), typeof(TaskExecutionUtility), typeof(TaskContext) });
             return (TaskExecutionUtility)ctor.Invoke(new object[] { DfsClient, JetClient, Umbilical, this, configuration });
         }
 
@@ -393,7 +393,7 @@ namespace Tkl.Jumbo.Jet
             _statusMessages[level] = message;
         }
 
-        private static Type DetermineTaskExecutionType(TaskAttemptConfiguration configuration)
+        private static Type DetermineTaskExecutionType(TaskContext configuration)
         {
             Type taskType = configuration.StageConfiguration.TaskType.ReferencedType;
             Type interfaceType = taskType.FindGenericInterfaceType(typeof(ITask<,>), true);

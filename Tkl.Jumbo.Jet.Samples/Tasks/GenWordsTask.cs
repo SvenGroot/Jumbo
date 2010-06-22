@@ -54,7 +54,7 @@ namespace Tkl.Jumbo.Jet.Samples.Tasks
         {
             List<WordInfo> words = GetWordList();
 
-            int size = TaskAttemptConfiguration.JobConfiguration.GetTypedSetting(SizePerTaskSetting, 0);
+            int size = TaskContext.JobConfiguration.GetTypedSetting(SizePerTaskSetting, 0);
             if( size <= 0 )
                 throw new InvalidOperationException("No size specified or size is not larger than 0.");
 
@@ -97,7 +97,7 @@ namespace Tkl.Jumbo.Jet.Samples.Tasks
         private List<WordInfo> GetWordList()
         {
             DfsClient client = new DfsClient(DfsConfiguration);
-            string dictionaryDirectoryName = TaskAttemptConfiguration.JobConfiguration.GetSetting(DictionaryDirectorySetting, null);
+            string dictionaryDirectoryName = TaskContext.JobConfiguration.GetSetting(DictionaryDirectorySetting, null);
             DfsDirectory dictionaryDirectory = client.NameServer.GetDirectoryInfo(dictionaryDirectoryName);
             List<WordInfo> words = new List<WordInfo>();
 

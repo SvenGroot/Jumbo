@@ -92,7 +92,7 @@ namespace Tkl.Jumbo.Jet.Samples
         /// </summary>
         /// <param name="output"></param>
         /// <param name="configuration"></param>
-        public static void GenSort(RecordWriter<GenSortRecord> output, TaskAttemptConfiguration configuration)
+        public static void GenSort(RecordWriter<GenSortRecord> output, TaskContext configuration)
         {
             ulong startRecord = configuration.StageConfiguration.GetTypedSetting(_startRecordSetting, 0UL);
             ulong count = configuration.StageConfiguration.GetTypedSetting(_countSetting, 0UL);

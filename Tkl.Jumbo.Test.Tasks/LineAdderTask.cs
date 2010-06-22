@@ -23,7 +23,7 @@ namespace Tkl.Jumbo.Test.Tasks
             foreach( int value in input.EnumerateRecords() )
             {
                 totalLines += value;
-                TaskAttemptConfiguration.StatusMessage = string.Format("Counted {0} lines", totalLines);
+                TaskContext.StatusMessage = string.Format("Counted {0} lines", totalLines);
                 _log.Info(value);
             }
             _log.InfoFormat("Total: {0}", totalLines);

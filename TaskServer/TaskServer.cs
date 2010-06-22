@@ -26,7 +26,7 @@ namespace TaskServerApplication
         private TaskRunner _taskRunner;
         private static object _startupLock = new object();
         private FileChannelServer _fileServer;
-        private readonly Dictionary<Guid, Dictionary<string, long>> _uncompressedTemporaryFileSizes = new Dictionary<Guid, Dictionary<string, long>>();
+        private readonly Dictionary<Guid, JobInfo> _jobs = new Dictionary<Guid, JobInfo>();
 
         private TaskServer()
             : this(JetConfiguration.GetConfiguration(), DfsConfiguration.GetConfiguration())
@@ -119,31 +119,25 @@ namespace TaskServerApplication
         public void SetUncompressedTemporaryFileSize(Guid jobId, string fileName, long uncompressedSize)
         {
             _log.DebugFormat("Uncompressed file size of job {0} file {1} is {2}.", jobId, fileName, uncompressedSize);
-            lock( _uncompressedTemporaryFileSizes )
+            JobInfo job = GetJobInfo(jobId, true);
+
+            lock( job )
             {
-                Dictionary<string, long> jobFileSizes;
-                if( !_uncompressedTemporaryFileSizes.TryGetValue(jobId, out jobFileSizes) )
-                {
-                    jobFileSizes = new Dictionary<string, long>();
-                    _uncompressedTemporaryFileSizes.Add(jobId, jobFileSizes);
-                }
-                jobFileSizes[fileName] = uncompressedSize;
+                job.SetUncompressedTemporaryFileSize(fileName, uncompressedSize);
             }
         }
 
         public long GetUncompressedTemporaryFileSize(Guid jobId, string fileName)
         {
-            lock( _uncompressedTemporaryFileSizes )
+            JobInfo job = GetJobInfo(jobId, false);
+            if( job != null )
             {
-                Dictionary<string, long> jobFileSizes;
-                if( _uncompressedTemporaryFileSizes.TryGetValue(jobId, out jobFileSizes) )
+                lock( job )
                 {
-                    long uncompressedSize;
-                    if( jobFileSizes.TryGetValue(fileName, out uncompressedSize) )
-                        return uncompressedSize;
+                    return job.GetUncompressedTemporaryFileSize(fileName);
                 }
-                return -1;
             }
+            return -1L;
         }
 
         public void RegisterTcpChannelPort(Guid jobId, TaskAttemptId taskAttemptId, int port)
@@ -156,6 +150,16 @@ namespace TaskServerApplication
             string fullTaskId = Job.CreateFullTaskId(jobId, taskAttemptId);
             _log.InfoFormat("Task {0} has is registering TCP channel port {1}.", fullTaskId, port);
             _taskRunner.RegisterTcpChannelPort(fullTaskId, port);
+        }
+
+        public string DownloadDfsFile(Guid jobId, string dfsPath)
+        {
+            JobInfo job = GetJobInfo(jobId, true);
+
+            lock( job )
+            {
+                return job.DownloadDfsFile(dfsPath);
+            }
         }
 
         #endregion
@@ -406,9 +410,9 @@ namespace TaskServerApplication
 
         private void CleanupJobFiles(Guid jobId)
         {
-            lock( _uncompressedTemporaryFileSizes )
+            lock( _jobs )
             {
-                _uncompressedTemporaryFileSizes.Remove(jobId);
+                _jobs.Remove(jobId);
             }
 
             try
@@ -417,6 +421,10 @@ namespace TaskServerApplication
                 {
                     string jobDirectory = GetJobDirectory(jobId);
                     CleanupJobFiles(jobId, jobDirectory);
+
+                    string downloadDirectory = Path.Combine(jobDirectory, "dfs");
+                    if( Directory.Exists(downloadDirectory) )
+                        Directory.Delete(downloadDirectory, true);
                 }
             }
             catch( UnauthorizedAccessException ex )
@@ -427,6 +435,25 @@ namespace TaskServerApplication
             {
                 _log.Error("Failed to clean up job files", ex);
             }
+        }
+
+        private JobInfo GetJobInfo(Guid jobId, bool create)
+        {
+            JobInfo job;
+            lock( _jobs )
+            {
+                if( !_jobs.TryGetValue(jobId, out job) )
+                {
+                    if( create )
+                    {
+                        job = new JobInfo(jobId);
+                        _jobs.Add(jobId, job);
+                    }
+                    else
+                        return null;
+                }
+            }
+            return job;
         }
     }
 }

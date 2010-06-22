@@ -30,7 +30,7 @@ namespace Tkl.Jumbo.Jet.Jobs
     /// <param name="input">The record reader providing the input records.</param>
     /// <param name="output">The record writer collecting the output records.</param>
     /// <param name="configuration">The configuration for the task.</param>
-    public delegate void TaskFunctionWithConfiguration<TInput, TOutput>(RecordReader<TInput> input, RecordWriter<TOutput> output, TaskAttemptConfiguration configuration);
+    public delegate void TaskFunctionWithConfiguration<TInput, TOutput>(RecordReader<TInput> input, RecordWriter<TOutput> output, TaskContext configuration);
 
     /// <summary>
     /// Delegate for push tasks.
@@ -49,7 +49,7 @@ namespace Tkl.Jumbo.Jet.Jobs
     /// <param name="record">The input record to process.</param>
     /// <param name="output">The record writer collecting the output records.</param>
     /// <param name="configuration">The configuration for the task.</param>
-    public delegate void PushTaskFunctionWithConfiguration<TInput, TOutput>(TInput record, RecordWriter<TOutput> output, TaskAttemptConfiguration configuration);
+    public delegate void PushTaskFunctionWithConfiguration<TInput, TOutput>(TInput record, RecordWriter<TOutput> output, TaskContext configuration);
 
     /// <summary>
     /// Delegate for accumulator tasks
@@ -82,7 +82,7 @@ namespace Tkl.Jumbo.Jet.Jobs
     /// <typeparam name="T">The type of the output records.</typeparam>
     /// <param name="output">The record writer collecting the output records.</param>
     /// <param name="configuration">The configuration for the task.</param>
-    public delegate void OutputOnlyTaskFunctionWithConfiguration<T>(RecordWriter<T> output, TaskAttemptConfiguration configuration);
+    public delegate void OutputOnlyTaskFunctionWithConfiguration<T>(RecordWriter<T> output, TaskContext configuration);
 
 #pragma warning restore 1587
 #pragma warning restore 1591

@@ -15,7 +15,7 @@ namespace Tkl.Jumbo.Test.Tasks
 
         public void Run(RecordReader<Utf8String> input, RecordWriter<int> writer)
         {
-            if( TaskAttemptConfiguration.TaskId.TaskNumber == 1 && TaskAttemptConfiguration.TaskAttemptId.Attempt == 1 )
+            if( TaskContext.TaskId.TaskNumber == 1 && TaskContext.TaskAttemptId.Attempt == 1 )
                 Thread.Sleep(6000000); // Sleep for a very long time.
 
             _log.Info("Running");
@@ -23,7 +23,7 @@ namespace Tkl.Jumbo.Test.Tasks
             while( input.ReadRecord() )
             {
                 ++lines;
-                TaskAttemptConfiguration.StatusMessage = string.Format("Counted {0} lines.", lines);
+                TaskContext.StatusMessage = string.Format("Counted {0} lines.", lines);
             }
             _log.Info(lines);
             if( writer != null )

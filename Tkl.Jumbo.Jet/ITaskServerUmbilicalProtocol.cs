@@ -51,5 +51,23 @@ namespace Tkl.Jumbo.Jet
         /// <param name="taskAttemptId">The task attempt id.</param>
         /// <param name="port">The port number.</param>
         void RegisterTcpChannelPort(Guid jobId, TaskAttemptId taskAttemptId, int port);
+
+        /// <summary>
+        /// Requests the task server to download a file from the DFS to make it available to all tasks.
+        /// </summary>
+        /// <param name="jobId">The ID of the job whose tasks need the file.</param>
+        /// <param name="dfsPath">The path of the file to download.</param>
+        /// <returns>The local path where the file was downloaded to.</returns>
+        /// <remarks>
+        /// <para>
+        ///   You can use this method to download additional files from the DFS that need to be available to more than one task of a job
+        ///   but weren't included in the job data when the job was created.
+        /// </para>
+        /// <para>
+        ///   The task server will download the file only once; subsequent calls to this method (for the same job) will return the local
+        ///   path of the previously downloaded file. This prevents the need for all tasks to download the same data from the DFS.
+        /// </para>
+        /// </remarks>
+        string DownloadDfsFile(Guid jobId, string dfsPath);
     }
 }

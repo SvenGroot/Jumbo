@@ -91,7 +91,7 @@ namespace Tkl.Jumbo.Jet
         private PipelinePrepartitionedPushTaskRecordWriter<TInput, TOutput> _pipelinePrepartitionedPushTaskRecordWriter; // Needed to finish pipelined prepartitioned push tasks.
         private PrepartitionedRecordWriter<TOutput> _prepartitionedOutputWriter; // Needed to finish prepartitioned tasks.
 
-        public TaskExecutionUtilityGeneric(DfsClient dfsClient, JetClient jetClient, ITaskServerUmbilicalProtocol umbilical, TaskExecutionUtility parentTask, TaskAttemptConfiguration configuration)
+        public TaskExecutionUtilityGeneric(DfsClient dfsClient, JetClient jetClient, ITaskServerUmbilicalProtocol umbilical, TaskExecutionUtility parentTask, TaskContext configuration)
             : base(dfsClient, jetClient, umbilical, parentTask, configuration)
         {
         }

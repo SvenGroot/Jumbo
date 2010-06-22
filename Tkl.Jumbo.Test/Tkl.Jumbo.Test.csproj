@@ -105,7 +105,6 @@
     <Compile Include="Jet\MultiThreadedTaskFinishTests.cs" />
     <Compile Include="Jet\TaskIdTests.cs" />
     <Compile Include="Jet\TaskTests.cs" />
-    <Compile Include="Jet\PipelineOutputChannelTests.cs" />
     <Compile Include="Jet\TestJetCluster.cs" />
     <Compile Include="PriorityQueueTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

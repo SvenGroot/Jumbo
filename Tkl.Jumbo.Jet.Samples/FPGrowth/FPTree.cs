@@ -41,12 +41,12 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
         private const int _minSize = 8;
         private int _weight;
         private int _mineUntilItem;
-        private readonly TaskAttemptConfiguration _config;
+        private readonly TaskContext _config;
         private bool _disposed;
 
         public event EventHandler ProgressChanged;
 
-        public FPTree(IEnumerable<ITransaction> transactions, int minSupport, int itemCount, TaskAttemptConfiguration config)
+        public FPTree(IEnumerable<ITransaction> transactions, int minSupport, int itemCount, TaskContext config)
         {
             // The transactions passed to this constructor must already be mapped and sorted by frequent item list order.
             // The itemCount indicates how many of the items from the frequent item list are in the subdatabase.

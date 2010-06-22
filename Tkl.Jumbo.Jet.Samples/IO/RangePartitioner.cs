@@ -171,7 +171,7 @@ namespace Tkl.Jumbo.Jet.Samples.IO
         private void ReadPartitionFile()
         {
             List<byte[]> splitPoints = new List<byte[]>();
-            string partitionFileName = TaskAttemptConfiguration.JobConfiguration.JobSettings["partitionFile"];
+            string partitionFileName = TaskContext.JobConfiguration.JobSettings["partitionFile"];
             _log.InfoFormat("Reading partition file {0}.", partitionFileName);
             DfsClient dfsClient = new DfsClient(DfsConfiguration);
             using( DfsInputStream stream = dfsClient.OpenFile(partitionFileName) )

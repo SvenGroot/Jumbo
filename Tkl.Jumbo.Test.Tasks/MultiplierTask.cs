@@ -15,7 +15,7 @@ namespace Tkl.Jumbo.Test.Tasks
 
         public void Run(RecordReader<Utf8String> input, RecordWriter<int> output)
         {
-            int factor = TaskAttemptConfiguration.JobConfiguration.GetTypedSetting("factor", 0);
+            int factor = TaskContext.JobConfiguration.GetTypedSetting("factor", 0);
 
             foreach( Utf8String record in input.EnumerateRecords() )
             {

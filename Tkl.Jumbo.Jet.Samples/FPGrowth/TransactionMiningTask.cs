@@ -29,7 +29,7 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
         {
             if( input.ReadRecord() )
             {
-                TaskAttemptConfiguration config = TaskAttemptConfiguration;
+                TaskContext config = TaskContext;
                 // job settings
                 int minSupport = config.JobConfiguration.GetTypedSetting("PFPGrowth.MinSupport", 2);
                 int k = config.JobConfiguration.GetTypedSetting("PFPGrowth.PatternCount", 50);
@@ -58,8 +58,8 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
                     groupId = input.CurrentRecord.Key;
                     string message = string.Format("Building tree for group {0}.", groupId);
                     _log.Info(message);
-                    TaskAttemptConfiguration.StatusMessage = message;
-                    using( FPTree tree = new FPTree(EnumerateGroup(input), minSupport, Math.Min((groupId + 1) * maxPerGroup, itemCount), TaskAttemptConfiguration) )
+                    TaskContext.StatusMessage = message;
+                    using( FPTree tree = new FPTree(EnumerateGroup(input), minSupport, Math.Min((groupId + 1) * maxPerGroup, itemCount), TaskContext) )
                     {
                         tree.ProgressChanged += new EventHandler(FPTree_ProgressChanged);
 

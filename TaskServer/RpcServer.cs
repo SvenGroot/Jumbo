@@ -37,6 +37,11 @@ namespace TaskServerApplication
             TaskServer.Instance.RegisterTcpChannelPort(jobId, taskAttemptId, port);
         }
 
+        public string DownloadDfsFile(Guid jobId, string dfsPath)
+        {
+            return TaskServer.Instance.DownloadDfsFile(jobId, dfsPath);
+        }
+
         #endregion
 
         #region ITaskServerClientProtocol Members

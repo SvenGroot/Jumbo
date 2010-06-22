@@ -29,7 +29,7 @@ namespace Tkl.Jumbo.Jet.Samples.Tasks
         /// <param name="output">A <see cref="RecordWriter{T}"/> to which the task's output should be written.</param>
         public void Run(Tkl.Jumbo.IO.RecordReader<LineItem> input, Tkl.Jumbo.IO.RecordWriter<Pair<PricingSummaryKey, PricingSummaryValue>> output)
         {
-            int delta = TaskAttemptConfiguration.JobConfiguration.GetTypedSetting(DeltaSettingName, 90);
+            int delta = TaskContext.JobConfiguration.GetTypedSetting(DeltaSettingName, 90);
             DateTime threshold = new DateTime(1998, 12, 1).AddDays(-delta);
             Pair<PricingSummaryKey, PricingSummaryValue> record = new Pair<PricingSummaryKey,PricingSummaryValue>(new PricingSummaryKey(), new PricingSummaryValue());
 

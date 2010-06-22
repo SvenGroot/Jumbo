@@ -162,12 +162,12 @@ namespace Tkl.Jumbo.Jet
 
         private void MergeThread()
         {
-            _mergeIntermediateOutputPath = Path.Combine(TaskAttemptConfiguration.LocalJobDirectory, TaskAttemptConfiguration.TaskId.ToString());
+            _mergeIntermediateOutputPath = Path.Combine(TaskContext.LocalJobDirectory, TaskContext.TaskId.ToString());
             if( !Directory.Exists(_mergeIntermediateOutputPath) )
                 Directory.CreateDirectory(_mergeIntermediateOutputPath);
-            int maxMergeInputs = TaskAttemptConfiguration.StageConfiguration.GetTypedSetting(MergeRecordReaderConstants.MaxMergeInputsSetting, 0);
+            int maxMergeInputs = TaskContext.StageConfiguration.GetTypedSetting(MergeRecordReaderConstants.MaxMergeInputsSetting, 0);
             if( maxMergeInputs == 0 )
-                maxMergeInputs = TaskAttemptConfiguration.JobConfiguration.GetTypedSetting(MergeRecordReaderConstants.MaxMergeInputsSetting, MergeRecordReaderConstants.DefaultMaxMergeInputs);
+                maxMergeInputs = TaskContext.JobConfiguration.GetTypedSetting(MergeRecordReaderConstants.MaxMergeInputsSetting, MergeRecordReaderConstants.DefaultMaxMergeInputs);
 
             if( maxMergeInputs <= 0 )
                 throw new InvalidOperationException("maxMergeInputs must be larger than zero.");
@@ -179,12 +179,12 @@ namespace Tkl.Jumbo.Jet
 
             string comparerTypeName;
             if( InputStage == null )
-                comparerTypeName = TaskAttemptConfiguration.StageConfiguration.GetSetting(MergeRecordReaderConstants.ComparerSetting, null);
+                comparerTypeName = TaskContext.StageConfiguration.GetSetting(MergeRecordReaderConstants.ComparerSetting, null);
             else
                 comparerTypeName = InputStage.GetSetting(Tasks.SortTaskConstants.ComparerSettingKey, null);
             
             if( !string.IsNullOrEmpty(comparerTypeName) )
-                recordComparer = (IComparer<T>)JetActivator.CreateInstance(Type.GetType(comparerTypeName, true), DfsConfiguration, JetConfiguration, TaskAttemptConfiguration);
+                recordComparer = (IComparer<T>)JetActivator.CreateInstance(Type.GetType(comparerTypeName, true), DfsConfiguration, JetConfiguration, TaskContext);
             else
                 recordComparer = Comparer<T>.Default;
 
@@ -294,7 +294,7 @@ namespace Tkl.Jumbo.Jet
                 {
                     PreviousMergePassOutput previousOutput = partitionPreviousPassOutputFiles[partitionMergeOutputsProcessed];
                     // No need to keep track of this reader to dispose it; BinaryRecordReader will dispose itself after reading the final record.
-                    RecordReader<T> reader = new BinaryRecordReader<T>(previousOutput.File, TaskAttemptConfiguration.AllowRecordReuse, JetConfiguration.FileChannel.DeleteIntermediateFiles, BufferSize, CompressionType, previousOutput.UncompressedSize);
+                    RecordReader<T> reader = new BinaryRecordReader<T>(previousOutput.File, TaskContext.AllowRecordReuse, JetConfiguration.FileChannel.DeleteIntermediateFiles, BufferSize, CompressionType, previousOutput.UncompressedSize);
                     if( reader.ReadRecord() )
                     {
                         queue.Enqueue(new MergeInput() { Value = reader.CurrentRecord, Reader = reader });
@@ -350,7 +350,7 @@ namespace Tkl.Jumbo.Jet
         /// <summary>
         /// Gets or sets the configuration for the task attempt.
         /// </summary>
-        public TaskAttemptConfiguration TaskAttemptConfiguration { get; set; }
+        public TaskContext TaskContext { get; set; }
 
         /// <summary>
         /// Indicates the configuration has been changed. <see cref="JetActivator.ApplyConfiguration"/> calls this method

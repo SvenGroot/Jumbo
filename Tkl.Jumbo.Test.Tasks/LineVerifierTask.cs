@@ -6,7 +6,6 @@ using System.Linq;
 using System.Text;
 using Tkl.Jumbo.Jet;
 using Tkl.Jumbo.IO;
-using Tkl.Jumbo.Dfs;
 using System.IO;
 
 namespace Tkl.Jumbo.Test.Tasks
@@ -18,12 +17,12 @@ namespace Tkl.Jumbo.Test.Tasks
         {
             // This task downloads the output of a previous stage to test the hard dependency. If this stage was scheduled before
             // the hard dependency was met, the output file won't be available yet and this will fail.
-            string actualOutputPath = TaskAttemptConfiguration.StageConfiguration.GetSetting("ActualOutputPath", null);
+            string actualOutputPath = TaskContext.StageConfiguration.GetSetting("ActualOutputPath", null);
 
-            DfsClient client = new DfsClient(DfsConfiguration);
+            string localPath = TaskContext.DownloadDfsFile(actualOutputPath);
+
             int actual;
-            using( DfsInputStream stream = client.OpenFile(actualOutputPath) )
-            using( StreamReader reader = new StreamReader(stream) )
+            using( StreamReader reader = new StreamReader(localPath) )
             {
                 actual = Convert.ToInt32(reader.ReadLine());
             }

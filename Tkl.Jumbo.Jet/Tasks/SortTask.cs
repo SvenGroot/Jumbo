@@ -32,12 +32,12 @@ namespace Tkl.Jumbo.Jet.Tasks
         public override void NotifyConfigurationChanged()
         {
             _comparer = null;
-            if( TaskAttemptConfiguration != null )
+            if( TaskContext != null )
             {
-                string comparerTypeName = TaskAttemptConfiguration.StageConfiguration.GetSetting(SortTaskConstants.ComparerSettingKey, null);
+                string comparerTypeName = TaskContext.StageConfiguration.GetSetting(SortTaskConstants.ComparerSettingKey, null);
                 if( !string.IsNullOrEmpty(comparerTypeName) )
-                    _comparer = (IComparer<T>)JetActivator.CreateInstance(Type.GetType(comparerTypeName, true), DfsConfiguration, JetConfiguration, TaskAttemptConfiguration);
-                _partitions = new List<T>[TaskAttemptConfiguration.StageConfiguration.InternalPartitionCount];
+                    _comparer = (IComparer<T>)JetActivator.CreateInstance(Type.GetType(comparerTypeName, true), DfsConfiguration, JetConfiguration, TaskContext);
+                _partitions = new List<T>[TaskContext.StageConfiguration.InternalPartitionCount];
             }
             else
                 _partitions = new List<T>[1];
@@ -71,7 +71,7 @@ namespace Tkl.Jumbo.Jet.Tasks
             if( output == null )
                 throw new ArgumentNullException("output");
 
-            bool parallelSort = TaskAttemptConfiguration == null ? true : TaskAttemptConfiguration.GetTypedSetting(SortTaskConstants.UseParallelSortSettingKey, true);
+            bool parallelSort = TaskContext == null ? true : TaskContext.GetTypedSetting(SortTaskConstants.UseParallelSortSettingKey, true);
 
             // Don't do parallel sort if we've been told not do, or if it doesn't make sense (1 partition or 1 CPU).
             if( parallelSort && _partitions.Length > 1 && Environment.ProcessorCount > 1 )

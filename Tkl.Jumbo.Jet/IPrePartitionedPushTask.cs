@@ -19,7 +19,7 @@ namespace Tkl.Jumbo.Jet
     /// </para>
     /// <para>
     ///   If the task needs to know how many partitions there are it should implement <see cref="IConfigurable"/> (or inherit from <see cref="Configurable"/>) and check the <see cref="StageConfiguration.InternalPartitionCount"/> property
-    ///   of the <see cref="TaskAttemptConfiguration.StageConfiguration"/> property.
+    ///   of the <see cref="TaskContext.StageConfiguration"/> property.
     /// </para>
     /// <para>
     ///   Although tasks using this interface are free to change the partition a record belongs to, it cannot change the number of partitions.

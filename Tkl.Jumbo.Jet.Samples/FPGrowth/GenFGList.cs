@@ -90,7 +90,7 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
         /// <param name="output">The output.</param>
         /// <param name="config">The configuration</param>
         [AllowRecordReuse]
-        public static void CountFeatures(RecordReader<Utf8String> input, RecordWriter<Pair<Utf8String, int>> output, TaskAttemptConfiguration config)
+        public static void CountFeatures(RecordReader<Utf8String> input, RecordWriter<Pair<Utf8String, int>> output, TaskContext config)
         {
             var record = Pair.MakePair(new Utf8String(), 1);
             char[] separator = { ' ' };

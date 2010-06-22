@@ -37,18 +37,18 @@ namespace Tkl.Jumbo.Jet.Samples.Tasks
         /// <param name="output">A <see cref="RecordWriter{T}"/> to which the task's output should be written.</param>
         public void Run(RecordReader<int> input, RecordWriter<LineItem> output)
         {
-            string dbGenFileName = TaskAttemptConfiguration.JobConfiguration.GetSetting(DbGenFileNameSetting, "dbgen");
-            string dbGenPath = Path.Combine(TaskAttemptConfiguration.LocalJobDirectory, dbGenFileName);
-            int scaleFactor = TaskAttemptConfiguration.JobConfiguration.GetTypedSetting(ScaleFactorSetting, 1);
+            string dbGenFileName = TaskContext.JobConfiguration.GetSetting(DbGenFileNameSetting, "dbgen");
+            string dbGenPath = Path.Combine(TaskContext.LocalJobDirectory, dbGenFileName);
+            int scaleFactor = TaskContext.JobConfiguration.GetTypedSetting(ScaleFactorSetting, 1);
 
             RuntimeEnvironment.MarkFileAsExecutable(dbGenPath); // This is required for Unix.
 
             // TODO: other tables.
-            _log.InfoFormat("Generating segment {0} out of a total of {1}; using scale factor {2}.", TaskAttemptConfiguration.TaskId.TaskNumber, TaskAttemptConfiguration.StageConfiguration.TaskCount, scaleFactor);
-            string arguments = string.Format(System.Globalization.CultureInfo.InvariantCulture, "-D -T L -C {0} -S {1}", TaskAttemptConfiguration.StageConfiguration.TaskCount, TaskAttemptConfiguration.TaskId.TaskNumber);
+            _log.InfoFormat("Generating segment {0} out of a total of {1}; using scale factor {2}.", TaskContext.TaskId.TaskNumber, TaskContext.StageConfiguration.TaskCount, scaleFactor);
+            string arguments = string.Format(System.Globalization.CultureInfo.InvariantCulture, "-D -T L -C {0} -S {1}", TaskContext.StageConfiguration.TaskCount, TaskContext.TaskId.TaskNumber);
             ProcessStartInfo startInfo = new ProcessStartInfo(dbGenPath, arguments)
             {
-                WorkingDirectory = TaskAttemptConfiguration.LocalJobDirectory,
+                WorkingDirectory = TaskContext.LocalJobDirectory,
                 UseShellExecute = false,
                 RedirectStandardError = true,
                 RedirectStandardOutput = true
