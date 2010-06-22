@@ -18,7 +18,7 @@ namespace TaskServerApplication
 
         private sealed class AppDomainTaskHost : MarshalByRefObject
         {
-            private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(AppDomainTaskHost));
+            private static log4net.ILog _log = log4net.LogManager.GetLogger(typeof(AppDomainTaskHost));
 
             public void Run(Guid jobId, string jobDirectory, string dfsJobDirectory, TaskAttemptId taskAttemptId)
             {

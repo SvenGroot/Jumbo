@@ -19,7 +19,7 @@ namespace JobServerApplication
     sealed class JobSchedulerInfo
     {
         private readonly HashSet<ServerAddress> _taskServers = new HashSet<ServerAddress>();
-        private Dictionary<Guid, TaskInfo> _inputBlockMap;
+        private Dictionary<Guid, List<TaskInfo>> _inputBlockMap;
         private readonly JobInfo _job;
         private readonly Dictionary<string, DfsFile> _files = new Dictionary<string, DfsFile>();
 
@@ -47,14 +47,22 @@ namespace JobServerApplication
         {
             if( _inputBlockMap == null )
             {
-                _inputBlockMap = new Dictionary<Guid, TaskInfo>();
+                // This needs to be a list because a job might have multiple stages reading the same block.
+                _inputBlockMap = new Dictionary<Guid, List<TaskInfo>>();
                 foreach( TaskInfo task in _job.GetAllDfsInputTasks() )
                 {
-                    _inputBlockMap.Add(task.SchedulerInfo.GetBlockId(dfsClient), task);
+                    List<TaskInfo> blockTasks;
+                    Guid taskBlockId = task.SchedulerInfo.GetBlockId(dfsClient);
+                    if( !_inputBlockMap.TryGetValue(taskBlockId, out blockTasks) )
+                    {
+                        blockTasks = new List<TaskInfo>();
+                        _inputBlockMap.Add(taskBlockId, blockTasks);
+                    }
+                    blockTasks.Add(task);
                 }
             }
 
-            return _inputBlockMap[blockId];
+            return _inputBlockMap[blockId].Where(task => task.Server == null && task.Stage.IsReadyForScheduling).FirstOrDefault();
         }
 
         public DfsFile GetFileInfo(DfsClient dfsClient, string path)

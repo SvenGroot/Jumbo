@@ -42,7 +42,7 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
             // Sort the list by descending support
             _fgList.Sort();
 
-            int numGroups = TaskContext.JobConfiguration.GetTypedSetting("GenFGList.Groups", 50);
+            int numGroups = TaskContext.JobConfiguration.GetTypedSetting("PFPGrowth.Groups", 50);
             int maxPerGroup = _fgList.Count / numGroups;
             if( _fgList.Count % numGroups != 0 )
                 maxPerGroup++;

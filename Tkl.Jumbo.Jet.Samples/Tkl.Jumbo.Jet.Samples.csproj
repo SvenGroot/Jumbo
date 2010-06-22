@@ -90,7 +90,6 @@
     <Compile Include="FPGrowth\MappedFrequentPattern.cs" />
     <Compile Include="FPGrowth\FrequentPatternCollector.cs" />
     <Compile Include="FPGrowth\FrequentPatternMaxHeap.cs" />
-    <Compile Include="FPGrowth\GenFGList.cs" />
     <Compile Include="FPGrowth\ITransaction.cs" />
     <Compile Include="FPGrowth\NodeChildList.cs" />
     <Compile Include="FPGrowth\PFPGrowth.cs" />

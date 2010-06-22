@@ -79,7 +79,7 @@ namespace JobServerApplication.Scheduling
                         while( taskServer.SchedulerInfo.AvailableTasks > 0 && block < localBlocks.Count )
                         {
                             TaskInfo task = job.SchedulerInfo.GetTaskForInputBlock(localBlocks[block], dfsClient);
-                            if( !task.SchedulerInfo.BadServers.Contains(taskServer) )
+                            if( task != null && !task.SchedulerInfo.BadServers.Contains(taskServer) )
                             {
                                 taskServer.SchedulerInfo.AssignTask(job, task);
                                 if( !newServers.Contains(taskServer) )

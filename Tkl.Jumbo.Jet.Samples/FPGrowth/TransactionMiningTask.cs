@@ -19,6 +19,7 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
         private int _groupsProcessed;
         private int _numGroups;
         private float _progress;
+        private int _itemCount;
 
         /// <summary>
         /// Runs the task.
@@ -33,22 +34,25 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
                 // job settings
                 int minSupport = config.JobConfiguration.GetTypedSetting("PFPGrowth.MinSupport", 2);
                 int k = config.JobConfiguration.GetTypedSetting("PFPGrowth.PatternCount", 50);
-                // stage settings
-                int numGroups = config.StageConfiguration.GetTypedSetting("PFPGrowth.Groups", 50);
-                int itemCount = config.StageConfiguration.GetTypedSetting("PFPGrowth.ItemCount", 0);
-                int numPartitions = config.StageConfiguration.GetTypedSetting("PFPGrowth.Partitions", 1);
+                int numGroups = config.JobConfiguration.GetTypedSetting("PFPGrowth.Groups", 50);
 
-                _numGroups = numGroups / numPartitions;
+                if( _itemCount == 0 )
+                {
+                    List<FGListItem> fglist = PFPGrowth.LoadFGList(TaskContext, null);
+                    _itemCount = fglist.Count;
+                }
+
+                _numGroups = numGroups / TaskContext.StageConfiguration.TaskCount;
                 IMultiInputRecordReader multiReader = input as IMultiInputRecordReader;
                 if( multiReader != null )
                 {
-                    int remainder = numGroups % numPartitions;
+                    int remainder = numGroups % TaskContext.StageConfiguration.TaskCount;
                     if( multiReader.CurrentPartition <= remainder )
                         _numGroups++;
                 }
 
-                int maxPerGroup = itemCount / numGroups;
-                if( itemCount % numGroups != 0 )
+                int maxPerGroup = _itemCount / numGroups;
+                if( _itemCount % numGroups != 0 )
                     maxPerGroup++;
                 while( true )
                 {
@@ -59,7 +63,7 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
                     string message = string.Format("Building tree for group {0}.", groupId);
                     _log.Info(message);
                     TaskContext.StatusMessage = message;
-                    using( FPTree tree = new FPTree(EnumerateGroup(input), minSupport, Math.Min((groupId + 1) * maxPerGroup, itemCount), TaskContext) )
+                    using( FPTree tree = new FPTree(EnumerateGroup(input), minSupport, Math.Min((groupId + 1) * maxPerGroup, _itemCount), TaskContext) )
                     {
                         tree.ProgressChanged += new EventHandler(FPTree_ProgressChanged);
 

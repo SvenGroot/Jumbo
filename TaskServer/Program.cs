@@ -16,6 +16,7 @@ namespace TaskServerApplication
 
         static void Main(string[] args)
         {
+            log4net.Config.XmlConfigurator.Configure();
             AppDomain.CurrentDomain.UnhandledException += new UnhandledExceptionEventHandler(CurrentDomain_UnhandledException);
             Console.CancelKeyPress += new ConsoleCancelEventHandler(Console_CancelKeyPress);
             _mainThread = Thread.CurrentThread;

@@ -47,7 +47,7 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
         public override void NotifyConfigurationChanged()
         {
             base.NotifyConfigurationChanged();
-            _minSupport = TaskContext.JobConfiguration.GetTypedSetting("GenFGList.MinSupport", 2);
+            _minSupport = TaskContext.JobConfiguration.GetTypedSetting("PFPGrowth.MinSupport", 2);
         }
     }
 }

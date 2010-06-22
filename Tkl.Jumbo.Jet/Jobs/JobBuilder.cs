@@ -889,9 +889,9 @@ namespace Tkl.Jumbo.Jet.Jobs
             generator.Emit(OpCodes.Ldarg_2);
             if( useConfiguration )
             {
-                // Put the TaskAttemptConfiguration on the stack.
+                // Put the TaskContext on the stack.
                 generator.Emit(OpCodes.Ldarg_0);
-                generator.Emit(OpCodes.Call, typeof(Configurable).GetProperty("TaskAttemptConfiguration").GetGetMethod());
+                generator.Emit(OpCodes.Call, typeof(Configurable).GetProperty("TaskContext").GetGetMethod());
             }
             generator.Emit(OpCodes.Call, taskMethod);
             generator.Emit(OpCodes.Ret);
@@ -923,9 +923,9 @@ namespace Tkl.Jumbo.Jet.Jobs
             generator.Emit(OpCodes.Ldarg_2); // Load the output writer.
             if( useConfiguration )
             {
-                // Put the TaskAttemptConfiguration on the stack.
+                // Put the TaskContext on the stack.
                 generator.Emit(OpCodes.Ldarg_0);
-                generator.Emit(OpCodes.Call, typeof(Configurable).GetProperty("TaskAttemptConfiguration").GetGetMethod());
+                generator.Emit(OpCodes.Call, typeof(Configurable).GetProperty("TaskContext").GetGetMethod());
             }
             generator.Emit(OpCodes.Call, taskMethod);
             generator.Emit(OpCodes.Ret);
