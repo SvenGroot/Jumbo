@@ -18,7 +18,7 @@ namespace JobServerApplication
     /// </summary>
     sealed class TaskInfo
     {
-        private readonly StageConfiguration _stage;
+        private readonly StageInfo _stage;
         private readonly TaskId _taskId;
         private readonly string _fullTaskId;
         private readonly JobInfo _job;
@@ -29,7 +29,7 @@ namespace JobServerApplication
         private long _startTimeUtcTicks;
         private long _endTimeUtcTicks;
 
-        public TaskInfo(JobInfo job, StageConfiguration stage, IList<StageConfiguration> inputStages, int taskNumber)
+        public TaskInfo(JobInfo job, StageInfo stage, IList<StageConfiguration> inputStages, int taskNumber)
         {
             if( stage == null )
                 throw new ArgumentNullException("stage");
@@ -56,7 +56,7 @@ namespace JobServerApplication
                             if( inputStage.OutputChannel.PartitionAssignmentMethod == PartitionAssignmentMethod.Striped )
                             {
                                 int partition = taskNumber;
-                                for( int x = 0; x < partitionsPerTask; ++x, partition += stage.TaskCount )
+                                for( int x = 0; x < partitionsPerTask; ++x, partition += stage.Configuration.TaskCount )
                                 {
                                     partitions.Add(partition);
                                 }
@@ -77,7 +77,7 @@ namespace JobServerApplication
             _schedulerInfo = new TaskSchedulerInfo(this);
         }
 
-        public TaskInfo(TaskInfo owner, StageConfiguration stage, int taskNumber)
+        public TaskInfo(TaskInfo owner, StageInfo stage, int taskNumber)
         {
             if( owner == null )
                 throw new ArgumentNullException("owner");
@@ -89,7 +89,7 @@ namespace JobServerApplication
             _owner = owner;
         }
 
-        public StageConfiguration Stage
+        public StageInfo Stage
         {
             get { return _stage; }
         }

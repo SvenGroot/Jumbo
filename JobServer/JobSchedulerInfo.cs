@@ -48,7 +48,7 @@ namespace JobServerApplication
             if( _inputBlockMap == null )
             {
                 _inputBlockMap = new Dictionary<Guid, TaskInfo>();
-                foreach( TaskInfo task in _job.GetDfsInputTasks() )
+                foreach( TaskInfo task in _job.GetAllDfsInputTasks() )
                 {
                     _inputBlockMap.Add(task.SchedulerInfo.GetBlockId(dfsClient), task);
                 }
@@ -72,7 +72,7 @@ namespace JobServerApplication
 
         public void AbortTasks()
         {
-            foreach( TaskInfo jobTask in _job.GetDfsInputTasks().Concat(_job.GetNonInputSchedulingTasks()) )
+            foreach( TaskInfo jobTask in _job.GetAllDfsInputTasks().Concat(_job.GetAllNonInputSchedulingTasks()) )
             {
                 if( jobTask.State <= TaskState.Running )
                     jobTask.SchedulerInfo.State = TaskState.Aborted;

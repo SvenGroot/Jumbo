@@ -336,6 +336,42 @@ namespace Tkl.Jumbo.Test.Jet
             ValidateLineCountOutput(outputPath, dfsClient, _lines);
         }
 
+        [Test]
+        public void TestJobExecutionHardDependency()
+        {
+            DfsClient dfsClient = new DfsClient(Dfs.TestDfsCluster.CreateClientConfig());
+            JetClient target = new JetClient(TestJetCluster.CreateClientConfig());
+            string outputPath = "/harddepend";
+            string lineCountPath = "/harddepend_linecount";
+            dfsClient.NameServer.CreateDirectory(outputPath);
+
+            using( DfsOutputStream stream = dfsClient.CreateFile(lineCountPath) )
+            using( RecordWriter<int> writer = new RecordFileWriter<int>(stream) )
+            {
+                writer.WriteRecord(_lines);
+            }
+
+            JobConfiguration config = CreateConfiguration(dfsClient, dfsClient.NameServer.GetFileInfo(_fileName), outputPath, false, typeof(LineCounterTask), typeof(LineAdderTask), ChannelType.File);
+            StageConfiguration stage = config.AddInputStage("VerificationStage", dfsClient.NameServer.GetFileInfo(lineCountPath), typeof(LineVerifierTask), typeof(RecordFileReader<int>), outputPath, typeof(TextRecordWriter<bool>));
+            stage.AddSetting("ActualOutputPath", DfsPath.Combine(outputPath, "OutputTask001"));
+            config.GetStage("OutputTask").DependentStages.Add(stage.StageId);
+
+            Job job = target.RunJob(config, dfsClient, typeof(TimeoutTask).Assembly.Location);
+            target.WaitForJobCompletion(job.JobId, Timeout.Infinite, 1000);
+
+            JobStatus status = target.JobServer.GetJobStatus(job.JobId);
+            Assert.IsTrue(status.IsSuccessful);
+            Assert.AreEqual(0, status.ErrorTaskCount); // Re-execution could allow the task to succeed even if the scheduler isn't properly taking the hard dependency into account, so we only accept error count 0
+
+            ValidateLineCountOutput(outputPath, dfsClient, _lines);
+
+            using( DfsInputStream stream = dfsClient.OpenFile(DfsPath.Combine(outputPath, "VerificationStage001")) )
+            using( StreamReader reader = new StreamReader(stream) )
+            {
+                Assert.AreEqual("True", reader.ReadLine());
+            }
+        }
+
         private void TestJobExecutionSort(string inputFileName, string outputPath, int mergeTasks, int partitionsPerTask, bool forceFileDownload, bool singleFileOutput)
         {
             const int recordCount = 2500000;

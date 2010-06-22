@@ -444,17 +444,30 @@ namespace Tkl.Jumbo.Jet
         /// <returns>The input stages.</returns>
         public IEnumerable<StageConfiguration> GetInputStagesForStage(string stageId)
         {
-            Queue<StageConfiguration> nestedStages = new Queue<StageConfiguration>(Stages);
-            while( nestedStages.Count > 0 )
+            return GetDependenciesForStage(stageId, true);
+        }
+
+        /// <summary>
+        /// Gets the stages that the specified stage depends on.
+        /// </summary>
+        /// <param name="stageId">The stage ID of the stage whose dependencies to retrieve.</param>
+        /// <param name="channelDependenciesOnly"><see langword="true"/> to return only stages connected to the specified stage's input channel; <see langword="false"/> to return
+        /// both stages connected by channel and dependencies indicated by <see cref="StageConfiguration.DependentStages"/>.</param>
+        /// <returns></returns>
+        public IEnumerable<StageConfiguration> GetDependenciesForStage(string stageId, bool channelDependenciesOnly)
+        {
+            if( stageId == null )
+                throw new ArgumentNullException("stageId");
+
+            foreach( StageConfiguration stage in Stages )
             {
-                // TODO: This code was adapted from when multiple child stages was still possibe, it might not be the best solution anymore.
-                StageConfiguration stage = nestedStages.Dequeue();
-                if( stage.ChildStage != null )
-                {
-                    nestedStages.Enqueue(stage.ChildStage);
-                }
-                else if( stage.OutputChannel != null && stage.OutputChannel.OutputStage == stageId )
-                    yield return stage;
+                StageConfiguration leafStage = stage;
+                while( leafStage.ChildStage != null )
+                    leafStage = leafStage.ChildStage;
+
+                if( (leafStage.OutputChannel != null && leafStage.OutputChannel.OutputStage == stageId) ||
+                    (!channelDependenciesOnly && leafStage.DependentStages.Contains(stageId)) )
+                    yield return leafStage;
             }
         }
 
@@ -509,26 +522,27 @@ namespace Tkl.Jumbo.Jet
 
             // Start with the DFS input stages.
             var inputStages = from stage in Stages
-                              where GetInputStagesForStage(stage.StageId).Count() == 0
+                              where GetDependenciesForStage(stage.StageId, false).Count() == 0
                               select stage;
 
-            foreach( StageConfiguration stage in inputStages )
+            Queue<StageConfiguration> nextStages = new Queue<StageConfiguration>(inputStages);
+
+            while( nextStages.Count > 0 )
             {
-                StageConfiguration nextStage = stage;
-                while( nextStage != null )
-                {
-                    // If a stage has multiple input stages it might already be in the list. In that case we must remove it and re-add it at the end.
-                    result.Remove(nextStage);
-                    result.Add(nextStage);
+                StageConfiguration nextStage = nextStages.Dequeue();
 
-                    while( nextStage.ChildStage != null )
-                        nextStage = nextStage.ChildStage;
+                // If a stage has multiple input stages it might already be in the list. In that case we must remove it and re-add it at the end.
+                result.Remove(nextStage);
+                result.Add(nextStage);
 
-                    if( nextStage.OutputChannel == null )
-                        nextStage = null;
-                    else
-                        nextStage = GetStage(nextStage.OutputChannel.OutputStage);
-                }
+                while( nextStage.ChildStage != null )
+                    nextStage = nextStage.ChildStage;
+
+                if( nextStage.OutputChannel != null )
+                    nextStages.Enqueue(GetStage(nextStage.OutputChannel.OutputStage));
+
+                foreach( string stageId in nextStage.DependentStages )
+                    nextStages.Enqueue(GetStage(stageId));
             }
 
             return result;

@@ -23,6 +23,7 @@ namespace Tkl.Jumbo.Jet
         private bool? _allowRecordReuse;
         private bool? _allowOutputRecordReuse;
         private readonly ExtendedCollection<TaskDfsInput> _dfsInputs = new ExtendedCollection<TaskDfsInput>();
+        private readonly ExtendedCollection<string> _dependentStages = new ExtendedCollection<string>();
         private StageConfiguration _childStage;
 
         /// <summary>
@@ -113,6 +114,22 @@ namespace Tkl.Jumbo.Jet
         public StageConfiguration Parent { get; private set; }
 
         /// <summary>
+        /// Gets the root stage of this compound stage.
+        /// </summary>
+        /// <value>The root.</value>
+        [XmlIgnore]
+        public StageConfiguration Root
+        {
+            get
+            {
+                StageConfiguration root = this;
+                while( root.Parent != null )
+                    root = root.Parent;
+                return root;
+            }
+        }
+
+        /// <summary>
         /// Gets or sets the name of the type of the partitioner to use to partitioner elements amount the child stages' tasks.
         /// </summary>
         public TypeReference ChildStagePartitionerType { get; set; }
@@ -144,6 +161,23 @@ namespace Tkl.Jumbo.Jet
         /// </para>
         /// </remarks>
         public TypeReference MultiInputRecordReaderType { get; set; }
+
+        /// <summary>
+        /// Gets the IDs of stages that have a dependency on this stage that is not represented by a channel.
+        /// </summary>
+        /// <value>The IDs of the dependent stages.</value>
+        /// <remarks>
+        /// <para>
+        ///   In some cases, a stage may depend on the work done by another stage in a way that cannot be
+        ///   represented by a channel. For example, if the stage requires DFS output that was produced
+        ///   by that stage, it must not be scheduled before that stage finishes even though there is no
+        ///   channel between them.
+        /// </para>
+        /// </remarks>
+        public Collection<string> DependentStages
+        {
+            get { return _dependentStages; }
+        }
 
         /// <summary>
         /// Gets a value that indicates whether the task type allows reusing the same object instance for every record.

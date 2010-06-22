@@ -23,13 +23,25 @@ namespace JobServerApplication
 
         private List<TaskServerInfo> _badServers;
         private Guid? _inputBlock;
+        private TaskState _state;
 
         public TaskSchedulerInfo(TaskInfo task)
         {
             _task = task;
         }
 
-        public TaskState State { get; set; }
+        public TaskState State
+        {
+            get { return _state; }
+            set
+            {
+                _state = value;
+                if( _state == TaskState.Finished )
+                {
+                    _task.Stage.NotifyTaskFinished();
+                }
+            }
+        }
 
         public TaskServerInfo Server { get; set; }
 
@@ -58,7 +70,7 @@ namespace JobServerApplication
         {
             if( _inputBlock == null )
             {
-                TaskDfsInput input = _task.Stage.DfsInputs[_task.TaskId.TaskNumber - 1];
+                TaskDfsInput input = _task.Stage.Configuration.DfsInputs[_task.TaskId.TaskNumber - 1];
                 Tkl.Jumbo.Dfs.DfsFile file = _task.Job.SchedulerInfo.GetFileInfo(dfsClient, input.Path);
                 _inputBlock = file.Blocks[input.Block];
             }

@@ -246,6 +246,23 @@ namespace Tkl.Jumbo.IO
             }
         }
 
+        private class BooleanWriter : IValueWriter<Boolean>
+        {
+            public void Write(bool value, BinaryWriter writer)
+            {
+                if( writer == null )
+                    throw new ArgumentNullException("writer");
+                writer.Write(value);
+            }
+
+            public bool Read(BinaryReader reader)
+            {
+                if( reader == null )
+                    throw new ArgumentNullException("reader");
+                return reader.ReadBoolean();
+            }
+        }
+
         #endregion
 
         private static readonly IValueWriter<T> _writer = (IValueWriter<T>)GetWriter();
@@ -300,6 +317,8 @@ namespace Tkl.Jumbo.IO
                 return new DecimalWriter();
             else if( type == typeof(DateTime) )
                 return new DateTimeWriter();
+            else if( type == typeof(Boolean) )
+                return new BooleanWriter();
             else
                 throw new NotSupportedException(string.Format(System.Globalization.CultureInfo.InvariantCulture, "Could not find the writer for type {0} and the type does not implement IWritable.", type));
         }

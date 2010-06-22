@@ -58,14 +58,14 @@ namespace JobServerApplication
             foreach( StageConfiguration stage in config.GetDependencyOrderedStages() )
             {
                 bool nonInputStage = (stage.DfsInputs == null || stage.DfsInputs.Count == 0);
-                List<TaskInfo> stageTasks = new List<TaskInfo>(); 
+                // Don't do the work trying to find the input stages if the stage has dfs inputs.
+                StageConfiguration[] inputStages = nonInputStage ? config.GetInputStagesForStage(stage.StageId).ToArray() : null;
+                StageInfo stageInfo = new StageInfo(this, stage);
                 for( int x = 1; x <= stage.TaskCount; ++x )
                 {
                     TaskInfo taskInfo;
 
-                    // Don't do the work trying to find the input stages if the stage has dfs inputs.
-                    StageConfiguration[] inputStages = nonInputStage ? config.GetInputStagesForStage(stage.StageId).ToArray() : null;
-                    taskInfo = new TaskInfo(this, stage, inputStages, x);
+                    taskInfo = new TaskInfo(this, stageInfo, inputStages, x);
                     _schedulingTasksById.Add(taskInfo.TaskId.ToString(), taskInfo);
                     if( nonInputStage )
                         _orderedSchedulingNonInputTasks.Add(taskInfo);
@@ -73,14 +73,13 @@ namespace JobServerApplication
                         _orderedSchedulingDfsInputTasks.Add(taskInfo);
 
                     _tasks.Add(taskInfo.TaskId.ToString(), taskInfo);
-                    stageTasks.Add(taskInfo);
+                    stageInfo.Tasks.Add(taskInfo);
                     CreateChildTasks(taskInfo, stage);
                     if( taskInfo.Partitions != null )
                     {
                         _log.InfoFormat("Task {0} has been assigned the following partitions: {1}", taskInfo.TaskId, taskInfo.Partitions.ToDelimitedString());
                     }
                 }
-                StageInfo stageInfo = new StageInfo(stage.StageId, stageTasks);
                 stages.Add(stageInfo);
             }
 
@@ -108,6 +107,11 @@ namespace JobServerApplication
         public string JobName
         {
             get { return _jobName; }
+        }
+
+        public JobConfiguration Configuration
+        {
+            get { return _config; }
         }
 
         public DateTime StartTimeUtc
@@ -172,13 +176,48 @@ namespace JobServerApplication
             return _schedulingTasksById[taskId];
         }
 
+        public StageInfo GetStage(string stageId)
+        {
+            foreach( StageInfo stage in _stages )
+            {
+                if( stage.StageId == stageId )
+                    return stage;
+            }
+            return null;
+        }
 
+        /// <summary>
+        /// Gets those DFS input tasks that are ready for scheduling.
+        /// </summary>
+        /// <returns></returns>
         public IEnumerable<TaskInfo> GetDfsInputTasks()
+        {
+            return _orderedSchedulingDfsInputTasks.Where(t => t.Stage.IsReadyForScheduling);
+        }
+
+        /// <summary>
+        /// Gets all DFS input tasks, including those that are not yet ready for scheduling.
+        /// </summary>
+        /// <returns></returns>
+        public IEnumerable<TaskInfo> GetAllDfsInputTasks()
         {
             return _orderedSchedulingDfsInputTasks;
         }
 
+        /// <summary>
+        /// Gets the non input scheduling tasks that are ready for scheduling.
+        /// </summary>
+        /// <returns></returns>
         public IEnumerable<TaskInfo> GetNonInputSchedulingTasks()
+        {
+            return _orderedSchedulingNonInputTasks.Where(t => t.Stage.IsReadyForScheduling);
+        }
+
+        /// <summary>
+        /// Gets all non input scheduling tasks, including those that are not ready for scheduling.
+        /// </summary>
+        /// <returns></returns>
+        public IEnumerable<TaskInfo> GetAllNonInputSchedulingTasks()
         {
             return _orderedSchedulingNonInputTasks;
         }
@@ -252,7 +291,7 @@ namespace JobServerApplication
                 StageConfiguration childStage = stage.ChildStage;
                 for( int x = 1; x <= childStage.TaskCount; ++x )
                 {
-                    TaskInfo taskInfo = new TaskInfo(owner, childStage, x);
+                    TaskInfo taskInfo = new TaskInfo(owner, new StageInfo(null, childStage), x);
                     _tasks.Add(taskInfo.TaskId.ToString(), taskInfo);
                     CreateChildTasks(taskInfo, childStage);
                 }
