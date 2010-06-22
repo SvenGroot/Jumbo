@@ -286,12 +286,16 @@ namespace Tkl.Jumbo.Jet
 
                 try
                 {
+                    TaskMetrics metrics;
                     using( TaskExecutionUtility taskExecution = TaskExecutionUtility.Create(dfsClient, jetClient, umbilical, jobId, config, taskAttemptId, dfsJobDirectory, jobDirectory) )
                     {
-                        taskExecution.RunTask();
+                        metrics = taskExecution.RunTask();
                     }
 
                     sw.Stop();
+
+                    _log.Debug("Reporting completion to task server.");
+                    umbilical.ReportCompletion(jobId, taskAttemptId, metrics);
                 }
                 catch( Exception ex )
                 {
@@ -343,7 +347,7 @@ namespace Tkl.Jumbo.Jet
         /// <summary>
         /// Runs the task.
         /// </summary>
-        public abstract void RunTask();
+        public abstract TaskMetrics RunTask();
 
         /// <summary>
         /// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.

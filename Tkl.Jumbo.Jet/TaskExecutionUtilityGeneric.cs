@@ -96,7 +96,7 @@ namespace Tkl.Jumbo.Jet
         {
         }
 
-        public override void RunTask()
+        public override TaskMetrics RunTask()
         {
             CheckDisposed();
             if( IsAssociatedTask )
@@ -139,8 +139,7 @@ namespace Tkl.Jumbo.Jet
 
             metrics.LogMetrics();
 
-            _log.Debug("Reporting completion to task server.");
-            Umbilical.ReportCompletion(Configuration.JobId, Configuration.TaskAttemptId, metrics);
+            return metrics;
         }
 
         protected override IRecordWriter CreateOutputRecordWriter()
