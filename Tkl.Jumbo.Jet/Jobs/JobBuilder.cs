@@ -24,6 +24,7 @@ namespace Tkl.Jumbo.Jet.Jobs
         private readonly List<StageBuilder> _stages = new List<StageBuilder>();
 
         private JobConfiguration _job;
+        private SettingsDictionary _settings;
 
         private AssemblyBuilder _dynamicAssembly;
         private ModuleBuilder _dynamicModule;
@@ -77,6 +78,8 @@ namespace Tkl.Jumbo.Jet.Jobs
                 _job.AssemblyFileNames.AddRange(from a in _assemblies select Path.GetFileName(a.Location));
                 if( _dynamicAssembly != null )
                     _job.AssemblyFileNames.Add(_dynamicAssembly.GetName().Name + ".dll");
+                if( _settings != null )
+                    _job.JobSettings = new SettingsDictionary(_settings);
             }
 
             return _job;
@@ -198,7 +201,7 @@ namespace Tkl.Jumbo.Jet.Jobs
         /// <param name="output">The <see cref="Channel"/> or <see cref="DfsOutput"/> to write the result to.</param>
         /// <param name="accumulator">The accumulator function.</param>
         /// <returns>A <see cref="StageBuilder"/> that can be used to customize the stage that will be created for the operation.</returns>
-        public StageBuilder AccumulatorRecords<TKey, TValue>(IStageInput input, IStageOutput output, AccumulatorFunction<TKey, TValue> accumulator)
+        public StageBuilder AccumulateRecords<TKey, TValue>(IStageInput input, IStageOutput output, AccumulatorFunction<TKey, TValue> accumulator)
             where TKey : IComparable<TKey>
         {
             if( input == null )
@@ -337,6 +340,31 @@ namespace Tkl.Jumbo.Jet.Jobs
             StageBuilder stage = new StageBuilder(this, null, output, taskType) { NoInputTaskCount = taskCount };
             _stages.Add(stage);
             return stage;
+        }
+
+        /// <summary>
+        /// Adds a setting to the job settings.
+        /// </summary>
+        /// <param name="key">The name of the setting.</param>
+        /// <param name="value">The value of the setting.</param>
+        public void AddSetting(string key, string value)
+        {
+            if( _settings == null )
+                _settings = new SettingsDictionary();
+            _settings.Add(key, value);
+        }
+
+        /// <summary>
+        /// Adds a setting with the specified type to the job settings.
+        /// </summary>
+        /// <typeparam name="T">The type of the setting.</typeparam>
+        /// <param name="key">The name of the setting.</param>
+        /// <param name="value">The value of the setting.</param>
+        public void AddTypedSetting<T>(string key, T value)
+        {
+            if( _settings == null )
+                _settings = new SettingsDictionary();
+            _settings.AddTypedSetting(key, value);
         }
 
         private StageBuilder ProcessRecords<TInput, TOutput>(IStageInput input, IStageOutput output, MethodInfo taskMethod, bool useInput)

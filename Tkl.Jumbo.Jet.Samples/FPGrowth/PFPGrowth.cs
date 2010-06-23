@@ -131,7 +131,7 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
         /// Constructs the job configuration using the specified job builder.
         /// </summary>
         /// <param name="builder">The <see cref="OldJobBuilder"/>.</param>
-        protected override void BuildJob(OldJobBuilder builder)
+        protected override void BuildJob(JobBuilder builder)
         {
             CheckAndCreateOutputPath(_outputPath);
             
@@ -467,7 +467,7 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
             return fgList;
         }
 
-        private void BuildJob<T>(OldJobBuilder builder, TaskFunctionWithContext<Utf8String, Pair<int, T>> generateFunction, TaskFunctionWithContext<Pair<int, T>, Pair<int, WritableCollection<MappedFrequentPattern>>> mineFunction)
+        private void BuildJob<T>(JobBuilder builder, TaskFunctionWithContext<Utf8String, Pair<int, T>> generateFunction, TaskFunctionWithContext<Pair<int, T>, Pair<int, WritableCollection<MappedFrequentPattern>>> mineFunction)
         {
             DfsClient client = new DfsClient(DfsConfiguration);
 
@@ -477,59 +477,52 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
             client.NameServer.CreateDirectory(fglistDirectory);
             client.NameServer.CreateDirectory(resultDirectory);
 
-            var input = builder.CreateRecordReader<Utf8String>(_inputPath, typeof(LineRecordReader));
-            var featureCollector = new RecordCollector<Pair<Utf8String, int>>() { PartitionCount = AccumulatorTaskCount };
-            var countCollector = new RecordCollector<Pair<Utf8String, int>>() { ChannelType = ChannelType.Pipeline };
-            var fListCollector = new RecordCollector<Pair<Utf8String, int>>() { PartitionCount = 1 }; // Has to have 1 partition, we should never group with more than one task.
-            var fglistOutput = CreateRecordWriter<FGListItem>(builder, fglistDirectory, typeof(BinaryRecordWriter<>));
-            var groupCollector = new RecordCollector<Pair<int, T>>() { PartitionCount = FPGrowthTaskCount * PartitionsPerTask, PartitionsPerTask = PartitionsPerTask, PartitionAssignmentMethod = PartitionAssignmentMethod.Striped };
-            var patternCollector = new RecordCollector<Pair<int, WritableCollection<MappedFrequentPattern>>>() { PartitionCount = AggregateTaskCount };
-            var output = CreateRecordWriter<Pair<Utf8String, WritableCollection<FrequentPattern>>>(builder, resultDirectory, BinaryOutput ? typeof(BinaryRecordWriter<>) : typeof(TextRecordWriter<>));
+            var input = new DfsInput(_inputPath, typeof(LineRecordReader));
 
             // Generate (feature,1) pairs for each feature in the transaction DB
-            builder.ProcessRecords(input, featureCollector.CreateRecordWriter(), CountFeatures, null);
+            var featureChannel = new Channel() { PartitionCount = AccumulatorTaskCount };
+            builder.ProcessRecords<Utf8String, Pair<Utf8String, int>>(input, featureChannel, CountFeatures);
             // Count the frequency of each feature.
-            builder.AccumulateRecords(featureCollector.CreateRecordReader(), countCollector.CreateRecordWriter(), AccumulateFeatureCounts);
+            var countChannel = new Channel() { ChannelType = ChannelType.Pipeline };
+            builder.AccumulateRecords<Utf8String, int>(featureChannel, countChannel, AccumulateFeatureCounts);
             // Remove non-frequent features
-            builder.ProcessRecords(countCollector.CreateRecordReader(), fListCollector.CreateRecordWriter(), typeof(FeatureFilterTask));
+            var flistChannel = new Channel() { PartitionCount = 1 };
+            builder.ProcessRecords(countChannel, flistChannel, typeof(FeatureFilterTask));
             // Sort and group the features.
-            builder.ProcessRecords(fListCollector.CreateRecordReader(), fglistOutput, typeof(FeatureGroupTask));
+            var fglistOutput = CreateDfsOutput(builder, fglistDirectory, typeof(BinaryRecordWriter<>));
+            StageBuilder groupListStage = builder.ProcessRecords(flistChannel, fglistOutput, typeof(FeatureGroupTask));
 
             // Generate group-dependent transactions
-            SettingsDictionary settings = new SettingsDictionary();
-            settings.AddTypedSetting(OutputChannel.CompressionTypeSetting, CompressionType);
+            var groupChannel = new Channel() { PartitionCount = FPGrowthTaskCount * PartitionsPerTask, PartitionsPerTask = PartitionsPerTask, PartitionAssignmentMethod = PartitionAssignmentMethod.Striped };
+            StageBuilder groupStage = builder.ProcessRecords(input, groupChannel, generateFunction);
+            groupStage.AddTypedSetting(OutputChannel.CompressionTypeSetting, CompressionType);
             if( WriteBufferSize.Value > 0 )
-                settings.AddTypedSetting(FileOutputChannel.WriteBufferSizeSettingKey, WriteBufferSize);
-            settings.AddTypedSetting(FileOutputChannel.SingleFileOutputSettingKey, UsePartitionFile);
-            builder.ProcessRecords(input, groupCollector.CreateRecordWriter(), generateFunction, settings);
+                groupStage.AddTypedSetting(FileOutputChannel.WriteBufferSizeSettingKey, WriteBufferSize);
+            groupStage.AddTypedSetting(FileOutputChannel.SingleFileOutputSettingKey, UsePartitionFile);
+            groupStage.AddSchedulingDependency(groupListStage);
 
             // Interesting observation: if the number of groups equals or is smaller than the number of partitions, we don't need to sort, because each
             // partition will get exactly one group.
             if( FPGrowthTaskCount * PartitionsPerTask < Groups )
             {
-                var sortCollector = new RecordCollector<Pair<int, T>>() { PartitionCount = FPGrowthTaskCount };
+                var sortChannel = new Channel() { PartitionCount = FPGrowthTaskCount };
                 // Sort each partition by group ID.
-                builder.SortRecords(groupCollector.CreateRecordReader(), sortCollector.CreateRecordWriter());
-                groupCollector = sortCollector;
+                builder.SortRecords(groupChannel, sortChannel);
+                groupChannel = sortChannel;
             }
 
-            settings = new SettingsDictionary();
+            // Mine groups for frequent patterns.
+            var patternChannel = new Channel() { PartitionCount = AggregateTaskCount };
             if( mineFunction == null )
-                builder.ProcessRecords(groupCollector.CreateRecordReader(), patternCollector.CreateRecordWriter(), typeof(TransactionMiningTask), "MineTransactions", settings);
+                builder.ProcessRecords(groupChannel, patternChannel, typeof(TransactionMiningTask)).StageId = "MineTransactions";
             else
-                builder.ProcessRecords(groupCollector.CreateRecordReader(), patternCollector.CreateRecordWriter(), mineFunction, settings);
-            builder.ProcessRecords(patternCollector.CreateRecordReader(), output, AggregatePatterns, settings);
+                builder.ProcessRecords(groupChannel, patternChannel, mineFunction);
 
-            // HACK: This bit is only necessary because we can't properly add dependencies using the JobBuilder yet.
-            StageConfiguration groupStage = builder.JobConfiguration.GetStage("FeatureGroupTask");
-            if( groupStage == null )
-                groupStage = builder.JobConfiguration.GetStage("AccumulateFeatureCounts"); // the group task was pipelined, so get the accumulate stage.
+            // Aggregate frequent patterns.
+            var output = CreateDfsOutput(builder, resultDirectory, BinaryOutput ? typeof(BinaryRecordWriter<>) : typeof(TextRecordWriter<>));
+            builder.ProcessRecords<Pair<int, WritableCollection<MappedFrequentPattern>>, Pair<Utf8String, WritableCollection<FrequentPattern>>>(patternChannel, output, AggregatePatterns);
 
-            while( groupStage.ChildStage != null )
-                groupStage = groupStage.ChildStage;
-
-            groupStage.DependentStages.Add(generateFunction.Method.Name);
-            builder.JobConfiguration.AddSetting("PFPGrowth.FGListPath", DfsPath.Combine(fglistDirectory, "FeatureGroupTask001"));
+            builder.AddSetting("PFPGrowth.FGListPath", DfsPath.Combine(fglistDirectory, "FeatureGroupTask001"));
         }
     }
 }

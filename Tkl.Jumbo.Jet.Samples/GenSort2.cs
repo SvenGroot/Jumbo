@@ -28,7 +28,7 @@ namespace Tkl.Jumbo.Jet.Samples
     /// </para>
     /// </remarks>
     [Description("Generates input records for the GraySort job.")]
-    public class GenSort2 : JobBuilderJob
+    public class GenSort2 : OldJobBuilderJob
     {
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(GenSort));
 

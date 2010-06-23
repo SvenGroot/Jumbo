@@ -30,7 +30,7 @@ namespace Tkl.Jumbo.Jet.Samples
     /// </para>
     /// </remarks>
     [Description("Validates whether the input is correctly sorted.")]
-    public class ValSort2 : JobBuilderJob
+    public class ValSort2 : OldJobBuilderJob
     {
         private readonly string _inputPath;
         private readonly string _outputPath;
@@ -73,7 +73,7 @@ namespace Tkl.Jumbo.Jet.Samples
         }
 
         /// <summary>
-        /// Overrides <see cref="JobBuilderJob.OnJobCreated"/>.
+        /// Overrides <see cref="OldJobBuilderJob.OnJobCreated"/>.
         /// </summary>
         /// <param name="job"></param>
         /// <param name="jobConfiguration"></param>

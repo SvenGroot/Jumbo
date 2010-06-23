@@ -19,7 +19,7 @@ namespace Tkl.Jumbo.Jet.Samples
     /// Job runner for word count.
     /// </summary>
     [Description("Counts the number of occurrences of each word in the input file or files. This version uses JobBuilder.")]
-    public sealed class WordCount2 : JobBuilderJob
+    public sealed class WordCount2 : OldJobBuilderJob
     {
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(WordCount2));
 

@@ -19,7 +19,7 @@ namespace Tkl.Jumbo.Jet.Samples
     /// <summary>
     /// Test job for file channel download performance.
     /// </summary>
-    public sealed class FileChannelTest : JobBuilderJob
+    public sealed class FileChannelTest : OldJobBuilderJob
     {
         private readonly string _inputPath;
         private readonly string _outputPath;

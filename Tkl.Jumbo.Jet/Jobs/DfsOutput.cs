@@ -14,8 +14,8 @@ namespace Tkl.Jumbo.Jet.Jobs
     public sealed class DfsOutput : IStageOutput
     {
         private readonly string _path;
-        private readonly Type _recordWriterType;
-        private readonly Type _recordType;
+        private Type _recordWriterType;
+        private Type _recordType;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="DfsOutput"/> class.
@@ -33,7 +33,8 @@ namespace Tkl.Jumbo.Jet.Jobs
 
             _path = path;
             _recordWriterType = recordWriterType;
-            _recordType = recordWriterBaseType.GetGenericArguments()[0];
+            if( !_recordWriterType.IsGenericTypeDefinition )
+                _recordType = recordWriterBaseType.GetGenericArguments()[0];
         }
 
         /// <summary>
@@ -63,6 +64,13 @@ namespace Tkl.Jumbo.Jet.Jobs
         public Type RecordType
         {
             get { return _recordType; }
+            set
+            {
+                if( _recordType != null )
+                    throw new InvalidOperationException("Record type is already set.");
+                _recordWriterType = _recordWriterType.MakeGenericType(value);
+                _recordType = value;
+            }
         }
 
         /// <summary>

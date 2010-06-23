@@ -15,8 +15,8 @@ namespace Tkl.Jumbo.Jet.Jobs
     public sealed class DfsInput : IStageInput
     {
         private readonly string _path;
-        private readonly Type _recordReaderType;
-        private readonly Type _recordType;
+        private Type _recordReaderType;
+        private Type _recordType;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="DfsInput"/> class.
@@ -34,7 +34,8 @@ namespace Tkl.Jumbo.Jet.Jobs
 
             _path = path;
             _recordReaderType = recordReaderType;
-            _recordType = recordReaderBaseType.GetGenericArguments()[0];
+            if( !_recordReaderType.IsGenericTypeDefinition )
+                _recordType = recordReaderBaseType.GetGenericArguments()[0];
         }
 
         /// <summary>
@@ -64,6 +65,13 @@ namespace Tkl.Jumbo.Jet.Jobs
         public Type RecordType
         {
             get { return _recordType; }
+            internal set
+            {
+                if( _recordType != null )
+                    throw new InvalidOperationException("Record type already set.");
+                _recordReaderType = _recordReaderType.MakeGenericType(value);
+                _recordType = value;
+            }
         }
     }
 }

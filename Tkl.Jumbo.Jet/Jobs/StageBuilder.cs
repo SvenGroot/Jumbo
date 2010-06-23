@@ -47,10 +47,16 @@ namespace Tkl.Jumbo.Jet.Jobs
                 Channel inputChannel = input as Channel;
                 if( inputChannel != null )
                     inputChannel.AttachReceivingStage(this);
-                else if( !(input is DfsInput) )
-                    throw new ArgumentException("Input must be a Channel or DfsInput instance.", "input");
-                else if( input.RecordType != _inputRecordType )
-                    throw new ArgumentException("The record type of the stage input doesn't match the task's input record type.", "input");
+                else
+                {
+                    DfsInput dfsInput = input as DfsInput;
+                    if( dfsInput == null )
+                        throw new ArgumentException("Input must be a Channel or DfsInput instance.", "input");
+                    else if( dfsInput.RecordType == null )
+                        dfsInput.RecordType = _inputRecordType;
+                    else if( dfsInput.RecordType != _inputRecordType )
+                        throw new ArgumentException("The record type of the stage input doesn't match the task's input record type.", "input");
+                }
             }
 
             if( output != null )
@@ -58,10 +64,16 @@ namespace Tkl.Jumbo.Jet.Jobs
                 Channel outputChannel = output as Channel;
                 if( outputChannel != null )
                     outputChannel.AttachSendingStage(this);
-                else if( !(output is DfsOutput) )
-                    throw new ArgumentException("Output must be a Channel or DfsOutput instance.", "output");
-                else if( output.RecordType != _outputRecordType )
-                    throw new ArgumentException("The record type of the stage output doesn't match the task's output record type.", "output");
+                else
+                {
+                    DfsOutput dfsOutput = output as DfsOutput;
+                    if( dfsOutput == null )
+                        throw new ArgumentException("Output must be a Channel or DfsOutput instance.", "output");
+                    else if( dfsOutput.RecordType == null )
+                        dfsOutput.RecordType = _outputRecordType;
+                    else if( dfsOutput.RecordType != _outputRecordType )
+                        throw new ArgumentException("The record type of the stage output doesn't match the task's output record type.", "output");
+                }                    
             }
         }
 
@@ -167,7 +179,7 @@ namespace Tkl.Jumbo.Jet.Jobs
 
         internal int NoInputTaskCount { get; set; }
 
-        public StageConfiguration StageConfiguration
+        internal StageConfiguration StageConfiguration
         {
             get { return _stageConfiguration; }
             set 

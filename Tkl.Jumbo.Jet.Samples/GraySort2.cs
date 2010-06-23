@@ -23,7 +23,7 @@ namespace Tkl.Jumbo.Jet.Samples
     /// </para>
     /// </remarks>
     [Description("Sorts the input file or files containing data in the gensort format.")]
-    public class GraySort2 : JobBuilderJob
+    public class GraySort2 : OldJobBuilderJob
     {
         private readonly string _inputPath;
         private readonly string _outputPath;

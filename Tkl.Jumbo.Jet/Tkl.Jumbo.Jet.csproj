@@ -126,6 +126,7 @@
     <Compile Include="Jobs\IStageInput.cs" />
     <Compile Include="Jobs\IStageOutput.cs" />
     <Compile Include="Jobs\JobBuilderCompiler.cs" />
+    <Compile Include="Jobs\JobBuilderJob.cs" />
     <Compile Include="Jobs\JobSettingAttribute.cs" />
     <Compile Include="Jobs\JobBuilder.cs" />
     <Compile Include="Jobs\PipelineCreationMethod.cs" />
@@ -157,7 +158,7 @@
     <Compile Include="Jobs\IJobRunner.cs" />
     <Compile Include="Jobs\OldJobBuilder.cs" />
     <Compile Include="Jobs\JobBuilderDelegates.cs" />
-    <Compile Include="Jobs\JobBuilderJob.cs" />
+    <Compile Include="Jobs\OldJobBuilderJob.cs" />
     <Compile Include="Jobs\JobRunnerArgument.cs" />
     <Compile Include="Jobs\JobRunnerInfo.cs" />
     <Compile Include="Jobs\RecordCollector.cs" />
