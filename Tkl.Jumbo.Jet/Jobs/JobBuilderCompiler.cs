@@ -32,24 +32,19 @@ namespace Tkl.Jumbo.Jet.Jobs
         public JobConfiguration CreateJob()
         {
             JobConfiguration job = new JobConfiguration();
-            foreach( StageBuilder stage in _jobBuilder.InitialStages )
+            foreach( StageBuilder stage in _jobBuilder.Stages )
             {
-                StageBuilder nextStage = stage;
-                while( nextStage != null )
-                {
-                    nextStage = CreateStage(nextStage, job);
-                }
+                CreateStage(stage, job);
             }
 
             return job;
         }
 
-        private StageBuilder CreateStage(StageBuilder stage, JobConfiguration job)
+        private void CreateStage(StageBuilder stage, JobConfiguration job)
         {
             string outputPath = null;
             Type outputWriterType = null;
 
-            StageBuilder nextStage = null;
             DfsOutput dfsOutput = stage.Output as DfsOutput;
             if( dfsOutput != null )
             {
@@ -62,7 +57,6 @@ namespace Tkl.Jumbo.Jet.Jobs
                 Channel outputChannel = (Channel)stage.Output;
                 if( outputChannel.ReceivingStage == null )
                     throw new InvalidOperationException(string.Format(CultureInfo.CurrentCulture, "Stage {0} has no output.", stage.StageId));
-                nextStage = outputChannel.ReceivingStage;
             }
             else
             {
@@ -97,8 +91,6 @@ namespace Tkl.Jumbo.Jet.Jobs
             }
 
             stage.StageConfiguration = stageConfig;
-
-            return nextStage;
         }
 
         private StageConfiguration CreateStageInputStage(StageBuilder stage, JobConfiguration job, string outputPath, Type outputWriterType)
@@ -124,7 +116,8 @@ namespace Tkl.Jumbo.Jet.Jobs
                 sendingStage = CreateAdditionalChildStage(stage, job, inputChannel, partitionCount, sendingStage);
             }
 
-            if( CanReplaceEmptyTask(job, sendingStage, partitionCount, inputChannel.ChannelType, inputChannel.PartitionerType, inputChannel.MultiInputRecordReaderType) )
+            // We don't do empty task replacement on stages that have scheduling dependencies.
+            if( !stage.HasDependencies && CanReplaceEmptyTask(job, sendingStage, partitionCount, inputChannel.ChannelType, inputChannel.PartitionerType, inputChannel.MultiInputRecordReaderType) )
             {
                 stageConfig = sendingStage;
                 sendingStage.TaskType = taskType;
@@ -138,13 +131,13 @@ namespace Tkl.Jumbo.Jet.Jobs
             {
                 // We can pipeline if:
                 // - The channel is pipeline (duh)
-                // - The channel type is not specified, the input is a single stage, the input task count is 1, and the input has no internal partitioning or has internal partitioning matching the output.
+                // - We have no dependencies, the channel type is not specified, the input is a single stage which has no dependent stages, the input task count is 1, and the input has no internal partitioning or has internal partitioning matching the output.
                 int taskCount = partitionCount / inputChannel.PartitionsPerTask;
                 ChannelType channelType;
                 if( inputChannel.ChannelType == null )
                 {
                     channelType = ChannelType.File; // Default to File
-                    if( inputChannel.SendingStage != null && inputChannel.SendingStage.StageConfiguration.Root.TaskCount == 1 )
+                    if( !stage.HasDependencies && inputChannel.SendingStage != null && !inputChannel.SendingStage.HasDependentStages && inputChannel.SendingStage.StageConfiguration.Root.TaskCount == 1 )
                     {
                         if( inputChannel.SendingStage.StageConfiguration.InternalPartitionCount == 1 )
                             channelType = ChannelType.Pipeline;

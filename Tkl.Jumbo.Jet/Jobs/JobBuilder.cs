@@ -21,7 +21,7 @@ namespace Tkl.Jumbo.Jet.Jobs
     public sealed class JobBuilder
     {
         private readonly JobBuilderCompiler _compiler;
-        private readonly List<StageBuilder> _initialStages = new List<StageBuilder>(); // Stages that read from the DFS or have no input at all.
+        private readonly List<StageBuilder> _stages = new List<StageBuilder>();
 
         private JobConfiguration _job;
 
@@ -54,9 +54,9 @@ namespace Tkl.Jumbo.Jet.Jobs
             _compiler = new JobBuilderCompiler(this, dfsClient, jetClient);
         }
 
-        internal ReadOnlyCollection<StageBuilder> InitialStages
+        internal ReadOnlyCollection<StageBuilder> Stages
         {
-            get { return _initialStages.AsReadOnly(); }
+            get { return _stages.AsReadOnly(); }
         }
 
         /// <summary>
@@ -119,9 +119,8 @@ namespace Tkl.Jumbo.Jet.Jobs
 
             CheckJobCreated();
 
-            StageBuilder stage = new StageBuilder(input, output, taskType);
-            if( input is DfsInput )
-                _initialStages.Add(stage);
+            StageBuilder stage = new StageBuilder(this, input, output, taskType);
+            _stages.Add(stage);
             return stage;
         }
 
@@ -335,8 +334,8 @@ namespace Tkl.Jumbo.Jet.Jobs
             if( taskType == null )
                 throw new ArgumentNullException("taskType");
 
-            StageBuilder stage = new StageBuilder(null, output, taskType) { NoInputTaskCount = taskCount };
-            _initialStages.Add(stage);
+            StageBuilder stage = new StageBuilder(this, null, output, taskType) { NoInputTaskCount = taskCount };
+            _stages.Add(stage);
             return stage;
         }
 

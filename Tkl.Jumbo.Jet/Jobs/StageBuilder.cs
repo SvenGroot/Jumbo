@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Globalization;
 
 namespace Tkl.Jumbo.Jet.Jobs
 {
@@ -17,17 +18,24 @@ namespace Tkl.Jumbo.Jet.Jobs
         private readonly Type _outputRecordType;
         private readonly IStageInput _input;
         private readonly IStageOutput _output;
+        private readonly JobBuilder _jobBuilder;
         private string _stageId;
         private SettingsDictionary _settings;
+        private List<StageBuilder> _dependencies;
+        private List<StageBuilder> _dependentStages;
+        private StageConfiguration _stageConfiguration;
 
-        internal StageBuilder(IStageInput input, IStageOutput output, Type taskType)
+        internal StageBuilder(JobBuilder jobBuilder, IStageInput input, IStageOutput output, Type taskType)
         {
+            if( jobBuilder == null )
+                throw new ArgumentNullException("jobBuilder");
             if( taskType == null )
                 throw new ArgumentNullException("taskType");
 
             Type taskInterfaceType = taskType.FindGenericInterfaceType(typeof(ITask<,>), true);
             Type[] arguments = taskInterfaceType.GetGenericArguments();
 
+            _jobBuilder = jobBuilder;
             _taskType = taskType;
             _inputRecordType = arguments[0];
             _outputRecordType = arguments[1];
@@ -128,31 +136,6 @@ namespace Tkl.Jumbo.Jet.Jobs
         }
 
         /// <summary>
-        /// Adds a setting to the stage settings.
-        /// </summary>
-        /// <param name="key">The name of the setting.</param>
-        /// <param name="value">The value of the setting.</param>
-        public void AddSetting(string key, string value)
-        {
-            if( _settings == null )
-                _settings = new SettingsDictionary();
-            _settings.Add(key, value);
-        }
-
-        /// <summary>
-        /// Adds a setting with the specified type to the stage settings.
-        /// </summary>
-        /// <typeparam name="T">The type of the setting.</typeparam>
-        /// <param name="key">The name of the setting.</param>
-        /// <param name="value">The value of the setting.</param>
-        public void AddTypedSetting<T>(string key, T value)
-        {
-            if( _settings == null )
-                _settings = new SettingsDictionary();
-            _settings.AddTypedSetting(key, value);
-        }
-
-        /// <summary>
         /// Gets or sets a value that indicates if it's possible to automatically create an pipeline stage on the input channel's sending stage if the <see cref="Channel.ChannelType"/> is unspecified.
         /// </summary>
         internal PipelineCreationMethod PipelineCreation { get; set; }
@@ -184,11 +167,118 @@ namespace Tkl.Jumbo.Jet.Jobs
 
         internal int NoInputTaskCount { get; set; }
 
-        internal StageConfiguration StageConfiguration { get; set; }
+        public StageConfiguration StageConfiguration
+        {
+            get { return _stageConfiguration; }
+            set 
+            {
+                if( _stageConfiguration != value )
+                {
+                    if( _stageConfiguration != null )
+                        throw new InvalidOperationException("This stage has already been created.");
+                    else if( value != null )
+                    {
+                        _stageConfiguration = value;
+                        AddDependenciesToConfiguration();
+                    }
+                }
+            }
+        }
+        
 
         internal SettingsDictionary Settings
         {
             get { return _settings; }
+        }
+
+        internal bool HasDependencies
+        {
+            get { return _dependencies != null; }
+        }
+
+        internal bool HasDependentStages
+        {
+            get { return _dependentStages != null; }
+        }
+
+        /// <summary>
+        /// Adds a setting to the stage settings.
+        /// </summary>
+        /// <param name="key">The name of the setting.</param>
+        /// <param name="value">The value of the setting.</param>
+        public void AddSetting(string key, string value)
+        {
+            if( _settings == null )
+                _settings = new SettingsDictionary();
+            _settings.Add(key, value);
+        }
+
+        /// <summary>
+        /// Adds a setting with the specified type to the stage settings.
+        /// </summary>
+        /// <typeparam name="T">The type of the setting.</typeparam>
+        /// <param name="key">The name of the setting.</param>
+        /// <param name="value">The value of the setting.</param>
+        public void AddTypedSetting<T>(string key, T value)
+        {
+            if( _settings == null )
+                _settings = new SettingsDictionary();
+            _settings.AddTypedSetting(key, value);
+        }
+
+        /// <summary>
+        /// Adds a scheduling dependency on the specified stage to this stage.
+        /// </summary>
+        /// <param name="stage">The stage that this stage depends on.</param>
+        public void AddSchedulingDependency(StageBuilder stage)
+        {
+            if( stage == null )
+                throw new ArgumentNullException("stage");
+            if( stage._jobBuilder != _jobBuilder )
+                throw new ArgumentException("The specified stage does not belong to the same job.", "stage");
+
+            // Dependencies are recorded in both directions so it doesn't matter which of the stages is created first by the JobBuilderCompiler.
+            if( _dependencies == null )
+                _dependencies = new List<StageBuilder>();
+            _dependencies.Add(stage);
+            if( stage._dependentStages == null )
+                stage._dependentStages = new List<StageBuilder>();
+            stage._dependentStages.Add(this);
+        }
+
+        private void AddDependenciesToConfiguration()
+        {
+            if( _dependencies != null )
+            {
+                // We depend on other stages.
+                if( StageConfiguration.Parent != null )
+                    throw new InvalidOperationException(string.Format(CultureInfo.CurrentCulture, "Stage {0} is a child stage which cannot have scheduler dependencies.", StageConfiguration.CompoundStageId));
+                foreach( StageBuilder stage in _dependencies )
+                {
+                    if( stage.StageConfiguration != null )
+                    {
+                        if( stage.StageConfiguration.ChildStage != null )
+                            throw new InvalidOperationException(string.Format(CultureInfo.CurrentCulture, "Cannot add a dependency to stage {0} because it has a child stage.", stage.StageConfiguration.CompoundStageId));
+                        stage.StageConfiguration.DependentStages.Add(StageConfiguration.StageId);
+                    }
+                }
+            }
+
+            if( _dependentStages != null )
+            {
+                // Other stages depend on us.
+                if( StageConfiguration.ChildStage != null )
+                    throw new InvalidOperationException(string.Format(CultureInfo.CurrentCulture, "Cannot add a dependency to stage {0} because it has a child stage.", StageConfiguration.CompoundStageId));
+                foreach( StageBuilder stage in _dependentStages )
+                {
+                    if( stage.StageConfiguration != null )
+                    {
+                        if( stage.StageConfiguration.Parent != null )
+                            throw new InvalidOperationException(string.Format(CultureInfo.CurrentCulture, "Stage {0} is a child stage which cannot have scheduler dependencies.", stage.StageConfiguration.CompoundStageId));
+                        StageConfiguration.DependentStages.Add(stage.StageConfiguration.StageId);
+                    }
+                }
+            }
         }
     }
 }

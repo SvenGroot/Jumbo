@@ -134,6 +134,8 @@ namespace Tkl.Jumbo.Jet.Jobs
 
         internal void AttachReceivingStage(StageBuilder stage)
         {
+            if( SendingStage == null )
+                throw new InvalidOperationException("A channel must have a sending stage before you can attach a receiving stage.");
             if( ReceivingStage != null )
                 throw new InvalidOperationException("This channel already has a receiving stage.");
             if( !CheckRecordType(stage.InputRecordType) )

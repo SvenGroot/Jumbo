@@ -557,6 +557,34 @@ namespace Tkl.Jumbo.Test.Jet
         }
 
         [Test]
+        public void TestSchedulingDependency()
+        {
+            JobBuilder builder = new JobBuilder(_dfsClient, _jetClient);
+
+            var input = new DfsInput(_inputPath, typeof(LineRecordReader));
+            var channel = new Channel() { PartitionCount = 1 };
+            var output1 = new DfsOutput(_outputPath, typeof(TextRecordWriter<Utf8String>));
+            var output2 = new DfsOutput(_outputPath, typeof(TextRecordWriter<int>));
+
+            StageBuilder stage1 = builder.ProcessRecords(input, output1, typeof(EmptyTask<Utf8String>));
+            stage1.StageId = "DependencyStage";
+            StageBuilder stage2 = builder.ProcessRecords(input, channel, typeof(LineCounterTask));
+            stage2.AddSchedulingDependency(stage1);
+            builder.ProcessRecords(channel, output2, typeof(LineAdderTask));
+
+            JobConfiguration config = builder.CreateJob();
+            Assert.AreEqual(1, config.AssemblyFileNames.Count);
+
+            Assert.AreEqual(3, config.Stages.Count);
+
+            VerifyStage(config, config.Stages[0], 3, "DependencyStage", typeof(EmptyTask<Utf8String>), null, typeof(LineRecordReader), typeof(TextRecordWriter<Utf8String>), ChannelType.File, ChannelConnectivity.Full, null, null, null);
+            VerifyStage(config, config.Stages[1], 3, typeof(LineCounterTask).Name, typeof(LineCounterTask), null, typeof(LineRecordReader), null, ChannelType.File, ChannelConnectivity.Full, typeof(HashPartitioner<int>), typeof(MultiRecordReader<int>), typeof(LineAdderTask).Name);
+            VerifyStage(config, config.Stages[2], 1, typeof(LineAdderTask).Name, typeof(LineAdderTask), null, null, typeof(TextRecordWriter<int>), ChannelType.File, ChannelConnectivity.Full, null, null, null);
+            Assert.AreEqual(1, config.Stages[0].DependentStages.Count);
+            Assert.AreEqual(config.Stages[1].StageId, config.Stages[0].DependentStages[0]);
+        }
+
+        [Test]
         public void TestJoinRecordsDfsInputOutput()
         {
             OldJobBuilder builder = new OldJobBuilder(_dfsClient, _jetClient);

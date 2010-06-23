@@ -11,6 +11,7 @@ using Tkl.Jumbo.IO;
 using Tkl.Jumbo.Jet.Channels;
 using System.Reflection;
 using System.Collections.ObjectModel;
+using System.Globalization;
 
 namespace Tkl.Jumbo.Jet
 {
@@ -317,9 +318,13 @@ namespace Tkl.Jumbo.Jet
         private static void AddChildStage(Type partitionerType, Type inputType, StageConfiguration stage, StageConfiguration parentStage)
         {
             if( parentStage.ChildStage != null )
-                throw new ArgumentException("The input stage already has a child stage.");
+                throw new ArgumentException(string.Format(CultureInfo.CurrentCulture, "Cannot add child stage to stage {0} because it already has a child stage.", stage.CompoundStageId));
             if( stage.TaskCount > 1 && parentStage.InternalPartitionCount > 1 )
-                throw new ArgumentException("The input stage already has internal partitioning, cannot add another child stage with internal partitioning.");
+                throw new ArgumentException(string.Format(CultureInfo.CurrentCulture, "Cannot add child stage with internal partitioning to stage {0} because it already uses internal partitioning.", stage.CompoundStageId));
+            if( stage.OutputChannel != null )
+                throw new ArgumentException(string.Format(CultureInfo.CurrentCulture, "Cannot add child stage to stage {0} because it already has an output channel.", stage.CompoundStageId));
+            if( stage.DependentStages != null && stage.DependentStages.Count > 0 )
+                throw new ArgumentException(string.Format(CultureInfo.CurrentCulture, "Cannot add child stage to stage {0} because other stages have a scheduling dependency on it.", stage.CompoundStageId));
             parentStage.ChildStage = stage;
             parentStage.ChildStagePartitionerType = partitionerType ?? typeof(HashPartitioner<>).MakeGenericType(inputType);
         }
@@ -485,12 +490,17 @@ namespace Tkl.Jumbo.Jet
 
             if( stage.Parent == null )
             {
-                foreach( StageConfiguration inputStage in GetInputStagesForStage(stage.StageId) )
+                foreach( StageConfiguration inputStage in GetDependenciesForStage(stage.StageId, false) )
                 {
-                    inputStage.OutputChannel.OutputStage = newName;
+                    if( inputStage.OutputChannel.OutputStage == stage.StageId )
+                        inputStage.OutputChannel.OutputStage = newName;
+                    else if( inputStage.DependentStages.Remove(stage.StageId) )
+                    {
+                        inputStage.DependentStages.Add(newName);
+                    }
                 }
-                stage.StageId = newName;
             }
+            stage.StageId = newName;
         }
 
         /// <summary>
