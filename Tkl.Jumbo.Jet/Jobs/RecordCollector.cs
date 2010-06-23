@@ -10,13 +10,13 @@ using Tkl.Jumbo.Jet.Channels;
 namespace Tkl.Jumbo.Jet.Jobs
 {
     /// <summary>
-    /// Collects intermediate output records for the <see cref="JobBuilder"/>.
+    /// Collects intermediate output records for the <see cref="OldJobBuilder"/>.
     /// </summary>
     /// <typeparam name="T">The type of records.</typeparam>
     /// <remarks>
     /// <para>
     ///   This class provides a record reader and record writer that can be used to collect output from one task
-    ///   and provide it as input to another task when using the <see cref="JobBuilder"/> to construct a job.
+    ///   and provide it as input to another task when using the <see cref="OldJobBuilder"/> to construct a job.
     /// </para>
     /// <para>
     ///   The record reader and writer can be used to execute the job building function directly for debugging purposes.
@@ -107,7 +107,7 @@ namespace Tkl.Jumbo.Jet.Jobs
         /// Gets or sets the channel type.
         /// </summary>
         /// <value>
-        /// The channel type, or <see langword="null"/> to let the <see cref="JobBuilder"/> decide. The default value is <see langword="null"/>.
+        /// The channel type, or <see langword="null"/> to let the <see cref="OldJobBuilder"/> decide. The default value is <see langword="null"/>.
         /// </value>
         public Channels.ChannelType? ChannelType
         {
@@ -125,7 +125,7 @@ namespace Tkl.Jumbo.Jet.Jobs
         /// Gets or sets the number of partitions to create
         /// </summary>
         /// <value>
-        /// The number of partitions to create, or zero to let the <see cref="JobBuilder"/> decide. The default value is zero.
+        /// The number of partitions to create, or zero to let the <see cref="OldJobBuilder"/> decide. The default value is zero.
         /// </value>
         public int PartitionCount
         {

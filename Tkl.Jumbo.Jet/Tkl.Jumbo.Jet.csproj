@@ -120,7 +120,16 @@
     <Compile Include="IHasAdditionalProgress.cs" />
     <Compile Include="IHasMetrics.cs" />
     <Compile Include="IPrepartitionedPushTask.cs" />
+    <Compile Include="Jobs\Channel.cs" />
+    <Compile Include="Jobs\DfsInput.cs" />
+    <Compile Include="Jobs\DfsOutput.cs" />
+    <Compile Include="Jobs\IStageInput.cs" />
+    <Compile Include="Jobs\IStageOutput.cs" />
+    <Compile Include="Jobs\JobBuilderCompiler.cs" />
     <Compile Include="Jobs\JobSettingAttribute.cs" />
+    <Compile Include="Jobs\JobBuilder.cs" />
+    <Compile Include="Jobs\PipelineCreationMethod.cs" />
+    <Compile Include="Jobs\StageBuilder.cs" />
     <Compile Include="KillTaskJetHeartbeatResponse.cs" />
     <Compile Include="PartitionerConstants.cs" />
     <Compile Include="IConfigurable.cs" />
@@ -146,7 +155,7 @@
     <Compile Include="Jobs\BaseJobRunner.cs" />
     <Compile Include="Jobs\BasicJob.cs" />
     <Compile Include="Jobs\IJobRunner.cs" />
-    <Compile Include="Jobs\JobBuilder.cs" />
+    <Compile Include="Jobs\OldJobBuilder.cs" />
     <Compile Include="Jobs\JobBuilderDelegates.cs" />
     <Compile Include="Jobs\JobBuilderJob.cs" />
     <Compile Include="Jobs\JobRunnerArgument.cs" />

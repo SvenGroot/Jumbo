@@ -29,8 +29,8 @@ namespace Tkl.Jumbo.Jet.Jobs
     /// <typeparam name="TOutput">The type of the output records.</typeparam>
     /// <param name="input">The record reader providing the input records.</param>
     /// <param name="output">The record writer collecting the output records.</param>
-    /// <param name="configuration">The configuration for the task.</param>
-    public delegate void TaskFunctionWithConfiguration<TInput, TOutput>(RecordReader<TInput> input, RecordWriter<TOutput> output, TaskContext configuration);
+    /// <param name="context">The context for the task.</param>
+    public delegate void TaskFunctionWithContext<TInput, TOutput>(RecordReader<TInput> input, RecordWriter<TOutput> output, TaskContext context);
 
     /// <summary>
     /// Delegate for push tasks.

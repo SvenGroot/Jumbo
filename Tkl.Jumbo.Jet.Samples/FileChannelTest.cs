@@ -65,7 +65,7 @@ namespace Tkl.Jumbo.Jet.Samples
         /// Builds the job.
         /// </summary>
         /// <param name="builder">The job builder</param>
-        protected override void BuildJob(JobBuilder builder)
+        protected override void BuildJob(OldJobBuilder builder)
         {
             DfsClient dfsClient = new DfsClient(DfsConfiguration);
 

@@ -483,11 +483,14 @@ namespace Tkl.Jumbo.Jet
             if( newName == null )
                 throw new ArgumentNullException("newName");
 
-            foreach( StageConfiguration inputStage in GetInputStagesForStage(stage.StageId) )
+            if( stage.Parent == null )
             {
-                inputStage.OutputChannel.OutputStage = newName;
+                foreach( StageConfiguration inputStage in GetInputStagesForStage(stage.StageId) )
+                {
+                    inputStage.OutputChannel.OutputStage = newName;
+                }
+                stage.StageId = newName;
             }
-            stage.StageId = newName;
         }
 
         /// <summary>

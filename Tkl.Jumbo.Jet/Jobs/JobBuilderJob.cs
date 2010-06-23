@@ -10,7 +10,7 @@ using Tkl.Jumbo.IO;
 namespace Tkl.Jumbo.Jet.Jobs
 {
     /// <summary>
-    /// Base class for job runners that use the <see cref="JobBuilder"/> to create the job configuration.
+    /// Base class for job runners that use the <see cref="OldJobBuilder"/> to create the job configuration.
     /// </summary>
     public abstract class JobBuilderJob : BaseJobRunner
     {
@@ -25,7 +25,7 @@ namespace Tkl.Jumbo.Jet.Jobs
             DfsClient dfsClient = new DfsClient(DfsConfiguration);
             JetClient jetClient = new JetClient(JetConfiguration);
 
-            JobBuilder builder = new JobBuilder(dfsClient, jetClient);
+            OldJobBuilder builder = new OldJobBuilder(dfsClient, jetClient);
 
             BuildJob(builder);
 
@@ -49,7 +49,7 @@ namespace Tkl.Jumbo.Jet.Jobs
         /// When implemented in a derived class, constructs the job configuration using the specified job builder.
         /// </summary>
         /// <param name="builder"></param>
-        protected abstract void BuildJob(JobBuilder builder);
+        protected abstract void BuildJob(OldJobBuilder builder);
 
         /// <summary>
         /// Called when the job has been created on the job server, but before running it.
@@ -71,7 +71,7 @@ namespace Tkl.Jumbo.Jet.Jobs
         /// <param name="output">The output path.</param>
         /// <param name="recordWriterType">The type of the record writer to use.</param>
         /// <returns>A record writer.</returns>
-        protected RecordWriter<T> CreateRecordWriter<T>(JobBuilder builder, string output, Type recordWriterType)
+        protected RecordWriter<T> CreateRecordWriter<T>(OldJobBuilder builder, string output, Type recordWriterType)
         {
             if( builder == null )
                 throw new ArgumentNullException("builder");

@@ -276,7 +276,7 @@ namespace Tkl.Jumbo.Test.Jet
             const string outputPath = "/testjbjoinoutput";
             const int joinTasks = 2;
 
-            JobBuilder builder = new JobBuilder(dfsClient, new JetClient(TestJetCluster.CreateClientConfig()));
+            OldJobBuilder builder = new OldJobBuilder(dfsClient, new JetClient(TestJetCluster.CreateClientConfig()));
 
             var customerInput = builder.CreateRecordReader<Customer>("/testjbjoin/customers", typeof(RecordFileReader<Customer>));
             var orderInput = builder.CreateRecordReader<Order>("/testjbjoin/orders", typeof(RecordFileReader<Order>));
