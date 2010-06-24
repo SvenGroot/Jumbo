@@ -141,6 +141,8 @@ namespace Tkl.Jumbo.Jet.Samples.IO
             if( offset != 0 )
             {
                 ReadRecordInternal(false);
+                CurrentRecord = null;
+                FirstRecordOffset = stream.Position;
             }
         }
 

@@ -30,7 +30,7 @@ namespace Tkl.Jumbo.Jet.Samples
     /// </para>
     /// </remarks>
     [Description("Validates whether the input is correctly sorted.")]
-    public class ValSort2 : OldJobBuilderJob
+    public class ValSort2 : JobBuilderJob
     {
         private readonly string _inputPath;
         private readonly string _outputPath;
@@ -57,19 +57,19 @@ namespace Tkl.Jumbo.Jet.Samples
         /// Builds the job.
         /// </summary>
         /// <param name="builder">The job builder.</param>
-        protected override void BuildJob(OldJobBuilder builder)
+        protected override void BuildJob(JobBuilder builder)
         {
             CheckAndCreateOutputPath(_outputPath);
 
-            var input = builder.CreateRecordReader<GenSortRecord>(_inputPath, typeof(GenSortRecordReader));
-            var collector1 = new RecordCollector<ValSortRecord>() { PartitionCount = 1 };
-            var collector2 = new RecordCollector<ValSortRecord>() { ChannelType = ChannelType.Pipeline, PartitionCount = 1 };
-            var output = builder.CreateRecordWriter<string>(_outputPath, typeof(TextRecordWriter<string>), (int)BlockSize.Value, ReplicationFactor);
+            var input = new DfsInput(_inputPath, typeof(GenSortRecordReader));
+            var valSortChannel = new Channel() { PartitionCount = 1 };
+            var combinerChannel = new Channel() { ChannelType = ChannelType.Pipeline, PartitionCount = 1 };
+            var output = CreateDfsOutput(_outputPath, typeof(TextRecordWriter<string>));
 
-            builder.ProcessRecords(input, collector1.CreateRecordWriter(), typeof(ValSortTask), "ValSortStage");
+            builder.ProcessRecords(input, valSortChannel, typeof(ValSortTask)).StageId = "ValSortStage";
             // Not using SortRecords because each ValSortTask produces only one output record, so there's no sense to the merge sort strategy.
-            builder.ProcessRecords(collector1.CreateRecordReader(), collector2.CreateRecordWriter(), typeof(SortTask<ValSortRecord>), "SortStage");
-            builder.ProcessRecords(collector2.CreateRecordReader(), output, typeof(ValSortCombinerTask), "CombinerStage");
+            builder.ProcessRecords(valSortChannel, combinerChannel, typeof(SortTask<ValSortRecord>)).StageId = "SortStage";
+            builder.ProcessRecords(combinerChannel, output, typeof(ValSortCombinerTask)).StageId = "CombinerStage";
         }
 
         /// <summary>

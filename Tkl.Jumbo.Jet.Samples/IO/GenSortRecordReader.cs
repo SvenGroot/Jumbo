@@ -54,7 +54,10 @@ namespace Tkl.Jumbo.Jet.Samples.IO
             // gensort records are 100 bytes long, making it easy to find the first record.
             long rem = _position % GenSortRecord.RecordSize;
             if( rem != 0 )
+            {
                 Stream.Position += GenSortRecord.RecordSize - rem;
+                FirstRecordOffset = Stream.Position;
+            }
             _position = Stream.Position;
 
             // Because this reader is only used for GraySort and ValSort, neither of which allow record reuse on the input,

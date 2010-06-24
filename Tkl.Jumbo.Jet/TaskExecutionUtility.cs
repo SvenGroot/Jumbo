@@ -770,7 +770,7 @@ namespace Tkl.Jumbo.Jet
                 {
                     // It's currently not possible to have a multi input record reader with DFS inputs, so this is safe.
                     if( _inputReader != null )
-                        metrics.DfsBytesRead += _inputReader.InputBytes;
+                        metrics.DfsBytesRead += _inputReader.BytesRead;
                 }
                 else if( _inputChannels != null )
                 {

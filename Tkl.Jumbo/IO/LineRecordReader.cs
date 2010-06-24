@@ -136,6 +136,7 @@ namespace Tkl.Jumbo.IO
             {
                 ReadRecord();
                 CurrentRecord = null;
+                FirstRecordOffset = stream.Position;
             }
         }
 

@@ -23,7 +23,7 @@ namespace Tkl.Jumbo.Jet.Samples
     /// </para>
     /// </remarks>
     [Description("Sorts the input file or files containing data in the gensort format.")]
-    public class GraySort2 : OldJobBuilderJob
+    public class GraySort2 : JobBuilderJob
     {
         private readonly string _inputPath;
         private readonly string _outputPath;
@@ -61,18 +61,18 @@ namespace Tkl.Jumbo.Jet.Samples
         /// Builds the job.
         /// </summary>
         /// <param name="builder">The job builder</param>
-        protected override void BuildJob(OldJobBuilder builder)
+        protected override void BuildJob(JobBuilder builder)
         {
             DfsClient dfsClient = new DfsClient(DfsConfiguration);
 
             CheckAndCreateOutputPath(dfsClient, _outputPath);
 
-            var input = builder.CreateRecordReader<GenSortRecord>(_inputPath, typeof(GenSortRecordReader));
-            var output = builder.CreateRecordWriter<GenSortRecord>(_outputPath, typeof(GenSortRecordWriter), (int)BlockSize.Value, ReplicationFactor);
-            RecordCollector<GenSortRecord> collector = new RecordCollector<GenSortRecord>() { PartitionerType = typeof(RangePartitioner), PartitionCount = _mergeTasks };
+            var input = new DfsInput(_inputPath, typeof(GenSortRecordReader));
+            var output = CreateDfsOutput(_outputPath, typeof(GenSortRecordWriter));
+            var channel = new Channel() { PartitionerType = typeof(RangePartitioner), PartitionCount = _mergeTasks };
 
-            builder.PartitionRecords(input, collector.CreateRecordWriter());
-            builder.SortRecords(collector.CreateRecordReader(), output);
+            builder.PartitionRecords(input, channel);
+            builder.SortRecords(channel, output);
         }
 
         /// <summary>
@@ -92,7 +92,7 @@ namespace Tkl.Jumbo.Jet.Samples
                             where stage.DfsInputs != null
                             from input in stage.DfsInputs
                             select input;
-            RangePartitioner.CreatePartitionFile(dfsClient, partitionFileName, dfsInputs.ToArray(), jobConfiguration.GetStage("SortMergeStage").TaskCount, SampleSize);
+            RangePartitioner.CreatePartitionFile(dfsClient, partitionFileName, dfsInputs.ToArray(), jobConfiguration.GetStage("MergeStage").TaskCount, SampleSize);
 
             jobConfiguration.AddSetting("partitionFile", partitionFileName);
             if( MaxMergeInputs > 0 )

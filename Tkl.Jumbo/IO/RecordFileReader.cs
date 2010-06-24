@@ -81,6 +81,7 @@ namespace Tkl.Jumbo.IO
             {
                 _lastRecordMarkerPosition = stream.Position - RecordFile.RecordMarkerSize;
             }
+            FirstRecordOffset = stream.Position;
         }
 
         /// <summary>
