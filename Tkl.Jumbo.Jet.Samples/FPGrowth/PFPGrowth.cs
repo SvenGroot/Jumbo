@@ -489,7 +489,7 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
             var flistChannel = new Channel() { PartitionCount = 1 };
             builder.ProcessRecords(countChannel, flistChannel, typeof(FeatureFilterTask));
             // Sort and group the features.
-            var fglistOutput = CreateDfsOutput(builder, fglistDirectory, typeof(BinaryRecordWriter<>));
+            var fglistOutput = CreateDfsOutput(fglistDirectory, typeof(BinaryRecordWriter<>));
             StageBuilder groupListStage = builder.ProcessRecords(flistChannel, fglistOutput, typeof(FeatureGroupTask));
 
             // Generate group-dependent transactions
@@ -519,7 +519,7 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
                 builder.ProcessRecords(groupChannel, patternChannel, mineFunction);
 
             // Aggregate frequent patterns.
-            var output = CreateDfsOutput(builder, resultDirectory, BinaryOutput ? typeof(BinaryRecordWriter<>) : typeof(TextRecordWriter<>));
+            var output = CreateDfsOutput(resultDirectory, BinaryOutput ? typeof(BinaryRecordWriter<>) : typeof(TextRecordWriter<>));
             builder.ProcessRecords<Pair<int, WritableCollection<MappedFrequentPattern>>, Pair<Utf8String, WritableCollection<FrequentPattern>>>(patternChannel, output, AggregatePatterns);
 
             builder.AddSetting("PFPGrowth.FGListPath", DfsPath.Combine(fglistDirectory, "FeatureGroupTask001"));

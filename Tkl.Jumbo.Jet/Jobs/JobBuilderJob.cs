@@ -66,15 +66,11 @@ namespace Tkl.Jumbo.Jet.Jobs
         /// <summary>
         /// Creates a <see cref="DfsOutput"/> that uses <see cref="BaseJobRunner.BlockSize"/> and <see cref="BaseJobRunner.ReplicationFactor"/>.
         /// </summary>
-        /// <param name="builder">The builder to use to create the record writer.</param>
         /// <param name="outputPath">The output path.</param>
         /// <param name="recordWriterType">The type of the record writer to use.</param>
         /// <returns>A <see cref="DfsOutput"/>.</returns>
-        protected DfsOutput CreateDfsOutput(JobBuilder builder, string outputPath, Type recordWriterType)
+        protected DfsOutput CreateDfsOutput(string outputPath, Type recordWriterType)
         {
-            if( builder == null )
-                throw new ArgumentNullException("builder");
-
             return new DfsOutput(outputPath, recordWriterType) 
             { 
                 BlockSize = (int)BlockSize.Value, 

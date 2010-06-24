@@ -584,7 +584,7 @@ namespace Tkl.Jumbo.Jet
 
         private List<IInputChannel> CreateInputChannels(IEnumerable<StageConfiguration> inputStages)
         {
-            List<IInputChannel> result = new List<IInputChannel>();
+            List<IInputChannel> result = null;
             foreach( StageConfiguration inputStage in inputStages )
             {
                 IInputChannel channel;
@@ -599,6 +599,8 @@ namespace Tkl.Jumbo.Jet
                 default:
                     throw new InvalidOperationException("Invalid channel type.");
                 }
+                if( result == null )
+                    result = new List<IInputChannel>();
                 result.Add(channel);
                 AddAdditionalProgressSource(channel);
             }

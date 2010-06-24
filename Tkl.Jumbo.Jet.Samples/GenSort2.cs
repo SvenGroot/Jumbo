@@ -28,7 +28,7 @@ namespace Tkl.Jumbo.Jet.Samples
     /// </para>
     /// </remarks>
     [Description("Generates input records for the GraySort job.")]
-    public class GenSort2 : OldJobBuilderJob
+    public class GenSort2 : JobBuilderJob
     {
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(GenSort));
 
@@ -69,7 +69,7 @@ namespace Tkl.Jumbo.Jet.Samples
         /// Builds the job.
         /// </summary>
         /// <param name="builder">The job builder.</param>
-        protected override void BuildJob(OldJobBuilder builder)
+        protected override void BuildJob(JobBuilder builder)
         {
             ulong countPerTask = _recordCount / (ulong)_taskCount;
             ulong remainder = _recordCount % (ulong)_taskCount;
@@ -78,13 +78,11 @@ namespace Tkl.Jumbo.Jet.Samples
             DfsClient dfsClient = new DfsClient(DfsConfiguration);
             CheckAndCreateOutputPath(dfsClient, _outputPath);
 
-            RecordWriter<GenSortRecord> output = builder.CreateRecordWriter<GenSortRecord>(_outputPath, typeof(GenSortRecordWriter), (int)BlockSize.Value, ReplicationFactor);
+            var output = CreateDfsOutput(_outputPath, typeof(GenSortRecordWriter));
 
-            SettingsDictionary settings = new SettingsDictionary();
-            settings.AddTypedSetting(_startRecordSetting, _startRecord);
-            settings.AddTypedSetting(_countSetting, _recordCount);
-
-            builder.GenerateRecords(output, GenSort, _taskCount, settings);
+            StageBuilder stage = builder.GenerateRecords<GenSortRecord>(output, GenSort, _taskCount);
+            stage.AddTypedSetting(_startRecordSetting, _startRecord);
+            stage.AddTypedSetting(_countSetting, _recordCount);
         }
 
         /// <summary>

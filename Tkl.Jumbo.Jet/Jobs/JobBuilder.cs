@@ -121,11 +121,7 @@ namespace Tkl.Jumbo.Jet.Jobs
             if( taskType == null )
                 throw new ArgumentNullException("taskType");
 
-            CheckJobCreated();
-
-            StageBuilder stage = new StageBuilder(this, new[] { input }, output, taskType, null);
-            _stages.Add(stage);
-            return stage;
+            return ProcessRecordsNoArgumentValidation(input, output, taskType);
         }
 
         /// <summary>
@@ -331,7 +327,7 @@ namespace Tkl.Jumbo.Jet.Jobs
         /// </summary>
         /// <param name="output">The <see cref="Channel"/> or <see cref="DfsOutput"/> to write the result to.</param>
         /// <param name="taskType">The type of the task.</param>
-        /// <param name="taskCount">The number of tasks to create when running the job.</param>
+        /// <param name="taskCount">The number of tasks in the stage.</param>
         /// <returns>A <see cref="StageBuilder"/> that can be used to customize the stage that will be created for the operation.</returns>
         public StageBuilder GenerateRecords(IStageOutput output, Type taskType, int taskCount)
         {
@@ -340,8 +336,30 @@ namespace Tkl.Jumbo.Jet.Jobs
             if( taskType == null )
                 throw new ArgumentNullException("taskType");
 
-            StageBuilder stage = new StageBuilder(this, null, output, taskType, null) { NoInputTaskCount = taskCount };
-            _stages.Add(stage);
+            StageBuilder stage = ProcessRecordsNoArgumentValidation(null, output, taskType);
+            stage.NoInputTaskCount = taskCount;
+            return stage;
+        }
+
+        /// <summary>
+        /// Generates records using a task function that takes no input.
+        /// </summary>
+        /// <typeparam name="T">The type of the records to generate.</typeparam>
+        /// <param name="output">The <see cref="Channel"/> or <see cref="DfsOutput"/> to write the result to.</param>
+        /// <param name="task">The task function.</param>
+        /// <param name="taskCount">The number of tasks in the stage.</param>
+        /// <returns>A <see cref="StageBuilder"/> that can be used to customize the stage that will be created for the operation.</returns>
+        public StageBuilder GenerateRecords<T>(IStageOutput output, OutputOnlyTaskFunctionWithConfiguration<T> task, int taskCount)
+        {
+            if( task == null )
+                throw new ArgumentNullException("task");
+            if( output == null )
+                throw new ArgumentNullException("output");
+            if( taskCount < 1 )
+                throw new ArgumentOutOfRangeException("taskCount");
+
+            StageBuilder stage = ProcessRecords<int, T>(null, output, task.Method, false);
+            stage.NoInputTaskCount = taskCount;
             return stage;
         }
 
@@ -456,6 +474,17 @@ namespace Tkl.Jumbo.Jet.Jobs
             _settings.AddTypedSetting(key, value);
         }
 
+        private StageBuilder ProcessRecordsNoArgumentValidation(IStageInput input, IStageOutput output, Type taskType)
+        {
+            CheckJobCreated();
+
+            IStageInput[] inputs = input == null ? null : new[] { input };
+
+            StageBuilder stage = new StageBuilder(this, inputs, output, taskType, null);
+            _stages.Add(stage);
+            return stage;
+        }
+
         private StageBuilder ProcessRecords<TInput, TOutput>(IStageInput input, IStageOutput output, MethodInfo taskMethod, bool useInput)
         {
             if( !(taskMethod.IsStatic && taskMethod.IsPublic) )
@@ -489,7 +518,7 @@ namespace Tkl.Jumbo.Jet.Jobs
 
             AddAssemblies(taskMethod.DeclaringType.Assembly);
 
-            return ProcessRecords(input, output, taskType);
+            return ProcessRecordsNoArgumentValidation(input, output, taskType);
         }
 
         private StageBuilder ProcessRecordsPushTask<TInput, TOutput>(IStageInput input, IStageOutput output, MethodInfo taskMethod)
