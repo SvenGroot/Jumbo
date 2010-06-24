@@ -12,6 +12,7 @@ using System.IO;
 using Tkl.Jumbo.Jet.Tasks;
 using System.Globalization;
 using System.Collections.ObjectModel;
+using Tkl.Jumbo.Jet.Channels;
 
 namespace Tkl.Jumbo.Jet.Jobs
 {
@@ -122,7 +123,7 @@ namespace Tkl.Jumbo.Jet.Jobs
 
             CheckJobCreated();
 
-            StageBuilder stage = new StageBuilder(this, input, output, taskType);
+            StageBuilder stage = new StageBuilder(this, new[] { input }, output, taskType, null);
             _stages.Add(stage);
             return stage;
         }
@@ -310,6 +311,7 @@ namespace Tkl.Jumbo.Jet.Jobs
         /// </summary>
         /// <param name="input">The <see cref="Channel"/> or <see cref="DfsInput"/> to read records to process from.</param>
         /// <param name="output">The <see cref="Channel"/> to write the result to.</param>
+        /// <returns>A <see cref="StageBuilder"/> that can be used to customize the stage that will be created for the operation.</returns>
         public StageBuilder PartitionRecords(IStageInput input, Channel output)
         {
             if( input == null )
@@ -330,6 +332,7 @@ namespace Tkl.Jumbo.Jet.Jobs
         /// <param name="output">The <see cref="Channel"/> or <see cref="DfsOutput"/> to write the result to.</param>
         /// <param name="taskType">The type of the task.</param>
         /// <param name="taskCount">The number of tasks to create when running the job.</param>
+        /// <returns>A <see cref="StageBuilder"/> that can be used to customize the stage that will be created for the operation.</returns>
         public StageBuilder GenerateRecords(IStageOutput output, Type taskType, int taskCount)
         {
             if( output == null )
@@ -337,8 +340,94 @@ namespace Tkl.Jumbo.Jet.Jobs
             if( taskType == null )
                 throw new ArgumentNullException("taskType");
 
-            StageBuilder stage = new StageBuilder(this, null, output, taskType) { NoInputTaskCount = taskCount };
+            StageBuilder stage = new StageBuilder(this, null, output, taskType, null) { NoInputTaskCount = taskCount };
             _stages.Add(stage);
+            return stage;
+        }
+
+        /// <summary>
+        /// Combines the records of several input channels into a single output.
+        /// </summary>
+        /// <param name="inputs">The input channels to combine.</param>
+        /// <param name="output">The <see cref="Channel"/> or <see cref="DfsOutput"/> to write the result to.</param>
+        /// <param name="multiInputRecordReaderType">The <see cref="Type"/> of the multi input record reader to use to combine the records..</param>
+        /// <returns>A <see cref="StageBuilder"/> that can be used to customize the stage that will be created for the operation.</returns>
+        /// <remarks>
+        /// <para>
+        ///   This method creates a stage that uses <see cref="EmptyTask{T}"/>. If you wish to do your own processing, <paramref name="output"/>
+        ///   should be a <see cref="Channel"/> with <see cref="Channel.ChannelType"/> set to <see cref="ChannelType.Pipeline"/>. In this
+        ///   case, the <see cref="EmptyTask{T}"/> will be replaced.
+        /// </para>
+        /// </remarks>
+        public StageBuilder CombineRecords(IEnumerable<Channel> inputs, IStageOutput output, Type multiInputRecordReaderType)
+        {
+            if( inputs == null )
+                throw new ArgumentNullException("inputs");
+            if( output == null )
+                throw new ArgumentNullException("output");
+            if( multiInputRecordReaderType == null )
+                throw new ArgumentNullException("multiInputRecordReaderType");
+
+            CheckJobCreated();
+
+            Type multiInputRecordReaderBaseType = multiInputRecordReaderType.FindGenericBaseType(typeof(MultiInputRecordReader<>), true);
+            Type recordType = multiInputRecordReaderBaseType.GetGenericArguments()[0];
+
+            StageBuilder stage = new StageBuilder(this, inputs.Cast<IStageInput>(), output, typeof(EmptyTask<>).MakeGenericType(recordType), multiInputRecordReaderType);
+            _assemblies.Add(multiInputRecordReaderType.Assembly);
+            _stages.Add(stage);
+
+            return stage;
+        }
+
+        /// <summary>
+        /// Performs an inner join on the records of two inputs.
+        /// </summary>
+        /// <param name="outerInput">The <see cref="Channel"/> or <see cref="DfsInput"/> containing the records of the outer relation.</param>
+        /// <param name="innerInput">The <see cref="Channel"/> or <see cref="DfsInput"/> containing the records of the inner relation.</param>
+        /// <param name="output">The <see cref="Channel"/> or <see cref="DfsOutput"/> to write the result to.</param>
+        /// <param name="joinRecordReaderType">The <see cref="Type"/> of the join record reader. This type must inherit from <see cref="InnerJoinRecordReader{TOuter,TInner,TResult}"/>.</param>
+        /// <param name="outerComparerType">The <see cref="Type"/> of the comparer to use for the outer input. 
+        /// This type must implement both <see cref="IComparer{T}"/> and <see cref="IEqualityComparer{T}"/>. May be <see langword="null"/>.</param>
+        /// <param name="innerComparerType">The <see cref="Type"/> of the comparer to use for the inner input. 
+        /// This type must implement both <see cref="IComparer{T}"/> and <see cref="IEqualityComparer{T}"/>. May be <see langword="null"/>.</param>
+        /// <returns>A <see cref="StageBuilder"/> that can be used to customize the stage that will be created for the operation.</returns>
+        /// <remarks>
+        /// <para>
+        ///   This method creates a stage that uses <see cref="EmptyTask{T}"/>. If you wish to do your own processing, <paramref name="output"/>
+        ///   should be a <see cref="Channel"/> with <see cref="Channel.ChannelType"/> set to <see cref="ChannelType.Pipeline"/>. In this
+        ///   case, the <see cref="EmptyTask{T}"/> will be replaced.
+        /// </para>
+        /// </remarks>
+        public StageBuilder JoinRecords(IStageInput outerInput, IStageInput innerInput, IStageOutput output, Type joinRecordReaderType, Type outerComparerType, Type innerComparerType)
+        {
+            if( outerInput == null )
+                throw new ArgumentNullException("outerInput");
+            if( innerInput == null )
+                throw new ArgumentNullException("inner");
+            if( output == null )
+                throw new ArgumentNullException("output");
+
+            CheckJobCreated();
+
+            Type joinRecordReaderBaseType = joinRecordReaderType.FindGenericBaseType(typeof(InnerJoinRecordReader<,,>), true);
+            Type[] arguments = joinRecordReaderBaseType.GetGenericArguments();
+            Type outerRecordType = arguments[0];
+            Type innerRecordType = arguments[1];
+
+            if( innerRecordType != innerInput.RecordType )
+                throw new ArgumentException("The inner record type of the join record reader doesn't match the inner input's record type.");
+            if( outerRecordType != outerInput.RecordType )
+                throw new ArgumentException("The outer record type of the join record reader doesn't match the outer input's record type.");
+
+            CheckJoinComparer(outerComparerType, outerRecordType);
+            CheckJoinComparer(innerComparerType, innerRecordType);
+
+            Channel outerSortChannel = SortJoinInput(outerInput, outerComparerType, "JoinOuterSortStage");
+            Channel innerSortChannel = SortJoinInput(innerInput, innerComparerType, "JoinInnerSortStage");
+
+            StageBuilder stage = CombineRecords(new[] { outerSortChannel, innerSortChannel }, output, joinRecordReaderType);
+            stage.StageId = "JoinStage";
             return stage;
         }
 
@@ -501,6 +590,58 @@ namespace Tkl.Jumbo.Jet.Jobs
                 string assemblyFileName = _dynamicAssembly.GetName().Name + ".dll";
                 _dynamicAssembly.Save(assemblyFileName);
             }
+        }
+
+        private void CheckJoinComparer(Type comparerType, Type recordType)
+        {
+            if( comparerType != null )
+            {
+                if( comparerType.FindGenericInterfaceType(typeof(IComparer<>), true).GetGenericArguments()[0] != recordType ||
+                    comparerType.FindGenericInterfaceType(typeof(IEqualityComparer<>), true).GetGenericArguments()[0] != recordType )
+                    throw new ArgumentException("Comparers for join operations must implement both IComparer<T> and IEqualityComparer<T>.");
+            }
+        }
+
+        private Channel SortJoinInput(IStageInput input, Type comparerType, string stageId)
+        {
+            Channel inputChannel = input as Channel;
+            Channel outputChannel = new Channel() { MultiInputRecordReaderType = typeof(MergeRecordReader<>).MakeGenericType(input.RecordType) };
+            if( inputChannel != null )
+            {
+                outputChannel.ChannelType = inputChannel.ChannelType;
+                outputChannel.PartitionCount = inputChannel.PartitionCount;
+                outputChannel.PartitionsPerTask = inputChannel.PartitionsPerTask;
+                outputChannel.PartitionAssignmentMethod = inputChannel.PartitionAssignmentMethod;
+                outputChannel.PartitionerType = inputChannel.PartitionerType;
+                // Force pipeline if not specified.
+                if( inputChannel.ChannelType == null )
+                {
+                    inputChannel.ChannelType = ChannelType.Pipeline;
+                    inputChannel.PartitionsPerTask = 1;
+                }
+                if( inputChannel.SendingStage != null )
+                {
+                    if( comparerType != null )
+                    {
+                        inputChannel.SendingStage.AddSetting(PartitionerConstants.EqualityComparerSetting, comparerType.AssemblyQualifiedName);
+                    }
+                }
+                else
+                {
+                    throw new ArgumentException("The specified input channel does not have a sending stage.");
+                }
+            }
+
+            StageBuilder stage = ProcessRecords(input, outputChannel, typeof(SortTask<>).MakeGenericType(input.RecordType));
+            stage.StageId = stageId;
+
+            if( comparerType != null )
+            {
+                _assemblies.Add(comparerType.Assembly);
+                stage.AddSetting(SortTaskConstants.ComparerSettingKey, comparerType.AssemblyQualifiedName);
+            }
+
+            return outputChannel;
         }
     }
 }

@@ -276,21 +276,21 @@ namespace Tkl.Jumbo.Test.Jet
             const string outputPath = "/testjbjoinoutput";
             const int joinTasks = 2;
 
-            OldJobBuilder builder = new OldJobBuilder(dfsClient, new JetClient(TestJetCluster.CreateClientConfig()));
+            JobBuilder builder = new JobBuilder(dfsClient, new JetClient(TestJetCluster.CreateClientConfig()));
 
-            var customerInput = builder.CreateRecordReader<Customer>("/testjbjoin/customers", typeof(RecordFileReader<Customer>));
-            var orderInput = builder.CreateRecordReader<Order>("/testjbjoin/orders", typeof(RecordFileReader<Order>));
-            var customerCollector = new RecordCollector<Customer>() { PartitionCount = joinTasks };
-            var orderCollector = new RecordCollector<Order>() { PartitionCount = joinTasks };
-            var output = builder.CreateRecordWriter<CustomerOrder>(outputPath, typeof(RecordFileWriter<CustomerOrder>));
+            var customerInput = new DfsInput("/testjbjoin/customers", typeof(RecordFileReader<Customer>));
+            var orderInput = new DfsInput("/testjbjoin/orders", typeof(RecordFileReader<Order>));
+            var customerChannel = new Channel() { PartitionCount = joinTasks };
+            var orderChannel = new Channel() { PartitionCount = joinTasks };
+            var output = new DfsOutput(outputPath, typeof(RecordFileWriter<CustomerOrder>));
 
-            builder.PartitionRecords(customerInput, customerCollector.CreateRecordWriter(), "CustomerInputStage");
-            builder.PartitionRecords(orderInput, orderCollector.CreateRecordWriter(), "OrderInputStage");
-            builder.JoinRecords(customerCollector.CreateRecordReader(), orderCollector.CreateRecordReader(), output, typeof(CustomerOrderJoinRecordReader), null, typeof(OrderJoinComparer));
+            builder.PartitionRecords(customerInput, customerChannel).StageId = "CustomerInputStage";
+            builder.PartitionRecords(orderInput, orderChannel).StageId = "OrderInputStage";
+            builder.JoinRecords(customerChannel, orderChannel, output, typeof(CustomerOrderJoinRecordReader), null, typeof(OrderJoinComparer));
 
             dfsClient.NameServer.CreateDirectory(outputPath);
 
-            RunJob(dfsClient, builder.JobConfiguration);
+            RunJob(dfsClient, builder.CreateJob());
 
             List<CustomerOrder> actual = new List<CustomerOrder>();
             for( int x = 0; x < joinTasks; ++x )

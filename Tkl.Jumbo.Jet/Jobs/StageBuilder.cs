@@ -5,6 +5,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Globalization;
+using System.Collections.ObjectModel;
+using Tkl.Jumbo.IO;
 
 namespace Tkl.Jumbo.Jet.Jobs
 {
@@ -16,7 +18,8 @@ namespace Tkl.Jumbo.Jet.Jobs
         private readonly Type _taskType;
         private readonly Type _inputRecordType;
         private readonly Type _outputRecordType;
-        private readonly IStageInput _input;
+        private readonly List<IStageInput> _inputs;
+        private readonly ReadOnlyCollection<IStageInput> _inputsReadOnlyWrapper;
         private readonly IStageOutput _output;
         private readonly JobBuilder _jobBuilder;
         private string _stageId;
@@ -24,8 +27,10 @@ namespace Tkl.Jumbo.Jet.Jobs
         private List<StageBuilder> _dependencies;
         private List<StageBuilder> _dependentStages;
         private StageConfiguration _stageConfiguration;
+        private List<Type> _inputTypes;
+        private Type _stageMultiInputRecordReaderType;
 
-        internal StageBuilder(JobBuilder jobBuilder, IStageInput input, IStageOutput output, Type taskType)
+        internal StageBuilder(JobBuilder jobBuilder, IEnumerable<IStageInput> inputs, IStageOutput output, Type taskType, Type stageMultiInputRecordReaderType)
         {
             if( jobBuilder == null )
                 throw new ArgumentNullException("jobBuilder");
@@ -39,23 +44,33 @@ namespace Tkl.Jumbo.Jet.Jobs
             _taskType = taskType;
             _inputRecordType = arguments[0];
             _outputRecordType = arguments[1];
-            _input = input;
-            _output = output;
-
-            if( input != null )
+            if( inputs != null )
             {
-                Channel inputChannel = input as Channel;
-                if( inputChannel != null )
-                    inputChannel.AttachReceivingStage(this);
-                else
+                _inputs = inputs.ToList();
+                if( _inputs.Count == 0 )
+                    throw new ArgumentException("The list of inputs may not be empty.", "inputs");
+                _inputsReadOnlyWrapper = _inputs.AsReadOnly();
+            }
+            _output = output;
+            StageMultiInputRecordReaderType = stageMultiInputRecordReaderType; // Use the property so _inputTypes gets set correctly.
+
+            if( _inputs != null )
+            {
+                foreach( IStageInput input in _inputs )
                 {
-                    DfsInput dfsInput = input as DfsInput;
-                    if( dfsInput == null )
-                        throw new ArgumentException("Input must be a Channel or DfsInput instance.", "input");
-                    else if( dfsInput.RecordType == null )
-                        dfsInput.RecordType = _inputRecordType;
-                    else if( dfsInput.RecordType != _inputRecordType )
-                        throw new ArgumentException("The record type of the stage input doesn't match the task's input record type.", "input");
+                    Channel inputChannel = input as Channel;
+                    if( inputChannel != null )
+                        inputChannel.AttachReceivingStage(this);
+                    else
+                    {
+                        DfsInput dfsInput = input as DfsInput;
+                        if( dfsInput == null )
+                            throw new ArgumentException("Input must be a Channel or DfsInput instance.", "input");
+                        else if( dfsInput.RecordType == null )
+                            dfsInput.RecordType = _inputRecordType;
+                        else if( !AcceptsInputType(dfsInput.RecordType) )
+                            throw new ArgumentException("The record type of the stage input doesn't match the task's input record type.", "input");
+                    }
                 }
             }
 
@@ -133,9 +148,9 @@ namespace Tkl.Jumbo.Jet.Jobs
         /// Gets the input for this stage.
         /// </summary>
         /// <value>The input.</value>
-        public IStageInput Input
+        public ReadOnlyCollection<IStageInput> Inputs
         {
-            get { return _input; }
+            get { return _inputsReadOnlyWrapper; }
         }
 
         /// <summary>
@@ -178,6 +193,29 @@ namespace Tkl.Jumbo.Jet.Jobs
         internal Type PipelineOutputMultiRecordReader { get; set; }
 
         internal int NoInputTaskCount { get; set; }
+
+        internal Type StageMultiInputRecordReaderType
+        {
+            get { return _stageMultiInputRecordReaderType; }
+            private set 
+            { 
+                _stageMultiInputRecordReaderType = value;
+                if( value == null )
+                    _inputTypes = null;
+                else
+                {
+                    Attribute[] attributes = Attribute.GetCustomAttributes(value, typeof(InputTypeAttribute));
+                    if( attributes == null || attributes.Length == 0 )
+                        _inputTypes = null;
+                    else
+                    {
+                        _inputTypes = (from InputTypeAttribute a in attributes
+                                       select a.AcceptedType).ToList();
+                    }
+                }
+            }
+        }
+        
 
         internal StageConfiguration StageConfiguration
         {
@@ -256,6 +294,14 @@ namespace Tkl.Jumbo.Jet.Jobs
             if( stage._dependentStages == null )
                 stage._dependentStages = new List<StageBuilder>();
             stage._dependentStages.Add(this);
+        }
+
+        internal bool AcceptsInputType(Type type)
+        {
+            if( _inputTypes == null )
+                return type == _inputRecordType;
+            else
+                return _inputTypes.Contains(type);
         }
 
         private void AddDependenciesToConfiguration()

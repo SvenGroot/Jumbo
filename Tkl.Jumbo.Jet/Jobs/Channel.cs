@@ -112,6 +112,11 @@ namespace Tkl.Jumbo.Jet.Jobs
 
         internal Type MultiInputRecordReaderType { get; set; }
 
+        /// <summary>
+        /// Gets or sets a value indicating whether a pipeline channel should match the partition count of the output channel if it's unspecified.
+        /// </summary>
+        internal bool MatchOutputChannelPartitions { get; set; }
+
         Type IStageInput.RecordType
         {
             get { return RecordType; }
@@ -138,7 +143,7 @@ namespace Tkl.Jumbo.Jet.Jobs
                 throw new InvalidOperationException("A channel must have a sending stage before you can attach a receiving stage.");
             if( ReceivingStage != null )
                 throw new InvalidOperationException("This channel already has a receiving stage.");
-            if( !CheckRecordType(stage.InputRecordType) )
+            if( !stage.AcceptsInputType(RecordType) )
                 throw new ArgumentException("The stage's input record type does not match this channel's record type.", "stage");
 
             ReceivingStage = stage;

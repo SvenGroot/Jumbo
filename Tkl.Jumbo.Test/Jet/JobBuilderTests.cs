@@ -587,48 +587,51 @@ namespace Tkl.Jumbo.Test.Jet
         [Test]
         public void TestJoinRecordsDfsInputOutput()
         {
-            OldJobBuilder builder = new OldJobBuilder(_dfsClient, _jetClient);
+            JobBuilder builder = new JobBuilder(_dfsClient, _jetClient);
 
-            var customerInput = builder.CreateRecordReader<Customer>(_inputPath, typeof(RecordFileReader<Customer>));
-            var orderInput = builder.CreateRecordReader<Order>(_inputPath, typeof(RecordFileReader<Order>));
-            var output = builder.CreateRecordWriter<CustomerOrder>(_outputPath, typeof(RecordFileWriter<CustomerOrder>));
+            var customerInput = new DfsInput(_inputPath, typeof(RecordFileReader<Customer>));
+            var orderInput = new DfsInput(_inputPath, typeof(RecordFileReader<Order>));
+            var output = new DfsOutput(_outputPath, typeof(RecordFileWriter<CustomerOrder>));
 
             builder.JoinRecords(customerInput, orderInput, output, typeof(CustomerOrderJoinRecordReader), null, typeof(OrderJoinComparer));
 
-            JobConfiguration config = builder.JobConfiguration;
+            JobConfiguration config = builder.CreateJob();
 
             Assert.AreEqual(3, config.Stages.Count);
 
-            VerifyStage(config, config.Stages[0], 3, "SortStage", typeof(SortTask<Customer>), null, typeof(RecordFileReader<Customer>), null, ChannelType.File, ChannelConnectivity.Full, typeof(HashPartitioner<Customer>), typeof(MergeRecordReader<Customer>), "JoinStage");
-            VerifyStage(config, config.Stages[1], 3, "SortStage2", typeof(SortTask<Order>), null, typeof(RecordFileReader<Order>), null, ChannelType.File, ChannelConnectivity.Full, typeof(HashPartitioner<Order>), typeof(MergeRecordReader<Order>), "JoinStage");
+            VerifyStage(config, config.Stages[0], 3, "JoinOuterSortStage", typeof(SortTask<Customer>), null, typeof(RecordFileReader<Customer>), null, ChannelType.File, ChannelConnectivity.Full, typeof(HashPartitioner<Customer>), typeof(MergeRecordReader<Customer>), "JoinStage");
+            VerifyStage(config, config.Stages[1], 3, "JoinInnerSortStage", typeof(SortTask<Order>), null, typeof(RecordFileReader<Order>), null, ChannelType.File, ChannelConnectivity.Full, typeof(HashPartitioner<Order>), typeof(MergeRecordReader<Order>), "JoinStage");
             VerifyStage(config, config.Stages[2], 1, "JoinStage", typeof(EmptyTask<CustomerOrder>), typeof(CustomerOrderJoinRecordReader), null, typeof(RecordFileWriter<CustomerOrder>), ChannelType.File, ChannelConnectivity.Full, null, null, null);
+            Assert.IsNull(config.Stages[0].GetSetting(SortTaskConstants.ComparerSettingKey, null));
             Assert.AreEqual(typeof(OrderJoinComparer).AssemblyQualifiedName, config.Stages[1].GetSetting(SortTaskConstants.ComparerSettingKey, null));
         }
 
         [Test]
         public void TestJoinRecordsChannelInputOutput()
         {
-            OldJobBuilder builder = new OldJobBuilder(_dfsClient, _jetClient);
+            JobBuilder builder = new JobBuilder(_dfsClient, _jetClient);
 
-            var customerInput = builder.CreateRecordReader<Customer>(_inputPath, typeof(RecordFileReader<Customer>));
-            var orderInput = builder.CreateRecordReader<Order>(_inputPath, typeof(RecordFileReader<Order>));
-            var customerCollector = new RecordCollector<Customer>() { PartitionCount = 2 };
-            var orderCollector = new RecordCollector<Order>() { PartitionCount = 2 };
-            var outputCollector = new RecordCollector<CustomerOrder>() { PartitionCount = 2 };
-            var output = builder.CreateRecordWriter<CustomerOrder>(_outputPath, typeof(RecordFileWriter<CustomerOrder>));
+            var customerInput = new DfsInput(_inputPath, typeof(RecordFileReader<Customer>));
+            var orderInput = new DfsInput(_inputPath, typeof(RecordFileReader<Order>));
+            var customerChannel = new Channel { PartitionCount = 2 };
+            var orderChannel = new Channel { PartitionCount = 2 };
+            var outputChannel = new Channel { ChannelType = ChannelType.Pipeline };
+            var output = new DfsOutput(_outputPath, typeof(RecordFileWriter<CustomerOrder>));
 
-            builder.PartitionRecords(customerInput, customerCollector.CreateRecordWriter());
-            builder.PartitionRecords(orderInput, orderCollector.CreateRecordWriter());
-            builder.JoinRecords(customerCollector.CreateRecordReader(), orderCollector.CreateRecordReader(), outputCollector.CreateRecordWriter(), typeof(CustomerOrderJoinRecordReader), null, typeof(OrderJoinComparer));
-            builder.ProcessRecords(outputCollector.CreateRecordReader(), output, typeof(EmptyTask<CustomerOrder>));
+            builder.PartitionRecords(customerInput, customerChannel);
+            builder.PartitionRecords(orderInput, orderChannel);
+            builder.JoinRecords(customerChannel, orderChannel, outputChannel, typeof(CustomerOrderJoinRecordReader), null, typeof(OrderJoinComparer));
+            builder.ProcessRecords(outputChannel, output, typeof(EmptyTask<CustomerOrder>));
 
-            JobConfiguration config = builder.JobConfiguration;
+            JobConfiguration config = builder.CreateJob();
 
             Assert.AreEqual(3, config.Stages.Count);
 
-            VerifyStage(config, config.Stages[0].ChildStage, 2, "SortStage", typeof(SortTask<Customer>), null, null, null, ChannelType.File, ChannelConnectivity.Full, typeof(HashPartitioner<Customer>), typeof(MergeRecordReader<Customer>), typeof(EmptyTask<CustomerOrder>).Name);
-            VerifyStage(config, config.Stages[1].ChildStage, 2, "SortStage2", typeof(SortTask<Order>), null, null, null, ChannelType.File, ChannelConnectivity.Full, typeof(HashPartitioner<Order>), typeof(MergeRecordReader<Order>), typeof(EmptyTask<CustomerOrder>).Name);
+            VerifyStage(config, config.Stages[0].ChildStage, 2, "JoinOuterSortStage", typeof(SortTask<Customer>), null, null, null, ChannelType.File, ChannelConnectivity.Full, typeof(HashPartitioner<Customer>), typeof(MergeRecordReader<Customer>), typeof(EmptyTask<CustomerOrder>).Name);
+            VerifyStage(config, config.Stages[1].ChildStage, 2, "JoinInnerSortStage", typeof(SortTask<Order>), null, null, null, ChannelType.File, ChannelConnectivity.Full, typeof(HashPartitioner<Order>), typeof(MergeRecordReader<Order>), typeof(EmptyTask<CustomerOrder>).Name);
             VerifyStage(config, config.Stages[2], 2, typeof(EmptyTask<CustomerOrder>).Name, typeof(EmptyTask<CustomerOrder>), typeof(CustomerOrderJoinRecordReader), null, typeof(RecordFileWriter<CustomerOrder>), ChannelType.File, ChannelConnectivity.Full, null, null, null);
+            Assert.IsNull(config.Stages[0].GetSetting(PartitionerConstants.EqualityComparerSetting, null));
+            Assert.IsNull(config.Stages[0].ChildStage.GetSetting(SortTaskConstants.ComparerSettingKey, null));
             Assert.AreEqual(typeof(OrderJoinComparer).AssemblyQualifiedName, config.Stages[1].GetSetting(PartitionerConstants.EqualityComparerSetting, null));
             Assert.AreEqual(typeof(OrderJoinComparer).AssemblyQualifiedName, config.Stages[1].ChildStage.GetSetting(SortTaskConstants.ComparerSettingKey, null));
         }

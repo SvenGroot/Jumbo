@@ -63,13 +63,13 @@ namespace Tkl.Jumbo.Jet.Jobs
                 throw new InvalidOperationException(string.Format(CultureInfo.CurrentCulture, "Stage {0} has no output.", stage.StageId));
             }
 
-            DfsInput dfsInput = stage.Input as DfsInput;
+            DfsInput dfsInput = stage.Inputs != null && stage.Inputs.Count == 1 ? stage.Inputs[0] as DfsInput : null;
             StageConfiguration stageConfig;
             if( dfsInput != null )
             {
                 stageConfig = CreateDfsInputStage(stage, job, outputPath, outputWriterType, dfsInput);
             }
-            else if( stage.Input != null )
+            else if( stage.Inputs != null )
             {
                 stageConfig = CreateStageInputStage(stage, job, outputPath, outputWriterType);
             }
@@ -96,14 +96,15 @@ namespace Tkl.Jumbo.Jet.Jobs
         private StageConfiguration CreateStageInputStage(StageBuilder stage, JobConfiguration job, string outputPath, Type outputWriterType)
         {
             StageConfiguration stageConfig;
-            Channel inputChannel = (Channel)stage.Input;
-            int partitionCount = DeterminePartitionCount(inputChannel);
-            bool createAdditionalChildStage = inputChannel.ChannelType != ChannelType.Pipeline && stage.PipelineCreation != PipelineCreationMethod.None && (inputChannel.SendingStage.StageConfiguration.Root.TaskCount > 1 || (partitionCount > 1 && outputPath == null));
+            Channel inputChannel = (Channel)stage.Inputs[0];
+            int partitionCount = DeterminePartitionCount(stage);
 
             StageConfiguration sendingStage = inputChannel.SendingStage.StageConfiguration;
             Type taskType = stage.TaskType;
             string stageId = stage.StageId;
-            if( createAdditionalChildStage )
+            // Check if we can create an additional child stage on the input's sending stage.
+            if( stage.Inputs.Count == 1 && inputChannel.ChannelType != ChannelType.Pipeline && stage.PipelineCreation != PipelineCreationMethod.None && 
+                (inputChannel.SendingStage.StageConfiguration.Root.TaskCount > 1 || (partitionCount > 1 && outputPath == null)) )
             {
                 inputChannel.ChannelType = ChannelType.File;
                 inputChannel.MultiInputRecordReaderType = stage.PipelineOutputMultiRecordReader;
@@ -116,8 +117,8 @@ namespace Tkl.Jumbo.Jet.Jobs
                 sendingStage = CreateAdditionalChildStage(stage, job, inputChannel, partitionCount, sendingStage);
             }
 
-            // We don't do empty task replacement on stages that have scheduling dependencies.
-            if( !stage.HasDependencies && CanReplaceEmptyTask(job, sendingStage, partitionCount, inputChannel.ChannelType, inputChannel.PartitionerType, inputChannel.MultiInputRecordReaderType) )
+            // We don't do empty task replacement if the stage has more than one input or has scheduling dependencies.
+            if( stage.Inputs.Count == 1 && !stage.HasDependencies && CanReplaceEmptyTask(job, sendingStage, partitionCount, inputChannel.ChannelType, inputChannel.PartitionerType, inputChannel.MultiInputRecordReaderType) )
             {
                 stageConfig = sendingStage;
                 sendingStage.TaskType = taskType;
@@ -131,13 +132,14 @@ namespace Tkl.Jumbo.Jet.Jobs
             {
                 // We can pipeline if:
                 // - The channel is pipeline (duh)
-                // - We have no dependencies, the channel type is not specified, the input is a single stage which has no dependent stages, the input task count is 1, and the input has no internal partitioning or has internal partitioning matching the output.
+                // - We have only one input, no dependencies, the channel type is not specified, the input is a single stage which has no dependent stages, 
+                //   the input task count is 1, and the input has no internal partitioning or has internal partitioning matching the output.
                 int taskCount = partitionCount / inputChannel.PartitionsPerTask;
                 ChannelType channelType;
                 if( inputChannel.ChannelType == null )
                 {
                     channelType = ChannelType.File; // Default to File
-                    if( !stage.HasDependencies && inputChannel.SendingStage != null && !inputChannel.SendingStage.HasDependentStages && inputChannel.SendingStage.StageConfiguration.Root.TaskCount == 1 )
+                    if( stage.Inputs.Count == 1 && !stage.HasDependencies && inputChannel.SendingStage != null && !inputChannel.SendingStage.HasDependentStages && inputChannel.SendingStage.StageConfiguration.Root.TaskCount == 1 )
                     {
                         if( inputChannel.SendingStage.StageConfiguration.InternalPartitionCount == 1 )
                             channelType = ChannelType.Pipeline;
@@ -158,26 +160,64 @@ namespace Tkl.Jumbo.Jet.Jobs
                 else
                     channelType = inputChannel.ChannelType.Value;
 
-                InputStageInfo inputInfo = new InputStageInfo(sendingStage)
-                {
-                    ChannelType = channelType,
-                    MultiInputRecordReaderType = inputChannel.MultiInputRecordReaderType,
-                    PartitionerType = inputChannel.PartitionerType,
-                    PartitionsPerTask = inputChannel.PartitionsPerTask,
-                    PartitionAssignmentMethod = inputChannel.PartitionAssignmentMethod
-                };
+                var inputInfo = from Channel channel in stage.Inputs
+                                select new InputStageInfo(stage.Inputs.Count == 1 ? sendingStage : channel.SendingStage.StageConfiguration)
+                                {
+                                    ChannelType = channel.ChannelType == null ? channelType : channel.ChannelType.Value,
+                                    MultiInputRecordReaderType = channel.MultiInputRecordReaderType,
+                                    PartitionerType = channel.PartitionerType,
+                                    PartitionsPerTask = channel.PartitionsPerTask,
+                                    PartitionAssignmentMethod = channel.PartitionAssignmentMethod
+                                };
 
-                stageConfig = job.AddStage(MakeUniqueStageId(stageId), taskType, taskCount, inputInfo, outputPath, outputWriterType);
+                stageConfig = job.AddStage(MakeUniqueStageId(stageId), taskType, taskCount, inputInfo, stage.StageMultiInputRecordReaderType, outputPath, outputWriterType);
 
                 if( inputChannel.PartitionerType != null )
                     _jobBuilder.AddAssemblies(inputChannel.PartitionerType.Assembly);
                 if( inputChannel.MultiInputRecordReaderType != null )
                     _jobBuilder.AddAssemblies(inputChannel.MultiInputRecordReaderType.Assembly);
+
+                if( channelType != ChannelType.Pipeline )
+                {
+                    foreach( Channel channel in stage.Inputs )
+                    {
+                        if( channel.SendingStage.Inputs != null && channel.SendingStage.Inputs.Count == 1 )
+                        {
+                            // If any of the inputs is a child stage with MatchOutputChannelPartitions set and an automatically determined task count of 1 and no existing internal partitions, we match
+                            Channel sendingStageInputChannel = channel.SendingStage.Inputs[0] as Channel;
+                            if( sendingStageInputChannel != null && sendingStageInputChannel.ChannelType == ChannelType.Pipeline && sendingStageInputChannel.MatchOutputChannelPartitions && sendingStageInputChannel.PartitionCount == 0 &&
+                                channel.SendingStage.StageConfiguration.Parent != null && channel.SendingStage.StageConfiguration.ChildStage == null && channel.SendingStage.StageConfiguration.InternalPartitionCount == 1 &&
+                                channel.SendingStage.StageConfiguration.TaskCount == 1 )
+                            {
+                                channel.SendingStage.StageConfiguration.TaskCount = partitionCount;
+                            }
+                        }
+                    }
+                }
             }
 
             _jobBuilder.AddAssemblies(taskType.Assembly);
 
             return stageConfig;
+        }
+
+        private int DeterminePartitionCount(StageBuilder stage)
+        {
+            int partitionCount = 0;
+            int partitionsPerTask = 0;
+            foreach( Channel channel in stage.Inputs )
+            {
+                int channelPartitionCount = DeterminePartitionCount(channel);
+                if( partitionCount == 0 )
+                    partitionCount = channelPartitionCount;
+                else if( partitionCount != channelPartitionCount )
+                    throw new InvalidOperationException(string.Format(CultureInfo.CurrentCulture, "Not all inputs for stage {0} have the same partition count.", stage.StageId));
+                if( partitionsPerTask == 0 )
+                    partitionsPerTask = channel.PartitionsPerTask;
+                else if( partitionsPerTask != channel.PartitionsPerTask )
+                    throw new InvalidOperationException(string.Format(CultureInfo.CurrentCulture, "Not all inputs for stage {0} have the same number of partitions per task.", stage.StageId));
+            }
+            return partitionCount;
         }
 
         private StageConfiguration CreateAdditionalChildStage(StageBuilder stage, JobConfiguration job, Channel inputChannel, int partitionCount, StageConfiguration sendingStage)
