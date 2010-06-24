@@ -10,7 +10,7 @@ using Tkl.Jumbo.IO;
 namespace Tkl.Jumbo.Jet.Jobs
 {
     /// <summary>
-    /// Represents input read from the DFS for a stage in a job being built by the <see cref="OldJobBuilder"/> class.
+    /// Represents input read from the DFS for a stage in a job being built by the <see cref="JobBuilder"/> class.
     /// </summary>
     public sealed class DfsInput : IStageInput
     {

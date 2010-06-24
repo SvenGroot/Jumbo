@@ -13,7 +13,7 @@ using Tkl.Jumbo.IO;
 namespace Tkl.Jumbo.Jet.Jobs
 {
     /// <summary>
-    /// Creates a <see cref="JobConfiguration"/> from a <see cref="OldJobBuilder"/>
+    /// Creates a <see cref="JobConfiguration"/> from a <see cref="JobBuilder"/>
     /// </summary>
     sealed class JobBuilderCompiler
     {

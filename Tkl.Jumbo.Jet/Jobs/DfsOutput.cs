@@ -9,7 +9,7 @@ using Tkl.Jumbo.IO;
 namespace Tkl.Jumbo.Jet.Jobs
 {
     /// <summary>
-    /// Represents output written to the DFS for a stage in a job being built by the <see cref="OldJobBuilder"/> class.
+    /// Represents output written to the DFS for a stage in a job being built by the <see cref="JobBuilder"/> class.
     /// </summary>
     public sealed class DfsOutput : IStageOutput
     {

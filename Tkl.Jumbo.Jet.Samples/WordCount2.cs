@@ -19,7 +19,7 @@ namespace Tkl.Jumbo.Jet.Samples
     /// Job runner for word count.
     /// </summary>
     [Description("Counts the number of occurrences of each word in the input file or files. This version uses JobBuilder.")]
-    public sealed class WordCount2 : OldJobBuilderJob
+    public sealed class WordCount2 : JobBuilderJob
     {
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(WordCount2));
 
@@ -51,19 +51,19 @@ namespace Tkl.Jumbo.Jet.Samples
         /// Builds the job.
         /// </summary>
         /// <param name="builder">The job builder</param>
-        protected override void BuildJob(OldJobBuilder builder)
+        protected override void BuildJob(JobBuilder builder)
         {
             DfsClient dfsClient = new DfsClient(DfsConfiguration);
 
             CheckAndCreateOutputPath(dfsClient, _outputPath);
 
-            var input = builder.CreateRecordReader<Utf8String>(_inputPath, typeof(WordRecordReader));
-            var collector = new RecordCollector<Pair<Utf8String, int>>() { PartitionCount = _combinerTasks };
-            var output = builder.CreateRecordWriter<Pair<Utf8String, int>>(_outputPath, typeof(TextRecordWriter<Pair<Utf8String, int>>), (int)BlockSize.Value, ReplicationFactor);
+            var input = new DfsInput(_inputPath, typeof(WordRecordReader));
+            var collector = new Channel() { PartitionCount = _combinerTasks };
+            var output = CreateDfsOutput(_outputPath, typeof(TextRecordWriter<Pair<Utf8String, int>>));
 
-            builder.ProcessRecords(input, collector.CreateRecordWriter(), WordCount);
+            builder.ProcessRecords<Utf8String, Pair<Utf8String, int>>(input, collector, WordCount);
 
-            builder.AccumulateRecords(collector.CreateRecordReader(), output, WordCountAccumulator);
+            builder.AccumulateRecords<Utf8String, int>(collector, output, WordCountAccumulator);
         }
 
         /// <summary>
@@ -71,8 +71,9 @@ namespace Tkl.Jumbo.Jet.Samples
         /// </summary>
         /// <param name="input"></param>
         /// <param name="output"></param>
+        /// <param name="context"></param>
         [AllowRecordReuse]
-        public static void WordCount(RecordReader<Utf8String> input, RecordWriter<Pair<Utf8String, int>> output)
+        public static void WordCount(RecordReader<Utf8String> input, RecordWriter<Pair<Utf8String, int>> output, TaskContext context)
         {
             _log.Info("Starting count.");
             Pair<Utf8String, int> record = new Pair<Utf8String, int>(null, 1);

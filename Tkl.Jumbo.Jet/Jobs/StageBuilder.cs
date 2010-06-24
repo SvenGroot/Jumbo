@@ -11,7 +11,7 @@ using Tkl.Jumbo.IO;
 namespace Tkl.Jumbo.Jet.Jobs
 {
     /// <summary>
-    /// Represents a stage in a job being built be the <see cref="OldJobBuilder"/> class.
+    /// Represents a stage in a job being built be the <see cref="JobBuilder"/> class.
     /// </summary>
     public sealed class StageBuilder
     {

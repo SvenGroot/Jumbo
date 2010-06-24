@@ -73,7 +73,7 @@ namespace Tkl.Jumbo.Jet.Samples
         }
 
         /// <summary>
-        /// Overrides <see cref="OldJobBuilderJob.OnJobCreated"/>.
+        /// Overrides <see cref="JobBuilderJob.OnJobCreated"/>.
         /// </summary>
         /// <param name="job"></param>
         /// <param name="jobConfiguration"></param>

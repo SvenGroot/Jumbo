@@ -62,12 +62,12 @@ namespace Tkl.Jumbo.Jet.Jobs
         }
 
         /// <summary>
-        /// Creates a <see cref="JobConfiguration"/> from this <see cref="OldJobBuilder"/>.
+        /// Creates a <see cref="JobConfiguration"/> from this <see cref="JobBuilder"/>.
         /// </summary>
         /// <returns>A <see cref="JobConfiguration"/> for the job.</returns>
         /// <remarks>
         /// <para>
-        ///   After calling this method the <see cref="OldJobBuilder"/> can no longer be modified.
+        ///   After calling this method the <see cref="JobBuilder"/> can no longer be modified.
         /// </para>
         /// </remarks>
         public JobConfiguration CreateJob()
@@ -133,7 +133,7 @@ namespace Tkl.Jumbo.Jet.Jobs
         /// <param name="output">The <see cref="Channel"/> or <see cref="DfsOutput"/> to write the result to.</param>
         /// <param name="task">The task function.</param>
         /// <returns>A <see cref="StageBuilder"/> that can be used to customize the stage that will be created for the operation.</returns>
-        public StageBuilder ProcessRecords<TInput, TOutput>(IStageInput input, IStageOutput output, TaskFunctionWithContext<TInput, TOutput> task)
+        public StageBuilder ProcessRecords<TInput, TOutput>(IStageInput input, IStageOutput output, TaskFunction<TInput, TOutput> task)
         {
             if( input == null )
                 throw new ArgumentNullException("input");
@@ -154,7 +154,7 @@ namespace Tkl.Jumbo.Jet.Jobs
         /// <param name="output">The <see cref="Channel"/> or <see cref="DfsOutput"/> to write the result to.</param>
         /// <param name="task">The task function.</param>
         /// <returns>A <see cref="StageBuilder"/> that can be used to customize the stage that will be created for the operation.</returns>
-        public StageBuilder ProcessRecords<TInput, TOutput>(IStageInput input, IStageOutput output, PushTaskFunctionWithConfiguration<TInput, TOutput> task)
+        public StageBuilder ProcessRecords<TInput, TOutput>(IStageInput input, IStageOutput output, PushTaskFunction<TInput, TOutput> task)
         {
             if( input == null )
                 throw new ArgumentNullException("input");
@@ -349,7 +349,7 @@ namespace Tkl.Jumbo.Jet.Jobs
         /// <param name="task">The task function.</param>
         /// <param name="taskCount">The number of tasks in the stage.</param>
         /// <returns>A <see cref="StageBuilder"/> that can be used to customize the stage that will be created for the operation.</returns>
-        public StageBuilder GenerateRecords<T>(IStageOutput output, OutputOnlyTaskFunctionWithConfiguration<T> task, int taskCount)
+        public StageBuilder GenerateRecords<T>(IStageOutput output, OutputOnlyTaskFunction<T> task, int taskCount)
         {
             if( task == null )
                 throw new ArgumentNullException("task");

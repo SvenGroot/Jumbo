@@ -10,7 +10,7 @@ using Tkl.Jumbo.Jet.Channels;
 namespace Tkl.Jumbo.Jet.Jobs
 {
     /// <summary>
-    /// Represents a channel between to stages in a job being built by the <see cref="OldJobBuilder"/> class.
+    /// Represents a channel between to stages in a job being built by the <see cref="JobBuilder"/> class.
     /// </summary>
     public sealed class Channel : IStageInput, IStageOutput
     {
@@ -63,7 +63,7 @@ namespace Tkl.Jumbo.Jet.Jobs
         /// Gets or sets the channel type.
         /// </summary>
         /// <value>
-        /// The channel type, or <see langword="null"/> to let the <see cref="OldJobBuilder"/> decide. The default value is <see langword="null"/>.
+        /// The channel type, or <see langword="null"/> to let the <see cref="JobBuilder"/> decide. The default value is <see langword="null"/>.
         /// </value>
         public ChannelType? ChannelType { get; set; }
 
@@ -71,7 +71,7 @@ namespace Tkl.Jumbo.Jet.Jobs
         /// Gets or sets the number of partitions to create
         /// </summary>
         /// <value>
-        /// The number of partitions to create, or zero to let the <see cref="OldJobBuilder"/> decide. The default value is zero.
+        /// The number of partitions to create, or zero to let the <see cref="JobBuilder"/> decide. The default value is zero.
         /// </value>
         public int PartitionCount
         {

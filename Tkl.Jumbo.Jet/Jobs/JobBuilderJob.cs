@@ -10,7 +10,7 @@ using Tkl.Jumbo.IO;
 namespace Tkl.Jumbo.Jet.Jobs
 {
     /// <summary>
-    /// Base class for job runners that use the <see cref="OldJobBuilder"/> to create the job configuration.
+    /// Base class for job runners that use the <see cref="JobBuilder"/> to create the job configuration.
     /// </summary>
     public abstract class JobBuilderJob : BaseJobRunner
     {

@@ -156,12 +156,9 @@
     <Compile Include="Jobs\BaseJobRunner.cs" />
     <Compile Include="Jobs\BasicJob.cs" />
     <Compile Include="Jobs\IJobRunner.cs" />
-    <Compile Include="Jobs\OldJobBuilder.cs" />
     <Compile Include="Jobs\JobBuilderDelegates.cs" />
-    <Compile Include="Jobs\OldJobBuilderJob.cs" />
     <Compile Include="Jobs\JobRunnerArgument.cs" />
     <Compile Include="Jobs\JobRunnerInfo.cs" />
-    <Compile Include="Jobs\RecordCollector.cs" />
     <Compile Include="MergeRecordReader.cs" />
     <Compile Include="Channels\PipelinePullTaskRecordWriter.cs" />
     <Compile Include="PrepartitionedPartitioner.cs" />

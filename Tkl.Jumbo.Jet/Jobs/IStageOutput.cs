@@ -8,7 +8,7 @@ using System.Text;
 namespace Tkl.Jumbo.Jet.Jobs
 {
     /// <summary>
-    /// Represents the output from a stage in a job being built by the <see cref="OldJobBuilder"/> class, such as a channel or DFS output.
+    /// Represents the output from a stage in a job being built by the <see cref="JobBuilder"/> class, such as a channel or DFS output.
     /// </summary>
     public interface IStageOutput
     {

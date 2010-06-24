@@ -130,7 +130,7 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
         /// <summary>
         /// Constructs the job configuration using the specified job builder.
         /// </summary>
-        /// <param name="builder">The <see cref="OldJobBuilder"/>.</param>
+        /// <param name="builder">The <see cref="JobBuilder"/>.</param>
         protected override void BuildJob(JobBuilder builder)
         {
             CheckAndCreateOutputPath(_outputPath);
@@ -467,7 +467,7 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
             return fgList;
         }
 
-        private void BuildJob<T>(JobBuilder builder, TaskFunctionWithContext<Utf8String, Pair<int, T>> generateFunction, TaskFunctionWithContext<Pair<int, T>, Pair<int, WritableCollection<MappedFrequentPattern>>> mineFunction)
+        private void BuildJob<T>(JobBuilder builder, TaskFunction<Utf8String, Pair<int, T>> generateFunction, TaskFunction<Pair<int, T>, Pair<int, WritableCollection<MappedFrequentPattern>>> mineFunction)
         {
             DfsClient client = new DfsClient(DfsConfiguration);
 
