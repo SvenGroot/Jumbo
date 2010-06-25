@@ -31,7 +31,6 @@ namespace JobServerApplication
         private readonly Dictionary<string, TaskInfo> _schedulingTasksById = new Dictionary<string, TaskInfo>();
         private readonly List<TaskInfo> _orderedSchedulingDfsInputTasks = new List<TaskInfo>();
         private readonly List<TaskInfo> _orderedSchedulingNonInputTasks = new List<TaskInfo>();
-        private readonly ManualResetEvent _jobCompletedEvent = new ManualResetEvent(false);
         private readonly ReadOnlyCollection<StageInfo> _stages;
         private readonly Job _job;
         private readonly DateTime _startTimeUtc;

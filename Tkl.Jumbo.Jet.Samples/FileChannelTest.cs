@@ -56,7 +56,7 @@ namespace Tkl.Jumbo.Jet.Samples
         public static void RecordCounterTask(RecordReader<GenSortRecord> input, RecordWriter<long> output, TaskContext context)
         {
             long recordCount = 0;
-            foreach( GenSortRecord record in input.EnumerateRecords() )
+            while( input.ReadRecord() )
                 ++recordCount;
 
             output.WriteRecord(recordCount);

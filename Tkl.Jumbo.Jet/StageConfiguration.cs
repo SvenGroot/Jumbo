@@ -346,7 +346,7 @@ namespace Tkl.Jumbo.Jet
                 throw new ArgumentNullException("outputPath");
             if( recordWriterType == null )
                 throw new ArgumentNullException("recordWriterType");
-            if( TaskType == null || string.IsNullOrEmpty(StageId) )
+            if( TaskType.TypeName == null || string.IsNullOrEmpty(StageId) )
                 throw new InvalidOperationException("Cannot set output before stage ID and task type are set.");
             if( ChildStage != null || OutputChannel != null || DfsOutput != null )
                 throw new InvalidOperationException("This stage already has output.");
