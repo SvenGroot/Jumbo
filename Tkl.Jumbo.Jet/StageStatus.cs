@@ -16,6 +16,7 @@ namespace Tkl.Jumbo.Jet
     public class StageStatus
     {
         private readonly ExtendedCollection<TaskStatus> _tasks = new ExtendedCollection<TaskStatus>();
+        private TaskMetrics _stageMetrics; // Used only if the JobStatus was created with JobStatus.FromXml()
 
         /// <summary>
         /// Gets or sets the ID of the stage.
@@ -145,6 +146,10 @@ namespace Tkl.Jumbo.Jet
         {
             get 
             {
+                // Stage metrics will be non-null only if the job was loaded with JobStatus.FromXml().
+                if( _stageMetrics != null )
+                    return _stageMetrics;
+
                 TaskMetrics result = new TaskMetrics();
                 foreach( TaskStatus task in Tasks )
                 {
@@ -164,6 +169,10 @@ namespace Tkl.Jumbo.Jet
                     }
                 }
                 return result;
+            }
+            internal set
+            {
+                _stageMetrics = value;
             }
         }
 

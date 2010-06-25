@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text;
 using System.IO;
 using System.Globalization;
+using System.Xml.Linq;
 
 namespace Tkl.Jumbo.Jet
 {
@@ -120,6 +121,53 @@ namespace Tkl.Jumbo.Jet
             _log.InfoFormat("Local bytes written: {0}", LocalBytesWritten);
             _log.InfoFormat("Channel network bytes read: {0}", NetworkBytesRead);
             _log.InfoFormat("Channel network bytes written: {0}", NetworkBytesWritten);
+        }
+
+        /// <summary>
+        /// Returns the value of this <see cref="TaskMetrics"/> object as an <see cref="XElement"/>.
+        /// </summary>
+        /// <returns>The value of this <see cref="TaskMetrics"/> object as an <see cref="XElement"/>.</returns>
+        public XElement ToXml()
+        {
+            return new XElement("Metrics",
+                new XElement("InputRecords", InputRecords),
+                new XElement("OutputRecords", OutputRecords),
+                new XElement("InputBytes", InputBytes),
+                new XElement("OutputBytes", OutputBytes),
+                new XElement("DfsBytesRead", DfsBytesRead),
+                new XElement("DfsBytesWritten", DfsBytesWritten),
+                new XElement("LocalBytesRead", LocalBytesRead),
+                new XElement("LocalBytesWritten", LocalBytesWritten),
+                new XElement("NetworkBytesRead", NetworkBytesRead),
+                new XElement("NetworkBytesWritten", NetworkBytesWritten)
+                );
+        }
+
+        /// <summary>
+        /// Creates a <see cref="TaskMetrics"/> instance from an XML element.
+        /// </summary>
+        /// <param name="element">The element. May be <see langword="null"/>.</param>
+        /// <returns>A <see cref="TaskMetrics"/> object created from the XML element, or <see langword="null"/> if <paramref name="element"/> was <see langword="null"/>.</returns>
+        public static TaskMetrics FromXml(XElement element)
+        {
+            if( element == null )
+                return null;
+            if( element.Name != "Metrics" )
+                throw new ArgumentException("Invalid metrics element.", "element");
+
+            return new TaskMetrics()
+            {
+                InputRecords = Convert.ToInt64(element.Element("InputRecords").Value),
+                OutputRecords = Convert.ToInt64(element.Element("OutputRecords").Value),
+                InputBytes = Convert.ToInt64(element.Element("InputBytes").Value),
+                OutputBytes = Convert.ToInt64(element.Element("OutputBytes").Value),
+                DfsBytesRead = Convert.ToInt64(element.Element("DfsBytesRead").Value),
+                DfsBytesWritten = Convert.ToInt64(element.Element("DfsBytesWritten").Value),
+                LocalBytesRead = Convert.ToInt64(element.Element("LocalBytesRead").Value),
+                LocalBytesWritten = Convert.ToInt64(element.Element("LocalBytesWritten").Value),
+                NetworkBytesRead = Convert.ToInt64(element.Element("NetworkBytesRead").Value),
+                NetworkBytesWritten = Convert.ToInt64(element.Element("NetworkBytesWritten").Value)
+            };
         }
     }
 }

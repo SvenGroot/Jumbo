@@ -174,6 +174,18 @@ namespace Tkl.Jumbo.Jet
         }
 
         /// <summary>
+        /// Gets the stage with the specified ID.
+        /// </summary>
+        /// <param name="stageId">The stage ID.</param>
+        /// <returns>The specified stage, or <see langword="null"/> if no stage with the specified ID exists.</returns>
+        public StageStatus GetStage(string stageId)
+        {
+            return (from stage in Stages
+                    where stage.StageId == stageId
+                    select stage).SingleOrDefault();
+        }
+
+        /// <summary>
         /// Gets an XML document containing the job status.
         /// </summary>
         /// <returns>An <see cref="XDocument"/> containing the job status.</returns>
@@ -182,6 +194,7 @@ namespace Tkl.Jumbo.Jet
             return new XDocument(new XDeclaration("1.0", "utf-8", null),
                 new XElement("Job",
                     new XAttribute("id", JobId.ToString()),
+                    new XAttribute("name", JobName),
                     new XElement("JobInfo",
                         new XAttribute("startTime", StartTime.ToString(DatePattern, System.Globalization.CultureInfo.InvariantCulture)),
                         new XAttribute("endTime", EndTime.ToString(DatePattern, System.Globalization.CultureInfo.InvariantCulture)),
@@ -198,7 +211,14 @@ namespace Tkl.Jumbo.Jet
                         null : 
                         new XElement("FailedTaskAttempts",
                             from task in FailedTaskAttempts
-                            select task.ToXml())));
+                            select task.ToXml()),
+                    new XElement("StageMetrics",
+                        from stage in Stages
+                        select new XElement("Stage",
+                            new XAttribute("id", stage.StageId),
+                            stage.Metrics.ToXml()))
+                )
+            );
         }
 
         /// <summary>
@@ -217,6 +237,7 @@ namespace Tkl.Jumbo.Jet
             JobStatus jobStatus = new JobStatus()
             {
                 JobId = new Guid(job.Attribute("id").Value),
+                JobName = job.Attribute("name") == null ? null : job.Attribute("name").Value,
                 StartTime = DateTime.ParseExact(jobInfo.Attribute("startTime").Value, JobStatus.DatePattern, System.Globalization.CultureInfo.InvariantCulture),
                 EndTime = DateTime.ParseExact(jobInfo.Attribute("endTime").Value, JobStatus.DatePattern, System.Globalization.CultureInfo.InvariantCulture),
                 FinishedTaskCount = (int)jobInfo.Attribute("finishedTasks"),
@@ -240,6 +261,17 @@ namespace Tkl.Jumbo.Jet
                 jobStatus.FailedTaskAttempts.AddRange(from task in job.Element("FailedTaskAttempts").Elements("Task")
                                                       select TaskStatus.FromXml(task, jobStatus));
             }
+
+            XElement metricsElement = job.Element("StageMetrics");
+            if( metricsElement != null )
+            {
+                foreach( XElement stage in metricsElement.Elements("Stages") )
+                {
+                    string stageId = stage.Attribute("id").Value;
+                    jobStatus.GetStage(stageId).Metrics = TaskMetrics.FromXml(stage.Element("Metrics"));
+                }
+            }
+
             return jobStatus;
 
         }

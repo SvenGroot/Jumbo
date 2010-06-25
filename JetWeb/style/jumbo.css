@@ -92,6 +92,10 @@ th
 {
     text-align: left;
 }
+th[scope="colgroup"]
+{
+    text-align: center;
+}
 pre.debug
 {
 	font-family: Consolas, monospace;
