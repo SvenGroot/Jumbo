@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text;
 using System.IO;
 using Tkl.Jumbo.IO;
+using System.Globalization;
 
 namespace Tkl.Jumbo.IO
 {
@@ -16,6 +17,7 @@ namespace Tkl.Jumbo.IO
     public abstract class RecordWriter<T> : IRecordWriter, IDisposable
     {
         private int _recordsWritten;
+        private readonly bool _recordTypeIsSealed = typeof(T).IsSealed;
 
         /// <summary>
         /// Gets the total number of records written by this record writer.
@@ -55,6 +57,11 @@ namespace Tkl.Jumbo.IO
         /// <param name="record">The record to write.</param>
         public void WriteRecord(T record)
         {
+            if( record == null )
+                throw new ArgumentNullException("record");
+            // Skip the type check if the record type is sealed.
+            if( !_recordTypeIsSealed && record.GetType() != typeof(T) )
+                throw new ArgumentException(string.Format(CultureInfo.CurrentCulture, "The record was type {0} rather than {1}.", record.GetType(), typeof(T)), "record");
             WriteRecordInternal(record);
             // Increment this after the write, so if the implementation of WriteRecordsInternal throws an exception the count
             // is not incremented.
