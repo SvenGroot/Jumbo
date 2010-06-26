@@ -33,6 +33,7 @@ public partial class job : System.Web.UI.Page
             HtmlTableRow row = new HtmlTableRow() { ID = "CurrentJobRow" };
             row.Cells.Add(new HtmlTableCell() { InnerText = job.StartTime.ToString(_datePattern, System.Globalization.CultureInfo.InvariantCulture) });
             TimeSpan duration;
+            _configLink.HRef = "jobconfig.ashx?id=" + jobId.ToString();
             if( job.IsFinished )
             {
                 _downloadLink.HRef = "jobinfo.ashx?id=" + jobId.ToString();

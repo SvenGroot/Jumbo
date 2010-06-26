@@ -17,6 +17,9 @@
             </tr>
         </table>
         <p>
+            <a id="_configLink" href="jobconfig.ashx" runat="server">View job configuration</a>
+        </p>
+        <p>
             <a id="_downloadLink" href="jobinfo.ashx" visible="false" runat="server">Download job information.</a>
         </p>
         <h3>Stages</h3>

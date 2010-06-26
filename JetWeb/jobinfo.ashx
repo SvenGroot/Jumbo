@@ -88,6 +88,12 @@ public class jobinfo : IHttpHandler
             {
                 configStream.CopyTo(stream);
             }
+
+            stream.PutNextEntry(new ZipEntry("config.xslt"));
+            using( FileStream configXsltStream = File.OpenRead(context.Server.MapPath("~/config.xslt")) )
+            {
+                configXsltStream.CopyTo(stream);
+            }
             
             stream.PutNextEntry(new ZipEntry("summary.xml"));
             using( MemoryStream xmlStream = new MemoryStream() )
@@ -97,6 +103,12 @@ public class jobinfo : IHttpHandler
                     job.ToXml().Save(writer);
                 }
                 xmlStream.WriteTo(stream);
+            }
+
+            stream.PutNextEntry(new ZipEntry("summary.xslt"));
+            using( FileStream configXsltStream = File.OpenRead(context.Server.MapPath("~/summary.xslt")) )
+            {
+                configXsltStream.CopyTo(stream);
             }
 
             var servers = (from stage in job.Stages 

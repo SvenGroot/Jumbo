@@ -191,7 +191,7 @@ namespace Tkl.Jumbo.Jet
         /// <returns>An <see cref="XDocument"/> containing the job status.</returns>
         public XDocument ToXml()
         {
-            return new XDocument(new XDeclaration("1.0", "utf-8", null),
+            return new XDocument(new XDeclaration("1.0", "utf-8", null), new XProcessingInstruction("xml-stylesheet", "type=\"text/xsl\" href=\"summary.xslt\""),
                 new XElement("Job",
                     new XAttribute("id", JobId.ToString()),
                     new XAttribute("name", JobName),

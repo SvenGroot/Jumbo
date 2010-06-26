@@ -439,7 +439,17 @@ namespace Tkl.Jumbo.Jet
         {
             if( stream == null )
                 throw new ArgumentNullException("stream");
-            _serializer.Serialize(stream, this);
+            XmlWriterSettings settings = new XmlWriterSettings()
+            {
+                Indent = true,
+                IndentChars = "  "
+            };
+            using( XmlWriter writer = XmlWriter.Create(stream, settings) )
+            {
+                writer.WriteStartDocument();
+                writer.WriteProcessingInstruction("xml-stylesheet", "type=\"text/xsl\" href=\"config.xslt\"");
+                _serializer.Serialize(writer, this);
+            }
         }
 
         /// <summary>
