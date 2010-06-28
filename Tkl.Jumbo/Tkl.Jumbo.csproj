@@ -103,6 +103,8 @@
     <Compile Include="IndividualProcessorStatus.cs" />
     <Compile Include="IO\ChildReaderException.cs" />
     <Compile Include="IO\IMultiRecordWriter.cs" />
+    <Compile Include="IO\IRecordOutputStream.cs" />
+    <Compile Include="IO\RecordStreamOptions.cs" />
     <Compile Include="IO\ValueWriter.cs" />
     <Compile Include="IO\IMultiInputRecordReader.cs" />
     <Compile Include="IO\InnerJoinRecordReader.cs" />

@@ -16,6 +16,7 @@ using Tkl.Jumbo;
 using System.Threading;
 using System.Collections.ObjectModel;
 using Tkl.Jumbo.Topology;
+using Tkl.Jumbo.IO;
 
 namespace NameServerApplication
 {
@@ -230,11 +231,11 @@ namespace NameServerApplication
         }
 
 
-        public BlockAssignment CreateFile(string path, int blockSize, int replicationFactor)
+        public BlockAssignment CreateFile(string path, int blockSize, int replicationFactor, RecordStreamOptions recordOptions)
         {
             _log.Debug("CreateFile called");
             CheckSafeMode();
-            BlockInfo block = _fileSystem.CreateFile(path, blockSize == 0 ? BlockSize : blockSize, replicationFactor == 0 ? _replicationFactor : replicationFactor);
+            BlockInfo block = _fileSystem.CreateFile(path, blockSize == 0 ? BlockSize : blockSize, replicationFactor == 0 ? _replicationFactor : replicationFactor, recordOptions);
             try
             {
                 lock( _pendingBlocks )

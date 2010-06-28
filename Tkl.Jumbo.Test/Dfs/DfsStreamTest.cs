@@ -179,5 +179,83 @@ namespace Tkl.Jumbo.Test.Dfs
                 }
             }
         }
+
+        [Test]
+        public void TestStreamsRecordBoundary()
+        {
+            const int size = 100000000;
+            const string fileName = "/RecordBoundary";
+            const int recordSize = 1000;
+            const int blockSize = 16 * (int)ByteSize.Megabyte;
+
+            // This test exercises both DfsOutputStream and DfsInputStream by writing a file to the DFS and reading it back
+            using( MemoryStream stream = new MemoryStream() )
+            {
+                // Create a file. This size is chosen so it's not a whole number of packets.
+                Trace.WriteLine("Creating file");
+                Trace.Flush();
+                Utilities.GenerateData(stream, size);
+                stream.Position = 0;
+                Trace.WriteLine("Uploading file");
+                Trace.Flush();
+                int realSize;
+                int blockPadding = blockSize % recordSize;
+                using( DfsOutputStream output = new DfsOutputStream(_nameServer, fileName, blockSize, 0, IO.RecordStreamOptions.DoNotCrossBoundary) )
+                {
+                    byte[] buffer = new byte[recordSize];
+                    int bytesRead = 0;
+                    while( (bytesRead = stream.Read(buffer, 0, recordSize)) > 0 )
+                    {
+                        output.Write(buffer, 0, bytesRead);
+                        output.MarkRecord();
+                    }
+
+                    int blocks = size / blockSize;
+                    if( size % blockSize != 0 )
+                        ++blocks;
+
+                    int totalPadding = (blocks - 1) * blockPadding;
+                    realSize = size + totalPadding;
+                    Assert.AreEqual(realSize, output.Length);
+                    Assert.AreEqual(realSize, output.Position);
+                }
+
+                Trace.WriteLine("Comparing file");
+                Trace.Flush();
+                stream.Position = 0;
+                using( DfsInputStream input = new DfsInputStream(_nameServer, fileName) )
+                {
+                    Assert.AreEqual(blockSize, input.BlockSize);
+                    Assert.IsTrue(input.CanRead);
+                    Assert.IsTrue(input.CanSeek);
+                    Assert.IsFalse(input.CanWrite);
+                    Assert.AreEqual(realSize, input.Length);
+                    Assert.AreEqual(0, input.Position);
+                    Assert.IsTrue(Utilities.CompareStream(stream, input));
+                    Assert.AreEqual(realSize, input.Position);
+                    Trace.WriteLine("Testing stream seek.");
+                    Trace.Flush();
+                    int startPosition = blockSize - 10000;
+                    input.Position = startPosition;
+                    stream.Position = startPosition;
+                    byte[] buffer = new byte[100000];
+                    byte[] buffer2 = new byte[100000];
+                    input.Read(buffer, 0, buffer.Length);
+                    stream.Read(buffer2, 0, buffer.Length);
+                    Assert.IsTrue(Utilities.CompareArray(buffer, 0, buffer2, 0, buffer.Length));
+                    Assert.AreEqual(startPosition + buffer.Length + blockPadding, input.Position);
+                    Utilities.TraceLineAndFlush("Testing stream seek into padding.");
+                    startPosition = blockSize - blockPadding / 2;
+                    input.Position = startPosition;
+                    // We read from the reference stream after the last record in the first block rather than the computed position.
+                    stream.Position = blockSize - blockPadding;
+                    input.Read(buffer, 0, buffer.Length);
+                    stream.Read(buffer2, 0, buffer.Length);
+                    Assert.IsTrue(Utilities.CompareArray(buffer, 0, buffer2, 0, buffer.Length));
+                    // Position of input should have been updated to blockSize after the seek, so the current position should reflect that.
+                    Assert.AreEqual(blockSize + buffer.Length, input.Position);
+                }
+            }
+        }
     }
 }

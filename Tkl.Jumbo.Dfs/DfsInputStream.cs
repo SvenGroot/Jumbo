@@ -10,6 +10,7 @@ using System.Runtime.Serialization.Formatters.Binary;
 using System.Diagnostics;
 using System.Threading;
 using System.Net;
+using System.Globalization;
 
 namespace Tkl.Jumbo.Dfs
 {
@@ -192,6 +193,8 @@ namespace Tkl.Jumbo.Dfs
                     if( _currentPacket == null )
                         _currentPacket = _packetBuffer.ReadItem;
 
+                    ThrowIfErrorOccurred();
+
                     // Where in the current packet do we need to read?
                     int packetOffset = (int)(_position % Packet.PacketSize);
                     int packetCount = Math.Min(_currentPacket.Size - packetOffset, sizeRemaining);
@@ -201,16 +204,20 @@ namespace Tkl.Jumbo.Dfs
                     offset += copied;
                     sizeRemaining -= copied;
                     _position += copied;
+                    packetOffset += copied;
 
-                    if( _position % Packet.PacketSize == 0 )
+                    if( packetOffset == _currentPacket.Size )
                     {
+                        // If this is the last packet in the block but not the last packet in the file, and the size is less than the max packet size,
+                        // it means this packet is padded so we should adjust the position.
+                        if( _currentPacket.IsLastPacket && _position < Length )
+                        {
+                            _position += (Packet.PacketSize - _currentPacket.Size);
+                        }
                         _currentPacket = null;
                     }
                 }
-                if( _lastException != null )
-                    throw new DfsException("Couldn't read data from the server.", _lastException);
-                if( _lastResult != DataServerClientProtocolResult.Ok )
-                    throw new DfsException("Couldn't read data from the server.");
+                ThrowIfErrorOccurred();
 
                 Debug.Assert(sizeRemaining == 0);
             }
@@ -306,10 +313,9 @@ namespace Tkl.Jumbo.Dfs
             Random rnd = new Random();
             try
             {
-                long position = _position;
-                while( !_disposed && position < _file.Size && _lastResult == DataServerClientProtocolResult.Ok )
+                int blockOffset = (int)(_position % BlockSize);
+                for( int blockIndex = (int)(_position / BlockSize); !_disposed && blockIndex < _file.Blocks.Count && _lastResult == DataServerClientProtocolResult.Ok; ++blockIndex )
                 {
-                    int blockIndex = (int)(position / BlockSize);
                     Guid block = _file.Blocks[blockIndex];
                     _log.DebugFormat("Retrieving list of servers for block {{{0}}}.", block);
                     List<ServerAddress> servers = _nameServer.GetDataServersForBlock(block).ToList();
@@ -318,7 +324,6 @@ namespace Tkl.Jumbo.Dfs
                     do
                     {
                         retry = false;
-                        int blockOffset = (int)(position % BlockSize);
                         ServerAddress server;
                         if( servers[0].HostName == Dns.GetHostName() )
                             server = servers[0];
@@ -327,8 +332,10 @@ namespace Tkl.Jumbo.Dfs
                         _log.DebugFormat("Connecting to server {0} to read block {1}.", server, block);
                         try
                         {
-                            if( !DownloadBlock(ref position, blockOffset, block, server) )
+                            if( !DownloadBlock(ref blockOffset, block, server, blockIndex) )
                                 return; // cancelled
+
+                            blockOffset = 0;
                         }
                         catch( Exception ex )
                         {
@@ -356,7 +363,7 @@ namespace Tkl.Jumbo.Dfs
             }
         }
 
-        private bool DownloadBlock(ref long position, int blockOffset, Guid block, ServerAddress server)
+        private bool DownloadBlock(ref int blockOffset, Guid block, ServerAddress server, int blockIndex)
         {
             using( TcpClient client = new TcpClient(server.HostName, server.Port) )
             {
@@ -375,12 +382,17 @@ namespace Tkl.Jumbo.Dfs
                     bufferedStream.Flush();
 
                     DataServerClientProtocolResult status = (DataServerClientProtocolResult)reader.ReadInt32();
+                    if( status == DataServerClientProtocolResult.OutOfRange && blockOffset > 0 && blockIndex < _file.Blocks.Count - 1 && _file.RecordOptions == IO.RecordStreamOptions.DoNotCrossBoundary )
+                    {
+                        // We tried to seek into padding, so go to the next block.
+                        // Because this can only happen after a seek operation the packet buffer is empty, which means no other threads can access _position so we can update it.
+                        _position = (blockIndex + 1) * BlockSize;
+                        return true;
+                    }
                     if( status != DataServerClientProtocolResult.Ok )
                         throw new DfsException("The server encountered an error while sending data.");
                     _log.Debug("Header sent and accepted by server.");
-                    int offset = reader.ReadInt32();
-                    int difference = blockOffset - offset;
-                    position -= difference; // Correct position
+                    blockOffset = reader.ReadInt32();
 
                     Packet packet = null;
                     while( !_disposed && _lastResult == DataServerClientProtocolResult.Ok && (packet == null || !packet.IsLastPacket) )
@@ -398,7 +410,8 @@ namespace Tkl.Jumbo.Dfs
                         {
                             packet.Read(reader, false, true);
 
-                            position += packet.Size;
+                            blockOffset += packet.Size;
+
                             // There is no need to lock this write because no other threads will update this value.
                             _packetBuffer.NotifyWrite();
                         }
@@ -406,6 +419,14 @@ namespace Tkl.Jumbo.Dfs
                 }
             }
             return true;
-        } 
+        }
+
+        private void ThrowIfErrorOccurred()
+        {
+            if( _lastException != null )
+                throw new DfsException("Couldn't read data from the server.", _lastException);
+            if( _lastResult != DataServerClientProtocolResult.Ok )
+                throw new DfsException(string.Format(CultureInfo.CurrentCulture, "Couldn't read data from the server: {0}", _lastResult));
+        }
     }
 }

@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Collections.ObjectModel;
+using Tkl.Jumbo.IO;
 
 namespace Tkl.Jumbo.Dfs
 {
@@ -23,12 +24,13 @@ namespace Tkl.Jumbo.Dfs
         /// <summary>
         /// Initializes a new instance of the <see cref="DfsFile"/> class.
         /// </summary>
-        /// <param name="parent">The parent of the file. May be <see langword="null" />.</param>
+        /// <param name="parent">The parent of the file. May be <see langword="null"/>.</param>
         /// <param name="name">The name of the file.</param>
         /// <param name="dateCreated">The date the file was created.</param>
         /// <param name="blockSize">The size of the blocks of the file.</param>
         /// <param name="replicationFactor">The number of replicas to create of each block in the file.</param>
-        public DfsFile(DfsDirectory parent, string name, DateTime dateCreated, int blockSize, int replicationFactor)
+        /// <param name="recordOptions">The record options.</param>
+        public DfsFile(DfsDirectory parent, string name, DateTime dateCreated, int blockSize, int replicationFactor, RecordStreamOptions recordOptions)
             : base(parent, name, dateCreated)
         {
             if( blockSize <= 0 )
@@ -40,6 +42,7 @@ namespace Tkl.Jumbo.Dfs
 
             BlockSize = blockSize;
             ReplicationFactor = replicationFactor;
+            RecordOptions = recordOptions;
         }
 
         internal DfsFile(DfsDirectory parent, string name, DateTime dateCreated)
@@ -100,6 +103,12 @@ namespace Tkl.Jumbo.Dfs
         public int ReplicationFactor { get; private set; }
 
         /// <summary>
+        /// Gets or sets the record options applied to this file.
+        /// </summary>
+        /// <value>The record options.</value>
+        public RecordStreamOptions RecordOptions { get; private set; }
+
+        /// <summary>
         /// Saves this <see cref="FileSystemEntry"/> to a file system image.
         /// </summary>
         /// <param name="writer">A <see cref="System.IO.BinaryWriter"/> used to write to the file system image.</param>
@@ -112,6 +121,7 @@ namespace Tkl.Jumbo.Dfs
             writer.Write(IsOpenForWriting);
             writer.Write(BlockSize);
             writer.Write(ReplicationFactor);
+            writer.Write((int)RecordOptions);
             writer.Write(Blocks.Count);
             foreach( Guid block in Blocks )
                 writer.Write(block.ToByteArray());
@@ -138,6 +148,7 @@ namespace Tkl.Jumbo.Dfs
             writer.WriteLine("Size:             {0:#,0} bytes", Size);
             writer.WriteLine("Block size:       {0:#,0} bytes", BlockSize);
             writer.WriteLine("Replicas:         {0}", ReplicationFactor);
+            writer.WriteLine("Record options:   {0}", RecordOptions);
             writer.WriteLine("Open for writing: {0}", IsOpenForWriting);
             writer.WriteLine("Blocks:           {0}", Blocks.Count);
             foreach( Guid block in Blocks )
@@ -157,6 +168,7 @@ namespace Tkl.Jumbo.Dfs
             IsOpenForWriting = reader.ReadBoolean();
             BlockSize = reader.ReadInt32();
             ReplicationFactor = reader.ReadInt32();
+            RecordOptions = (RecordStreamOptions)reader.ReadInt32();
             int blockCount = reader.ReadInt32();
             _blocks.Clear();
             _blocks.Capacity = blockCount;

@@ -7,6 +7,7 @@ using System.Text;
 using Tkl.Jumbo.Dfs;
 using System.Runtime.Remoting.Messaging;
 using System.IO;
+using Tkl.Jumbo.IO;
 
 namespace NameServerApplication
 {
@@ -29,8 +30,9 @@ namespace NameServerApplication
          * 2: Binary edit log and support for checkpointing to FS image.
          * 3: Custom file block size and replication factor.
          * 4: Checksummed format.
+         * 5: Record options support.
          */
-        public const int FileSystemFormatVersion = 4;
+        public const int FileSystemFormatVersion = 5;
 
         public event EventHandler<FileDeletedEventArgs> FileDeleted;
 
@@ -161,13 +163,17 @@ namespace NameServerApplication
         /// </summary>
         /// <param name="path">The full path of the new file.</param>
         /// <param name="blockSize">The size of the blocks of the file.</param>
-        /// <returns>The block ID of the first block of the new file.</returns>
-        /// <exception cref="ArgumentNullException"><paramref name="directory"/> is <see langword="null" />, or <paramref name="name"/> is <see langword="null"/> or an empty string..</exception>
+        /// <param name="replicationFactor">The replication factor.</param>
+        /// <param name="recordOptions">The record options.</param>
+        /// <returns>
+        /// The block ID of the first block of the new file.
+        /// </returns>
+        /// <exception cref="ArgumentNullException"><paramref name="directory"/> is <see langword="null"/>, or <paramref name="name"/> is <see langword="null"/> or an empty string..</exception>
         /// <exception cref="ArgumentException"><paramref name="directory"/> is not an absolute path, contains an empty component, contains a file name, or <paramref name="name"/> refers to an existing file or directory.</exception>
         /// <exception cref="DirectoryNotFoundException"><paramref name="directory"/> does not exist.</exception>
-        public BlockInfo CreateFile(string path, int blockSize, int replicationFactor)
+        public BlockInfo CreateFile(string path, int blockSize, int replicationFactor, RecordStreamOptions recordOptions)
         {
-            return CreateFile(path, DateTime.UtcNow, blockSize, replicationFactor, true);
+            return CreateFile(path, DateTime.UtcNow, blockSize, replicationFactor, recordOptions, true);
         }
 
         /// <summary>
@@ -176,13 +182,16 @@ namespace NameServerApplication
         /// <param name="path">The full path of the new file.</param>
         /// <param name="dateCreated">The creation time of the file.</param>
         /// <param name="blockSize">The block size of the file.</param>
-        /// <param name="appendBlock"><see langword="true"/> to append a block to the new file; otherwise, <see langword="false"/>.</param>
         /// <param name="replicationFactor">The number of replicas to create of the file's blocks.</param>
-        /// <returns>The block ID of the first block of the new file.</returns>
-        /// <exception cref="ArgumentNullException"><paramref name="directory"/> is <see langword="null" />, or <paramref name="name"/> is <see langword="null"/> or an empty string..</exception>
+        /// <param name="recordOptions">The record options.</param>
+        /// <param name="appendBlock"><see langword="true"/> to append a block to the new file; otherwise, <see langword="false"/>.</param>
+        /// <returns>
+        /// The block ID of the first block of the new file.
+        /// </returns>
+        /// <exception cref="ArgumentNullException"><paramref name="directory"/> is <see langword="null"/>, or <paramref name="name"/> is <see langword="null"/> or an empty string..</exception>
         /// <exception cref="ArgumentException"><paramref name="directory"/> is not an absolute path, contains an empty component, contains a file name, or <paramref name="name"/> refers to an existing file or directory.</exception>
         /// <exception cref="DirectoryNotFoundException"><paramref name="directory"/> does not exist.</exception>
-        public BlockInfo CreateFile(string path, DateTime dateCreated, int blockSize, int replicationFactor, bool appendBlock)
+        public BlockInfo CreateFile(string path, DateTime dateCreated, int blockSize, int replicationFactor, RecordStreamOptions recordOptions, bool appendBlock)
         {
             if( path == null )
                 throw new ArgumentNullException("path");
@@ -198,7 +207,7 @@ namespace NameServerApplication
                 if( entry != null )
                     throw new ArgumentException("The specified directory already has a file or directory with the specified name.", "name");
                 
-                PendingFile file = CreateFile(parent, name, dateCreated, blockSize, replicationFactor);
+                PendingFile file = CreateFile(parent, name, dateCreated, blockSize, replicationFactor, recordOptions);
                 try
                 {
                     if( appendBlock )
@@ -573,7 +582,12 @@ namespace NameServerApplication
                 throw new InvalidOperationException("Cannot add a block to a file with a pending block.");
 
             if( file.File.Size % file.File.BlockSize != 0 )
-                throw new InvalidOperationException("The final block of the file is smaller than the maximum block size, therefore the file can no longer be extended.");
+            {
+                if( (file.File.RecordOptions & RecordStreamOptions.DoNotCrossBoundary) == 0 )
+                    throw new InvalidOperationException("The final block of the file is smaller than the maximum block size, therefore the file can no longer be extended.");
+                else
+                    file.File.Size += file.File.BlockSize - file.File.Size % file.File.BlockSize; // Correct the file size for padding.
+            }
 
             _log.InfoFormat("Appending new block {0} to file {1}", blockID, file.File.FullPath);
             _editLog.LogAppendBlock(file.File.FullPath, DateTime.UtcNow, blockID);
@@ -696,7 +710,7 @@ namespace NameServerApplication
             return new DfsDirectory(parent, name, dateCreated);
         }
 
-        private PendingFile CreateFile(DfsDirectory parent, string name, DateTime dateCreated, int blockSize, int replicationFactor)
+        private PendingFile CreateFile(DfsDirectory parent, string name, DateTime dateCreated, int blockSize, int replicationFactor, RecordStreamOptions recordOptions)
         {
             if( blockSize <= 0 )
                 throw new ArgumentOutOfRangeException("blockSize", "File block size must be larger than zero.");
@@ -706,8 +720,8 @@ namespace NameServerApplication
                 throw new ArgumentOutOfRangeException("replicationFactor", "Replication factor must be larger than zero.");
 
             _log.InfoFormat("Creating file \"{0}\" inside \"{1}\" with block size {2}.", name, parent.FullPath, blockSize);
-            _editLog.LogCreateFile(AppendPath(parent.FullPath, name), dateCreated, blockSize, replicationFactor);
-            PendingFile result = new PendingFile(new DfsFile(parent, name, dateCreated, blockSize, replicationFactor) { IsOpenForWriting = true });
+            _editLog.LogCreateFile(AppendPath(parent.FullPath, name), dateCreated, blockSize, replicationFactor, recordOptions);
+            PendingFile result = new PendingFile(new DfsFile(parent, name, dateCreated, blockSize, replicationFactor, recordOptions) { IsOpenForWriting = true });
             lock( _pendingFiles )
             {
                 _pendingFiles.Add(result.File.FullPath, result);

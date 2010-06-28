@@ -150,7 +150,7 @@ namespace Tkl.Jumbo.Test.Dfs
         private DfsFile CreateFakeFile(int replicationFactor)
         {
             DfsDirectory root = new DfsDirectory(null, "", DateTime.UtcNow);
-            return new DfsFile(root, "testfile", DateTime.UtcNow, 16 * 1024 * 1024, replicationFactor);
+            return new DfsFile(root, "testfile", DateTime.UtcNow, 16 * 1024 * 1024, replicationFactor, IO.RecordStreamOptions.None);
         }
     
     }

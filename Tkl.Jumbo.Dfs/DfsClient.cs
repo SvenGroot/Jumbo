@@ -9,6 +9,7 @@ using System.Runtime.Remoting.Channels.Tcp;
 using System.Net.Sockets;
 using System.Runtime.Serialization.Formatters.Binary;
 using System.IO;
+using Tkl.Jumbo.IO;
 
 namespace Tkl.Jumbo.Dfs
 {
@@ -196,7 +197,7 @@ namespace Tkl.Jumbo.Dfs
             if( stream == null )
                 throw new ArgumentNullException("stream");
 
-            using( DfsOutputStream outputStream = new DfsOutputStream(NameServer, dfsPath, blockSize, replicationFactor) )
+            using( DfsOutputStream outputStream = new DfsOutputStream(NameServer, dfsPath, blockSize, replicationFactor, IO.RecordStreamOptions.None) )
             {
                 CopyStream(dfsPath, stream, outputStream, progressCallback);
             }
@@ -422,10 +423,27 @@ namespace Tkl.Jumbo.Dfs
         /// <param name="path">The path containing the directory and name of the file to create.</param>
         /// <param name="blockSize">The block size of the new file, or zero to use the file system default block size.</param>
         /// <param name="replicationFactor">The number of replicas to create of the file's blocks, or zero to use the file system default replication factor.</param>
-        /// <returns>A <see cref="DfsOutputStream"/> that can be used to write data to the file.</returns>
+        /// <returns>
+        /// A <see cref="DfsOutputStream"/> that can be used to write data to the file.
+        /// </returns>
         public DfsOutputStream CreateFile(string path, int blockSize, int replicationFactor)
         {
-            return new DfsOutputStream(NameServer, path, blockSize, replicationFactor);
+            return CreateFile(path, blockSize, replicationFactor, RecordStreamOptions.None);
+        }
+
+        /// <summary>
+        /// Creates a new file with the specified path on the distributed file system.
+        /// </summary>
+        /// <param name="path">The path containing the directory and name of the file to create.</param>
+        /// <param name="blockSize">The block size of the new file, or zero to use the file system default block size.</param>
+        /// <param name="replicationFactor">The number of replicas to create of the file's blocks, or zero to use the file system default replication factor.</param>
+        /// <param name="recordOptions">The record options for the file.</param>
+        /// <returns>
+        /// A <see cref="DfsOutputStream"/> that can be used to write data to the file.
+        /// </returns>
+        public DfsOutputStream CreateFile(string path, int blockSize, int replicationFactor, RecordStreamOptions recordOptions)
+        {
+            return new DfsOutputStream(NameServer, path, blockSize, replicationFactor, recordOptions);
         }
 
         private static T CreateNameServerClientInternal<T>(string hostName, int port)

@@ -92,20 +92,23 @@ namespace NameServerApplication
             {
             }
 
-            public CreateFileEditLogEntry(DateTime date, string path, int blockSize, int replicationFactor)
+            public CreateFileEditLogEntry(DateTime date, string path, int blockSize, int replicationFactor, RecordStreamOptions recordOptions)
                 : base(FileSystemMutation.CreateFile, date, path)
             {
                 BlockSize = blockSize;
                 ReplicationFactor = replicationFactor;
+                RecordOptions = recordOptions;
             }
 
             public int BlockSize { get; private set; }
 
             public int ReplicationFactor { get; private set; }
 
+            public RecordStreamOptions RecordOptions { get; private set; }
+
             public override void Replay(FileSystem fileSystem)
             {
-                fileSystem.CreateFile(Path, Date, BlockSize, ReplicationFactor, false);
+                fileSystem.CreateFile(Path, Date, BlockSize, ReplicationFactor, RecordOptions, false);
             }
 
             public override void Write(BinaryWriter writer)
@@ -113,6 +116,7 @@ namespace NameServerApplication
                 base.Write(writer);
                 writer.Write(BlockSize);
                 writer.Write(ReplicationFactor);
+                writer.Write((int)RecordOptions);
             }
 
             public override void Read(BinaryReader reader)
@@ -120,6 +124,7 @@ namespace NameServerApplication
                 base.Read(reader);
                 BlockSize = reader.ReadInt32();
                 ReplicationFactor = reader.ReadInt32();
+                RecordOptions = (RecordStreamOptions)reader.ReadInt32();
             }
         }
 
@@ -354,12 +359,12 @@ namespace NameServerApplication
             LogMutation(new CreateDirectoryEditLogEntry(date, path));
         }
 
-        public void LogCreateFile(string path, DateTime date, int blockSize, int replicationFactor)
+        public void LogCreateFile(string path, DateTime date, int blockSize, int replicationFactor, RecordStreamOptions recordOptions)
         {
             if( path == null )
                 throw new ArgumentNullException("path");
 
-            LogMutation(new CreateFileEditLogEntry(date, path, blockSize, replicationFactor));
+            LogMutation(new CreateFileEditLogEntry(date, path, blockSize, replicationFactor, recordOptions));
         }
 
         public void LogAppendBlock(string path, DateTime date, Guid blockId)

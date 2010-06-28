@@ -8,6 +8,7 @@ using System.IO;
 using System.Threading;
 using System.Net.Sockets;
 using System.Runtime.Serialization.Formatters.Binary;
+using Tkl.Jumbo.IO;
 
 namespace Tkl.Jumbo.Dfs
 {
@@ -15,16 +16,17 @@ namespace Tkl.Jumbo.Dfs
     /// Provides a stream for writing files to the distributed file system.
     /// </summary>
     /// <threadsafety static="true" instance="false" />
-    public class DfsOutputStream : Stream
+    public class DfsOutputStream : Stream, IRecordOutputStream
     {
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(DfsOutputStream));
         private BlockSender _sender;
         private BlockAssignment _block;
-        private const int _packetSize = 0x10000;
         private readonly INameServerClientProtocol _nameServer;
         private readonly string _path;
+        private readonly RecordStreamOptions _recordOptions;
         private int _blockBytesWritten;
-        private readonly byte[] _buffer = new byte[_packetSize];
+        private readonly byte[] _buffer = new byte[Packet.PacketSize];
+        private readonly MemoryStream _recordBuffer;
         private int _bufferPos;
         private bool _disposed = false;
         private long _fileBytesWritten;
@@ -37,7 +39,19 @@ namespace Tkl.Jumbo.Dfs
         /// file system.</param>
         /// <param name="path">The path of the file to write.</param>
         public DfsOutputStream(INameServerClientProtocol nameServer, string path)
-            : this(nameServer, path, 0, 0)
+            : this(nameServer, path, 0, 0, RecordStreamOptions.None)
+        {
+        }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="DfsOutputStream"/> class.
+        /// </summary>
+        /// <param name="nameServer">The <see cref="INameServerClientProtocol"/> interface of the name server for the distributed
+        /// file system.</param>
+        /// <param name="path">The path of the file to write.</param>
+        /// <param name="recordOptions">The record options for the file.</param>
+        public DfsOutputStream(INameServerClientProtocol nameServer, string path, RecordStreamOptions recordOptions)
+            : this(nameServer, path, 0, 0, recordOptions)
         {
         }
 
@@ -50,6 +64,20 @@ namespace Tkl.Jumbo.Dfs
         /// <param name="blockSize">The size of the blocks of the file, or zero to use the file system default block size.</param>
         /// <param name="replicationFactor">The number of replicas to create of the file's blocks, or zero to use the file system default replication factor.</param>
         public DfsOutputStream(INameServerClientProtocol nameServer, string path, int blockSize, int replicationFactor)
+            : this(nameServer, path, blockSize, replicationFactor, RecordStreamOptions.None)
+        {
+        }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="DfsOutputStream"/> with the specified name server and file.
+        /// </summary>
+        /// <param name="nameServer">The <see cref="INameServerClientProtocol"/> interface of the name server for the distributed
+        /// file system.</param>
+        /// <param name="path">The path of the file to write.</param>
+        /// <param name="blockSize">The size of the blocks of the file, or zero to use the file system default block size.</param>
+        /// <param name="replicationFactor">The number of replicas to create of the file's blocks, or zero to use the file system default replication factor.</param>
+        /// <param name="recordOptions">The record options for the file.</param>
+        public DfsOutputStream(INameServerClientProtocol nameServer, string path, int blockSize, int replicationFactor, RecordStreamOptions recordOptions)
         {
             if( nameServer == null )
                 throw new ArgumentNullException("nameServer");
@@ -71,9 +99,14 @@ namespace Tkl.Jumbo.Dfs
                 BlockSize = blockSize;
             _nameServer = nameServer;
             _path = path;
+            _recordOptions = recordOptions;
             _log.DebugFormat("Creating file {0} on name server.", _path);
-            _block = nameServer.CreateFile(path, blockSize, replicationFactor);
+            _block = nameServer.CreateFile(path, blockSize, replicationFactor, recordOptions);
             _log.Debug("DfsOutputStream construction complete.");
+            if( (recordOptions & RecordStreamOptions.DoNotCrossBoundary) == RecordStreamOptions.DoNotCrossBoundary )
+            {
+                _recordBuffer = new MemoryStream(Packet.PacketSize);
+            }
         }
 
         /// <summary>
@@ -162,6 +195,15 @@ namespace Tkl.Jumbo.Dfs
         }
 
         /// <summary>
+        /// Gets the options applied to records in the stream.
+        /// </summary>
+        /// <value>One or more of the <see cref="RecordStreamOptions"/> values.</value>
+        public RecordStreamOptions RecordOptions
+        {
+            get { return _recordOptions; }
+        }
+
+        /// <summary>
         /// Not supported.
         /// </summary>
         public override int Read(byte[] buffer, int offset, int count)
@@ -206,38 +248,90 @@ namespace Tkl.Jumbo.Dfs
 
             if( _sender != null )
                 _sender.ThrowIfErrorOccurred();
-            int bufferPos = offset;
-            int end = offset + count;
-            
-            while( bufferPos < end )
+
+            // If the DoNotCrossBoundary option is set, we write records into a temporary buffer and do not add them to the real buffer until MarkRecord is called.
+            if( _recordBuffer != null )
             {
-                if( _bufferPos == _buffer.Length )
+                _recordBuffer.Write(buffer, offset, count);
+                _length += count;
+            }
+            else
+            {
+                int bufferPos = offset;
+                int end = offset + count;
+
+                while( bufferPos < end )
                 {
-                    System.Diagnostics.Debug.Assert(_blockBytesWritten + _bufferPos <= BlockSize);
-                    bool finalPacket = _blockBytesWritten + _bufferPos == BlockSize;
-                    WritePacket(_buffer, _bufferPos, finalPacket);
-                    _blockBytesWritten += _bufferPos;
-                    _fileBytesWritten += _bufferPos;
-                    _bufferPos = 0;
-                    if( finalPacket )
+                    if( _bufferPos == _buffer.Length )
                     {
-                        // Do we really want to wait here? We could just let it run in the background and continue on our
-                        // merry way. That would require keeping track of them so we know in Dispose when we're really finished.
-                        // It would also require the name server to allow appending of new blocks while old ones are still pending.
-                        _sender.WaitUntilSendFinished();
-                        _sender.ThrowIfErrorOccurred();
-                        _sender = null;
-                        _block = null;
-                        _blockBytesWritten = 0;
+                        WriteBufferToPacket(false);
                     }
-                } 
-                int bufferRemaining = _buffer.Length - _bufferPos;
-                int writeSize = Math.Min(end - bufferPos, bufferRemaining);
-                Array.Copy(buffer, bufferPos, _buffer, _bufferPos, writeSize);
-                _bufferPos += writeSize;
-                bufferPos += writeSize;
-                _length += writeSize;
-                System.Diagnostics.Debug.Assert(_bufferPos <= _buffer.Length);
+                    int bufferRemaining = _buffer.Length - _bufferPos;
+                    int writeSize = Math.Min(end - bufferPos, bufferRemaining);
+                    Array.Copy(buffer, bufferPos, _buffer, _bufferPos, writeSize);
+                    _bufferPos += writeSize;
+                    bufferPos += writeSize;
+                    _length += writeSize;
+                    System.Diagnostics.Debug.Assert(_bufferPos <= _buffer.Length);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Indicates that the current position of the stream is a record boundary.
+        /// </summary>
+        public void MarkRecord()
+        {
+            // _recordBuffer not null means DoNotCrossBoundary option is set.
+            if( _recordBuffer != null && _recordBuffer.Length > 0 )
+            {
+                if( _recordBuffer.Length > BlockSize )
+                    throw new InvalidOperationException("The record is larger than a block."); // TODO: Allow this.
+
+                // Does the record fit in the current block?
+                if( _blockBytesWritten + _bufferPos + _recordBuffer.Length > BlockSize )
+                {
+                    int padding = BlockSize - (_blockBytesWritten + _bufferPos);
+                    // Write the current buffer contents to the block and start a new block. We do this even if _bufferPos == 0 because we at least have to tell the block server the block is finished.
+                    WriteBufferToPacket(true);
+                    // Correct length to account for padding added to the block.
+                    _length += padding;
+                }
+
+                _recordBuffer.Position = 0;
+                int remaining = (int)_recordBuffer.Length;
+                // If there is data in the buffer, we copy this record into the current buffer.
+                if( _bufferPos > 0 )
+                {
+                    if( _bufferPos < _buffer.Length )
+                    {
+                        int bytesRead = _recordBuffer.Read(_buffer, _bufferPos, _buffer.Length - _bufferPos);
+                        remaining -= bytesRead;
+                        _bufferPos += bytesRead;
+                    }
+
+                    if( _bufferPos == _buffer.Length )
+                        WriteBufferToPacket(false);
+                }
+
+                // If the data left in the record is bigger than a single packet, we add those whole packets to the sender.
+                while( remaining > Packet.PacketSize )
+                {
+                    // We can never cross a record boundary here because of the check above, so no need to check for final packets.
+                    WritePacket(_recordBuffer, false);
+                    _blockBytesWritten += Packet.PacketSize;
+                    _fileBytesWritten += Packet.PacketSize;
+                    remaining -= Packet.PacketSize;
+                }
+
+                // And copy the remaining data into the buffer.
+                if( remaining > 0 )
+                {
+                    // _bufferPos should be zero here but anyway.
+                    _bufferPos += _recordBuffer.Read(_buffer, _bufferPos, remaining);
+                }
+
+                _recordBuffer.SetLength(0);
             }
         }
 
@@ -294,13 +388,45 @@ namespace Tkl.Jumbo.Dfs
         
         private void WritePacket(byte[] buffer, int length, bool finalPacket)
         {
+            EnsureSenderCreated();
+            _sender.AddPacket(buffer, length, finalPacket);
+        }
+
+        private void EnsureSenderCreated()
+        {
             if( _sender == null )
             {
                 if( _block == null )
                     _block = _nameServer.AppendBlock(_path);
                 _sender = new BlockSender(_block);
             }
-            _sender.AddPacket(buffer, length, finalPacket);
+        }
+
+        private void WritePacket(Stream stream, bool finalPacket)
+        {
+            EnsureSenderCreated();
+            _sender.AddPacket(stream, finalPacket);
+        }
+
+        private void WriteBufferToPacket(bool forceFinalPacket)
+        {
+            System.Diagnostics.Debug.Assert(_blockBytesWritten + _bufferPos <= BlockSize);
+            bool finalPacket = forceFinalPacket || _blockBytesWritten + _bufferPos == BlockSize;
+            WritePacket(_buffer, _bufferPos, finalPacket);
+            _blockBytesWritten += _bufferPos;
+            _fileBytesWritten += _bufferPos;
+            _bufferPos = 0;
+            if( finalPacket )
+            {
+                // Do we really want to wait here? We could just let it run in the background and continue on our
+                // merry way. That would require keeping track of them so we know in Dispose when we're really finished.
+                // It would also require the name server to allow appending of new blocks while old ones are still pending.
+                _sender.WaitUntilSendFinished();
+                _sender.ThrowIfErrorOccurred();
+                _sender = null;
+                _block = null;
+                _blockBytesWritten = 0;
+            }
         }
     }
 }
