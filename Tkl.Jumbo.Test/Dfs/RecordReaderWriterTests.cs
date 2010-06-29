@@ -144,5 +144,54 @@ namespace Tkl.Jumbo.Test.Dfs
             Assert.AreEqual(_records.Count, totalRecordsRead);
         }
 
+        [Test]
+        public void TestBinaryRecordReaderRecordsDoNotCrossBoundary()
+        {
+            const string fileName = "/binaryboundary";
+            int recordSize = _records[0].ByteLength + 2; // BinaryRecordWriter writes string length which will take 2 bytes.
+            using( DfsOutputStream stream = _dfsClient.CreateFile(fileName, 0, 0, RecordStreamOptions.DoNotCrossBoundary) )
+            using( BinaryRecordWriter<Utf8String> writer = new BinaryRecordWriter<Utf8String>(stream) )
+            {
+                foreach( Utf8String record in _records )
+                    writer.WriteRecord(record);
+
+                int blockPadding = _blockSize % recordSize;
+                int totalPadding = (int)(stream.Length / _blockSize) * blockPadding;
+
+                Assert.AreEqual(_records.Count, writer.RecordsWritten);
+                Assert.AreEqual(_records.Count * recordSize, writer.OutputBytes);
+                Assert.AreEqual(writer.OutputBytes + totalPadding, writer.BytesWritten);
+                Assert.AreEqual(writer.BytesWritten, stream.Length);
+            }
+
+            int recordIndex = 0;
+            DfsFile file = _dfsClient.NameServer.GetFileInfo(fileName);
+            int blocks = file.Blocks.Count;
+            int totalRecordsRead = 0;
+            for( int block = 0; block < blocks; ++block )
+            {
+                int offset = block * _blockSize;
+                int size = Math.Min((int)(file.Size - offset), _blockSize);
+                using( DfsInputStream stream = _dfsClient.OpenFile(fileName) )
+                using( BinaryRecordReader<Utf8String> reader = new BinaryRecordReader<Utf8String>(stream, block * _blockSize, size, true) )
+                {
+                    foreach( Utf8String record in reader.EnumerateRecords() )
+                    {
+                        Assert.AreEqual(_records[recordIndex], record);
+                        ++recordIndex;
+                    }
+
+                    totalRecordsRead += reader.RecordsRead;
+                    int recordCount = size / recordSize;
+                    Assert.AreEqual(recordCount, reader.RecordsRead);
+                    Assert.AreEqual(recordCount * recordSize, reader.InputBytes);
+                    Assert.GreaterOrEqual(reader.BytesRead, recordCount * recordSize);
+                    Assert.AreEqual(size, reader.BytesRead);
+                    Assert.AreEqual(1, stream.BlocksRead);
+                }
+            }
+
+            Assert.AreEqual(_records.Count, totalRecordsRead);
+        }
     }
 }

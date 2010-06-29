@@ -99,7 +99,7 @@ namespace Tkl.Jumbo.IO
         private bool _allowRecordReuse;
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="LineRecordReader"/> class with the specified stream.
+        /// Initializes a new instance of the <see cref="LineRecordReader"/> class that reads from the specified stream.
         /// </summary>
         /// <param name="stream">The stream to read from.</param>
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1062:Validate arguments of public methods", MessageId = "0")]
@@ -109,7 +109,7 @@ namespace Tkl.Jumbo.IO
         }
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="LineRecordReader"/> class with the specified stream.
+        /// Initializes a new instance of the <see cref="LineRecordReader"/> class that reads the specified range from the specified stream.
         /// </summary>
         /// <param name="stream">The stream to read from.</param>
         /// <param name="offset">The position in the stream to start reading.</param>
@@ -117,9 +117,21 @@ namespace Tkl.Jumbo.IO
         /// <param name="allowRecordReuse"><see langword="true"/> if the record reader may re-use the same <see cref="Utf8String"/> instance for every
         /// record; <see langword="false"/> if it must create a new instance for every record.</param>
         /// <remarks>
-        /// The reader will read a whole number of records until the start of the next record falls
-        /// after <paramref name="offset"/> + <paramref name="size"/>. Because of this, the reader can
-        /// read more than <paramref name="size"/> bytes.
+        /// <para>
+        ///   The reader will start reading at <paramref name="offset"/>. If <paramref name="offset"/> is larger than zero, the reader
+        ///   will seek ahead to the start of the next record and read from there.
+        /// </para>
+        /// <para>
+        ///   The reader will read a whole number of records until the start of the next record falls
+        ///   after <paramref name="offset"/> + <paramref name="size"/>. Because of this, the reader can
+        ///   read more than <paramref name="size"/> bytes.
+        /// </para>
+        /// <para>
+        ///   The reader will check if <paramref name="stream"/> implements <see cref="IRecordInputStream"/> with <see cref="IRecordInputStream.RecordOptions"/>
+        ///   set to <see cref="RecordStreamOptions.DoNotCrossBoundary"/>. If so, if <paramref name="offset"/> falls on a structural boundary
+        ///   the reader will not seek ahead because it knows structural boundaries are record boundaries; if <paramref name="offset"/> + <paramref name="size"/> falls
+        ///   on a structural boundary, the reader is guaranteed to not read beyond <paramref name="offset"/> + <paramref name="size"/>.
+        /// </para>
         /// </remarks>
         public LineRecordReader(Stream stream, long offset, long size, bool allowRecordReuse)
             : base(stream, offset, size)
@@ -134,9 +146,8 @@ namespace Tkl.Jumbo.IO
                 --_end;
             if( offset != 0 )
             {
-                IRecordInputStream recordInputStream = stream as IRecordInputStream;
-                if( recordInputStream == null || (recordInputStream.RecordOptions & RecordStreamOptions.DoNotCrossBoundary) != RecordStreamOptions.DoNotCrossBoundary ||
-                    recordInputStream.OffsetFromBoundary(offset) != 0 )
+                if( RecordInputStream == null || (RecordInputStream.RecordOptions & RecordStreamOptions.DoNotCrossBoundary) != RecordStreamOptions.DoNotCrossBoundary ||
+                    RecordInputStream.OffsetFromBoundary(offset) != 0 )
                 {
                     ReadRecordInternal();
                     CurrentRecord = null;

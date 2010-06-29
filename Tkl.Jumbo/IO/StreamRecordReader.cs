@@ -24,10 +24,9 @@ namespace Tkl.Jumbo.IO
     ///   next record boundary.
     /// </para>
     /// <para>
-    ///   The stream that records are read from may implement <see cref="IRecordInputStream"/>. If this is the case,
-    ///   and <see cref="RecordStreamOptions.DoNotCrossBoundary"/> is set on that stream and if <see cref="Offset"/>
-    ///   and <see cref="Offset"/> + <see cref="Size"/> do not cross a structural boundary (e.g. block boundary)
-    ///   then <see cref="IRecordInputStream.StopReadingAtNextBoundary"/> is set to <see langword="true"/>. In
+    ///   If the stream implements <see cref="IRecordInputStream"/> with <see cref="RecordStreamOptions.DoNotCrossBoundary"/> set, 
+    ///   and <see cref="Offset"/> + <see cref="Size"/> is on a structural boundary,
+    ///   <see cref="IRecordInputStream.StopReadingAtPosition"/> will be set to <see cref="Offset"/> + <see cref="Size"/>. In
     ///   this situation, <see cref="System.IO.Stream.Read"/> may return 0 before <see cref="Size"/> bytes are read. A
     ///   deriving class should check this and stop reading at that point.
     /// </para>
@@ -36,6 +35,7 @@ namespace Tkl.Jumbo.IO
     {
         private bool _disposed;
         private long _bytesRead;
+        private long _paddingBytesSkipped;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="StreamRecordReader{T}"/> class with the specified stream.
@@ -61,8 +61,8 @@ namespace Tkl.Jumbo.IO
         /// </para>
         /// <para>
         ///   If the stream implements <see cref="IRecordInputStream"/> with <see cref="RecordStreamOptions.DoNotCrossBoundary"/> set, 
-        ///   and the start and end offset (<paramref name="offset"/> + <paramref name="size"/>) do not cross a boundary, then 
-        ///   <see cref="IRecordInputStream.StopReadingAtNextBoundary"/> will be set to <see langword="true"/>.
+        ///   and <paramref name="offset"/> + <paramref name="size"/> is on a structural boundary,
+        ///   <see cref="IRecordInputStream.StopReadingAtPosition"/> will be set to <paramref name="offset"/> + <paramref name="size"/>.
         /// </para>
         /// </remarks>
         protected StreamRecordReader(Stream stream, long offset, long size)
@@ -85,8 +85,8 @@ namespace Tkl.Jumbo.IO
         /// </para>
         /// <para>
         ///   If the stream implements <see cref="IRecordInputStream"/> with <see cref="RecordStreamOptions.DoNotCrossBoundary"/> set, 
-        ///   and the start and end offset (<paramref name="offset"/> + <paramref name="size"/>) do not cross a boundary, then 
-        ///   <see cref="IRecordInputStream.StopReadingAtNextBoundary"/> will be set to <see langword="true"/>.
+        ///   and <paramref name="offset"/> + <paramref name="size"/> is on a structural boundary,
+        ///   <see cref="IRecordInputStream.StopReadingAtPosition"/> will be set to <paramref name="offset"/> + <paramref name="size"/>.
         /// </para>
         /// </remarks>
         protected StreamRecordReader(Stream stream, long offset, long size, bool seekToOffset)
@@ -107,8 +107,9 @@ namespace Tkl.Jumbo.IO
             FirstRecordOffset = offset;
             Size = size;
             IRecordInputStream recordInputStream = Stream as IRecordInputStream;
-            if( recordInputStream != null && (recordInputStream.RecordOptions & RecordStreamOptions.DoNotCrossBoundary) == RecordStreamOptions.DoNotCrossBoundary && recordInputStream.AreInsideSameBoundary(offset, offset + size - 1) )
-                recordInputStream.StopReadingAtNextBoundary = true;
+            if( recordInputStream != null && (recordInputStream.RecordOptions & RecordStreamOptions.DoNotCrossBoundary) == RecordStreamOptions.DoNotCrossBoundary && recordInputStream.OffsetFromBoundary(offset + size) == 0 )
+                recordInputStream.StopReadingAtPosition = offset + size;
+            RecordInputStream = recordInputStream;
         }
 
         /// <summary>
@@ -125,6 +126,12 @@ namespace Tkl.Jumbo.IO
         /// Gets the underlying stream from which this record reader is reading.
         /// </summary>
         protected Stream Stream { get; private set; }
+
+        /// <summary>
+        /// Gets or sets the <see cref="IRecordInputStream"/> implementation of <see cref="Stream"/>.
+        /// </summary>
+        /// <value><see cref="Stream"/> cast to <see cref="IRecordInputStream"/>, or <see langword="null"/> if it doesn't implement it.</value>
+        protected IRecordInputStream RecordInputStream { get; private set; }
 
         /// <summary>
         /// Gets or sets the offset of the first record.
@@ -152,9 +159,14 @@ namespace Tkl.Jumbo.IO
                 // but it might still be called after the reader is disposed (because BinaryRecordReader disposes itself when the last byte is read).
                 Stream s = Stream;
                 if( s == null )
-                    return _bytesRead - (FirstRecordOffset - Offset);
+                    return _bytesRead - (FirstRecordOffset - Offset) - _paddingBytesSkipped;
                 else
-                    return s.Position - FirstRecordOffset;
+                {
+                    long result = s.Position - FirstRecordOffset;
+                    if( RecordInputStream != null )
+                        result -= RecordInputStream.PaddingBytesSkipped;
+                    return result;
+                }
             }
         }
         
@@ -225,6 +237,8 @@ namespace Tkl.Jumbo.IO
                     if( Stream != null )
                     {
                         _bytesRead = UncompressedBytesRead; // Store so that property can be used after the object is disposed.
+                        if( RecordInputStream != null )
+                            _paddingBytesSkipped = RecordInputStream.PaddingBytesSkipped;
                         Stream s = Stream;
                         Stream = null;
                         s.Dispose();

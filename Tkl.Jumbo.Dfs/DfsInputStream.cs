@@ -29,12 +29,13 @@ namespace Tkl.Jumbo.Dfs
         private readonly PacketBuffer _packetBuffer = new PacketBuffer(_bufferSize);
         private DataServerClientProtocolResult _lastResult = DataServerClientProtocolResult.Ok;
         private Exception _lastException;
-        private volatile Thread _feadBufferThread;
+        private volatile Thread _readBufferThread;
         private bool _disposed;
         private Packet _currentPacket;
-        private volatile bool _stopReadingAtNextBoundary;
+        private volatile int _lastBlockToDownload = -1;
         private long _endOffset;
-        private readonly object _boundaryCheckLock = new object();
+        private readonly object _endOffsetLock = new object();
+        private long _paddingSkipped;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="DfsInputStream"/> with the specified name server and file.
@@ -169,41 +170,64 @@ namespace Tkl.Jumbo.Dfs
             get { return _file.RecordOptions; }
         }
 
+
         /// <summary>
-        /// Gets or sets a value indicating whether read operations will stop at structural boundaries (e.g. block boundaries on the DFS).
+        /// Gets or sets the position in the stream after which no data will be read.
         /// </summary>
         /// <value>
-        /// 	<see langword="true"/> if the <see cref="System.IO.Stream.Read"/> method will not return any data after the next boundary; <see langword="false"/>
-        /// if it continues returning data until the end of the stream. The default value is <see langword="false"/>.
+        /// The position after which <see cref="System.IO.Stream.Read"/> method will not return any data. The default value is the length of the stream.
         /// </value>
-        public bool StopReadingAtNextBoundary
+        /// <remarks>
+        /// 	<para>
+        /// For a stream where <see cref="RecordOptions"/> is set to <see cref="RecordStreamOptions.DoNotCrossBoundary"/> you can use this property
+        /// to ensure that no data after the boundary is read if you only wish to read records up to the boundary.
+        /// </para>
+        /// 	<para>
+        /// On the Jumbo DFS, crossing a block boundary will cause a network connection to be established and data to be read from
+        /// a different data server. If you are reading records from only a single block (as is often the case for Jumbo Jet tasks)
+        /// this property can be used to ensure that no data from the next block will be read.
+        /// </para>
+        /// 	<para>
+        /// Setting this property to a value other than the stream length if <see cref="RecordStreamOptions.DoNotCrossBoundary"/> is not set, or
+        /// to a value that is not on a structural boundary can cause reading to halt in the middle of a record, and is therefore not recommended.
+        /// </para>
+        /// </remarks>
+        public long StopReadingAtPosition
         {
-            get { return _stopReadingAtNextBoundary; }
+            get { return _endOffset; }
             set
             {
-                // The lock here ensure that if you're setting this value to false, if the ReadBufferThread hasn't
+                if( value < _position || value > Length )
+                    throw new ArgumentOutOfRangeException("value");
+
+                // The lock here ensure that if you're increasing this value, if the ReadBufferThread hasn't
                 // stopped already it isn't going to stop, and if it has already stopped _feadBufferThread will
                 // already be null so Read will restart it.
-                lock( _boundaryCheckLock )
+                lock( _endOffsetLock )
                 {
-                    _stopReadingAtNextBoundary = value;
-                    if( _stopReadingAtNextBoundary )
-                    {
-                        int currentBlock = (int)(_position / _file.BlockSize);
-                        _endOffset = Math.Min(Length, (currentBlock + 1) * _file.BlockSize);
-                    }
+                    _endOffset = value;
+                    if( value > 0 )
+                        _lastBlockToDownload = (int)((value - 1) / _file.BlockSize);
                     else
-                        _endOffset = Length;
+                        _lastBlockToDownload = 0;
                 }
             }
+        }
+
+        /// <summary>
+        /// Gets the amount of padding skipped while reading from the stream.
+        /// </summary>
+        /// <value>The amount of padding bytes skipped.</value>
+        public long PaddingBytesSkipped
+        {
+            get { return _paddingSkipped; }
         }
 
         /// <summary>
         /// Gets a value indicating whether this instance has stopped reading.
         /// </summary>
         /// <value>
-        /// 	<see langword="true"/> if the stream has reached the end or <see cref="StopReadingAtNextBoundary"/> is <see langword="true"/> and the
-        ///     boundary has been reached; otherwise, <see langword="false"/>.
+        /// 	<see langword="true"/> if the stream has reached the position indicated by <see cref="StopReadingAtPosition"/>; otherwise, <see langword="false"/>.
         /// </value>
         /// <remarks>
         /// If this property is <see langword="true"/> it means the next call to <see cref="Read"/> will return 0.
@@ -268,7 +292,9 @@ namespace Tkl.Jumbo.Dfs
                         // it means this packet is padded so we should adjust the position.
                         if( _currentPacket.IsLastPacket && _position < Length )
                         {
-                            _position += (Packet.PacketSize - _currentPacket.Size);
+                            int padding = Packet.PacketSize - _currentPacket.Size;
+                            _position += padding;
+                            _paddingSkipped += padding;
                         }
                         _currentPacket = null;
                     }
@@ -303,15 +329,14 @@ namespace Tkl.Jumbo.Dfs
                 throw new ArgumentOutOfRangeException("offset");
             if( newPosition != _position )
             {
-                if( _feadBufferThread != null )
+                if( _readBufferThread != null )
                 {
                     _packetBuffer.Cancel();
-                    _feadBufferThread.Join();
-                    _feadBufferThread = null;
+                    _readBufferThread.Join();
+                    _readBufferThread = null;
                 }
                 _lastResult = DataServerClientProtocolResult.Ok;
                 _position = newPosition;
-                StopReadingAtNextBoundary = StopReadingAtNextBoundary; // Setting this property to itself will recompute the end offset if it was false.
                 // We'll restart the thread when Read is called.
                 _packetBuffer.Reset();
                 _currentPacket = null;
@@ -385,11 +410,11 @@ namespace Tkl.Jumbo.Dfs
 			  //if( _readTime != null )
 			  //    _log.DebugFormat("Total: {0}, count: {1}, average: {2}", _readTime.ElapsedMilliseconds, _totalReads, _readTime.ElapsedMilliseconds / (float)_totalReads);
                 _disposed = true;
-                if( _feadBufferThread != null )
+                if( _readBufferThread != null )
                 {
                     _packetBuffer.Cancel();
-                    _feadBufferThread.Join();
-                    _feadBufferThread = null;
+                    _readBufferThread.Join();
+                    _readBufferThread = null;
                 }
                 if( _packetBuffer != null )
                     _packetBuffer.Dispose();
@@ -424,11 +449,11 @@ namespace Tkl.Jumbo.Dfs
                             if( !DownloadBlock(ref blockOffset, block, server, blockIndex) )
                                 return; // cancelled
 
-                            lock( _boundaryCheckLock )
+                            lock( _endOffsetLock )
                             {
-                                if( _stopReadingAtNextBoundary )
+                                if( blockIndex == _lastBlockToDownload )
                                 {
-                                    _feadBufferThread = null;
+                                    _readBufferThread = null;
                                     return;
                                 }
                             }
@@ -485,7 +510,9 @@ namespace Tkl.Jumbo.Dfs
                     {
                         // We tried to seek into padding, so go to the next block.
                         // Because this can only happen after a seek operation the packet buffer is empty, which means no other threads can access _position so we can update it.
+                        long oldPosition = _position;
                         _position = (blockIndex + 1) * BlockSize;
+                        _paddingSkipped += _position - oldPosition;
                         return true;
                     }
                     if( status != DataServerClientProtocolResult.Ok )
@@ -530,13 +557,13 @@ namespace Tkl.Jumbo.Dfs
 
         private void EnsureReadBufferThreadStarted()
         {
-            if( _feadBufferThread == null && _packetBuffer.ReadItemWillBlock )
+            if( _readBufferThread == null && _packetBuffer.ReadItemWillBlock )
             {
                 // We don't start the thread in the constructor because that'd be a waste if you immediately seek after that.
-                _feadBufferThread = new Thread(ReadBufferThread);
-                _feadBufferThread.IsBackground = true;
-                _feadBufferThread.Name = "FillBuffer";
-                _feadBufferThread.Start();
+                _readBufferThread = new Thread(ReadBufferThread);
+                _readBufferThread.IsBackground = true;
+                _readBufferThread.Name = "FillBuffer";
+                _readBufferThread.Start();
             }
         }    
     }

@@ -125,6 +125,7 @@ namespace Tkl.Jumbo.Test.Dfs
                     input.Read(buffer, 0, buffer.Length);
                     stream.Read(buffer2, 0, buffer.Length);
                     Assert.IsTrue(Utilities.CompareArray(buffer, 0, buffer2, 0, buffer.Length));
+                    Assert.AreEqual(0, input.PaddingBytesSkipped);
                 }
             }
         }
@@ -200,6 +201,7 @@ namespace Tkl.Jumbo.Test.Dfs
                 Trace.Flush();
                 int realSize;
                 int blockPadding = blockSize % recordSize;
+                int totalPadding;
                 using( DfsOutputStream output = new DfsOutputStream(_nameServer, fileName, blockSize, 0, IO.RecordStreamOptions.DoNotCrossBoundary) )
                 {
                     byte[] buffer = new byte[recordSize];
@@ -214,7 +216,7 @@ namespace Tkl.Jumbo.Test.Dfs
                     if( size % blockSize != 0 )
                         ++blocks;
 
-                    int totalPadding = (blocks - 1) * blockPadding;
+                    totalPadding = (blocks - 1) * blockPadding;
                     realSize = size + totalPadding;
                     Assert.AreEqual(realSize, output.Length);
                     Assert.AreEqual(realSize, output.Position);
@@ -234,6 +236,7 @@ namespace Tkl.Jumbo.Test.Dfs
                     Assert.AreEqual(0, input.Position);
                     Assert.IsTrue(Utilities.CompareStream(stream, input));
                     Assert.AreEqual(realSize, input.Position);
+                    Assert.AreEqual(totalPadding, input.PaddingBytesSkipped);
                     Assert.IsTrue(input.IsStopped);
                     Trace.WriteLine("Testing stream seek.");
                     Trace.Flush();
@@ -245,6 +248,7 @@ namespace Tkl.Jumbo.Test.Dfs
                     byte[] buffer2 = new byte[100000];
                     input.Read(buffer, 0, buffer.Length);
                     Assert.IsFalse(input.IsStopped);
+                    Assert.AreEqual(totalPadding + blockPadding, input.PaddingBytesSkipped); // PaddingBytesSkipped is not reset to zero.
                     stream.Read(buffer2, 0, buffer.Length);
                     Assert.IsTrue(Utilities.CompareArray(buffer, 0, buffer2, 0, buffer.Length));
                     Assert.AreEqual(startPosition + buffer.Length + blockPadding, input.Position);
@@ -263,7 +267,7 @@ namespace Tkl.Jumbo.Test.Dfs
                 stream.Position = 0;
                 using( DfsInputStream input = new DfsInputStream(_nameServer, fileName) )
                 {
-                    input.StopReadingAtNextBoundary = true;
+                    input.StopReadingAtPosition = blockSize;
                     Assert.IsFalse(input.IsStopped);
                     byte[] buffer = new byte[100000];
                     byte[] buffer2 = new byte[100000];
@@ -282,7 +286,7 @@ namespace Tkl.Jumbo.Test.Dfs
                     Assert.AreEqual(0, input.Read(buffer, 0, buffer.Length));
                     Assert.IsTrue(input.IsStopped);
 
-                    input.StopReadingAtNextBoundary = false;
+                    input.StopReadingAtPosition = input.Length;
                     Assert.IsFalse(input.IsStopped);
                     bytesRead = input.Read(buffer, 0, buffer.Length);
                     Assert.AreEqual(buffer.Length, bytesRead);

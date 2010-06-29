@@ -140,9 +140,8 @@ namespace Tkl.Jumbo.Jet.Samples.IO
                 --_end;
             if( offset != 0 )
             {
-                IRecordInputStream recordInputStream = stream as IRecordInputStream;
-                if( recordInputStream == null || (recordInputStream.RecordOptions & RecordStreamOptions.DoNotCrossBoundary) != RecordStreamOptions.DoNotCrossBoundary ||
-                    recordInputStream.OffsetFromBoundary(offset) != 0 )
+                if( RecordInputStream == null || (RecordInputStream.RecordOptions & RecordStreamOptions.DoNotCrossBoundary) != RecordStreamOptions.DoNotCrossBoundary ||
+                    RecordInputStream.OffsetFromBoundary(offset) != 0 )
                 {
                     ReadRecordInternal(false);
                     CurrentRecord = null;

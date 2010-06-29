@@ -34,6 +34,7 @@ namespace Tkl.Jumbo.IO
         private string _fileName;
         private bool _deleteFile;
         private static readonly IValueWriter<T> _valueWriter = ValueWriter<T>.Writer;
+        private readonly long _end;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="BinaryRecordReader{T}"/> class that reads from the specified file.
@@ -69,12 +70,34 @@ namespace Tkl.Jumbo.IO
         /// <param name="allowRecordReuse"><see langword="true"/> if the reader can reuse the same instance of <typeparamref name="T"/> every time; <see langword="false"/>
         /// if a new instance must be created for every record.</param>
         public BinaryRecordReader(Stream stream, bool allowRecordReuse)
-            : base(stream)
+            : this(stream, 0, stream.Length, allowRecordReuse)
         {
+        }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="BinaryRecordReader&lt;T&gt;"/> class.
+        /// </summary>
+        /// <param name="stream">The stream.</param>
+        /// <param name="offset">The offset.</param>
+        /// <param name="size">The size.</param>
+        /// <param name="allowRecordReuse"><see langword="true"/> to [allow record reuse]; otherwise, <see langword="false"/>.</param>
+        public BinaryRecordReader(Stream stream, long offset, long size, bool allowRecordReuse)
+            : base(stream, offset, size, true)
+        {
+            if( offset != 0 )
+            {
+                if( RecordInputStream == null || (RecordInputStream.RecordOptions & RecordStreamOptions.DoNotCrossBoundary) != RecordStreamOptions.DoNotCrossBoundary ||
+                    RecordInputStream.OffsetFromBoundary(offset) != 0 )
+                {
+                    throw new ArgumentException("BinaryRecordReader only supports offsets that are zero or at the start of a block if RecordStreamOptions.DoNotCrossBoundary is enabled.", "offset");
+                }
+            }
+
             _reader = new BinaryReader(stream);
             if( allowRecordReuse && _valueWriter == null )
                 _record = (T)FormatterServices.GetUninitializedObject(typeof(T));
             _allowRecordReuse = allowRecordReuse;
+            _end = offset + size;
         }
 
         /// <summary>
@@ -85,7 +108,7 @@ namespace Tkl.Jumbo.IO
         {
             CheckDisposed();
 
-            if( Stream.Position == Stream.Length )
+            if( (RecordInputStream != null && RecordInputStream.IsStopped) || Stream.Position >= _end )
             {
                 CurrentRecord = default(T);
                 Dispose(); // This will delete the file if necessary.

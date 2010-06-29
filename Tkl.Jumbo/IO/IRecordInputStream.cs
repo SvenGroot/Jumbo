@@ -19,18 +19,12 @@ namespace Tkl.Jumbo.IO
         RecordStreamOptions RecordOptions { get; }
 
         /// <summary>
-        /// Gets or sets a value indicating whether read operations will stop at structural boundaries (e.g. block boundaries on the DFS).
+        /// Gets or sets the position in the stream after which no data will be read.
         /// </summary>
         /// <value>
-        /// 	<see langword="true"/> if the <see cref="System.IO.Stream.Read"/> method will not return any data after the next boundary; <see langword="false"/>
-        /// 	if it continues returning data until the end of the stream. The default value is <see langword="false"/>.
+        /// 	The position after which <see cref="System.IO.Stream.Read"/> method will not return any data. The default value is the length of the stream.
         /// </value>
         /// <remarks>
-        /// <para>
-        ///   Setting this property to <see langword="true"/> will prevent read operations from crossing structural boundaries (e.g. block boundaries on the DFS).
-        ///   The <see cref="System.IO.Stream.Read"/> method will not return any more data after such a boundary is hit until this property is set to <see langword="false"/>
-        ///   or until a seek operation is performed.
-        /// </para>
         /// <para>
         ///   For a stream where <see cref="RecordOptions"/> is set to <see cref="RecordStreamOptions.DoNotCrossBoundary"/> you can use this property
         ///   to ensure that no data after the boundary is read if you only wish to read records up to the boundary.
@@ -41,18 +35,17 @@ namespace Tkl.Jumbo.IO
         ///   this property can be used to ensure that no data from the next block will be read.
         /// </para>
         /// <para>
-        ///   Setting this property to <see langword="true"/> if <see cref="RecordStreamOptions.DoNotCrossBoundary"/> is not set can cause reading
-        ///   to halt in the middle of a record, and is therefore not recommended.
+        ///   Setting this property to a value other than the stream length if <see cref="RecordStreamOptions.DoNotCrossBoundary"/> is not set, or
+        ///   to a value that is not on a structural boundary can cause reading to halt in the middle of a record, and is therefore not recommended.
         /// </para>
         /// </remarks>
-        bool StopReadingAtNextBoundary { get; set; }
+        long StopReadingAtPosition { get; set; }
 
         /// <summary>
         /// Gets a value indicating whether this instance has stopped reading.
         /// </summary>
         /// <value>
-        /// 	<see langword="true"/> if the stream has reached the end or <see cref="StopReadingAtNextBoundary"/> is <see langword="true"/> and the
-        /// 	boundary has been reached; otherwise, <see langword="false"/>.
+        /// 	<see langword="true"/> if the stream has reached the position indicated by <see cref="StopReadingAtPosition"/>; otherwise, <see langword="false"/>.
         /// </value>
         /// <remarks>
         /// <para>
@@ -60,6 +53,12 @@ namespace Tkl.Jumbo.IO
         /// </para>
         /// </remarks>
         bool IsStopped { get; }
+
+        /// <summary>
+        /// Gets the amount of padding skipped while reading from the stream.
+        /// </summary>
+        /// <value>The amount of padding bytes skipped.</value>
+        long PaddingBytesSkipped { get; }
 
         /// <summary>
         /// Determines the offset of the specified position from the directly preceding structural boundary (e.g. a block boundary on the DFS).
