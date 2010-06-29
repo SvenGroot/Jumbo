@@ -99,7 +99,7 @@ namespace Tkl.Jumbo.IO
         private bool _allowRecordReuse;
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="StreamRecordReader{T}"/> class with the specified stream.
+        /// Initializes a new instance of the <see cref="LineRecordReader"/> class with the specified stream.
         /// </summary>
         /// <param name="stream">The stream to read from.</param>
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1062:Validate arguments of public methods", MessageId = "0")]
@@ -109,7 +109,7 @@ namespace Tkl.Jumbo.IO
         }
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="StreamRecordReader{T}"/> class with the specified stream.
+        /// Initializes a new instance of the <see cref="LineRecordReader"/> class with the specified stream.
         /// </summary>
         /// <param name="stream">The stream to read from.</param>
         /// <param name="offset">The position in the stream to start reading.</param>
@@ -134,9 +134,28 @@ namespace Tkl.Jumbo.IO
                 --_end;
             if( offset != 0 )
             {
-                ReadRecord();
-                CurrentRecord = null;
-                FirstRecordOffset = stream.Position;
+                IRecordInputStream recordInputStream = stream as IRecordInputStream;
+                if( recordInputStream == null || (recordInputStream.RecordOptions & RecordStreamOptions.DoNotCrossBoundary) != RecordStreamOptions.DoNotCrossBoundary ||
+                    recordInputStream.OffsetFromBoundary(offset) != 0 )
+                {
+                    ReadRecordInternal();
+                    CurrentRecord = null;
+                    FirstRecordOffset = _position;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Gets the size of the records before deserialization.
+        /// </summary>
+        /// <value>
+        /// The number of bytes read from the stream.
+        /// </value>
+        public override long InputBytes
+        {
+            get
+            {
+                return _position - FirstRecordOffset;
             }
         }
 
@@ -155,6 +174,13 @@ namespace Tkl.Jumbo.IO
             }
             int bytesProcessed;
             _reader.ReadLine(out bytesProcessed);
+
+            // If the stream uses RecordStreamOptions.DoNotCrossBoundary, we can run out of data before _position > _end, so check that here.
+            if( _reader.Line.ByteLength == 0 && bytesProcessed == 0 )
+            {
+                CurrentRecord = null;
+                return false;
+            }
 
             if( _allowRecordReuse )
                 CurrentRecord = _reader.Line;

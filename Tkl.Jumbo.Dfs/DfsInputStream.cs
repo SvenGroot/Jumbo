@@ -199,6 +199,21 @@ namespace Tkl.Jumbo.Dfs
         }
 
         /// <summary>
+        /// Gets a value indicating whether this instance has stopped reading.
+        /// </summary>
+        /// <value>
+        /// 	<see langword="true"/> if the stream has reached the end or <see cref="StopReadingAtNextBoundary"/> is <see langword="true"/> and the
+        ///     boundary has been reached; otherwise, <see langword="false"/>.
+        /// </value>
+        /// <remarks>
+        /// If this property is <see langword="true"/> it means the next call to <see cref="Read"/> will return 0.
+        /// </remarks>
+        public bool IsStopped
+        {
+            get { return _position >= _endOffset; }
+        }
+
+        /// <summary>
         /// Reads a sequence of bytes from the current stream and advances the position within the stream by the number of bytes read. 
         /// </summary>
         /// <param name="buffer">An array of bytes. When this method returns, the buffer contains the specified byte array with the values between offset and (offset + count - 1) replaced by the bytes read from the current source.</param>
@@ -296,6 +311,7 @@ namespace Tkl.Jumbo.Dfs
                 }
                 _lastResult = DataServerClientProtocolResult.Ok;
                 _position = newPosition;
+                StopReadingAtNextBoundary = StopReadingAtNextBoundary; // Setting this property to itself will recompute the end offset if it was false.
                 // We'll restart the thread when Read is called.
                 _packetBuffer.Reset();
                 _currentPacket = null;
@@ -321,6 +337,40 @@ namespace Tkl.Jumbo.Dfs
         public override void Write(byte[] buffer, int offset, int count)
         {
             throw new NotSupportedException();
+        }
+
+        /// <summary>
+        /// Determines the offset of the specified position from the directly preceding structural boundary (e.g. a block boundary on the DFS).
+        /// </summary>
+        /// <param name="position">The position.</param>
+        /// <returns>
+        /// The offset from the structural boundary that directly precedes the specified position.
+        /// </returns>
+        public long OffsetFromBoundary(long position)
+        {
+            if( position < 0 || position > Length )
+                throw new ArgumentOutOfRangeException("position");
+
+            return position % _file.BlockSize;
+        }
+
+        /// <summary>
+        /// Determines whether the range between two specified positions does not cross a structural boundary (e.g. a block boundary on the DFS).
+        /// </summary>
+        /// <param name="position1">The first position.</param>
+        /// <param name="position2">The second position.</param>
+        /// <returns>
+        /// 	<see langword="true"/> if the <paramref name="position1"/> and <paramref name="position2"/> fall inside the same boundaries (e.g. if
+        /// both positions are in the same block in the DFS); otherwise, <see langword="false"/>.
+        /// </returns>
+        public bool AreInsideSameBoundary(long position1, long position2)
+        {
+            if( position1 < 0 || position1 > Length )
+                throw new ArgumentOutOfRangeException("position1");
+            if( position2 < 0 || position2 > Length )
+                throw new ArgumentOutOfRangeException("position2");
+
+            return position1 / _file.BlockSize == position2 / _file.BlockSize;
         }
 
         /// <summary>

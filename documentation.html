@@ -359,6 +359,9 @@
             in the next DFS block and may reside on a different node in the cluster.
         </li>
         <li>
+            It should be check the RecordOptions of the underlying stream, so it behaves correctly if <code>RecordStreamOptions.DoNotCrossBoundary</code> is set.
+        </li>
+        <li>
             If and only if <em>allowRecordReuse</em> is <code>true</code>, it is allowed for each call to <code>ReadRecord</code> to reuse the same object instance. If <em>allowRecordReuse</em>
             is <code>false</code> it must create a new instance and assign it to <code>CurrentRecord</code> for every record. It is not required (but strongly recommended) to reuse record instances
             if <em>allowRecordReuse</em> is true.

@@ -140,9 +140,28 @@ namespace Tkl.Jumbo.Jet.Samples.IO
                 --_end;
             if( offset != 0 )
             {
-                ReadRecordInternal(false);
-                CurrentRecord = null;
-                FirstRecordOffset = stream.Position;
+                IRecordInputStream recordInputStream = stream as IRecordInputStream;
+                if( recordInputStream == null || (recordInputStream.RecordOptions & RecordStreamOptions.DoNotCrossBoundary) != RecordStreamOptions.DoNotCrossBoundary ||
+                    recordInputStream.OffsetFromBoundary(offset) != 0 )
+                {
+                    ReadRecordInternal(false);
+                    CurrentRecord = null;
+                    FirstRecordOffset = _position;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Gets the size of the records before deserialization.
+        /// </summary>
+        /// <value>
+        /// The number of bytes read from the stream.
+        /// </value>
+        public override long InputBytes
+        {
+            get
+            {
+                return _position - FirstRecordOffset;
             }
         }
 
@@ -170,6 +189,12 @@ namespace Tkl.Jumbo.Jet.Samples.IO
                 int bytesProcessed;
                 _reader.ReadWord(out bytesProcessed);
                 _position += bytesProcessed;
+                // If the stream uses RecordStreamOptions.DoNotCrossBoundary, we can run out of data before _position > _end, so check that here.
+                if( _word.ByteLength == 0 && bytesProcessed == 0 )
+                {
+                    CurrentRecord = null;
+                    return false;
+                }
             } while( skipEmpty && _word.ByteLength == 0 );
             CurrentRecord = _word;
             return true;

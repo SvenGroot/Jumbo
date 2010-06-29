@@ -31,6 +31,7 @@ namespace Tkl.Jumbo.Jet.Samples.IO
         protected override void WriteRecordInternal(GenSortRecord record)
         {
             Stream.Write(record.RecordBuffer, 0, GenSortRecord.RecordSize);
+            base.WriteRecordInternal(record);
         }
     }
 }

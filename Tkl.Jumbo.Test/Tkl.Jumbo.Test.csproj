@@ -94,6 +94,7 @@
     <Compile Include="Dfs\NameServerTests.cs" />
     <Compile Include="Dfs\NewBlockHeartbeatDataTests.cs" />
     <Compile Include="Dfs\PacketTests.cs" />
+    <Compile Include="Dfs\RecordReaderWriterTests.cs" />
     <Compile Include="Dfs\ReplicaPlacementTests.cs" />
     <Compile Include="InnerJoinRecordReaderTests.cs" />
     <Compile Include="Jet\FileChannelCompressionTests.cs" />

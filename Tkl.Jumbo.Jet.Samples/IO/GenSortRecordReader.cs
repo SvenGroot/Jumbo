@@ -51,8 +51,17 @@ namespace Tkl.Jumbo.Jet.Samples.IO
             _position = offset;
             _end = offset + size;
 
-            // gensort records are 100 bytes long, making it easy to find the first record.
-            long rem = _position % GenSortRecord.RecordSize;
+            IRecordInputStream recordInputStream = stream as IRecordInputStream;
+            long rem;
+            if( recordInputStream != null && (recordInputStream.RecordOptions & RecordStreamOptions.DoNotCrossBoundary) == RecordStreamOptions.DoNotCrossBoundary )
+            {
+                rem = recordInputStream.OffsetFromBoundary(_position) % GenSortRecord.RecordSize;
+            }
+            else
+            {
+                // gensort records are 100 bytes long, making it easy to find the first record.
+                rem = _position % GenSortRecord.RecordSize;
+            }
             if( rem != 0 )
             {
                 Stream.Position += GenSortRecord.RecordSize - rem;
@@ -80,7 +89,12 @@ namespace Tkl.Jumbo.Jet.Samples.IO
 
             GenSortRecord result = new GenSortRecord();
             int bytesRead = Stream.Read(result.RecordBuffer, 0, GenSortRecord.RecordSize);
-            if( bytesRead != GenSortRecord.RecordSize )
+            if( bytesRead == 0 )
+            {
+                CurrentRecord = null;
+                return false;
+            }
+            else if( bytesRead != GenSortRecord.RecordSize )
             {
                 CurrentRecord = null;
                 throw new InvalidOperationException("Invalid input file format");

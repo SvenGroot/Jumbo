@@ -171,5 +171,10 @@ namespace Tkl.Jumbo.Test.Dfs
             return config;
         }
 
+        public static DfsClient CreateClient()
+        {
+            return new DfsClient(CreateClientConfig());
+        }
+
     }
 }

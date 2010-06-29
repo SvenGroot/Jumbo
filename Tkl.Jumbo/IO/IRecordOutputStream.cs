@@ -19,6 +19,12 @@ namespace Tkl.Jumbo.IO
         RecordStreamOptions RecordOptions { get; }
 
         /// <summary>
+        /// Gets the amount of the stream that is actually used by records.
+        /// </summary>
+        /// <value>The length of the stream minus padding.</value>
+        long RecordsSize { get; }
+
+        /// <summary>
         /// Indicates that the current position of the stream is a record boundary.
         /// </summary>
         void MarkRecord();

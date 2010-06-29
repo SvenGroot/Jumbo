@@ -13,6 +13,25 @@ namespace Tkl.Jumbo.IO
     /// Abstract base class for classes that read records from a stream or part of a stream.
     /// </summary>
     /// <typeparam name="T">The type of the records to read.</typeparam>
+    /// <remarks>
+    /// <para>
+    ///   Deriving classes should start reading at <see cref="Offset"/>. If <see cref="Offset"/> is not on a record boundary,
+    ///   they should seek ahead to the first record boundary and start from there.
+    /// </para>
+    /// <para>
+    ///   Deriving classes should use <see cref="Offset"/> and <see cref="Size"/> to determine when to stop returning records.
+    ///   If <see cref="Offset"/> + <see cref="Size"/> is not on a record boundary, they should continue reading until the
+    ///   next record boundary.
+    /// </para>
+    /// <para>
+    ///   The stream that records are read from may implement <see cref="IRecordInputStream"/>. If this is the case,
+    ///   and <see cref="RecordStreamOptions.DoNotCrossBoundary"/> is set on that stream and if <see cref="Offset"/>
+    ///   and <see cref="Offset"/> + <see cref="Size"/> do not cross a structural boundary (e.g. block boundary)
+    ///   then <see cref="IRecordInputStream.StopReadingAtNextBoundary"/> is set to <see langword="true"/>. In
+    ///   this situation, <see cref="System.IO.Stream.Read"/> may return 0 before <see cref="Size"/> bytes are read. A
+    ///   deriving class should check this and stop reading at that point.
+    /// </para>
+    /// </remarks>
     public abstract class StreamRecordReader<T> : RecordReader<T>
     {
         private bool _disposed;
@@ -35,9 +54,16 @@ namespace Tkl.Jumbo.IO
         /// <param name="offset">The position in the stream to start reading.</param>
         /// <param name="size">The number of bytes to read from the stream.</param>
         /// <remarks>
-        /// The reader will read a whole number of records until the start of the next record falls
-        /// after <paramref name="offset"/> + <paramref name="size"/>. Because of this, the reader can
-        /// read more than <paramref name="size"/> bytes.
+        /// <para>
+        ///   The reader will read a whole number of records until the start of the next record falls
+        ///   after <paramref name="offset"/> + <paramref name="size"/>. Because of this, the reader can
+        ///   read more than <paramref name="size"/> bytes.
+        /// </para>
+        /// <para>
+        ///   If the stream implements <see cref="IRecordInputStream"/> with <see cref="RecordStreamOptions.DoNotCrossBoundary"/> set, 
+        ///   and the start and end offset (<paramref name="offset"/> + <paramref name="size"/>) do not cross a boundary, then 
+        ///   <see cref="IRecordInputStream.StopReadingAtNextBoundary"/> will be set to <see langword="true"/>.
+        /// </para>
         /// </remarks>
         protected StreamRecordReader(Stream stream, long offset, long size)
             : this(stream, offset, size, true)
@@ -52,9 +78,16 @@ namespace Tkl.Jumbo.IO
         /// <param name="size">The number of bytes to read from the stream.</param>
         /// <param name="seekToOffset"><see langword="true"/> to seek the stream to <paramref name="offset"/>; <see langword="false"/> to leave the stream at the current position.</param>
         /// <remarks>
-        /// The reader will read a whole number of records until the start of the next record falls
-        /// after <paramref name="offset"/> + <paramref name="size"/>. Because of this, the reader can
-        /// read more than <paramref name="size"/> bytes.
+        /// <para>
+        ///   The reader will read a whole number of records until the start of the next record falls
+        ///   after <paramref name="offset"/> + <paramref name="size"/>. Because of this, the reader can
+        ///   read more than <paramref name="size"/> bytes.
+        /// </para>
+        /// <para>
+        ///   If the stream implements <see cref="IRecordInputStream"/> with <see cref="RecordStreamOptions.DoNotCrossBoundary"/> set, 
+        ///   and the start and end offset (<paramref name="offset"/> + <paramref name="size"/>) do not cross a boundary, then 
+        ///   <see cref="IRecordInputStream.StopReadingAtNextBoundary"/> will be set to <see langword="true"/>.
+        /// </para>
         /// </remarks>
         protected StreamRecordReader(Stream stream, long offset, long size, bool seekToOffset)
         {
@@ -73,6 +106,9 @@ namespace Tkl.Jumbo.IO
             Offset = offset;
             FirstRecordOffset = offset;
             Size = size;
+            IRecordInputStream recordInputStream = Stream as IRecordInputStream;
+            if( recordInputStream != null && (recordInputStream.RecordOptions & RecordStreamOptions.DoNotCrossBoundary) == RecordStreamOptions.DoNotCrossBoundary && recordInputStream.AreInsideSameBoundary(offset, offset + size - 1) )
+                recordInputStream.StopReadingAtNextBoundary = true;
         }
 
         /// <summary>

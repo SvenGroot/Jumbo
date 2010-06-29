@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using Tkl.Jumbo.IO;
+using System.IO;
 
 namespace Tkl.Jumbo.IO
 {
@@ -15,7 +16,7 @@ namespace Tkl.Jumbo.IO
     /// Because this object is mutable you must take care when using it scenarios where immutability is expected, e.g. as a key
     /// in a <see cref="Dictionary{TKey,TValue}"/>.
     /// </remarks>
-    public class Utf8String : IWritable, IEquatable<Utf8String>, IComparable<Utf8String>, IComparable, ICloneable
+    public sealed class Utf8String : IWritable, IEquatable<Utf8String>, IComparable<Utf8String>, IComparable, ICloneable
     {
         private static readonly Encoding _encoding = Encoding.UTF8;
         private static readonly byte[] _emptyArray = new byte[0];
@@ -208,6 +209,21 @@ namespace Tkl.Jumbo.IO
         public override string ToString()
         {
             return _encoding.GetString(_utf8Bytes, 0, _byteLength);
+        }
+
+        /// <summary>
+        /// Writes this <see cref="Utf8String"/> to the specified stream.
+        /// </summary>
+        /// <param name="stream">The stream.</param>
+        /// <remarks>
+        ///   This writes the utf-8 byte data of the string to the stream. No other information (such as the string length) is written.
+        /// </remarks>
+        public void Write(Stream stream)
+        {
+            if( stream == null )
+                throw new ArgumentNullException("stream");
+
+            stream.Write(_utf8Bytes, 0, _byteLength);
         }
 
         /// <summary>

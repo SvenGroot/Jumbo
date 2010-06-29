@@ -46,5 +46,39 @@ namespace Tkl.Jumbo.IO
         /// </para>
         /// </remarks>
         bool StopReadingAtNextBoundary { get; set; }
+
+        /// <summary>
+        /// Gets a value indicating whether this instance has stopped reading.
+        /// </summary>
+        /// <value>
+        /// 	<see langword="true"/> if the stream has reached the end or <see cref="StopReadingAtNextBoundary"/> is <see langword="true"/> and the
+        /// 	boundary has been reached; otherwise, <see langword="false"/>.
+        /// </value>
+        /// <remarks>
+        /// <para>
+        ///   If this property is <see langword="true"/> it means the next call to <see cref="System.IO.Stream.Read"/> will return 0.
+        /// </para>
+        /// </remarks>
+        bool IsStopped { get; }
+
+        /// <summary>
+        /// Determines the offset of the specified position from the directly preceding structural boundary (e.g. a block boundary on the DFS).
+        /// </summary>
+        /// <param name="position">The position.</param>
+        /// <returns>
+        /// 	The offset from the structural boundary that directly precedes the specified position.
+        /// </returns>
+        long OffsetFromBoundary(long position);
+
+        /// <summary>
+        /// Determines whether the range between two specified positions does not cross a structural boundary (e.g. a block boundary on the DFS).
+        /// </summary>
+        /// <param name="position1">The first position.</param>
+        /// <param name="position2">The second position.</param>
+        /// <returns>
+        ///     <see langword="true"/> if the <paramref name="position1"/> and <paramref name="position2"/> fall inside the same boundaries (e.g. if
+        ///     both positions are in the same block in the DFS); otherwise, <see langword="false"/>.
+        /// </returns>
+        bool AreInsideSameBoundary(long position1, long position2);
     }
 }

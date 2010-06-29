@@ -225,6 +225,7 @@ namespace Tkl.Jumbo.Test.Dfs
                 stream.Position = 0;
                 using( DfsInputStream input = new DfsInputStream(_nameServer, fileName) )
                 {
+                    Assert.IsFalse(input.IsStopped);
                     Assert.AreEqual(blockSize, input.BlockSize);
                     Assert.IsTrue(input.CanRead);
                     Assert.IsTrue(input.CanSeek);
@@ -233,14 +234,17 @@ namespace Tkl.Jumbo.Test.Dfs
                     Assert.AreEqual(0, input.Position);
                     Assert.IsTrue(Utilities.CompareStream(stream, input));
                     Assert.AreEqual(realSize, input.Position);
+                    Assert.IsTrue(input.IsStopped);
                     Trace.WriteLine("Testing stream seek.");
                     Trace.Flush();
                     int startPosition = blockSize - 10000;
                     input.Position = startPosition;
+                    Assert.IsFalse(input.IsStopped);
                     stream.Position = startPosition;
                     byte[] buffer = new byte[100000];
                     byte[] buffer2 = new byte[100000];
                     input.Read(buffer, 0, buffer.Length);
+                    Assert.IsFalse(input.IsStopped);
                     stream.Read(buffer2, 0, buffer.Length);
                     Assert.IsTrue(Utilities.CompareArray(buffer, 0, buffer2, 0, buffer.Length));
                     Assert.AreEqual(startPosition + buffer.Length + blockPadding, input.Position);
@@ -260,6 +264,7 @@ namespace Tkl.Jumbo.Test.Dfs
                 using( DfsInputStream input = new DfsInputStream(_nameServer, fileName) )
                 {
                     input.StopReadingAtNextBoundary = true;
+                    Assert.IsFalse(input.IsStopped);
                     byte[] buffer = new byte[100000];
                     byte[] buffer2 = new byte[100000];
                     int bytesRead;
@@ -275,12 +280,15 @@ namespace Tkl.Jumbo.Test.Dfs
                     Assert.AreEqual(blockSize, input.Position);
                     Assert.AreEqual(1, input.BlocksRead);
                     Assert.AreEqual(0, input.Read(buffer, 0, buffer.Length));
+                    Assert.IsTrue(input.IsStopped);
 
                     input.StopReadingAtNextBoundary = false;
+                    Assert.IsFalse(input.IsStopped);
                     bytesRead = input.Read(buffer, 0, buffer.Length);
                     Assert.AreEqual(buffer.Length, bytesRead);
                     stream.Read(buffer2, 0, buffer2.Length);
                     Assert.IsTrue(Utilities.CompareArray(buffer, 0, buffer2, 0, bytesRead));
+                    Assert.IsFalse(input.IsStopped);
                 }
             }
         }

@@ -15,6 +15,9 @@ namespace Tkl.Jumbo.IO
     /// <typeparam name="T">The type of the record.</typeparam>
     public abstract class StreamRecordWriter<T> : RecordWriter<T>
     {
+        private readonly IRecordOutputStream _recordOutputStream;
+        private readonly long _startPosition;
+
         /// <summary>
         /// Initializes a new instance of the <see cref="RecordWriter{T}"/> class.
         /// </summary>
@@ -24,6 +27,10 @@ namespace Tkl.Jumbo.IO
             if( stream == null )
                 throw new ArgumentNullException("stream");
             Stream = stream;
+            _startPosition = stream.Position;
+            _recordOutputStream = stream as IRecordOutputStream;
+            if( _recordOutputStream != null && _recordOutputStream.RecordOptions == RecordStreamOptions.None )
+                _recordOutputStream = null; // No need to waste time calling MarkRecord if there's no record options set.
         }
 
         /// <summary>
@@ -39,7 +46,7 @@ namespace Tkl.Jumbo.IO
         /// </value>
         public override long OutputBytes
         {
-            get { return Stream.Length; }
+            get { return _recordOutputStream == null ? Stream.Position - _startPosition : _recordOutputStream.RecordsSize; }
         }
 
         /// <summary>
@@ -52,10 +59,25 @@ namespace Tkl.Jumbo.IO
             {
                 ICompressor compressionStream = Stream as ICompressor;
                 if( compressionStream == null )
-                    return OutputBytes;
+                    return Stream.Position - _startPosition;
                 else
                     return compressionStream.CompressedBytesWritten;
             }
+        }
+
+        /// <summary>
+        /// Writes a record.
+        /// </summary>
+        /// <param name="record">The record to write.</param>
+        /// <remarks>
+        /// <para>
+        ///   Derived classes should call the base class implementation after they wrote the record to the stream.
+        /// </para>
+        /// </remarks>
+        protected override void WriteRecordInternal(T record)
+        {
+            if( _recordOutputStream != null )
+                _recordOutputStream.MarkRecord();
         }
         
         /// <summary>

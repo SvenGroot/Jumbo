@@ -68,6 +68,8 @@ namespace Tkl.Jumbo.IO
                 ((IWritable)record).Write(_writer);
             else
                 _valueWriter.Write(record, _writer);
+
+            base.WriteRecordInternal(record);
         }
 
         /// <summary>

@@ -31,6 +31,7 @@ namespace Tkl.Jumbo.Dfs
         private bool _disposed = false;
         private long _fileBytesWritten;
         private long _length;
+        private long _padding;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="DfsOutputStream"/> with the specified name server and file.
@@ -204,6 +205,15 @@ namespace Tkl.Jumbo.Dfs
         }
 
         /// <summary>
+        /// Gets the amount of the stream that is actually used by records.
+        /// </summary>
+        /// <value>The length of the stream minus padding.</value>
+        public long RecordsSize
+        {
+            get { return _length - _padding; }
+        }
+
+        /// <summary>
         /// Not supported.
         /// </summary>
         public override int Read(byte[] buffer, int offset, int count)
@@ -296,6 +306,7 @@ namespace Tkl.Jumbo.Dfs
                     WriteBufferToPacket(true);
                     // Correct length to account for padding added to the block.
                     _length += padding;
+                    _padding += padding;
                 }
 
                 _recordBuffer.Position = 0;
