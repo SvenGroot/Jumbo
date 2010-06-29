@@ -255,6 +255,33 @@ namespace Tkl.Jumbo.Test.Dfs
                     // Position of input should have been updated to blockSize after the seek, so the current position should reflect that.
                     Assert.AreEqual(blockSize + buffer.Length, input.Position);
                 }
+
+                stream.Position = 0;
+                using( DfsInputStream input = new DfsInputStream(_nameServer, fileName) )
+                {
+                    input.StopReadingAtNextBoundary = true;
+                    byte[] buffer = new byte[100000];
+                    byte[] buffer2 = new byte[100000];
+                    int bytesRead;
+                    int totalBytesRead = 0;
+                    while( (bytesRead = input.Read(buffer, 0, buffer.Length)) > 0 )
+                    {
+                        stream.Read(buffer2, 0, bytesRead);
+                        Assert.IsTrue(Utilities.CompareArray(buffer, 0, buffer2, 0, bytesRead));
+                        totalBytesRead += bytesRead;
+                    }
+
+                    Assert.AreEqual(blockSize - blockPadding, totalBytesRead);
+                    Assert.AreEqual(blockSize, input.Position);
+                    Assert.AreEqual(1, input.BlocksRead);
+                    Assert.AreEqual(0, input.Read(buffer, 0, buffer.Length));
+
+                    input.StopReadingAtNextBoundary = false;
+                    bytesRead = input.Read(buffer, 0, buffer.Length);
+                    Assert.AreEqual(buffer.Length, bytesRead);
+                    stream.Read(buffer2, 0, buffer2.Length);
+                    Assert.IsTrue(Utilities.CompareArray(buffer, 0, buffer2, 0, bytesRead));
+                }
             }
         }
     }
