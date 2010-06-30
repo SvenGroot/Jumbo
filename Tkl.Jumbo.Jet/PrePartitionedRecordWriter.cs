@@ -89,5 +89,10 @@ namespace Tkl.Jumbo.Jet
                 }
             }
         }
+
+        void IRecordWriter.WriteRecord(object record)
+        {
+            throw new NotSupportedException();
+        }
     }
 }

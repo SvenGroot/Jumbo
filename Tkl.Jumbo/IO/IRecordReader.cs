@@ -15,7 +15,7 @@ namespace Tkl.Jumbo.IO
     ///   Record readers must inherit from <see cref="RecordReader{T}"/>, not just implement this interface.
     /// </note>
     /// </remarks>
-    public interface IRecordReader
+    public interface IRecordReader : IDisposable
     {
         /// <summary>
         /// Gets the number of records that has been read by this record reader.

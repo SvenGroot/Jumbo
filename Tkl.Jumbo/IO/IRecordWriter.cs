@@ -42,5 +42,11 @@ namespace Tkl.Jumbo.IO
         /// </para>
         /// </remarks>
         long BytesWritten { get; }
+
+        /// <summary>
+        /// Writes a record.
+        /// </summary>
+        /// <param name="record">The record to write.</param>
+        void WriteRecord(object record);
     }
 }

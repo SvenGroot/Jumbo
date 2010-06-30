@@ -83,6 +83,11 @@ namespace Tkl.Jumbo.IO
         {
         }
 
+        void IRecordWriter.WriteRecord(object record)
+        {
+            WriteRecord((T)record);
+        }
+
         #region IDisposable Members
 
         /// <summary>
