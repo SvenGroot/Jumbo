@@ -83,6 +83,7 @@ namespace Tkl.Jumbo.Jet.Jobs
             {
                 stageConfig.DfsOutput.BlockSize = dfsOutput.BlockSize;
                 stageConfig.DfsOutput.ReplicationFactor = dfsOutput.ReplicationFactor;
+                stageConfig.DfsOutput.RecordOptions = dfsOutput.RecordOptions;
             }
 
             if( stage.Settings != null )

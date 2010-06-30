@@ -56,7 +56,7 @@ namespace JobServerApplication
             _stages = stages.AsReadOnly();
             foreach( StageConfiguration stage in config.GetDependencyOrderedStages() )
             {
-                bool nonInputStage = (stage.DfsInputs == null || stage.DfsInputs.Count == 0);
+                bool nonInputStage = stage.DfsInput == null;
                 // Don't do the work trying to find the input stages if the stage has dfs inputs.
                 StageConfiguration[] inputStages = nonInputStage ? config.GetInputStagesForStage(stage.StageId).ToArray() : null;
                 StageInfo stageInfo = new StageInfo(this, stage);

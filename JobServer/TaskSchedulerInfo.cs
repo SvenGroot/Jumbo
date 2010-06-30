@@ -70,7 +70,7 @@ namespace JobServerApplication
         {
             if( _inputBlock == null )
             {
-                TaskDfsInput input = _task.Stage.Configuration.DfsInputs[_task.TaskId.TaskNumber - 1];
+                TaskDfsInput input = _task.Stage.Configuration.DfsInput.TaskInputs[_task.TaskId.TaskNumber - 1];
                 Tkl.Jumbo.Dfs.DfsFile file = _task.Job.SchedulerInfo.GetFileInfo(dfsClient, input.Path);
                 _inputBlock = file.Blocks[input.Block];
             }

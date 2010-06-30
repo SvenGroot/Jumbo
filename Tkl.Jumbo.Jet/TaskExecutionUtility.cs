@@ -408,11 +408,9 @@ namespace Tkl.Jumbo.Jet
 
         private IRecordReader CreateInputRecordReader()
         {
-            if( Configuration.StageConfiguration.DfsInputs != null && Configuration.StageConfiguration.DfsInputs.Count > 0 )
+            if( Configuration.StageConfiguration.DfsInput != null )
             {
-                TaskDfsInput input = Configuration.StageConfiguration.DfsInputs[Configuration.TaskId.TaskNumber - 1];
-                //_log.DebugFormat("Creating record reader of type {0}", input.RecordReaderTypeName);
-                return input.CreateRecordReader(DfsClient, this);
+                return Configuration.StageConfiguration.DfsInput.CreateRecordReader(this);
             }
             else if( _inputChannels != null )
             {
@@ -766,7 +764,7 @@ namespace Tkl.Jumbo.Jet
                     metrics.InputBytes += _inputReader.InputBytes;
                 }
 
-                if( Configuration.StageConfiguration.DfsInputs != null && Configuration.StageConfiguration.DfsInputs.Count > 0 )
+                if( Configuration.StageConfiguration.DfsInput != null )
                 {
                     // It's currently not possible to have a multi input record reader with DFS inputs, so this is safe.
                     if( _inputReader != null )

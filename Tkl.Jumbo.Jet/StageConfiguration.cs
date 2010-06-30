@@ -22,7 +22,6 @@ namespace Tkl.Jumbo.Jet
         private int _taskCount;
         private bool? _allowRecordReuse;
         private bool? _allowOutputRecordReuse;
-        private readonly ExtendedCollection<TaskDfsInput> _dfsInputs = new ExtendedCollection<TaskDfsInput>();
         private readonly ExtendedCollection<string> _dependentStages = new ExtendedCollection<string>();
         private StageConfiguration _childStage;
 
@@ -57,15 +56,15 @@ namespace Tkl.Jumbo.Jet
         /// Gets or sets the number of tasks in this stage.
         /// </summary>
         /// <remarks>
-        /// This property is ignored if <see cref="DfsInputs"/> is not <see langword="null"/>.
+        /// This property is ignored if <see cref="DfsInput"/> is not <see langword="null"/>.
         /// </remarks>
         [XmlAttribute("taskCount")]
         public int TaskCount
         {
             get 
             {
-                if( DfsInputs != null && DfsInputs.Count > 0 )
-                    return DfsInputs.Count;
+                if( DfsInput != null )
+                    return DfsInput.TaskInputs.Count;
                 return _taskCount; 
             }
             set 
@@ -81,10 +80,7 @@ namespace Tkl.Jumbo.Jet
         /// If this property is not <see langword="null"/>, then the stage will have as many tasks as there are inputs, and
         /// the <see cref="TaskCount"/> property will be ignored.
         /// </remarks>
-        public Collection<TaskDfsInput> DfsInputs
-        {
-            get { return _dfsInputs; }
-        }
+        public StageDfsInput DfsInput { get; set; }
 
         /// <summary>
         /// Gets or sets a child stage that will be connected to this stage's tasks via a <see cref="Channels.PipelineOutputChannel"/>.

@@ -128,18 +128,18 @@ namespace Tkl.Jumbo.Jet.Samples.IO
         /// <param name="inputs">The inputs of the job.</param>
         /// <param name="partitions">The number of partitions.</param>
         /// <param name="sampleSize">The total number of records to sample.</param>
-        public static void CreatePartitionFile(DfsClient dfsClient, string partitionFileName, TaskDfsInput[] inputs, int partitions, int sampleSize)
+        public static void CreatePartitionFile(DfsClient dfsClient, string partitionFileName, StageDfsInput input, int partitions, int sampleSize)
         {
-            int samples = Math.Min(10, inputs.Length);
+            int samples = Math.Min(10, input.TaskInputs.Count);
             int recordsPerSample = sampleSize / samples;
-            int sampleStep = inputs.Length / samples;
+            int sampleStep = input.TaskInputs.Count / samples;
             _log.InfoFormat("Sampling {0} records in {1} samples ({2} records per sample) to create {3} partitions.", sampleSize, samples, recordsPerSample, partitions);
 
             List<byte[]> sampleData = new List<byte[]>(sampleSize);
 
             for( int sample = 0; sample < samples; ++sample )
             {
-                using( RecordReader<GenSortRecord> reader = (RecordReader<GenSortRecord>)inputs[sample * sampleStep].CreateRecordReader(dfsClient, null) )
+                using( RecordReader<GenSortRecord> reader = (RecordReader<GenSortRecord>)input.CreateRecordReader(dfsClient, sample * sampleStep) )
                 {
                     int records = 0;
                     while( records++ < recordsPerSample && reader.ReadRecord() )

@@ -168,6 +168,7 @@
     <Compile Include="ServerShutdownException.cs" />
     <Compile Include="SettingsDictionary.cs" />
     <Compile Include="StageConfiguration.cs" />
+    <Compile Include="StageDfsInput.cs" />
     <Compile Include="StageStatus.cs" />
     <Compile Include="InitialStatusJetHeartbeatData.cs" />
     <Compile Include="TaskContext.cs" />

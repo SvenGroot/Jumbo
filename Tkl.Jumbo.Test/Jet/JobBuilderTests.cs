@@ -650,14 +650,14 @@ namespace Tkl.Jumbo.Test.Jet
             if( recordReaderType != null )
             {
                 Assert.IsNull(stage.Parent);
-                Assert.IsNotNull(stage.DfsInputs);
-                Assert.AreEqual(3, stage.DfsInputs.Count);
+                Assert.IsNotNull(stage.DfsInput);
+                Assert.AreEqual(3, stage.DfsInput.TaskInputs.Count);
+                Assert.AreEqual(recordReaderType, stage.DfsInput.RecordReaderType.ReferencedType);
                 for( int x = 0; x < 3; ++x )
                 {
-                    TaskDfsInput input = stage.DfsInputs[x];
+                    TaskDfsInput input = stage.DfsInput.TaskInputs[x];
                     Assert.AreEqual(x, input.Block);
                     Assert.AreEqual(_inputPath, input.Path);
-                    Assert.AreEqual(recordReaderType, input.RecordReaderType);
                 }
             }
             else
@@ -666,7 +666,7 @@ namespace Tkl.Jumbo.Test.Jet
                 foreach( StageConfiguration inputStage in inputStages )
                     Assert.AreEqual(partitionsPerTask, inputStage.OutputChannel.PartitionsPerTask);
 
-                Assert.IsEmpty(stage.DfsInputs);
+                Assert.IsNull(stage.DfsInput);
             }
 
             if( recordWriterType != null )
@@ -677,7 +677,7 @@ namespace Tkl.Jumbo.Test.Jet
                 Assert.AreEqual(DfsPath.Combine(_outputPath, stageId + "{0:000}"), stage.DfsOutput.PathFormat);
                 Assert.AreEqual(0, stage.DfsOutput.ReplicationFactor);
                 Assert.AreEqual(0, stage.DfsOutput.BlockSize);
-                Assert.AreEqual(recordWriterType, stage.DfsOutput.RecordWriterType);
+                Assert.AreEqual(recordWriterType, stage.DfsOutput.RecordWriterType.ReferencedType);
             }
             else
             {

@@ -64,14 +64,14 @@ namespace Tkl.Jumbo.Test.Jet
             Assert.AreEqual(1, target.Stages.Count);
             Assert.AreEqual(stage, target.Stages[0]);
             Assert.AreEqual("InputStage", stage.StageId);
-            Assert.IsNotNull(stage.DfsInputs);
-            Assert.AreEqual(file.Blocks.Count, stage.DfsInputs.Count);
-            for( int x = 0; x < stage.DfsInputs.Count; ++x )
+            Assert.IsNotNull(stage.DfsInput);
+            Assert.AreEqual(file.Blocks.Count, stage.DfsInput.TaskInputs.Count);
+            Assert.AreEqual(typeof(LineRecordReader).AssemblyQualifiedName, stage.DfsInput.RecordReaderType.TypeName);
+            Assert.AreEqual(typeof(LineRecordReader), stage.DfsInput.RecordReaderType.ReferencedType);
+            for( int x = 0; x < stage.DfsInput.TaskInputs.Count; ++x )
             {
-                Assert.AreEqual(x, stage.DfsInputs[x].Block);
-                Assert.AreEqual(file.FullPath, stage.DfsInputs[x].Path);
-                Assert.AreEqual(typeof(LineRecordReader).AssemblyQualifiedName, stage.DfsInputs[x].RecordReaderTypeName);
-                Assert.AreEqual(typeof(LineRecordReader), stage.DfsInputs[x].RecordReaderType);
+                Assert.AreEqual(x, stage.DfsInput.TaskInputs[x].Block);
+                Assert.AreEqual(file.FullPath, stage.DfsInput.TaskInputs[x].Path);
             }
             Assert.IsNull(stage.DfsOutput);
             Assert.AreEqual(typeof(Tasks.LineCounterTask).AssemblyQualifiedName, stage.TaskType.TypeName);
@@ -213,13 +213,13 @@ namespace Tkl.Jumbo.Test.Jet
             Assert.AreEqual(stage, target.Stages[2]);
 
             Assert.AreEqual("SecondStage", stage.StageId);
-            Assert.AreEqual(0, stage.DfsInputs.Count);
+            Assert.IsNull(stage.DfsInput);
             if( useOutput )
             {
                 Assert.IsNotNull(stage.DfsOutput);
                 Assert.AreEqual(DfsPath.Combine(outputPath, stage.StageId + "{0:000}"), stage.DfsOutput.PathFormat);
-                Assert.AreEqual(typeof(TextRecordWriter<int>).AssemblyQualifiedName, stage.DfsOutput.RecordWriterTypeName);
-                Assert.AreEqual(typeof(TextRecordWriter<int>), stage.DfsOutput.RecordWriterType);
+                Assert.AreEqual(typeof(TextRecordWriter<int>).AssemblyQualifiedName, stage.DfsOutput.RecordWriterType.TypeName);
+                Assert.AreEqual(typeof(TextRecordWriter<int>), stage.DfsOutput.RecordWriterType.ReferencedType);
             }
             else
                 Assert.IsNull(stage.DfsOutput);

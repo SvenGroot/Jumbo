@@ -16,9 +16,6 @@ namespace Tkl.Jumbo.Jet
     [XmlType(Namespace=JobConfiguration.XmlNamespace)]
     public class TaskDfsOutput : ICloneable
     {
-        private string _recordWriterTypeName;
-        private Type _recordWriterType;
-
         /// <summary>
         /// Gets or sets the path of the file to write.
         /// </summary>
@@ -26,37 +23,9 @@ namespace Tkl.Jumbo.Jet
         public string PathFormat { get; set; }
 
         /// <summary>
-        /// Gets or sets the name of the type of <see cref="Tkl.Jumbo.IO.RecordWriter{T}"/> to use to write the file.
-        /// </summary>
-        [XmlAttribute("recordWriter")]
-        public string RecordWriterTypeName
-        {
-            get { return _recordWriterTypeName; }
-            set 
-            {
-                _recordWriterTypeName = value;
-                _recordWriterType = null;
-            }
-        }
-
-        /// <summary>
         /// Gets or sets the type of <see cref="Tkl.Jumbo.IO.RecordWriter{T}"/> to use to write the file.
         /// </summary>
-        [XmlIgnore]
-        public Type RecordWriterType
-        {
-            get 
-            {
-                if( _recordWriterType == null && _recordWriterTypeName != null )
-                    _recordWriterType = Type.GetType(_recordWriterTypeName, true);
-                return _recordWriterType; 
-            }
-            set 
-            {
-                _recordWriterType = value;
-                _recordWriterTypeName = value == null ? null : value.AssemblyQualifiedName;
-            }
-        }
+        public TypeReference RecordWriterType { get; set; }
 
         /// <summary>
         /// Gets or sets the block size of the output file, or zero to use the file system default block size.
@@ -69,6 +38,13 @@ namespace Tkl.Jumbo.Jet
         /// </summary>
         [XmlAttribute("replicationFactor")]
         public int ReplicationFactor { get; set; }
+
+        /// <summary>
+        /// Gets or sets the record options of the output file.
+        /// </summary>
+        /// <value>The record options.</value>
+        [XmlAttribute("recordOptions")]
+        public RecordStreamOptions RecordOptions { get; set; }
 
         /// <summary>
         /// Creates a clone of the current object.
@@ -101,9 +77,9 @@ namespace Tkl.Jumbo.Jet
             if( taskExecution == null )
                 throw new ArgumentNullException("taskExecution");
             // It's the record writer's job to dispose the stream.
-            DfsOutputStream outputStream = taskExecution.DfsClient.CreateFile(fileName, BlockSize, ReplicationFactor);
+            DfsOutputStream outputStream = taskExecution.DfsClient.CreateFile(fileName, BlockSize, ReplicationFactor, RecordOptions);
             //_log.DebugFormat("Creating record writer of type {0}", Configuration.StageConfiguration.DfsOutput.RecordWriterTypeName);
-            return (IRecordWriter)JetActivator.CreateInstance(RecordWriterType, taskExecution, outputStream);
+            return (IRecordWriter)JetActivator.CreateInstance(RecordWriterType.ReferencedType, taskExecution, outputStream);
         }
 
         #region ICloneable Members

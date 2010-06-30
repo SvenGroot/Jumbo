@@ -84,5 +84,11 @@ namespace Tkl.Jumbo.Jet.Jobs
         /// </summary>
         /// <value>The replication factor, or 0 to the use the DFS default setting. The default value is 0.</value>
         public int ReplicationFactor { get; set; }
+
+        /// <summary>
+        /// Gets or sets the record options for the output files.
+        /// </summary>
+        /// <value>A combination of values from the <see cref="RecordStreamOptions"/> enumeration. The default value is <see cref="RecordStreamOptions.None"/>.</value>
+        public RecordStreamOptions RecordOptions { get; set; }
     }
 }

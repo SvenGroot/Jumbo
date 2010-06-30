@@ -166,8 +166,6 @@
             <xsl:value-of select="@taskCount"/>
           </td>
         </tr>
-        <xsl:if test="job:DfsInputs/job:TaskDfsInput">
-        </xsl:if>
         <xsl:if test="job:MultiInputRecordReaderType!=''">
           <tr>
             <th scope="row">Multi input record reader:</th>
@@ -267,7 +265,7 @@
         <th scope="row">Record writer:</th>
         <td>
           <span class="type">
-            <xsl:value-of select="@recordWriter"/>
+            <xsl:value-of select="job:RecordWriterType"/>
           </span>
         </td>
       </tr>
@@ -312,9 +310,9 @@
       </td>
     </tr>
   </xsl:template>
-  <xsl:template match="job:Stage[job:DfsInputs/job:TaskDfsInput or //job:OutputChannel/job:OutputStage=@id or //job:DependentStages/job:string=@id]" mode="input">
+  <xsl:template match="job:Stage[job:DfsInput or //job:OutputChannel/job:OutputStage=@id or //job:DependentStages/job:string=@id]" mode="input">
     <table class="input">
-      <xsl:apply-templates select="job:DfsInputs[job:TaskDfsInput]" />
+      <xsl:apply-templates select="job:DfsInput" />
       <xsl:apply-templates select="//job:OutputChannel[job:OutputStage=current()/@id]" mode="input" />
       <xsl:if test="//job:DependentStages/job:string=current()/@id">
         <tr>
@@ -327,16 +325,16 @@
     </table>
   </xsl:template>
   <xsl:template match="job:Stage | job:ChildStage" mode="input"></xsl:template>
-  <xsl:template match="job:DfsInputs[job:TaskDfsInput]">
+  <xsl:template match="job:DfsInput">
     <tr>
       <th scope="row">DFS input:</th>
       <td>
-        <xsl:value-of select="job:TaskDfsInput/@path"/>
+        <xsl:value-of select="job:TaskInputs/job:TaskDfsInput/@path"/>
         <xsl:text>, block </xsl:text>
-        <xsl:value-of select="job:TaskDfsInput/@block"/>
-        <xsl:if test="count(job:TaskDfsInput)>1">
+        <xsl:value-of select="job:TaskInputs/job:TaskDfsInput/@block"/>
+        <xsl:if test="count(job:TaskInputs/job:TaskDfsInput)>1">
           <xsl:text> (and </xsl:text>
-          <xsl:value-of select="count(job:TaskDfsInput)-1"/>
+          <xsl:value-of select="count(job:TaskInputs/job:TaskDfsInput)-1"/>
           <xsl:text> others).</xsl:text>
         </xsl:if>
       </td>
@@ -345,7 +343,7 @@
       <th scope="row">Record reader:</th>
       <td>
         <span class="type">
-          <xsl:value-of select="job:TaskDfsInput/@recordReader"/>
+          <xsl:value-of select="job:RecordReaderType"/>
         </span>
       </td>
     </tr>

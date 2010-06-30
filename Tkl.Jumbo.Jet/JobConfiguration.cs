@@ -343,18 +343,19 @@ namespace Tkl.Jumbo.Jet
 
             if( inputs != null )
             {
+                StageDfsInput stageInput = new StageDfsInput() { RecordReaderType = recordReaderType };
                 foreach( DfsFile file in inputs )
                 {
                     for( int block = 0; block < file.Blocks.Count; ++block )
                     {
-                        stage.DfsInputs.Add(new TaskDfsInput()
+                        stageInput.TaskInputs.Add(new TaskDfsInput()
                         {
                             Path = file.FullPath,
                             Block = block,
-                            RecordReaderType = recordReaderType 
                         });
                     }
                 }
+                stage.DfsInput = stageInput;
             }
 
             AddAdditionalProgressCounter(taskType);
