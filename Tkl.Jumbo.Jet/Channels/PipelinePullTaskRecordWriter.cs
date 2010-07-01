@@ -135,22 +135,24 @@ namespace Tkl.Jumbo.Jet.Channels
 
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(PipelinePullTaskRecordWriter<TRecord, TPipelinedTaskOutput>));
 
-        private readonly TaskExecutionUtility _task;
+        private readonly TaskExecutionUtility _taskExecution;
         private readonly RecordWriter<TPipelinedTaskOutput> _output;
+        private IPullTask<TRecord, TPipelinedTaskOutput> _task;
         private readonly TaskId _taskId;
         private Thread _taskThread;
         private ProducerConsumerBuffer _buffer;
 
-        public PipelinePullTaskRecordWriter(TaskExecutionUtility task, RecordWriter<TPipelinedTaskOutput> output, TaskId taskId)
+        public PipelinePullTaskRecordWriter(TaskExecutionUtility taskExecution, RecordWriter<TPipelinedTaskOutput> output, TaskId taskId)
         {
-            if( task == null )
-                throw new ArgumentNullException("task");
+            if( taskExecution == null )
+                throw new ArgumentNullException("taskExecution");
             if( output == null )
                 throw new ArgumentNullException("output");
             if( taskId == null )
                 throw new ArgumentNullException("taskId");
 
-            _task = task;
+            _taskExecution = taskExecution;
+            _task = (IPullTask<TRecord, TPipelinedTaskOutput>)taskExecution.Task; // just to ensure the task instance gets added to additional progress sources up front.
             _output = output;
             _taskId = taskId;
         }
@@ -178,10 +180,10 @@ namespace Tkl.Jumbo.Jet.Channels
 
         private void TaskThread()
         {
-            IPullTask<TRecord, TPipelinedTaskOutput> task = (IPullTask<TRecord, TPipelinedTaskOutput>)_task.Task;
+            _task = (IPullTask<TRecord, TPipelinedTaskOutput>)_taskExecution.Task;
             using( BufferRecordReader reader = new BufferRecordReader(_buffer) )
             {
-                task.Run(reader, _output);
+                _task.Run(reader, _output);
             }
             _log.Debug("Pipelined task thread has finished.");
         }

@@ -10,23 +10,26 @@ namespace Tkl.Jumbo.Jet.Channels
 {
     sealed class PipelinePushTaskRecordWriter<TRecord, TPipelinedTaskOutput> : RecordWriter<TRecord>
     {
+        private readonly TaskExecutionUtility _taskExecution;
         private IPushTask<TRecord, TPipelinedTaskOutput> _task;
         private RecordWriter<TPipelinedTaskOutput> _output;
 
-        public PipelinePushTaskRecordWriter(IPushTask<TRecord, TPipelinedTaskOutput> task, RecordWriter<TPipelinedTaskOutput> output)
+        public PipelinePushTaskRecordWriter(TaskExecutionUtility taskExecution, RecordWriter<TPipelinedTaskOutput> output)
         {
-            if( task == null )
-                throw new ArgumentNullException("task");
+            if( taskExecution == null )
+                throw new ArgumentNullException("taskExecution");
             if( output == null )
                 throw new ArgumentNullException("output");
 
-            _task = task;
+            _taskExecution = taskExecution;
+            _task = (IPushTask<TRecord, TPipelinedTaskOutput>)taskExecution.Task;
+            _taskExecution.TaskInstanceCreated += new EventHandler(_taskExecution_TaskInstanceCreated);
             _output = output;
         }
 
         protected override void WriteRecordInternal(TRecord record)
         {
-            if( _task == null )
+            if( _output == null )
                 throw new ObjectDisposedException(typeof(PipelinePushTaskRecordWriter<TRecord, TPipelinedTaskOutput>).FullName);
             _task.ProcessRecord(record, _output);
         }
@@ -49,6 +52,12 @@ namespace Tkl.Jumbo.Jet.Channels
                 base.Dispose(disposing);
             }
         }
+
+        void _taskExecution_TaskInstanceCreated(object sender, EventArgs e)
+        {
+            _task = (IPushTask<TRecord, TPipelinedTaskOutput>)_taskExecution.Task;
+        }
+
     }
 
 }

@@ -22,6 +22,8 @@ namespace Tkl.Jumbo.Jet.Channels
                 throw new ArgumentNullException("partitioner");
 
             _taskExecution = taskExecution;
+            _task = (IPrepartitionedPushTask<TRecord, TPipelinedTaskOutput>)_taskExecution.Task;
+            _taskExecution.TaskInstanceCreated += new EventHandler(_taskExecution_TaskInstanceCreated);
             _output = new PrepartitionedRecordWriter<TPipelinedTaskOutput>(output);
             _partitioner = partitioner;
         }
@@ -29,13 +31,10 @@ namespace Tkl.Jumbo.Jet.Channels
         public void Finish()
         {
             _task.Finish(_output);
-            _task = null;
         }
 
         protected override void WriteRecordInternal(TRecord record)
         {
-            if( _task == null )
-                _task = (IPrepartitionedPushTask<TRecord, TPipelinedTaskOutput>)_taskExecution.Task;
             _task.ProcessRecord(record, _partitioner.GetPartition(record), _output);
         }
 
@@ -57,6 +56,11 @@ namespace Tkl.Jumbo.Jet.Channels
                 base.Dispose(disposing);
             }
         }
+
+        private void _taskExecution_TaskInstanceCreated(object sender, EventArgs e)
+        {
+            _task = (IPrepartitionedPushTask<TRecord, TPipelinedTaskOutput>)_taskExecution.Task;
+        }    
     }
 
 

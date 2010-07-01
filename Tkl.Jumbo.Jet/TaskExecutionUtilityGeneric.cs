@@ -109,22 +109,33 @@ namespace Tkl.Jumbo.Jet
             RecordWriter<TOutput> output = (RecordWriter<TOutput>)OutputWriter;
             Stopwatch taskStopwatch = new Stopwatch();
 
+            // Ensure task object created and added to additional progress sources if needed before progress thread is started.
+            ITask<TInput, TOutput> task = (ITask<TInput, TOutput>)Task;
+
             StartProgressThread();
 
             IMultiInputRecordReader multiInputReader = input as IMultiInputRecordReader;
             if( multiInputReader != null )
             {
+                TotalInputPartitions = multiInputReader.Partitions.Count;
+                bool firstPartition = true;
                 foreach( int partition in multiInputReader.Partitions )
                 {
                     _log.InfoFormat("Running task for partition {0}.", partition);
-                    ResetForNextPartition();
+                    if( firstPartition )
+                        firstPartition = false;
+                    else
+                    {
+                        ResetForNextPartition();
+                        task = (ITask<TInput, TOutput>)Task;
+                    }
                     multiInputReader.CurrentPartition = partition;
-                    CallTaskRunMethod(input, output, taskStopwatch, (ITask<TInput, TOutput>)Task);
+                    CallTaskRunMethod(input, output, taskStopwatch, task);
                     _log.InfoFormat("Finished running task for partition {0}.", partition);
                 }
             }
             else
-                CallTaskRunMethod(input, output, taskStopwatch, (ITask<TInput, TOutput>)Task);
+                CallTaskRunMethod(input, output, taskStopwatch, task);
             TimeSpan timeWaiting;
 
             MultiRecordReader<TInput> multiReader = input as MultiRecordReader<TInput>;
@@ -172,7 +183,7 @@ namespace Tkl.Jumbo.Jet
             object task = Task;
             IPushTask<TInput, TOutput> pushTask = task as IPushTask<TInput, TOutput>;
             if( pushTask != null )
-                return new PipelinePushTaskRecordWriter<TInput, TOutput>(pushTask, output);
+                return new PipelinePushTaskRecordWriter<TInput, TOutput>(this, output);
             else
             {
                 IPrepartitionedPushTask<TInput, TOutput> prepartitionedPushTask = task as IPrepartitionedPushTask<TInput, TOutput>;

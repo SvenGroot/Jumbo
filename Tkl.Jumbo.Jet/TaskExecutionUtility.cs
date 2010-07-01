@@ -90,6 +90,8 @@ namespace Tkl.Jumbo.Jet
         private readonly object _taskProgressLock = new object();
         private bool _hasAddedTaskProgressSource;
 
+        internal event EventHandler TaskInstanceCreated;
+
         internal TaskExecutionUtility(DfsClient dfsClient, JetClient jetClient, ITaskServerUmbilicalProtocol umbilical, TaskExecutionUtility parentTask, TaskContext configuration)
         {
             if( dfsClient == null )
@@ -648,6 +650,9 @@ namespace Tkl.Jumbo.Jet
                     AddAdditionalProgressSource(task);
                 }
             }
+
+            OnTaskInstanceCreated(EventArgs.Empty);
+
             return task;
         }
 
@@ -927,6 +932,13 @@ namespace Tkl.Jumbo.Jet
             };
             appender.ActivateOptions();
             log4net.Config.BasicConfigurator.Configure(appender);
+        }
+
+        private void OnTaskInstanceCreated(EventArgs e)
+        {
+            EventHandler handler = TaskInstanceCreated;
+            if( handler != null )
+                handler(this, e);
         }
     }
 }
