@@ -82,7 +82,7 @@ namespace Tkl.Jumbo.Test.Jet
         [TestFixtureSetUp]
         public void SetUp()
         {
-            _cluster = new TestJetCluster(4194304, true, 1, CompressionType.None, false);
+            _cluster = new TestJetCluster(4194304, true, 1, CompressionType.None);
             _dfsClient = new DfsClient(TestDfsCluster.CreateClientConfig());
             _jetClient = new JetClient(TestJetCluster.CreateClientConfig());
             Trace.WriteLine("Cluster running.");

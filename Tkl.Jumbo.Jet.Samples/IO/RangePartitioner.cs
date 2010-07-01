@@ -125,7 +125,7 @@ namespace Tkl.Jumbo.Jet.Samples.IO
         /// </summary>
         /// <param name="dfsClient">The <see cref="DfsClient"/> used to access the DFS.</param>
         /// <param name="partitionFileName">The name of the file on the DFS where the partitioning data should be stored.</param>
-        /// <param name="inputs">The inputs of the job.</param>
+        /// <param name="input">The input of the job.</param>
         /// <param name="partitions">The number of partitions.</param>
         /// <param name="sampleSize">The total number of records to sample.</param>
         public static void CreatePartitionFile(DfsClient dfsClient, string partitionFileName, StageDfsInput input, int partitions, int sampleSize)

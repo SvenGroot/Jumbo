@@ -505,10 +505,7 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
             // partition will get exactly one group.
             if( FPGrowthTaskCount * PartitionsPerTask < Groups )
             {
-                var sortChannel = new Channel() { PartitionCount = FPGrowthTaskCount };
-                // Sort each partition by group ID.
-                builder.SortRecords(groupChannel, sortChannel);
-                groupChannel = sortChannel;
+                throw new NotSupportedException("The number of groups must be less then or equal to the number of partitions.");
             }
 
             // Mine groups for frequent patterns.

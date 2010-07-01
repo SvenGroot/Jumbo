@@ -30,6 +30,36 @@ namespace Tkl.Jumbo.Jet
             public string DfsOutputTempPath { get; set; }
         }
 
+        private sealed class TaskProgressSource : IHasAdditionalProgress
+        {
+            private readonly TaskExecutionUtility _task;
+
+            public TaskProgressSource(TaskExecutionUtility task)
+            {
+                _task = task;
+            }
+
+            public float AdditionalProgress
+            {
+                get 
+                {
+                    float totalProgress;
+                    lock( _task._taskProgressLock )
+                    {
+                        totalProgress = _task.InputPartitionsFinished;
+                        // This property will be called on a different thread. There is therefore a chance it will get called exactly when Task is being reset so we need to check for null.
+                        IHasAdditionalProgress progressTask = _task.Task as IHasAdditionalProgress;
+                        if( progressTask == null )
+                        {
+                            totalProgress += progressTask.AdditionalProgress;
+                        }
+                    }
+
+                    return totalProgress / (float)_task.TotalInputPartitions;
+                }
+            }
+        }
+
         #endregion
 
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(TaskExecutionUtility));
@@ -56,6 +86,9 @@ namespace Tkl.Jumbo.Jet
         private object _task;
         private readonly int _statusMessageLevel;
         private volatile bool _mustReportProgress;
+        private int _totalInputPartitions = 1;
+        private readonly object _taskProgressLock = new object();
+        private bool _hasAddedTaskProgressSource;
 
         internal TaskExecutionUtility(DfsClient dfsClient, JetClient jetClient, ITaskServerUmbilicalProtocol umbilical, TaskExecutionUtility parentTask, TaskContext configuration)
         {
@@ -75,7 +108,6 @@ namespace Tkl.Jumbo.Jet
             _taskType = _configuration.StageConfiguration.TaskType.ReferencedType;
             configuration.TaskExecution = this;
             _progressInterval = _jetClient.Configuration.TaskServer.ProgressInterval;
-
 
             if( parentTask == null ) // that means it's not a child task
             {
@@ -113,6 +145,22 @@ namespace Tkl.Jumbo.Jet
                 return _outputWriter;
             }
         }
+
+        /// <summary>
+        /// Gets or sets the total number of input partitions this task will process (if the input is a channel and the PartitionsPerTask option was > 1).
+        /// </summary>
+        /// <value>The total number of partitions.</value>
+        protected int TotalInputPartitions
+        {
+            get { return _rootTask._totalInputPartitions; }
+            set { _totalInputPartitions = value; }
+        }
+
+        /// <summary>
+        /// Gets or sets the number of input partitions that have finished.
+        /// </summary>
+        /// <value>The number of input partitions that have finished.</value>
+        protected int InputPartitionsFinished { get; set; }
 
         internal IRecordReader InputReader
         {
@@ -159,11 +207,7 @@ namespace Tkl.Jumbo.Jet
             get { return _isAssociatedTask; }
         }
 
-        /// <summary>
-        /// Gets the task object.
-        /// </summary>
-        /// <value>The task.</value>
-        protected object Task
+        internal object Task
         {
             get
             {
@@ -358,6 +402,30 @@ namespace Tkl.Jumbo.Jet
             GC.SuppressFinalize(this);
         }
 
+        /// <summary>
+        /// Resets the task for the next partition.
+        /// </summary>
+        protected void ResetForNextPartition()
+        {
+            if( _task != null )
+            {
+                // The lock is needed because we must prevent the progress thread from seeing the updated value of InputPartitionsFinished and the old task instance at the same time.
+                lock( _taskProgressLock )
+                {
+                    ++InputPartitionsFinished;
+                    _task = null;
+                }
+            }
+
+            if( _associatedTasks != null )
+            {
+                foreach( TaskExecutionUtility childTask in _associatedTasks )
+                {
+                    childTask.ResetForNextPartition();
+                }
+            }
+        }
+
         internal TaskExecutionUtility CreateAssociatedTask(StageConfiguration childStage, int taskNumber)
         {
             if( childStage == null )
@@ -448,24 +516,31 @@ namespace Tkl.Jumbo.Jet
         protected abstract IRecordWriter CreateOutputRecordWriter();
 
         /// <summary>
-        /// If the task is a push task, calls <see cref="IPushTask{TInput,TOutput}.Finish"/>, then closes the output stream and moves any DFS output to its final location, for this task and all associated tasks.
+        /// Runs the appropriate finish method (if any) on this task and all child tasks.
         /// </summary>
-        protected void FinishTask(TaskMetrics metrics)
+        protected void FinishTask()
         {
             RunTaskFinishMethod();
 
             if( _associatedTasks != null )
             {
-                if( _associatedTasks.Count > 1 && JetClient.Configuration.TaskServer.MultithreadedTaskFinish )
+                foreach( TaskExecutionUtility childTask in _associatedTasks )
                 {
-                    throw new NotImplementedException();
+                    childTask.FinishTask();
                 }
-                else
+            }
+        }
+
+        /// <summary>
+        /// Calculates metrics, closes the output stream and moves any DFS output to its final location, for this task and all associated tasks.
+        /// </summary>
+        protected void FinalizeTask(TaskMetrics metrics)
+        {
+            if( _associatedTasks != null )
+            {
+                foreach( TaskExecutionUtility associatedTask in _associatedTasks )
                 {
-                    foreach( TaskExecutionUtility associatedTask in _associatedTasks )
-                    {
-                        associatedTask.FinishTask(metrics);
-                    }
+                    associatedTask.FinalizeTask(metrics);
                 }
             }
 
@@ -554,7 +629,25 @@ namespace Tkl.Jumbo.Jet
         {
             _log.DebugFormat("Creating {0} task instance.", _taskType.AssemblyQualifiedName);
             object task = JetActivator.CreateInstance(_taskType, this);
-            AddAdditionalProgressSource(task);
+
+            if( !_hasAddedTaskProgressSource )
+            {
+                _hasAddedTaskProgressSource = true;
+
+                if( InputChannels != null && InputChannels.Count == 1 )
+                {
+                    // There may be multiple input partitions, so use the TaskProgressSource class which can handle that.
+                    IHasAdditionalProgress progressTask = task as IHasAdditionalProgress;
+                    if( progressTask != null )
+                    {
+                        AddAdditionalProgressSource(task.GetType().FullName, new TaskProgressSource(this));
+                    }
+                }
+                else
+                {
+                    AddAdditionalProgressSource(task);
+                }
+            }
             return task;
         }
 
@@ -564,20 +657,26 @@ namespace Tkl.Jumbo.Jet
                 _rootTask.AddAdditionalProgressSource(obj);
             else
             {
-                if( _additionalProgressSources == null )
-                    _additionalProgressSources = new Dictionary<string, List<IHasAdditionalProgress>>();
                 IHasAdditionalProgress progressObj = obj as IHasAdditionalProgress;
                 if( progressObj != null )
                 {
-                    List<IHasAdditionalProgress> sources;
-                    if( !_additionalProgressSources.TryGetValue(obj.GetType().FullName, out sources) )
-                    {
-                        sources = new List<IHasAdditionalProgress>();
-                        _additionalProgressSources.Add(obj.GetType().FullName, sources);
-                    }
-                    sources.Add(progressObj);
+                    string progressName = obj.GetType().FullName;
+                    AddAdditionalProgressSource(progressName, progressObj);
                 }
             }
+        }
+
+        private void AddAdditionalProgressSource(string progressName, IHasAdditionalProgress progressObj)
+        {
+            if( _additionalProgressSources == null )
+                _additionalProgressSources = new Dictionary<string, List<IHasAdditionalProgress>>();
+            List<IHasAdditionalProgress> sources;
+            if( !_additionalProgressSources.TryGetValue(progressName, out sources) )
+            {
+                sources = new List<IHasAdditionalProgress>();
+                _additionalProgressSources.Add(progressName, sources);
+            }
+            sources.Add(progressObj);
         }
 
         private List<IInputChannel> CreateInputChannels(IEnumerable<StageConfiguration> inputStages)
@@ -682,10 +781,13 @@ namespace Tkl.Jumbo.Jet
                 previousProgress.StatusMessage = CurrentStatus;
                 if( InputReader != null )
                     previousProgress.Progress = InputReader.Progress;
-                foreach( KeyValuePair<string, List<IHasAdditionalProgress>> progressSource in _additionalProgressSources )
+                if( _additionalProgressSources != null )
                 {
-                    float value = progressSource.Value.Average(i => i.AdditionalProgress);
-                    previousProgress.AddAdditionalProgressValue(progressSource.Key, value);
+                    foreach( KeyValuePair<string, List<IHasAdditionalProgress>> progressSource in _additionalProgressSources )
+                    {
+                        float value = progressSource.Value.Average(i => i.AdditionalProgress);
+                        previousProgress.AddAdditionalProgressValue(progressSource.Key, value);
+                    }
                 }
             }
             else
@@ -708,18 +810,21 @@ namespace Tkl.Jumbo.Jet
                     progressChanged = true;
                 }
 
-                // These are always in the same order so we can do this.
-                int x = 0;
-                foreach( KeyValuePair<string, List<IHasAdditionalProgress>> progressSource in _additionalProgressSources )
+                if( _additionalProgressSources != null )
                 {
-                    float value = progressSource.Value.Average(i => i.AdditionalProgress);
-                    AdditionalProgressValue additionalProgress = previousProgress.AdditionalProgressValues[x];
-                    if( additionalProgress.Progress != value )
+                    // These are always in the same order so we can do this.
+                    int x = 0;
+                    foreach( KeyValuePair<string, List<IHasAdditionalProgress>> progressSource in _additionalProgressSources )
                     {
-                        additionalProgress.Progress = value;
-                        progressChanged = true;
+                        float value = progressSource.Value.Average(i => i.AdditionalProgress);
+                        AdditionalProgressValue additionalProgress = previousProgress.AdditionalProgressValues[x];
+                        if( additionalProgress.Progress != value )
+                        {
+                            additionalProgress.Progress = value;
+                            progressChanged = true;
+                        }
+                        ++x;
                     }
-                    ++x;
                 }
             }
 

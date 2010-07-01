@@ -130,17 +130,6 @@ namespace Tkl.Jumbo.Jet
         }
 
         /// <summary>
-        /// Gets or sets a value that indicates whether the task host should use multiple threads to call <see cref="IPushTask{TInput,TOutput}.Finish"/> on
-        /// child stage tasks, if there is more than one.
-        /// </summary>
-        [ConfigurationProperty("multiThreadedTaskFinish", DefaultValue = false, IsRequired = false, IsKey = false)]
-        public bool MultithreadedTaskFinish
-        {
-            get { return (bool)this["multiThreadedTaskFinish"]; }
-            set { this["multiThreadedTaskFinish"] = value; }
-        }
-
-        /// <summary>
         /// Gets or sets a value that indicates whether the task should periodically log processor and memory usage status.
         /// </summary>
         [ConfigurationProperty("logSystemStatus", DefaultValue = false, IsRequired = false, IsKey = false)]

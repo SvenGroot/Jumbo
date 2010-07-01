@@ -135,13 +135,13 @@ namespace Tkl.Jumbo.Jet.Channels
 
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(PipelinePullTaskRecordWriter<TRecord, TPipelinedTaskOutput>));
 
-        private readonly IPullTask<TRecord, TPipelinedTaskOutput> _task;
+        private readonly TaskExecutionUtility _task;
         private readonly RecordWriter<TPipelinedTaskOutput> _output;
         private readonly TaskId _taskId;
         private Thread _taskThread;
         private ProducerConsumerBuffer _buffer;
 
-        public PipelinePullTaskRecordWriter(IPullTask<TRecord, TPipelinedTaskOutput> task, RecordWriter<TPipelinedTaskOutput> output, TaskId taskId)
+        public PipelinePullTaskRecordWriter(TaskExecutionUtility task, RecordWriter<TPipelinedTaskOutput> output, TaskId taskId)
         {
             if( task == null )
                 throw new ArgumentNullException("task");
@@ -178,9 +178,10 @@ namespace Tkl.Jumbo.Jet.Channels
 
         private void TaskThread()
         {
+            IPullTask<TRecord, TPipelinedTaskOutput> task = (IPullTask<TRecord, TPipelinedTaskOutput>)_task.Task;
             using( BufferRecordReader reader = new BufferRecordReader(_buffer) )
             {
-                _task.Run(reader, _output);
+                task.Run(reader, _output);
             }
             _log.Debug("Pipelined task thread has finished.");
         }

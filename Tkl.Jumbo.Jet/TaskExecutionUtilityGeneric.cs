@@ -105,7 +105,6 @@ namespace Tkl.Jumbo.Jet
                 throw new InvalidOperationException("This task has already been run.");
             _hasTaskRun = true;
 
-            ITask<TInput, TOutput> task = (ITask<TInput, TOutput>)Task;
             RecordReader<TInput> input = (RecordReader<TInput>)InputReader;
             RecordWriter<TOutput> output = (RecordWriter<TOutput>)OutputWriter;
             Stopwatch taskStopwatch = new Stopwatch();
@@ -118,13 +117,14 @@ namespace Tkl.Jumbo.Jet
                 foreach( int partition in multiInputReader.Partitions )
                 {
                     _log.InfoFormat("Running task for partition {0}.", partition);
+                    ResetForNextPartition();
                     multiInputReader.CurrentPartition = partition;
-                    CallTaskRunMethod(input, output, taskStopwatch, task);
+                    CallTaskRunMethod(input, output, taskStopwatch, (ITask<TInput, TOutput>)Task);
                     _log.InfoFormat("Finished running task for partition {0}.", partition);
                 }
             }
             else
-                CallTaskRunMethod(input, output, taskStopwatch, task);
+                CallTaskRunMethod(input, output, taskStopwatch, (ITask<TInput, TOutput>)Task);
             TimeSpan timeWaiting;
 
             MultiRecordReader<TInput> multiReader = input as MultiRecordReader<TInput>;
@@ -135,7 +135,7 @@ namespace Tkl.Jumbo.Jet
             _log.InfoFormat("Task finished execution, execution time: {0}s; time spent waiting for input: {1}s.", taskStopwatch.Elapsed.TotalSeconds, timeWaiting.TotalSeconds);
 
             TaskMetrics metrics = new TaskMetrics();
-            FinishTask(metrics);
+            FinalizeTask(metrics);
 
             metrics.LogMetrics();
 
@@ -180,12 +180,12 @@ namespace Tkl.Jumbo.Jet
                 {
                     IPartitioner<TInput> partitioner2 = (IPartitioner<TInput>)partitioner;
                     partitioner2.Partitions = Configuration.StageConfiguration.InternalPartitionCount;
-                    _pipelinePrepartitionedPushTaskRecordWriter = new PipelinePrepartitionedPushTaskRecordWriter<TInput, TOutput>(prepartitionedPushTask, output, partitioner2);
+                    _pipelinePrepartitionedPushTaskRecordWriter = new PipelinePrepartitionedPushTaskRecordWriter<TInput, TOutput>(this, output, partitioner2);
                     return _pipelinePrepartitionedPushTaskRecordWriter;
                 }
                 else
                 {
-                    _pipelinePullTaskRecordWriter = new PipelinePullTaskRecordWriter<TInput, TOutput>((IPullTask<TInput, TOutput>)task, output, Configuration.TaskId);
+                    _pipelinePullTaskRecordWriter = new PipelinePullTaskRecordWriter<TInput, TOutput>(this, output, Configuration.TaskId);
                     return _pipelinePullTaskRecordWriter;
                 }
             }
@@ -229,6 +229,8 @@ namespace Tkl.Jumbo.Jet
                     }
                 }
             }
+
+            FinishTask();
         }
 
         protected override void RunTaskFinishMethod()

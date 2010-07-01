@@ -42,7 +42,7 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
                     _itemCount = fglist.Count;
                 }
 
-                _numGroups = numGroups / TaskContext.StageConfiguration.TaskCount;
+                _numGroups = 1; // Each partition will always process a single group.
                 IMultiInputRecordReader multiReader = input as IMultiInputRecordReader;
                 if( multiReader != null )
                 {
