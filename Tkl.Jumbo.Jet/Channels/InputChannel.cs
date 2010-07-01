@@ -61,6 +61,15 @@ namespace Tkl.Jumbo.Jet.Channels
         }
 
         /// <summary>
+        /// Gets the configuration of the input channel.
+        /// </summary>
+        /// <value>The configuration of the input channel.</value>
+        public ChannelConfiguration Configuration
+        {
+            get { return InputStage.OutputChannel; }
+        }
+
+        /// <summary>
         /// Gets the task execution utility for the task that this channel provides input for.
         /// </summary>
         protected TaskExecutionUtility TaskExecution { get; private set; }

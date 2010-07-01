@@ -114,30 +114,13 @@ namespace Tkl.Jumbo.Jet
 
             StartProgressThread();
 
-            IMultiInputRecordReader multiInputReader = input as IMultiInputRecordReader;
-            if( multiInputReader != null )
-            {
-                TotalInputPartitions = multiInputReader.Partitions.Count;
-                bool firstPartition = true;
-                foreach( int partition in multiInputReader.Partitions )
-                {
-                    _log.InfoFormat("Running task for partition {0}.", partition);
-                    if( firstPartition )
-                        firstPartition = false;
-                    else
-                    {
-                        ResetForNextPartition();
-                        task = (ITask<TInput, TOutput>)Task;
-                    }
-                    multiInputReader.CurrentPartition = partition;
-                    CallTaskRunMethod(input, output, taskStopwatch, task);
-                    _log.InfoFormat("Finished running task for partition {0}.", partition);
-                }
-            }
+            MultiInputRecordReader<TInput> multiInputReader = input as MultiInputRecordReader<TInput>;
+            if( multiInputReader != null && InputChannels.Count == 1 && InputChannels[0].Configuration.PartitionsPerTask > 1 )
+                RunTaskMultipleInputPartitions(multiInputReader, output, taskStopwatch, task);
             else
                 CallTaskRunMethod(input, output, taskStopwatch, task);
-            TimeSpan timeWaiting;
 
+            TimeSpan timeWaiting;
             MultiRecordReader<TInput> multiReader = input as MultiRecordReader<TInput>;
             if( multiReader != null )
                 timeWaiting = multiReader.TimeWaiting;
@@ -159,7 +142,7 @@ namespace Tkl.Jumbo.Jet
             {
                 if( Configuration.StageConfiguration.InternalPartitionCount == 1 )
                 {
-                    if( RootTask.InputChannels != null && RootTask.InputChannels.Count == 1 )
+                    if( !ProcessesAllInputPartitions && RootTask.InputChannels != null && RootTask.InputChannels.Count == 1 && RootTask.InputChannels[0].Configuration.PartitionsPerTask > 1 )
                         return new PartitionDfsOutputRecordWriter(this);
                 }
                 return (RecordWriter<TOutput>)CreateDfsOutputWriter(Configuration.TaskId.TaskNumber);
@@ -244,17 +227,22 @@ namespace Tkl.Jumbo.Jet
             FinishTask();
         }
 
-        protected override void RunTaskFinishMethod()
+        protected override void RunTaskFinishMethod(bool isFinalizing)
         {
-            IPushTask<TInput, TOutput> task = Task as IPushTask<TInput, TOutput>;
-            if( task != null )
-                task.Finish((RecordWriter<TOutput>)OutputWriter);
-            else if( _pipelinePrepartitionedPushTaskRecordWriter != null )
-                _pipelinePrepartitionedPushTaskRecordWriter.Finish();
-            else if( _prepartitionedOutputWriter != null )
-                ((IPrepartitionedPushTask<TInput, TOutput>)Task).Finish(_prepartitionedOutputWriter);
-            else if( _pipelinePullTaskRecordWriter != null )
-                _pipelinePullTaskRecordWriter.Finish();
+            // For a task that processes all input partitions, we don't call finish until we're finalizing.
+            // For a task that doesn't, we call finish unless we're finalizing.
+            if( isFinalizing == ProcessesAllInputPartitions )
+            {
+                IPushTask<TInput, TOutput> task = Task as IPushTask<TInput, TOutput>;
+                if( task != null )
+                    task.Finish((RecordWriter<TOutput>)OutputWriter);
+                else if( _pipelinePrepartitionedPushTaskRecordWriter != null )
+                    _pipelinePrepartitionedPushTaskRecordWriter.Finish();
+                else if( _prepartitionedOutputWriter != null )
+                    ((IPrepartitionedPushTask<TInput, TOutput>)Task).Finish(_prepartitionedOutputWriter);
+                else if( _pipelinePullTaskRecordWriter != null )
+                    _pipelinePullTaskRecordWriter.Finish();
+            }
         }
 
         protected override void Dispose(bool disposing)
@@ -266,6 +254,39 @@ namespace Tkl.Jumbo.Jet
                 {
                     _prepartitionedOutputWriter.Dispose();
                     _prepartitionedOutputWriter = null;
+                }
+            }
+        }
+
+        private void RunTaskMultipleInputPartitions(MultiInputRecordReader<TInput> input, RecordWriter<TOutput> output, Stopwatch taskStopwatch, ITask<TInput, TOutput> task)
+        {
+            IPullTask<TInput, TOutput> pullTask;
+            if( ProcessesAllInputPartitions && (pullTask = task as IPullTask<TInput, TOutput>) != null )
+            {
+                using( MultiPartitionRecordReader<TInput> partitionReader = new MultiPartitionRecordReader<TInput>(input) )
+                {
+                    taskStopwatch.Start();
+                    pullTask.Run(partitionReader, output);
+                    taskStopwatch.Stop();
+                }
+            }
+            else
+            {
+                TotalInputPartitions = input.Partitions.Count;
+                bool firstPartition = true;
+                foreach( int partition in input.Partitions )
+                {
+                    _log.InfoFormat("Running task for partition {0}.", partition);
+                    if( firstPartition )
+                        firstPartition = false;
+                    else
+                    {
+                        ResetForNextPartition();
+                        task = (ITask<TInput, TOutput>)Task;
+                    }
+                    input.CurrentPartition = partition;
+                    CallTaskRunMethod(input, output, taskStopwatch, task);
+                    _log.InfoFormat("Finished running task for partition {0}.", partition);
                 }
             }
         }

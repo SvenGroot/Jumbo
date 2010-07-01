@@ -11,15 +11,13 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
     /// <summary>
     /// Task for PFP growth transaction mining.
     /// </summary>
-    [AllowRecordReuse]
-    [AdditionalProgressCounter("FP growth")]
+    [AllowRecordReuse, ProcessAllInputPartitions, AdditionalProgressCounter("FP growth")]
     public class TransactionMiningTask : Configurable, IPullTask<Pair<int, Transaction>, Pair<int, WritableCollection<MappedFrequentPattern>>>, IHasAdditionalProgress
     {
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(TransactionMiningTask));
         private int _groupsProcessed;
-        private int _numGroups;
         private float _progress;
-        private int _itemCount;
+        private MultiPartitionRecordReader<Pair<int, Transaction>> _partitionReader;
 
         /// <summary>
         /// Runs the task.
@@ -28,6 +26,7 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
         /// <param name="output">The output.</param>
         public void Run(RecordReader<Pair<int, Transaction>> input, RecordWriter<Pair<int, WritableCollection<MappedFrequentPattern>>> output)
         {
+            _partitionReader = input as MultiPartitionRecordReader<Pair<int, Transaction>>;
             if( input.ReadRecord() )
             {
                 TaskContext config = TaskContext;
@@ -36,41 +35,37 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
                 int k = config.JobConfiguration.GetTypedSetting("PFPGrowth.PatternCount", 50);
                 int numGroups = config.JobConfiguration.GetTypedSetting("PFPGrowth.Groups", 50);
 
-                if( _itemCount == 0 )
-                {
-                    List<FGListItem> fglist = PFPGrowth.LoadFGList(TaskContext, null);
-                    _itemCount = fglist.Count;
-                }
+                List<FGListItem> fglist = PFPGrowth.LoadFGList(TaskContext, null);
 
-                _numGroups = 1; // Each partition will always process a single group.
-                IMultiInputRecordReader multiReader = input as IMultiInputRecordReader;
-                if( multiReader != null )
-                {
-                    int remainder = numGroups % TaskContext.StageConfiguration.TaskCount;
-                    if( multiReader.CurrentPartition <= remainder )
-                        _numGroups++;
-                }
-
-                int maxPerGroup = _itemCount / numGroups;
-                if( _itemCount % numGroups != 0 )
+                int maxPerGroup = fglist.Count / numGroups;
+                if( fglist.Count % numGroups != 0 )
                     maxPerGroup++;
-                while( true )
+                FrequentPatternMaxHeap[] itemHeaps = null;
+                while( !input.HasFinished )
                 {
                     int groupId;
-                    if( input.HasFinished )
-                        break;
                     groupId = input.CurrentRecord.Key;
                     string message = string.Format("Building tree for group {0}.", groupId);
                     _log.Info(message);
                     TaskContext.StatusMessage = message;
-                    using( FPTree tree = new FPTree(EnumerateGroup(input), minSupport, Math.Min((groupId + 1) * maxPerGroup, _itemCount), TaskContext) )
+                    using( FPTree tree = new FPTree(EnumerateGroup(input), minSupport, Math.Min((groupId + 1) * maxPerGroup, fglist.Count), TaskContext) )
                     {
                         tree.ProgressChanged += new EventHandler(FPTree_ProgressChanged);
 
                         // The tree needs to do mining only for the items in its group.
-                        tree.Mine(output, k, false, groupId * maxPerGroup);
+                        itemHeaps = tree.Mine(output, k, false, groupId * maxPerGroup, itemHeaps);
                     }
                     ++_groupsProcessed;
+                }
+
+                if( itemHeaps != null )
+                {
+                    for( int item = 0; item < itemHeaps.Length; ++item )
+                    {
+                        FrequentPatternMaxHeap heap = itemHeaps[item];
+                        if( heap != null )
+                            heap.OutputItems(item, output);
+                    }
                 }
             }
         }
@@ -87,7 +82,8 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
 
         private void FPTree_ProgressChanged(object sender, EventArgs e)
         {
-            _progress = (_groupsProcessed + ((FPTree)sender).Progress) / (float)_numGroups;
+            MultiPartitionRecordReader<Pair<int, Transaction>> reader = _partitionReader;
+            _progress = (_groupsProcessed + ((FPTree)sender).Progress) / (float)(reader == null ? 1 : reader.PartitionCount);
         }
 
         /// <summary>

@@ -309,6 +309,7 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
             int maxPerGroup = itemCount / numGroups;
             if( itemCount % numGroups != 0 )
                 maxPerGroup++;
+            FrequentPatternMaxHeap[] itemHeaps = null;
             while( true )
             {
                 FPTree tree;
@@ -331,7 +332,17 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
                 }
 
                 // The tree needs to do mining only for the items in its group.
-                tree.Mine(output, k, false, groupId * maxPerGroup);
+                itemHeaps = tree.Mine(output, k, false, groupId * maxPerGroup, itemHeaps);
+            }
+
+            if( itemHeaps != null )
+            {
+                for( int item = 0; item < itemHeaps.Length; ++item )
+                {
+                    FrequentPatternMaxHeap heap = itemHeaps[item];
+                    if( heap != null )
+                        heap.OutputItems(item, output);
+                }
             }
         }
 

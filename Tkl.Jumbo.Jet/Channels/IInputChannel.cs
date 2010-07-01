@@ -14,6 +14,12 @@ namespace Tkl.Jumbo.Jet.Channels
     public interface IInputChannel
     {
         /// <summary>
+        /// Gets the configuration of the input channel.
+        /// </summary>
+        /// <value>The configuration of the input channel.</value>
+        ChannelConfiguration Configuration { get; }
+
+        /// <summary>
         /// Creates a <see cref="RecordReader{T}"/> from which the channel can read its input.
         /// </summary>
         /// <returns>A <see cref="RecordReader{T}"/> for the channel.</returns>

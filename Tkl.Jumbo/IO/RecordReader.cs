@@ -102,7 +102,7 @@ namespace Tkl.Jumbo.IO
         /// <summary>
         /// Reads a record.
         /// </summary>
-        /// <returns><see langword="true"/> if an object was successfully read from the stream; <see langword="false"/> if the end of the stream or stream fragment was reached.</returns>
+        /// <returns><see langword="true"/> if an object was successfully read; <see langword="false"/> if there are no more records.</returns>
         public bool ReadRecord()
         {
             _hasRecords = ReadRecordInternal();
@@ -126,7 +126,7 @@ namespace Tkl.Jumbo.IO
         /// <summary>
         /// Reads a record.
         /// </summary>
-        /// <returns><see langword="true"/> if an object was successfully read from the stream; <see langword="false"/> if the end of the stream or stream fragment was reached.</returns>
+        /// <returns><see langword="true"/> if an object was successfully read; <see langword="false"/> if there are no more records.</returns>
         protected abstract bool ReadRecordInternal();
 
         /// <summary>

@@ -5,11 +5,14 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using Tkl.Jumbo;
+using Tkl.Jumbo.IO;
 
 namespace Tkl.Jumbo.Jet.Samples.FPGrowth
 {
-    class FrequentPatternMaxHeap
+    sealed class FrequentPatternMaxHeap
     {
+        private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(FrequentPatternMaxHeap));
+
         private readonly PriorityQueue<MappedFrequentPattern> _queue;
         private readonly int _maxSize;
         private int _minSupport;
@@ -97,6 +100,19 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
                     _minSupport = Math.Min(_minSupport, pattern.Support);
                 }
             }
+        }
+
+        public void OutputItems(int item, RecordWriter<Pair<int, WritableCollection<MappedFrequentPattern>>> output)
+        {
+            WritableCollection<MappedFrequentPattern> patterns = new WritableCollection<MappedFrequentPattern>();
+            PriorityQueue<MappedFrequentPattern> queue = Queue;
+            _log.InfoFormat("{2}: Found {0} frequent items with min support {1}.", queue.Count, queue.Peek().Support, item);
+            while( queue.Count > 0 )
+            {
+                patterns.Add(queue.Dequeue());
+            }
+
+            output.WriteRecord(Pair.MakePair(item, patterns));
         }
 
         private bool AddInternal(MappedFrequentPattern pattern)

@@ -85,19 +85,18 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
 
         public float Progress { get; private set; }
 
-        public void Mine(RecordWriter<Pair<int, WritableCollection<MappedFrequentPattern>>> output, int k, bool expandPerfectExtensions, int mineUntilItem)
+        public FrequentPatternMaxHeap[] Mine(RecordWriter<Pair<int, WritableCollection<MappedFrequentPattern>>> output, int k, bool expandPerfectExtensions, int mineUntilItem, FrequentPatternMaxHeap[] itemHeaps)
         {
             if( output == null )
                 throw new ArgumentNullException("output");
 
-            FrequentPatternCollector collector = new FrequentPatternCollector(_headerTable.Length, _weight, output, expandPerfectExtensions, _minSupport, k);
+            FrequentPatternCollector collector = new FrequentPatternCollector(_headerTable.Length, _weight, output, expandPerfectExtensions, _minSupport, k, itemHeaps);
 
             _mineUntilItem = mineUntilItem;
             Mine(null, collector);
 
             // If we didn't mine the entire item set, those items we did mine can still have found patterns containing the lower items, so we need to report those as well.
-            for( int x = mineUntilItem - 1; x >= 0; --x )
-                collector.ReportTopK(x);
+            return collector.ItemHeaps;
         }
 
         public void PrintTree(TextWriter writer)
@@ -183,9 +182,6 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
                 }
                 collector.Report();
                 collector.Remove(1);
-
-                if( currentItem == null )
-                    collector.ReportTopK(item);
             }
         }
 

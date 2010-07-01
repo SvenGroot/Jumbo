@@ -220,7 +220,7 @@ namespace Tkl.Jumbo.Jet.Jobs
 
             TypeBuilder taskTypeBuilder = _dynamicModule.DefineType(_dynamicAssembly.GetName().Name + "." + accumulatorMethod.Name, TypeAttributes.Class | TypeAttributes.Sealed, typeof(AccumulatorTask<TKey, TValue>));
 
-            SetAllowRecordReuseAttribute(accumulatorMethod, taskTypeBuilder);
+            SetTaskAttributes(accumulatorMethod, taskTypeBuilder);
 
             MethodBuilder accumulateMethod = taskTypeBuilder.DefineMethod("Accumulate", MethodAttributes.Public | MethodAttributes.Virtual, typeof(TValue), new[] { typeof(TKey), typeof(TValue), typeof(TValue) });
             accumulateMethod.DefineParameter(1, ParameterAttributes.None, "key");
@@ -496,7 +496,7 @@ namespace Tkl.Jumbo.Jet.Jobs
 
             TypeBuilder taskTypeBuilder = _dynamicModule.DefineType(_dynamicAssembly.GetName().Name + "." + taskMethod.Name, TypeAttributes.Class | TypeAttributes.Public | TypeAttributes.Sealed, typeof(Configurable), new[] { typeof(IPullTask<TInput, TOutput>) });
 
-            SetAllowRecordReuseAttribute(taskMethod, taskTypeBuilder);
+            SetTaskAttributes(taskMethod, taskTypeBuilder);
 
             MethodBuilder runMethod = taskTypeBuilder.DefineMethod("Run", MethodAttributes.Public | MethodAttributes.Virtual, null, new[] { typeof(RecordReader<TInput>), typeof(RecordWriter<TOutput>) });
             runMethod.DefineParameter(1, ParameterAttributes.None, "input");
@@ -532,7 +532,7 @@ namespace Tkl.Jumbo.Jet.Jobs
 
             TypeBuilder taskTypeBuilder = _dynamicModule.DefineType(_dynamicAssembly.GetName().Name + "." + taskMethod.Name, TypeAttributes.Class | TypeAttributes.Public | TypeAttributes.Sealed, typeof(Configurable), new[] { typeof(IPushTask<TInput, TOutput>) });
 
-            SetAllowRecordReuseAttribute(taskMethod, taskTypeBuilder);
+            SetTaskAttributes(taskMethod, taskTypeBuilder);
 
             MethodBuilder processMethod = taskTypeBuilder.DefineMethod("ProcessRecord", MethodAttributes.Public | MethodAttributes.Virtual, null, new[] { typeof(TInput), typeof(RecordWriter<TOutput>) });
             processMethod.DefineParameter(1, ParameterAttributes.None, "record");
@@ -566,7 +566,7 @@ namespace Tkl.Jumbo.Jet.Jobs
             }
         }
 
-        private static void SetAllowRecordReuseAttribute(MethodInfo taskMethod, TypeBuilder taskTypeBuilder)
+        private static void SetTaskAttributes(MethodInfo taskMethod, TypeBuilder taskTypeBuilder)
         {
             Type allowRecordReuseAttributeType = typeof(AllowRecordReuseAttribute);
             AllowRecordReuseAttribute allowRecordReuse = (AllowRecordReuseAttribute)Attribute.GetCustomAttribute(taskMethod, allowRecordReuseAttributeType);
@@ -577,6 +577,14 @@ namespace Tkl.Jumbo.Jet.Jobs
 
                 CustomAttributeBuilder allowRecordReuseBuilder = new CustomAttributeBuilder(ctor, new object[] { }, new[] { passThrough }, new object[] { allowRecordReuse.PassThrough });
                 taskTypeBuilder.SetCustomAttribute(allowRecordReuseBuilder);
+            }
+
+            if( Attribute.IsDefined(taskMethod, typeof(ProcessAllInputPartitionsAttribute)) )
+            {
+                ConstructorInfo ctor = typeof(ProcessAllInputPartitionsAttribute).GetConstructor(Type.EmptyTypes);
+                CustomAttributeBuilder partitionAttribute = new CustomAttributeBuilder(ctor, new object[0]);
+
+                taskTypeBuilder.SetCustomAttribute(partitionAttribute);
             }
         }
 

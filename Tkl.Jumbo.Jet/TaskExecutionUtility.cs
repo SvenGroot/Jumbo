@@ -49,7 +49,7 @@ namespace Tkl.Jumbo.Jet
                         totalProgress = _task.InputPartitionsFinished;
                         // This property will be called on a different thread. There is therefore a chance it will get called exactly when Task is being reset so we need to check for null.
                         IHasAdditionalProgress progressTask = _task.Task as IHasAdditionalProgress;
-                        if( progressTask == null )
+                        if( progressTask != null )
                         {
                             totalProgress += progressTask.AdditionalProgress;
                         }
@@ -74,6 +74,7 @@ namespace Tkl.Jumbo.Jet
         private readonly List<IInputChannel> _inputChannels;
         private readonly List<string> _statusMessages;
         private readonly bool _isAssociatedTask;
+        private readonly bool _processesAllPartitions;
         private List<DfsOutputInfo> _dfsOutputs;
         private volatile bool _finished;
         private volatile bool _disposed;
@@ -129,6 +130,13 @@ namespace Tkl.Jumbo.Jet
                 parentTask._associatedTasks.Add(this);
                 _statusMessageLevel = parentTask._statusMessageLevel + 1;
                 _rootTask.EnsureStatusLevels(_statusMessageLevel);
+                _processesAllPartitions = parentTask._processesAllPartitions;
+            }
+
+            // If the partitions aren't already combined by the parent task, we check the task type if it has the attribute set.
+            if( !_processesAllPartitions )
+            {
+                _processesAllPartitions = Attribute.IsDefined(_taskType, typeof(ProcessAllInputPartitionsAttribute));
             }
 
             OutputChannel = CreateOutputChannel();
@@ -163,6 +171,18 @@ namespace Tkl.Jumbo.Jet
         /// </summary>
         /// <value>The number of input partitions that have finished.</value>
         protected int InputPartitionsFinished { get; set; }
+
+        /// <summary>
+        /// Gets a value indicating whether a single task instance will process all input partitions.
+        /// </summary>
+        /// <value>
+        /// 	<see langword="true"/> if the task type of this task or any ancestor in the compound task has the 
+        /// 	<see cref="ProcessAllInputPartitionsAttribute"/> attribute; otherwise, <see langword="false"/>.
+        /// </value>
+        protected bool ProcessesAllInputPartitions
+        {
+            get { return _processesAllPartitions; }
+        }
 
         internal IRecordReader InputReader
         {
@@ -409,21 +429,24 @@ namespace Tkl.Jumbo.Jet
         /// </summary>
         protected void ResetForNextPartition()
         {
-            if( _task != null )
+            if( !ProcessesAllInputPartitions )
             {
-                // The lock is needed because we must prevent the progress thread from seeing the updated value of InputPartitionsFinished and the old task instance at the same time.
-                lock( _taskProgressLock )
+                if( _task != null )
                 {
-                    ++InputPartitionsFinished;
-                    _task = null;
+                    // The lock is needed because we must prevent the progress thread from seeing the updated value of InputPartitionsFinished and the old task instance at the same time.
+                    lock( _taskProgressLock )
+                    {
+                        ++InputPartitionsFinished;
+                        _task = null;
+                    }
                 }
-            }
 
-            if( _associatedTasks != null )
-            {
-                foreach( TaskExecutionUtility childTask in _associatedTasks )
+                if( _associatedTasks != null )
                 {
-                    childTask.ResetForNextPartition();
+                    foreach( TaskExecutionUtility childTask in _associatedTasks )
+                    {
+                        childTask.ResetForNextPartition();
+                    }
                 }
             }
         }
@@ -522,7 +545,7 @@ namespace Tkl.Jumbo.Jet
         /// </summary>
         protected void FinishTask()
         {
-            RunTaskFinishMethod();
+            RunTaskFinishMethod(false);
 
             if( _associatedTasks != null )
             {
@@ -538,6 +561,8 @@ namespace Tkl.Jumbo.Jet
         /// </summary>
         protected void FinalizeTask(TaskMetrics metrics)
         {
+            RunTaskFinishMethod(true);
+
             if( _associatedTasks != null )
             {
                 foreach( TaskExecutionUtility associatedTask in _associatedTasks )
@@ -571,7 +596,8 @@ namespace Tkl.Jumbo.Jet
         /// <summary>
         /// Runs the task finish method if this task is a push task.
         /// </summary>
-        protected abstract void RunTaskFinishMethod();
+        /// <param name="finalizing"><see langword="true"/> if the task is being finalized; otherwise, <see langword="false"/>.</param>
+        protected abstract void RunTaskFinishMethod(bool isFinalizing);
 
         /// <summary>
         /// Throws an exception if this object was disposed.
@@ -636,7 +662,7 @@ namespace Tkl.Jumbo.Jet
             {
                 _hasAddedTaskProgressSource = true;
 
-                if( InputChannels != null && InputChannels.Count == 1 )
+                if( !ProcessesAllInputPartitions && InputChannels != null && InputChannels.Count == 1 && InputChannels[0].Configuration.PartitionsPerTask > 1 )
                 {
                     // There may be multiple input partitions, so use the TaskProgressSource class which can handle that.
                     IHasAdditionalProgress progressTask = task as IHasAdditionalProgress;
