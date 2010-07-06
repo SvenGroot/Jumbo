@@ -91,12 +91,11 @@ namespace Tkl.Jumbo.Test.Jet
                 reader.AddInput(partitionInputs);
             }
 
-            for( int partition = 0; partition < partitions; ++partition )
+            for( int partition = 0; partition < partitions; ++partition, reader.NextPartition() )
             {
                 List<int> expected = sortedLists[partition];
                 expected.Sort();
 
-                reader.CurrentPartition = partition;
                 List<int> result = new List<int>(reader.EnumerateRecords());
 
                 Assert.IsTrue(Utilities.CompareList(expected, result));

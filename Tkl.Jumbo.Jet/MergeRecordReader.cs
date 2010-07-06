@@ -204,7 +204,7 @@ namespace Tkl.Jumbo.Jet
                 int partitionProcessed = 0;
 
                 bool needMorePasses = false;
-                foreach( int partition in Partitions )
+                foreach( int partition in PartitionNumbers )
                 {
                     partitionMergeOutputsProcessed = mergeOutputsProcessed;
                     partitionProcessed = processed;

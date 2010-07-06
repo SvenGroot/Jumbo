@@ -58,8 +58,8 @@ namespace Tkl.Jumbo.IO
             if( _outer == null )
             {
                 WaitForInputs(2, Timeout.Infinite);
-                _outer = (RecordReader<TOuter>)GetInputReader(CurrentPartition, 0);
-                _inner = (RecordReader<TInner>)GetInputReader(CurrentPartition, 1);
+                _outer = (RecordReader<TOuter>)GetInputReader(0);
+                _inner = (RecordReader<TInner>)GetInputReader(1);
 
                 _outerHasRecords = _outer.ReadRecord();
                 _innerHasRecords = _inner.ReadRecord();

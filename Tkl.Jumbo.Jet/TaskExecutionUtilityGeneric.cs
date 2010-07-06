@@ -272,11 +272,11 @@ namespace Tkl.Jumbo.Jet
             }
             else
             {
-                TotalInputPartitions = input.Partitions.Count;
+                TotalInputPartitions = input.PartitionCount;
                 bool firstPartition = true;
-                foreach( int partition in input.Partitions )
+                do
                 {
-                    _log.InfoFormat("Running task for partition {0}.", partition);
+                    _log.InfoFormat("Running task for partition {0}.", input.CurrentPartition);
                     if( firstPartition )
                         firstPartition = false;
                     else
@@ -284,10 +284,9 @@ namespace Tkl.Jumbo.Jet
                         ResetForNextPartition();
                         task = (ITask<TInput, TOutput>)Task;
                     }
-                    input.CurrentPartition = partition;
                     CallTaskRunMethod(input, output, taskStopwatch, task);
-                    _log.InfoFormat("Finished running task for partition {0}.", partition);
-                }
+                    _log.InfoFormat("Finished running task for partition {0}.", input.CurrentPartition);
+                } while( input.NextPartition() );
             }
         }
     }

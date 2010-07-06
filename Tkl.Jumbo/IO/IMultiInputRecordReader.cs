@@ -48,14 +48,20 @@ namespace Tkl.Jumbo.IO
         CompressionType CompressionType { get; }
 
         /// <summary>
-        /// Gets all partitions that this reader currently has data for.
+        /// Gets all partitions currently assigned to this reader.
         /// </summary>
-        IList<int> Partitions { get; }
+        IList<int> PartitionNumbers { get; }
 
         /// <summary>
-        /// Gets or sets the partition that calls to <see cref="RecordReader{T}.ReadRecord"/> should return records for.
+        /// Gets the partition that calls to <see cref="RecordReader{T}.ReadRecord"/> should return records for.
         /// </summary>
-        int CurrentPartition { get; set; }
+        int CurrentPartition { get; }
+
+        /// <summary>
+        /// Moves the current partition to the next partition.
+        /// </summary>
+        /// <returns><see langword="true"/> if the current partition was moved to the next partition; <see langword="false"/> if there were no more partitions.</returns>
+        bool NextPartition();
 
         /// <summary>
         /// Adds the specified input to be read by this record reader.

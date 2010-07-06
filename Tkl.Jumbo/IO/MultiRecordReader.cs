@@ -91,7 +91,7 @@ namespace Tkl.Jumbo.IO
                 WaitForInputs(newReaderNumber, Timeout.Infinite);
                 _timeWaitingStopwatch.Stop();
 
-                _currentReader = (RecordReader<T>)GetInputReader(CurrentPartition, _currentReaderNumber);
+                _currentReader = (RecordReader<T>)GetInputReader(_currentReaderNumber);
                 _currentReaderNumber = newReaderNumber;
             }
             return true;

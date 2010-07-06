@@ -26,7 +26,6 @@ namespace Tkl.Jumbo.Jet
     public sealed class MultiPartitionRecordReader<T> : RecordReader<T>
     {
         private readonly MultiInputRecordReader<T> _baseReader; // Do not override Dispose to dispose of the _baseReader. TaskExecutionUtility will need it later.
-        private int _currentPartitionIndex;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="MultiPartitionRecordReader&lt;T&gt;"/> class.
@@ -38,7 +37,6 @@ namespace Tkl.Jumbo.Jet
                 throw new ArgumentNullException("baseReader");
 
             _baseReader = baseReader;
-            _baseReader.CurrentPartition = _baseReader.Partitions[0];
         }
 
         /// <summary>
@@ -65,7 +63,7 @@ namespace Tkl.Jumbo.Jet
         /// <value>The total number of partitions.</value>
         public int PartitionCount
         {
-            get { return _baseReader.Partitions.Count; }
+            get { return _baseReader.PartitionCount; }
         }
 
         /// <summary>
@@ -76,14 +74,11 @@ namespace Tkl.Jumbo.Jet
         {
             while( !_baseReader.ReadRecord() )
             {
-                ++_currentPartitionIndex;
-                if( _currentPartitionIndex >= _baseReader.Partitions.Count )
+                if( !_baseReader.NextPartition() )
                 {
                     CurrentRecord = default(T);
                     return false;
                 }
-
-                _baseReader.CurrentPartition = _baseReader.Partitions[_currentPartitionIndex];
             }
 
             CurrentRecord = _baseReader.CurrentRecord;

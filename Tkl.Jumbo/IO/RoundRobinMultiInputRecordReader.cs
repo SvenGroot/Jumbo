@@ -61,7 +61,7 @@ namespace Tkl.Jumbo.IO
                 if( inputsAvailable > _previousInputsAvailable )
                 {
                     for( int x = _previousInputsAvailable; x < inputsAvailable; ++x )
-                        _readers.Add((RecordReader<T>)GetInputReader(CurrentPartition, x));
+                        _readers.Add((RecordReader<T>)GetInputReader(x));
                     _previousInputsAvailable = inputsAvailable;
                     if( _currentReader == -1 )
                         _currentReader = _readers.Count - 1;

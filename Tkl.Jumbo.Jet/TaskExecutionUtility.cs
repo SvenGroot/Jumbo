@@ -596,7 +596,7 @@ namespace Tkl.Jumbo.Jet
         /// <summary>
         /// Runs the task finish method if this task is a push task.
         /// </summary>
-        /// <param name="finalizing"><see langword="true"/> if the task is being finalized; otherwise, <see langword="false"/>.</param>
+        /// <param name="isFinalizing"><see langword="true"/> if the task is being finalized; otherwise, <see langword="false"/>.</param>
         protected abstract void RunTaskFinishMethod(bool isFinalizing);
 
         /// <summary>

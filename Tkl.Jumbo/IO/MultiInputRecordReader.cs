@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Diagnostics;
+using System.Collections.ObjectModel;
 
 namespace Tkl.Jumbo.IO
 {
@@ -23,7 +24,7 @@ namespace Tkl.Jumbo.IO
     /// </para>
     /// <note>
     ///   While the <see cref="AddInput"/>, <see cref="WaitForInputs"/> 
-    ///   and <see cref="GetInputReader"/> methods are thread safe, no other methods of this class are guaranteed to be thread
+    ///   and <see cref="GetInputReader(int)"/> methods are thread safe, no other methods of this class are guaranteed to be thread
     ///   safe, and derived classes are not required to make <see cref="RecordReader{T}.ReadRecordInternal"/> thread safe.
     ///   Essentially, you may have only one thread reading from the <see cref="MultiInputRecordReader{T}"/>, while one or
     ///   more other threads add inputs to it.
@@ -31,9 +32,44 @@ namespace Tkl.Jumbo.IO
     /// </remarks>
     public abstract class MultiInputRecordReader<T> : RecordReader<T>, IMultiInputRecordReader
     {
+        #region Nested types
+
+        private sealed class Partition : IDisposable
+        {
+            private readonly int _partitionNumber;
+            private readonly List<RecordInput> _inputs;
+
+            public Partition(int partitionNumber, int totalInputCount)
+            {
+                _partitionNumber = partitionNumber;
+                _inputs = new List<RecordInput>(totalInputCount);
+            }
+
+            public int PartitionNumber
+            {
+                get { return _partitionNumber; }
+            }
+
+            public List<RecordInput> Inputs
+            {
+                get { return _inputs; }
+            }
+
+            public void Dispose()
+            {
+                foreach( RecordInput input in _inputs )
+                    input.Dispose();
+
+                _inputs.Clear();
+            }
+        }
+
+        #endregion
+
         private bool _disposed;
-        private readonly SortedList<int, List<RecordInput>> _inputs = new SortedList<int, List<RecordInput>>();
-        private int _currentPartition;
+        private readonly List<Partition> _partitions = new List<Partition>();
+        private readonly Dictionary<int, Partition> _partitionsByNumber = new Dictionary<int, Partition>(); // lock _partitions to access this member.
+        private int _currentPartitionIndex;
 
         /// <summary>
         /// Event raised when the value of the <see cref="CurrentPartition"/> property changes.
@@ -57,16 +93,17 @@ namespace Tkl.Jumbo.IO
             if( bufferSize <= 0 )
                 throw new ArgumentOutOfRangeException("bufferSize", "Buffer size must be larger than zero.");
 
-            foreach( int partition in partitions )
+            foreach( int partitionNumber in partitions )
             {
-                _inputs.Add(partition, new List<RecordInput>());
+                Partition partition = new Partition(partitionNumber, totalInputCount);
+                _partitions.Add(partition);
+                _partitionsByNumber.Add(partitionNumber, partition);
             }
 
             TotalInputCount = totalInputCount;
             AllowRecordReuse = allowRecordReuse;
             BufferSize = bufferSize;
             CompressionType = compressionType;
-            _currentPartition = _inputs.Keys[0];
         }
 
         /// <summary>
@@ -96,15 +133,15 @@ namespace Tkl.Jumbo.IO
         {
             get
             {
-                lock( _inputs )
+                lock( _partitions )
                 {
-                    if( _inputs.Count == 0 ) // prevent division by zero.
+                    if( _partitions.Count == 0 ) // prevent division by zero.
                         return 0;
 
-                    return (from inputList in _inputs.Values
-                            from input in inputList
+                    return (from partition in _partitions
+                            from input in partition.Inputs
                             where input.IsReaderCreated
-                            select input.Reader.Progress).Sum() / (float)(TotalInputCount * _inputs.Count);
+                            select input.Reader.Progress).Sum() / (float)(TotalInputCount * _partitions.Count);
                 }
             }
         }
@@ -119,10 +156,13 @@ namespace Tkl.Jumbo.IO
         {
             get
             {
-                return (from inputList in _inputs.Values
-                        from input in inputList
-                        where input.IsReaderCreated
-                        select input.Reader.InputBytes).Sum();
+                lock( _partitions )
+                {
+                    return (from partition in _partitions
+                            from input in partition.Inputs
+                            where input.IsReaderCreated
+                            select input.Reader.InputBytes).Sum();
+                }
             }
         }
 
@@ -141,10 +181,13 @@ namespace Tkl.Jumbo.IO
         {
             get
             {
-                return (from inputList in _inputs.Values
-                        from input in inputList
-                        where input.IsReaderCreated
-                        select input.Reader.BytesRead).Sum();                
+                lock( _partitions )
+                {
+                    return (from partition in _partitions
+                            from input in partition.Inputs
+                            where input.IsReaderCreated
+                            select input.Reader.BytesRead).Sum();
+                }
             }
         }
 
@@ -155,26 +198,57 @@ namespace Tkl.Jumbo.IO
         {
             get
             {
-                lock( _inputs )
+                lock( _partitions )
                 {
                     // We treat inputs whose reader hasn't yet been created as if RecordsAvailable is true, as they are read from a file
                     // so their readers would always return true anyway.
-                    return _inputs.Values[0].Exists((i) => !i.IsReaderCreated || i.Reader.RecordsAvailable);
+                    return _partitions.Exists(p => p.Inputs.Exists(i => !i.IsReaderCreated || i.Reader.RecordsAvailable));
                 }
             }
         }
 
 
         /// <summary>
-        /// Gets the current number of inputs that have been added to the <see cref="MultiInputRecordReader{T}"/>.
+        /// Gets the current number of inputs that have been added to the <see cref="MultiInputRecordReader{T}"/> for the current partition.
         /// </summary>
         public int CurrentInputCount
         {
             get
             {
-                lock( _inputs )
+                lock( _partitions )
                 {
-                    return _inputs.Count == 0 ? 0 : _inputs.Values[0].Count;
+                    return _partitions.Count == 0 ? 0 : _partitions[_currentPartitionIndex].Inputs.Count;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Gets the partition numbers assigned to this reader.
+        /// </summary>
+        /// <value>The partition numbers assigned to this reader.</value>
+        public IList<int> PartitionNumbers
+        {
+            get
+            {
+                lock( _partitions )
+                {
+                    return (from p in _partitions
+                            select p.PartitionNumber).ToList();
+                }
+            }
+        }
+
+        /// <summary>
+        /// Gets the number of partitions assigned to this reader.
+        /// </summary>
+        /// <value>The number of partitions assigned to this reader.</value>
+        public int PartitionCount
+        {
+            get
+            {
+                lock( _partitions )
+                {
+                    return _partitions.Count;
                 }
             }
         }
@@ -182,55 +256,66 @@ namespace Tkl.Jumbo.IO
         /// <summary>
         /// Gets or sets the partition that calls to <see cref="RecordReader{T}.ReadRecord"/> should return records for.
         /// </summary>
+        /// <value>The current partition.</value>
+        /// <para>
+        /// The current partition determines which partition the <see cref="RecordReader{T}.ReadRecord"/> function should return records for.
+        /// Deriving classes should use this when implementing <see cref="RecordReader{T}.ReadRecordInternal"/>.
+        /// </para>
         public int CurrentPartition
         {
-            get { return _currentPartition; }
-            set 
-            {
-                if( _currentPartition != value )
-                {
-                    _currentPartition = value;
-                    OnCurrentPartitionChanged(EventArgs.Empty);
-                }
-            }
-        }
-
-        /// <summary>
-        /// Gets all partitions that this reader currently has data for.
-        /// </summary>
-        public IList<int> Partitions
-        {
-            get
-            {
-                return _inputs.Keys;
-            }
+            get { return _partitions[_currentPartitionIndex].PartitionNumber; }
         }
 
         /// <summary>
         /// Gets a value that indicates whether the object has been disposed.
         /// </summary>
+        /// <value>
+        /// 	<see langword="true"/> if this instance is disposed; otherwise, <see langword="false"/>.
+        /// </value>
         protected bool IsDisposed
         {
             get { return _disposed; }
         }
 
         /// <summary>
+        /// Moves the current partition to the next partition.
+        /// </summary>
+        /// <returns><see langword="true"/> if the current partition was moved to the next partition; <see langword="false"/> if there were no more partitions.</returns>
+        /// <remarks>
+        /// <para>
+        ///   The current partition determines which partition the <see cref="RecordReader{T}.ReadRecord"/> function should return records for.
+        ///   Deriving classes should use this when implementing <see cref="RecordReader{T}.ReadRecordInternal"/>.
+        /// </para>
+        /// </remarks>
+        public bool NextPartition()
+        {
+            if( _currentPartitionIndex < _partitions.Count - 1 )
+            {
+                ++_currentPartitionIndex;
+                OnCurrentPartitionChanged(EventArgs.Empty);
+                return true;
+            }
+
+            return false;
+        }
+
+        /// <summary>
         /// Adds the specified input to be read by this record reader.
         /// </summary>
-        /// <param name="partitions">The partitions for this input.</param>
+        /// <param name="partitions">The partitions for this input, in the same order as the partition list provided to the constructor.</param>
         /// <remarks>
         /// Which partitions a multi input record reader is responsible for is specified when that reader is created.
-        /// All calls to <see cref="AddInput"/> must specify those exact same partitions, sorted by the partition number.
+        /// All calls to <see cref="AddInput"/> must specify those exact same partitions, in the same order..
         /// </remarks>
         public void AddInput(IList<RecordInput> partitions)
         {
             if( partitions == null )
                 throw new ArgumentNullException("partitions");
-            if( partitions.Count != _inputs.Count )
-                throw new ArgumentException("Incorrect number of partitions.");
 
-            lock( _inputs )
+            lock( _partitions )
             {
+                if( partitions.Count != _partitions.Count )
+                    throw new ArgumentException("Incorrect number of partitions.");
                 if( CurrentInputCount >= TotalInputCount )
                     throw new InvalidOperationException("The merge task input already has all inputs.");
 
@@ -238,15 +323,15 @@ namespace Tkl.Jumbo.IO
                 {
                     RecordInput input = partitions[x];
                     input.Input = this;
-                    _inputs.Values[x].Add(input);
+                    _partitions[x].Inputs.Add(input);
                 }
 
-                Monitor.PulseAll(_inputs);
+                Monitor.PulseAll(_partitions);
             }
         }
 
         /// <summary>
-        /// Waits until the specified number of inputs becomes available.
+        /// Waits until the specified number of inputs becomes available for all currently active partitions.
         /// </summary>
         /// <param name="inputCount">The number of inputs to wait for.</param>
         /// <param name="timeout">The maximum amount of time to wait, in milliseconds, or <see cref="System.Threading.Timeout.Infinite"/> to wait indefinitely.</param>
@@ -258,20 +343,21 @@ namespace Tkl.Jumbo.IO
                 throw new ArgumentOutOfRangeException("inputCount", "inputCount must be greater than zero.");
             if( inputCount > TotalInputCount )
                 inputCount = TotalInputCount;
-            Stopwatch sw = new Stopwatch();
-            sw.Start();
-            lock( _inputs )
+            Stopwatch sw = null;
+            if( timeout > 0 )
+                sw = Stopwatch.StartNew();
+            lock( _partitions )
             {
-                while( _inputs.Values[0].Count < inputCount )
+                while( _partitions[0].Inputs.Count < inputCount )
                 {
                     int timeoutRemaining = Timeout.Infinite;
-                    if( timeout > 0 )
+                    if( timeout >= 0 )
                     {
                         timeoutRemaining = (int)(timeout - sw.ElapsedMilliseconds);
                         if( timeoutRemaining <= 0 )
                             return false;
                     }
-                    if( !Monitor.Wait(_inputs, timeoutRemaining) )
+                    if( !Monitor.Wait(_partitions, timeoutRemaining) )
                         return false;
                 }
                 return true;
@@ -279,16 +365,29 @@ namespace Tkl.Jumbo.IO
         }
 
         /// <summary>
-        /// Returns the record reader for the specified input.
+        /// Gets the record reader for the specified input of the current partition.
+        /// </summary>
+        /// <param name="index">The index of the input.</param>
+        /// <returns>An instance of a class implementing <see cref="IRecordReader"/> for the specified input.</returns>
+        protected IRecordReader GetInputReader(int index)
+        {
+            lock( _partitions )
+            {
+                return _partitions[_currentPartitionIndex].Inputs[index].Reader;
+            }
+        }
+
+        /// <summary>
+        /// Returns the record reader for the specified partition and input.
         /// </summary>
         /// <param name="partition">The partition of the reader to return.</param>
         /// <param name="index">The index of the record reader to return.</param>
         /// <returns>An instance of a class implementing <see cref="IRecordReader"/> for the specified input.</returns>
         protected IRecordReader GetInputReader(int partition, int index)
         {
-            lock( _inputs )
+            lock( _partitions )
             {
-                return _inputs[partition][index].Reader;
+                return _partitionsByNumber[partition].Inputs[index].Reader;
             }
         }
 
@@ -301,19 +400,20 @@ namespace Tkl.Jumbo.IO
         {
             try
             {
-                if( !_disposed && disposing )
+                if( !_disposed )
                 {
-                    lock( _inputs )
+                    _disposed = true;
+                    if( disposing )
                     {
-                        foreach( List<RecordInput> inputList in _inputs.Values )
+                        lock( _partitions )
                         {
-                            foreach( RecordInput input in inputList )
+                            foreach( Partition partition in _partitions )
                             {
-                                input.Dispose();
+                                partition.Dispose();
                             }
+                            _partitions.Clear();
+                            _partitionsByNumber.Clear();
                         }
-                        _inputs.Clear();
-                        _disposed = true;
                     }
                 }
             }
