@@ -27,5 +27,19 @@ namespace Tkl.Jumbo.Jet.Channels
         /// If the task has more than one input, the record reader will combine all inputs, usually by serializing them.
         /// </remarks>
         IRecordReader CreateRecordReader();
+
+        /// <summary>
+        /// Assigns additional partitions to this input channel.
+        /// </summary>
+        /// <param name="additionalPartitions">The additional partitions.</param>
+        /// <remarks>
+        /// <para>
+        ///   Not all input channels need to support this.
+        /// </para>
+        /// <para>
+        ///   This method will never be called if <see cref="ChannelConfiguration.PartitionsPerTask"/> is 1.
+        /// </para>
+        /// </remarks>
+        void AssignAdditionalPartitions(IList<int> additionalPartitions);
     }
 }

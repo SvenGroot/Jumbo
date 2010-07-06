@@ -123,6 +123,23 @@ namespace Tkl.Jumbo.Jet.Channels
         /// <returns>A <see cref="RecordReader{T}"/> for the channel.</returns>
         public abstract IRecordReader CreateRecordReader();
 
+        /// <summary>
+        /// Assigns additional partitions to this input channel.
+        /// </summary>
+        /// <param name="additionalPartitions">The additional partitions.</param>
+        /// <remarks>
+        ///   <para>
+        ///     Not all input channels need to support this.
+        ///   </para>
+        ///   <para>
+        ///     This method will never be called if <see cref="ChannelConfiguration.PartitionsPerTask"/> is 1.
+        ///   </para>
+        /// </remarks>
+        public void AssignAdditionalPartitions(IList<int> additionalPartitions)
+        {
+            throw new NotImplementedException();
+        }
+
         #endregion
 
         /// <summary>
@@ -136,7 +153,7 @@ namespace Tkl.Jumbo.Jet.Channels
             _log.InfoFormat(System.Globalization.CultureInfo.CurrentCulture, "Creating MultiRecordReader of type {3} for {0} inputs, allow record reuse = {1}, buffer size = {2}.", InputTaskIds.Count, TaskExecution.AllowRecordReuse, TaskExecution.JetClient.Configuration.FileChannel.ReadBufferSize, multiInputRecordReaderType);
             int bufferSize = (multiInputRecordReaderType.IsGenericType && multiInputRecordReaderType.GetGenericTypeDefinition() == typeof(MergeRecordReader<>)) ? (int)TaskExecution.JetClient.Configuration.FileChannel.MergeTaskReadBufferSize : (int)TaskExecution.JetClient.Configuration.FileChannel.ReadBufferSize;
             // We're not using JetActivator to create the object because we need to delay calling NotifyConfigurationChanged until after InputStage was set.
-            int[] partitions = GetPartitions();
+            int[] partitions = TaskExecution.GetPartitions();
             _partitions.AddRange(partitions);
             IMultiInputRecordReader reader = (IMultiInputRecordReader)Activator.CreateInstance(multiInputRecordReaderType, partitions, _inputTaskIds.Count, TaskExecution.AllowRecordReuse, bufferSize, CompressionType);
             IChannelMultiInputRecordReader channelReader = reader as IChannelMultiInputRecordReader;
@@ -173,11 +190,6 @@ namespace Tkl.Jumbo.Jet.Channels
             }
 
             return result.ToString();
-        }
-
-        private int[] GetPartitions()
-        {
-            return TaskExecution.JetClient.JobServer.GetPartitionsForTask(TaskExecution.Configuration.JobId, TaskExecution.Configuration.TaskId.ToString());
         }
     }
 }

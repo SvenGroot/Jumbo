@@ -13,7 +13,7 @@ using System.Collections;
 
 namespace JobServerApplication
 {
-    public class JobServer : IJobServerHeartbeatProtocol, IJobServerClientProtocol
+    public class JobServer : IJobServerHeartbeatProtocol, IJobServerClientProtocol, IJobServerTaskProtocol
     {
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(JobServer));
 
@@ -212,18 +212,6 @@ namespace JobServerApplication
             return result.ToArray();
         }
 
-        public int[] GetPartitionsForTask(Guid jobId, string taskId)
-        {
-            if( taskId == null )
-                throw new ArgumentNullException("taskId");
-
-            JobInfo job = (JobInfo)_jobs[jobId];
-            if( job == null )
-                throw new ArgumentException("Unknown job ID.");
-            TaskInfo task = job.GetTask(taskId);
-            return task.Partitions == null ? null : task.Partitions.ToArray();
-        }
-
         public JobStatus GetJobStatus(Guid jobId)
         {
             JobInfo job = (JobInfo)_jobs[jobId];
@@ -307,6 +295,34 @@ namespace JobServerApplication
             return null;
         }
 
+        #endregion
+
+        #region IJobServerTaskProtocol Members
+
+        public int[] GetPartitionsForTask(Guid jobId, TaskId taskId)
+        {
+            if( taskId == null )
+                throw new ArgumentNullException("taskId");
+
+            JobInfo job = (JobInfo)_jobs[jobId];
+            if( job == null )
+                throw new ArgumentException("Unknown job ID.");
+            TaskInfo task = job.GetTask(taskId.ToString());
+            return task.Partitions == null ? null : task.Partitions.ToArray();
+        }
+
+        public bool NotifyStartPartitionProcessing(Guid jobId, TaskId taskId, int partitionNumber)
+        {
+            // TODO: Real implementation
+            return true;
+        }
+
+        public int[] GetAdditionalPartitions(Guid jobId, TaskId taskId)
+        {
+            // TODO: Real implementation
+            return null;
+        }
+        
         #endregion
 
         #region IJobServerHeartbeatProtocol Members

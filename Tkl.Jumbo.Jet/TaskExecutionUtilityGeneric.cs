@@ -263,7 +263,7 @@ namespace Tkl.Jumbo.Jet
             IPullTask<TInput, TOutput> pullTask;
             if( ProcessesAllInputPartitions && (pullTask = task as IPullTask<TInput, TOutput>) != null )
             {
-                using( MultiPartitionRecordReader<TInput> partitionReader = new MultiPartitionRecordReader<TInput>(input) )
+                using( MultiPartitionRecordReader<TInput> partitionReader = new MultiPartitionRecordReader<TInput>(this, input) )
                 {
                     taskStopwatch.Start();
                     pullTask.Run(partitionReader, output);
@@ -282,11 +282,14 @@ namespace Tkl.Jumbo.Jet
                     else
                     {
                         ResetForNextPartition();
+                        if( !NotifyStartPartitionProcessing(input.CurrentPartition) )
+                            continue;
                         task = (ITask<TInput, TOutput>)Task;
                     }
                     CallTaskRunMethod(input, output, taskStopwatch, task);
                     _log.InfoFormat("Finished running task for partition {0}.", input.CurrentPartition);
-                } while( input.NextPartition() );
+                    // If input.NextPartition fails we will check for additional partitions, and if we got any, we need to call input.NextPartition again.
+                } while( input.NextPartition() || (GetAdditionalPartitions(input) && input.NextPartition()) );
             }
         }
     }

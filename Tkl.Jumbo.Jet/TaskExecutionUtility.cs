@@ -67,6 +67,7 @@ namespace Tkl.Jumbo.Jet
 
         private readonly DfsClient _dfsClient;
         private readonly JetClient _jetClient;
+        private readonly IJobServerTaskProtocol _jobServerTaskClient;
         private readonly TaskContext _configuration;
         private readonly ITaskServerUmbilicalProtocol _umbilical;
         private readonly TaskExecutionUtility _rootTask;
@@ -106,6 +107,7 @@ namespace Tkl.Jumbo.Jet
 
             _dfsClient = dfsClient;
             _jetClient = jetClient;
+            _jobServerTaskClient = JetClient.CreateJobServerTaskClient(jetClient.Configuration);
             _configuration = configuration;
             _umbilical = umbilical;
             _taskType = _configuration.StageConfiguration.TaskType.ReferencedType;
@@ -451,6 +453,38 @@ namespace Tkl.Jumbo.Jet
             }
         }
 
+        internal bool NotifyStartPartitionProcessing(int partitionNumber)
+        {
+            bool result = _jobServerTaskClient.NotifyStartPartitionProcessing(Configuration.JobId, Configuration.TaskAttemptId.TaskId, partitionNumber);
+            if( !result && !ProcessesAllInputPartitions )
+            {
+                lock( _taskProgressLock )
+                {
+                    --TotalInputPartitions;
+                }
+            }
+
+            return result;
+        }
+
+        internal bool GetAdditionalPartitions(IMultiInputRecordReader reader)
+        {
+            int[] additionalPartitions = _jobServerTaskClient.GetAdditionalPartitions(Configuration.JobId, Configuration.TaskAttemptId.TaskId);
+            if( additionalPartitions != null && additionalPartitions.Length > 0 )
+            {
+                reader.AssignAdditionalPartitions(additionalPartitions);
+
+                foreach( IInputChannel channel in InputChannels )
+                {
+                    channel.AssignAdditionalPartitions(additionalPartitions);
+                }
+
+                return true;
+            }
+            else
+                return false;
+        }
+
         internal TaskExecutionUtility CreateAssociatedTask(StageConfiguration childStage, int taskNumber)
         {
             if( childStage == null )
@@ -652,6 +686,10 @@ namespace Tkl.Jumbo.Jet
             }
         }
 
+        internal int[] GetPartitions()
+        {
+            return _jobServerTaskClient.GetPartitionsForTask(Configuration.JobId, Configuration.TaskAttemptId.TaskId);
+        }
 
         private object CreateTaskInstance()
         {

@@ -72,5 +72,16 @@ namespace Tkl.Jumbo.IO
         /// All calls to <see cref="AddInput"/> must specify those exact same partitions, sorted by the partition number.
         /// </remarks>
         void AddInput(IList<RecordInput> partitions);
+
+        /// <summary>
+        /// Assigns additional partitions to this record reader.
+        /// </summary>
+        /// <param name="newPartitions">The new partitions to assign.</param>
+        /// <remarks>
+        /// <para>
+        ///   New partitions may only be assigned after all inputs for the existing partitions have been received.
+        /// </para>
+        /// </remarks>
+        void AssignAdditionalPartitions(IList<int> newPartitions);
     }
 }

@@ -25,17 +25,20 @@ namespace Tkl.Jumbo.Jet
     /// </remarks>
     public sealed class MultiPartitionRecordReader<T> : RecordReader<T>
     {
+        private readonly TaskExecutionUtility _taskExecution;
         private readonly MultiInputRecordReader<T> _baseReader; // Do not override Dispose to dispose of the _baseReader. TaskExecutionUtility will need it later.
 
         /// <summary>
         /// Initializes a new instance of the <see cref="MultiPartitionRecordReader&lt;T&gt;"/> class.
         /// </summary>
+        /// <param name="taskExecution">The task execution utility for this task. May be <see langword="null"/>.</param>
         /// <param name="baseReader">The <see cref="MultiInputRecordReader{T}"/> to read from.</param>
-        public MultiPartitionRecordReader(MultiInputRecordReader<T> baseReader)
+        public MultiPartitionRecordReader(TaskExecutionUtility taskExecution, MultiInputRecordReader<T> baseReader)
         {
             if( baseReader == null )
                 throw new ArgumentNullException("baseReader");
 
+            _taskExecution = taskExecution;
             _baseReader = baseReader;
         }
 
@@ -74,7 +77,7 @@ namespace Tkl.Jumbo.Jet
         {
             while( !_baseReader.ReadRecord() )
             {
-                if( !_baseReader.NextPartition() )
+                if( !NextPartition() )
                 {
                     CurrentRecord = default(T);
                     return false;
@@ -82,6 +85,18 @@ namespace Tkl.Jumbo.Jet
             }
 
             CurrentRecord = _baseReader.CurrentRecord;
+            return true;
+        }
+
+        private bool NextPartition()
+        {
+            do
+            {
+                // If .NextPartition fails we will check for additional partitions, and if we got any, we need to call NextPartition again.
+                if( !(_baseReader.NextPartition() || (_taskExecution != null && _taskExecution.GetAdditionalPartitions(_baseReader) && _baseReader.NextPartition())) )
+                    return false;
+            } while( !(_taskExecution == null || _taskExecution.NotifyStartPartitionProcessing(_baseReader.CurrentPartition)) );
+
             return true;
         }
     }

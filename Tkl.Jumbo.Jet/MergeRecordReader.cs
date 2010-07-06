@@ -102,6 +102,20 @@ namespace Tkl.Jumbo.Jet
         }
 
         /// <summary>
+        /// Assigns additional partitions to this record reader.
+        /// </summary>
+        /// <param name="newPartitions">The new partitions to assign.</param>
+        /// <remarks>
+        /// <para>
+        ///   New partitions may only be assigned after all inputs for the existing partitions have been received.
+        /// </para>
+        /// </remarks>
+        public override void AssignAdditionalPartitions(System.Collections.Generic.IList<int> newPartitions)
+        {
+            throw new NotImplementedException();
+        }
+
+        /// <summary>
         /// Reads a record.
         /// </summary>
         /// <returns><see langword="true"/> if an object was successfully read from the stream; <see langword="false"/> if the end of the stream or stream fragment was reached.</returns>

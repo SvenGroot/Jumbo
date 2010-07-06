@@ -9,7 +9,7 @@ using Tkl.Jumbo;
 
 namespace JobServerApplication
 {
-    class RpcServer : MarshalByRefObject, IJobServerHeartbeatProtocol, IJobServerClientProtocol
+    class RpcServer : MarshalByRefObject, IJobServerHeartbeatProtocol, IJobServerClientProtocol, IJobServerTaskProtocol
     {
         #region IJobServerHeartbeatProtocol Members
 
@@ -47,11 +47,6 @@ namespace JobServerApplication
             return JobServer.Instance.CheckTaskCompletion(jobId, tasks);
         }
 
-        public int[] GetPartitionsForTask(Guid jobId, string taskId)
-        {
-            return JobServer.Instance.GetPartitionsForTask(jobId, taskId);
-        }
-
         public JobStatus GetJobStatus(Guid jobId)
         {
             return JobServer.Instance.GetJobStatus(jobId);
@@ -70,6 +65,25 @@ namespace JobServerApplication
         public string GetLogFileContents(int maxSize)
         {
             return JobServer.Instance.GetLogFileContents(maxSize);
+        }
+
+        #endregion
+
+        #region IJobServerTaskProtocol Members
+
+        public int[] GetPartitionsForTask(Guid jobId, TaskId taskId)
+        {
+            return JobServer.Instance.GetPartitionsForTask(jobId, taskId);
+        }
+
+        public int[] GetAdditionalPartitions(Guid jobId, TaskId taskId)
+        {
+            return JobServer.Instance.GetAdditionalPartitions(jobId, taskId);
+        }
+
+        public bool NotifyStartPartitionProcessing(Guid jobId, TaskId taskId, int partitionNumber)
+        {
+            return JobServer.Instance.NotifyStartPartitionProcessing(jobId, taskId, partitionNumber);
         }
 
         #endregion

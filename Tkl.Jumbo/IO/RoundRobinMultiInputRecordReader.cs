@@ -100,6 +100,17 @@ namespace Tkl.Jumbo.IO
             }
         }
 
+        /// <summary>
+        /// Raises the <see cref="E:MultiInputRecordReader{T}.CurrentPartitionChanged"/> event.
+        /// </summary>
+        /// <param name="e">The <see cref="System.EventArgs"/> instance containing the event data.</param>
+        protected override void OnCurrentPartitionChanged(EventArgs e)
+        {
+            _currentReader = -1;
+            _readers.Clear();
+            _previousInputsAvailable = 0;
+        }
+
         private bool ReadRecordFromReader(int index, RecordReader<T> reader)
         {
             try

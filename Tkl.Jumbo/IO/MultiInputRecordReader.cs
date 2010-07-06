@@ -70,6 +70,7 @@ namespace Tkl.Jumbo.IO
         private readonly List<Partition> _partitions = new List<Partition>();
         private readonly Dictionary<int, Partition> _partitionsByNumber = new Dictionary<int, Partition>(); // lock _partitions to access this member.
         private int _currentPartitionIndex;
+        private int _firstActivePartitionIndex;
 
         /// <summary>
         /// Event raised when the value of the <see cref="CurrentPartition"/> property changes.
@@ -289,13 +290,16 @@ namespace Tkl.Jumbo.IO
         /// </remarks>
         public bool NextPartition()
         {
-            if( _currentPartitionIndex < _partitions.Count - 1 )
+            lock( _partitions )
             {
-                ++_currentPartitionIndex;
-                OnCurrentPartitionChanged(EventArgs.Empty);
-                return true;
+                _partitions[_currentPartitionIndex].Dispose();
+                if( _currentPartitionIndex < _partitions.Count - 1 )
+                {
+                    ++_currentPartitionIndex;
+                    OnCurrentPartitionChanged(EventArgs.Empty);
+                    return true;
+                }
             }
-
             return false;
         }
 
@@ -314,7 +318,7 @@ namespace Tkl.Jumbo.IO
 
             lock( _partitions )
             {
-                if( partitions.Count != _partitions.Count )
+                if( partitions.Count != _partitions.Count - _firstActivePartitionIndex )
                     throw new ArgumentException("Incorrect number of partitions.");
                 if( CurrentInputCount >= TotalInputCount )
                     throw new InvalidOperationException("The merge task input already has all inputs.");
@@ -331,11 +335,48 @@ namespace Tkl.Jumbo.IO
         }
 
         /// <summary>
+        /// Assigns additional partitions to this record reader.
+        /// </summary>
+        /// <param name="newPartitions">The new partitions to assign.</param>
+        /// <remarks>
+        /// <para>
+        ///   New partitions may only be assigned after all inputs for the existing partitions have been received.
+        /// </para>
+        /// </remarks>
+        public virtual void AssignAdditionalPartitions(IList<int> newPartitions)
+        {
+            if( newPartitions == null )
+                throw new ArgumentNullException("newPartitions");
+            if( newPartitions.Count == 0 )
+                throw new ArgumentException("The list of new partitions is empty.", "newPartitions");
+
+            lock( _partitions )
+            {
+                if( _partitions.Count > 0 && _partitions[_firstActivePartitionIndex].Inputs.Count != TotalInputCount )
+                    throw new InvalidOperationException("You cannot assign new partitions to a record reader until the currently assigned partitions have all their inputs.");
+
+                _firstActivePartitionIndex = _partitions.Count;
+                foreach( int partitionNumber in newPartitions )
+                {
+                    Partition partition = new Partition(partitionNumber, TotalInputCount);
+                    _partitions.Add(partition);
+                    _partitionsByNumber.Add(partitionNumber, partition);
+                }
+            }
+        }
+
+        /// <summary>
         /// Waits until the specified number of inputs becomes available for all currently active partitions.
         /// </summary>
         /// <param name="inputCount">The number of inputs to wait for.</param>
         /// <param name="timeout">The maximum amount of time to wait, in milliseconds, or <see cref="System.Threading.Timeout.Infinite"/> to wait indefinitely.</param>
         /// <returns><see langword="true"/> if a new input is available; <see langword="false"/> if the timeout expired.</returns>
+        /// <remarks>
+        /// <para>
+        ///   This function will wait for the specified number of inputs on the last group of partitions assigned to the reader via
+        ///   <see cref="AssignAdditionalPartitions"/>.
+        /// </para>
+        /// </remarks>
         protected bool WaitForInputs(int inputCount, int timeout)
         {
             CheckDisposed();
@@ -348,7 +389,7 @@ namespace Tkl.Jumbo.IO
                 sw = Stopwatch.StartNew();
             lock( _partitions )
             {
-                while( _partitions[0].Inputs.Count < inputCount )
+                while( _partitions[_firstActivePartitionIndex].Inputs.Count < inputCount )
                 {
                     int timeoutRemaining = Timeout.Infinite;
                     if( timeout >= 0 )

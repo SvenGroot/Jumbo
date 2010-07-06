@@ -119,6 +119,7 @@
     <Compile Include="HashPartitioner.cs" />
     <Compile Include="IHasAdditionalProgress.cs" />
     <Compile Include="IHasMetrics.cs" />
+    <Compile Include="IJobServerTaskProtocol.cs" />
     <Compile Include="IPrepartitionedPushTask.cs" />
     <Compile Include="Jobs\Channel.cs" />
     <Compile Include="Jobs\DfsInput.cs" />

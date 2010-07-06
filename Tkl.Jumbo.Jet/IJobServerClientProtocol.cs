@@ -55,14 +55,6 @@ namespace Tkl.Jumbo.Jet
         CompletedTask[] CheckTaskCompletion(Guid jobId, string[] tasks);
 
         /// <summary>
-        /// Gets the partitions that a task reading from a channel should process.
-        /// </summary>
-        /// <param name="jobId">The ID of the job containing the task.</param>
-        /// <param name="taskId">The ID of the task.</param>
-        /// <returns>A list of partition numbers that the task should process.</returns>
-        int[] GetPartitionsForTask(Guid jobId, string taskId);
-
-        /// <summary>
         /// Gets the current status for the specified job.
         /// </summary>
         /// <param name="jobId">The job ID.</param>

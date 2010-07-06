@@ -47,6 +47,8 @@ namespace Tkl.Jumbo.IO
         {
             if( totalInputCount != 2 )
                 throw new ArgumentOutOfRangeException("totalInputCount", "InnerJoinRecordReader must have exactly two input readers.");
+            if( PartitionCount != 1 )
+                throw new NotSupportedException("You cannot use multiple partitions with the InnerJoinRecordReader.");
         }
 
         /// <summary>
@@ -146,6 +148,20 @@ namespace Tkl.Jumbo.IO
                 }
             }
             return true;
+        }
+
+        /// <summary>
+        /// Assigns additional partitions to this record reader.
+        /// </summary>
+        /// <param name="newPartitions">The new partitions to assign.</param>
+        /// <remarks>
+        /// <para>
+        ///   New partitions may not be assigned to this record reader, so this method always throws a <see cref="NotSupportedException"/>.
+        /// </para>
+        /// </remarks>
+        public override void AssignAdditionalPartitions(IList<int> newPartitions)
+        {
+            throw new NotSupportedException();
         }
 
         /// <summary>
