@@ -308,19 +308,41 @@ namespace JobServerApplication
             if( job == null )
                 throw new ArgumentException("Unknown job ID.");
             TaskInfo task = job.GetTask(taskId.ToString());
-            return task.Partitions == null ? null : task.Partitions.ToArray();
+            return task.PartitionInfo == null ? null : task.PartitionInfo.GetAssignedPartitions();
         }
 
         public bool NotifyStartPartitionProcessing(Guid jobId, TaskId taskId, int partitionNumber)
         {
-            // TODO: Real implementation
-            return true;
+            if( taskId == null )
+                throw new ArgumentNullException("taskId");
+
+            JobInfo job = (JobInfo)_jobs[jobId];
+            if( job == null )
+                throw new ArgumentException("Unknown job ID.");
+            TaskInfo task = job.GetTask(taskId.ToString());
+            if( task.PartitionInfo == null )
+                throw new ArgumentException("Task doesn't have partitions.");
+
+            return task.PartitionInfo.NotifyStartPartitionProcessing(partitionNumber);
         }
 
         public int[] GetAdditionalPartitions(Guid jobId, TaskId taskId)
         {
-            // TODO: Real implementation
-            return null;
+            if( taskId == null )
+                throw new ArgumentNullException("taskId");
+
+            JobInfo job = (JobInfo)_jobs[jobId];
+            if( job == null )
+                throw new ArgumentException("Unknown job ID.");
+            TaskInfo task = job.GetTask(taskId.ToString());
+            if( task.PartitionInfo == null )
+                throw new ArgumentException("Task doesn't have partitions.");
+
+            int additionalPartition = task.PartitionInfo.AssignAdditionalPartition();
+            if( additionalPartition == -1 )
+                return null;
+            else
+                return new[] { additionalPartition };
         }
         
         #endregion
@@ -560,6 +582,8 @@ namespace JobServerApplication
                             task.SchedulerInfo.CurrentAttempt = null;
                             task.SchedulerInfo.SuccessfulAttempt = data.TaskAttemptId;
                             task.SchedulerInfo.State = TaskState.Finished;
+                            if( task.PartitionInfo != null )
+                                task.PartitionInfo.FreezePartitions();
                             _log.InfoFormat("Task {0} completed successfully.", Job.CreateFullTaskId(data.JobId, data.TaskAttemptId));
                             if( task.Progress == null )
                                 task.Progress = new TaskProgress() { Progress = 1.0f };
@@ -571,6 +595,8 @@ namespace JobServerApplication
                         case TaskAttemptStatus.Error:
                             task.SchedulerInfo.CurrentAttempt = null;
                             task.SchedulerInfo.State = TaskState.Error;
+                            if( task.PartitionInfo != null )
+                                task.PartitionInfo.Reset();
                             task.Progress = null;
                             _log.WarnFormat("Task {0} encountered an error.", Job.CreateFullTaskId(data.JobId, data.TaskAttemptId));
                             TaskStatus failedAttempt = task.ToTaskStatus();

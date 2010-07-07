@@ -22,7 +22,7 @@ namespace JobServerApplication
         private readonly TaskId _taskId;
         private readonly string _fullTaskId;
         private readonly JobInfo _job;
-        private readonly ReadOnlyCollection<int> _partitions;
+        private readonly TaskPartitionInfo _partitionInfo;
         private readonly TaskInfo _owner;
         private readonly TaskSchedulerInfo _schedulerInfo;
 
@@ -40,38 +40,9 @@ namespace JobServerApplication
             _fullTaskId = Tkl.Jumbo.Jet.Job.CreateFullTaskId(job.Job.JobId, _taskId);
             _job = job;
 
-            List<int> partitions = null;
-            if( inputStages != null )
+            if( inputStages != null && inputStages.Count > 0 )
             {
-                foreach( StageConfiguration inputStage in inputStages )
-                {
-                    if( partitions == null )
-                    {
-                        int partitionsPerTask = inputStage.OutputChannel.PartitionsPerTask;
-                        partitions = new List<int>(partitionsPerTask < 1 ? 1 : partitionsPerTask);
-                        if( partitionsPerTask <= 1 )
-                            partitions.Add(taskNumber);
-                        else
-                        {
-                            if( inputStage.OutputChannel.PartitionAssignmentMethod == PartitionAssignmentMethod.Striped )
-                            {
-                                int partition = taskNumber;
-                                for( int x = 0; x < partitionsPerTask; ++x, partition += stage.Configuration.TaskCount )
-                                {
-                                    partitions.Add(partition);
-                                }
-                            }
-                            else
-                            {
-                                int begin = ((taskNumber - 1) * partitionsPerTask) + 1;
-                                partitions.AddRange(Enumerable.Range(begin, partitionsPerTask));
-                            }
-                        }
-                        _partitions = partitions.AsReadOnly();
-                    }
-                    else if( inputStage.OutputChannel.PartitionsPerTask > 1 || Partitions.Count > 1 )
-                        throw new InvalidOperationException("Cannot use multiple partitions per task when there are multiple input channels.");
-                }
+                _partitionInfo = new TaskPartitionInfo(this, inputStages);
             }
 
             _schedulerInfo = new TaskSchedulerInfo(this);
@@ -110,9 +81,9 @@ namespace JobServerApplication
             get { return _schedulerInfo; }
         }
 
-        public ReadOnlyCollection<int> Partitions
+        public TaskPartitionInfo PartitionInfo
         {
-            get { return _partitions; }
+            get { return _partitionInfo; }
         }
 
         public TaskState State

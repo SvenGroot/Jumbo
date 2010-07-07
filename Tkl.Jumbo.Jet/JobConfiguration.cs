@@ -259,6 +259,7 @@ namespace Tkl.Jumbo.Jet
                             OutputStage = stageId,
                             PartitionsPerTask = info.PartitionsPerTask,
                             PartitionAssignmentMethod = info.PartitionAssignmentMethod,
+                            DisableDynamicPartitionAssignment = info.DisableDynamicPartitionAssignment
                         };
                         info.InputStage.OutputChannel = channel;
                         AddAdditionalProgressCounter(info.ChannelType == ChannelType.Tcp ? typeof(TcpInputChannel) : typeof(FileInputChannel));

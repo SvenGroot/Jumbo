@@ -74,10 +74,6 @@ namespace JobServerApplication
                     _tasks.Add(taskInfo.TaskId.ToString(), taskInfo);
                     stageInfo.Tasks.Add(taskInfo);
                     CreateChildTasks(taskInfo, stage);
-                    if( taskInfo.Partitions != null )
-                    {
-                        _log.InfoFormat("Task {0} has been assigned the following partitions: {1}", taskInfo.TaskId, taskInfo.Partitions.ToDelimitedString());
-                    }
                 }
                 stages.Add(stageInfo);
             }

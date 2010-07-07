@@ -52,16 +52,17 @@ namespace Tkl.Jumbo.Jet
 
             private void IMultiInputRecordReader_CurrentPartitionChanged(object sender, EventArgs e)
             {
-                CreateOutputWriter();
-            }
-
-            private void CreateOutputWriter()
-            {
                 if( _recordWriter != null )
                 {
                     _bytesWritten += _recordWriter.OutputBytes;
                     _recordWriter.Dispose();
                 }
+
+                CreateOutputWriter();
+            }
+
+            private void CreateOutputWriter()
+            {
 
                 _recordWriter = (RecordWriter<TOutput>)_task.CreateDfsOutputWriter(_reader.CurrentPartition);
             }
@@ -272,6 +273,7 @@ namespace Tkl.Jumbo.Jet
             }
             else
             {
+                input.CurrentPartitionChanging += new EventHandler<CurrentPartitionChangingEventArgs>(input_CurrentPartitionChanging);
                 TotalInputPartitions = input.PartitionCount;
                 bool firstPartition = true;
                 do
@@ -282,8 +284,6 @@ namespace Tkl.Jumbo.Jet
                     else
                     {
                         ResetForNextPartition();
-                        if( !NotifyStartPartitionProcessing(input.CurrentPartition) )
-                            continue;
                         task = (ITask<TInput, TOutput>)Task;
                     }
                     CallTaskRunMethod(input, output, taskStopwatch, task);
@@ -291,6 +291,11 @@ namespace Tkl.Jumbo.Jet
                     // If input.NextPartition fails we will check for additional partitions, and if we got any, we need to call input.NextPartition again.
                 } while( input.NextPartition() || (GetAdditionalPartitions(input) && input.NextPartition()) );
             }
+        }
+
+        private void input_CurrentPartitionChanging(object sender, CurrentPartitionChangingEventArgs e)
+        {
+            e.Cancel = !NotifyStartPartitionProcessing(e.NewPartitionNumber);
         }
     }
 }

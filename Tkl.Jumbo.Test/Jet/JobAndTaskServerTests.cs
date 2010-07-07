@@ -390,7 +390,7 @@ namespace Tkl.Jumbo.Test.Jet
                 sortStage.AddTypedSetting(FileOutputChannel.SingleFileOutputSettingKey, true);
                 sortStage.AddTypedSetting(FileOutputChannel.SingleFileOutputBufferSizeSettingKey, "1MB");
             }
-            config.AddStage("MergeStage", typeof(EmptyTask<int>), mergeTasks, new InputStageInfo(sortStage) { MultiInputRecordReaderType = typeof(MergeRecordReader<int>), PartitionsPerTask = partitionsPerTask }, outputPath, typeof(BinaryRecordWriter<int>));
+            config.AddStage("MergeStage", typeof(EmptyTask<int>), mergeTasks, new InputStageInfo(sortStage) { MultiInputRecordReaderType = typeof(MergeRecordReader<int>), PartitionsPerTask = partitionsPerTask, DisableDynamicPartitionAssignment = true }, outputPath, typeof(BinaryRecordWriter<int>));
             sortStage.OutputChannel.ForceFileDownload = forceFileDownload;
 
             RunJob(dfsClient, config);
@@ -472,6 +472,9 @@ namespace Tkl.Jumbo.Test.Jet
 
             bool complete = target.WaitForJobCompletion(job.JobId, Timeout.Infinite, 1000);
             Assert.IsTrue(complete);
+            JobStatus status = target.JobServer.GetJobStatus(job.JobId);
+            Assert.IsTrue(status.IsSuccessful);
+            Assert.AreEqual(0, status.ErrorTaskCount);
         }
 
         private static List<int> CreateNumberListInputFile(int recordCount, string inputFileName, DfsClient dfsClient)
@@ -525,6 +528,9 @@ namespace Tkl.Jumbo.Test.Jet
 
             bool complete = target.WaitForJobCompletion(job.JobId, Timeout.Infinite, 1000);
             Assert.IsTrue(complete);
+            JobStatus status = target.JobServer.GetJobStatus(job.JobId);
+            Assert.IsTrue(status.IsSuccessful);
+            Assert.AreEqual(0, status.ErrorTaskCount);
 
             ValidateLineCountOutput(outputPath, dfsClient, lines);
         }

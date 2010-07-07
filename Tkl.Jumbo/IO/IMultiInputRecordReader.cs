@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.ComponentModel;
 
 namespace Tkl.Jumbo.IO
 {
@@ -21,6 +22,18 @@ namespace Tkl.Jumbo.IO
         /// Event that is raised if the value of the <see cref="CurrentPartition"/> property changes.
         /// </summary>
         event EventHandler CurrentPartitionChanged;
+
+        /// <summary>
+        /// Event raised when the value of the <see cref="CurrentPartition"/> property is about to change.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        ///   If you set <see cref="CancelEventArgs.Cancel"/> to <see langword="true"/> in the handler
+        ///   for this event, the <see cref="NextPartition"/> method will skip the indicated partition
+        ///   and move to the next one.
+        /// </para>
+        /// </remarks>
+        event EventHandler<CurrentPartitionChangingEventArgs> CurrentPartitionChanging;
 
         /// <summary>
         /// Gets the total number of inputs readers that this record reader will have.

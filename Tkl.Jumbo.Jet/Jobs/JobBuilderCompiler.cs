@@ -168,7 +168,8 @@ namespace Tkl.Jumbo.Jet.Jobs
                                     MultiInputRecordReaderType = channel.MultiInputRecordReaderType,
                                     PartitionerType = channel.PartitionerType,
                                     PartitionsPerTask = channel.PartitionsPerTask,
-                                    PartitionAssignmentMethod = channel.PartitionAssignmentMethod
+                                    PartitionAssignmentMethod = channel.PartitionAssignmentMethod,
+                                    DisableDynamicPartitionAssignment = channel.DisableDynamicPartitionAssignment
                                 };
 
                 stageConfig = job.AddStage(MakeUniqueStageId(stageId), taskType, taskCount, inputInfo, stage.StageMultiInputRecordReaderType, outputPath, outputWriterType);

@@ -45,6 +45,26 @@ namespace Tkl.Jumbo.Jet.Channels
         }
 
         /// <summary>
+        /// Gets or sets a value indicating whether to disable dynamic partition assignment.
+        /// </summary>
+        /// <value>
+        /// 	<see langword="true"/> if dynamic partition assignment; otherwise, <see langword="false"/>.
+        /// </value>
+        /// <remarks>
+        /// <para>
+        ///   If <see cref="PartitionsPerTask"/> is larger than 1, tasks can dynamically receive additional partitions
+        ///   besides those that were initially assigned to them.
+        /// </para>
+        /// <para>
+        ///   If this property is set to <see langword="true"/>, dynamic partition assignment is disabled for
+        ///   the receiving stage of this channel, and every task will only ever process the partitions it was
+        ///   initially assigned.
+        /// </para>
+        /// </remarks>
+        [XmlAttribute("disableDynamicPartitionAssignment")]
+        public bool DisableDynamicPartitionAssignment { get; set; }
+
+        /// <summary>
         /// Gets or sets the method used to assign partitions to tasks when the job is started.
         /// </summary>
         /// <value>The partition assignment method.</value>

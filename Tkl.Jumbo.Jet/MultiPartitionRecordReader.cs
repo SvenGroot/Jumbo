@@ -25,6 +25,8 @@ namespace Tkl.Jumbo.Jet
     /// </remarks>
     public sealed class MultiPartitionRecordReader<T> : RecordReader<T>
     {
+        private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(MultiPartitionRecordReader<T>));
+
         private readonly TaskExecutionUtility _taskExecution;
         private readonly MultiInputRecordReader<T> _baseReader; // Do not override Dispose to dispose of the _baseReader. TaskExecutionUtility will need it later.
 
@@ -40,6 +42,8 @@ namespace Tkl.Jumbo.Jet
 
             _taskExecution = taskExecution;
             _baseReader = baseReader;
+            _baseReader.CurrentPartitionChanging += new EventHandler<CurrentPartitionChangingEventArgs>(_baseReader_CurrentPartitionChanging);
+            _log.InfoFormat("Now processing partition {0}.", _baseReader.CurrentPartition);
         }
 
         /// <summary>
@@ -90,14 +94,19 @@ namespace Tkl.Jumbo.Jet
 
         private bool NextPartition()
         {
-            do
-            {
-                // If .NextPartition fails we will check for additional partitions, and if we got any, we need to call NextPartition again.
-                if( !(_baseReader.NextPartition() || (_taskExecution != null && _taskExecution.GetAdditionalPartitions(_baseReader) && _baseReader.NextPartition())) )
-                    return false;
-            } while( !(_taskExecution == null || _taskExecution.NotifyStartPartitionProcessing(_baseReader.CurrentPartition)) );
+            // If .NextPartition fails we will check for additional partitions, and if we got any, we need to call NextPartition again.
+            if( !(_baseReader.NextPartition() || (_taskExecution != null && _taskExecution.GetAdditionalPartitions(_baseReader) && _baseReader.NextPartition())) )
+                return false;
 
+            _log.InfoFormat("Now processing partition {0}.", _baseReader.CurrentPartition);
             return true;
         }
+
+        private void _baseReader_CurrentPartitionChanging(object sender, CurrentPartitionChangingEventArgs e)
+        {
+            if( _taskExecution != null )
+                e.Cancel = !_taskExecution.NotifyStartPartitionProcessing(e.NewPartitionNumber);
+        }
+    
     }
 }

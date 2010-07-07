@@ -7,6 +7,7 @@ using System.Text;
 using System.Threading;
 using System.Diagnostics;
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 
 namespace Tkl.Jumbo.IO
 {
@@ -76,6 +77,22 @@ namespace Tkl.Jumbo.IO
         /// Event raised when the value of the <see cref="CurrentPartition"/> property changes.
         /// </summary>
         public event EventHandler CurrentPartitionChanged;
+
+        /// <summary>
+        /// Event raised when the value of the <see cref="CurrentPartition"/> property is about to change.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        ///   If you set <see cref="CancelEventArgs.Cancel"/> to <see langword="true"/> in the handler
+        ///   for this event, the <see cref="NextPartition"/> method will skip the indicated partition
+        ///   and move to the next one.
+        /// </para>
+        /// <para>
+        ///   The <see cref="CurrentPartitionChanged"/> event will not be raised for partitions
+        ///   that were skipped in this fashion.
+        /// </para>
+        /// </remarks>
+        public event EventHandler<CurrentPartitionChangingEventArgs> CurrentPartitionChanging;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="MultiInputRecordReader{T}"/> class.
@@ -292,15 +309,35 @@ namespace Tkl.Jumbo.IO
         {
             lock( _partitions )
             {
+                int newPartitionIndex = _currentPartitionIndex + 1;
                 _partitions[_currentPartitionIndex].Dispose();
-                if( _currentPartitionIndex < _partitions.Count - 1 )
+                while( newPartitionIndex < _partitions.Count )
                 {
-                    ++_currentPartitionIndex;
-                    OnCurrentPartitionChanged(EventArgs.Empty);
-                    return true;
+                    if( _currentPartitionIndex < _partitions.Count - 1 )
+                    {
+                        CurrentPartitionChangingEventArgs e = new CurrentPartitionChangingEventArgs(_partitions[newPartitionIndex].PartitionNumber);
+                        OnCurrentPartitionChanging(e);
+                        if( e.Cancel )
+                        {
+                            _partitions[newPartitionIndex].Dispose();
+                            ++newPartitionIndex;
+                        }
+                        else
+                        {
+                            _currentPartitionIndex = newPartitionIndex;
+                            OnCurrentPartitionChanged(EventArgs.Empty);
+                            return true;
+                        }
+                    }
+                    else
+                        return false;
                 }
+
+                // Set the current partition index so that if AssignAdditionalPartitions is called, NextPartition will work right after that.
+                // But don't raise the CurrentPartitionChanged event because we're not going to process that partition (and have already disposed it).
+                _currentPartitionIndex = _partitions.Count - 1;
+                return false;
             }
-            return false;
         }
 
         /// <summary>
@@ -471,6 +508,17 @@ namespace Tkl.Jumbo.IO
         protected virtual void OnCurrentPartitionChanged(EventArgs e)
         {
             EventHandler handler = CurrentPartitionChanged;
+            if( handler != null )
+                handler(this, e);
+        }
+
+        /// <summary>
+        /// Raises the <see cref="CurrentPartitionChanging"/> event.
+        /// </summary>
+        /// <param name="e">The data for the event.</param>
+        protected virtual void OnCurrentPartitionChanging(CurrentPartitionChangingEventArgs e)
+        {
+            EventHandler<CurrentPartitionChangingEventArgs> handler = CurrentPartitionChanging;
             if( handler != null )
                 handler(this, e);
         }

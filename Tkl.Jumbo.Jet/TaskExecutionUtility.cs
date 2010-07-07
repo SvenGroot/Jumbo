@@ -455,34 +455,57 @@ namespace Tkl.Jumbo.Jet
 
         internal bool NotifyStartPartitionProcessing(int partitionNumber)
         {
-            bool result = _jobServerTaskClient.NotifyStartPartitionProcessing(Configuration.JobId, Configuration.TaskAttemptId.TaskId, partitionNumber);
-            if( !result && !ProcessesAllInputPartitions )
+            // Stages with multiple input channels cannot use PartitionsPerTask>1, so this method should not be called for such stages
+            Debug.Assert(InputChannels.Count == 1);
+            if( InputChannels[0].Configuration.DisableDynamicPartitionAssignment )
+                return true;
+            else
             {
-                lock( _taskProgressLock )
+                bool result = _jobServerTaskClient.NotifyStartPartitionProcessing(Configuration.JobId, Configuration.TaskAttemptId.TaskId, partitionNumber);
+                if( !result )
                 {
-                    --TotalInputPartitions;
-                }
-            }
+                    _log.InfoFormat("Assignment of partition {0} has been revoked; skipping.", partitionNumber);
 
-            return result;
+                    // TotalInputPartitions is not used for tasks with the ProcessAllInputPartitionsAttribute.
+                    if( !ProcessesAllInputPartitions )
+                    {
+                        lock( _taskProgressLock )
+                        {
+                            --TotalInputPartitions;
+                        }
+                    }
+                }
+
+                return result;
+            }
         }
 
         internal bool GetAdditionalPartitions(IMultiInputRecordReader reader)
         {
-            int[] additionalPartitions = _jobServerTaskClient.GetAdditionalPartitions(Configuration.JobId, Configuration.TaskAttemptId.TaskId);
-            if( additionalPartitions != null && additionalPartitions.Length > 0 )
-            {
-                reader.AssignAdditionalPartitions(additionalPartitions);
+            // Stages with multiple input channels cannot use PartitionsPerTask>1, so this method should not be called for such stages
+            Debug.Assert(InputChannels.Count == 1);
 
-                foreach( IInputChannel channel in InputChannels )
-                {
-                    channel.AssignAdditionalPartitions(additionalPartitions);
-                }
-
-                return true;
-            }
-            else
+            if( InputChannels[0].Configuration.DisableDynamicPartitionAssignment )
                 return false;
+            else
+            {
+                int[] additionalPartitions = _jobServerTaskClient.GetAdditionalPartitions(Configuration.JobId, Configuration.TaskAttemptId.TaskId);
+                if( additionalPartitions != null && additionalPartitions.Length > 0 )
+                {
+                    _log.InfoFormat("Received additional partitions for processing: {0}", additionalPartitions.ToDelimitedString());
+                    reader.AssignAdditionalPartitions(additionalPartitions);
+
+                    foreach( IInputChannel channel in InputChannels )
+                    {
+                        channel.AssignAdditionalPartitions(additionalPartitions);
+                    }
+
+                    return true;
+                }
+                else
+                    return false;
+            }
+
         }
 
         internal TaskExecutionUtility CreateAssociatedTask(StageConfiguration childStage, int taskNumber)
