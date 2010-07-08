@@ -11,7 +11,6 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
 {
     class FrequentPatternCollector
     {
-        private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(FrequentPatternCollector));
 
         private int _count;
         //private int _prefixCount;
@@ -21,7 +20,6 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
         private readonly int[] _perfectExtensionCount;
         private readonly int[] _perfectExtensions;
         private int _perfectExtensionItemIndex;
-        private readonly RecordWriter<Pair<int, WritableCollection<MappedFrequentPattern>>> _output;
         private readonly FrequentPatternMaxHeap[] _itemHeaps;
         private readonly int _minSupport;
         private readonly bool _expandPerfectExtensions;
@@ -34,7 +32,6 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
             _supports = new int[itemCount + 1];
             _perfectExtensionCount = new int[itemCount + 1];
             _supports[0] = weight;
-            _output = output;
             _minSupport = minSupport;
             _expandPerfectExtensions = expandPerfectExtensions;
 

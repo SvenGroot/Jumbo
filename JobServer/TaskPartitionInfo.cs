@@ -160,7 +160,7 @@ namespace JobServerApplication
             {
                 if( task != _task && !task.PartitionInfo._frozen )
                 {
-                    if( result == null || task.PartitionInfo.UnstartedPartitionCount < result.PartitionInfo.UnstartedPartitionCount )
+                    if( result == null || task.PartitionInfo.UnstartedPartitionCount > result.PartitionInfo.UnstartedPartitionCount )
                     {
                         result = task;
                     }
