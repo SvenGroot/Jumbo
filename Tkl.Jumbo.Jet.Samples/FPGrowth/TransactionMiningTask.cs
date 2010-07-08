@@ -27,6 +27,7 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
         public void Run(RecordReader<Pair<int, Transaction>> input, RecordWriter<Pair<int, WritableCollection<MappedFrequentPattern>>> output)
         {
             _partitionReader = input as MultiPartitionRecordReader<Pair<int, Transaction>>;
+
             if( input.ReadRecord() )
             {
                 TaskContext config = TaskContext;
@@ -48,6 +49,10 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
                     string message = string.Format("Building tree for group {0}.", groupId);
                     _log.Info(message);
                     TaskContext.StatusMessage = message;
+                    // Prevent fetching new partitions while building the FP tree.
+                    if( _partitionReader != null )
+                        _partitionReader.AllowAdditionalPartitions = false;
+
                     using( FPTree tree = new FPTree(EnumerateGroup(input), minSupport, Math.Min((groupId + 1) * maxPerGroup, fglist.Count), TaskContext) )
                     {
                         tree.ProgressChanged += new EventHandler(FPTree_ProgressChanged);
@@ -56,6 +61,13 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
                         itemHeaps = tree.Mine(output, k, false, groupId * maxPerGroup, itemHeaps);
                     }
                     ++_groupsProcessed;
+                    if( _partitionReader != null )
+                    {
+                        // Re-enable allow additional partitions, and if we had finished before try calling ReadRecord again.
+                        _partitionReader.AllowAdditionalPartitions = true;
+                        if( input.HasFinished )
+                            input.ReadRecord();
+                    }
                 }
 
                 if( itemHeaps != null )

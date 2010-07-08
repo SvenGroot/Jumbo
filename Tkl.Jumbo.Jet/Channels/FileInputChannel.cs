@@ -48,6 +48,7 @@ namespace Tkl.Jumbo.Jet.Channels
         private const int _downloadRetryIntervalRandomization = 2000;
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(FileInputChannel));
 
+        private readonly object _progressLock = new object();
         private readonly int _writeBufferSize;
         private string _jobDirectory;
         private Guid _jobID;
@@ -65,6 +66,9 @@ namespace Tkl.Jumbo.Jet.Channels
         private readonly Type _inputReaderType;
         private readonly bool _inputUsesSingleFileFormat;
         private int _filesRetrieved;
+        private int _partitionsCompleted;
+        private int _totalPartitions;
+        private IMultiInputRecordReader _reader;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="FileInputChannel"/> class.
@@ -81,7 +85,7 @@ namespace Tkl.Jumbo.Jet.Channels
             _jobDirectory = taskExecution.Configuration.LocalJobDirectory;
             _jobID = taskExecution.Configuration.JobId;
             _jobServer = taskExecution.JetClient.JobServer;
-            _inputDirectory = Path.Combine(_jobDirectory, taskExecution.Configuration.TaskId.ToString());
+            _inputDirectory = Path.Combine(_jobDirectory, taskExecution.Configuration.TaskAttemptId.ToString());
             if( !Directory.Exists(_inputDirectory) )
                 Directory.CreateDirectory(_inputDirectory);
             _outputStageId = taskExecution.Configuration.StageConfiguration.StageId;
@@ -128,6 +132,27 @@ namespace Tkl.Jumbo.Jet.Channels
         }
 
         /// <summary>
+        /// Gets the additional progress value.
+        /// </summary>
+        /// <value>The additional progress value.</value>
+        /// <remarks>
+        /// This property is thread safe.
+        /// </remarks>
+        public float AdditionalProgress
+        {
+            get
+            {
+                lock( _progressLock )
+                {
+                    if( _totalPartitions == 0 || InputTaskIds.Count == 0 )
+                        return 0f;
+
+                    return (_partitionsCompleted + ((_filesRetrieved * ActivePartitions.Count) / (float)InputTaskIds.Count)) / _totalPartitions;
+                }
+            }
+        }
+
+        /// <summary>
         /// Creates a <see cref="RecordReader{T}"/> from which the channel can read its input.
         /// </summary>
         /// <returns>A <see cref="RecordReader{T}"/> for the channel.</returns>
@@ -139,18 +164,50 @@ namespace Tkl.Jumbo.Jet.Channels
             if( _inputPollThread != null )
                 throw new InvalidOperationException("A record reader for this channel was already created.");
 
-            IMultiInputRecordReader reader = CreateChannelRecordReader();
+            _reader = CreateChannelRecordReader();
 
-            _inputPollThread = new Thread(InputPollThread);
-            _inputPollThread.Name = "FileInputChannelPolling";
-            _inputPollThread.Start();
-            _downloadThread = new Thread(() => DownloadThread(reader));
-            _downloadThread.Name = "FileInputChannelDownload";
-            _downloadThread.Start();
+            _totalPartitions = ActivePartitions.Count;
+            StartThreads();
 
             // Wait until the reader has at least one input.
             _readyEvent.WaitOne();
-            return reader;
+            return _reader;
+        }
+
+        /// <summary>
+        /// Assigns additional partitions to this input channel.
+        /// </summary>
+        /// <param name="additionalPartitions">The additional partitions.</param>
+        /// <remarks>
+        /// <para>
+        ///   This method will only be called after the task finished processing all previously assigned partitions.
+        /// </para>
+        /// <para>
+        ///   This method will never be called if <see cref="ChannelConfiguration.PartitionsPerTask"/> is 1
+        ///   or <see cref="ChannelConfiguration.DisableDynamicPartitionAssignment"/> is <see langword="true"/>.
+        /// </para>
+        /// </remarks>
+        public override void AssignAdditionalPartitions(IList<int> additionalPartitions)
+        {
+            if( !_allInputTasksCompleted )
+                throw new InvalidOperationException("Cannot assign additinoal partitions until the current partitions have finished downloading.");
+
+            // Just making sure the threads have exited.
+            _downloadThread.Join();
+            _inputPollThread.Join();
+
+            lock( _progressLock )
+            {
+                _filesRetrieved = 0;
+                _partitionsCompleted += ActivePartitions.Count;
+
+                base.AssignAdditionalPartitions(additionalPartitions);
+
+                _totalPartitions += ActivePartitions.Count;
+                _allInputTasksCompleted = false;
+
+                StartThreads();
+            }
         }
 
         #region IDisposable Members
@@ -202,7 +259,6 @@ namespace Tkl.Jumbo.Jet.Channels
 
                 while( !_disposed && tasksLeft.Count > 0 )
                 {
-                    Thread.Sleep(_pollingInterval);
                     TaskExecution.ReportProgress(); // Ping the job server for progress to ensure our task doesn't time out while waiting for input.
 
                     CompletedTask[] completedTasks = _jobServer.CheckTaskCompletion(_jobID, tasksLeftArray);
@@ -221,6 +277,9 @@ namespace Tkl.Jumbo.Jet.Channels
                         }
                         tasksLeftArray = tasksLeft.ToArray();
                     }
+
+                    if( tasksLeft.Count > 0 )
+                        Thread.Sleep(_pollingInterval);
                 }
                 _allInputTasksCompleted = true;
                 lock( _completedTasks )
@@ -242,8 +301,9 @@ namespace Tkl.Jumbo.Jet.Channels
             }
         }
 
-        private void DownloadThread(IMultiInputRecordReader reader)
+        private void DownloadThread()
         {
+            IMultiInputRecordReader reader = _reader;
             List<CompletedTask> tasksToProcess = new List<CompletedTask>();
             List<CompletedTask> remainingTasks = new List<CompletedTask>();
             Random rnd = new Random();
@@ -338,7 +398,7 @@ namespace Tkl.Jumbo.Jet.Channels
 
         private IList<RecordInput> UseLocalFilesForInput(IMultiInputRecordReader reader, CompletedTask task)
         {
-            IList<RecordInput> inputs = new List<RecordInput>(Partitions.Count);
+            IList<RecordInput> inputs = new List<RecordInput>(ActivePartitions.Count);
             long uncompressedSize = -1L;
             ITaskServerClientProtocol taskServer = JetClient.CreateTaskServerClient(task.TaskServer);
             string taskOutputDirectory = taskServer.GetOutputFileDirectory(task.JobId);
@@ -349,7 +409,7 @@ namespace Tkl.Jumbo.Jet.Channels
             }
             else
             {
-                foreach( int partition in Partitions )
+                foreach( int partition in ActivePartitions )
                 {
                     string outputFileName = FileOutputChannel.CreateChannelFileName(task.TaskAttemptId.ToString(), TaskId.CreateTaskIdString(_outputStageId, partition));
                     string fileName = Path.Combine(taskOutputDirectory, outputFileName);
@@ -381,7 +441,7 @@ namespace Tkl.Jumbo.Jet.Channels
             string fileName = Path.Combine(taskOutputDirectory, outputFileName);
             using( PartitionFileIndex index = new PartitionFileIndex(fileName) )
             {
-                foreach( int partition in Partitions )
+                foreach( int partition in ActivePartitions )
                 {
                     IEnumerable<PartitionFileIndexEntry> indexEntries = index.GetEntriesForPartition(partition);
                     if( indexEntries == null )
@@ -412,11 +472,11 @@ namespace Tkl.Jumbo.Jet.Channels
             if( _inputUsesSingleFileFormat )
             {
                 singleFileToDownload = FileOutputChannel.CreateChannelFileName(task.TaskAttemptId.ToString(), null);
-                _log.InfoFormat(CultureInfo.InvariantCulture, "Downloading {0} partition(s) {1} from server {2}:{3}.", singleFileToDownload, Partitions.ToDelimitedString(), task.TaskServer.HostName, port);
+                _log.InfoFormat(CultureInfo.InvariantCulture, "Downloading {0} partition(s) {1} from server {2}:{3}.", singleFileToDownload, ActivePartitions.ToDelimitedString(), task.TaskServer.HostName, port);
             }
             else
             {
-                filesToDownload = (from partition in Partitions
+                filesToDownload = (from partition in ActivePartitions
                                    select FileOutputChannel.CreateChannelFileName(task.TaskAttemptId.ToString(), TaskId.CreateTaskIdString(_outputStageId, partition))).ToArray();
                 _log.InfoFormat(CultureInfo.InvariantCulture, "Downloading {0} from server {1}:{2}.", filesToDownload.ToDelimitedString(), task.TaskServer.HostName, port);
             }
@@ -439,8 +499,8 @@ namespace Tkl.Jumbo.Jet.Channels
                 if( _inputUsesSingleFileFormat )
                 {
                     writer.Write(singleFileToDownload);
-                    writer.Write(Partitions.Count);
-                    foreach( int partition in Partitions )
+                    writer.Write(ActivePartitions.Count);
+                    foreach( int partition in ActivePartitions )
                         writer.Write(partition);
                 }
                 else
@@ -450,7 +510,7 @@ namespace Tkl.Jumbo.Jet.Channels
                         writer.Write(fileToDownload);
                 }
 
-                foreach( int partition in Partitions )
+                foreach( int partition in ActivePartitions )
                 {
                     DownloadPartition(task, downloadedFiles, stream, reader, partition);
                 }
@@ -504,16 +564,13 @@ namespace Tkl.Jumbo.Jet.Channels
                 throw new InvalidOperationException(); // TODO: Recover from this.
         }
 
-        /// <summary>
-        /// Gets the additional progress value.
-        /// </summary>
-        /// <value>The additional progress value.</value>
-        /// <remarks>
-        /// This property is thread safe.
-        /// </remarks>
-        public float AdditionalProgress
+        private void StartThreads()
         {
-            get { return _filesRetrieved / (float)InputTaskIds.Count; }
+            _inputPollThread = new Thread(InputPollThread) { Name = "FileInputChannelPolling", IsBackground = true };
+            _inputPollThread.Start();
+            _downloadThread = new Thread(DownloadThread) { Name = "FileInputChannelDownload", IsBackground = true };
+            _downloadThread.Start();
         }
+    
     }
 }

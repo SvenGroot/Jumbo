@@ -37,7 +37,11 @@ namespace Tkl.Jumbo.Jet.Channels
         ///   Not all input channels need to support this.
         /// </para>
         /// <para>
-        ///   This method will never be called if <see cref="ChannelConfiguration.PartitionsPerTask"/> is 1.
+        ///   This method will only be called after the task finished processing all previously assigned partitions.
+        /// </para>
+        /// <para>
+        ///   This method will never be called if <see cref="ChannelConfiguration.PartitionsPerTask"/> is 1
+        ///   or <see cref="ChannelConfiguration.DisableDynamicPartitionAssignment"/> is <see langword="true"/>.
         /// </para>
         /// </remarks>
         void AssignAdditionalPartitions(IList<int> additionalPartitions);

@@ -44,6 +44,7 @@ namespace Tkl.Jumbo.Jet
             _baseReader = baseReader;
             _baseReader.CurrentPartitionChanging += new EventHandler<CurrentPartitionChangingEventArgs>(_baseReader_CurrentPartitionChanging);
             _log.InfoFormat("Now processing partition {0}.", _baseReader.CurrentPartition);
+            AllowAdditionalPartitions = true;
         }
 
         /// <summary>
@@ -74,6 +75,27 @@ namespace Tkl.Jumbo.Jet
         }
 
         /// <summary>
+        /// Gets or sets a value indicating whether the task may request additional partitions from the job server if it finishes the current ones.
+        /// </summary>
+        /// <value>
+        /// 	<see langword="true"/> if getting additional partitions is allowed; otherwise, <see langword="false"/>. The default value is <see langword="true"/>.
+        /// </value>
+        /// <remarks>
+        /// <para>
+        ///   A task can set this property to <see langword="false"/> to prevent the task from requesting additional partitions.
+        /// </para>
+        /// <para>
+        ///   If this property is <see langword="false"/>, and a call to <see cref="RecordReader{T}.ReadRecord"/> returned <see langword="false"/>, you
+        ///   may change this property to <see langword="true"/> and attempt the call to <see cref="RecordReader{T}.ReadRecord"/> again.
+        /// </para>
+        /// <para>
+        ///   Note that if this stage doesn't use multiple partitions per task or if dynamic partition assignment was disabled a
+        ///   task will never get additional partitions even if this property is <see langword="true"/>.
+        /// </para>
+        /// </remarks>
+        public bool AllowAdditionalPartitions { get; set; }
+
+        /// <summary>
         /// Reads a record.
         /// </summary>
         /// <returns><see langword="true"/> if an object was successfully read; <see langword="false"/> if there are no more records.</returns>
@@ -95,7 +117,7 @@ namespace Tkl.Jumbo.Jet
         private bool NextPartition()
         {
             // If .NextPartition fails we will check for additional partitions, and if we got any, we need to call NextPartition again.
-            if( !(_baseReader.NextPartition() || (_taskExecution != null && _taskExecution.GetAdditionalPartitions(_baseReader) && _baseReader.NextPartition())) )
+            if( !(_baseReader.NextPartition() || (AllowAdditionalPartitions && _taskExecution != null && _taskExecution.GetAdditionalPartitions(_baseReader) && _baseReader.NextPartition())) )
                 return false;
 
             _log.InfoFormat("Now processing partition {0}.", _baseReader.CurrentPartition);

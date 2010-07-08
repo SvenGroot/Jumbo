@@ -17,6 +17,7 @@ namespace Tkl.Jumbo.IO
         private readonly long _uncompressedSize;
         private readonly Type _inputRecordReaderType;
         private readonly bool _deleteFile;
+        private bool _disposed;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="RecordInput"/> class with the specified record reader.
@@ -57,7 +58,18 @@ namespace Tkl.Jumbo.IO
             _deleteFile = deleteFile;
         }
 
-
+        internal float Progress
+        {
+            get
+            {
+                if( _disposed )
+                    return 1.0f;
+                else if( IsReaderCreated )
+                    return _reader.Progress;
+                else
+                    return 0.0f;
+            }
+        }
 
         internal string FileName { get; private set; }
 
@@ -67,6 +79,7 @@ namespace Tkl.Jumbo.IO
         {
             get
             {
+                CheckDisposed();
                 if( _reader == null )
                 {
                     _reader = (IRecordReader)Activator.CreateInstance(_inputRecordReaderType, FileName, Input.AllowRecordReuse, _deleteFile, Input.BufferSize, Input.CompressionType, _uncompressedSize);
@@ -91,14 +104,24 @@ namespace Tkl.Jumbo.IO
         /// </summary>
         public void Dispose()
         {
-            if( _reader != null )
+            if( !_disposed )
             {
-                ((IDisposable)_reader).Dispose();
-                _reader = null;
+                _disposed = true;
+                if( _reader != null )
+                {
+                    ((IDisposable)_reader).Dispose();
+                    _reader = null;
+                }
             }
             GC.SuppressFinalize(this);
         }
 
         #endregion
+
+        private void CheckDisposed()
+        {
+            if( _disposed )
+                throw new ObjectDisposedException(typeof(RecordInput).Name);
+        }
     }
 }

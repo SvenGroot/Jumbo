@@ -90,9 +90,16 @@ namespace Tkl.Jumbo.Jet.Channels
         protected Type InputRecordType { get; private set; }
 
         /// <summary>
-        /// Gets the partitions that the task that this input channel is for is processing.
+        /// Gets the last set of partitions assigned to this channel.
         /// </summary>
-        public ReadOnlyCollection<int> Partitions
+        /// <remarks>
+        /// <para>
+        ///   This property returns the set of partitions passed in the last
+        ///   call to <see cref="AssignAdditionalPartitions"/>, or the initial
+        ///   partitions if that method hasn't been called.
+        /// </para>
+        /// </remarks>
+        public ReadOnlyCollection<int> ActivePartitions
         {
             get
             {
@@ -128,16 +135,26 @@ namespace Tkl.Jumbo.Jet.Channels
         /// </summary>
         /// <param name="additionalPartitions">The additional partitions.</param>
         /// <remarks>
-        ///   <para>
-        ///     Not all input channels need to support this.
-        ///   </para>
-        ///   <para>
-        ///     This method will never be called if <see cref="ChannelConfiguration.PartitionsPerTask"/> is 1.
-        ///   </para>
+        /// <para>
+        ///   Not all input channels need to support this.
+        /// </para>
+        /// <para>
+        ///   This method will only be called after the task finished processing all previously assigned partitions.
+        /// </para>
+        /// <para>
+        ///   This method will never be called if <see cref="ChannelConfiguration.PartitionsPerTask"/> is 1
+        ///   or <see cref="ChannelConfiguration.DisableDynamicPartitionAssignment"/> is <see langword="true"/>.
+        /// </para>
         /// </remarks>
-        public void AssignAdditionalPartitions(IList<int> additionalPartitions)
+        public virtual void AssignAdditionalPartitions(IList<int> additionalPartitions)
         {
-            throw new NotImplementedException();
+            if( additionalPartitions == null )
+                throw new ArgumentNullException("additionalPartitions");
+            if( additionalPartitions.Count == 0 )
+                throw new ArgumentException("The list of partitions is empty.", "additionalPartitions");
+
+            _partitions.Clear();
+            _partitions.AddRange(additionalPartitions);
         }
 
         #endregion

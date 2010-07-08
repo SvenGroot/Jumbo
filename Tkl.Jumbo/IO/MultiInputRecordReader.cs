@@ -60,8 +60,6 @@ namespace Tkl.Jumbo.IO
             {
                 foreach( RecordInput input in _inputs )
                     input.Dispose();
-
-                _inputs.Clear();
             }
         }
 
@@ -158,8 +156,7 @@ namespace Tkl.Jumbo.IO
 
                     return (from partition in _partitions
                             from input in partition.Inputs
-                            where input.IsReaderCreated
-                            select input.Reader.Progress).Sum() / (float)(TotalInputCount * _partitions.Count);
+                            select input.Progress).Sum() / (float)(TotalInputCount * _partitions.Count);
                 }
             }
         }
@@ -364,7 +361,7 @@ namespace Tkl.Jumbo.IO
                 {
                     RecordInput input = partitions[x];
                     input.Input = this;
-                    _partitions[x].Inputs.Add(input);
+                    _partitions[_firstActivePartitionIndex + x].Inputs.Add(input);
                 }
 
                 Monitor.PulseAll(_partitions);

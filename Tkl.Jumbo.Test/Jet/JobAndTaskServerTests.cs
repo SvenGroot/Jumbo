@@ -14,6 +14,7 @@ using Tkl.Jumbo.Test.Tasks;
 using System.Threading;
 using Tkl.Jumbo.Jet.Tasks;
 using Tkl.Jumbo.Jet.Jobs;
+using System.Globalization;
 
 namespace Tkl.Jumbo.Test.Jet
 {
@@ -322,10 +323,10 @@ namespace Tkl.Jumbo.Test.Jet
             JetClient target = new JetClient(TestJetCluster.CreateClientConfig());
             string outputPath = "/timeout";
             dfsClient.NameServer.CreateDirectory(outputPath);
-            JobConfiguration config = CreateConfiguration(dfsClient, dfsClient.NameServer.GetFileInfo(_fileName), outputPath, false, typeof(TimeoutTask), typeof(LineAdderTask), ChannelType.File);
+            JobConfiguration config = CreateConfiguration(dfsClient, dfsClient.NameServer.GetFileInfo(_fileName), outputPath, false, typeof(DelayTask), typeof(LineAdderTask), ChannelType.File);
             config.AddTypedSetting(TaskServerConfigurationElement.TaskTimeoutJobSettingKey, 20000); // Set timeout to 20 seconds.
 
-            Job job = target.RunJob(config, dfsClient, typeof(TimeoutTask).Assembly.Location);
+            Job job = target.RunJob(config, dfsClient, typeof(DelayTask).Assembly.Location);
             target.WaitForJobCompletion(job.JobId, Timeout.Infinite, 1000);
 
             JobStatus status = target.JobServer.GetJobStatus(job.JobId);
@@ -334,6 +335,52 @@ namespace Tkl.Jumbo.Test.Jet
             Assert.AreEqual(2, status.Stages.Where(s => s.StageId == "Task").Single().Tasks[0].Attempts);
 
             ValidateLineCountOutput(outputPath, dfsClient, _lines);
+        }
+
+        [Test]
+        public void TestJobExecutionDynamicPartitionAssignment()
+        {
+            DfsClient dfsClient = new DfsClient(Dfs.TestDfsCluster.CreateClientConfig());
+            JetClient target = new JetClient(TestJetCluster.CreateClientConfig());
+            const string outputPath = "/dynamicpartitions";
+            dfsClient.NameServer.CreateDirectory(outputPath);
+            // The idea of this test is that the delay task will sleep on the first task in the stage so the second task will pick up its partitions.
+            JobConfiguration config = CreateConfiguration(dfsClient, dfsClient.NameServer.GetFileInfo(_fileName), outputPath, false, typeof(EmptyTask<Utf8String>), typeof(DelayTask), ChannelType.File);
+            // Delay task should sleep for 10 seconds
+            config.AddTypedSetting(DelayTask.DelayTimeSettingKey, 10000);
+            // Create 6 partitions.
+            config.Stages[0].OutputChannel.PartitionsPerTask = 3;
+            config.Stages[1].TaskCount = 2;
+
+            Job job = target.RunJob(config, dfsClient, typeof(DelayTask).Assembly.Location);
+            target.WaitForJobCompletion(job.JobId, Timeout.Infinite, 1000);
+
+            JobStatus status = target.JobServer.GetJobStatus(job.JobId);
+            Assert.IsTrue(status.IsSuccessful);
+            Assert.AreEqual(0, status.ErrorTaskCount);
+
+            int[] lineCounts = new int[6];
+            HashPartitioner<Utf8String> partitioner = new HashPartitioner<Utf8String>() { Partitions = 6 };
+
+            using( DfsInputStream stream = dfsClient.OpenFile(_fileName) )
+            using( LineRecordReader reader = new LineRecordReader(stream) )
+            {
+                foreach( Utf8String record in reader.EnumerateRecords() )
+                {
+                    int partition = partitioner.GetPartition(record);
+                    lineCounts[partition]++;
+                }
+            }
+
+            for( int x = 0; x < 6; ++x )
+            {
+                string path = DfsPath.Combine(outputPath, string.Format(CultureInfo.InvariantCulture, "OutputTask{0:000}", x + 1));
+                using( DfsInputStream stream = dfsClient.OpenFile(path) )
+                using( StreamReader reader = new StreamReader(stream) )
+                {
+                    Assert.AreEqual(lineCounts[x], Convert.ToInt32(reader.ReadLine()));
+                }
+            }
         }
 
         [Test]
@@ -356,7 +403,7 @@ namespace Tkl.Jumbo.Test.Jet
             stage.AddSetting("ActualOutputPath", DfsPath.Combine(outputPath, "OutputTask001"));
             config.GetStage("OutputTask").DependentStages.Add(stage.StageId);
 
-            Job job = target.RunJob(config, dfsClient, typeof(TimeoutTask).Assembly.Location);
+            Job job = target.RunJob(config, dfsClient, typeof(DelayTask).Assembly.Location);
             target.WaitForJobCompletion(job.JobId, Timeout.Infinite, 1000);
 
             JobStatus status = target.JobServer.GetJobStatus(job.JobId);

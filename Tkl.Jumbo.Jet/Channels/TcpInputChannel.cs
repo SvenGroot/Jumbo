@@ -62,6 +62,20 @@ namespace Tkl.Jumbo.Jet.Channels
             return _reader;
         }
 
+        /// <summary>
+        /// Assigns additional partitions to this input channel.
+        /// </summary>
+        /// <param name="additionalPartitions">The additional partitions.</param>
+        /// <remarks>
+        /// <para>
+        ///   The TCP input channel does not support this method, and will always throw a <see cref="NotSupportedException"/>.
+        /// </para>
+        /// </remarks>
+        public override void AssignAdditionalPartitions(IList<int> additionalPartitions)
+        {
+            throw new NotSupportedException();
+        }
+
         private void ListenerThread(object param)
         {
             TcpListener listener = (TcpListener)param;

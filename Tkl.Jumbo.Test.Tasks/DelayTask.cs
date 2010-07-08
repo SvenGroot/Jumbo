@@ -1,4 +1,6 @@
-﻿using System;
+﻿// $Id$
+//
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -9,14 +11,17 @@ using System.Threading;
 namespace Tkl.Jumbo.Test.Tasks
 {
     [AllowRecordReuse]
-    public class TimeoutTask : Configurable, IPullTask<Utf8String, int>
+    public class DelayTask : Configurable, IPullTask<Utf8String, int>
     {
+        public const string DelayTimeSettingKey = "DelayTime";
+
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(LineCounterTask));
 
         public void Run(RecordReader<Utf8String> input, RecordWriter<int> writer)
         {
+            int delayTime = TaskContext.GetTypedSetting(DelayTimeSettingKey, 6000000);
             if( TaskContext.TaskId.TaskNumber == 1 && TaskContext.TaskAttemptId.Attempt == 1 )
-                Thread.Sleep(6000000); // Sleep for a very long time.
+                Thread.Sleep(delayTime); // Sleep for a very long time.
 
             _log.Info("Running");
             int lines = 0;
