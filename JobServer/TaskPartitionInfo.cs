@@ -142,7 +142,7 @@ namespace JobServerApplication
             lock( _partitions )
             {
                 int lastPartition = _partitions[_partitions.Count - 1];
-                if( !_unstartedPartitions.Contains(lastPartition) )
+                if( !_unstartedPartitions.Remove(lastPartition) )
                 {
                     // Last partition already started
                     return -1;
@@ -160,7 +160,8 @@ namespace JobServerApplication
             {
                 if( task != _task && !task.PartitionInfo._frozen )
                 {
-                    if( result == null || task.PartitionInfo.UnstartedPartitionCount > result.PartitionInfo.UnstartedPartitionCount )
+                    int unstartedPartitionCount = task.PartitionInfo.UnstartedPartitionCount;
+                    if( unstartedPartitionCount > 0 && (result == null || unstartedPartitionCount > result.PartitionInfo.UnstartedPartitionCount) )
                     {
                         result = task;
                     }
