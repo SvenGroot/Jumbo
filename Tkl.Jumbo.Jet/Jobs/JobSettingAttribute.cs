@@ -13,7 +13,7 @@ namespace Tkl.Jumbo.Jet.Jobs
     /// <remarks>
     /// <para>
     ///   You can apply this attribute to properties of a job runner class that inherits from <see cref="BaseJobRunner"/>.
-    ///   Call the <see cref="BaseJobRunner.AddJobSettings"/> method after creating your <see cref="JobConfiguration"/>
+    ///   Call the <see cref="BaseJobRunner.ApplyJobPropertiesAndSettings"/> method after creating your <see cref="JobConfiguration"/>
     ///   to add the properties tot the job settings.
     /// </para>
     /// <para>

@@ -365,9 +365,9 @@ namespace Tkl.Jumbo.Jet
         }
 
         /// <summary>
-        /// Gets the stage with the specified ID.
+        /// Gets the root stage with the specified ID.
         /// </summary>
-        /// <param name="stageId">The ID of the task.</param>
+        /// <param name="stageId">The ID of the stage. This may not be a compound stage ID.</param>
         /// <returns>The <see cref="StageConfiguration"/> for the stage, or <see langword="null"/> if no stage with that ID exists.</returns>
         public StageConfiguration GetStage(string stageId)
         {
@@ -377,7 +377,7 @@ namespace Tkl.Jumbo.Jet
         }
 
         /// <summary>
-        /// Gets all stages in a compount stage ID.
+        /// Gets all stages in a compound stage ID.
         /// </summary>
         /// <param name="compoundStageId">The compound stage ID.</param>
         /// <returns>A list of all <see cref="StageConfiguration"/> instances for the stages, or <see langword="null"/> if any of the components
@@ -401,6 +401,30 @@ namespace Tkl.Jumbo.Jet
                     stages.Add(current);
             }
             return stages;
+        }
+
+        /// <summary>
+        /// Gets the stage with the specified compound stage ID.
+        /// </summary>
+        /// <param name="compoundStageId">The compound stage ID.</param>
+        /// <returns>The <see cref="StageConfiguration"/> for the stage, or <see langword="null"/> if no stage with that ID exists.</returns>
+        public StageConfiguration GetStageWithCompoundId(string compoundStageId)
+        {
+            if( compoundStageId == null )
+                throw new ArgumentNullException("compoundStageId");
+
+            string[] stageIds = compoundStageId.Split(TaskId.ChildStageSeparator);
+            List<StageConfiguration> stages = new List<StageConfiguration>(stageIds.Length);
+            StageConfiguration current = GetStage(stageIds[0]);
+            for( int x = 0; x < stageIds.Length; ++x )
+            {
+                if( x > 0 )
+                    current = current.GetNamedChildStage(stageIds[x]);
+
+                if( current == null )
+                    return null;
+            }
+            return current;
         }
 
         /// <summary>
