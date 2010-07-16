@@ -63,7 +63,7 @@ namespace Tkl.Jumbo.Test.Jet
             const int recordCountMax = 10000;
             MergeRecordReader<int> reader = new MergeRecordReader<int>(Enumerable.Range(0, partitions), inputCount, false, 4096, compression);
             StageConfiguration stageConfig = new StageConfiguration();
-            stageConfig.AddTypedSetting(MergeRecordReaderConstants.MaxMergeInputsSetting, maxMergeInputs);
+            stageConfig.AddTypedSetting(MergeRecordReaderConstants.MaxFileInputsSetting, maxMergeInputs);
             stageConfig.StageId = "Merge";
             reader.JetConfiguration = new JetConfiguration();
             reader.TaskContext = new TaskContext(Guid.Empty, new JobConfiguration(), new TaskAttemptId(new TaskId(stageConfig.StageId, 1), 1), stageConfig, Utilities.TestOutputPath, "");
@@ -86,7 +86,7 @@ namespace Tkl.Jumbo.Test.Jet
                         sortedLists[partition].Add(value);
                     }
                     records.Sort();
-                    partitionInputs[partition] = new RecordInput(new EnumerableRecordReader<int>(records));
+                    partitionInputs[partition] = new RecordInput(new EnumerableRecordReader<int>(records), false); // pretend these are disk-based inputs.
                 }
                 reader.AddInput(partitionInputs);
             }

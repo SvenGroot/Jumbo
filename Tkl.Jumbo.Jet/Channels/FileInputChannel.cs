@@ -60,7 +60,7 @@ namespace Tkl.Jumbo.Jet.Channels
         private bool _isReady;
         private readonly ManualResetEvent _readyEvent = new ManualResetEvent(false);
         private bool _disposed;
-        private FileChannelMemoryStorageManager _memoryStorage;
+        private readonly FileChannelMemoryStorageManager _memoryStorage;
         private readonly List<CompletedTask> _completedTasks = new List<CompletedTask>();
         private volatile bool _allInputTasksCompleted;
         private readonly Type _inputReaderType;
@@ -69,6 +69,7 @@ namespace Tkl.Jumbo.Jet.Channels
         private int _partitionsCompleted;
         private int _totalPartitions;
         private IMultiInputRecordReader _reader;
+        private volatile bool _hasNonMemoryInputs;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="FileInputChannel"/> class.
@@ -96,6 +97,13 @@ namespace Tkl.Jumbo.Jet.Channels
 
             if( !inputStage.TryGetTypedSetting(FileOutputChannel.SingleFileOutputSettingKey, out _inputUsesSingleFileFormat) )
                 _inputUsesSingleFileFormat = taskExecution.Configuration.JobConfiguration.GetTypedSetting(FileOutputChannel.SingleFileOutputSettingKey, taskExecution.JetClient.Configuration.FileChannel.SingleFileOutput);
+
+            long memoryStorageSize = TaskExecution.Configuration.JobConfiguration.GetTypedSetting(MemoryStorageSizeSetting, TaskExecution.JetClient.Configuration.FileChannel.MemoryStorageSize);
+            if( memoryStorageSize > 0 )
+            {
+                _memoryStorage = FileChannelMemoryStorageManager.GetInstance(memoryStorageSize);
+                _memoryStorage.StreamRemoved += new EventHandler(_memoryStorage_StreamRemoved);
+            }
         }
 
         /// <summary>
@@ -149,6 +157,43 @@ namespace Tkl.Jumbo.Jet.Channels
 
                     return (_partitionsCompleted + ((_filesRetrieved * ActivePartitions.Count) / (float)InputTaskIds.Count)) / _totalPartitions;
                 }
+            }
+        }
+
+        /// <summary>
+        /// Gets a value indicating whether the input channel uses memory storage to store inputs.
+        /// </summary>
+        /// <value>
+        /// 	<see langword="true"/> if the channel uses memory storage; otherwise, <see langword="false"/>.
+        /// </value>
+        public override bool UsesMemoryStorage
+        {
+            get { return _memoryStorage != null; }
+        }
+
+        /// <summary>
+        /// Gets the current memory storage usage level.
+        /// </summary>
+        /// <value>The memory storage usage level, between 0 and 1.</value>
+        /// <remarks>
+        /// 	<para>
+        /// The <see cref="MemoryStorageLevel"/> will always be 0 if <see cref="UsesMemoryStorage"/> is <see langword="false"/>.
+        /// </para>
+        /// 	<para>
+        /// If an input was too large to be stored in memory, <see cref="MemoryStorageLevel"/> will be 1 regardless of
+        /// the actual level.
+        /// </para>
+        /// </remarks>
+        public override float MemoryStorageLevel
+        {
+            get 
+            {
+                if( _memoryStorage == null )
+                    return 0.0f;
+                else if( _hasNonMemoryInputs )
+                    return 1.0f;
+                else
+                    return _memoryStorage.Level;
             }
         }
 
@@ -232,11 +277,6 @@ namespace Tkl.Jumbo.Jet.Channels
             if( !_disposed && disposing )
             {
                 ((IDisposable)_readyEvent).Dispose();
-                if( _memoryStorage != null )
-                {
-                    _memoryStorage.Dispose();
-                    _memoryStorage = null;
-                }
             }
             _disposed = true;
             lock( _completedTasks )
@@ -252,10 +292,8 @@ namespace Tkl.Jumbo.Jet.Channels
             {
                 HashSet<string> tasksLeft = new HashSet<string>(InputTaskIds);
                 string[] tasksLeftArray = tasksLeft.ToArray();
-                long memoryStorageSize = TaskExecution.Configuration.JobConfiguration.GetTypedSetting(MemoryStorageSizeSetting, TaskExecution.JetClient.Configuration.FileChannel.MemoryStorageSize);
-                _memoryStorage = FileChannelMemoryStorageManager.GetInstance(memoryStorageSize);
 
-                _log.InfoFormat("Start checking for output file completion of {0} tasks, timeout {1}ms", tasksLeft.Count, _pollingInterval);
+                _log.InfoFormat("Start checking for output file completion of {0} tasks, {1} partitions, timeout {2}ms", tasksLeft.Count, ActivePartitions.Count, _pollingInterval);
 
                 while( !_disposed && tasksLeft.Count > 0 )
                 {
@@ -366,8 +404,6 @@ namespace Tkl.Jumbo.Jet.Channels
 
         private bool DownloadCompletedFile(IMultiInputRecordReader reader, CompletedTask task)
         {
-            _log.InfoFormat("Task {0} output files are now available.", task.TaskAttemptId.TaskId);
-
             IList<RecordInput> inputs;
 
             if( !InputStage.OutputChannel.ForceFileDownload && task.TaskServer.HostName == Dns.GetHostName() )
@@ -403,6 +439,7 @@ namespace Tkl.Jumbo.Jet.Channels
             ITaskServerClientProtocol taskServer = JetClient.CreateTaskServerClient(task.TaskServer);
             string taskOutputDirectory = taskServer.GetOutputFileDirectory(task.JobId);
 
+            _log.InfoFormat("Using local input files from task {0} for {1} partitions.", task.TaskAttemptId, ActivePartitions.Count);
             if( _inputUsesSingleFileFormat )
             {
                 UseLocalFilesForInputSingleFileFormat(reader, task, inputs, taskOutputDirectory);
@@ -416,14 +453,13 @@ namespace Tkl.Jumbo.Jet.Channels
                     long size = new FileInfo(fileName).Length;
                     if( size == 0 )
                     {
-                        _log.InfoFormat("Local input file {0} is empty.", fileName);
+                        _log.DebugFormat("Local input file {0} is empty.", fileName);
                         IRecordReader taskReader = (IRecordReader)JetActivator.CreateInstance(typeof(EmptyRecordReader<>).MakeGenericType(InputRecordType), TaskExecution);
                         taskReader.SourceName = task.TaskAttemptId.TaskId.ToString();
-                        inputs.Add(new RecordInput(taskReader));
+                        inputs.Add(new RecordInput(taskReader, true));
                     }
                     else
                     {
-                        _log.InfoFormat("Using local file {0} as input.", fileName);
                         uncompressedSize = TaskExecution.Umbilical.GetUncompressedTemporaryFileSize(task.JobId, outputFileName);
                         LocalBytesRead += size;
                         // We don't delete output files; if this task fails they might still be needed
@@ -437,6 +473,7 @@ namespace Tkl.Jumbo.Jet.Channels
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Reliability", "CA2000:Dispose objects before losing scope")]
         private void UseLocalFilesForInputSingleFileFormat(IMultiInputRecordReader reader, CompletedTask task, IList<RecordInput> inputs, string taskOutputDirectory)
         {
+
             string outputFileName = FileOutputChannel.CreateChannelFileName(task.TaskAttemptId.ToString(), null);
             string fileName = Path.Combine(taskOutputDirectory, outputFileName);
             using( PartitionFileIndex index = new PartitionFileIndex(fileName) )
@@ -446,17 +483,17 @@ namespace Tkl.Jumbo.Jet.Channels
                     IEnumerable<PartitionFileIndexEntry> indexEntries = index.GetEntriesForPartition(partition);
                     if( indexEntries == null )
                     {
-                        _log.InfoFormat("Local input file {0} partition {1} is empty.", fileName, partition);
+                        _log.DebugFormat("Local input file {0} partition {1} is empty.", fileName, partition);
                         IRecordReader taskReader = (IRecordReader)JetActivator.CreateInstance(typeof(EmptyRecordReader<>).MakeGenericType(InputRecordType), TaskExecution);
                         taskReader.SourceName = task.TaskAttemptId.TaskId.ToString();
-                        inputs.Add(new RecordInput(taskReader));
+                        inputs.Add(new RecordInput(taskReader, true));
                     }
                     else
                     {
                         PartitionFileStream stream = new PartitionFileStream(fileName, reader.BufferSize, indexEntries);
                         LocalBytesRead += stream.Length;
                         IRecordReader taskReader = (IRecordReader)Activator.CreateInstance(_inputReaderType, stream, reader.AllowRecordReuse);
-                        inputs.Add(new RecordInput(taskReader));
+                        inputs.Add(new RecordInput(taskReader, false));
                     }
                 }
             }
@@ -472,14 +509,13 @@ namespace Tkl.Jumbo.Jet.Channels
             if( _inputUsesSingleFileFormat )
             {
                 singleFileToDownload = FileOutputChannel.CreateChannelFileName(task.TaskAttemptId.ToString(), null);
-                _log.InfoFormat(CultureInfo.InvariantCulture, "Downloading {0} partition(s) {1} from server {2}:{3}.", singleFileToDownload, ActivePartitions.ToDelimitedString(), task.TaskServer.HostName, port);
             }
             else
             {
                 filesToDownload = (from partition in ActivePartitions
                                    select FileOutputChannel.CreateChannelFileName(task.TaskAttemptId.ToString(), TaskId.CreateTaskIdString(_outputStageId, partition))).ToArray();
-                _log.InfoFormat(CultureInfo.InvariantCulture, "Downloading {0} from server {1}:{2}.", filesToDownload.ToDelimitedString(), task.TaskServer.HostName, port);
             }
+            _log.InfoFormat(CultureInfo.InvariantCulture, "Downloading task {0} input file from server {1}:{2}.", task.TaskAttemptId, ActivePartitions.ToDelimitedString(), task.TaskServer.HostName, port);
 
             List<RecordInput> downloadedFiles = new List<RecordInput>();
             using( TcpClient client = new TcpClient(task.TaskServer.HostName, port) )
@@ -490,7 +526,7 @@ namespace Tkl.Jumbo.Jet.Channels
                 int connectionAccepted = reader.ReadInt32();
                 if( connectionAccepted == 0 )
                 {
-                    _log.InfoFormat("Server {0}:{1} is busy.", task.TaskServer.HostName, port);
+                    _log.WarnFormat("Server {0}:{1} is busy.", task.TaskServer.HostName, port);
                     return null;
                 }
 
@@ -514,7 +550,7 @@ namespace Tkl.Jumbo.Jet.Channels
                 {
                     DownloadPartition(task, downloadedFiles, stream, reader, partition);
                 }
-                _log.Info("Download complete.");
+                _log.Debug("Download complete.");
 
                 return downloadedFiles;
             }
@@ -529,16 +565,18 @@ namespace Tkl.Jumbo.Jet.Channels
                 if( !_inputUsesSingleFileFormat )
                     uncompressedSize = reader.ReadInt64();
                 string targetFile = null;
-                Stream memoryStream = _memoryStorage.AddStreamIfSpaceAvailable((int)size);
-                if( memoryStream == null )
+                Stream memoryStream = null;
+
+                if( _memoryStorage == null || (memoryStream = _memoryStorage.AddStreamIfSpaceAvailable((int)size)) == null )
                 {
+                    _hasNonMemoryInputs = true;
                     targetFile = Path.Combine(_inputDirectory, string.Format(System.Globalization.CultureInfo.InvariantCulture, "{0}_part{1}.input", task.TaskAttemptId.TaskId, partition));
                     using( FileStream fileStream = File.Create(targetFile, _writeBufferSize) )
                     {
                         stream.CopySize(fileStream, size, _writeBufferSize);
                     }
                     downloadedFiles.Add(new RecordInput(_inputReaderType, targetFile, task.TaskAttemptId.TaskId.ToString(), uncompressedSize, TaskExecution.JetClient.Configuration.FileChannel.DeleteIntermediateFiles));
-                    _log.InfoFormat("File stored in {0}.", targetFile);
+                    _log.DebugFormat("Input stored in local file {0}.", targetFile);
                     // We are writing this file to disk and reading it back again, so we need to update this.
                     LocalBytesRead += size;
                     LocalBytesWritten += size;
@@ -549,16 +587,16 @@ namespace Tkl.Jumbo.Jet.Channels
                     memoryStream.Position = 0;
                     IRecordReader taskReader = (IRecordReader)JetActivator.CreateInstance(_inputReaderType, TaskExecution, memoryStream.CreateDecompressor(CompressionType, uncompressedSize), TaskExecution.AllowRecordReuse);
                     taskReader.SourceName = task.TaskAttemptId.TaskId.ToString();
-                    downloadedFiles.Add(new RecordInput(taskReader));
+                    downloadedFiles.Add(new RecordInput(taskReader, true));
                 }
                 NetworkBytesRead += size;
             }
             else if( size == 0 )
             {
-                _log.InfoFormat("Input partition {0} is empty.", partition);
+                _log.DebugFormat("Input partition {0} is empty.", partition);
                 IRecordReader taskReader = (IRecordReader)JetActivator.CreateInstance(typeof(EmptyRecordReader<>).MakeGenericType(InputRecordType), TaskExecution);
                 taskReader.SourceName = task.TaskAttemptId.TaskId.ToString();
-                downloadedFiles.Add(new RecordInput(taskReader));
+                downloadedFiles.Add(new RecordInput(taskReader, true));
             }
             else
                 throw new InvalidOperationException(); // TODO: Recover from this.
@@ -571,6 +609,10 @@ namespace Tkl.Jumbo.Jet.Channels
             _downloadThread = new Thread(DownloadThread) { Name = "FileInputChannelDownload", IsBackground = true };
             _downloadThread.Start();
         }
-    
+
+        private void _memoryStorage_StreamRemoved(object sender, EventArgs e)
+        {
+            _hasNonMemoryInputs = false;
+        }
     }
 }

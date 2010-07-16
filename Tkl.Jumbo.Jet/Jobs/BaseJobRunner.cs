@@ -64,7 +64,7 @@ namespace Tkl.Jumbo.Jet.Jobs
         /// </para>
         /// <para>
         ///   You can access properties that are more than one level deep, for instance "MyStage:OutputChannel.PartitionsPerTask=2"
-        ///   is used to set the <see cref="ChannelConfiguration.PartitionsPerTask"/> property for the <see cref="StageConfiguration.OutputChannel"/>
+        ///   is used to set the <see cref="Channels.ChannelConfiguration.PartitionsPerTask"/> property for the <see cref="StageConfiguration.OutputChannel"/>
         ///   property. This will cause an error if <see cref="StageConfiguration.OutputChannel"/> is <see langword="null"/>.
         /// </para>
         /// <para>

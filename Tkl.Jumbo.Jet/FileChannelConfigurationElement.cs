@@ -24,16 +24,6 @@ namespace Tkl.Jumbo.Jet
         }
 
         /// <summary>
-        /// Gets or sets the buffer size to use for the <see cref="MergeRecordReader{T}"/>.
-        /// </summary>
-        [ConfigurationProperty("mergeTaskReadBufferSize", DefaultValue = "1MB", IsRequired = false, IsKey = false)]
-        public ByteSize MergeTaskReadBufferSize
-        {
-            get { return (ByteSize)this["mergeTaskReadBufferSize"]; }
-            set { this["mergeTaskReadBufferSize"] = value; }
-        }
-
-        /// <summary>
         /// Gets or sets the buffer size used by the file output channel to write to intermediate files.
         /// </summary>
         [ConfigurationProperty("writeBufferSize", DefaultValue = "64KB", IsRequired = false, IsKey = false)]

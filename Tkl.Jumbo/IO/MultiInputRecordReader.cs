@@ -39,6 +39,7 @@ namespace Tkl.Jumbo.IO
         {
             private readonly int _partitionNumber;
             private readonly List<RecordInput> _inputs;
+            private volatile int _firstNonMemoryIndex;
 
             public Partition(int partitionNumber, int totalInputCount)
             {
@@ -51,9 +52,70 @@ namespace Tkl.Jumbo.IO
                 get { return _partitionNumber; }
             }
 
-            public List<RecordInput> Inputs
+            public float ProgressSum
             {
-                get { return _inputs; }
+                get
+                {
+                    return (from input in _inputs
+                            select input.Progress).Sum();
+                }
+            }
+
+            public long InputBytesSum
+            {
+                get
+                {
+                    return (from input in _inputs
+                            where input.IsReaderCreated
+                            select input.Reader.InputBytes).Sum();
+                }
+            }
+
+            public long BytesReadSum
+            {
+                get
+                {
+                    return (from input in _inputs
+                            where input.IsReaderCreated
+                            select input.Reader.BytesRead).Sum();
+                }
+            }
+
+            public int InputCount
+            {
+                get
+                {
+                    return _inputs.Count;
+                }
+            }
+
+            public void AddInput(RecordInput input)
+            {
+                if( input.IsMemoryBased )
+                {
+                    _inputs.Insert(_firstNonMemoryIndex, input);
+                    ++_firstNonMemoryIndex;
+                }
+                else
+                {
+                    _inputs.Add(input);
+                }
+            }
+
+            public RecordInput GetInput(int index, bool memoryOnly)
+            {
+                // Inputs that have been retrieved may not be moved; adjusting the _firstNonMemoryIndex field will make sure they won't be.
+                RecordInput result = _inputs[index];
+                if( memoryOnly && !result.IsMemoryBased )
+                    return null;
+                if( index > _firstNonMemoryIndex )
+                    _firstNonMemoryIndex = index + 1;
+                return result;
+            }
+
+            public bool Exists(Predicate<RecordInput> match)
+            {
+                return _inputs.Exists(match);
             }
 
             public void Dispose()
@@ -155,8 +217,7 @@ namespace Tkl.Jumbo.IO
                         return 0;
 
                     return (from partition in _partitions
-                            from input in partition.Inputs
-                            select input.Progress).Sum() / (float)(TotalInputCount * _partitions.Count);
+                            select partition.ProgressSum).Sum() / (float)(TotalInputCount * _partitions.Count);
                 }
             }
         }
@@ -174,9 +235,7 @@ namespace Tkl.Jumbo.IO
                 lock( _partitions )
                 {
                     return (from partition in _partitions
-                            from input in partition.Inputs
-                            where input.IsReaderCreated
-                            select input.Reader.InputBytes).Sum();
+                            select partition.InputBytesSum).Sum();
                 }
             }
         }
@@ -199,9 +258,7 @@ namespace Tkl.Jumbo.IO
                 lock( _partitions )
                 {
                     return (from partition in _partitions
-                            from input in partition.Inputs
-                            where input.IsReaderCreated
-                            select input.Reader.BytesRead).Sum();
+                            select partition.BytesReadSum).Sum();
                 }
             }
         }
@@ -217,7 +274,7 @@ namespace Tkl.Jumbo.IO
                 {
                     // We treat inputs whose reader hasn't yet been created as if RecordsAvailable is true, as they are read from a file
                     // so their readers would always return true anyway.
-                    return _partitions.Exists(p => p.Inputs.Exists(i => !i.IsReaderCreated || i.Reader.RecordsAvailable));
+                    return _partitions.Exists(p => p.Exists(i => !i.IsReaderCreated || i.Reader.RecordsAvailable));
                 }
             }
         }
@@ -232,7 +289,7 @@ namespace Tkl.Jumbo.IO
             {
                 lock( _partitions )
                 {
-                    return _partitions.Count == 0 ? 0 : _partitions[_currentPartitionIndex].Inputs.Count;
+                    return _partitions.Count == 0 ? 0 : _partitions[_currentPartitionIndex].InputCount;
                 }
             }
         }
@@ -342,10 +399,16 @@ namespace Tkl.Jumbo.IO
         /// </summary>
         /// <param name="partitions">The partitions for this input, in the same order as the partition list provided to the constructor.</param>
         /// <remarks>
-        /// Which partitions a multi input record reader is responsible for is specified when that reader is created.
-        /// All calls to <see cref="AddInput"/> must specify those exact same partitions, in the same order..
+        /// <para>
+        ///   Which partitions a multi input record reader is responsible for is specified when that reader is created or
+        ///   when <see cref="AssignAdditionalPartitions"/> is called. All calls to <see cref="AddInput"/> must specify those
+        ///   exact same partitions, in the same order.
+        /// </para>
+        /// <para>
+        ///   If you override this method, you must call the base class implementation.
+        /// </para>
         /// </remarks>
-        public void AddInput(IList<RecordInput> partitions)
+        public virtual void AddInput(IList<RecordInput> partitions)
         {
             if( partitions == null )
                 throw new ArgumentNullException("partitions");
@@ -361,7 +424,7 @@ namespace Tkl.Jumbo.IO
                 {
                     RecordInput input = partitions[x];
                     input.Input = this;
-                    _partitions[_firstActivePartitionIndex + x].Inputs.Add(input);
+                    _partitions[_firstActivePartitionIndex + x].AddInput(input);
                 }
 
                 Monitor.PulseAll(_partitions);
@@ -386,7 +449,7 @@ namespace Tkl.Jumbo.IO
 
             lock( _partitions )
             {
-                if( _partitions.Count > 0 && _partitions[_firstActivePartitionIndex].Inputs.Count != TotalInputCount )
+                if( _partitions.Count > 0 && _partitions[_firstActivePartitionIndex].InputCount != TotalInputCount )
                     throw new InvalidOperationException("You cannot assign new partitions to a record reader until the currently assigned partitions have all their inputs.");
 
                 _firstActivePartitionIndex = _partitions.Count;
@@ -423,7 +486,7 @@ namespace Tkl.Jumbo.IO
                 sw = Stopwatch.StartNew();
             lock( _partitions )
             {
-                while( _partitions[_firstActivePartitionIndex].Inputs.Count < inputCount )
+                while( _partitions[_firstActivePartitionIndex].InputCount < inputCount )
                 {
                     int timeoutRemaining = Timeout.Infinite;
                     if( timeout >= 0 )
@@ -448,7 +511,7 @@ namespace Tkl.Jumbo.IO
         {
             lock( _partitions )
             {
-                return _partitions[_currentPartitionIndex].Inputs[index].Reader;
+                return _partitions[_currentPartitionIndex].GetInput(index, false).Reader;
             }
         }
 
@@ -458,11 +521,85 @@ namespace Tkl.Jumbo.IO
         /// <param name="partition">The partition of the reader to return.</param>
         /// <param name="index">The index of the record reader to return.</param>
         /// <returns>An instance of a class implementing <see cref="IRecordReader"/> for the specified input.</returns>
+        /// <remarks>
+        /// <para>
+        ///   Once a call to <see cref="GetInputReader(int,int)"/> has returned an input, subsequent
+        ///   calls with the same <paramref name="partition"/> and <paramref name="index"/> are guaranteed to return the same value.
+        /// </para>
+        /// <para>
+        ///   Two calls to <see cref="GetInputReader(int,int)"/> with the same <paramref name="index"/> but a different <paramref name="partition"/>
+        ///   aren't guaranteed to return inputs from the same source.
+        /// </para>
+        /// </remarks>
         protected IRecordReader GetInputReader(int partition, int index)
+        {
+            return GetInputReader(partition, index, false);
+        }
+
+        /// <summary>
+        /// Returns the record reader for the specified partition and input.
+        /// </summary>
+        /// <param name="partition">The partition of the reader to return.</param>
+        /// <param name="index">The index of the record reader to return.</param>
+        /// <param name="memoryOnly"><see langword="true"/> to return only inputs that are stored in memory; otherwise, <see langword="false"/>.</param>
+        /// <returns>
+        /// An instance of a class implementing <see cref="IRecordReader"/> for the specified input, or <see langword="null"/> if <paramref name="memoryOnly"/>
+        /// was <see langword="true"/> and the input was not stored in memory.
+        /// </returns>
+        /// <remarks>
+        /// <para>
+        ///   Because the <see cref="MultiInputRecordReader{T}"/> tries to keep the inputs that in memory in front of the inputs that aren't, if
+        ///   a call to <see cref="GetInputReader(int,int,bool)"/> returned <see langword="null"/>, subsequent calls with the same <paramref name="partition"/>
+        ///   and <paramref name="index"/> might not return <see langword="null"/>.
+        /// </para>
+        /// <para>
+        ///   Once a call to <see cref="GetInputReader(int,int,bool)"/> has returned a value other than <see langword="null"/>, subsequent
+        ///   calls with the same <paramref name="partition"/> and <paramref name="index"/> are guaranteed to return the same value.
+        /// </para>
+        /// <para>
+        ///   Two calls to <see cref="GetInputReader(int,int,bool)"/> with the same <paramref name="index"/> but a different <paramref name="partition"/>
+        ///   aren't guaranteed to return inputs from the same source.
+        /// </para>
+        /// </remarks>
+        protected IRecordReader GetInputReader(int partition, int index, bool memoryOnly)
         {
             lock( _partitions )
             {
-                return _partitionsByNumber[partition].Inputs[index].Reader;
+                RecordInput input = _partitionsByNumber[partition].GetInput(index, memoryOnly);
+                return input == null ? null : input.Reader;
+            }
+        }
+
+        /// <summary>
+        /// Returns the specified input.
+        /// </summary>
+        /// <param name="partition">The partition of the input to return.</param>
+        /// <param name="index">The index of the record input to return.</param>
+        /// <param name="memoryOnly"><see langword="true"/> to return only inputs that are stored in memory; otherwise, <see langword="false"/>.</param>
+        /// <returns>
+        /// The <see cref="RecordInput"/> instance for the input, or <see langword="null"/> if <paramref name="memoryOnly"/>
+        /// was <see langword="true"/> and the input was not stored in memory.
+        /// </returns>
+        /// <remarks>
+        /// <para>
+        ///   Because the <see cref="MultiInputRecordReader{T}"/> tries to keep the inputs that in memory in front of the inputs that aren't, if
+        ///   a call to <see cref="GetInput(int,int,bool)"/> returned <see langword="null"/>, subsequent calls with the same <paramref name="partition"/>
+        ///   and <paramref name="index"/> might not return <see langword="null"/>.
+        /// </para>
+        /// <para>
+        ///   Once a call to <see cref="GetInput(int,int,bool)"/> has returned a value other than <see langword="null"/>, subsequent
+        ///   calls with the same <paramref name="partition"/> and <paramref name="index"/> are guaranteed to return the same value.
+        /// </para>
+        /// <para>
+        ///   Two calls to <see cref="GetInput(int,int,bool)"/> with the same <paramref name="index"/> but a different <paramref name="partition"/>
+        ///   aren't guaranteed to return inputs from the same source.
+        /// </para>
+        /// </remarks>
+        protected RecordInput GetInput(int partition, int index, bool memoryOnly)
+        {
+            lock( _partitions )
+            {
+                return _partitionsByNumber[partition].GetInput(index, memoryOnly);
             }
         }
 

@@ -210,7 +210,6 @@ namespace Tkl.Jumbo.Test.Jet
 
             orderInput.AddSetting(PartitionerConstants.EqualityComparerSetting, typeof(OrderJoinComparer).AssemblyQualifiedName);
             orderSort.AddSetting(SortTaskConstants.ComparerSettingKey, typeof(OrderJoinComparer).AssemblyQualifiedName);
-            orderSort.AddSetting(MergeRecordReaderConstants.ComparerSetting, typeof(OrderJoinComparer).AssemblyQualifiedName);
 
             const string outputPath = "/testjoinoutput";
             dfsClient.NameServer.CreateDirectory(outputPath);

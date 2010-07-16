@@ -133,6 +133,8 @@
     <Compile Include="Jobs\PipelineCreationMethod.cs" />
     <Compile Include="Jobs\StageBuilder.cs" />
     <Compile Include="KillTaskJetHeartbeatResponse.cs" />
+    <Compile Include="MergePassHelper.cs" />
+    <Compile Include="MergeRecordReaderConfigurationElement.cs" />
     <Compile Include="MultiPartitionRecordReader.cs" />
     <Compile Include="PartitionerConstants.cs" />
     <Compile Include="IConfigurable.cs" />

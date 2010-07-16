@@ -35,6 +35,35 @@ namespace Tkl.Jumbo.Jet.Channels
         }
 
         /// <summary>
+        /// Gets a value indicating whether the input channel uses memory storage to store inputs.
+        /// </summary>
+        /// <value>
+        /// 	<see langword="true"/> if the channel uses memory storage; otherwise, <see langword="false"/>.
+        /// </value>
+        public override bool UsesMemoryStorage
+        {
+            get { return false; }
+        }
+
+        /// <summary>
+        /// Gets the current memory storage usage level.
+        /// </summary>
+        /// <value>The memory storage usage level, between 0 and 1.</value>
+        /// <remarks>
+        /// 	<para>
+        /// The <see cref="MemoryStorageLevel"/> will always be 0 if <see cref="UsesMemoryStorage"/> is <see langword="false"/>.
+        /// </para>
+        /// 	<para>
+        /// If an input was too large to be stored in memory, <see cref="MemoryStorageLevel"/> will be 1 regardless of
+        /// the actual level.
+        /// </para>
+        /// </remarks>
+        public override float MemoryStorageLevel
+        {
+            get { return 0; }
+        }
+
+        /// <summary>
         /// Creates a <see cref="RecordReader{T}"/> from which the channel can read its input.
         /// </summary>
         /// <returns>A <see cref="RecordReader{T}"/> for the channel.</returns>
@@ -90,7 +119,7 @@ namespace Tkl.Jumbo.Jet.Channels
                 {
                     TcpClient client = listener.AcceptTcpClient();
                     _log.InfoFormat("Accepted connection from {0}.", client.Client.RemoteEndPoint);
-                    inputs[0] = new RecordInput((IRecordReader)JetActivator.CreateInstance(_inputReaderType, TaskExecution, client, TaskExecution.AllowRecordReuse));
+                    inputs[0] = new RecordInput((IRecordReader)JetActivator.CreateInstance(_inputReaderType, TaskExecution, client, TaskExecution.AllowRecordReuse), false);
                     _reader.AddInput(inputs);
                 }
 

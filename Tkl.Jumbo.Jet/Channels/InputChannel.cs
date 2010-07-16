@@ -20,7 +20,7 @@ namespace Tkl.Jumbo.Jet.Channels
         private readonly List<string> _inputTaskIds = new List<string>();
         private ReadOnlyCollection<string> _inputTaskIdsReadOnlyWrapper;
         private readonly List<int> _partitions = new List<int>();
-        private ReadOnlyCollection<int> _partitionsReadOnlyWrapper;
+        private readonly ReadOnlyCollection<int> _partitionsReadOnlyWrapper;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="InputChannel"/> class.
@@ -34,6 +34,7 @@ namespace Tkl.Jumbo.Jet.Channels
             if( inputStage == null )
                 throw new ArgumentNullException("inputStage");
 
+            _partitionsReadOnlyWrapper = _partitions.AsReadOnly();
             TaskExecution = taskExecution;
             InputStage = inputStage;
             // Match the compression type of the input stage.
@@ -70,14 +71,15 @@ namespace Tkl.Jumbo.Jet.Channels
         }
 
         /// <summary>
+        /// Gets the input stage of this channel.
+        /// </summary>
+        /// <value>The <see cref="StageConfiguration"/> of the input stage.</value>
+        public StageConfiguration InputStage { get; private set; }
+
+        /// <summary>
         /// Gets the task execution utility for the task that this channel provides input for.
         /// </summary>
         protected TaskExecutionUtility TaskExecution { get; private set; }
-
-        /// <summary>
-        /// Gets the input stage of this channel.
-        /// </summary>
-        protected StageConfiguration InputStage { get; private set; }
 
         /// <summary>
         /// Gets the compression type used by the channel.
@@ -103,8 +105,6 @@ namespace Tkl.Jumbo.Jet.Channels
         {
             get
             {
-                if( _partitionsReadOnlyWrapper == null )
-                    System.Threading.Interlocked.CompareExchange(ref _partitionsReadOnlyWrapper, _partitions.AsReadOnly(), null);
                 return _partitionsReadOnlyWrapper;
             }
         }
@@ -123,6 +123,29 @@ namespace Tkl.Jumbo.Jet.Channels
         }
 
         #region IInputChannel Members
+
+        /// <summary>
+        /// Gets a value indicating whether the input channel uses memory storage to store inputs.
+        /// </summary>
+        /// <value>
+        /// 	<see langword="true"/> if the channel uses memory storage; otherwise, <see langword="false"/>.
+        /// </value>
+        public abstract bool UsesMemoryStorage { get; }
+
+        /// <summary>
+        /// Gets the current memory storage usage level.
+        /// </summary>
+        /// <value>The memory storage usage level, between 0 and 1.</value>
+        /// <remarks>
+        /// 	<para>
+        /// The <see cref="MemoryStorageLevel"/> will always be 0 if <see cref="UsesMemoryStorage"/> is <see langword="false"/>.
+        /// </para>
+        /// 	<para>
+        /// If an input was too large to be stored in memory, <see cref="MemoryStorageLevel"/> will be 1 regardless of
+        /// the actual level.
+        /// </para>
+        /// </remarks>
+        public abstract float MemoryStorageLevel { get; }
 
         /// <summary>
         /// Creates a <see cref="RecordReader{T}"/> from which the channel can read its input.
@@ -168,14 +191,14 @@ namespace Tkl.Jumbo.Jet.Channels
         {
             Type multiInputRecordReaderType = InputStage.OutputChannel.MultiInputRecordReaderType.ReferencedType;
             _log.InfoFormat(System.Globalization.CultureInfo.CurrentCulture, "Creating MultiRecordReader of type {3} for {0} inputs, allow record reuse = {1}, buffer size = {2}.", InputTaskIds.Count, TaskExecution.AllowRecordReuse, TaskExecution.JetClient.Configuration.FileChannel.ReadBufferSize, multiInputRecordReaderType);
-            int bufferSize = (multiInputRecordReaderType.IsGenericType && multiInputRecordReaderType.GetGenericTypeDefinition() == typeof(MergeRecordReader<>)) ? (int)TaskExecution.JetClient.Configuration.FileChannel.MergeTaskReadBufferSize : (int)TaskExecution.JetClient.Configuration.FileChannel.ReadBufferSize;
+            int bufferSize = (multiInputRecordReaderType.IsGenericType && multiInputRecordReaderType.GetGenericTypeDefinition() == typeof(MergeRecordReader<>)) ? (int)TaskExecution.JetClient.Configuration.MergeRecordReader.MergeStreamReadBufferSize : (int)TaskExecution.JetClient.Configuration.FileChannel.ReadBufferSize;
             // We're not using JetActivator to create the object because we need to delay calling NotifyConfigurationChanged until after InputStage was set.
             int[] partitions = TaskExecution.GetPartitions();
             _partitions.AddRange(partitions);
             IMultiInputRecordReader reader = (IMultiInputRecordReader)Activator.CreateInstance(multiInputRecordReaderType, partitions, _inputTaskIds.Count, TaskExecution.AllowRecordReuse, bufferSize, CompressionType);
             IChannelMultiInputRecordReader channelReader = reader as IChannelMultiInputRecordReader;
             if( channelReader != null )
-                channelReader.InputStage = InputStage;
+                channelReader.Channel = this;
             JetActivator.ApplyConfiguration(reader, TaskExecution.DfsClient.Configuration, TaskExecution.JetClient.Configuration, TaskExecution.Configuration);
             return reader;
         }
