@@ -99,7 +99,13 @@ namespace Tkl.Jumbo.Jet.Channels
             }
         }
 
-        internal static string CreateChannelFileName(string inputTaskAttemptId, string outputTaskId)
+        /// <summary>
+        /// Creates the name of an intermediate file for the channel. For Jumbo internal use only.
+        /// </summary>
+        /// <param name="inputTaskAttemptId">The input task attempt id.</param>
+        /// <param name="outputTaskId">The output task id.</param>
+        /// <returns>The intermediate file name.</returns>
+        public static string CreateChannelFileName(string inputTaskAttemptId, string outputTaskId)
         {
             if( outputTaskId == null ) // for single-file output
                 return Path.Combine(inputTaskAttemptId, inputTaskAttemptId + ".output");

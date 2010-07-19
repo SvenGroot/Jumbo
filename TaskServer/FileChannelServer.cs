@@ -9,6 +9,8 @@ using System.Net;
 using System.IO;
 using System.Net.Sockets;
 using Tkl.Jumbo.Jet.Channels;
+using System.Diagnostics;
+using Tkl.Jumbo.Jet;
 
 namespace TaskServerApplication
 {
@@ -19,21 +21,21 @@ namespace TaskServerApplication
     /// The protocol for this is very simple:
     /// - Request port number from the TaskServer.
     /// - Connect.
-    /// - Send job ID as byte array.
-    /// - Send boolean true if single file output, otherwise false.
-    /// - If single file output:
-    ///   - Write output file name (string)
-    ///   - Write partition count (int32)
-    ///   - Write partitions (int32)
-    ///   - For each partition
-    ///     - Server returns size (int64, may be 0, compression not currently supported)
-    ///     - Server returns partition data.
+    /// - Send job ID (byte[])
+    /// - Send true if single file output, otherwise false (boolean)
+    /// - Send partition count (int32)
+    /// - Send partitions (int32[])
+    /// - Send task attempt ID count (int32)
+    /// - Send task attempt IDs (string[])
     /// - If multi file output
-    ///   - Send number of files (int32)
-    ///   - Send file names (string)
-    ///   - For each file.
-    ///     - Server writes a the compressed and uncompressed size of the file to the stream as two longs (Int64), or -1 if there's a failure.
-    ///     - Server writes file if it exists.
+    ///   - Send output stage ID (string)
+    /// - For each task.
+    ///   - For each partition
+    ///     - If a failure occurs, the server writes -1 (int64).
+    ///     - Server writes partition size (int64, may be 0)
+    ///     - If multi file output
+    ///       - Server writes uncompressed file size; if there's no compression this will equal the file size (int64)
+    ///     - Server writes partition data
     /// </remarks>
     class FileChannelServer : TcpServer
     {
@@ -61,31 +63,44 @@ namespace TaskServerApplication
                     try
                     {
                         byte[] guidBytes = reader.ReadBytes(16);
-                        Guid jobID = new Guid(guidBytes);
+                        Guid jobId = new Guid(guidBytes);
                         bool singleFileOutput = reader.ReadBoolean(); // Is the output a single indexed partition file?
+
+                        int partitionCount = reader.ReadInt32();
+                        int[] partitions = new int[partitionCount];
+                        for( int x = 0; x < partitionCount; ++x )
+                            partitions[x] = reader.ReadInt32();
+
+                        int taskCount = reader.ReadInt32();
+                        string[] tasks = new string[taskCount];
+                        for( int x = 0; x < taskCount; ++x )
+                        {
+                            tasks[x] = reader.ReadString();
+                        }
+
+                        Stopwatch sw = _log.IsDebugEnabled ? Stopwatch.StartNew() : null;
                         if( singleFileOutput )
                         {
-                            string fileName = reader.ReadString();
-                            int partitionCount = reader.ReadInt32();
-                            int[] partitions = new int[partitionCount];
-                            for( int x = 0; x < partitionCount; ++x )
-                                partitions[x] = reader.ReadInt32();
-
-                            SendPartitionsFromSingleFileOutput(writer, jobID, fileName, partitions);
+                            SendSingleFileOutput(writer, jobId, partitions, tasks);
                         }
                         else
                         {
-                            int fileCount = reader.ReadInt32();
-                            string[] files = new string[fileCount];
-                            for( int x = 0; x < fileCount; ++x )
-                            {
-                                files[x] = reader.ReadString();
-                            }
+                            string outputStageId = reader.ReadString();
 
-                            _log.DebugFormat("Sending files {0} to {1}", files.ToDelimitedString(), client.Client.RemoteEndPoint);
-                            foreach( string file in files )
-                                SendFile(writer, jobID, file);
-                            _log.DebugFormat("Sending files {0} complete.", files.ToDelimitedString());
+                            string jobDirectory = _taskServer.GetJobDirectory(jobId);
+                            foreach( string task in tasks )
+                            {
+                                foreach( int partition in partitions )
+                                {
+                                    string outputFile = FileOutputChannel.CreateChannelFileName(task, TaskId.CreateTaskIdString(outputStageId, partition));
+                                    SendFile(writer, jobId, jobDirectory, outputFile);
+                                }
+                            }
+                        }
+                        if( _log.IsDebugEnabled )
+                        {
+                            sw.Stop();
+                            _log.DebugFormat("Sent tasks {0} partitions {1} to client {2} in {3}ms", tasks.ToDelimitedString(","), partitions.ToDelimitedString(","), client.Client.RemoteEndPoint, sw.ElapsedMilliseconds);
                         }
                     }
                     catch( Exception )
@@ -107,13 +122,12 @@ namespace TaskServerApplication
             }
         }
 
-        private void SendFile(BinaryWriter writer, Guid jobID, string file)
+        private void SendFile(BinaryWriter writer, Guid jobId, string jobDirectory, string file)
         {
-            string dir = _taskServer.GetJobDirectory(jobID);
-            string path = Path.Combine(dir, file);
+            string path = Path.Combine(jobDirectory, file);
             //if( File.Exists(path) )
             //{
-                long uncompressedSize = _taskServer.GetUncompressedTemporaryFileSize(jobID, file);
+                long uncompressedSize = _taskServer.GetUncompressedTemporaryFileSize(jobId, file);
 
                 using( FileStream fileStream = File.OpenRead(path) )
                 {
@@ -131,27 +145,31 @@ namespace TaskServerApplication
             //}
         }
 
-        private void SendPartitionsFromSingleFileOutput(BinaryWriter writer, Guid jobId, string file, IEnumerable<int> partitions)
+        private void SendSingleFileOutput(BinaryWriter writer, Guid jobId, int[] partitions, string[] tasks)
         {
             string dir = _taskServer.GetJobDirectory(jobId);
-            string path = Path.Combine(dir, file);
-            PartitionFileIndex index = _indexCache.GetIndex(path);
-            using( FileStream stream = File.OpenRead(path) )
+            foreach( string task in tasks )
             {
-                foreach( int partition in partitions )
+                string outputFile = FileOutputChannel.CreateChannelFileName(task, null);
+                string path = Path.Combine(dir, outputFile);
+                PartitionFileIndex index = _indexCache.GetIndex(path);
+                using( FileStream stream = File.OpenRead(path) )
                 {
-                    IEnumerable<PartitionFileIndexEntry> entries = index.GetEntriesForPartition(partition);
-                    if( entries == null )
-                        writer.Write(0L);
-                    else
+                    foreach( int partition in partitions )
                     {
-                        long totalSize = entries.Sum(e => e.Count);
-                        writer.Write(totalSize);
-                        // No need for compressed size because compression is not supported for partition files currently.
-                        foreach( PartitionFileIndexEntry entry in entries )
+                        IEnumerable<PartitionFileIndexEntry> entries = index.GetEntriesForPartition(partition);
+                        if( entries == null )
+                            writer.Write(0L);
+                        else
                         {
-                            stream.Seek(entry.Offset, SeekOrigin.Begin);
-                            stream.CopySize(writer.BaseStream, entry.Count, 65516);
+                            long totalSize = entries.Sum(e => e.Count);
+                            writer.Write(totalSize);
+                            // No need for compressed size because compression is not supported for partition files currently.
+                            foreach( PartitionFileIndexEntry entry in entries )
+                            {
+                                stream.Seek(entry.Offset, SeekOrigin.Begin);
+                                stream.CopySize(writer.BaseStream, entry.Count, 65516);
+                            }
                         }
                     }
                 }
