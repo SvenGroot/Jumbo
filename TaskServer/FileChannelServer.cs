@@ -42,6 +42,7 @@ namespace TaskServerApplication
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(FileChannelServer));
         private readonly TaskServer _taskServer;
         private readonly PartitionFileIndexCache _indexCache;
+        private readonly int _bufferSize;
 
         public FileChannelServer(TaskServer taskServer, IPAddress[] localAddresses, int port, int maxConnections, int maxCacheSize)
             : base(localAddresses, port, maxConnections)
@@ -50,6 +51,7 @@ namespace TaskServerApplication
                 throw new ArgumentNullException("taskServer");
             _taskServer = taskServer;
             _indexCache = new PartitionFileIndexCache(maxCacheSize);
+            _bufferSize = (int)taskServer.Configuration.FileChannel.ReadBufferSize.Value;
         }
 
         protected override void HandleConnection(System.Net.Sockets.TcpClient client)
@@ -129,7 +131,7 @@ namespace TaskServerApplication
             //{
                 long uncompressedSize = _taskServer.GetUncompressedTemporaryFileSize(jobId, file);
 
-                using( FileStream fileStream = File.OpenRead(path) )
+                using( FileStream fileStream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read, _bufferSize) )
                 {
                     writer.Write(fileStream.Length);
                     if( uncompressedSize == -1 )
@@ -153,7 +155,7 @@ namespace TaskServerApplication
                 string outputFile = FileOutputChannel.CreateChannelFileName(task, null);
                 string path = Path.Combine(dir, outputFile);
                 PartitionFileIndex index = _indexCache.GetIndex(path);
-                using( FileStream stream = File.OpenRead(path) )
+                using( FileStream stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read, _bufferSize) )
                 {
                     foreach( int partition in partitions )
                     {

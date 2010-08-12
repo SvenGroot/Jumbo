@@ -108,7 +108,7 @@ namespace Tkl.Jumbo.IO
                 RecordInput result = _inputs[index];
                 if( memoryOnly && !result.IsMemoryBased )
                     return null;
-                if( index > _firstNonMemoryIndex )
+                if( index >= _firstNonMemoryIndex )
                     _firstNonMemoryIndex = index + 1;
                 return result;
             }
