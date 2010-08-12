@@ -46,5 +46,16 @@ namespace Tkl.Jumbo.Jet
         /// Gets or sets the port that the task server listens on for downloading file channel data.
         /// </summary>
         public int TaskServerFileServerPort { get; set; }
+
+        /// <summary>
+        /// Returns a <see cref="System.String"/> that represents this instance.
+        /// </summary>
+        /// <returns>
+        /// A <see cref="System.String"/> that represents this instance.
+        /// </returns>
+        public override string ToString()
+        {
+            return TaskAttemptId == null ? "" : TaskAttemptId.ToString();
+        }
     }
 }

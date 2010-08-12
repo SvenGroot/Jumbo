@@ -520,7 +520,7 @@ namespace Tkl.Jumbo.Jet.Channels
                 reader.AddInput(taskInputs);
             }
             server.NotifyDownloadSuccess();
-            int files = Interlocked.Increment(ref _filesRetrieved);
+            int files = Interlocked.Add(ref _filesRetrieved, inputs.Count);
             TaskExecution.ChannelStatusMessage = string.Format(CultureInfo.InvariantCulture, "Downloaded {0} of {1} input files.", files, InputTaskIds.Count);
 
             if( !_isReady )
