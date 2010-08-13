@@ -7,6 +7,7 @@ using System.Text;
 using Tkl.Jumbo.Jet;
 using Tkl.Jumbo.IO;
 using Tkl.Jumbo.Dfs;
+using System.IO;
 
 namespace Tkl.Jumbo.Jet.Samples.IO
 {
@@ -16,6 +17,11 @@ namespace Tkl.Jumbo.Jet.Samples.IO
     public sealed class RangePartitioner : Configurable, IPartitioner<GenSortRecord>
     {
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(RangePartitioner));
+
+        /// <summary>
+        /// The name of the partition split file.
+        /// </summary>
+        public const string SplitFileName = "SplitPoints";
 
         #region Nested types
 
@@ -112,7 +118,7 @@ namespace Tkl.Jumbo.Jet.Samples.IO
             if( _trie == null )
             {
                 ReadPartitionFile();
-                _trie = BuildTrie(0, _splitPoints.Length, new byte[] {}, 2);
+                _trie = BuildTrie(0, _splitPoints.Length, new byte[] { }, 2);
             }
 
             return _trie.GetPartition(value.RecordBuffer);
@@ -124,11 +130,11 @@ namespace Tkl.Jumbo.Jet.Samples.IO
         /// Creates a file defining the partitioning split points by sampling the input data.
         /// </summary>
         /// <param name="dfsClient">The <see cref="DfsClient"/> used to access the DFS.</param>
-        /// <param name="partitionFileName">The name of the file on the DFS where the partitioning data should be stored.</param>
+        /// <param name="partitionFilePath">The path on the DFS where the partitioning data should be stored.</param>
         /// <param name="input">The input of the job.</param>
         /// <param name="partitions">The number of partitions.</param>
         /// <param name="sampleSize">The total number of records to sample.</param>
-        public static void CreatePartitionFile(DfsClient dfsClient, string partitionFileName, StageDfsInput input, int partitions, int sampleSize)
+        public static void CreatePartitionFile(DfsClient dfsClient, string partitionFilePath, StageDfsInput input, int partitions, int sampleSize)
         {
             int samples = Math.Min(10, input.TaskInputs.Count);
             int recordsPerSample = sampleSize / samples;
@@ -151,13 +157,13 @@ namespace Tkl.Jumbo.Jet.Samples.IO
 
             sampleData.Sort(GenSortRecord.CompareKeys);
 
-            _log.InfoFormat("Sampling complete, writing partition file {0}.", partitionFileName);
+            _log.InfoFormat("Sampling complete, writing partition file {0}.", partitionFilePath);
 
-            dfsClient.NameServer.Delete(partitionFileName, false);
+            dfsClient.NameServer.Delete(partitionFilePath, false);
 
             float stepSize = sampleData.Count / (float)partitions;
 
-            using( DfsOutputStream stream = dfsClient.CreateFile(partitionFileName) )
+            using( DfsOutputStream stream = dfsClient.CreateFile(partitionFilePath) )
             {
                 for( int x = 1; x < partitions; ++x )
                 {
@@ -171,10 +177,10 @@ namespace Tkl.Jumbo.Jet.Samples.IO
         private void ReadPartitionFile()
         {
             List<byte[]> splitPoints = new List<byte[]>();
-            string partitionFileName = TaskContext.JobConfiguration.JobSettings["partitionFile"];
-            _log.InfoFormat("Reading partition file {0}.", partitionFileName);
+            string partitionFilePath = Path.Combine(TaskContext.LocalJobDirectory, SplitFileName);
+            _log.InfoFormat("Reading local partition split file {0}.", partitionFilePath);
             DfsClient dfsClient = new DfsClient(DfsConfiguration);
-            using( DfsInputStream stream = dfsClient.OpenFile(partitionFileName) )
+            using( FileStream stream =  File.OpenRead(partitionFilePath) )
             {
                 int bytesRead;
                 do

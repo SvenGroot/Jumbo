@@ -429,7 +429,7 @@ namespace Tkl.Jumbo.Test.Jet
 
             JobConfiguration config = new JobConfiguration(typeof(StringConversionTask).Assembly);
             StageConfiguration conversionStage = config.AddInputStage("ConversionStage", dfsClient.NameServer.GetFileInfo(inputFileName), typeof(StringConversionTask), typeof(LineRecordReader));
-            int taskCount = singleFileOutput ? 1 : mergeTasks * partitionsPerTask; // single file output does not currently support internal partitioning.
+            int taskCount = mergeTasks * partitionsPerTask;
             StageConfiguration sortStage = config.AddStage("SortStage", typeof(SortTask<int>), taskCount, new InputStageInfo(conversionStage) { ChannelType = ChannelType.Pipeline }, null, null);
             if( singleFileOutput )
             {

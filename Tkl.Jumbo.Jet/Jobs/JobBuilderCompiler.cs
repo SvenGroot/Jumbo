@@ -68,6 +68,7 @@ namespace Tkl.Jumbo.Jet.Jobs
             if( dfsInput != null )
             {
                 stageConfig = CreateDfsInputStage(stage, job, outputPath, outputWriterType, dfsInput);
+                stage.ApplySettings(stageConfig, false);
             }
             else if( stage.Inputs != null )
             {
@@ -77,6 +78,7 @@ namespace Tkl.Jumbo.Jet.Jobs
             {
                 _jobBuilder.AddAssemblies(stage.TaskType.Assembly);
                 stageConfig = job.AddStage(MakeUniqueStageId(stage.StageId), stage.TaskType, stage.NoInputTaskCount, null, outputPath, outputWriterType);
+                stage.ApplySettings(stageConfig, false);
             }
 
             if( dfsOutput != null )
@@ -84,11 +86,6 @@ namespace Tkl.Jumbo.Jet.Jobs
                 stageConfig.DfsOutput.BlockSize = dfsOutput.BlockSize;
                 stageConfig.DfsOutput.ReplicationFactor = dfsOutput.ReplicationFactor;
                 stageConfig.DfsOutput.RecordOptions = dfsOutput.RecordOptions;
-            }
-
-            if( stage.Settings != null )
-            {
-                stageConfig.StageSettings = new SettingsDictionary(stage.Settings);
             }
 
             stage.StageConfiguration = stageConfig;
@@ -116,6 +113,8 @@ namespace Tkl.Jumbo.Jet.Jobs
                 else if( stage.UsePipelineTaskOverrides )
                     taskType = stage.RealStageTaskOverride;
                 sendingStage = CreateAdditionalChildStage(stage, job, inputChannel, partitionCount, sendingStage);
+                stage.ApplySettings(sendingStage, true);
+                inputChannel.SendingStage.AdjustChildStageSettings(sendingStage, null);
             }
 
             // We don't do empty task replacement if the stage has more than one input or has scheduling dependencies.
@@ -137,6 +136,7 @@ namespace Tkl.Jumbo.Jet.Jobs
                 //   the input task count is 1, and the input has no internal partitioning or has internal partitioning matching the output.
                 int taskCount = partitionCount / inputChannel.PartitionsPerTask;
                 ChannelType channelType;
+                bool isAutoPipeline = false;
                 if( inputChannel.ChannelType == null )
                 {
                     channelType = ChannelType.File; // Default to File
@@ -153,6 +153,7 @@ namespace Tkl.Jumbo.Jet.Jobs
                             if( internalPartitioningStage.ChildStagePartitionerType.ReferencedType == partitionerType )
                             {
                                 channelType = ChannelType.Pipeline;
+                                isAutoPipeline = true;
                                 taskCount = 1;
                             }
                         }
@@ -173,6 +174,12 @@ namespace Tkl.Jumbo.Jet.Jobs
                                 };
 
                 stageConfig = job.AddStage(MakeUniqueStageId(stageId), taskType, taskCount, inputInfo, stage.StageMultiInputRecordReaderType, outputPath, outputWriterType);
+
+                stage.ApplySettings(stageConfig, false);
+                if( isAutoPipeline )
+                {
+                    inputChannel.SendingStage.AdjustChildStageSettings(stageConfig, stage);
+                }
 
                 if( inputChannel.PartitionerType != null )
                     _jobBuilder.AddAssemblies(inputChannel.PartitionerType.Assembly);

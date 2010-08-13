@@ -64,7 +64,7 @@ namespace Tkl.Jumbo.Jet.Channels
             _singleFileOutput = taskExecution.Configuration.GetTypedSetting(SingleFileOutputSettingKey, TaskExecution.JetClient.Configuration.FileChannel.SingleFileOutput);
             if( _singleFileOutput )
             {
-                if( taskExecution.Configuration.StageConfiguration.InternalPartitionCount > 1 )
+                if( taskExecution.Configuration.StageConfiguration.InternalPartitionCount > 1 && !taskExecution.Configuration.StageConfiguration.IsOutputPrepartitioned )
                     throw new NotSupportedException("Cannot use single file output with internal partitioning.");
                 _log.Debug("The file output channel is using a single partition file for output.");
                 _fileNames = new List<string>() { CreateChannelFileName(inputTaskAttemptId, null) };

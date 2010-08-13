@@ -23,8 +23,12 @@ namespace Tkl.Jumbo.Jet.Samples
     /// </para>
     /// </remarks>
     [Description("Sorts the input file or files containing data in the gensort format.")]
-    public class GraySort : BasicJob
+    public class GraySort : JobBuilderJob
     {
+        private readonly string _inputPath;
+        private readonly string _outputPath;
+        private readonly int _mergeTasks;
+
         /// <summary>
         /// Initializes a new instance of the <see cref="GraySort"/> class.
         /// </summary>
@@ -33,10 +37,13 @@ namespace Tkl.Jumbo.Jet.Samples
         /// <param name="mergeTasks">The number of merge tasks to use.</param>
         public GraySort([Description("The input file or directory on the Jumbo DFS containing the data to be sorted.")] string inputPath,
                         [Description("The output directory on the Jumbo DFS where the sorted data will be written.")] string outputPath,
-                        [Description("The number of merge tasks to use."), Optional, DefaultParameterValue(1)] int mergeTasks)
-            : base(inputPath, outputPath, mergeTasks, typeof(EmptyTask<GenSortRecord>), "InputStage", null, null, typeof(GenSortRecordReader), typeof(GenSortRecordWriter), typeof(RangePartitioner), true)
+                        [Description("The number of merge tasks to use."), Optional, DefaultParameterValue(0)] int mergeTasks)
         {
+            PartitionsPerTask = 1;
             SampleSize = 10000;
+            _inputPath = inputPath;
+            _outputPath = outputPath;
+            _mergeTasks = mergeTasks;
         }
 
         /// <summary>
@@ -48,8 +55,49 @@ namespace Tkl.Jumbo.Jet.Samples
         /// <summary>
         /// Gets or sets the maximum number of merge inputs for a single merge pass.
         /// </summary>
+        /// <value>The maxiximum number of file merge inputs.</value>
         [NamedCommandLineArgument("m"), Description("The maximum number of inputs for a single merge pass. If unspecified, Jumbo Jet's default value will be used.")]
         public int MaxMergeInputs { get; set; }
+
+        /// <summary>
+        /// Gets or sets the number of partitions per merge task.
+        /// </summary>
+        /// <value>The number of partitions per task.</value>
+        [NamedCommandLineArgument("ppt"), Description("The number of partitions per merge task. The default is 1.")]
+        public int PartitionsPerTask { get; set; }
+
+        /// <summary>
+        /// Gets or sets a value indicating whether to use a single partition file for the intermediate data.
+        /// </summary>
+        /// <value>
+        /// 	<see langword="true"/> if the single-file partition file format is used; otherwise, <see langword="false"/>.
+        /// </value>
+        [NamedCommandLineArgument("pf"), Description("When set, the job will use the single-file partition file format for the intermediate data.")]
+        public bool UsePartitionFile { get; set; }
+
+        /// <summary>
+        /// Builds the job.
+        /// </summary>
+        /// <param name="builder">The job builder</param>
+        protected override void BuildJob(JobBuilder builder)
+        {
+            DfsClient dfsClient = new DfsClient(DfsConfiguration);
+
+            CheckAndCreateOutputPath(dfsClient, _outputPath);
+
+            var input = new DfsInput(_inputPath, typeof(GenSortRecordReader));
+            // TODO: Currently the merge record reader doesn't support dynamic partition assignment; when it does, turn it back on.
+            var channel = new Channel() { PartitionerType = typeof(RangePartitioner), PartitionCount = _mergeTasks, PartitionsPerTask = PartitionsPerTask, DisableDynamicPartitionAssignment = true };
+
+            if( MaxMergeInputs > 0 )
+                builder.AddTypedSetting(MergeRecordReaderConstants.MaxFileInputsSetting, MaxMergeInputs);
+
+            StageBuilder partitionStage = builder.PartitionRecords(input, channel);
+            partitionStage.AddSetting(Channels.FileOutputChannel.SingleFileOutputSettingKey, UsePartitionFile, StageSettingCategory.OutputChannel);
+
+            var output = CreateDfsOutput(_outputPath, typeof(GenSortRecordWriter));
+            builder.SortRecords(channel, output);
+        }
 
         /// <summary>
         /// Overrides <see cref="BasicJob.OnJobCreated"/>.
@@ -58,21 +106,14 @@ namespace Tkl.Jumbo.Jet.Samples
         /// <param name="jobConfiguration"></param>
         protected override void OnJobCreated(Job job, JobConfiguration jobConfiguration)
         {
-            base.OnJobCreated(job, jobConfiguration);
-            // The partition file is not placed directly in the job's directory because the task server doesn't need to download it.
-            string partitionFileDirectory = DfsPath.Combine(job.Path, "partitions");
-            string partitionFileName = DfsPath.Combine(partitionFileDirectory, "SplitPoints");
+            //
+            string partitionFileName = DfsPath.Combine(job.Path, RangePartitioner.SplitFileName);
             DfsClient dfsClient = new DfsClient(DfsConfiguration);
-            dfsClient.NameServer.CreateDirectory(partitionFileDirectory);
 
             var dfsInput = (from stage in jobConfiguration.Stages
                             where stage.DfsInput != null
                             select stage.DfsInput).SingleOrDefault();
-            RangePartitioner.CreatePartitionFile(dfsClient, partitionFileName, dfsInput, SecondStageTaskCount * PartitionsPerTask, SampleSize);
-
-            jobConfiguration.AddSetting("partitionFile", partitionFileName);
-            if( MaxMergeInputs > 0 )
-                jobConfiguration.AddTypedSetting(MergeRecordReaderConstants.MaxFileInputsSetting, MaxMergeInputs);
+            RangePartitioner.CreatePartitionFile(dfsClient, partitionFileName, dfsInput, jobConfiguration.GetStage("MergeStage").TaskCount, SampleSize);
         }
     }
 }

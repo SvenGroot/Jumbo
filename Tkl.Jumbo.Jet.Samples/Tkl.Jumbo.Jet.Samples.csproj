@@ -98,13 +98,12 @@
     <Compile Include="FPGrowth\TransactionTree.cs" />
     <Compile Include="FPGrowth\WeightedTransaction.cs" />
     <Compile Include="GenSort2.cs" />
-    <Compile Include="GraySort2.cs" />
+    <Compile Include="GraySort.cs" />
     <Compile Include="IO\UInt128Writer.cs" />
     <Compile Include="ValSort2.cs" />
     <Compile Include="WordCount2.cs" />
     <Compile Include="GenSort.cs" />
     <Compile Include="GenWords.cs" />
-    <Compile Include="GraySort.cs" />
     <Compile Include="DbGen.cs" />
     <Compile Include="IO\GenSortRecord.cs" />
     <Compile Include="IO\GenSortRecordReader.cs" />

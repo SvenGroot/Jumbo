@@ -132,6 +132,7 @@
     <Compile Include="Jobs\JobBuilder.cs" />
     <Compile Include="Jobs\PipelineCreationMethod.cs" />
     <Compile Include="Jobs\StageBuilder.cs" />
+    <Compile Include="Jobs\StageSettingCategory.cs" />
     <Compile Include="KillTaskJetHeartbeatResponse.cs" />
     <Compile Include="MergePassHelper.cs" />
     <Compile Include="MergeRecordReaderConfigurationElement.cs" />

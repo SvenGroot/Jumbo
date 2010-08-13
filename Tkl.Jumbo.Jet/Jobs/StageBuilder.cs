@@ -7,6 +7,7 @@ using System.Text;
 using System.Globalization;
 using System.Collections.ObjectModel;
 using Tkl.Jumbo.IO;
+using Tkl.Jumbo.Jet.Tasks;
 
 namespace Tkl.Jumbo.Jet.Jobs
 {
@@ -15,6 +16,16 @@ namespace Tkl.Jumbo.Jet.Jobs
     /// </summary>
     public sealed class StageBuilder
     {
+        #region Nested types
+
+        private class StageSetting
+        {
+            public StageSettingCategory Category { get; set; }
+            public object Value { get; set; }
+        }
+
+        #endregion
+
         private readonly Type _taskType;
         private readonly Type _inputRecordType;
         private readonly Type _outputRecordType;
@@ -23,7 +34,7 @@ namespace Tkl.Jumbo.Jet.Jobs
         private readonly IStageOutput _output;
         private readonly JobBuilder _jobBuilder;
         private string _stageId;
-        private SettingsDictionary _settings;
+        private Dictionary<string, StageSetting> _settings;
         private List<StageBuilder> _dependencies;
         private List<StageBuilder> _dependentStages;
         private StageConfiguration _stageConfiguration;
@@ -234,12 +245,6 @@ namespace Tkl.Jumbo.Jet.Jobs
                 }
             }
         }
-        
-
-        internal SettingsDictionary Settings
-        {
-            get { return _settings; }
-        }
 
         internal bool HasDependencies
         {
@@ -256,24 +261,16 @@ namespace Tkl.Jumbo.Jet.Jobs
         /// </summary>
         /// <param name="key">The name of the setting.</param>
         /// <param name="value">The value of the setting.</param>
-        public void AddSetting(string key, string value)
+        /// <param name="category">The category of the setting.</param>
+        public void AddSetting(string key, object value, StageSettingCategory category)
         {
+            if( key == null )
+                throw new ArgumentNullException("key");
+            if( value == null )
+                throw new ArgumentNullException("value");
             if( _settings == null )
-                _settings = new SettingsDictionary();
-            _settings.Add(key, value);
-        }
-
-        /// <summary>
-        /// Adds a setting with the specified type to the stage settings.
-        /// </summary>
-        /// <typeparam name="T">The type of the setting.</typeparam>
-        /// <param name="key">The name of the setting.</param>
-        /// <param name="value">The value of the setting.</param>
-        public void AddTypedSetting<T>(string key, T value)
-        {
-            if( _settings == null )
-                _settings = new SettingsDictionary();
-            _settings.AddTypedSetting(key, value);
+                _settings = new Dictionary<string, StageSetting>();
+            _settings.Add(key, new StageSetting() { Value = value, Category = category });
         }
 
         /// <summary>
@@ -302,6 +299,66 @@ namespace Tkl.Jumbo.Jet.Jobs
                 return type == _inputRecordType;
             else
                 return _inputTypes.Contains(type);
+        }
+
+        internal void ApplySettings(StageConfiguration stage, bool isAdditionalPipelinedStage)
+        {
+            if( _settings != null )
+            {
+                bool isEmptyTask = TaskType.IsGenericType && TaskType.GetGenericTypeDefinition() == typeof(EmptyTask<>);
+
+                foreach( KeyValuePair<string, StageSetting> setting in _settings )
+                {
+                    switch( setting.Value.Category )
+                    {
+                    case StageSettingCategory.Task:
+                        if( !isEmptyTask )
+                            stage.AddTypedSetting(setting.Key, setting.Value.Value);
+                        break;
+                    default:
+                        if( !isAdditionalPipelinedStage )
+                            stage.AddTypedSetting(setting.Key, setting.Value.Value);
+                        break;
+                    }
+                }
+            }
+        }
+
+        internal void AdjustChildStageSettings(StageConfiguration childStage, StageBuilder childStageBuilder)
+        {
+            // Call on the parent passing the child's config.
+            if( _settings != null )
+            {
+                foreach( KeyValuePair<string, StageSetting> setting in _settings )
+                {
+                    switch( setting.Value.Category )
+                    {
+                    case StageSettingCategory.Partitioner:
+                        // Copy
+                        AddChildStageSetting(childStage, childStageBuilder, setting);
+                        break;
+                    case StageSettingCategory.OutputChannel:
+                        // Move
+                        AddChildStageSetting(childStage, childStageBuilder, setting);
+                        if( StageConfiguration != null && StageConfiguration.StageSettings != null )
+                            StageConfiguration.StageSettings.Remove(setting.Key);
+                        break;
+                    }
+                }
+            }
+        }
+
+        private static void AddChildStageSetting(StageConfiguration childStage, StageBuilder childStageBuilder, KeyValuePair<string, StageSetting> setting)
+        {
+            if( childStage.StageSettings == null || !childStage.StageSettings.ContainsKey(setting.Key) )
+            {
+                // Also add them to the child stage builder so that if another child stage is pipelined to that one the settings get propagated.
+                if( childStageBuilder != null )
+                {
+                    childStageBuilder.AddSetting(setting.Key, setting.Value.Value, setting.Value.Category);
+                }
+                childStage.AddTypedSetting(setting.Key, setting.Value.Value);
+            }
         }
 
         private void AddDependenciesToConfiguration()

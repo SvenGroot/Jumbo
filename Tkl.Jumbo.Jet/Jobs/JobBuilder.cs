@@ -296,7 +296,7 @@ namespace Tkl.Jumbo.Jet.Jobs
             if( comparerType != null )
             {
                 AddAssemblies(comparerType.Assembly);
-                stage.AddSetting(SortTaskConstants.ComparerSettingKey, comparerType.AssemblyQualifiedName);
+                stage.AddSetting(SortTaskConstants.ComparerSettingKey, comparerType.AssemblyQualifiedName, StageSettingCategory.Task);
             }
 
             return stage;
@@ -660,7 +660,7 @@ namespace Tkl.Jumbo.Jet.Jobs
                 {
                     if( comparerType != null )
                     {
-                        inputChannel.SendingStage.AddSetting(PartitionerConstants.EqualityComparerSetting, comparerType.AssemblyQualifiedName);
+                        inputChannel.SendingStage.AddSetting(PartitionerConstants.EqualityComparerSetting, comparerType.AssemblyQualifiedName, StageSettingCategory.Partitioner);
                     }
                 }
                 else
@@ -675,7 +675,7 @@ namespace Tkl.Jumbo.Jet.Jobs
             if( comparerType != null )
             {
                 _assemblies.Add(comparerType.Assembly);
-                stage.AddSetting(SortTaskConstants.ComparerSettingKey, comparerType.AssemblyQualifiedName);
+                stage.AddSetting(SortTaskConstants.ComparerSettingKey, comparerType.AssemblyQualifiedName, StageSettingCategory.Task);
             }
 
             return outputChannel;

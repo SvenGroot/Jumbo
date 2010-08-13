@@ -506,10 +506,10 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
             // Generate group-dependent transactions
             var groupChannel = new Channel() { PartitionCount = FPGrowthTaskCount * PartitionsPerTask, PartitionsPerTask = PartitionsPerTask, PartitionAssignmentMethod = PartitionAssignmentMethod.Striped };
             StageBuilder groupStage = builder.ProcessRecords(input, groupChannel, generateFunction);
-            groupStage.AddTypedSetting(OutputChannel.CompressionTypeSetting, CompressionType);
+            groupStage.AddSetting(OutputChannel.CompressionTypeSetting, CompressionType, StageSettingCategory.OutputChannel);
             if( WriteBufferSize.Value > 0 )
-                groupStage.AddTypedSetting(FileOutputChannel.WriteBufferSizeSettingKey, WriteBufferSize);
-            groupStage.AddTypedSetting(FileOutputChannel.SingleFileOutputSettingKey, UsePartitionFile);
+                groupStage.AddSetting(FileOutputChannel.WriteBufferSizeSettingKey, WriteBufferSize, StageSettingCategory.OutputChannel);
+            groupStage.AddSetting(FileOutputChannel.SingleFileOutputSettingKey, UsePartitionFile, StageSettingCategory.OutputChannel);
             groupStage.AddSchedulingDependency(groupListStage);
 
             // Interesting observation: if the number of groups equals or is smaller than the number of partitions, we don't need to sort, because each

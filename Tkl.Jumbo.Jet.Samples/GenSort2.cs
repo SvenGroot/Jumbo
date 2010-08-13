@@ -81,8 +81,8 @@ namespace Tkl.Jumbo.Jet.Samples
             var output = CreateDfsOutput(_outputPath, typeof(GenSortRecordWriter));
 
             StageBuilder stage = builder.GenerateRecords<GenSortRecord>(output, GenSort, _taskCount);
-            stage.AddTypedSetting(_startRecordSetting, _startRecord);
-            stage.AddTypedSetting(_countSetting, _recordCount);
+            stage.AddSetting(_startRecordSetting, _startRecord, StageSettingCategory.Task);
+            stage.AddSetting(_countSetting, _recordCount, StageSettingCategory.Task);
         }
 
         /// <summary>
