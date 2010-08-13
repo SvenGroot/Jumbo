@@ -22,7 +22,8 @@ namespace Tkl.Jumbo.Jet
     ///   <see cref="MergeRecordReaderConstants.ComparerSetting"/> of the current stage. If neither is specified, <see cref="Comparer{T}.Default"/> will be used.
     /// </para>
     /// </remarks>
-    public sealed class MergeRecordReader<T> : MultiInputRecordReader<T>, IConfigurable, IChannelMultiInputRecordReader
+    [AdditionalProgressCounter("Sort")]
+    public sealed class MergeRecordReader<T> : MultiInputRecordReader<T>, IConfigurable, IChannelMultiInputRecordReader, IHasAdditionalProgress
     {
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(MergeRecordReader<T>));
 
@@ -58,6 +59,33 @@ namespace Tkl.Jumbo.Jet
                 Name = "MergeThread",
                 IsBackground = true
             };
+        }
+
+        /// <summary>
+        /// Gets the combined progress of the record readers.
+        /// </summary>
+        /// <value>A value between 0 and 1 that indicates the overall progress of the <see cref="MultiInputRecordReader{T}"/>.</value>
+        public override float Progress
+        {
+            get
+            {
+                return _partitionMergers.Average(m => m.FinalPassProgress);
+            }
+        }
+
+        /// <summary>
+        /// Gets the additional progress value.
+        /// </summary>
+        /// <value>The additional progress value.</value>
+        /// <remarks>
+        /// This property must be thread safe.
+        /// </remarks>
+        public float AdditionalProgress
+        {
+            get 
+            {
+                return base.Progress;
+            }
         }
 
         internal int MaxFileInputs

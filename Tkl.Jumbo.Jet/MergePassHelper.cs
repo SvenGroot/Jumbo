@@ -65,6 +65,7 @@ namespace Tkl.Jumbo.Jet
         private int _inputsProcessed;
         private int _pass;
         private PriorityQueue<RecordReader<T>> _finalPassQueue;
+        private RecordReader<T>[] _finalPassRecordReaders;
         private RecordReader<T> _currentReader;
         // To access either _memoryInputs or _fileInputs, lock _fileInputs only.
         private readonly List<RecordInput> _memoryInputs = new List<RecordInput>();
@@ -82,9 +83,17 @@ namespace Tkl.Jumbo.Jet
             get { return _partition; }
         }
 
-        public int InputsProcessed
+        public float FinalPassProgress
         {
-            get { return _inputsProcessed; }
+            get
+            {
+                if( _finalPassRecordReaders == null )
+                    return 0f;
+                else
+                {
+                    return _finalPassRecordReaders.Average(r => r.Progress);
+                }
+            }
         }
 
         public bool AddInput(RecordInput input, bool countAllInputs)
@@ -208,6 +217,14 @@ namespace Tkl.Jumbo.Jet
                               let reader = input.Reader
                               where reader.ReadRecord()
                               select (RecordReader<T>)reader;
+
+                if( finalPass )
+                {
+                    Debug.Assert(_finalPassRecordReaders == null);
+                    _finalPassRecordReaders = readers.ToArray();
+                    readers = _finalPassRecordReaders;
+                }
+
                 mergeQueue = new PriorityQueue<RecordReader<T>>(readers, _comparer);
                 _inputsProcessed += mergeQueue.Count;
 

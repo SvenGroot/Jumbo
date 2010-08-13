@@ -207,6 +207,7 @@ namespace Tkl.Jumbo.IO
         /// <summary>
         /// Gets the combined progress of the record readers.
         /// </summary>
+        /// <value>A value between 0 and 1 that indicates the overall progress of the <see cref="MultiInputRecordReader{T}"/>.</value>
         public override float Progress
         {
             get
