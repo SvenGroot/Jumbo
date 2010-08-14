@@ -28,7 +28,7 @@ namespace NameServerApplication
             _topology = topology;
         }
 
-        public BlockAssignment AssignBlockToDataServers(IEnumerable<DataServerInfo> dataServers, BlockInfo block, string writerHostName)
+        public BlockAssignment AssignBlockToDataServers(IEnumerable<DataServerInfo> dataServers, BlockInfo block, string writerHostName, bool useLocalReplica)
         {
             long freeSpaceThreshold = _configuration.NameServer.DataServerFreeSpaceThreshold;
             Guid blockId = block.BlockId;
@@ -53,6 +53,7 @@ namespace NameServerApplication
                 forceDifferentRack = (from server in currentDataServers select server.Rack.RackId).Distinct().Count() == 1;
             }
 
+            string originalWriterHostName = writerHostName;
             if( writerHostName != null )
             {
                 if( currentDataServers.Count > 0 )
@@ -73,9 +74,10 @@ namespace NameServerApplication
                 switch( serversUsed )
                 {
                 case 0:
-                    // This is the first replica. Try to place it on the same node as the write if possible.
+                    // This is the first replica. Try to place it on the same node as the write if possible, and if useLocalReplica is true.
                     // TODO: If the writer is not in the cluster at all, this will favour the default rack if there is one.
-                    selectedServer = SelectClosestServerWithMinimumDistance(eligibleServers, writerHostName, writerRackId, 0);
+                    // If useLocalReplica is false, we don't pass the host name so all nodes in the rack are treated equal (including the local one)
+                    selectedServer = SelectClosestServerWithMinimumDistance(eligibleServers, useLocalReplica ? writerHostName : null, writerRackId, 0);
                     // For the next replicas, these will be used to place it in a different or the same rack as the first replica.
                     writerHostName = selectedServer.Address.HostName;
                     writerRackId = selectedServer.Rack.RackId;
@@ -110,7 +112,11 @@ namespace NameServerApplication
                 }
 
                 eligibleServers.Remove(selectedServer);
-                newDataServers.Add(selectedServer);
+                // If useLocalReplica is false, the local node can still be selected randomly. If that's the case, we want to make sure it's at the front.
+                if( !useLocalReplica && originalWriterHostName == selectedServer.Address.HostName )
+                    newDataServers.Insert(0, selectedServer);
+                else
+                    newDataServers.Add(selectedServer);
                 selectedServer.PendingBlocks.Add(block.BlockId);
                 --serversNeeded;
                 ++serversUsed;

@@ -110,7 +110,7 @@ namespace Tkl.Jumbo.Test.Dfs
             INameServerClientProtocol target = _nameServer;
             try
             {
-                target.CreateFile("/createdirectory/test", 0, 0, IO.RecordStreamOptions.None);
+                target.CreateFile("/createdirectory/test", 0, 0, true, IO.RecordStreamOptions.None);
                 target.CloseFile("/createdirectory/test");
             }
             catch( ArgumentException )
@@ -151,7 +151,7 @@ namespace Tkl.Jumbo.Test.Dfs
             INameServerClientProtocol target = _nameServer;
             try
             {
-                target.CreateFile("/getdirectoryinfotestfile", 0, 0, IO.RecordStreamOptions.None);
+                target.CreateFile("/getdirectoryinfotestfile", 0, 0, true, IO.RecordStreamOptions.None);
                 target.CloseFile("/getdirectoryinfotestfile");
             }
             catch( ArgumentException )
@@ -184,7 +184,7 @@ namespace Tkl.Jumbo.Test.Dfs
         public void CreateFilePathNullTest()
         {
             INameServerClientProtocol target = _nameServer;
-            target.CreateFile(null, 0, 0, IO.RecordStreamOptions.None);
+            target.CreateFile(null, 0, 0, true, IO.RecordStreamOptions.None);
         }
 
         [Test]
@@ -192,7 +192,7 @@ namespace Tkl.Jumbo.Test.Dfs
         public void CreateFileNameEmptyTest()
         {
             INameServerClientProtocol target = _nameServer;
-            target.CreateFile("/test/", 0, 0, IO.RecordStreamOptions.None);
+            target.CreateFile("/test/", 0, 0, true, IO.RecordStreamOptions.None);
         }
 
         [Test]
@@ -200,7 +200,7 @@ namespace Tkl.Jumbo.Test.Dfs
         public void CreateFileDirectoryNotRootedTest()
         {
             INameServerClientProtocol target = _nameServer;
-            target.CreateFile("test/foo/test", 0, 0, IO.RecordStreamOptions.None);
+            target.CreateFile("test/foo/test", 0, 0, true, IO.RecordStreamOptions.None);
         }
 
         [Test]
@@ -208,7 +208,7 @@ namespace Tkl.Jumbo.Test.Dfs
         public void CreateFileDirectoryEmptyComponentTest()
         {
             INameServerClientProtocol target = _nameServer;
-            target.CreateFile("/test//test", 0, 0, IO.RecordStreamOptions.None);
+            target.CreateFile("/test//test", 0, 0, true, IO.RecordStreamOptions.None);
         }
 
         [Test]
@@ -216,7 +216,7 @@ namespace Tkl.Jumbo.Test.Dfs
         public void CreateFileDirectoryNotFoundTest()
         {
             INameServerClientProtocol target = _nameServer;
-            target.CreateFile("/test/test", 0, 0, IO.RecordStreamOptions.None);
+            target.CreateFile("/test/test", 0, 0, true, IO.RecordStreamOptions.None);
         }
 
         [Test]
@@ -226,14 +226,14 @@ namespace Tkl.Jumbo.Test.Dfs
             INameServerClientProtocol target = _nameServer;
             try
             {
-                target.CreateFile("/existingfile", 0, 0, IO.RecordStreamOptions.None);
+                target.CreateFile("/existingfile", 0, 0, true, IO.RecordStreamOptions.None);
                 target.CloseFile("/existingfile");
             }
             catch( ArgumentException )
             {
                 Assert.Fail("Exception thrown too early");
             }
-            target.CreateFile("/existingfile", 0, 0, IO.RecordStreamOptions.None);
+            target.CreateFile("/existingfile", 0, 0, true, IO.RecordStreamOptions.None);
         }
 
         [Test]
@@ -249,7 +249,7 @@ namespace Tkl.Jumbo.Test.Dfs
             {
                 Assert.Fail("Exception thrown too early");
             }
-            target.CreateFile("/existingdirectory", 0, 0, IO.RecordStreamOptions.None);
+            target.CreateFile("/existingdirectory", 0, 0, true, IO.RecordStreamOptions.None);
         }
 
         [Test]
@@ -259,14 +259,14 @@ namespace Tkl.Jumbo.Test.Dfs
             INameServerClientProtocol target = _nameServer;
             try
             {
-                target.CreateFile("/test", 0, 0, IO.RecordStreamOptions.None);
+                target.CreateFile("/test", 0, 0, true, IO.RecordStreamOptions.None);
                 target.CloseFile("/test");
             }
             catch( ArgumentException )
             {
                 Assert.Fail("Premature exception");
             }
-            target.CreateFile("/test/foo", 0, 0, IO.RecordStreamOptions.None);
+            target.CreateFile("/test/foo", 0, 0, true, IO.RecordStreamOptions.None);
         }
 
         [Test]
@@ -328,7 +328,7 @@ namespace Tkl.Jumbo.Test.Dfs
             INameServerClientProtocol target = _nameServer;
             try
             {
-                target.CreateFile("/getfileinfofile", 0, 0, IO.RecordStreamOptions.None);
+                target.CreateFile("/getfileinfofile", 0, 0, true, IO.RecordStreamOptions.None);
                 target.CloseFile("/getfileinfofile");
             }
             catch( ArgumentException )
@@ -345,7 +345,7 @@ namespace Tkl.Jumbo.Test.Dfs
             string directoryPath = "/getfilesystementryinfodir";
             string filePath = DfsPath.Combine(directoryPath, "somefile");
             target.CreateDirectory(directoryPath);
-            target.CreateFile(filePath, 0, 0, IO.RecordStreamOptions.None);
+            target.CreateFile(filePath, 0, 0, true, IO.RecordStreamOptions.None);
             target.CloseFile(filePath);
 
             FileSystemEntry entry = target.GetFileSystemEntryInfo(directoryPath);
@@ -375,9 +375,9 @@ namespace Tkl.Jumbo.Test.Dfs
         {
             INameServerClientProtocol target = _nameServer;
             target.CreateDirectory("/test1");
-            target.CreateFile("/test1/test2", 0, 0, IO.RecordStreamOptions.None);
+            target.CreateFile("/test1/test2", 0, 0, true, IO.RecordStreamOptions.None);
             target.CloseFile("/test1/test2");
-            target.CreateFile("/test1/test3", 0, 0, IO.RecordStreamOptions.None);
+            target.CreateFile("/test1/test3", 0, 0, true, IO.RecordStreamOptions.None);
             target.CloseFile("/test1/test3");
 
             bool result = target.Delete("/test1/test2", false);
@@ -410,13 +410,13 @@ namespace Tkl.Jumbo.Test.Dfs
             INameServerClientProtocol target = _nameServer;
             target.CreateDirectory("/appendblock");
             string path = "/appendblock/file";
-            BlockAssignment block = target.CreateFile(path, 0, 0, IO.RecordStreamOptions.None);
+            BlockAssignment block = target.CreateFile(path, 0, 0, true, IO.RecordStreamOptions.None);
 
             bool hasException = false;
             try
             {
                 // This must fail because the file still has a pending block.
-                target.AppendBlock(path);
+                target.AppendBlock(path, true);
             }
             catch( InvalidOperationException )
             {
@@ -434,7 +434,7 @@ namespace Tkl.Jumbo.Test.Dfs
                 sender.ThrowIfErrorOccurred();
             }
 
-            BlockAssignment block2 = target.AppendBlock(path);
+            BlockAssignment block2 = target.AppendBlock(path, true);
             Assert.AreNotEqual(block.BlockId, block2.BlockId);
             Assert.AreEqual(1, block2.DataServers.Count);
             Assert.AreEqual(Dns.GetHostName(), block2.DataServers[0].HostName);
@@ -469,8 +469,8 @@ namespace Tkl.Jumbo.Test.Dfs
                 target.CreateDirectory("/appendblockmultiplewriters");
                 string path1 = "/appendblockmultiplewriters/file1";
                 string path2 = "/appendblockmultiplewriters/file2";
-                BlockAssignment block1 = target.CreateFile(path1, 0, 0, IO.RecordStreamOptions.None);
-                BlockAssignment block2 = target.CreateFile(path2, 0, 0, IO.RecordStreamOptions.None);
+                BlockAssignment block1 = target.CreateFile(path1, 0, 0, true, IO.RecordStreamOptions.None);
+                BlockAssignment block2 = target.CreateFile(path2, 0, 0, true, IO.RecordStreamOptions.None);
 
                 Assert.AreNotEqual(block1.BlockId, block2.BlockId);
                 // Because the name server load balances based on pending blocks, and there is exactly one pending block in the system,
@@ -508,7 +508,7 @@ namespace Tkl.Jumbo.Test.Dfs
         public void TestCloseFilePendingBlock()
         {
             INameServerClientProtocol target = _nameServer;
-            target.CreateFile("/closefilependingblock", 0, 0, IO.RecordStreamOptions.None);
+            target.CreateFile("/closefilependingblock", 0, 0, true, IO.RecordStreamOptions.None);
             target.CloseFile("/closefilependingblock");
             Tkl.Jumbo.Dfs.DfsFile file = target.GetFileInfo("/closefilependingblock");
             Assert.AreEqual(0, file.Blocks.Count);
@@ -555,7 +555,7 @@ namespace Tkl.Jumbo.Test.Dfs
         {
             _nameServer.CreateDirectory("/move/dir1");
             _nameServer.CreateDirectory("/move/dir2");
-            _nameServer.CreateFile("/move/dir1/file1", 0, 0, IO.RecordStreamOptions.None);
+            _nameServer.CreateFile("/move/dir1/file1", 0, 0, true, IO.RecordStreamOptions.None);
             _nameServer.CloseFile("/move/dir1/file1");
             // Test move to different file name in same directory
             _nameServer.Move("/move/dir1/file1", "/move/dir1/file2");
@@ -618,7 +618,7 @@ namespace Tkl.Jumbo.Test.Dfs
             INameServerClientProtocol target = _nameServer;
             target.CreateDirectory("/createfile");
             string path = DfsPath.Combine("/createfile", fileName);
-            BlockAssignment block = target.CreateFile(path, blockSize, replicationFactor, IO.RecordStreamOptions.None);
+            BlockAssignment block = target.CreateFile(path, blockSize, replicationFactor, true, IO.RecordStreamOptions.None);
             Assert.AreEqual(replicationFactor == 0 ? 1 : replicationFactor, block.DataServers.Count);
             Assert.AreEqual(Dns.GetHostName(), block.DataServers[0].HostName);
             //Assert.AreEqual(10001, block.DataServers[0].Port);

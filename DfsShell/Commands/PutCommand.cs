@@ -53,6 +53,9 @@ namespace DfsShell.Commands
         [NamedCommandLineArgument("text"), Description("Treat the file as line-separated text. This is equivalent to specifying LineRecordReader as the record reader and TextRecordReader<Utf8String> as the record writer.")]
         public bool TextFile { get; set; }
 
+        [NamedCommandLineArgument("nl"), Description("The first replica should not be put on the local node if that node is part of the DFS. Note that the first replica might still be placed on the local node; it is just no longer guaranteed.")]
+        public bool NoLocalReplica { get; set; }
+
         public override void Run()
         {
             Type recordReaderType;
@@ -74,7 +77,7 @@ namespace DfsShell.Commands
                         if( recordReaderType != null )
                             UploadDirectoryRecords(_localPath, _dfsPath, recordReaderType, recordWriterType);
                         else
-                            Client.UploadDirectory(_localPath, _dfsPath, (int)BlockSize.Value, ReplicationFactor, progressCallback);
+                            Client.UploadDirectory(_localPath, _dfsPath, (int)BlockSize.Value, ReplicationFactor, !NoLocalReplica, progressCallback);
                     }
                     else
                     {
@@ -90,7 +93,7 @@ namespace DfsShell.Commands
                         if( recordReaderType != null )
                             UploadFileRecords(_localPath, dfsPath, recordReaderType, recordWriterType);
                         else
-                            Client.UploadFile(_localPath, dfsPath, (int)BlockSize.Value, ReplicationFactor, progressCallback);
+                            Client.UploadFile(_localPath, dfsPath, (int)BlockSize.Value, ReplicationFactor, !NoLocalReplica, progressCallback);
                     }
                     if( !Quiet )
                         Console.WriteLine();
@@ -113,7 +116,7 @@ namespace DfsShell.Commands
             int previousPercentage = -1;
             using( FileStream inputStream = File.OpenRead(localPath) )
             using( IRecordReader reader = (IRecordReader)Activator.CreateInstance(recordReaderType, inputStream) )
-            using( DfsOutputStream outputStream = Client.CreateFile(dfsPath, (int)BlockSize.Value, ReplicationFactor, RecordOptions) )
+            using( DfsOutputStream outputStream = Client.CreateFile(dfsPath, (int)BlockSize.Value, ReplicationFactor, !NoLocalReplica, RecordOptions) )
             using( IRecordWriter writer = (IRecordWriter)Activator.CreateInstance(recordWriterType, outputStream) )
             {
                 while( reader.ReadRecord() )

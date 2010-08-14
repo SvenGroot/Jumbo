@@ -202,7 +202,7 @@ namespace Tkl.Jumbo.Test.Dfs
                 int realSize;
                 int blockPadding = blockSize % recordSize;
                 int totalPadding;
-                using( DfsOutputStream output = new DfsOutputStream(_nameServer, fileName, blockSize, 0, IO.RecordStreamOptions.DoNotCrossBoundary) )
+                using( DfsOutputStream output = new DfsOutputStream(_nameServer, fileName, blockSize, 0, true, IO.RecordStreamOptions.DoNotCrossBoundary) )
                 {
                     byte[] buffer = new byte[recordSize];
                     int bytesRead = 0;

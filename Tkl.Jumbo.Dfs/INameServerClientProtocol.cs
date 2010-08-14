@@ -36,12 +36,15 @@ namespace Tkl.Jumbo.Dfs
         /// <param name="path">The full path of the new file.</param>
         /// <param name="blockSize">The size of the blocks in the file, or zero to use the file system default block size.</param>
         /// <param name="replicationFactor">The number of replicas to create of the file's blocks, or zero to use the file system default replication factor.</param>
+        /// <param name="localReplica"><see langword="true"/> to put the first replica on the node that's creating the file if it's part of the DFS cluster; otherwise, <see langword="false"/>.</param>
         /// <param name="recordOptions">The record options for the file.</param>
-        /// <returns>The <see cref="BlockAssignment"/> for the first block of the file.</returns>
+        /// <returns>
+        /// The <see cref="BlockAssignment"/> for the first block of the file.
+        /// </returns>
         /// <exception cref="ArgumentNullException"><paramref name="path"/> is <see langword="null"/>.</exception>
         /// <exception cref="ArgumentException"><paramref name="path"/> is not an absolute path, contains an empty component, contains a file name, or refers to an existing file or directory.</exception>
         /// <exception cref="System.IO.DirectoryNotFoundException">Part of the path specified in <paramref name="path"/> does not exist.</exception>
-        BlockAssignment CreateFile(string path,  int blockSize, int replicationFactor, RecordStreamOptions recordOptions);
+        BlockAssignment CreateFile(string path,  int blockSize, int replicationFactor, bool localReplica, RecordStreamOptions recordOptions);
 
         /// <summary>
         /// Deletes the specified file or directory.
@@ -82,11 +85,12 @@ namespace Tkl.Jumbo.Dfs
         /// Appends a new block to a file.
         /// </summary>
         /// <param name="path">The full path of the file to which to append a block.</param>
+        /// <param name="useLocalReplica"><see langword="true"/> to put the first replica on the node that's appending the block if it's part of the DFS cluster; otherwise, <see langword="false"/>.</param>
         /// <returns>Information about the new block.</returns>
         /// <exception cref="ArgumentNullException"><paramref name="path"/> is <see langword="null" /> an empty string.</exception>
         /// <exception cref="ArgumentException"><paramref name="path"/> is not an absolute path, contains an empty component, contains a file name, or refers to an existing file or directory.</exception>
         /// <exception cref="System.IO.DirectoryNotFoundException">Part of <paramref name="path"/> does not exist.</exception>
-        BlockAssignment AppendBlock(string path);
+        BlockAssignment AppendBlock(string path, bool useLocalReplica);
 
         /// <summary>
         /// Closes a file that is open for writing.

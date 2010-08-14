@@ -25,9 +25,9 @@ namespace NameServerApplication
             return NameServer.Instance.GetDirectoryInfo(path);
         }
 
-        public BlockAssignment CreateFile(string path, int blockSize, int replicationFactor, RecordStreamOptions recordOptions)
+        public BlockAssignment CreateFile(string path, int blockSize, int replicationFactor, bool useLocalReplica, RecordStreamOptions recordOptions)
         {
-            return NameServer.Instance.CreateFile(path, blockSize, replicationFactor, recordOptions);
+            return NameServer.Instance.CreateFile(path, blockSize, replicationFactor, useLocalReplica, recordOptions);
         }
 
         public bool Delete(string path, bool recursive)
@@ -50,9 +50,9 @@ namespace NameServerApplication
             return NameServer.Instance.GetFileSystemEntryInfo(path);
         }
 
-        public BlockAssignment AppendBlock(string path)
+        public BlockAssignment AppendBlock(string path, bool useLocalReplica)
         {
-            return NameServer.Instance.AppendBlock(path);
+            return NameServer.Instance.AppendBlock(path, useLocalReplica);
         }
 
         public void CloseFile(string path)

@@ -24,6 +24,7 @@ namespace Tkl.Jumbo.Dfs
         private readonly INameServerClientProtocol _nameServer;
         private readonly string _path;
         private readonly RecordStreamOptions _recordOptions;
+        private readonly bool _useLocalReplica;
         private int _blockBytesWritten;
         private readonly byte[] _buffer = new byte[Packet.PacketSize];
         private readonly MemoryStream _recordBuffer;
@@ -40,7 +41,7 @@ namespace Tkl.Jumbo.Dfs
         /// file system.</param>
         /// <param name="path">The path of the file to write.</param>
         public DfsOutputStream(INameServerClientProtocol nameServer, string path)
-            : this(nameServer, path, 0, 0, RecordStreamOptions.None)
+            : this(nameServer, path, 0, 0, true, RecordStreamOptions.None)
         {
         }
 
@@ -52,7 +53,7 @@ namespace Tkl.Jumbo.Dfs
         /// <param name="path">The path of the file to write.</param>
         /// <param name="recordOptions">The record options for the file.</param>
         public DfsOutputStream(INameServerClientProtocol nameServer, string path, RecordStreamOptions recordOptions)
-            : this(nameServer, path, 0, 0, recordOptions)
+            : this(nameServer, path, 0, 0, true, recordOptions)
         {
         }
 
@@ -65,7 +66,7 @@ namespace Tkl.Jumbo.Dfs
         /// <param name="blockSize">The size of the blocks of the file, or zero to use the file system default block size.</param>
         /// <param name="replicationFactor">The number of replicas to create of the file's blocks, or zero to use the file system default replication factor.</param>
         public DfsOutputStream(INameServerClientProtocol nameServer, string path, int blockSize, int replicationFactor)
-            : this(nameServer, path, blockSize, replicationFactor, RecordStreamOptions.None)
+            : this(nameServer, path, blockSize, replicationFactor, true, RecordStreamOptions.None)
         {
         }
 
@@ -77,8 +78,9 @@ namespace Tkl.Jumbo.Dfs
         /// <param name="path">The path of the file to write.</param>
         /// <param name="blockSize">The size of the blocks of the file, or zero to use the file system default block size.</param>
         /// <param name="replicationFactor">The number of replicas to create of the file's blocks, or zero to use the file system default replication factor.</param>
+        /// <param name="useLocalReplica"><see langword="true"/> to put the first replica on the node that's creating the file if it's part of the DFS cluster; otherwise, <see langword="false"/>.</param>
         /// <param name="recordOptions">The record options for the file.</param>
-        public DfsOutputStream(INameServerClientProtocol nameServer, string path, int blockSize, int replicationFactor, RecordStreamOptions recordOptions)
+        public DfsOutputStream(INameServerClientProtocol nameServer, string path, int blockSize, int replicationFactor, bool useLocalReplica, RecordStreamOptions recordOptions)
         {
             if( nameServer == null )
                 throw new ArgumentNullException("nameServer");
@@ -101,8 +103,9 @@ namespace Tkl.Jumbo.Dfs
             _nameServer = nameServer;
             _path = path;
             _recordOptions = recordOptions;
+            _useLocalReplica = useLocalReplica;
             _log.DebugFormat("Creating file {0} on name server.", _path);
-            _block = nameServer.CreateFile(path, blockSize, replicationFactor, recordOptions);
+            _block = nameServer.CreateFile(path, blockSize, replicationFactor, useLocalReplica, recordOptions);
             _log.Debug("DfsOutputStream construction complete.");
             if( (recordOptions & RecordStreamOptions.DoNotCrossBoundary) == RecordStreamOptions.DoNotCrossBoundary )
             {
@@ -408,7 +411,7 @@ namespace Tkl.Jumbo.Dfs
             if( _sender == null )
             {
                 if( _block == null )
-                    _block = _nameServer.AppendBlock(_path);
+                    _block = _nameServer.AppendBlock(_path, _useLocalReplica);
                 _sender = new BlockSender(_block);
             }
         }
