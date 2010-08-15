@@ -27,23 +27,23 @@ namespace Tkl.Jumbo.Jet.Samples
     {
         private readonly string _inputPath;
         private readonly string _outputPath;
-        private readonly int _mergeTasks;
+        private readonly int _mergePartitions;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="GraySort"/> class.
         /// </summary>
         /// <param name="inputPath">The input file or directory containing the data to be sorted.</param>
         /// <param name="outputPath">The output directory where the sorted data will be written.</param>
-        /// <param name="mergeTasks">The number of merge tasks to use.</param>
+        /// <param name="mergePartitions">The number of merge tasks to use.</param>
         public GraySort([Description("The input file or directory on the Jumbo DFS containing the data to be sorted.")] string inputPath,
                         [Description("The output directory on the Jumbo DFS where the sorted data will be written.")] string outputPath,
-                        [Description("The number of merge tasks to use."), Optional, DefaultParameterValue(0)] int mergeTasks)
+                        [Description("The number of merge tasks to use."), Optional, DefaultParameterValue(0)] int mergePartitions)
         {
             PartitionsPerTask = 1;
             SampleSize = 10000;
             _inputPath = inputPath;
             _outputPath = outputPath;
-            _mergeTasks = mergeTasks;
+            _mergePartitions = mergePartitions;
         }
 
         /// <summary>
@@ -87,7 +87,7 @@ namespace Tkl.Jumbo.Jet.Samples
 
             var input = new DfsInput(_inputPath, typeof(GenSortRecordReader));
             // TODO: Currently the merge record reader doesn't support dynamic partition assignment; when it does, turn it back on.
-            var channel = new Channel() { PartitionerType = typeof(RangePartitioner), PartitionCount = _mergeTasks, PartitionsPerTask = PartitionsPerTask, DisableDynamicPartitionAssignment = true };
+            var channel = new Channel() { PartitionerType = typeof(RangePartitioner), PartitionCount = _mergePartitions, PartitionsPerTask = PartitionsPerTask, DisableDynamicPartitionAssignment = true };
 
             if( MaxMergeInputs > 0 )
                 builder.AddTypedSetting(MergeRecordReaderConstants.MaxFileInputsSetting, MaxMergeInputs);
@@ -113,7 +113,7 @@ namespace Tkl.Jumbo.Jet.Samples
             var dfsInput = (from stage in jobConfiguration.Stages
                             where stage.DfsInput != null
                             select stage.DfsInput).SingleOrDefault();
-            RangePartitioner.CreatePartitionFile(dfsClient, partitionFileName, dfsInput, jobConfiguration.GetStage("MergeStage").TaskCount, SampleSize);
+            RangePartitioner.CreatePartitionFile(dfsClient, partitionFileName, dfsInput, _mergePartitions, SampleSize);
         }
     }
 }
