@@ -13,8 +13,6 @@ namespace Tkl.Jumbo.Jet
     /// </summary>
     public static class JetActivator
     {
-        private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(JetActivator));
-
         /// <summary>
         /// Creates an instance of the specified type and configures it.
         /// </summary>
@@ -34,7 +32,6 @@ namespace Tkl.Jumbo.Jet
         {
             if( type == null )
                 throw new ArgumentNullException("type");
-            _log.DebugFormat("Creating instance of type {0}.", type.AssemblyQualifiedName);
             object instance = Activator.CreateInstance(type, args);
 
             ApplyConfiguration(instance, dfsConfiguration, jetConfiguration, taskAttemptConfiguration);
@@ -83,8 +80,6 @@ namespace Tkl.Jumbo.Jet
             IConfigurable configurable = target as IConfigurable;
             if( configurable != null )
             {
-                if( _log.IsDebugEnabled )
-                    _log.DebugFormat("Applying configuration to configurable object of type {0}.", target.GetType().AssemblyQualifiedName);
                 configurable.DfsConfiguration = dfsConfiguration;
                 configurable.JetConfiguration = jetConfiguration;
                 configurable.TaskContext = taskAttemptConfiguration;
