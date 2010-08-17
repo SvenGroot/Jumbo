@@ -162,7 +162,6 @@
     <Compile Include="Jobs\BasicJob.cs" />
     <Compile Include="Jobs\IJobRunner.cs" />
     <Compile Include="Jobs\JobBuilderDelegates.cs" />
-    <Compile Include="Jobs\JobRunnerArgument.cs" />
     <Compile Include="Jobs\JobRunnerInfo.cs" />
     <Compile Include="MergeRecordReader.cs" />
     <Compile Include="Channels\PipelinePullTaskRecordWriter.cs" />

@@ -26,7 +26,7 @@ namespace Tkl.Jumbo.IO
     /// </remarks>
     public class BinaryRecordReader<T> : StreamRecordReader<T>
     {
-        private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(BinaryRecordReader<T>));
+        private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(BinaryRecordReader<>));
 
         private BinaryReader _reader;
         private T _record;
@@ -156,7 +156,6 @@ namespace Tkl.Jumbo.IO
                 {
                     if( File.Exists(_fileName) )
                     {
-                        _log.DebugFormat("Deleting file {0}.", _fileName);
                         File.Delete(_fileName);
                     }
                 }
