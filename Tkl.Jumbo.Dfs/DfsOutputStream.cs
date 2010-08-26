@@ -95,7 +95,6 @@ namespace Tkl.Jumbo.Dfs
 
             if( blockSize == 0 )
             {
-                _log.Debug("Getting block size from name server.");
                 BlockSize = nameServer.BlockSize;
             }
             else
@@ -106,7 +105,6 @@ namespace Tkl.Jumbo.Dfs
             _useLocalReplica = useLocalReplica;
             _log.DebugFormat("Creating file {0} on name server.", _path);
             _block = nameServer.CreateFile(path, blockSize, replicationFactor, useLocalReplica, recordOptions);
-            _log.Debug("DfsOutputStream construction complete.");
             if( (recordOptions & RecordStreamOptions.DoNotCrossBoundary) == RecordStreamOptions.DoNotCrossBoundary )
             {
                 _recordBuffer = new MemoryStream(Packet.PacketSize);

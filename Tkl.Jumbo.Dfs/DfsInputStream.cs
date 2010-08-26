@@ -51,13 +51,12 @@ namespace Tkl.Jumbo.Dfs
                 throw new ArgumentNullException("path");
 
             _nameServer = nameServer;
-            _log.Debug("Retrieving file information.");
+            _log.DebugFormat("Opening file {0} from the DFS.", path);
             _file = nameServer.GetFileInfo(path);
             // GetFileInfo doesn't throw if the file doesn't exist; we do.
             if( _file == null )
                 throw new FileNotFoundException(string.Format(System.Globalization.CultureInfo.CurrentCulture, "The file '{0}' does not exist on the distributed file system.", path));
             BlockSize = _file.BlockSize;
-            _log.Debug("DfsInputStream construction complete.");
             _endOffset = _file.Size;
         }
 
@@ -431,7 +430,6 @@ namespace Tkl.Jumbo.Dfs
                 for( int blockIndex = (int)(_position / BlockSize); !_disposed && blockIndex < _file.Blocks.Count && _lastResult == DataServerClientProtocolResult.Ok; ++blockIndex )
                 {
                     Guid block = _file.Blocks[blockIndex];
-                    _log.DebugFormat("Retrieving list of servers for block {{{0}}}.", block);
                     List<ServerAddress> servers = _nameServer.GetDataServersForBlock(block).ToList();
 
                     bool retry;
@@ -491,7 +489,6 @@ namespace Tkl.Jumbo.Dfs
             ++BlocksRead;
             using( TcpClient client = new TcpClient(server.HostName, server.Port) )
             {
-                _log.Debug("Connection established.");
                 DataServerClientProtocolReadHeader header = new DataServerClientProtocolReadHeader();
                 header.BlockId = block;
                 header.Offset = blockOffset;
@@ -517,7 +514,6 @@ namespace Tkl.Jumbo.Dfs
                     }
                     if( status != DataServerClientProtocolResult.Ok )
                         throw new DfsException("The server encountered an error while sending data.");
-                    _log.Debug("Header sent and accepted by server.");
                     blockOffset = reader.ReadInt32();
 
                     Packet packet = null;
