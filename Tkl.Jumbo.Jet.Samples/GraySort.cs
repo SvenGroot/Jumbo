@@ -86,8 +86,7 @@ namespace Tkl.Jumbo.Jet.Samples
             CheckAndCreateOutputPath(dfsClient, _outputPath);
 
             var input = new DfsInput(_inputPath, typeof(GenSortRecordReader));
-            // TODO: Currently the merge record reader doesn't support dynamic partition assignment; when it does, turn it back on.
-            var channel = new Channel() { PartitionerType = typeof(RangePartitioner), PartitionCount = _mergePartitions, PartitionsPerTask = PartitionsPerTask, DisableDynamicPartitionAssignment = true };
+            var channel = new Channel() { PartitionerType = typeof(RangePartitioner), PartitionCount = _mergePartitions, PartitionsPerTask = PartitionsPerTask };
 
             if( MaxMergeInputs > 0 )
                 builder.AddTypedSetting(MergeRecordReaderConstants.MaxFileInputsSetting, MaxMergeInputs);

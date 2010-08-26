@@ -91,6 +91,8 @@ namespace Tkl.Jumbo.Jet
         private int _totalInputPartitions = 1;
         private readonly object _taskProgressLock = new object();
         private bool _hasAddedTaskProgressSource;
+        private int _additionalPartitionCount;
+        private int _discardedPartitionCount;
 
         internal event EventHandler TaskInstanceCreated;
 
@@ -358,6 +360,10 @@ namespace Tkl.Jumbo.Jet
                     using( TaskExecutionUtility taskExecution = TaskExecutionUtility.Create(dfsClient, jetClient, umbilical, jobId, config, taskAttemptId, dfsJobDirectory, jobDirectory) )
                     {
                         metrics = taskExecution.RunTask();
+                        if( taskExecution._additionalPartitionCount > 0 )
+                            _log.InfoFormat("Received {0} additional partitions during execution.", taskExecution._additionalPartitionCount);
+                        if( taskExecution._discardedPartitionCount > 0 )
+                            _log.InfoFormat("Discarded {0} partitions during execution.", taskExecution._discardedPartitionCount);
                     }
 
                     sw.Stop();
@@ -465,6 +471,7 @@ namespace Tkl.Jumbo.Jet
                 if( !result )
                 {
                     _log.InfoFormat("Assignment of partition {0} has been revoked; skipping.", partitionNumber);
+                    ++_discardedPartitionCount;
 
                     // TotalInputPartitions is not used for tasks with the ProcessAllInputPartitionsAttribute.
                     if( !ProcessesAllInputPartitions )
@@ -493,6 +500,7 @@ namespace Tkl.Jumbo.Jet
                 if( additionalPartitions != null && additionalPartitions.Length > 0 )
                 {
                     _log.InfoFormat("Received additional partitions for processing: {0}", additionalPartitions.ToDelimitedString());
+                    _additionalPartitionCount += additionalPartitions.Length;
                     reader.AssignAdditionalPartitions(additionalPartitions);
 
                     foreach( IInputChannel channel in InputChannels )

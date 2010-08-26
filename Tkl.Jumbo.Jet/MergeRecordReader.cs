@@ -28,7 +28,7 @@ namespace Tkl.Jumbo.Jet
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(MergeRecordReader<T>));
 
         private readonly ManualResetEvent _finalPassEvent = new ManualResetEvent(false);
-        private readonly Thread _mergeThread;
+        private Thread _mergeThread;
         private bool _started;
         private string _mergeIntermediateOutputPath;
         private int _maxMergeInputs;
@@ -54,11 +54,6 @@ namespace Tkl.Jumbo.Jet
         public MergeRecordReader(IEnumerable<int> partitions, int totalInputCount, bool allowRecordReuse, int bufferSize, CompressionType compressionType)
             : base(partitions, totalInputCount, allowRecordReuse, bufferSize, compressionType)
         {
-            _mergeThread = new Thread(MergeThread)
-            {
-                Name = "MergeThread",
-                IsBackground = true
-            };
         }
 
         /// <summary>
@@ -69,7 +64,15 @@ namespace Tkl.Jumbo.Jet
         {
             get
             {
-                return _partitionMergers.Average(m => m.FinalPassProgress);
+                if( _finalPassMergers == null )
+                    return 0f;
+                else
+                {
+                    lock( _finalPassMergers )
+                    {
+                        return _finalPassMergers.Values.Average(m => m.FinalPassProgress);
+                    }
+                }
             }
         }
 
@@ -165,9 +168,16 @@ namespace Tkl.Jumbo.Jet
         ///   New partitions may only be assigned after all inputs for the existing partitions have been received.
         /// </para>
         /// </remarks>
-        public override void AssignAdditionalPartitions(System.Collections.Generic.IList<int> newPartitions)
+        public override void AssignAdditionalPartitions(IList<int> newPartitions)
         {
-            throw new NotImplementedException();
+            // Have to check both because _partitionMergers can be null before NotifyConfigurationChanged is called.
+            if( _finalPassMergers == null || _partitionMergers != null )
+                throw new InvalidOperationException("You cannot assign additional partitions until the final pass has started on the current partitions.");
+
+            base.AssignAdditionalPartitions(newPartitions);
+
+            _finalPassEvent.Reset();
+            StartMergeThread(newPartitions);
         }
 
         /// <summary>
@@ -183,7 +193,17 @@ namespace Tkl.Jumbo.Jet
 
             if( _currentFinalPassMerger == null )
             {
-                _currentFinalPassMerger = _finalPassMergers[CurrentPartition];
+                bool needWait;
+                do
+                {
+                    lock( _finalPassMergers )
+                    {
+                        needWait = !_finalPassMergers.TryGetValue(CurrentPartition, out _currentFinalPassMerger);
+                    }
+
+                    if( needWait )
+                        _finalPassEvent.WaitOne();
+                } while( needWait );
             }
 
             T record;
@@ -260,10 +280,10 @@ namespace Tkl.Jumbo.Jet
                             _log.Warn("Using memory storage levels to determine when to merge has yielded insufficient inputs; switching to waiting for input counts.");
                             _memoryStorageLevelMode = false;
                         }
-
-                        if( result != MergePassResult.ReadyForFinalPass && result != MergePassResult.MorePassesNeeded )
-                            allPartitionsReadyForFinalPass = false;
                     } while( result == MergePassResult.MorePassesNeeded );
+
+                    if( result != MergePassResult.ReadyForFinalPass )
+                        allPartitionsReadyForFinalPass = false;
                 }
             }
 
@@ -272,11 +292,16 @@ namespace Tkl.Jumbo.Jet
             else
             {
                 _log.Info("All partitions are ready for the final pass.");
-                _finalPassMergers = new Dictionary<int, MergePassHelper<T>>();
-                foreach( MergePassHelper<T> merger in _partitionMergers )
+                if( _finalPassMergers == null )
+                    _finalPassMergers = new Dictionary<int, MergePassHelper<T>>();
+                lock( _finalPassMergers )
                 {
-                    _finalPassMergers.Add(merger.PartitionNumber, merger);
+                    foreach( MergePassHelper<T> merger in _partitionMergers )
+                    {
+                        _finalPassMergers.Add(merger.PartitionNumber, merger);
+                    }
                 }
+                _partitionMergers = null;
                 _finalPassEvent.Set();
             }
         }
@@ -372,18 +397,28 @@ namespace Tkl.Jumbo.Jet
                 if( _memoryStorageTriggerLevel < 0 || _memoryStorageTriggerLevel > 1 )
                     throw new InvalidOperationException("The memory storage trigger level must be between 0 and 1.");
 
-                IComparer<T> comparer = GetComparer();
-
-                _partitionMergers = new MergePassHelper<T>[PartitionCount];
-                for( int x = 0; x < _partitionMergers.Length; ++x )
-                {
-                    _partitionMergers[x] = new MergePassHelper<T>(this, PartitionNumbers[x], comparer);
-                }
-
-                _memoryStorageLevelMode = _memoryStorageTriggerLevel > 0 && Channel != null && Channel.UsesMemoryStorage;
-                
-                _mergeThread.Start();
+                StartMergeThread(PartitionNumbers);
             }
+        }
+
+        private void StartMergeThread(IList<int> partitionNumbers)
+        {
+            IComparer<T> comparer = GetComparer();
+
+            _partitionMergers = new MergePassHelper<T>[partitionNumbers.Count];
+            for( int x = 0; x < _partitionMergers.Length; ++x )
+            {
+                _partitionMergers[x] = new MergePassHelper<T>(this, partitionNumbers[x], comparer);
+            }
+
+            _memoryStorageLevelMode = _memoryStorageTriggerLevel > 0 && Channel != null && Channel.UsesMemoryStorage;
+
+            _mergeThread = new Thread(MergeThread)
+            {
+                Name = "MergeThread",
+                IsBackground = true
+            }; 
+            _mergeThread.Start();
         }
 
         #endregion

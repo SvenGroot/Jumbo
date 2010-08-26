@@ -436,7 +436,7 @@ namespace Tkl.Jumbo.Test.Jet
                 sortStage.AddTypedSetting(FileOutputChannel.SingleFileOutputSettingKey, true);
                 sortStage.AddTypedSetting(FileOutputChannel.SingleFileOutputBufferSizeSettingKey, "1MB");
             }
-            config.AddStage("MergeStage", typeof(EmptyTask<int>), mergeTasks, new InputStageInfo(sortStage) { MultiInputRecordReaderType = typeof(MergeRecordReader<int>), PartitionsPerTask = partitionsPerTask, DisableDynamicPartitionAssignment = true }, outputPath, typeof(BinaryRecordWriter<int>));
+            config.AddStage("MergeStage", typeof(EmptyTask<int>), mergeTasks, new InputStageInfo(sortStage) { MultiInputRecordReaderType = typeof(MergeRecordReader<int>), PartitionsPerTask = partitionsPerTask }, outputPath, typeof(BinaryRecordWriter<int>));
             sortStage.OutputChannel.ForceFileDownload = forceFileDownload;
 
             RunJob(dfsClient, config);
