@@ -21,6 +21,12 @@ namespace Tkl.Jumbo.Jet
         private readonly ExtendedCollection<TaskServerMetrics> _taskServers = new ExtendedCollection<TaskServerMetrics>();
 
         /// <summary>
+        /// Gets or sets the addrses of the job server.
+        /// </summary>
+        /// <value>The address of the job server.</value>
+        public ServerAddress JobServer { get; set; }
+
+        /// <summary>
         /// Gets or sets the IDs of the running jobs.
         /// </summary>
         public Collection<Guid> RunningJobs
@@ -75,6 +81,7 @@ namespace Tkl.Jumbo.Jet
         {
             if( writer == null )
                 throw new ArgumentNullException("writer");
+            writer.WriteLine("Job server: {0}", JobServer);
             writer.WriteLine("Running jobs: {0}", RunningJobs.Count);
             PrintList(writer, RunningJobs);
             writer.WriteLine("Finished jobs: {0}", FinishedJobs.Count);

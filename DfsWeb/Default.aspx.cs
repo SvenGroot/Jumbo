@@ -17,6 +17,8 @@ public partial class _Default : System.Web.UI.Page
     {
         DfsClient client = new DfsClient();
         DfsMetrics metrics = client.NameServer.GetMetrics();
+        Title = string.Format("Jumbo DFS ({0})", metrics.NameServer);
+        NameServerColumn.InnerText = metrics.NameServer.ToString();
         TotalSizeColumn.InnerHtml = FormatSize(metrics.TotalSize);
         BlocksColumn.InnerText = metrics.TotalBlockCount.ToString();
         UnderReplicatedBlocksColumn.InnerText = metrics.UnderReplicatedBlockCount.ToString();

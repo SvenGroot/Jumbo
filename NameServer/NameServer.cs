@@ -46,7 +46,7 @@ namespace NameServerApplication
         private bool _safeMode = true;
         private System.Threading.ManualResetEvent _safeModeEvent = new System.Threading.ManualResetEvent(false);
         private readonly Timer _checkpointTimer;
-
+        private readonly ServerAddress _localAddress;
 
 
         private NameServer(JumboConfiguration jumboConfig, DfsConfiguration dfsConfig, bool replayLog)
@@ -57,6 +57,7 @@ namespace NameServerApplication
                 throw new ArgumentNullException("config");
 
             Configuration = dfsConfig;
+            _localAddress = new ServerAddress(ServerContext.LocalHostName, dfsConfig.NameServer.Port);
             _topology = new NetworkTopology(jumboConfig);
             _replicaPlacement = new ReplicaPlacement(Configuration, _topology);
             _replicationFactor = dfsConfig.NameServer.ReplicationFactor;
@@ -342,7 +343,11 @@ namespace NameServerApplication
         public DfsMetrics GetMetrics()
         {
             _log.Debug("GetMetrics called");
-            DfsMetrics metrics = new DfsMetrics();
+            DfsMetrics metrics = new DfsMetrics()
+            {
+                NameServer = _localAddress
+            };
+
             lock( _blocks )
             {
                 metrics.TotalBlockCount = _blocks.Count;

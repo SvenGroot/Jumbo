@@ -25,6 +25,7 @@ namespace JobServerApplication
         private readonly DfsClient _dfsClient;
         private readonly Scheduling.IScheduler _scheduler;
         private readonly object _schedulerLock = new object();
+        private readonly ServerAddress _localAddress;
         private volatile bool _running;
         // A list of task servers that only the scheduler can access. Setting or getting this field should be done inside the _taskServers lock. You should never modify the collection after storing it in this field.
         private List<TaskServerInfo> _schedulerTaskServers;
@@ -41,6 +42,7 @@ namespace JobServerApplication
 
             Configuration = configuration;
             _dfsClient = new DfsClient(dfsConfiguration);
+            _localAddress = new ServerAddress(ServerContext.LocalHostName, configuration.JobServer.Port);
 
             _scheduler = (Scheduling.IScheduler)Activator.CreateInstance(Type.GetType("JobServerApplication.Scheduling." + configuration.JobServer.Scheduler));
             _running = true;
@@ -238,7 +240,11 @@ namespace JobServerApplication
 
         public JetMetrics GetMetrics()
         {
-            JetMetrics result = new JetMetrics();
+            JetMetrics result = new JetMetrics()
+            {
+                JobServer = _localAddress
+            };
+
             // Locking _jobs because enumeration is not thread-safe.
             lock( _jobs )
             {

@@ -3,6 +3,10 @@
     <h2>Job server status</h2>
     <table>
         <tr>
+            <th scope="row">Job server</th>
+            <td id="JobServerColumn" runat="server"></td>
+        </tr>
+        <tr>
             <th scope="row">Running jobs</th>
             <td id="RunningJobsColumn" runat="server"></td>
         </tr>

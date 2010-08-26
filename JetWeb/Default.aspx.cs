@@ -17,6 +17,8 @@ public partial class _Default : System.Web.UI.Page
     {
         JetClient client = new JetClient();
         JetMetrics metrics = client.JobServer.GetMetrics();
+        Title = string.Format("Jumbo Jet ({0})", client.JobServer);
+        JobServerColumn.InnerText = metrics.JobServer.ToString();
         RunningJobsColumn.InnerText = metrics.RunningJobs.Count.ToString();
         FinishedJobsColumn.InnerText = metrics.FinishedJobs.Count.ToString();
         FailedJobsColumn.InnerText = metrics.FailedJobs.Count.ToString();

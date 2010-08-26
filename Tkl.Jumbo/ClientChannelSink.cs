@@ -77,7 +77,7 @@ namespace Tkl.Jumbo
         private static void AddHostNameToMessage(IMessage msg)
         {
             LogicalCallContext context = (LogicalCallContext)msg.Properties["__CallContext"];
-            context.SetData("HostName", System.Net.Dns.GetHostName());
+            context.SetData("HostName", ServerContext.LocalHostName);
         }
     }
 }
