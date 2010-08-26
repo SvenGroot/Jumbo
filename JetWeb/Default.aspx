@@ -36,7 +36,7 @@
         </tr>
     </table>
     <p>
-        <a href="logfile.aspx">View job server log file.</a><br />
+        View job server log file: <a href="logfile.aspx?maxSize=100KB">last 100KB</a>, <a href="logfile.aspx?maxSize=0">all</a><br />
     </p>
     <h2>Task servers</h2>
     <table id="DataServerTable" runat="server">

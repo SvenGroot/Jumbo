@@ -44,7 +44,7 @@ public partial class _Default : System.Web.UI.Page
             if( server.DiskSpaceFree < DfsConfiguration.GetConfiguration().NameServer.DataServerFreeSpaceThreshold )
                 diskSpaceCell.Style.Add(HtmlTextWriterStyle.BackgroundColor, "yellow");
             row.Cells.Add(diskSpaceCell);
-            row.Cells.Add(new HtmlTableCell() { InnerHtml = string.Format("<a href=\"logfile.aspx?dataServer={0}&amp;port={1}\">View</a>", Server.HtmlEncode(server.Address.HostName), server.Address.Port) });
+            row.Cells.Add(new HtmlTableCell() { InnerHtml = string.Format("<a href=\"logfile.aspx?dataServer={0}&amp;port={1}&amp;maxSize=100KB\">Last 100KB</a>, <a href=\"logfile.aspx?dataServer={0}&amp;port={1}&amp;maxSize=0\">all</a>", Server.HtmlEncode(server.Address.HostName), server.Address.Port) });
             row.Cells.Add(new HtmlTableCell() { InnerHtml = string.Format("<a href=\"blocklist.aspx?dataServer={0}&amp;port={1}\">View</a>", Server.HtmlEncode(server.Address.HostName), server.Address.Port) });
             DataServerTable.Rows.Add(row);
         }

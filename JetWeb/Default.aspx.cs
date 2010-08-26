@@ -40,7 +40,7 @@ public partial class _Default : System.Web.UI.Page
             row.Cells.Add(new HtmlTableCell() { InnerText = string.Format("{0:0.0}s ago", lastContact.TotalSeconds) });
             row.Cells.Add(new HtmlTableCell() { InnerText = server.MaxTasks.ToString() });
             row.Cells.Add(new HtmlTableCell() { InnerText = server.MaxNonInputTasks.ToString() });
-            row.Cells.Add(new HtmlTableCell() { InnerHtml = string.Format("<a href=\"logfile.aspx?taskServer={0}&amp;port={1}\">View</a>", Server.HtmlEncode(server.Address.HostName), server.Address.Port) });
+            row.Cells.Add(new HtmlTableCell() { InnerHtml = string.Format("<a href=\"logfile.aspx?taskServer={0}&amp;port={1}&amp;maxSize=100KB\">Last 100KB</a>, <a href=\"logfile.aspx?taskServer={0}&amp;port={1}&amp;maxSize=0\">all</a>", Server.HtmlEncode(server.Address.HostName), server.Address.Port) });
             DataServerTable.Rows.Add(row);
         }
 
@@ -48,7 +48,7 @@ public partial class _Default : System.Web.UI.Page
         {
             JobStatus job = client.JobServer.GetJobStatus(jobId);
             HtmlTableRow row = new HtmlTableRow();
-            row.Cells.Add(new HtmlTableCell() { InnerHtml = string.Format("<a href=\"job.aspx?id={0}\">{{{0}}}</a>", jobId) });
+            row.Cells.Add(new HtmlTableCell() { InnerHtml = string.Format("<a href=\"job.aspx?id={0}&amp;refresh=5\">{{{0}}}</a>", jobId) });
             row.Cells.Add(new HtmlTableCell() { InnerText = job.JobName ?? "(unnamed)" });
             row.Cells.Add(new HtmlTableCell() { InnerText = job.StartTime.ToString(System.Globalization.DateTimeFormatInfo.InvariantInfo.UniversalSortableDateTimePattern) });
             TimeSpan duration = DateTime.UtcNow - job.StartTime;

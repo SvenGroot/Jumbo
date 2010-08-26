@@ -20,12 +20,15 @@ public partial class logfile : System.Web.UI.Page
         string maxSizeString = Request.QueryString["maxSize"];
         int maxSize = 102400;
         if( maxSizeString != null )
-            maxSize = Convert.ToInt32(maxSizeString);
+            maxSize = (int)ByteSize.Parse(maxSizeString);
+        if( maxSize <= 0 )
+            maxSize = Int32.MaxValue;
         if( taskServer == null )
         {
-            Title = "Job server log file - Jumbo Jet";
-            HeaderText.InnerText = "Job server log file";
             JetClient client = new JetClient();
+            JetMetrics metrics = client.JobServer.GetMetrics();
+            Title = string.Format("Job server {0} log file - Jumbo Jet", metrics.JobServer);
+            HeaderText.InnerText = string.Format("Job server {0} log file", metrics.JobServer);
             string log = client.JobServer.GetLogFileContents(maxSize);
             LogFileContents.InnerText = log;
         }

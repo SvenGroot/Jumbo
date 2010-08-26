@@ -6,6 +6,7 @@ using System.Linq;
 using System.Web;
 using System.Web.UI;
 using System.Web.UI.WebControls;
+using Tkl.Jumbo;
 using Tkl.Jumbo.Dfs;
 using System.Net.Sockets;
 using System.Runtime.Serialization.Formatters.Binary;
@@ -19,12 +20,15 @@ public partial class logfile : System.Web.UI.Page
         string maxSizeString = Request.QueryString["maxSize"];
         int maxSize = 102400;
         if( maxSizeString != null )
-            maxSize = Convert.ToInt32(maxSizeString);
+            maxSize = (int)ByteSize.Parse(maxSizeString);
+        if( maxSize <= 0 )
+            maxSize = Int32.MaxValue;
         if( dataServer == null )
         {
-            Title = "Name server log file - Jumbo DFS";
-            HeaderText.InnerText = "Name server log file";
             DfsClient client = new DfsClient();
+            DfsMetrics metrics = client.NameServer.GetMetrics();
+            Title = string.Format("Name server {0} log file - Jumbo DFS", metrics.NameServer);
+            HeaderText.InnerText = string.Format("Name server {0} log file", metrics.NameServer);
             string log = client.NameServer.GetLogFileContents(maxSize);
             LogFileContents.InnerText = log;
         }
