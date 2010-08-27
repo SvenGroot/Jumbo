@@ -42,7 +42,7 @@ namespace Tkl.Jumbo.Jet.Channels
             if( inputStage.TryGetTypedSetting(FileOutputChannel.CompressionTypeSetting, out type) )
                 CompressionType = type;
             else
-                CompressionType = taskExecution.Configuration.JobConfiguration.GetTypedSetting(FileOutputChannel.CompressionTypeSetting, taskExecution.JetClient.Configuration.FileChannel.CompressionType);
+                CompressionType = taskExecution.Context.JobConfiguration.GetTypedSetting(FileOutputChannel.CompressionTypeSetting, taskExecution.JetClient.Configuration.FileChannel.CompressionType);
             // The type of the records in the intermediate files will be the output type of the input stage, which usually matches the input type of the output stage but
             // in the case of a join it may not.
             InputRecordType = inputStage.TaskType.ReferencedType.FindGenericInterfaceType(typeof(ITask<,>)).GetGenericArguments()[1];
@@ -50,7 +50,7 @@ namespace Tkl.Jumbo.Jet.Channels
             switch( inputStage.OutputChannel.Connectivity )
             {
             case ChannelConnectivity.Full:
-                IList<StageConfiguration> stages = taskExecution.Configuration.JobConfiguration.GetPipelinedStages(inputStage.CompoundStageId);
+                IList<StageConfiguration> stages = taskExecution.Context.JobConfiguration.GetPipelinedStages(inputStage.CompoundStageId);
                 if( stages == null )
                     throw new ArgumentException(string.Format(System.Globalization.CultureInfo.CurrentCulture, "Input stage ID {0} could not be found.", inputStage.StageId));
                 GetInputTaskIdsFull(stages);
@@ -199,7 +199,7 @@ namespace Tkl.Jumbo.Jet.Channels
             IChannelMultiInputRecordReader channelReader = reader as IChannelMultiInputRecordReader;
             if( channelReader != null )
                 channelReader.Channel = this;
-            JetActivator.ApplyConfiguration(reader, TaskExecution.DfsClient.Configuration, TaskExecution.JetClient.Configuration, TaskExecution.Configuration);
+            JetActivator.ApplyConfiguration(reader, TaskExecution.DfsClient.Configuration, TaskExecution.JetClient.Configuration, TaskExecution.Context);
             return reader;
         }
 
@@ -216,8 +216,8 @@ namespace Tkl.Jumbo.Jet.Channels
 
         private string GetInputTaskIdPointToPoint()
         {
-            int outputTaskNumber = TaskExecution.Configuration.TaskId.TaskNumber;
-            IList<StageConfiguration> inputStages = TaskExecution.Configuration.JobConfiguration.GetPipelinedStages(InputStage.CompoundStageId);
+            int outputTaskNumber = TaskExecution.Context.TaskId.TaskNumber;
+            IList<StageConfiguration> inputStages = TaskExecution.Context.JobConfiguration.GetPipelinedStages(InputStage.CompoundStageId);
 
             int remainder = outputTaskNumber;
             TaskId result = null;

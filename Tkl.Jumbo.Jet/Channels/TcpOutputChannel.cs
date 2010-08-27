@@ -58,7 +58,7 @@ namespace Tkl.Jumbo.Jet.Channels
             foreach( string taskId in OutputIds )
             {
                 TcpClient client = ConnectToOutput(taskId);
-                writers.Add(new NetworkRecordWriter<T>(client, TaskExecution.Configuration.TaskId.ToString()));
+                writers.Add(new NetworkRecordWriter<T>(client, TaskExecution.Context.TaskId.ToString()));
             }
 
             return writers;
@@ -71,7 +71,7 @@ namespace Tkl.Jumbo.Jet.Channels
             ServerAddress taskServer;
             do
             {
-                taskServer = TaskExecution.JetClient.JobServer.GetTaskServerForTask(TaskExecution.Configuration.JobId, taskId);
+                taskServer = TaskExecution.JetClient.JobServer.GetTaskServerForTask(TaskExecution.Context.JobId, taskId);
                 if( taskServer == null )
                 {
                     _log.DebugFormat("Task {0} is not yet assigned to a server, waiting for retry...", taskId);
@@ -86,7 +86,7 @@ namespace Tkl.Jumbo.Jet.Channels
             do
             {
                 // Since a task failure fails the job with the TCP channel, the attempt number will always be 1.
-                port = taskServerClient.GetTcpChannelPort(TaskExecution.Configuration.JobId, new TaskAttemptId(new TaskId(taskId), 1));
+                port = taskServerClient.GetTcpChannelPort(TaskExecution.Context.JobId, new TaskAttemptId(new TaskId(taskId), 1));
                 if( port == 0 )
                 {
                     _log.DebugFormat("Task {0} has not yet registered a port number, waiting for retry...", taskId);

@@ -44,7 +44,7 @@ namespace Tkl.Jumbo.Jet
         /// </returns>
         public IRecordReader CreateRecordReader(TaskExecutionUtility taskExecution)
         {
-            return CreateRecordReader(taskExecution.DfsClient, taskExecution, taskExecution.Configuration.TaskAttemptId.TaskId.TaskNumber - 1);
+            return CreateRecordReader(taskExecution.DfsClient, taskExecution, taskExecution.Context.TaskAttemptId.TaskId.TaskNumber - 1);
         }
 
         /// <summary>

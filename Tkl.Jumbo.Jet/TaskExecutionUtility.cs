@@ -203,7 +203,7 @@ namespace Tkl.Jumbo.Jet
             get { return _umbilical; }
         }
 
-        internal TaskContext Configuration
+        internal TaskContext Context
         {
             get { return _configuration; }
         }
@@ -463,7 +463,7 @@ namespace Tkl.Jumbo.Jet
                 return true;
             else
             {
-                bool result = _jobServerTaskClient.NotifyStartPartitionProcessing(Configuration.JobId, Configuration.TaskAttemptId.TaskId, partitionNumber);
+                bool result = _jobServerTaskClient.NotifyStartPartitionProcessing(Context.JobId, Context.TaskAttemptId.TaskId, partitionNumber);
                 if( !result )
                 {
                     _log.InfoFormat("Assignment of partition {0} has been revoked; skipping.", partitionNumber);
@@ -492,7 +492,7 @@ namespace Tkl.Jumbo.Jet
                 return false;
             else
             {
-                int[] additionalPartitions = _jobServerTaskClient.GetAdditionalPartitions(Configuration.JobId, Configuration.TaskAttemptId.TaskId);
+                int[] additionalPartitions = _jobServerTaskClient.GetAdditionalPartitions(Context.JobId, Context.TaskAttemptId.TaskId);
                 if( additionalPartitions != null && additionalPartitions.Length > 0 )
                 {
                     _log.InfoFormat("Received additional partitions for processing: {0}", additionalPartitions.ToDelimitedString());
@@ -517,8 +517,8 @@ namespace Tkl.Jumbo.Jet
             if( childStage == null )
                 throw new ArgumentNullException("childStage");
             
-            TaskId childTaskId = new TaskId(Configuration.TaskAttemptId.TaskId, childStage.StageId, taskNumber);
-            TaskContext configuration = new TaskContext(Configuration.JobId, Configuration.JobConfiguration, new TaskAttemptId(childTaskId, Configuration.TaskAttemptId.Attempt), childStage, Configuration.LocalJobDirectory, Configuration.DfsJobDirectory);
+            TaskId childTaskId = new TaskId(Context.TaskAttemptId.TaskId, childStage.StageId, taskNumber);
+            TaskContext configuration = new TaskContext(Context.JobId, Context.JobConfiguration, new TaskAttemptId(childTaskId, Context.TaskAttemptId.Attempt), childStage, Context.LocalJobDirectory, Context.DfsJobDirectory);
 
             Type taskExecutionType = DetermineTaskExecutionType(configuration);
 
@@ -562,9 +562,9 @@ namespace Tkl.Jumbo.Jet
 
         private IRecordReader CreateInputRecordReader()
         {
-            if( Configuration.StageConfiguration.DfsInput != null )
+            if( Context.StageConfiguration.DfsInput != null )
             {
-                return Configuration.StageConfiguration.DfsInput.CreateRecordReader(this);
+                return Context.StageConfiguration.DfsInput.CreateRecordReader(this);
             }
             else if( _inputChannels != null )
             {
@@ -576,9 +576,9 @@ namespace Tkl.Jumbo.Jet
                 }
                 else
                 {
-                    Type multiInputRecordReaderType = Configuration.StageConfiguration.MultiInputRecordReaderType.ReferencedType;
+                    Type multiInputRecordReaderType = Context.StageConfiguration.MultiInputRecordReaderType.ReferencedType;
                     int bufferSize = (multiInputRecordReaderType.IsGenericType && multiInputRecordReaderType.GetGenericTypeDefinition() == typeof(MergeRecordReader<>)) ? (int)JetClient.Configuration.MergeRecordReader.MergeStreamReadBufferSize : (int)JetClient.Configuration.FileChannel.ReadBufferSize;
-                    CompressionType compressionType = Configuration.GetTypedSetting(FileOutputChannel.CompressionTypeSetting, JetClient.Configuration.FileChannel.CompressionType);
+                    CompressionType compressionType = Context.GetTypedSetting(FileOutputChannel.CompressionTypeSetting, JetClient.Configuration.FileChannel.CompressionType);
                     IMultiInputRecordReader reader = (IMultiInputRecordReader)JetActivator.CreateInstance(multiInputRecordReaderType, this, new int[] { 0 }, _inputChannels.Count, AllowRecordReuse, bufferSize, compressionType);
                     foreach( IInputChannel inputChannel in _inputChannels )
                     {
@@ -641,7 +641,7 @@ namespace Tkl.Jumbo.Jet
 
             CalculateMetrics(metrics);
 
-            if( Configuration.StageConfiguration.DfsOutput != null )
+            if( Context.StageConfiguration.DfsOutput != null )
             {
                 if( _outputWriter != null )
                 {
@@ -715,7 +715,7 @@ namespace Tkl.Jumbo.Jet
 
         internal int[] GetPartitions()
         {
-            return _jobServerTaskClient.GetPartitionsForTask(Configuration.JobId, Configuration.TaskAttemptId.TaskId);
+            return _jobServerTaskClient.GetPartitionsForTask(Context.JobId, Context.TaskAttemptId.TaskId);
         }
 
         private object CreateTaskInstance()
@@ -802,11 +802,11 @@ namespace Tkl.Jumbo.Jet
 
         private IOutputChannel CreateOutputChannel()
         {
-            if( Configuration.StageConfiguration.ChildStage != null )
+            if( Context.StageConfiguration.ChildStage != null )
                 return new PipelineOutputChannel(this);
             else
             {
-                ChannelConfiguration config = Configuration.StageConfiguration.OutputChannel;
+                ChannelConfiguration config = Context.StageConfiguration.OutputChannel;
                 if( config != null )
                 {
                     switch( config.ChannelType )
@@ -825,10 +825,10 @@ namespace Tkl.Jumbo.Jet
 
         internal IRecordWriter CreateDfsOutputWriter(int partition)
         {
-            string file = DfsPath.Combine(DfsPath.Combine(Configuration.DfsJobDirectory, "temp"), Configuration.TaskAttemptId + "_part" + partition.ToString(System.Globalization.CultureInfo.InvariantCulture));
+            string file = DfsPath.Combine(DfsPath.Combine(Context.DfsJobDirectory, "temp"), Context.TaskAttemptId + "_part" + partition.ToString(System.Globalization.CultureInfo.InvariantCulture));
             _log.DebugFormat("Opening output file {0}", file);
 
-            TaskDfsOutput output = Configuration.StageConfiguration.DfsOutput;
+            TaskDfsOutput output = Context.StageConfiguration.DfsOutput;
             if( _dfsOutputs == null )
                 _dfsOutputs = new List<DfsOutputInfo>();
             _dfsOutputs.Add(new DfsOutputInfo() { DfsOutputTempPath = file, DfsOutputPath = output.GetPath(partition) });
@@ -940,7 +940,7 @@ namespace Tkl.Jumbo.Jet
                         _log.DebugFormat("CPU: {0}", procStatus.Total);
                         _log.DebugFormat("Memory: {0}", memStatus);
                     }
-                    Umbilical.ReportProgress(Configuration.JobId, Configuration.TaskAttemptId, previousProgress);
+                    Umbilical.ReportProgress(Context.JobId, Context.TaskAttemptId, previousProgress);
                 }
                 catch( SocketException ex )
                 {
@@ -965,7 +965,7 @@ namespace Tkl.Jumbo.Jet
                     metrics.InputBytes += _inputReader.InputBytes;
                 }
 
-                if( Configuration.StageConfiguration.DfsInput != null )
+                if( Context.StageConfiguration.DfsInput != null )
                 {
                     // It's currently not possible to have a multi input record reader with DFS inputs, so this is safe.
                     if( _inputReader != null )
@@ -992,7 +992,7 @@ namespace Tkl.Jumbo.Jet
                     metrics.OutputBytes += _outputWriter.OutputBytes;
                 }
 
-                if( Configuration.StageConfiguration.DfsOutput != null )
+                if( Context.StageConfiguration.DfsOutput != null )
                 {
                     metrics.DfsBytesWritten += _outputWriter.BytesWritten;
                 }

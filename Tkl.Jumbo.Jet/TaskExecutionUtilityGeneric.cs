@@ -139,14 +139,14 @@ namespace Tkl.Jumbo.Jet
 
         protected override IRecordWriter CreateOutputRecordWriter()
         {
-            if( Configuration.StageConfiguration.DfsOutput != null )
+            if( Context.StageConfiguration.DfsOutput != null )
             {
-                if( Configuration.StageConfiguration.InternalPartitionCount == 1 )
+                if( Context.StageConfiguration.InternalPartitionCount == 1 )
                 {
                     if( !ProcessesAllInputPartitions && RootTask.InputChannels != null && RootTask.InputChannels.Count == 1 && RootTask.InputChannels[0].Configuration.PartitionsPerTask > 1 )
                         return new PartitionDfsOutputRecordWriter(this);
                 }
-                return (RecordWriter<TOutput>)CreateDfsOutputWriter(Configuration.TaskId.TaskNumber);
+                return (RecordWriter<TOutput>)CreateDfsOutputWriter(Context.TaskId.TaskNumber);
             }
             else if( OutputChannel != null )
             {
@@ -174,13 +174,13 @@ namespace Tkl.Jumbo.Jet
                 if( prepartitionedPushTask != null )
                 {
                     IPartitioner<TInput> partitioner2 = (IPartitioner<TInput>)partitioner;
-                    partitioner2.Partitions = Configuration.StageConfiguration.InternalPartitionCount;
+                    partitioner2.Partitions = Context.StageConfiguration.InternalPartitionCount;
                     _pipelinePrepartitionedPushTaskRecordWriter = new PipelinePrepartitionedPushTaskRecordWriter<TInput, TOutput>(this, output, partitioner2);
                     return _pipelinePrepartitionedPushTaskRecordWriter;
                 }
                 else
                 {
-                    _pipelinePullTaskRecordWriter = new PipelinePullTaskRecordWriter<TInput, TOutput>(this, output, Configuration.TaskId);
+                    _pipelinePullTaskRecordWriter = new PipelinePullTaskRecordWriter<TInput, TOutput>(this, output, Context.TaskId);
                     return _pipelinePullTaskRecordWriter;
                 }
             }

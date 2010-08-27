@@ -168,22 +168,22 @@ namespace Tkl.Jumbo.Jet.Channels
                 throw new ArgumentNullException("taskExecution");
             if( inputStage == null )
                 throw new ArgumentNullException("inputStage");
-            _jobDirectory = taskExecution.Configuration.LocalJobDirectory;
-            _jobID = taskExecution.Configuration.JobId;
+            _jobDirectory = taskExecution.Context.LocalJobDirectory;
+            _jobID = taskExecution.Context.JobId;
             _jobServer = taskExecution.JetClient.JobServer;
-            _inputDirectory = Path.Combine(_jobDirectory, taskExecution.Configuration.TaskAttemptId.ToString());
+            _inputDirectory = Path.Combine(_jobDirectory, taskExecution.Context.TaskAttemptId.ToString());
             if( !Directory.Exists(_inputDirectory) )
                 Directory.CreateDirectory(_inputDirectory);
-            _outputStageId = taskExecution.Configuration.StageConfiguration.StageId;
+            _outputStageId = taskExecution.Context.StageConfiguration.StageId;
             // The type of the records in the intermediate files will be the output type of the input stage, which usually matches the input type of the output stage but
             // in the case of a join it may not.
             _inputReaderType = typeof(BinaryRecordReader<>).MakeGenericType(InputRecordType);
             _writeBufferSize = (int)taskExecution.JetClient.Configuration.FileChannel.WriteBufferSize;
 
             if( !inputStage.TryGetTypedSetting(FileOutputChannel.SingleFileOutputSettingKey, out _inputUsesSingleFileFormat) )
-                _inputUsesSingleFileFormat = taskExecution.Configuration.JobConfiguration.GetTypedSetting(FileOutputChannel.SingleFileOutputSettingKey, taskExecution.JetClient.Configuration.FileChannel.SingleFileOutput);
+                _inputUsesSingleFileFormat = taskExecution.Context.JobConfiguration.GetTypedSetting(FileOutputChannel.SingleFileOutputSettingKey, taskExecution.JetClient.Configuration.FileChannel.SingleFileOutput);
 
-            long memoryStorageSize = TaskExecution.Configuration.JobConfiguration.GetTypedSetting(MemoryStorageSizeSetting, TaskExecution.JetClient.Configuration.FileChannel.MemoryStorageSize);
+            long memoryStorageSize = TaskExecution.Context.JobConfiguration.GetTypedSetting(MemoryStorageSizeSetting, TaskExecution.JetClient.Configuration.FileChannel.MemoryStorageSize);
             if( memoryStorageSize > 0 )
             {
                 _memoryStorage = FileChannelMemoryStorageManager.GetInstance(memoryStorageSize);

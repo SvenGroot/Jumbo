@@ -55,16 +55,16 @@ namespace Tkl.Jumbo.Jet.Channels
 
             // We don't include child task IDs in the output file name because internal partitioning can happen only once
             // so the number always matches the output partition number anyway.
-            string inputTaskAttemptId = root.Configuration.TaskAttemptId.ToString();
-            _localJobDirectory = taskExecution.Configuration.LocalJobDirectory;
+            string inputTaskAttemptId = root.Context.TaskAttemptId.ToString();
+            _localJobDirectory = taskExecution.Context.LocalJobDirectory;
             string directory = Path.Combine(_localJobDirectory, inputTaskAttemptId);
             if( !Directory.Exists(directory) )
                 Directory.CreateDirectory(directory);
 
-            _singleFileOutput = taskExecution.Configuration.GetTypedSetting(SingleFileOutputSettingKey, TaskExecution.JetClient.Configuration.FileChannel.SingleFileOutput);
+            _singleFileOutput = taskExecution.Context.GetTypedSetting(SingleFileOutputSettingKey, TaskExecution.JetClient.Configuration.FileChannel.SingleFileOutput);
             if( _singleFileOutput )
             {
-                if( taskExecution.Configuration.StageConfiguration.InternalPartitionCount > 1 && !taskExecution.Configuration.StageConfiguration.IsOutputPrepartitioned )
+                if( taskExecution.Context.StageConfiguration.InternalPartitionCount > 1 && !taskExecution.Context.StageConfiguration.IsOutputPrepartitioned )
                     throw new NotSupportedException("Cannot use single file output with internal partitioning.");
                 _log.Debug("The file output channel is using a single partition file for output.");
                 _fileNames = new List<string>() { CreateChannelFileName(inputTaskAttemptId, null) };
@@ -91,7 +91,7 @@ namespace Tkl.Jumbo.Jet.Channels
                 foreach( IRecordWriter writer in _writers )
                 {
                     string fileName = _fileNames[x];
-                    TaskExecution.Umbilical.SetUncompressedTemporaryFileSize(TaskExecution.Configuration.JobId, fileName, writer.OutputBytes);
+                    TaskExecution.Umbilical.SetUncompressedTemporaryFileSize(TaskExecution.Context.JobId, fileName, writer.OutputBytes);
 
                     ++x;
                 }
@@ -126,14 +126,14 @@ namespace Tkl.Jumbo.Jet.Channels
             if( _writers != null )
                 throw new InvalidOperationException("The channel record writer has already been created.");
 
-            ByteSize writeBufferSize = TaskExecution.Configuration.GetTypedSetting(WriteBufferSizeSettingKey, TaskExecution.JetClient.Configuration.FileChannel.WriteBufferSize);
+            ByteSize writeBufferSize = TaskExecution.Context.GetTypedSetting(WriteBufferSizeSettingKey, TaskExecution.JetClient.Configuration.FileChannel.WriteBufferSize);
 
             if( _singleFileOutput )
             {
                 // We're using single file output
 
-                ByteSize outputBufferSize = TaskExecution.Configuration.GetTypedSetting(SingleFileOutputBufferSizeSettingKey, TaskExecution.JetClient.Configuration.FileChannel.SingleFileOutputBufferSize);
-                float outputBufferLimit = TaskExecution.Configuration.GetTypedSetting(SingleFileOutputBufferLimitSettingKey, TaskExecution.JetClient.Configuration.FileChannel.SingleFileOutputBufferLimit);
+                ByteSize outputBufferSize = TaskExecution.Context.GetTypedSetting(SingleFileOutputBufferSizeSettingKey, TaskExecution.JetClient.Configuration.FileChannel.SingleFileOutputBufferSize);
+                float outputBufferLimit = TaskExecution.Context.GetTypedSetting(SingleFileOutputBufferLimitSettingKey, TaskExecution.JetClient.Configuration.FileChannel.SingleFileOutputBufferLimit);
                 if( outputBufferSize.Value < 0 || outputBufferSize.Value > Int32.MaxValue )
                     throw new ConfigurationErrorsException("Invalid output buffer size: " + outputBufferSize.Value);
                 if( outputBufferLimit < 0.1f || outputBufferLimit > 1.0f )
