@@ -74,6 +74,12 @@
             <tr>
                 <th scope="row">Channel network bytes written</th>
             </tr>
+            <tr>
+                <th scope="row">Dynamically assigned partitions</th>
+            </tr>
+            <tr>
+                <th scope="row">Discarded partitions</th>
+            </tr>
         </table>
     </div>
 </asp:Content>

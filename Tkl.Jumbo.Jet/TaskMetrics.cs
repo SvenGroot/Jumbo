@@ -34,55 +34,97 @@ namespace Tkl.Jumbo.Jet
         /// <summary>
         /// Gets or sets the number of bytes read from the Distributed File System.
         /// </summary>
+        /// <value>The number of DFS bytes read.</value>
         public long DfsBytesRead { get; set; }
 
         /// <summary>
         /// Gets or sets the number of bytes written to the Distributed File System.
         /// </summary>
+        /// <value>The number of DFS bytes written.</value>
         public long DfsBytesWritten { get; set; }
 
         /// <summary>
         /// Gets or sets the number of bytes read from the local disk.
         /// </summary>
+        /// <value>The number of local bytes read.</value>
         public long LocalBytesRead { get; set; }
 
         /// <summary>
         /// Gets or sets the number of bytes written to the local disk.
         /// </summary>
+        /// <value>The number of local bytes written.</value>
         public long LocalBytesWritten { get; set; }
 
         /// <summary>
         /// Gets or sets the number of bytes read over the network by the file and TCP channels.
         /// </summary>
+        /// <value>The number of network bytes read.</value>
         public long NetworkBytesRead { get; set; }
 
         /// <summary>
         /// Gets or sets the number of bytes written over the network by the TCP channel.
         /// </summary>
-        /// <value>The network bytes written.</value>
+        /// <value>The number of network bytes written.</value>
         public long NetworkBytesWritten { get; set; }
 
         /// <summary>
         /// Gets or sets the number of bytes that this task had as input.
         /// </summary>
-        /// <value>The input bytes.</value>
+        /// <value>The number of input bytes.</value>
         public long InputBytes { get; set; }
 
         /// <summary>
         /// Gets or sets the number of records read.
         /// </summary>
+        /// <value>The number of input records.</value>
         public long InputRecords { get; set; }
 
         /// <summary>
         /// Gets or sets the number of bytes that this task had as output.
         /// </summary>
-        /// <value>The output bytes.</value>
+        /// <value>The number of output bytes.</value>
         public long OutputBytes { get; set; }
 
         /// <summary>
         /// Gets or sets the number of records written.
         /// </summary>
+        /// <value>The number of records written.</value>
         public long OutputRecords { get; set; }
+
+        /// <summary>
+        /// Gets or sets the number of partitions that the task received through dynamic partition assignment.
+        /// </summary>
+        /// <value>The number of dynamically assigned partitions.</value>
+        public int DynamicallyAssignedPartitions { get; set; }
+
+        /// <summary>
+        /// Gets or sets the number of partitions that were discarded because the had been reassigned to another task.
+        /// </summary>
+        /// <value>The number of discarded partitions.</value>
+        public int DiscardedPartitions { get; set; }
+
+        /// <summary>
+        /// Adds the value of the specified <see cref="TaskMetrics"/> instance to this instance.
+        /// </summary>
+        /// <param name="other">A <see cref="TaskMetrics"/> instance.</param>
+        public void Add(TaskMetrics other)
+        {
+            if( other == null )
+                throw new ArgumentNullException("other");
+
+            DfsBytesRead += other.DfsBytesRead;
+            DfsBytesWritten += other.DfsBytesWritten;
+            InputBytes += other.InputBytes;
+            InputRecords += other.InputRecords;
+            LocalBytesRead += other.LocalBytesRead;
+            LocalBytesWritten += other.LocalBytesWritten;
+            NetworkBytesRead += other.NetworkBytesRead;
+            NetworkBytesWritten += other.NetworkBytesWritten;
+            OutputBytes += other.OutputBytes;
+            OutputRecords += other.OutputRecords;
+            DynamicallyAssignedPartitions += other.DynamicallyAssignedPartitions;
+            DiscardedPartitions += other.DynamicallyAssignedPartitions;
+        }
 
         /// <summary>
         /// Returns a string representation of the <see cref="TaskMetrics"/> object.
@@ -102,6 +144,8 @@ namespace Tkl.Jumbo.Jet
                 result.WriteLine("Local bytes written: {0}", LocalBytesWritten);
                 result.WriteLine("Channel network bytes read: {0}", NetworkBytesRead);
                 result.WriteLine("Channel network bytes written: {0}", NetworkBytesWritten);
+                result.WriteLine("Additional partitions: {0}", DynamicallyAssignedPartitions);
+                result.WriteLine("Discarded partitions: {0}", DiscardedPartitions);
                 return result.ToString();
             }
         }
@@ -121,6 +165,8 @@ namespace Tkl.Jumbo.Jet
             _log.InfoFormat("Local bytes written: {0}", LocalBytesWritten);
             _log.InfoFormat("Channel network bytes read: {0}", NetworkBytesRead);
             _log.InfoFormat("Channel network bytes written: {0}", NetworkBytesWritten);
+            _log.InfoFormat("Additional partitions: {0}", DynamicallyAssignedPartitions);
+            _log.InfoFormat("Discarded partitions: {0}", DiscardedPartitions);
         }
 
         /// <summary>
@@ -139,7 +185,9 @@ namespace Tkl.Jumbo.Jet
                 new XElement("LocalBytesRead", LocalBytesRead),
                 new XElement("LocalBytesWritten", LocalBytesWritten),
                 new XElement("NetworkBytesRead", NetworkBytesRead),
-                new XElement("NetworkBytesWritten", NetworkBytesWritten)
+                new XElement("NetworkBytesWritten", NetworkBytesWritten),
+                new XElement("DynamicallyAssignedPartitions", DynamicallyAssignedPartitions),
+                new XElement("DiscardedPartitions", DiscardedPartitions)
                 );
         }
 
@@ -166,7 +214,9 @@ namespace Tkl.Jumbo.Jet
                 LocalBytesRead = Convert.ToInt64(element.Element("LocalBytesRead").Value),
                 LocalBytesWritten = Convert.ToInt64(element.Element("LocalBytesWritten").Value),
                 NetworkBytesRead = Convert.ToInt64(element.Element("NetworkBytesRead").Value),
-                NetworkBytesWritten = Convert.ToInt64(element.Element("NetworkBytesWritten").Value)
+                NetworkBytesWritten = Convert.ToInt64(element.Element("NetworkBytesWritten").Value),
+                DynamicallyAssignedPartitions = Convert.ToInt32(element.Element("DynamicallyAssignedPartitions").Value),
+                DiscardedPartitions = Convert.ToInt32(element.Element("DiscardedPartitions").Value)
             };
         }
     }

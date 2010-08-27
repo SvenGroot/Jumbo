@@ -227,7 +227,11 @@
             <xsl:value-of select="@partitionsPerTask"/>
             <xsl:text> (</xsl:text>
             <xsl:value-of select="@partitionAssignmentMethod"/>
-            <xsl:text> assignment)</xsl:text>
+            <xsl:text> assignment</xsl:text>
+            <xsl:if test="@disableDynamicPartitionAssignment='true'">
+              <xsl:text>; dynamic assignment is disabled</xsl:text>
+            </xsl:if>
+            <xsl:text>)</xsl:text>
           </td>
         </tr>
       </xsl:if>

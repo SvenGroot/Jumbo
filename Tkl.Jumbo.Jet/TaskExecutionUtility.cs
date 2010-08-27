@@ -360,10 +360,6 @@ namespace Tkl.Jumbo.Jet
                     using( TaskExecutionUtility taskExecution = TaskExecutionUtility.Create(dfsClient, jetClient, umbilical, jobId, config, taskAttemptId, dfsJobDirectory, jobDirectory) )
                     {
                         metrics = taskExecution.RunTask();
-                        if( taskExecution._additionalPartitionCount > 0 )
-                            _log.InfoFormat("Received {0} additional partitions during execution.", taskExecution._additionalPartitionCount);
-                        if( taskExecution._discardedPartitionCount > 0 )
-                            _log.InfoFormat("Discarded {0} partitions during execution.", taskExecution._discardedPartitionCount);
                     }
 
                     sw.Stop();
@@ -982,6 +978,9 @@ namespace Tkl.Jumbo.Jet
                         UpdateMetricsFromSource(metrics, inputChannel);
                     }
                 }
+
+                metrics.DynamicallyAssignedPartitions += _additionalPartitionCount;
+                metrics.DiscardedPartitions += _discardedPartitionCount;
             }
 
             if( _associatedTasks == null || _associatedTasks.Count == 0 )

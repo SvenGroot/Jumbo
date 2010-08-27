@@ -160,6 +160,8 @@ public partial class job : System.Web.UI.Page
             MetricsTable.Rows[8].Cells.Add(new HtmlTableCell() { InnerText = metrics.LocalBytesWritten.ToString("#,0", CultureInfo.InvariantCulture) });
             MetricsTable.Rows[9].Cells.Add(new HtmlTableCell() { InnerText = metrics.NetworkBytesRead.ToString("#,0", CultureInfo.InvariantCulture) });
             MetricsTable.Rows[10].Cells.Add(new HtmlTableCell() { InnerText = metrics.NetworkBytesWritten.ToString("#,0", CultureInfo.InvariantCulture) });
+            MetricsTable.Rows[11].Cells.Add(new HtmlTableCell() { InnerText = metrics.DynamicallyAssignedPartitions.ToString("#,0", CultureInfo.InvariantCulture) });
+            MetricsTable.Rows[12].Cells.Add(new HtmlTableCell() { InnerText = metrics.DiscardedPartitions.ToString("#,0", CultureInfo.InvariantCulture) });
         }
     }
 }

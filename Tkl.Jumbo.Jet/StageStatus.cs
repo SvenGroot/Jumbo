@@ -156,16 +156,7 @@ namespace Tkl.Jumbo.Jet
                     TaskMetrics metrics = task.Metrics;
                     if( metrics != null )
                     {
-                        result.DfsBytesRead += metrics.DfsBytesRead;
-                        result.DfsBytesWritten += metrics.DfsBytesWritten;
-                        result.InputBytes += metrics.InputBytes;
-                        result.InputRecords += metrics.InputRecords;
-                        result.LocalBytesRead += metrics.LocalBytesRead;
-                        result.LocalBytesWritten += metrics.LocalBytesWritten;
-                        result.NetworkBytesRead += metrics.NetworkBytesRead;
-                        result.NetworkBytesWritten += metrics.NetworkBytesWritten;
-                        result.OutputBytes += metrics.OutputBytes;
-                        result.OutputRecords += metrics.OutputRecords;
+                        result.Add(metrics);
                     }
                 }
                 return result;
