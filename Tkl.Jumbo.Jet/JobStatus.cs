@@ -242,6 +242,7 @@ namespace Tkl.Jumbo.Jet
                 EndTime = DateTime.ParseExact(jobInfo.Attribute("endTime").Value, JobStatus.DatePattern, System.Globalization.CultureInfo.InvariantCulture),
                 FinishedTaskCount = (int)jobInfo.Attribute("finishedTasks"),
                 NonDataLocalTaskCount = (int)jobInfo.Attribute("nonDataLocalTasks"),
+                IsFinished = true
             };
 
             var stages = from task in job.Element("Tasks").Elements("Task")
@@ -265,7 +266,7 @@ namespace Tkl.Jumbo.Jet
             XElement metricsElement = job.Element("StageMetrics");
             if( metricsElement != null )
             {
-                foreach( XElement stage in metricsElement.Elements("Stages") )
+                foreach( XElement stage in metricsElement.Elements("Stage") )
                 {
                     string stageId = stage.Attribute("id").Value;
                     jobStatus.GetStage(stageId).Metrics = TaskMetrics.FromXml(stage.Element("Metrics"));

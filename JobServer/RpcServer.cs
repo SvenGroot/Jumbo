@@ -67,6 +67,21 @@ namespace JobServerApplication
             return JobServer.Instance.GetLogFileContents(maxSize);
         }
 
+        public ArchivedJob[] GetArchivedJobs()
+        {
+            return JobServer.Instance.GetArchivedJobs();
+        }
+
+        public JobStatus GetArchivedJobStatus(Guid jobId)
+        {
+            return JobServer.Instance.GetArchivedJobStatus(jobId);
+        }
+
+        public string GetArchivedJobConfiguration(Guid jobId)
+        {
+            return JobServer.Instance.GetArchivedJobConfiguration(jobId);
+        }
+
         #endregion
 
         #region IJobServerTaskProtocol Members

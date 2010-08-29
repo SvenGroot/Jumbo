@@ -19,7 +19,12 @@ public partial class job : System.Web.UI.Page
     {
         Guid jobId = new Guid(Request.QueryString["id"]);
         JetClient client = new JetClient();
-        JobStatus job = client.JobServer.GetJobStatus(jobId);
+        JobStatus job;
+        bool archived = Request.QueryString["archived"] == "true";
+        if( archived )
+            job = client.JobServer.GetArchivedJobStatus(jobId);
+        else
+            job = client.JobServer.GetJobStatus(jobId);
         if( job == null )
         {
             HeaderText.InnerText = "Job not found.";
@@ -34,9 +39,13 @@ public partial class job : System.Web.UI.Page
             row.Cells.Add(new HtmlTableCell() { InnerText = job.StartTime.ToString(_datePattern, System.Globalization.CultureInfo.InvariantCulture) });
             TimeSpan duration;
             _configLink.HRef = "jobconfig.ashx?id=" + jobId.ToString();
+            if( archived )
+                _configLink.HRef += "&amp;archived=true";
             if( job.IsFinished )
             {
                 _downloadLink.HRef = "jobinfo.ashx?id=" + jobId.ToString();
+                if( archived )
+                    _downloadLink.HRef += "&amp;archived=true";
                 _downloadLink.Visible = true;
 
                 row.Cells.Add(new HtmlTableCell() { InnerText = job.EndTime.ToString(_datePattern, System.Globalization.CultureInfo.InvariantCulture) });
@@ -64,7 +73,7 @@ public partial class job : System.Web.UI.Page
             foreach( StageStatus stage in job.Stages )
             {
                 row = new HtmlTableRow();
-                row.Cells.Add(new HtmlTableCell() { InnerHtml = string.Format("<a href=\"stage.aspx?job={0}&amp;stage={1}\">{1}</a>", job.JobId, Server.HtmlEncode(stage.StageId)) });
+                row.Cells.Add(new HtmlTableCell() { InnerHtml = string.Format("<a href=\"stage.aspx?job={0}&amp;stage={1}{2}\">{1}</a>", job.JobId, Server.HtmlEncode(stage.StageId), archived ? "&amp;archived=true" : "") });
                 DateTime? startTime = stage.StartTime;
                 if( startTime == null )
                     row.Cells.Add(new HtmlTableCell());
@@ -95,9 +104,11 @@ public partial class job : System.Web.UI.Page
             }
 
             _allTasksLink.HRef = "alltasks.aspx?id=" + job.JobId.ToString();
-        }
+            if( archived )
+                _allTasksLink.HRef += "&amp;archived=true";
 
-        CreateMetricsTable(job);
+            CreateMetricsTable(job);
+        }
     }
 
     private HtmlTableCell CreateProgressCell(JobStatus job, StageStatus stage, bool complexProgress)

@@ -19,12 +19,20 @@ public class jobconfig : IHttpHandler
 
         context.Response.ContentType = "text/xml";
         context.Response.Charset = "utf-8";
-        
-        DfsClient dfsClient = new DfsClient();
-        string configFilePath = DfsPath.Combine(DfsPath.Combine(JetConfiguration.GetConfiguration().JobServer.JetDfsPath, "job_" + jobId.ToString("B")), Job.JobConfigFileName);
-        using( DfsInputStream configStream = dfsClient.OpenFile(configFilePath) )
+
+        if( context.Request.QueryString["archived"] == "true" )
         {
-            configStream.CopyTo(context.Response.OutputStream);
+            JetClient client = new JetClient();
+            context.Response.Write(client.JobServer.GetArchivedJobConfiguration(jobId));
+        }
+        else
+        {
+            DfsClient dfsClient = new DfsClient();
+            string configFilePath = DfsPath.Combine(DfsPath.Combine(JetConfiguration.GetConfiguration().JobServer.JetDfsPath, "job_" + jobId.ToString("B")), Job.JobConfigFileName);
+            using( DfsInputStream configStream = dfsClient.OpenFile(configFilePath) )
+            {
+                configStream.CopyTo(context.Response.OutputStream);
+            }
         }
     }
 }

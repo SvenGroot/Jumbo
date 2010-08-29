@@ -63,6 +63,17 @@ namespace Tkl.Jumbo.Jet
         }
 
         /// <summary>
+        /// Gets or sets the local directory where archived jobs are stored.
+        /// </summary>
+        /// <value>The directory where archived jobs are stored, or <see langword="null"/> to disable job archiving.</value>
+        [ConfigurationProperty("archiveDirectory", DefaultValue = null, IsRequired = false, IsKey = false)]
+        public string ArchiveDirectory
+        {
+            get { return (string)this["archiveDirectory"]; }
+            set { this["archiveDirectory"] = value; }
+        }
+
+        /// <summary>
         /// Gets or sets the scheduler to use for scheduling task.
         /// </summary>
         [ConfigurationProperty("scheduler", DefaultValue = "StagedScheduler", IsRequired = false, IsKey = false)]

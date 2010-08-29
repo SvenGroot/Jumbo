@@ -20,7 +20,11 @@ public partial class stage : System.Web.UI.Page
         string stageId = Request.QueryString["stage"];
 
         JetClient client = new JetClient();
-        JobStatus job = client.JobServer.GetJobStatus(jobId);
+        JobStatus job;
+        if( Request.QueryString["archived"] == "true" )
+            job = client.JobServer.GetArchivedJobStatus(jobId);
+        else
+            job = client.JobServer.GetJobStatus(jobId);
         if( job == null )
         {
             HeaderText.InnerText = "Job not found.";

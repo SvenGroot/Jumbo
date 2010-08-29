@@ -19,7 +19,11 @@ public partial class alltasks : System.Web.UI.Page
         HeaderText.InnerText = string.Format("Job {0}", jobId);
         Title = string.Format("Job {0} - Jumbo Jet", jobId);
         JetClient client = new JetClient();
-        JobStatus job = client.JobServer.GetJobStatus(jobId);
+        JobStatus job;
+        if( Request.QueryString["archived"] == "true" )
+            job = client.JobServer.GetArchivedJobStatus(jobId);
+        else
+            job = client.JobServer.GetJobStatus(jobId);
 
         HtmlTableRow row = new HtmlTableRow() { ID = "CurrentJobRow" };
         row.Cells.Add(new HtmlTableCell() { InnerText = job.JobId.ToString() });

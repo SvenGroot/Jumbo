@@ -10,6 +10,9 @@ using Tkl.Jumbo;
 using Tkl.Jumbo.Dfs;
 using System.Threading;
 using System.Collections;
+using System.IO;
+using Tkl.Jumbo.IO;
+using System.Xml.Linq;
 
 namespace JobServerApplication
 {
@@ -31,9 +34,11 @@ namespace JobServerApplication
         private List<TaskServerInfo> _schedulerTaskServers;
         private readonly Queue<JobInfo> _schedulerJobQueue = new Queue<JobInfo>();
         private Thread _schedulerThread;
-        private object _schedulerThreadLock = new object();
+        private readonly object _schedulerThreadLock = new object();
         private readonly ManualResetEvent _schedulerWaitingEvent = new ManualResetEvent(false);
+        private readonly object _archiveLock = new object();
         private const int _schedulerTimeoutMilliseconds = 30000;
+        private const string _archiveFileName = "archive";
 
         private JobServer(JetConfiguration configuration, DfsConfiguration dfsConfiguration)
         {
@@ -298,6 +303,58 @@ namespace JobServerApplication
                     }
                 }
             }
+            return null;
+        }
+
+        public ArchivedJob[] GetArchivedJobs()
+        {
+            string archiveDir = Configuration.JobServer.ArchiveDirectory;
+            if( archiveDir != null )
+            {
+                string archiveFilePath = Path.Combine(archiveDir, _archiveFileName);
+                if( File.Exists(archiveFilePath) )
+                {
+                    lock( _archiveLock )
+                    {
+                        using( FileStream stream = File.OpenRead(archiveFilePath) )
+                        using( BinaryRecordReader<ArchivedJob> reader = new BinaryRecordReader<ArchivedJob>(stream) )
+                        {
+                            return reader.EnumerateRecords().ToArray();
+                        }
+                    }
+                }
+            }
+
+            return null;
+        }
+
+        public JobStatus GetArchivedJobStatus(Guid jobId)
+        {
+            string archiveDir = Configuration.JobServer.ArchiveDirectory;
+            if( archiveDir != null )
+            {
+                string summaryPath = Path.Combine(archiveDir, jobId.ToString() + "_summary.xml");
+                if( File.Exists(summaryPath) )
+                {
+                    return JobStatus.FromXml(XDocument.Load(summaryPath).Root);
+                }
+            }
+
+            return null;
+        }
+
+        public string GetArchivedJobConfiguration(Guid jobId)
+        {
+            string archiveDir = Configuration.JobServer.ArchiveDirectory;
+            if( archiveDir != null )
+            {
+                string configPath = Path.Combine(archiveDir, jobId.ToString() + "_config.xml");
+                if( File.Exists(configPath) )
+                {
+                    return File.ReadAllText(configPath);
+                }
+            }
+
             return null;
         }
 
@@ -672,6 +729,8 @@ namespace JobServerApplication
             }
 
             job.EndTimeUtc = DateTime.UtcNow;
+
+            ArchiveJob(job);
         }
 
         /// <summary>
@@ -834,6 +893,30 @@ namespace JobServerApplication
                         }
                     }
                 }
+            }
+        }
+
+        private void ArchiveJob(JobInfo job)
+        {
+            string archiveDir = Configuration.JobServer.ArchiveDirectory;
+            if( archiveDir != null )
+            {
+                Directory.CreateDirectory(archiveDir);
+                string archiveFilePath = Path.Combine(archiveDir, _archiveFileName);
+                JobStatus jobStatus = job.ToJobStatus();
+                _log.InfoFormat("Archiving job {{{0}}}.", job.Job.JobId);
+
+                lock( _archiveLock )
+                {
+                    using( FileStream stream = new FileStream(archiveFilePath, FileMode.Append, FileAccess.Write, FileShare.Read) )
+                    using( BinaryRecordWriter<ArchivedJob> writer = new BinaryRecordWriter<ArchivedJob>(stream) )
+                    {
+                        writer.WriteRecord(new ArchivedJob(jobStatus));
+                    }
+                }
+
+                _dfsClient.DownloadFile(job.Job.JobConfigurationFilePath, Path.Combine(archiveDir, jobStatus.JobId + "_config.xml"));
+                jobStatus.ToXml().Save(Path.Combine(archiveDir, jobStatus.JobId + "_summary.xml"));
             }
         }
     }

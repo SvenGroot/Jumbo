@@ -124,6 +124,7 @@ namespace Tkl.Jumbo.Jet
                 Attempts = (int)task.Attribute("attempts"),
                 StartTime = DateTime.ParseExact(task.Attribute("startTime").Value, JobStatus.DatePattern, System.Globalization.CultureInfo.InvariantCulture),
                 EndTime = DateTime.ParseExact(task.Attribute("endTime").Value, JobStatus.DatePattern, System.Globalization.CultureInfo.InvariantCulture),
+                TaskProgress = new TaskProgress() { Progress = 1f }
             };
             status.StartOffset = status.StartTime - job.StartTime;
             return status;

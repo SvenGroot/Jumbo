@@ -80,5 +80,25 @@ namespace Tkl.Jumbo.Jet
         /// <param name="maxSize">The maximum size of the log data to return.</param>
         /// <returns>The contents of the diagnostic log file.</returns>
         string GetLogFileContents(int maxSize);
+
+        /// <summary>
+        /// Gets a list of archived jobs.
+        /// </summary>
+        /// <returns>A list of archived jobs.</returns>
+        ArchivedJob[] GetArchivedJobs();
+
+        /// <summary>
+        /// Gets the job status for an archived job.
+        /// </summary>
+        /// <param name="jobId">The job ID.</param>
+        /// <returns>The status for the archived job, or <see langword="null"/> if the job wasn't found.</returns>
+        JobStatus GetArchivedJobStatus(Guid jobId);
+
+        /// <summary>
+        /// Gets the job configuration for an archived job.
+        /// </summary>
+        /// <param name="jobId">The job ID.</param>
+        /// <returns>The raw XML of the archived job's configuration, or <see langword="null"/> if the job wasn't found.</returns>
+        string GetArchivedJobConfiguration(Guid jobId);
     }
 }

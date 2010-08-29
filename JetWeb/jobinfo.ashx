@@ -73,7 +73,13 @@ public class jobinfo : IHttpHandler
         Guid jobId = new Guid(context.Request.QueryString["id"]);
         JetClient client = new JetClient();
         DfsClient dfsClient = new DfsClient();
-        JobStatus job = client.JobServer.GetJobStatus(jobId);
+        JobStatus job;
+        bool archived = context.Request.QueryString["archived"] == "true";
+        if( archived )
+            job = client.JobServer.GetArchivedJobStatus(jobId);
+        else
+            job = client.JobServer.GetJobStatus(jobId);
+        
         context.Response.ContentType = "application/zip";
         string fileName = string.Format(System.Globalization.CultureInfo.InvariantCulture, "{0},%20{1}%20({2}).zip", typeof(DfsClient).Assembly.GetName().Version.Revision, job.JobName, job.JobId);
         context.Response.AddHeader("Content-Disposition", "attachment; filename=" + fileName);
@@ -83,10 +89,18 @@ public class jobinfo : IHttpHandler
             stream.SetLevel(9);
 
             stream.PutNextEntry(new ZipEntry("config.xml"));
-            string configFilePath = DfsPath.Combine(DfsPath.Combine(client.Configuration.JobServer.JetDfsPath, "job_" + job.JobId.ToString("B")), Job.JobConfigFileName);
-            using( DfsInputStream configStream = dfsClient.OpenFile(configFilePath) )
+            if( archived )
             {
-                configStream.CopyTo(stream);
+                byte[] buffer = System.Text.Encoding.UTF8.GetBytes(client.JobServer.GetArchivedJobConfiguration(jobId));
+                stream.Write(buffer, 0, buffer.Length);
+            }
+            else
+            {
+                string configFilePath = DfsPath.Combine(DfsPath.Combine(client.Configuration.JobServer.JetDfsPath, "job_" + job.JobId.ToString("B")), Job.JobConfigFileName);
+                using( DfsInputStream configStream = dfsClient.OpenFile(configFilePath) )
+                {
+                    configStream.CopyTo(stream);
+                }
             }
 
             stream.PutNextEntry(new ZipEntry("config.xslt"));

@@ -85,6 +85,7 @@
     <Compile Include="AdditionalProgressCounterAttribute.cs" />
     <Compile Include="AdditionalProgressValue.cs" />
     <Compile Include="AllowRecordReuseAttribute.cs" />
+    <Compile Include="ArchivedJob.cs" />
     <Compile Include="AssemblyResolver.cs" />
     <Compile Include="Channels\ChannelConfiguration.cs" />
     <Compile Include="Channels\ChannelConnectivity.cs" />
