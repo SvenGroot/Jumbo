@@ -31,9 +31,6 @@ public partial class alltasks : System.Web.UI.Page
         TimeSpan duration;
         if( job.IsFinished )
         {
-            _downloadLink.HRef = "jobinfo.ashx?id=" + jobId.ToString();
-            _downloadLink.Visible = true;
-
             row.Cells.Add(new HtmlTableCell() { InnerText = job.EndTime.ToString(_datePattern, System.Globalization.CultureInfo.InvariantCulture) });
             duration = job.EndTime - job.StartTime;
         }
