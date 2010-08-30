@@ -8,82 +8,93 @@ using Tkl.Jumbo.Jet;
 using System.IO;
 using Tkl.Jumbo.Dfs;
 using System.Threading;
+using System.Collections.ObjectModel;
+using Tkl.Jumbo.Jet.Channels;
 
 namespace JobServerApplication
 {
-    class TaskInfo
+    /// <summary>
+    /// Information about a task of a running job.
+    /// </summary>
+    sealed class TaskInfo
     {
-        private readonly ManualResetEvent _taskCompletedEvent;
-        private TaskServerInfo _server;
-        private TaskInfo _owner;
-        private List<TaskServerInfo> _badServers;
-        private TaskState _state;
-        private Guid? _inputBlock;
+        private readonly StageInfo _stage;
+        private readonly TaskId _taskId;
+        private readonly string _fullTaskId;
+        private readonly JobInfo _job;
+        private readonly TaskPartitionInfo _partitionInfo;
+        private readonly TaskInfo _owner;
+        private readonly TaskSchedulerInfo _schedulerInfo;
 
-        public TaskInfo(JobInfo job, StageConfiguration stage, IList<StageConfiguration> inputStages, int taskNumber)
+        private long _startTimeUtcTicks;
+        private long _endTimeUtcTicks;
+
+        public TaskInfo(JobInfo job, StageInfo stage, IList<StageConfiguration> inputStages, int taskNumber)
         {
             if( stage == null )
                 throw new ArgumentNullException("stage");
             if( job == null )
                 throw new ArgumentNullException("job");
-            Stage = stage;
-            TaskId = new TaskId(stage.StageId, taskNumber);
-            Job = job;
-            _taskCompletedEvent = new ManualResetEvent(false);
+            _stage = stage;
+            _taskId = new TaskId(stage.StageId, taskNumber);
+            _fullTaskId = Tkl.Jumbo.Jet.Job.CreateFullTaskId(job.Job.JobId, _taskId);
+            _job = job;
 
-            if( inputStages != null )
+            if( inputStages != null && inputStages.Count > 0 )
             {
-                foreach( StageConfiguration inputStage in inputStages )
-                {
-                    if( Partitions == null )
-                    {
-                        int partitionsPerTask = inputStage.OutputChannel.PartitionsPerTask;
-                        Partitions = new List<int>(partitionsPerTask < 1 ? 1 : partitionsPerTask);
-                        if( partitionsPerTask <= 1 )
-                            Partitions.Add(taskNumber);
-                        else
-                        {
-                            int begin = ((taskNumber - 1) * partitionsPerTask) + 1;
-                            Partitions.AddRange(Enumerable.Range(begin, partitionsPerTask));
-                        }
-                    }
-                    else if( inputStage.OutputChannel.PartitionsPerTask > 1 || Partitions.Count > 1 )
-                        throw new InvalidOperationException("Cannot use multiple partitions per task when there are multiple input channels.");
-                }
+                _partitionInfo = new TaskPartitionInfo(this, inputStages);
             }
+
+            _schedulerInfo = new TaskSchedulerInfo(this);
         }
 
-        public TaskInfo(TaskInfo owner, StageConfiguration stage, int taskNumber)
+        public TaskInfo(TaskInfo owner, StageInfo stage, int taskNumber)
         {
             if( owner == null )
                 throw new ArgumentNullException("owner");
             if( stage == null )
                 throw new ArgumentNullException("stage");
-            Job = owner.Job;
-            Stage = stage;
-            TaskId = new TaskId(owner.TaskId, stage.StageId, taskNumber);
-            _taskCompletedEvent = owner.TaskCompletedEvent;
+            _job = owner.Job;
+            _stage = stage;
+            _taskId = new TaskId(owner.TaskId, stage.StageId, taskNumber);
             _owner = owner;
         }
 
-        public StageConfiguration Stage { get; private set; }
+        public StageInfo Stage
+        {
+            get { return _stage; }
+        }
 
-        public TaskId TaskId { get; private set; }
+        public TaskId TaskId
+        {
+            get { return _taskId; }
+        }
 
-        public JobInfo Job { get; private set; }
+        public JobInfo Job
+        {
+            get { return _job; }
+        }
 
-        public List<int> Partitions { get; set; }
+        // Do not access except inside the scheduler lock.
+        public TaskSchedulerInfo SchedulerInfo
+        {
+            get { return _schedulerInfo; }
+        }
+
+        public TaskPartitionInfo PartitionInfo
+        {
+            get { return _partitionInfo; }
+        }
 
         public TaskState State
         {
             get 
             {
                 if( _owner == null )
-                    return _state;
+                    return _schedulerInfo.State;
                 else
                     return _owner.State;
             }
-            set { _state = value; }
         }
 
         public TaskServerInfo Server 
@@ -91,80 +102,85 @@ namespace JobServerApplication
             get
             {
                 if( _owner == null )
-                    return _server;
+                    return _schedulerInfo.Server;
                 else
                     return _owner.Server;
             }
-            set { _server = value; }
         }
 
-        public List<TaskServerInfo> BadServers
+        public TaskAttemptId CurrentAttempt
         {
             get
             {
-                if( _owner != null )
-                    return _owner.BadServers;
+                if( _owner == null )
+                    return _schedulerInfo.CurrentAttempt;
                 else
-                {
-                    if( _badServers == null )
-                    {
-                        Interlocked.CompareExchange(ref _badServers, new List<TaskServerInfo>(), null);
-                    }
-                    return _badServers;
-                }
+                    throw new NotSupportedException("Cannot retrieve current attempt of a non-scheduling task.");
             }
         }
 
-        public int Attempts { get; set; }
-
-        public DateTime StartTimeUtc { get; set; }
-
-        public DateTime EndTimeUtc { get; set; }
-
-        public float Progress { get; set; }
-
-        // TODO: This even should be reset if the task server dies or other tasks cannot download the task's output data.
-        public ManualResetEvent TaskCompletedEvent
-        {
-            get { return _taskCompletedEvent; }
-        }
-
-        public string GlobalID
+        public TaskAttemptId SuccessfulAttempt
         {
             get
             {
-                return string.Format("{{{0}}}_{1}", Job.Job.JobId, TaskId);
+                if( _owner == null )
+                    return _schedulerInfo.SuccessfulAttempt;
+                else
+                    throw new NotSupportedException("Cannot retrieve successful attempt of a non-scheduling task.");
             }
         }
 
-        /// <summary>
-        /// NOTE: Only call if Stage.DfsInputs is not null, and inside the _jobs lock. The value of this function is cached, only first call uses DfsClient.
-        /// </summary>
-        /// <param name="dfsClient"></param>
-        /// <returns></returns>
-        public Guid GetBlockId(DfsClient dfsClient)
+        public DateTime StartTimeUtc
         {
-            if( _inputBlock == null )
+            get { return new DateTime(Interlocked.Read(ref _startTimeUtcTicks), DateTimeKind.Utc); }
+            set { Interlocked.Exchange(ref _startTimeUtcTicks, value.Ticks); }
+        }
+
+        public DateTime EndTimeUtc
+        {
+            get { return new DateTime(Interlocked.Read(ref _endTimeUtcTicks), DateTimeKind.Utc); }
+            set { Interlocked.Exchange(ref _endTimeUtcTicks, value.Ticks); }
+        }
+
+        public TaskProgress Progress { get; set; }
+
+        public TaskMetrics Metrics { get; set; }
+
+        public int Attempts
+        {
+            get
             {
-                TaskDfsInput input = Stage.DfsInputs[TaskId.TaskNumber - 1];
-                Tkl.Jumbo.Dfs.DfsFile file = Job.GetFileInfo(dfsClient, input.Path);
-                _inputBlock = file.Blocks[input.Block];
+                if( _owner == null )
+                    return _schedulerInfo.Attempts;
+                else
+                    return _owner.Attempts;
             }
-            return _inputBlock.Value;
+        }
+
+        public string FullTaskId
+        {
+            get
+            {
+                return _fullTaskId;
+            }
         }
 
         public TaskStatus ToTaskStatus()
         {
+            // making a local copy of stuff we need more than once for thread safety.
+            TaskServerInfo server = Server;
+            DateTime startTimeUtc = StartTimeUtc;
             return new TaskStatus()
             {
                 TaskId = TaskId.ToString(),
                 State = State,
-                TaskServer = Server == null ? null : Server.Address,
+                TaskServer = server == null ? null : server.Address,
                 Attempts = Attempts,
-                StartTime = StartTimeUtc,
+                StartTime = startTimeUtc,
                 EndTime = EndTimeUtc,
-                StartOffset = StartTimeUtc - StartTimeUtc,
-                Progress = Progress
+                StartOffset = startTimeUtc - _job.StartTimeUtc,
+                TaskProgress = Progress,
+                Metrics = Metrics,
             };
         }
     }

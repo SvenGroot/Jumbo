@@ -15,8 +15,11 @@ namespace Tkl.Jumbo.IO
     /// <typeparam name="T">The type of the records.</typeparam>
     public class TextRecordWriter<T> : StreamRecordWriter<T>
     {
-        private readonly string _recordSeparator;
-        private StreamWriter _writer;
+        private readonly byte[] _recordSeparator;
+        private readonly Encoder _encoder = Encoding.UTF8.GetEncoder();
+        private readonly char[] _charBuffer = new char[1024];
+        private readonly byte[] _byteBuffer;
+        private readonly bool _utf8StringRecords = typeof(T) == typeof(Utf8String);
 
         /// <summary>
         /// Initializes a new instance of the <see cref="TextRecordWriter{T}"/> class with the specified
@@ -38,20 +41,8 @@ namespace Tkl.Jumbo.IO
         public TextRecordWriter(Stream stream, string recordSeparator)
             : base(stream)
         {
-            _recordSeparator = recordSeparator ?? Environment.NewLine;
-            _writer = new StreamWriter(stream);
-        }
-
-        /// <summary>
-        /// Gets the number of bytes written to the stream.
-        /// </summary>
-        public override long BytesWritten
-        {
-            get
-            {
-                _writer.Flush();
-                return base.BytesWritten;
-            }
+            _recordSeparator = Encoding.UTF8.GetBytes(recordSeparator ?? Environment.NewLine);
+            _byteBuffer = new byte[Encoding.UTF8.GetMaxByteCount(_charBuffer.Length)];
         }
 
         /// <summary>
@@ -60,40 +51,31 @@ namespace Tkl.Jumbo.IO
         /// <param name="record">The record to write.</param>
         protected override void WriteRecordInternal(T record)
         {
-            CheckDisposed();
-
-            _writer.Write(record);
-            _writer.Write(_recordSeparator);
-        }
-
-        /// <summary>
-        /// Cleans up all resources associated with this <see cref="TextRecordWriter{T}"/>.
-        /// </summary>
-        /// <param name="disposing"><see langword="true"/> to clean up both managed and unmanaged resources; <see langword="false"/>
-        /// to clean up unmanaged resources only.</param>
-        protected override void Dispose(bool disposing)
-        {
-            try
+            if( _utf8StringRecords )
             {
-                if( disposing )
+                // Doing (Utf8String)record is not allowed on generic type arguments.
+                // No need to check for null because we already know it must be a Utf8String.
+                (record as Utf8String).Write(Stream);
+            }
+            else
+            {
+                string recordString = record.ToString();
+                int charsLeft = recordString.Length;
+                int index = 0;
+                while( charsLeft > 0 )
                 {
-                    if( _writer != null )
-                    {
-                        _writer.Dispose();
-                        _writer = null;
-                    }
+                    int copySize = Math.Min(charsLeft, _charBuffer.Length);
+                    recordString.CopyTo(index, _charBuffer, 0, copySize);
+                    int byteCount = _encoder.GetBytes(_charBuffer, 0, copySize, _byteBuffer, 0, charsLeft == copySize);
+                    Stream.Write(_byteBuffer, 0, byteCount);
+                    charsLeft -= copySize;
+                    index += copySize;
                 }
             }
-            finally
-            {
-                base.Dispose(disposing);
-            }
-        }
 
-        private void CheckDisposed()
-        {
-            if( _writer == null )
-                throw new ObjectDisposedException("TextRecordWriter");
+            Stream.Write(_recordSeparator, 0, _recordSeparator.Length);
+
+            base.WriteRecordInternal(record);
         }
     }
 }

@@ -13,8 +13,6 @@ namespace Tkl.Jumbo.Jet
     /// </summary>
     public static class JetActivator
     {
-        private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(JetActivator));
-
         /// <summary>
         /// Creates an instance of the specified type and configures it.
         /// </summary>
@@ -30,11 +28,10 @@ namespace Tkl.Jumbo.Jet
         ///   implements <see cref="IConfigurable"/> and if so, applies the configuration to it.
         /// </para>
         /// </remarks>
-        public static object CreateInstance(Type type, DfsConfiguration dfsConfiguration, JetConfiguration jetConfiguration, TaskAttemptConfiguration taskAttemptConfiguration, params object[] args)
+        public static object CreateInstance(Type type, DfsConfiguration dfsConfiguration, JetConfiguration jetConfiguration, TaskContext taskAttemptConfiguration, params object[] args)
         {
             if( type == null )
                 throw new ArgumentNullException("type");
-            _log.DebugFormat("Creating instance of type {0}.", type.AssemblyQualifiedName);
             object instance = Activator.CreateInstance(type, args);
 
             ApplyConfiguration(instance, dfsConfiguration, jetConfiguration, taskAttemptConfiguration);
@@ -60,7 +57,7 @@ namespace Tkl.Jumbo.Jet
             if( taskExecution == null )
                 return CreateInstance(type, (DfsConfiguration)null, null, null, args);
             else
-                return CreateInstance(type, taskExecution.DfsClient.Configuration, taskExecution.JetClient.Configuration, taskExecution.Configuration, args);
+                return CreateInstance(type, taskExecution.DfsClient.Configuration, taskExecution.JetClient.Configuration, taskExecution.Context, args);
         }
 
         /// <summary>
@@ -75,7 +72,7 @@ namespace Tkl.Jumbo.Jet
         ///   This function checks if the object implements <see cref="IConfigurable"/> and if so, applies the configuration to it.
         /// </para>
         /// </remarks>
-        public static void ApplyConfiguration(object target, DfsConfiguration dfsConfiguration, JetConfiguration jetConfiguration, TaskAttemptConfiguration taskAttemptConfiguration)
+        public static void ApplyConfiguration(object target, DfsConfiguration dfsConfiguration, JetConfiguration jetConfiguration, TaskContext taskAttemptConfiguration)
         {
             if( target == null )
                 throw new ArgumentNullException("target");
@@ -83,11 +80,9 @@ namespace Tkl.Jumbo.Jet
             IConfigurable configurable = target as IConfigurable;
             if( configurable != null )
             {
-                if( _log.IsDebugEnabled )
-                    _log.DebugFormat("Applying configuration to configurable object of type {0}.", target.GetType().AssemblyQualifiedName);
                 configurable.DfsConfiguration = dfsConfiguration;
                 configurable.JetConfiguration = jetConfiguration;
-                configurable.TaskAttemptConfiguration = taskAttemptConfiguration;
+                configurable.TaskContext = taskAttemptConfiguration;
                 configurable.NotifyConfigurationChanged();
             }
         }

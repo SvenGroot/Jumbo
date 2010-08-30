@@ -12,130 +12,17 @@ using System.Collections;
 using System.Threading;
 using System.Net.Sockets;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
+using System.IO;
 
 namespace Tkl.Jumbo.Jet
 {
     /// <summary>
     /// Encapsulates all the data and functionality needed to run a task and its pipelined tasks.
     /// </summary>
-    public sealed class TaskExecutionUtility : IDisposable
+    public abstract class TaskExecutionUtility : IDisposable
     {
         #region Nested types
-
-        private interface ITaskContainer
-        {
-            object Task { get; }
-            void Finish();
-        }
-
-        private class TaskContainer<TInput, TOutput> : ITaskContainer
-        {
-            private ITask<TInput, TOutput> _task;
-            private RecordWriter<TOutput> _output;
-
-            public TaskContainer(ITask<TInput, TOutput> task, RecordWriter<TOutput> output)
-            {
-                _task = task;
-                _output = output;
-            }
-
-            #region ITaskContainer Members
-
-            public object Task
-            {
-                get { return _task; }
-            }
-
-            public void Finish()
-            {
-                IPushTask<TInput, TOutput> pushTask = _task as IPushTask<TInput, TOutput>;
-                if( pushTask != null )
-                    pushTask.Finish(_output);
-            }
-
-            #endregion
-        }
-
-        // This class is used if the input of a compound task is a channel and the output is a file (and there is no internal partitioning)
-        // in which case we want to name output files after partitions rather than task numbers. Since there can be more than one partition,
-        // this writer keeps an eye on 
-        private sealed class PartitionDfsOutputRecordWriter<T> : RecordWriter<T>
-        {
-            private readonly TaskExecutionUtility _task;
-            private readonly TaskExecutionUtility _rootTask;
-            private RecordWriter<T> _recordWriter;
-            private IMultiInputRecordReader _reader;
-            private long _bytesWritten;
-
-            public PartitionDfsOutputRecordWriter(TaskExecutionUtility task, TaskExecutionUtility rootTask)
-            {
-                _task = task;
-                _rootTask = rootTask;
-
-                if( _task._inputReader == null )
-                    _rootTask.InputRecordReaderCreated += new EventHandler(_task_InputRecordReaderCreated);
-                else
-                    ConnectToReader();
-            }
-
-            public override long BytesWritten
-            {
-                get
-                {
-                    if( _recordWriter == null )
-                        return _bytesWritten;
-                    else
-                        return _bytesWritten + _recordWriter.BytesWritten;
-                }
-            }
-
-            protected override void WriteRecordInternal(T record)
-            {
-                _recordWriter.WriteRecord(record);
-            }
-
-            private void IMultiInputRecordReader_CurrentPartitionChanged(object sender, EventArgs e)
-            {
-                CreateOutputWriter();
-            }
-
-            private void _task_InputRecordReaderCreated(object sender, EventArgs e)
-            {
-                ConnectToReader();
-            }
-
-            private void CreateOutputWriter()
-            {
-                if( _recordWriter != null )
-                {
-                    _bytesWritten += _recordWriter.BytesWritten;
-                    _recordWriter.Dispose();
-                }
-
-                _recordWriter = _task.CreateDfsOutputRecordWriter<T>(_reader.CurrentPartition);
-            }
-
-            private void ConnectToReader()
-            {
-                _reader = (IMultiInputRecordReader)_rootTask._inputReader;
-                _reader.CurrentPartitionChanged += new EventHandler(IMultiInputRecordReader_CurrentPartitionChanged);
-                CreateOutputWriter();
-            }
-
-            protected override void Dispose(bool disposing)
-            {
-                base.Dispose(disposing);
-                if( disposing )
-                {
-                    if( _recordWriter != null )
-                    {
-                        _bytesWritten += _recordWriter.BytesWritten;
-                        _recordWriter.Dispose();
-                        _recordWriter = null;
-                    }
-                }
-            }
-        }
 
         private sealed class DfsOutputInfo
         {
@@ -143,293 +30,605 @@ namespace Tkl.Jumbo.Jet
             public string DfsOutputTempPath { get; set; }
         }
 
+        private sealed class TaskProgressSource : IHasAdditionalProgress
+        {
+            private readonly TaskExecutionUtility _task;
+
+            public TaskProgressSource(TaskExecutionUtility task)
+            {
+                _task = task;
+            }
+
+            public float AdditionalProgress
+            {
+                get 
+                {
+                    float totalProgress;
+                    lock( _task._taskProgressLock )
+                    {
+                        totalProgress = _task.InputPartitionsFinished;
+                        // This property will be called on a different thread. There is therefore a chance it will get called exactly when Task is being reset so we need to check for null.
+                        IHasAdditionalProgress progressTask = _task.Task as IHasAdditionalProgress;
+                        if( progressTask != null )
+                        {
+                            totalProgress += progressTask.AdditionalProgress;
+                        }
+                    }
+
+                    return totalProgress / (float)_task.TotalInputPartitions;
+                }
+            }
+        }
+
         #endregion
 
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(TaskExecutionUtility));
-        private const int _progressInterval = 5000;
+        private readonly int _progressInterval = 5000;
 
-        private List<TaskExecutionUtility> _associatedTasks = new List<TaskExecutionUtility>();
-        private ExtendedCollection<IInputChannel> _inputChannels;
-        private IOutputChannel _outputChannel;
-        private DfsOutputStream _outputStream;
-        private IRecordReader _inputReader;
-        private IRecordWriter _outputWriter;
-        private Thread _progressThread;
-        private bool _disposed;
-        private ITaskContainer _task;
-        private int _recordsWritten;
-        private long _dfsBytesWritten;
-        private bool _finished;
-        private bool _isAssociatedTask;
-        private readonly ManualResetEvent _finishedEvent = new ManualResetEvent(false);
+        private readonly DfsClient _dfsClient;
+        private readonly JetClient _jetClient;
+        private readonly IJobServerTaskProtocol _jobServerTaskClient;
+        private readonly TaskContext _configuration;
+        private readonly ITaskServerUmbilicalProtocol _umbilical;
+        private readonly TaskExecutionUtility _rootTask;
+        private readonly Type _taskType;
+        private readonly List<IInputChannel> _inputChannels;
+        private readonly List<string> _statusMessages;
+        private readonly bool _isAssociatedTask;
+        private readonly bool _processesAllPartitions;
         private List<DfsOutputInfo> _dfsOutputs;
-        private readonly List<StageConfiguration> _inputStages = new List<StageConfiguration>();
-        private readonly TaskExecutionUtility _baseTask;
+        private volatile bool _finished;
+        private volatile bool _disposed;
+        private Dictionary<string, List<IHasAdditionalProgress>> _additionalProgressSources;
+        private Thread _progressThread;
+        private readonly ManualResetEvent _finishedEvent = new ManualResetEvent(false);
+        private List<TaskExecutionUtility> _associatedTasks;
+        private IRecordWriter _outputWriter;
+        private IRecordReader _inputReader;
+        private object _task;
+        private readonly int _statusMessageLevel;
+        private volatile bool _mustReportProgress;
+        private int _totalInputPartitions = 1;
+        private readonly object _taskProgressLock = new object();
+        private bool _hasAddedTaskProgressSource;
+        private int _additionalPartitionCount;
+        private int _discardedPartitionCount;
 
-        /// <summary>
-        /// Event raised when the input record reader is creatd
-        /// </summary>
-        public event EventHandler InputRecordReaderCreated;
+        internal event EventHandler TaskInstanceCreated;
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="TaskExecutionUtility"/> class.
-        /// </summary>
-        /// <param name="jetClient">The <see cref="JetClient"/> used to access the job server.</param>
-        /// <param name="umbilical">The <see cref="ITaskServerUmbilicalProtocol"/> used to communicate with the task server.</param>
-        /// <param name="jobId">The ID of the job.</param>
-        /// <param name="jobConfiguration">The configuration for the job.</param>
-        /// <param name="taskId">The task ID.</param>
-        /// <param name="dfsClient">The <see cref="DfsClient"/> used to access the DFS.</param>
-        /// <param name="localJobDirectory">The local directory where the task server stores the job's files.</param>
-        /// <param name="dfsJobDirectory">The DFS directory where the job's files are stored.</param>
-        /// <param name="attempt">The attempt number for this task.</param>
-        public TaskExecutionUtility(JetClient jetClient, ITaskServerUmbilicalProtocol umbilical, Guid jobId, JobConfiguration jobConfiguration, TaskId taskId, DfsClient dfsClient, string localJobDirectory, string dfsJobDirectory, int attempt)
-            : this(jetClient, umbilical, jobId, jobConfiguration, null, taskId, dfsClient, localJobDirectory, dfsJobDirectory, attempt)
+        internal TaskExecutionUtility(DfsClient dfsClient, JetClient jetClient, ITaskServerUmbilicalProtocol umbilical, TaskExecutionUtility parentTask, TaskContext configuration)
         {
+            if( dfsClient == null )
+                throw new ArgumentNullException("dfsClient");
+            if( jetClient == null )
+                throw new ArgumentNullException("jetClient");
+            if( umbilical == null )
+                throw new ArgumentNullException("umbilical");
+            if( configuration == null )
+                throw new ArgumentNullException("configuration");
+
+            _dfsClient = dfsClient;
+            _jetClient = jetClient;
+            _jobServerTaskClient = JetClient.CreateJobServerTaskClient(jetClient.Configuration);
+            _configuration = configuration;
+            _umbilical = umbilical;
+            _taskType = _configuration.StageConfiguration.TaskType.ReferencedType;
+            configuration.TaskExecution = this;
+            _progressInterval = _jetClient.Configuration.TaskServer.ProgressInterval;
+
+            if( parentTask == null ) // that means it's not a child task
+            {
+                _rootTask = this;
+                _inputChannels = CreateInputChannels(configuration.JobConfiguration.GetInputStagesForStage(configuration.TaskId.StageId));
+
+                // Create the status message array with room for the channel message and this task's message.
+                _statusMessageLevel = 1;                
+                _statusMessages = new List<string>() { null, null };
+            }
+            else
+            {
+                _isAssociatedTask = true;
+                _rootTask = parentTask.RootTask;
+                if( parentTask._associatedTasks == null )
+                    parentTask._associatedTasks = new List<TaskExecutionUtility>();
+                parentTask._associatedTasks.Add(this);
+                _statusMessageLevel = parentTask._statusMessageLevel + 1;
+                _rootTask.EnsureStatusLevels(_statusMessageLevel);
+                _processesAllPartitions = parentTask._processesAllPartitions;
+            }
+
+            // If the partitions aren't already combined by the parent task, we check the task type if it has the attribute set.
+            if( !_processesAllPartitions )
+            {
+                _processesAllPartitions = Attribute.IsDefined(_taskType, typeof(ProcessAllInputPartitionsAttribute));
+            }
+
+            OutputChannel = CreateOutputChannel();
         }
 
-        private TaskExecutionUtility(TaskExecutionUtility baseTask, StageConfiguration childStage, int childTaskNumber)
-            : this(baseTask.JetClient, baseTask.Umbilical, baseTask.Configuration.JobId, baseTask.Configuration.JobConfiguration, childStage, new TaskId(baseTask.Configuration.TaskId, childStage.StageId, childTaskNumber), baseTask.DfsClient, baseTask.Configuration.LocalJobDirectory, baseTask.Configuration.DfsJobDirectory, baseTask.Configuration.Attempt)
+        /// <summary>
+        /// Gets the output writer.
+        /// </summary>
+        /// <value>The output writer.</value>
+        protected IRecordWriter OutputWriter
         {
-            _baseTask = baseTask;
-            _isAssociatedTask = true;
-            _inputStages.Add(baseTask.Configuration.StageConfiguration);
+            get
+            {
+                if( _outputWriter == null )
+                    _outputWriter = CreateOutputRecordWriter();
+                return _outputWriter;
+            }
         }
 
-        private TaskExecutionUtility(JetClient jetClient, ITaskServerUmbilicalProtocol umbilical, Guid jobId, JobConfiguration jobConfiguration, StageConfiguration stageConfiguration, TaskId taskId, DfsClient dfsClient, string localJobDirectory, string dfsJobDirectory, int attempt)
+        /// <summary>
+        /// Gets or sets the total number of input partitions this task will process (if the input is a channel and the PartitionsPerTask option was > 1).
+        /// </summary>
+        /// <value>The total number of partitions.</value>
+        protected int TotalInputPartitions
         {
+            get { return _rootTask._totalInputPartitions; }
+            set { _totalInputPartitions = value; }
+        }
+
+        /// <summary>
+        /// Gets or sets the number of input partitions that have finished.
+        /// </summary>
+        /// <value>The number of input partitions that have finished.</value>
+        protected int InputPartitionsFinished { get; set; }
+
+        /// <summary>
+        /// Gets a value indicating whether a single task instance will process all input partitions.
+        /// </summary>
+        /// <value>
+        /// 	<see langword="true"/> if the task type of this task or any ancestor in the compound task has the 
+        /// 	<see cref="ProcessAllInputPartitionsAttribute"/> attribute; otherwise, <see langword="false"/>.
+        /// </value>
+        protected bool ProcessesAllInputPartitions
+        {
+            get { return _processesAllPartitions; }
+        }
+
+        internal IRecordReader InputReader
+        {
+            get
+            {
+                if( _inputReader == null )
+                    _inputReader = CreateInputRecordReader();
+                return _inputReader;
+            }
+        }
+
+        internal ITaskServerUmbilicalProtocol Umbilical
+        {
+            get { return _umbilical; }
+        }
+
+        internal TaskContext Context
+        {
+            get { return _configuration; }
+        }
+
+        internal JetClient JetClient
+        {
+            get { return _jetClient; }
+        }
+
+        internal DfsClient DfsClient
+        {
+            get { return _dfsClient; }
+        }
+
+        internal bool AllowRecordReuse
+        {
+            get { return _configuration.StageConfiguration.AllowRecordReuse; }
+        }
+
+        internal TaskExecutionUtility RootTask
+        {
+            get { return _rootTask; }
+        }
+
+        internal bool IsAssociatedTask
+        {
+            get { return _isAssociatedTask; }
+        }
+
+        internal object Task
+        {
+            get
+            {
+                if( _task == null )
+                    _task = CreateTaskInstance();
+                return _task;
+            }
+        }
+
+        internal IOutputChannel OutputChannel { get; private set; }
+
+        internal List<IInputChannel> InputChannels 
+        { 
+            get { return _inputChannels; } 
+        }
+
+        internal string ChannelStatusMessage
+        {
+            get { return _rootTask._statusMessages[0]; }
+            set 
+            {
+                lock( _rootTask._statusMessages )
+                {
+                    _rootTask._statusMessages[0] = value;
+                }
+            }
+        }
+
+        internal string TaskStatusMessage
+        {
+            get { return _rootTask._statusMessages[_statusMessageLevel]; }
+            set 
+            {
+                lock( _rootTask._statusMessages )
+                {
+                    _rootTask._statusMessages[_statusMessageLevel] = value;
+                }
+            }
+        }
+
+        private string CurrentStatus
+        {
+            get
+            {
+                lock( _rootTask._statusMessages )
+                {
+                    StringBuilder status = new StringBuilder(100);
+                    bool first = true;
+                    foreach( string message in _rootTask._statusMessages )
+                    {
+                        if( message != null )
+                        {
+                            if( first )
+                                first = false;
+                            else
+                                status.Append(" > ");
+                            status.Append(message);
+                        }
+                    }
+
+                    return status.ToString();
+                }
+            }
+        }
+
+        /// <summary>
+        /// Executes a task on behalf of the task host. For Jumbo internal use only.
+        /// </summary>
+        /// <param name="jobId">The job id.</param>
+        /// <param name="jobDirectory">The job directory.</param>
+        /// <param name="dfsJobDirectory">The DFS job directory.</param>
+        /// <param name="taskAttemptId">The task attempt id.</param>
+        /// <remarks>
+        /// <para>
+        ///   This method assumes that the current AppDomain is used only for running the task, as it will override the global logging configuration and register the custom assembly resolver.
+        /// </para>
+        /// <para>
+        ///   This method should only be invoked by the TaskHost, and by the TaskServer when using AppDomain mode.
+        /// </para>
+        /// </remarks>
+        public static void RunTask(Guid jobId, string jobDirectory, string dfsJobDirectory, TaskAttemptId taskAttemptId)
+        {
+            AssemblyResolver.Register();
+
+            using( ProcessorStatus processorStatus = new ProcessorStatus() )
+            {
+                Stopwatch sw = new Stopwatch();
+                sw.Start();
+                string logFile = Path.Combine(jobDirectory, taskAttemptId.ToString() + ".log");
+                ConfigureLog(logFile);
+
+                _log.InfoFormat("Running task; job ID = \"{0}\", job directory = \"{1}\", task attempt ID = \"{2}\", DFS job directory = \"{3}\"", jobId, jobDirectory, taskAttemptId, dfsJobDirectory);
+                _log.DebugFormat("Command line: {0}", Environment.CommandLine);
+                _log.LogEnvironmentInformation();
+
+                _log.Info("Loading configuration.");
+                string configDirectory = Path.Combine(jobDirectory, "config");
+                DfsConfiguration dfsConfig = DfsConfiguration.FromXml(Path.Combine(configDirectory, "dfs.config"));
+                JetConfiguration jetConfig = JetConfiguration.FromXml(Path.Combine(configDirectory, "jet.config"));
+
+                _log.Info("Creating RPC clients.");
+                ITaskServerUmbilicalProtocol umbilical = JetClient.CreateTaskServerUmbilicalClient(jetConfig.TaskServer.Port);
+                DfsClient dfsClient = new DfsClient(dfsConfig);
+                JetClient jetClient = new JetClient(jetConfig);
+
+
+                string xmlConfigPath = Path.Combine(jobDirectory, Job.JobConfigFileName);
+                _log.DebugFormat("Loading job configuration from local file {0}.", xmlConfigPath);
+                JobConfiguration config = JobConfiguration.LoadXml(xmlConfigPath);
+                _log.Debug("Job configuration loaded.");
+
+                if( config.AssemblyFileNames != null )
+                {
+                    foreach( string assemblyFileName in config.AssemblyFileNames )
+                    {
+                        _log.DebugFormat("Loading assembly {0}.", assemblyFileName);
+                        Assembly.LoadFrom(Path.Combine(jobDirectory, assemblyFileName));
+                    }
+                }
+
+                try
+                {
+                    TaskMetrics metrics;
+                    using( TaskExecutionUtility taskExecution = TaskExecutionUtility.Create(dfsClient, jetClient, umbilical, jobId, config, taskAttemptId, dfsJobDirectory, jobDirectory) )
+                    {
+                        metrics = taskExecution.RunTask();
+                    }
+
+                    sw.Stop();
+
+                    _log.Debug("Reporting completion to task server.");
+                    umbilical.ReportCompletion(jobId, taskAttemptId, metrics);
+                }
+                catch( Exception ex )
+                {
+                    _log.Fatal("Failed to execute task.", ex);
+                }
+                _log.InfoFormat("Task host finished execution of task, execution time: {0}s", sw.Elapsed.TotalSeconds);
+                processorStatus.Refresh();
+                _log.InfoFormat("Processor usage during this task (system-wide, not process specific):");
+                _log.Info(processorStatus.Total);
+            }
+        }
+
+
+        /// <summary>
+        /// Creates a <see cref="TaskExecutionUtility"/> instance for the specified task.
+        /// </summary>
+        /// <param name="dfsClient">The DFS client.</param>
+        /// <param name="jetClient">The jet client.</param>
+        /// <param name="umbilical">The umbilical.</param>
+        /// <param name="jobId">The job id.</param>
+        /// <param name="jobConfiguration">The job configuration.</param>
+        /// <param name="taskAttemptId">The task attempt ID.</param>
+        /// <param name="dfsJobDirectory">The DFS job directory.</param>
+        /// <param name="localJobDirectory">The local job directory.</param>
+        /// <returns>A <see cref="TaskExecutionUtility"/>.</returns>
+        public static TaskExecutionUtility Create(DfsClient dfsClient, JetClient jetClient, ITaskServerUmbilicalProtocol umbilical, Guid jobId, JobConfiguration jobConfiguration, TaskAttemptId taskAttemptId, string dfsJobDirectory, string localJobDirectory)
+        {
+            if( dfsClient == null )
+                throw new ArgumentNullException("dfsClient");
             if( jetClient == null )
                 throw new ArgumentNullException("jetClient");
             if( umbilical == null )
                 throw new ArgumentNullException("umbilical");
             if( jobConfiguration == null )
                 throw new ArgumentNullException("jobConfiguration");
-            if( taskId == null )
-                throw new ArgumentNullException("taskId");
-            if( dfsClient == null )
-                throw new ArgumentNullException("dfsClient");
-            if( localJobDirectory == null )
-                throw new ArgumentNullException("localJobDirectory");
+            if( taskAttemptId == null )
+                throw new ArgumentNullException("taskAttemptId");
             if( dfsJobDirectory == null )
                 throw new ArgumentNullException("dfsJobDirectory");
-            if( stageConfiguration == null && taskId.ParentTaskId != null )
-                throw new ArgumentException("Cannot create task execution utility for pipelined task.");
+            if( localJobDirectory == null )
+                throw new ArgumentNullException("localJobDirectory");
 
-            //_log.DebugFormat("Creating task execution utility for task {0}.", taskId);
-
-            JetClient = jetClient;
-            Umbilical = umbilical;
-            Configuration = new TaskAttemptConfiguration(jobId, jobConfiguration, taskId, stageConfiguration ?? jobConfiguration.GetStage(taskId.StageId), localJobDirectory, dfsJobDirectory, attempt, this);
-            DfsClient = dfsClient;
-
-            // if stage configuration is not null this is a child task so we can't set input channel configuration here.
-            if( stageConfiguration == null )
-                _inputStages.AddRange(jobConfiguration.GetInputStagesForStage(taskId.StageId));
-
-            //_log.DebugFormat("Loading type {0}.", Configuration.StageConfiguration.TaskTypeName);
-            TaskType = Configuration.StageConfiguration.TaskType;
-            //_log.Debug("Determining input and output types.");
-            Type taskInterfaceType = TaskType.FindGenericInterfaceType(typeof(ITask<,>));
-            Type[] arguments = taskInterfaceType.GetGenericArguments();
-            InputRecordType = arguments[0];
-            OutputRecordType = arguments[1];
-            //_log.InfoFormat("Input type: {0}", InputRecordType.AssemblyQualifiedName);
-            //_log.InfoFormat("Output type: {0}", OutputRecordType.AssemblyQualifiedName);
+            TaskContext configuration = new TaskContext(jobId, jobConfiguration, taskAttemptId, jobConfiguration.GetStage(taskAttemptId.TaskId.StageId), localJobDirectory, dfsJobDirectory);
+            Type taskExecutionType = DetermineTaskExecutionType(configuration);
+            ConstructorInfo ctor = taskExecutionType.GetConstructor(new Type[] { typeof(DfsClient), typeof(JetClient), typeof(ITaskServerUmbilicalProtocol), typeof(TaskExecutionUtility), typeof(TaskContext) });
+            return (TaskExecutionUtility)ctor.Invoke(new object[] { dfsClient, jetClient, umbilical, null, configuration });
         }
 
         /// <summary>
-        /// Gets the <see cref="JetClient"/> used to access the job server.
+        /// Runs the task.
         /// </summary>
-        public JetClient JetClient { get; private set; }
+        public abstract TaskMetrics RunTask();
 
         /// <summary>
-        /// Gets the <see cref="DfsClient"/> used to access the DFS.
+        /// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
         /// </summary>
-        public DfsClient DfsClient { get; private set; }
-
-        /// <summary>
-        /// Gets the configuration data for this task.
-        /// </summary>
-        public TaskAttemptConfiguration Configuration { get; private set; }
-
-        /// <summary>
-        /// Gets the list of input stages for this task.
-        /// </summary>
-        public ReadOnlyCollection<StageConfiguration> InputStages
+        public void Dispose()
         {
-            get { return _inputStages.AsReadOnly(); }
+            Dispose(true);
+            GC.SuppressFinalize(this);
         }
 
         /// <summary>
-        /// Gets the input channel.
+        /// Resets the task for the next partition.
         /// </summary>
-        public Collection<IInputChannel> InputChannels
+        protected void ResetForNextPartition()
         {
-            get
+            if( !ProcessesAllInputPartitions )
             {
-                CheckDisposed();
-                if( _inputChannels == null )
+                if( _task != null )
                 {
-                    _inputChannels = CreateInputChannels();
-                }
-                return _inputChannels;
-            }
-        }
-
-        /// <summary>
-        /// Gets the output channel.
-        /// </summary>
-        public IOutputChannel OutputChannel
-        {
-            get
-            {
-                CheckDisposed();
-                if( _outputChannel == null )
-                {
-                    _outputChannel = CreateOutputChannel();
-                }
-                return _outputChannel;
-            }
-        }
-
-        /// <summary>
-        /// Gets the type of the task.
-        /// </summary>
-        public Type TaskType { get; private set; }
-
-        /// <summary>
-        /// Gets the type of input records for the task.
-        /// </summary>
-        public Type InputRecordType { get; private set; }
-
-        /// <summary>
-        /// Gets the type of output records for the task.
-        /// </summary>
-        public Type OutputRecordType { get; private set; }
-        
-        /// <summary>
-        /// Gets a value that indicates whether the task type allows reusing the same object instance for every record.
-        /// </summary>
-        /// <remarks>
-        /// This value also takes associated tasks into account.
-        /// </remarks>
-        public bool AllowRecordReuse
-        {
-            get
-            {
-                return Configuration.StageConfiguration.AllowRecordReuse;
-            }
-        }
-
-        /// <summary>
-        /// Gets the <see cref="ITaskServerUmbilicalProtocol"/> used to communicate with the task server.
-        /// </summary>
-        public ITaskServerUmbilicalProtocol Umbilical { get; private set; }
-
-        /// <summary>
-        /// Gets the <see cref="TaskExecutionUtility"/> for the previous task in the pipeline.
-        /// </summary>
-        public TaskExecutionUtility BaseTask
-        {
-            get { return _baseTask; }
-        }
-
-        /// <summary>
-        /// Gets the output record writer.
-        /// </summary>
-        /// <typeparam name="T">The type of records for the task's output</typeparam>
-        /// <returns>A <see cref="RecordWriter{T}"/> that writes to the task's output channel or DFS output.</returns>
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1004:GenericMethodsShouldProvideTypeParameter")]
-        public RecordWriter<T> GetOutputWriter<T>()
-       {
-            CheckDisposed();
-            if( _outputWriter == null )
-                _outputWriter = CreateOutputRecordWriter<T>();
-            return (RecordWriter<T>)_outputWriter;
-        }
-
-        /// <summary>
-        /// Gets the input record reader.
-        /// </summary>
-        /// <typeparam name="T">The type of records for the task's input.</typeparam>
-        /// <returns>A <see cref="RecordReader{T}"/> that reads from the task's input channel or DFS input.</returns>
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1004:GenericMethodsShouldProvideTypeParameter")]
-        public RecordReader<T> GetInputReader<T>()
-        {
-            CheckDisposed();
-            if( _inputReader == null )
-            {
-                _inputReader = CreateInputRecordReader<T>();
-                OnInputRecordReaderCreated(EventArgs.Empty);
-                StartProgressThread();
-            }
-            return (RecordReader<T>)_inputReader;
-        }
-
-        /// <summary>
-        /// Creates a task associated with this task, typically a pipelined task.
-        /// </summary>
-        /// <param name="childStage">The stage of the associated task.</param>
-        /// <param name="childTaskNumber">The task number of the associated task.</param>
-        /// <returns>An instance of <see cref="TaskExecutionUtility"/> for the associated task.</returns>
-        public TaskExecutionUtility CreateAssociatedTask(StageConfiguration childStage, int childTaskNumber)
-        {
-            // We don't check if childStage is actually a child stage of this task's stage; the behaviour is undefined if that isn't the case.
-            CheckDisposed();
-            TaskExecutionUtility associatedTask = new TaskExecutionUtility(this, childStage, childTaskNumber);
-            _associatedTasks.Add(associatedTask);
-            return associatedTask;
-        }
-
-        /// <summary>
-        /// Creates an instance of <see cref="TaskType"/>.
-        /// </summary>
-        /// <typeparam name="TInput">The input record type of the task.</typeparam>
-        /// <typeparam name="TOutput">The output record type of the task.</typeparam>
-        /// <returns>An instance of <see cref="TaskType"/>.</returns>
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1004:GenericMethodsShouldProvideTypeParameter")]
-        public ITask<TInput, TOutput> GetTaskInstance<TInput, TOutput>()
-        {
-            if( _task == null )
-            {
-                _log.DebugFormat("Creating {0} task instance.", TaskType.AssemblyQualifiedName);
-                _task = new TaskContainer<TInput, TOutput>((ITask<TInput, TOutput>)JetActivator.CreateInstance(TaskType, this), GetOutputWriter<TOutput>());
-            }
-            return (ITask<TInput, TOutput>)_task.Task;
-        }
-
-        /// <summary>
-        /// If the task is a push task, calls <see cref="IPushTask{TInput,TOutput}.Finish"/>, then closes the output stream and moves any DFS output to its final location, for this task and all associated tasks.
-        /// </summary>
-        public void FinishTask()
-        {
-            CheckDisposed();
-
-            if( _task != null )
-                _task.Finish();
-
-            if( _associatedTasks.Count > 1 && JetClient.Configuration.TaskServer.MultithreadedTaskFinish )
-            {
-                _log.Info("Using multi-threaded task finish for associated tasks.");
-
-                foreach( TaskExecutionUtility associatedTask in _associatedTasks )
-                {
-                    associatedTask.FinishTaskAsync();
+                    // The lock is needed because we must prevent the progress thread from seeing the updated value of InputPartitionsFinished and the old task instance at the same time.
+                    lock( _taskProgressLock )
+                    {
+                        ++InputPartitionsFinished;
+                        _task = null;
+                    }
                 }
 
-                WaitHandle[] events = (from associatedTask in _associatedTasks
-                                       select (WaitHandle)associatedTask._finishedEvent).ToArray();
-
-                // TODO: This will break if there are more than 64 child tasks.
-                WaitHandle.WaitAll(events);
-
-                _log.Info("All associated tasks have finished.");
+                if( _associatedTasks != null )
+                {
+                    foreach( TaskExecutionUtility childTask in _associatedTasks )
+                    {
+                        childTask.ResetForNextPartition();
+                    }
+                }
             }
+        }
+
+        internal bool NotifyStartPartitionProcessing(int partitionNumber)
+        {
+            // Stages with multiple input channels cannot use PartitionsPerTask>1, so this method should not be called for such stages
+            Debug.Assert(InputChannels.Count == 1);
+            if( InputChannels[0].Configuration.DisableDynamicPartitionAssignment )
+                return true;
             else
             {
+                bool result = _jobServerTaskClient.NotifyStartPartitionProcessing(Context.JobId, Context.TaskAttemptId.TaskId, partitionNumber);
+                if( !result )
+                {
+                    _log.InfoFormat("Assignment of partition {0} has been revoked; skipping.", partitionNumber);
+                    ++_discardedPartitionCount;
+
+                    // TotalInputPartitions is not used for tasks with the ProcessAllInputPartitionsAttribute.
+                    if( !ProcessesAllInputPartitions )
+                    {
+                        lock( _taskProgressLock )
+                        {
+                            --TotalInputPartitions;
+                        }
+                    }
+                }
+
+                return result;
+            }
+        }
+
+        internal bool GetAdditionalPartitions(IMultiInputRecordReader reader)
+        {
+            // Stages with multiple input channels cannot use PartitionsPerTask>1, so this method should not be called for such stages
+            Debug.Assert(InputChannels.Count == 1);
+
+            if( InputChannels[0].Configuration.DisableDynamicPartitionAssignment )
+                return false;
+            else
+            {
+                int[] additionalPartitions = _jobServerTaskClient.GetAdditionalPartitions(Context.JobId, Context.TaskAttemptId.TaskId);
+                if( additionalPartitions != null && additionalPartitions.Length > 0 )
+                {
+                    _log.InfoFormat("Received additional partitions for processing: {0}", additionalPartitions.ToDelimitedString());
+                    _additionalPartitionCount += additionalPartitions.Length;
+                    reader.AssignAdditionalPartitions(additionalPartitions);
+
+                    foreach( IInputChannel channel in InputChannels )
+                    {
+                        channel.AssignAdditionalPartitions(additionalPartitions);
+                    }
+
+                    return true;
+                }
+                else
+                    return false;
+            }
+
+        }
+
+        internal TaskExecutionUtility CreateAssociatedTask(StageConfiguration childStage, int taskNumber)
+        {
+            if( childStage == null )
+                throw new ArgumentNullException("childStage");
+            
+            TaskId childTaskId = new TaskId(Context.TaskAttemptId.TaskId, childStage.StageId, taskNumber);
+            TaskContext configuration = new TaskContext(Context.JobId, Context.JobConfiguration, new TaskAttemptId(childTaskId, Context.TaskAttemptId.Attempt), childStage, Context.LocalJobDirectory, Context.DfsJobDirectory);
+
+            Type taskExecutionType = DetermineTaskExecutionType(configuration);
+
+            ConstructorInfo ctor = taskExecutionType.GetConstructor(new Type[] { typeof(DfsClient), typeof(JetClient), typeof(ITaskServerUmbilicalProtocol), typeof(TaskExecutionUtility), typeof(TaskContext) });
+            return (TaskExecutionUtility)ctor.Invoke(new object[] { DfsClient, JetClient, Umbilical, this, configuration });
+        }
+
+        /// <summary>
+        /// Creates the record writer that writes data to this child task.
+        /// </summary>
+        /// <param name="partitioner">The partitioner to use for the <see cref="PrepartitionedRecordWriter{T}"/> if the child stage uses the <see cref="IPrepartitionedPushTask{TInput,TOutput}"/> interface. Otherwise, ignored.</param>
+        /// <returns>A record writer.</returns>
+        internal abstract IRecordWriter CreatePipelineRecordWriter(object partitioner);
+
+        internal void EnsureStatusLevels(int maxLevel)
+        {
+            // Only call this on the root task!
+            while( _statusMessages.Count < maxLevel + 1 )
+                _statusMessages.Add(null);
+        }
+
+        internal void ReportProgress()
+        {
+            // Will force a progress report to be sent, even if nothing's changed.
+            _rootTask._mustReportProgress = true;
+        }
+
+        private void SetStatusMessage(int level, string message)
+        {
+            _statusMessages[level] = message;
+        }
+
+        private static Type DetermineTaskExecutionType(TaskContext configuration)
+        {
+            Type taskType = configuration.StageConfiguration.TaskType.ReferencedType;
+            Type interfaceType = taskType.FindGenericInterfaceType(typeof(ITask<,>), true);
+            Type[] recordTypes = interfaceType.GetGenericArguments();
+
+            return typeof(TaskExecutionUtilityGeneric<,>).MakeGenericType(recordTypes);
+        }
+
+        private IRecordReader CreateInputRecordReader()
+        {
+            if( Context.StageConfiguration.DfsInput != null )
+            {
+                return Context.StageConfiguration.DfsInput.CreateRecordReader(this);
+            }
+            else if( _inputChannels != null )
+            {
+                //_log.Debug("Creating input channel record reader.");
+                IRecordReader result;
+                if( _inputChannels.Count == 1 )
+                {
+                    result = _inputChannels[0].CreateRecordReader();
+                }
+                else
+                {
+                    Type multiInputRecordReaderType = Context.StageConfiguration.MultiInputRecordReaderType.ReferencedType;
+                    int bufferSize = (multiInputRecordReaderType.IsGenericType && multiInputRecordReaderType.GetGenericTypeDefinition() == typeof(MergeRecordReader<>)) ? (int)JetClient.Configuration.MergeRecordReader.MergeStreamReadBufferSize : (int)JetClient.Configuration.FileChannel.ReadBufferSize;
+                    CompressionType compressionType = Context.GetTypedSetting(FileOutputChannel.CompressionTypeSetting, JetClient.Configuration.FileChannel.CompressionType);
+                    IMultiInputRecordReader reader = (IMultiInputRecordReader)JetActivator.CreateInstance(multiInputRecordReaderType, this, new int[] { 0 }, _inputChannels.Count, AllowRecordReuse, bufferSize, compressionType);
+                    foreach( IInputChannel inputChannel in _inputChannels )
+                    {
+                        IRecordReader channelReader = inputChannel.CreateRecordReader();
+                        AddAdditionalProgressSource(channelReader);
+                        reader.AddInput(new[] { new RecordInput(channelReader, false) });
+                    }
+                    result = reader;
+                }
+                AddAdditionalProgressSource(result);
+                return result;
+            }
+            else
+                return null;
+        }
+
+        /// <summary>
+        /// Creates the output record writer.
+        /// </summary>
+        /// <returns>The output record writer</returns>
+        protected abstract IRecordWriter CreateOutputRecordWriter();
+
+        /// <summary>
+        /// Runs the appropriate finish method (if any) on this task and all child tasks.
+        /// </summary>
+        protected void FinishTask()
+        {
+            RunTaskFinishMethod(false);
+
+            if( _associatedTasks != null )
+            {
+                foreach( TaskExecutionUtility childTask in _associatedTasks )
+                {
+                    childTask.FinishTask();
+                }
+            }
+        }
+
+        /// <summary>
+        /// Calculates metrics, closes the output stream and moves any DFS output to its final location, for this task and all associated tasks.
+        /// </summary>
+        protected void FinalizeTask(TaskMetrics metrics)
+        {
+            RunTaskFinishMethod(true);
+
+            if( _associatedTasks != null )
+            {
                 foreach( TaskExecutionUtility associatedTask in _associatedTasks )
                 {
-                    associatedTask.FinishTask();
+                    associatedTask.FinalizeTask(metrics);
                 }
             }
 
@@ -440,21 +639,14 @@ namespace Tkl.Jumbo.Jet
             if( fileOutputChannel != null )
                 fileOutputChannel.ReportFileSizesToTaskServer();
 
-            if( Configuration.StageConfiguration.DfsOutput != null )
+            CalculateMetrics(metrics);
+
+            if( Context.StageConfiguration.DfsOutput != null )
             {
                 if( _outputWriter != null )
                 {
-                    _recordsWritten = _outputWriter.RecordsWritten;
-                    _dfsBytesWritten = _outputWriter.BytesWritten;
-
                     ((IDisposable)_outputWriter).Dispose();
-                    _outputWriter = null;
-                }
-
-                if( _outputStream != null )
-                {
-                    _outputStream.Dispose();
-                    _outputStream = null;
+                    // Not setting it to null so there's no chance it'll get recreated.
                 }
 
                 foreach( DfsOutputInfo output in _dfsOutputs )
@@ -463,46 +655,38 @@ namespace Tkl.Jumbo.Jet
         }
 
         /// <summary>
-        /// Calculates metrics for the task.
+        /// Runs the task finish method if this task is a push task.
         /// </summary>
-        /// <returns>Metrics for the task.</returns>
-        public TaskMetrics CalculateMetrics()
-        {
-            TaskMetrics metrics = new TaskMetrics();
-            CalculateMetrics(metrics);
-            return metrics;
-        }
-
-        #region IDisposable Members
+        /// <param name="isFinalizing"><see langword="true"/> if the task is being finalized; otherwise, <see langword="false"/>.</param>
+        protected abstract void RunTaskFinishMethod(bool isFinalizing);
 
         /// <summary>
-        /// Releases all resources used by this <see cref="TaskExecutionUtility"/>.
+        /// Throws an exception if this object was disposed.
         /// </summary>
-        public void Dispose()
+        protected void CheckDisposed()
         {
-            Dispose(true);
-            GC.SuppressFinalize(this);
+            if( _disposed )
+                throw new ObjectDisposedException(typeof(TaskExecutionUtility).FullName);
         }
-
-        #endregion
 
         /// <summary>
         /// Releases all resources used by this <see cref="TaskExecutionUtility"/>.
         /// </summary>
         /// <param name="disposing"><see langword="true"/> to release managed and unmanaged resources; <see langword="false" /> to release only unmanaged resources.</param>
-        private void Dispose(bool disposing)
+        protected virtual void Dispose(bool disposing)
         {
             if( !_disposed )
             {
                 _disposed = true;
                 if( disposing )
                 {
-                    foreach( TaskExecutionUtility task in _associatedTasks )
-                        task.Dispose();
+                    if( _associatedTasks != null )
+                    {
+                        foreach( TaskExecutionUtility task in _associatedTasks )
+                            task.Dispose();
+                    }
                     if( _outputWriter != null )
                         ((IDisposable)_outputWriter).Dispose();
-                    if( _outputStream != null )
-                        _outputStream.Dispose();
                     if( _inputReader != null )
                     {
                         ((IDisposable)_inputReader).Dispose();
@@ -516,7 +700,7 @@ namespace Tkl.Jumbo.Jet
                                 inputChannelDisposable.Dispose();
                         }
                     }
-                    IDisposable outputChannelDisposable = _outputChannel as IDisposable;
+                    IDisposable outputChannelDisposable = OutputChannel as IDisposable;
                     if( outputChannelDisposable != null )
                         outputChannelDisposable.Dispose();
                     if( _progressThread != null )
@@ -529,55 +713,100 @@ namespace Tkl.Jumbo.Jet
             }
         }
 
-        private void FinishTaskAsync()
+        internal int[] GetPartitions()
         {
-            // TODO: Using the ThreadPool is not a good idea; if there is more than one level of associated tasks it could cause deadlock if the pool is exhausted
-            // because each work item will queue additional work items and then wait for their completion.
-            ThreadPool.QueueUserWorkItem(FinishTaskWaitCallback);
+            return _jobServerTaskClient.GetPartitionsForTask(Context.JobId, Context.TaskAttemptId.TaskId);
         }
 
-        private void FinishTaskWaitCallback(object state)
+        private object CreateTaskInstance()
         {
-            FinishTask();
-        }
+            _log.DebugFormat("Creating {0} task instance.", _taskType.AssemblyQualifiedName);
+            object task = JetActivator.CreateInstance(_taskType, this);
 
-        private void CheckDisposed()
-        {
-            if( _disposed )
-                throw new ObjectDisposedException(typeof(TaskExecutionUtility).FullName);
-        }
-
-        private ExtendedCollection<IInputChannel> CreateInputChannels()
-        {
-            if( _inputStages.Count > 0 )
+            if( !_hasAddedTaskProgressSource )
             {
-                ExtendedCollection<IInputChannel> result = new ExtendedCollection<IInputChannel>();
-                foreach( StageConfiguration inputStage in _inputStages )
+                _hasAddedTaskProgressSource = true;
+
+                if( !ProcessesAllInputPartitions && InputChannels != null && InputChannels.Count == 1 && InputChannels[0].Configuration.PartitionsPerTask > 1 )
                 {
-                    switch( inputStage.OutputChannel.ChannelType )
+                    // There may be multiple input partitions, so use the TaskProgressSource class which can handle that.
+                    IHasAdditionalProgress progressTask = task as IHasAdditionalProgress;
+                    if( progressTask != null )
                     {
-                    case ChannelType.File:
-                        result.Add(new FileInputChannel(this, inputStage));
-                        break;
-                    case ChannelType.Tcp:
-                        result.Add(new TcpInputChannel(this, inputStage));
-                        break;
-                    default:
-                        throw new InvalidOperationException("Invalid channel type.");
+                        AddAdditionalProgressSource(task.GetType().FullName, new TaskProgressSource(this));
                     }
                 }
-                return result;
+                else
+                {
+                    AddAdditionalProgressSource(task);
+                }
             }
-            return null;
+
+            OnTaskInstanceCreated(EventArgs.Empty);
+
+            return task;
+        }
+
+        private void AddAdditionalProgressSource(object obj)
+        {
+            if( _isAssociatedTask )
+                _rootTask.AddAdditionalProgressSource(obj);
+            else
+            {
+                IHasAdditionalProgress progressObj = obj as IHasAdditionalProgress;
+                if( progressObj != null )
+                {
+                    string progressName = obj.GetType().FullName;
+                    AddAdditionalProgressSource(progressName, progressObj);
+                }
+            }
+        }
+
+        private void AddAdditionalProgressSource(string progressName, IHasAdditionalProgress progressObj)
+        {
+            if( _additionalProgressSources == null )
+                _additionalProgressSources = new Dictionary<string, List<IHasAdditionalProgress>>();
+            List<IHasAdditionalProgress> sources;
+            if( !_additionalProgressSources.TryGetValue(progressName, out sources) )
+            {
+                sources = new List<IHasAdditionalProgress>();
+                _additionalProgressSources.Add(progressName, sources);
+            }
+            sources.Add(progressObj);
+        }
+
+        private List<IInputChannel> CreateInputChannels(IEnumerable<StageConfiguration> inputStages)
+        {
+            List<IInputChannel> result = null;
+            foreach( StageConfiguration inputStage in inputStages )
+            {
+                IInputChannel channel;
+                switch( inputStage.OutputChannel.ChannelType )
+                {
+                case ChannelType.File:
+                    channel = new FileInputChannel(this, inputStage);
+                    break;
+                case ChannelType.Tcp:
+                    channel = new TcpInputChannel(this, inputStage);
+                    break;
+                default:
+                    throw new InvalidOperationException("Invalid channel type.");
+                }
+                if( result == null )
+                    result = new List<IInputChannel>();
+                result.Add(channel);
+                AddAdditionalProgressSource(channel);
+            }
+            return result;
         }
 
         private IOutputChannel CreateOutputChannel()
         {
-            if( Configuration.StageConfiguration.ChildStage != null )
+            if( Context.StageConfiguration.ChildStage != null )
                 return new PipelineOutputChannel(this);
             else
             {
-                ChannelConfiguration config = Configuration.StageConfiguration.OutputChannel;
+                ChannelConfiguration config = Context.StageConfiguration.OutputChannel;
                 if( config != null )
                 {
                     switch( config.ChannelType )
@@ -594,119 +823,22 @@ namespace Tkl.Jumbo.Jet
             return null;
         }
 
-        private RecordWriter<T> CreateOutputRecordWriter<T>()
+        internal IRecordWriter CreateDfsOutputWriter(int partition)
         {
-            if( Configuration.StageConfiguration.DfsOutput != null )
-            {
-                _dfsOutputs = new List<DfsOutputInfo>();
-                if( Configuration.StageConfiguration.InternalPartitionCount == 1 )
-                {
-                    TaskExecutionUtility root = this;
-                    while( root._baseTask != null )
-                        root = root._baseTask;
-                    if( root.InputChannels != null && root.InputChannels.Count == 1 )
-                        return new PartitionDfsOutputRecordWriter<T>(this, root);
-                }
-                return CreateDfsOutputRecordWriter<T>(Configuration.TaskId.TaskNumber);
-            }
-            else if( OutputChannel != null )
-            {
-                //_log.Debug("Creating output channel record writer.");
-                return OutputChannel.CreateRecordWriter<T>();
-            }
-            else
-                return null;
-        }
-
-        private RecordWriter<T> CreateDfsOutputRecordWriter<T>(int partition)
-        {
-            string file = DfsPath.Combine(DfsPath.Combine(Configuration.DfsJobDirectory, "temp"), Configuration.TaskAttemptId + "_part" + partition.ToString(System.Globalization.CultureInfo.InvariantCulture));
+            string file = DfsPath.Combine(DfsPath.Combine(Context.DfsJobDirectory, "temp"), Context.TaskAttemptId + "_part" + partition.ToString(System.Globalization.CultureInfo.InvariantCulture));
             _log.DebugFormat("Opening output file {0}", file);
 
-            TaskDfsOutput output = Configuration.StageConfiguration.DfsOutput;
+            TaskDfsOutput output = Context.StageConfiguration.DfsOutput;
+            if( _dfsOutputs == null )
+                _dfsOutputs = new List<DfsOutputInfo>();
             _dfsOutputs.Add(new DfsOutputInfo() { DfsOutputTempPath = file, DfsOutputPath = output.GetPath(partition) });
-            _outputStream = DfsClient.CreateFile(file, output.BlockSize, output.ReplicationFactor);
-            //_log.DebugFormat("Creating record writer of type {0}", Configuration.StageConfiguration.DfsOutput.RecordWriterTypeName);
-            Type recordWriterType = Configuration.StageConfiguration.DfsOutput.RecordWriterType;
-            return (RecordWriter<T>)JetActivator.CreateInstance(recordWriterType, this, _outputStream);
+            return output.CreateRecordWriter(this, file);
         }
 
-        private RecordReader<T> CreateInputRecordReader<T>()
-        {
-            if( Configuration.StageConfiguration.DfsInputs != null && Configuration.StageConfiguration.DfsInputs.Count > 0 )
-            {
-                TaskDfsInput input = Configuration.StageConfiguration.DfsInputs[Configuration.TaskId.TaskNumber - 1];
-                //_log.DebugFormat("Creating record reader of type {0}", input.RecordReaderTypeName);
-                return input.CreateRecordReader<T>(DfsClient, this);
-            }
-            else if( InputChannels != null )
-            {
-                //_log.Debug("Creating input channel record reader.");
-                if( InputChannels.Count == 1 )
-                    return (RecordReader<T>)InputChannels[0].CreateRecordReader();
-                else
-                {
-                    Type multiInputRecordReaderType = Configuration.StageConfiguration.MultiInputRecordReaderType.ReferencedType;
-                    int bufferSize = multiInputRecordReaderType == typeof(MergeRecordReader<T>) ? (int)JetClient.Configuration.FileChannel.MergeTaskReadBufferSize : (int)JetClient.Configuration.FileChannel.ReadBufferSize;
-                    CompressionType compressionType = Configuration.JobConfiguration.GetTypedSetting(FileOutputChannel.CompressionTypeSetting, JetClient.Configuration.FileChannel.CompressionType);
-                    MultiInputRecordReader<T> reader = (MultiInputRecordReader<T>)JetActivator.CreateInstance(multiInputRecordReaderType, this, new int[] { 0 }, InputChannels.Count, AllowRecordReuse, bufferSize, compressionType);
-                    foreach( IInputChannel inputChannel in InputChannels )
-                    {
-                        reader.AddInput(new[] { new RecordInput(inputChannel.CreateRecordReader()) });
-                    }
-                    return reader;
-                }
-            }
-            else
-                return null;
-        }
-
-        private void CalculateMetrics(TaskMetrics metrics)
-        {
-            // TODO: Metrics for TCP channels.
-
-            // We don't count pipeline input or output.
-            if( _inputStages.Count == 0 || _inputStages[0].OutputChannel != null )
-            {
-                if( _inputReader != null )
-                    metrics.RecordsRead += _inputReader.RecordsRead;
-
-                if( Configuration.StageConfiguration.DfsInputs != null && Configuration.StageConfiguration.DfsInputs.Count > 0 )
-                {
-                    if( _inputReader != null )
-                        metrics.DfsBytesRead += _inputReader.BytesRead;
-                }
-                else if( InputChannels != null )
-                {
-                    foreach( IInputChannel inputChannel in InputChannels )
-                    {
-                        FileInputChannel fileInputChannel = inputChannel as FileInputChannel;
-                        if( fileInputChannel != null )
-                        {
-                            metrics.LocalBytesRead += fileInputChannel.LocalBytesRead;
-                            metrics.NetworkBytesRead += fileInputChannel.NetworkBytesRead;
-                            metrics.CompressedLocalBytesRead += fileInputChannel.CompressedLocalBytesRead;
-                        }
-                    }
-                }
-            }
-
-            metrics.RecordsWritten += _recordsWritten;
-            metrics.DfsBytesWritten += _dfsBytesWritten;
-            if( OutputChannel is FileOutputChannel && _outputWriter != null )
-            {
-                metrics.LocalBytesWritten += _outputWriter.BytesWritten;
-                metrics.CompressedLocalBytesWritten += _outputWriter.CompressedBytesWritten;
-                metrics.RecordsWritten += _outputWriter.RecordsWritten;
-            }
-
-            foreach( TaskExecutionUtility associatedTask in _associatedTasks )
-            {
-                associatedTask.CalculateMetrics(metrics);
-            }
-        }
-
-        private void StartProgressThread()
+        /// <summary>
+        /// Starts the progress thread.
+        /// </summary>
+        protected void StartProgressThread()
         {
             if( _progressThread == null && !_isAssociatedTask )
             {
@@ -718,47 +850,187 @@ namespace Tkl.Jumbo.Jet
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Reliability", "CA2000:Dispose objects before losing scope")]
         private void ProgressThread()
         {
+            TaskProgress progress = null;
+
             using( MemoryStatus memStatus = JetClient.Configuration.TaskServer.LogSystemStatus ? new MemoryStatus() : null )
             using( ProcessorStatus procStatus = JetClient.Configuration.TaskServer.LogSystemStatus ? new ProcessorStatus() : null )
             {
 
                 _log.Info("Progress thread has started.");
                 // Thread that reports progress
-                float previousProgress = -1;
                 while( !(_finished || _disposed) )
                 {
-                    float progress = 0;
-                    if( _inputReader != null )
-                        progress = _inputReader.Progress;
-                    if( progress != previousProgress )
-                    {
-                        try
-                        {
-                            _log.InfoFormat("Reporting progress: {0}%", (int)(progress * 100));
-                            if( procStatus != null )
-                            {
-                                procStatus.Refresh();
-                                memStatus.Refresh();
-                                _log.DebugFormat("CPU: {0}", procStatus.Total);
-                                _log.DebugFormat("Memory: {0}", memStatus);
-                            }
-                            Umbilical.ReportProgress(Configuration.JobId, Configuration.TaskId.ToString(), progress);
-                            previousProgress = progress;
-                        }
-                        catch( SocketException ex )
-                        {
-                            _log.Error("Failed to report progress to the task server.", ex);
-                        }
-                    }
+                    progress = ReportProgress(progress, memStatus, procStatus);
                     _finishedEvent.WaitOne(_progressInterval, false);
                 }
                 _log.Info("Progress thread has finished.");
             }
         }
 
-        private void OnInputRecordReaderCreated(EventArgs e)
+        private TaskProgress ReportProgress(TaskProgress previousProgress, MemoryStatus memStatus, ProcessorStatus procStatus)
         {
-            EventHandler handler = InputRecordReaderCreated;
+            bool progressChanged = false;
+            if( previousProgress == null )
+            {
+                progressChanged = true;
+                previousProgress = new TaskProgress();
+                previousProgress.StatusMessage = CurrentStatus;
+                if( InputReader != null )
+                    previousProgress.Progress = InputReader.Progress;
+                if( _additionalProgressSources != null )
+                {
+                    foreach( KeyValuePair<string, List<IHasAdditionalProgress>> progressSource in _additionalProgressSources )
+                    {
+                        float value = progressSource.Value.Average(i => i.AdditionalProgress);
+                        previousProgress.AddAdditionalProgressValue(progressSource.Key, value);
+                    }
+                }
+            }
+            else
+            {
+                // Reuse the instance.
+                if( InputReader != null )
+                {
+                    float newProgress = InputReader.Progress;
+                    if( newProgress != previousProgress.Progress )
+                    {
+                        previousProgress.Progress = newProgress;
+                        progressChanged = true;
+                    }
+                }
+
+                string status = CurrentStatus;
+                if( previousProgress.StatusMessage != status )
+                {
+                    previousProgress.StatusMessage = status;
+                    progressChanged = true;
+                }
+
+                if( _additionalProgressSources != null )
+                {
+                    // These are always in the same order so we can do this.
+                    int x = 0;
+                    foreach( KeyValuePair<string, List<IHasAdditionalProgress>> progressSource in _additionalProgressSources )
+                    {
+                        float value = progressSource.Value.Average(i => i.AdditionalProgress);
+                        AdditionalProgressValue additionalProgress = previousProgress.AdditionalProgressValues[x];
+                        if( additionalProgress.Progress != value )
+                        {
+                            additionalProgress.Progress = value;
+                            progressChanged = true;
+                        }
+                        ++x;
+                    }
+                }
+            }
+
+            // If there's no input reader but there are additional progress values, we use their average as the base progress.
+            if( InputReader == null && progressChanged && previousProgress.AdditionalProgressValues != null )
+                previousProgress.Progress = previousProgress.AdditionalProgressValues.Average(v => v.Progress);
+
+            if( progressChanged || _mustReportProgress )
+            {
+                try
+                {
+                    _log.InfoFormat("Reporting progress: {0}", previousProgress);
+                    if( procStatus != null )
+                    {
+                        procStatus.Refresh();
+                        memStatus.Refresh();
+                        _log.DebugFormat("CPU: {0}", procStatus.Total);
+                        _log.DebugFormat("Memory: {0}", memStatus);
+                    }
+                    Umbilical.ReportProgress(Context.JobId, Context.TaskAttemptId, previousProgress);
+                }
+                catch( SocketException ex )
+                {
+                    _log.Error("Failed to report progress to the task server.", ex);
+                }
+
+                _mustReportProgress = false;
+            }
+            return previousProgress;
+        }
+
+        private void CalculateMetrics(TaskMetrics metrics)
+        {
+            // TODO: Metrics for TCP channels.
+
+            if( !_isAssociatedTask )
+            {
+                // This is the root stage of a compound stage (or it's not a compound stage), so we need to calculate input metrics.
+                if( _inputReader != null )
+                {
+                    metrics.InputRecords += _inputReader.RecordsRead;
+                    metrics.InputBytes += _inputReader.InputBytes;
+                }
+
+                if( Context.StageConfiguration.DfsInput != null )
+                {
+                    // It's currently not possible to have a multi input record reader with DFS inputs, so this is safe.
+                    if( _inputReader != null )
+                        metrics.DfsBytesRead += _inputReader.BytesRead;
+                }
+                else if( _inputChannels != null )
+                {
+                    foreach( IInputChannel inputChannel in _inputChannels )
+                    {
+                        UpdateMetricsFromSource(metrics, inputChannel);
+                    }
+                }
+
+                metrics.DynamicallyAssignedPartitions += _additionalPartitionCount;
+                metrics.DiscardedPartitions += _discardedPartitionCount;
+            }
+
+            if( _associatedTasks == null || _associatedTasks.Count == 0 )
+            {
+                // This is the final stage of a compound stage (or it's not a compound stage), so we need to calculate output metrics.
+                if( _outputWriter != null )
+                {
+                    metrics.OutputRecords += _outputWriter.RecordsWritten;
+                    metrics.OutputBytes += _outputWriter.OutputBytes;
+                }
+
+                if( Context.StageConfiguration.DfsOutput != null )
+                {
+                    metrics.DfsBytesWritten += _outputWriter.BytesWritten;
+                }
+                else
+                {
+                    UpdateMetricsFromSource(metrics, OutputChannel);
+                }
+            }
+        }
+
+        private static void UpdateMetricsFromSource(TaskMetrics metrics, object source)
+        {
+            IHasMetrics metricsSource = source as IHasMetrics;
+            if( metricsSource != null )
+            {
+                metrics.LocalBytesRead += metricsSource.LocalBytesRead;
+                metrics.LocalBytesWritten += metricsSource.LocalBytesWritten;
+                metrics.NetworkBytesRead += metricsSource.NetworkBytesRead;
+                metrics.NetworkBytesWritten += metricsSource.NetworkBytesWritten;
+            }
+        }
+
+        private static void ConfigureLog(string logFile)
+        {
+            log4net.LogManager.ResetConfiguration();
+            log4net.Appender.FileAppender appender = new log4net.Appender.FileAppender()
+            {
+                File = logFile,
+                Layout = new log4net.Layout.PatternLayout("%date [%thread] %-5level %logger - %message%newline"),
+                Threshold = log4net.Core.Level.All
+            };
+            appender.ActivateOptions();
+            log4net.Config.BasicConfigurator.Configure(appender);
+        }
+
+        private void OnTaskInstanceCreated(EventArgs e)
+        {
+            EventHandler handler = TaskInstanceCreated;
             if( handler != null )
                 handler(this, e);
         }

@@ -74,9 +74,6 @@ namespace Tkl.Jumbo.IO
             if( recordType == null )
                 throw new ArgumentNullException("recordType");
 
-            if( recordType.GetInterface(typeof(IWritable).FullName) != typeof(IWritable) )
-                throw new ArgumentException("The specified type does not implement Tkl.Jumbo.IO.IWritable.", "recordType");
-
             Version = RecordFile.CurrentVersion;
             if( useStrongName )
                 RecordTypeName = recordType.AssemblyQualifiedName;

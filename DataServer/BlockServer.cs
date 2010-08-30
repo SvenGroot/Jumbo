@@ -227,6 +227,15 @@ namespace DataServerApplication
                 using( Tkl.Jumbo.IO.WriteBufferedStream bufferedStream = new Tkl.Jumbo.IO.WriteBufferedStream(stream) )
                 using( BinaryWriter writer = new BinaryWriter(bufferedStream) )
                 {
+                    // Check if the requested offset is in range. To do this, we take the computed offset of the 
+                    // first packet to send (fileOffset) and add the offset into that first packet (header.Offset - offset) to it.
+                    if( fileOffset + header.Offset - offset > blockFile.Length )
+                    {
+                        _log.ErrorFormat("Client requested offset {0} (after correction) larger than block file length {1}.", fileOffset + header.Offset - offset, blockFile.Length);
+                        writer.WriteResult(DataServerClientProtocolResult.OutOfRange);
+                        return;
+                    }
+
                     _log.DebugFormat("Block file opened, beginning send.");
                     if( header.Size >= 0 )
                     {
@@ -234,7 +243,7 @@ namespace DataServerApplication
                     }
                     else
                     {
-					  endPacketOffset = (int)(blockFile.Length / (Packet.PacketSize + sizeof(uint)));
+                        endPacketOffset = (int)(blockFile.Length / (Packet.PacketSize + sizeof(uint)));
                     }
                     endOffset = endPacketOffset * Packet.PacketSize;
                     endFileOffset = endPacketOffset * (Packet.PacketSize + sizeof(uint));
@@ -243,15 +252,15 @@ namespace DataServerApplication
 
                     if( fileOffset > blockFile.Length || endFileOffset > blockFile.Length )
                     {
-                        _log.ErrorFormat("Requested offsets are out of range.");
-                        writer.WriteResult(DataServerClientProtocolResult.Error);
+                        _log.Error("Requested offsets are out of range.");
+                        writer.WriteResult(DataServerClientProtocolResult.OutOfRange);
                         return;
                     }
 
                     blockFile.Seek(fileOffset, SeekOrigin.Begin);
                     int sizeRemaining = endOffset - offset;
                     Packet packet = new Packet();
-                    writer.Write((int)DataServerClientProtocolResult.Ok);
+                    writer.WriteResult(DataServerClientProtocolResult.Ok);
                     writer.Write(offset);
                     try
                     {

@@ -18,7 +18,7 @@ namespace Tkl.Jumbo.Test.Jet
         [TestFixtureSetUp]
         public void Setup()
         {
-            _cluster = new TestJetCluster(null, true, 4, CompressionType.None, false);
+            _cluster = new TestJetCluster(null, true, 4, CompressionType.None);
         }
 
         [TestFixtureTearDown]
@@ -47,14 +47,14 @@ namespace Tkl.Jumbo.Test.Jet
         public void TestCreateTaskServerUmbilicalClient()
         {
             ITaskServerUmbilicalProtocol client = JetClient.CreateTaskServerUmbilicalClient(TestJetCluster.TaskServerPort);
-            client.ReportCompletion(Guid.Empty, null);
+            client.ReportCompletion(Guid.Empty, null, null);
         }
 
         [Test]
         public void TestCreateTaskServerClient()
         {
             ITaskServerClientProtocol client = JetClient.CreateTaskServerClient(new ServerAddress("localhost", TestJetCluster.TaskServerPort));
-            Assert.AreEqual(TaskAttemptStatus.NotStarted, client.GetTaskStatus("bogus"));
+            Assert.AreEqual(TaskAttemptStatus.NotStarted, client.GetTaskStatus(Guid.Empty, new TaskAttemptId(new TaskId("bogus", 1), 1)));
         }
     }
 }

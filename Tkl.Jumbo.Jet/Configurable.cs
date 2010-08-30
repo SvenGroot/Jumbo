@@ -27,7 +27,7 @@ namespace Tkl.Jumbo.Jet
         /// <summary>
         /// Gets or sets the configuration for the task attempt.
         /// </summary>
-        public TaskAttemptConfiguration TaskAttemptConfiguration { get; set; }
+        public TaskContext TaskContext { get; set; }
 
         /// <summary>
         /// Indicates the configuration has been changed. <see cref="JetActivator.ApplyConfiguration"/> calls this method

@@ -29,8 +29,8 @@ namespace Tkl.Jumbo.Test
                     Assert.AreEqual(typeof(Utf8String).FullName + ", " + typeof(Utf8String).Assembly.GetName().Name, writer.Header.RecordTypeName);
                     Assert.AreEqual(1, writer.Header.Version);
                     Assert.AreEqual(0, writer.RecordsWritten);
-                    Assert.AreNotEqual(0, writer.BytesWritten); // Because it must've written the header this isn't 0.
-                    headerSize = writer.BytesWritten;
+                    Assert.AreNotEqual(0, writer.OutputBytes); // Because it must've written the header this isn't 0.
+                    headerSize = writer.OutputBytes;
                     Utf8String record = new Utf8String();
                     foreach( string item in records )
                     {

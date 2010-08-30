@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.ComponentModel;
 
 namespace Tkl.Jumbo.IO
 {
@@ -21,6 +22,18 @@ namespace Tkl.Jumbo.IO
         /// Event that is raised if the value of the <see cref="CurrentPartition"/> property changes.
         /// </summary>
         event EventHandler CurrentPartitionChanged;
+
+        /// <summary>
+        /// Event raised when the value of the <see cref="CurrentPartition"/> property is about to change.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        ///   If you set <see cref="CancelEventArgs.Cancel"/> to <see langword="true"/> in the handler
+        ///   for this event, the <see cref="NextPartition"/> method will skip the indicated partition
+        ///   and move to the next one.
+        /// </para>
+        /// </remarks>
+        event EventHandler<CurrentPartitionChangingEventArgs> CurrentPartitionChanging;
 
         /// <summary>
         /// Gets the total number of inputs readers that this record reader will have.
@@ -48,14 +61,20 @@ namespace Tkl.Jumbo.IO
         CompressionType CompressionType { get; }
 
         /// <summary>
-        /// Gets all partitions that this reader currently has data for.
+        /// Gets all partitions currently assigned to this reader.
         /// </summary>
-        IList<int> Partitions { get; }
+        IList<int> PartitionNumbers { get; }
 
         /// <summary>
-        /// Gets or sets the partition that calls to <see cref="RecordReader{T}.ReadRecord"/> should return records for.
+        /// Gets the partition that calls to <see cref="RecordReader{T}.ReadRecord"/> should return records for.
         /// </summary>
-        int CurrentPartition { get; set; }
+        int CurrentPartition { get; }
+
+        /// <summary>
+        /// Moves the current partition to the next partition.
+        /// </summary>
+        /// <returns><see langword="true"/> if the current partition was moved to the next partition; <see langword="false"/> if there were no more partitions.</returns>
+        bool NextPartition();
 
         /// <summary>
         /// Adds the specified input to be read by this record reader.
@@ -66,5 +85,16 @@ namespace Tkl.Jumbo.IO
         /// All calls to <see cref="AddInput"/> must specify those exact same partitions, sorted by the partition number.
         /// </remarks>
         void AddInput(IList<RecordInput> partitions);
+
+        /// <summary>
+        /// Assigns additional partitions to this record reader.
+        /// </summary>
+        /// <param name="newPartitions">The new partitions to assign.</param>
+        /// <remarks>
+        /// <para>
+        ///   New partitions may only be assigned after all inputs for the existing partitions have been received.
+        /// </para>
+        /// </remarks>
+        void AssignAdditionalPartitions(IList<int> newPartitions);
     }
 }

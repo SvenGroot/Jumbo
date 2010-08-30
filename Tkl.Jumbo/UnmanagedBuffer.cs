@@ -88,6 +88,52 @@ namespace Tkl.Jumbo
         }
 
         /// <summary>
+        /// Copies data from a managed array to the buffer, wrapping around if necessary.
+        /// </summary>
+        /// <param name="source">The managed byte array containing the data to copy.</param>
+        /// <param name="sourceIndex">The index in <paramref name="source"/> to start copying at.</param>
+        /// <param name="destination">The <see cref="UnmanagedBuffer"/> to copy the data to.</param>
+        /// <param name="destinationIndex">The index in <paramref name="destination"/> to start copying at.</param>
+        /// <param name="count">The number of bytes to copy.</param>
+        /// <returns>The next index position after writing the data.</returns>
+        public static int CopyCircular(byte[] source, int sourceIndex, UnmanagedBuffer destination, int destinationIndex, int count)
+        {
+            if( source == null )
+                throw new ArgumentNullException("source");
+            if( destination == null )
+                throw new ArgumentNullException("destination");
+            if( sourceIndex < 0 )
+                throw new ArgumentOutOfRangeException("sourceIndex");
+            if( destinationIndex < 0 )
+                throw new ArgumentOutOfRangeException("destinationIndex");
+            if( count < 0 )
+                throw new ArgumentOutOfRangeException("count");
+            if( sourceIndex + count > source.Length )
+                throw new ArgumentException("sourceIndex + count is larger than the source array.");
+            int end = destinationIndex + count;
+            if( end > destination.Size )
+            {
+                end %= destination.Size;
+                if( end > destinationIndex )
+                    throw new ArgumentException("count is larger than the destination array.");
+            }
+
+            destination.CheckDisposed();
+
+            if( end >= destinationIndex )
+            {
+                Marshal.Copy(source, sourceIndex, new IntPtr(destination._buffer + destinationIndex), count);
+            }
+            else
+            {
+                int firstCount = destination.Size - destinationIndex;
+                Marshal.Copy(source, sourceIndex, new IntPtr(destination._buffer + destinationIndex), firstCount);
+                Marshal.Copy(source, sourceIndex + firstCount, new IntPtr(destination._buffer), end);
+            }
+            return end % destination.Size;
+        }
+
+        /// <summary>
         /// Copies data from a buffer to a managed array.
         /// </summary>
         /// <param name="source">The <see cref="UnmanagedBuffer"/> containing the data to copy.</param>
@@ -115,6 +161,53 @@ namespace Tkl.Jumbo
             source.CheckDisposed();
 
             Marshal.Copy(new IntPtr(source._buffer + sourceIndex), destination, destinationIndex, count);
+        }
+
+        /// <summary>
+        /// Copies data from a circular buffer to a managed array.
+        /// </summary>
+        /// <param name="source">The <see cref="UnmanagedBuffer"/> containing the data to copy.</param>
+        /// <param name="sourceIndex">The index in <paramref name="source"/> to start copying at.</param>
+        /// <param name="destination">The managed byte array to copy the data to.</param>
+        /// <param name="destinationIndex">The index in <paramref name="destination"/> to start copying at.</param>
+        /// <param name="count">The number of bytes to copy.</param>
+        public static int CopyCircular(UnmanagedBuffer source, int sourceIndex, byte[] destination, int destinationIndex, int count)
+        {
+            if( source == null )
+                throw new ArgumentNullException("source");
+            if( destination == null )
+                throw new ArgumentNullException("destination");
+            if( sourceIndex < 0 )
+                throw new ArgumentOutOfRangeException("sourceIndex");
+            if( destinationIndex < 0 )
+                throw new ArgumentOutOfRangeException("destinationIndex");
+            if( count < 0 )
+                throw new ArgumentOutOfRangeException("count");
+            if( destinationIndex + count > destination.Length )
+                throw new ArgumentException("destinationIndex + count is larger than the destination array.");
+
+            int end = sourceIndex + count;
+            if( end > source.Size )
+            {
+                end %= source.Size;
+                if( end > sourceIndex )
+                    throw new ArgumentException("count is larger than the source array.");
+            }
+
+            source.CheckDisposed();
+
+            if( end >= sourceIndex )
+            {
+                Marshal.Copy(new IntPtr(source._buffer + sourceIndex), destination, destinationIndex, count);
+            }
+            else
+            {
+                int firstCount = source.Size - sourceIndex;
+                Marshal.Copy(new IntPtr(source._buffer + sourceIndex), destination, destinationIndex, firstCount);
+                Marshal.Copy(new IntPtr(source._buffer), destination, destinationIndex + firstCount, end);
+            }
+            return end % source.Size;
+
         }
 
         /// <summary>

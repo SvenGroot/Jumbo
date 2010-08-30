@@ -81,7 +81,11 @@
     <Compile Include="..\Version.cs">
       <Link>Properties\Version.cs</Link>
     </Compile>
+    <Compile Include="AdditionalProgressCounter.cs" />
+    <Compile Include="AdditionalProgressCounterAttribute.cs" />
+    <Compile Include="AdditionalProgressValue.cs" />
     <Compile Include="AllowRecordReuseAttribute.cs" />
+    <Compile Include="ArchivedJob.cs" />
     <Compile Include="AssemblyResolver.cs" />
     <Compile Include="Channels\ChannelConfiguration.cs" />
     <Compile Include="Channels\ChannelConnectivity.cs" />
@@ -97,7 +101,15 @@
     <Compile Include="Channels\NetworkRecordReader.cs" />
     <Compile Include="Channels\NetworkRecordWriter.cs" />
     <Compile Include="Channels\OutputChannel.cs" />
+    <Compile Include="Channels\PartitionAssignmentMethod.cs" />
+    <Compile Include="Channels\PartitionFileIndex.cs" />
+    <Compile Include="Channels\PartitionFileIndexEntry.cs" />
+    <Compile Include="Channels\PartitionFileStream.cs" />
     <Compile Include="Channels\PipelineOutputChannel.cs" />
+    <Compile Include="Channels\PipelinePrepartitionedPushTaskRecordWriter.cs" />
+    <Compile Include="Channels\PipelinePushTaskRecordWriter.cs" />
+    <Compile Include="Channels\SingleFileMultiRecordWriter.cs" />
+    <Compile Include="Channels\SizeRecordingStream.cs" />
     <Compile Include="Channels\TcpInputChannel.cs" />
     <Compile Include="Channels\TcpOutputChannel.cs" />
     <Compile Include="CleanupJobJetHeartbeatResponse.cs" />
@@ -106,7 +118,26 @@
     <Compile Include="FileChannelConfigurationElement.cs" />
     <Compile Include="GlobalSuppressions.cs" />
     <Compile Include="HashPartitioner.cs" />
+    <Compile Include="IHasAdditionalProgress.cs" />
+    <Compile Include="IHasMetrics.cs" />
+    <Compile Include="IJobServerTaskProtocol.cs" />
+    <Compile Include="IPrepartitionedPushTask.cs" />
+    <Compile Include="Jobs\Channel.cs" />
+    <Compile Include="Jobs\DfsInput.cs" />
+    <Compile Include="Jobs\DfsOutput.cs" />
+    <Compile Include="Jobs\IStageInput.cs" />
+    <Compile Include="Jobs\IStageOutput.cs" />
+    <Compile Include="Jobs\JobBuilderCompiler.cs" />
+    <Compile Include="Jobs\JobBuilderJob.cs" />
     <Compile Include="Jobs\JobSettingAttribute.cs" />
+    <Compile Include="Jobs\JobBuilder.cs" />
+    <Compile Include="Jobs\PipelineCreationMethod.cs" />
+    <Compile Include="Jobs\StageBuilder.cs" />
+    <Compile Include="Jobs\StageSettingCategory.cs" />
+    <Compile Include="KillTaskJetHeartbeatResponse.cs" />
+    <Compile Include="MergePassHelper.cs" />
+    <Compile Include="MergeRecordReaderConfigurationElement.cs" />
+    <Compile Include="MultiPartitionRecordReader.cs" />
     <Compile Include="PartitionerConstants.cs" />
     <Compile Include="IConfigurable.cs" />
     <Compile Include="InputStageInfo.cs" />
@@ -131,26 +162,30 @@
     <Compile Include="Jobs\BaseJobRunner.cs" />
     <Compile Include="Jobs\BasicJob.cs" />
     <Compile Include="Jobs\IJobRunner.cs" />
-    <Compile Include="Jobs\JobBuilder.cs" />
     <Compile Include="Jobs\JobBuilderDelegates.cs" />
-    <Compile Include="Jobs\JobBuilderJob.cs" />
-    <Compile Include="Jobs\JobRunnerArgument.cs" />
     <Compile Include="Jobs\JobRunnerInfo.cs" />
-    <Compile Include="Jobs\RecordCollector.cs" />
     <Compile Include="MergeRecordReader.cs" />
+    <Compile Include="Channels\PipelinePullTaskRecordWriter.cs" />
+    <Compile Include="PrepartitionedPartitioner.cs" />
+    <Compile Include="PrepartitionedRecordWriter.cs" />
+    <Compile Include="ProcessAllInputPartitionsAttribute.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="RunTaskJetHeartbeatResponse.cs" />
     <Compile Include="ServerShutdownException.cs" />
     <Compile Include="SettingsDictionary.cs" />
     <Compile Include="StageConfiguration.cs" />
+    <Compile Include="StageDfsInput.cs" />
     <Compile Include="StageStatus.cs" />
-    <Compile Include="StatusJetHeartbeatData.cs" />
-    <Compile Include="TaskAttemptConfiguration.cs" />
+    <Compile Include="InitialStatusJetHeartbeatData.cs" />
+    <Compile Include="TaskContext.cs" />
+    <Compile Include="TaskAttemptId.cs" />
     <Compile Include="TaskDfsInput.cs" />
     <Compile Include="TaskDfsOutput.cs" />
     <Compile Include="TaskExecutionUtility.cs" />
+    <Compile Include="TaskExecutionUtilityGeneric.cs" />
     <Compile Include="TaskId.cs" />
     <Compile Include="TaskMetrics.cs" />
+    <Compile Include="TaskProgress.cs" />
     <Compile Include="TaskServerConfigurationElement.cs" />
     <Compile Include="TaskServerHeartbeatCommand.cs" />
     <Compile Include="TaskServerMetrics.cs" />
@@ -179,9 +214,6 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
-    <CodeAnalysisDictionary Include="CodeAnalysisDictionary.xml" />
-  </ItemGroup>
-  <ItemGroup>
     <BootstrapperPackage Include="Microsoft.Net.Client.3.5">
       <Visible>False</Visible>
       <ProductName>.NET Framework 3.5 SP1 Client Profile</ProductName>
@@ -197,6 +229,11 @@
       <ProductName>Windows Installer 3.1</ProductName>
       <Install>true</Install>
     </BootstrapperPackage>
+  </ItemGroup>
+  <ItemGroup>
+    <CodeAnalysisDictionary Include="..\CodeAnalysisDictionary.xml">
+      <Link>CodeAnalysisDictionary.xml</Link>
+    </CodeAnalysisDictionary>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

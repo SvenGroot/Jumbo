@@ -18,7 +18,7 @@ namespace JetShell.Commands
     [ShellCommand("job"), Description("Runs a job on the Jumbo Jet cluster.")]
     class RunJobCommand : JetShellCommand
     {
-        private const int _jobStatusPollInterval = 5000;
+        private const int _jobStatusPollInterval = 1000;
 
         private readonly string[] _args;
         private readonly int _argIndex;
@@ -31,6 +31,7 @@ namespace JetShell.Commands
 
         public override void Run()
         {
+            ExitStatus = 1; // Assume failure unless we can successfully run a job.
             if( _args.Length - _argIndex == 0 )
                 Console.WriteLine("Usage: JetShell.exe job <assemblyName> [jobName] [job arguments...]");
             else
@@ -63,22 +64,29 @@ namespace JetShell.Commands
                         else
                         {
                             Guid jobId = jobRunner.RunJob();
-                            bool success = WaitForJobCompletion(JetClient, _jobStatusPollInterval, jobId);
+                            bool success = WaitForJobCompletion(JetClient, jobId);
                             jobRunner.FinishJob(success);
+                            ExitStatus = success ? 0 : 1;
                         }
                     }
                 }
             }
         }
 
-        private static bool WaitForJobCompletion(JetClient jetClient, int interval, Guid jobId)
+        private static bool WaitForJobCompletion(JetClient jetClient, Guid jobId)
         {
             JobStatus status = null;
+            string previousStatus = null;
             do
             {
-                Thread.Sleep(interval);
+                Thread.Sleep(_jobStatusPollInterval);
                 status = jetClient.JobServer.GetJobStatus(jobId);
-                Console.WriteLine(status);
+                string statusString = status.ToString();
+                if( statusString != previousStatus )
+                {
+                    Console.WriteLine(statusString);
+                    previousStatus = statusString;
+                }
             } while( !status.IsFinished );
 
             Console.WriteLine();

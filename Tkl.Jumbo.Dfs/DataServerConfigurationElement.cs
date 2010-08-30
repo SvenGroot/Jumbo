@@ -61,5 +61,27 @@ namespace Tkl.Jumbo.Dfs
             get { return (int)this["statusUpdateInterval"]; }
             set { this["statusUpdateInterval"] = value; }
         }
+
+        /// <summary>
+        /// Gets or sets the size of the write buffer for block files.
+        /// </summary>
+        /// <value>The size of the write buffer for block files.</value>
+        [ConfigurationProperty("writeBufferSize", DefaultValue = "128KB", IsRequired = false, IsKey = false)]
+        public ByteSize WriteBufferSize
+        {
+            get { return (ByteSize)this["writeBufferSize"]; }
+            set { this["writeBufferSize"] = value; }
+        }
+
+        /// <summary>
+        /// Gets or sets the size of the read buffer for block files.
+        /// </summary>
+        /// <value>The size of the read buffer for block files.</value>
+        [ConfigurationProperty("readBufferSize", DefaultValue = "128KB", IsRequired = false, IsKey = false)]
+        public ByteSize ReadBufferSize
+        {
+            get { return (ByteSize)this["readBufferSize"]; }
+            set { this["readBufferSize"] = value; }
+        }
     }
 }

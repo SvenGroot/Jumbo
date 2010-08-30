@@ -33,11 +33,11 @@ namespace Tkl.Jumbo.Jet
         public override void NotifyConfigurationChanged()
         {
             _comparer = null;
-            if( TaskAttemptConfiguration != null )
+            if( TaskContext != null )
             {
-                string comparerTypeName = TaskAttemptConfiguration.StageConfiguration.GetSetting(PartitionerConstants.EqualityComparerSetting, null);
+                string comparerTypeName = TaskContext.StageConfiguration.GetSetting(PartitionerConstants.EqualityComparerSetting, null);
                 if( !string.IsNullOrEmpty(comparerTypeName) )
-                    _comparer = (IEqualityComparer<T>)JetActivator.CreateInstance(Type.GetType(comparerTypeName, true), DfsConfiguration, JetConfiguration, TaskAttemptConfiguration);
+                    _comparer = (IEqualityComparer<T>)JetActivator.CreateInstance(Type.GetType(comparerTypeName, true), DfsConfiguration, JetConfiguration, TaskContext);
             }
 
             if( _comparer == null )

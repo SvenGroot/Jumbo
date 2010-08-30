@@ -49,9 +49,23 @@ namespace Tkl.Jumbo.Jet
         public DateTime EndTime { get; set; }
 
         /// <summary>
-        /// Gets or sets the progress of the task, between 0 and 1.
+        /// Gets or sets the progress of the task.
         /// </summary>
-        public float Progress { get; set; }
+        public TaskProgress TaskProgress { get; set; }
+
+        /// <summary>
+        /// Gets or sets the metrics collected during task execution.
+        /// </summary>
+        public TaskMetrics Metrics { get; set; }
+
+        /// <summary>
+        /// Gets the overall progress of the task.
+        /// </summary>
+        /// <value>The overall progress.</value>
+        public float Progress
+        {
+            get { return TaskProgress == null ? 0.0f : TaskProgress.OverallProgress; }
+        }
 
         /// <summary>
         /// Gets the duration of the task.
@@ -110,6 +124,7 @@ namespace Tkl.Jumbo.Jet
                 Attempts = (int)task.Attribute("attempts"),
                 StartTime = DateTime.ParseExact(task.Attribute("startTime").Value, JobStatus.DatePattern, System.Globalization.CultureInfo.InvariantCulture),
                 EndTime = DateTime.ParseExact(task.Attribute("endTime").Value, JobStatus.DatePattern, System.Globalization.CultureInfo.InvariantCulture),
+                TaskProgress = new TaskProgress() { Progress = 1f }
             };
             status.StartOffset = status.StartTime - job.StartTime;
             return status;

@@ -82,12 +82,14 @@
     <Compile Include="LineAdderTask.cs" />
     <Compile Include="LineCounterPushTask.cs" />
     <Compile Include="LineCounterTask.cs" />
+    <Compile Include="LineVerifierTask.cs" />
     <Compile Include="MultiplierTask.cs" />
     <Compile Include="NoOutputTask.cs" />
     <Compile Include="Order.cs" />
     <Compile Include="OrderJoinComparer.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="StringConversionTask.cs" />
+    <Compile Include="DelayTask.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Tkl.Jumbo.Jet\Tkl.Jumbo.Jet.csproj">

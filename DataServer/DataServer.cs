@@ -130,13 +130,13 @@ namespace DataServerApplication
                     throw new ArgumentException("Existing block ID.");
                 _pendingBlocks.Add(blockID);
                 System.IO.Directory.CreateDirectory(_temporaryBlockStorageDirectory);
-                return System.IO.File.Create(Path.Combine(_temporaryBlockStorageDirectory, blockID.ToString()));
+                return System.IO.File.Create(Path.Combine(_temporaryBlockStorageDirectory, blockID.ToString()), (int)_config.DataServer.WriteBufferSize.Value);
             }
         }
 
         public FileStream OpenBlock(Guid blockID)
         {
-            return System.IO.File.OpenRead(GetBlockFileName(blockID));
+            return new FileStream(GetBlockFileName(blockID), FileMode.Open, FileAccess.Read, FileShare.Read, (int)_config.DataServer.ReadBufferSize.Value);
         }
 
         public int GetBlockSize(Guid blockID)

@@ -57,11 +57,11 @@ namespace Tkl.Jumbo
             }
             else if( value is int )
             {
-                return new ByteSize() { Value = (int)value };
+                return new ByteSize((int)value);
             }
             else if( value is long )
             {
-                return new ByteSize() { Value = (long)value };
+                return new ByteSize((long)value);
             }
             return base.ConvertFrom(context, culture, value);
         }

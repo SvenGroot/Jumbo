@@ -8,13 +8,17 @@ using System.Diagnostics;
 using Tkl.Jumbo;
 using System.IO;
 using Tkl.Jumbo.IO;
+using System.Runtime.InteropServices;
 
 namespace Tkl.Jumbo.Jet.Samples.FPGrowth
 {
-    class FPTree
+    // This class stores the node list and node children lists in unmanaged arrays, allocated with Marshal.AllocHGlobal.
+    // The reason it does this is because the Mono GC (in Mono 2.6) doesn't compact and doesn't return memory to the OS,
+    // so the frequent calls to Array.Resize cause a large amount of memory to be wasted. Using unsafe code here gives us
+    // 50%+ memory savings in many cases.
+    unsafe sealed class FPTree : IDisposable
     {
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(FPTree));
-        private static int _totalTrees;
 
         #region Nested types
 
@@ -24,85 +28,75 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
             public int Support { get; set; }
         }
 
-        private struct NodeChildList
-        {
-            public int Count;
-            public int[] Children;
-
-            public void Add(int node)
-            {
-                int newChild = Count++;
-                if( Children == null )
-                    Children = new int[2];
-                else if( Children.Length < Count )
-                {
-                    int newSize = (int)(Children.Length * _growthRate);
-                    Array.Resize(ref Children, newSize);
-                }
-                Children[newChild] = node;
-            }
-        }
-
-        private class Count
-        {
-            public int Value { get; set; }
-        }
-
         #endregion
 
         private readonly HeaderTableItem[] _headerTable;
         private readonly int _minSupport;
-        private FPTreeNode[] _nodes;
-        private NodeChildList[] _nodeChildren; // Children stored separately to reduce the size of FPTreeNode.
+        private FPTreeNode* _nodes;
+        private int _nodesLength;
+        private NodeChildList* _nodeChildren; // Children stored separately to reduce the size of FPTreeNode.
         private int _nodeCount = 1;
         private const int _rootNode = 0;
         private const float _growthRate = 1.5f;
         private const int _minSize = 8;
         private int _weight;
         private int _mineUntilItem;
+        private readonly TaskContext _config;
+        private bool _disposed;
 
-        public FPTree(IEnumerable<ITransaction> transactions, int minSupport, int itemCount)
+        public event EventHandler ProgressChanged;
+
+        public FPTree(IEnumerable<ITransaction> transactions, int minSupport, int itemCount, TaskContext config)
         {
             // The transactions passed to this constructor must already be mapped and sorted by frequent item list order.
             // The itemCount indicates how many of the items from the frequent item list are in the subdatabase.
             // The highest item ID in the subdatabase should be itemCount - 1.
-            ++_totalTrees;
             int size = Math.Max(itemCount, _minSize);
-            _nodes = new FPTreeNode[size];
-            _nodeChildren = new NodeChildList[size];
+            _nodes = (FPTreeNode*)Marshal.AllocHGlobal(size * sizeof(FPTreeNode));
+            _nodes[_rootNode] = new FPTreeNode();
+            _nodes[_rootNode].Id = -1;
+            _nodesLength = size;
+            _nodeChildren = (NodeChildList*)Marshal.AllocHGlobal(size * sizeof(NodeChildList));
+            _nodeChildren[_rootNode] = new NodeChildList();
             _headerTable = new HeaderTableItem[itemCount];
             BuildTree(transactions);
-            _nodeChildren = null; // Not needed after tree construction, allow collection of objects.
-            _log.DebugFormat("Length: {0}; Capacity: {1}; Memory: {2}", _nodeCount, _nodes.Length, Process.GetCurrentProcess().PrivateMemorySize64);
+            CleanupChildren(); // Children are not needed after tree construction.
+            _log.DebugFormat("Length: {0}; Capacity: {1}; Memory: {2}", _nodeCount, _nodesLength, Process.GetCurrentProcess().PrivateMemorySize64);
             _minSupport = minSupport;
             _nodes[_rootNode].Id = -1;
+            _config = config;
         }
 
         private FPTree(int size, int headerSize, int minSupport)
         {
-            ++_totalTrees;
             // This is used only for conditional trees, so we don't need to create the _nodeChildren array.
-            _nodes = new FPTreeNode[size];
+            _nodes = (FPTreeNode*)Marshal.AllocHGlobal(size * sizeof(FPTreeNode));
+            _nodesLength = size;
             _headerTable = new HeaderTableItem[headerSize];
             _minSupport = minSupport;
+            _nodes[_rootNode] = new FPTreeNode();
             _nodes[_rootNode].Id = -1;
         }
 
-        public static int TotalTrees { get { return _totalTrees; } }
+        ~FPTree()
+        {
+            Dispose(false);
+        }
 
-        public void Mine(RecordWriter<Pair<int, WritableCollection<MappedFrequentPattern>>> output, int k, bool expandPerfectExtensions, int mineUntilItem)
+        public float Progress { get; private set; }
+
+        public FrequentPatternMaxHeap[] Mine(RecordWriter<Pair<int, WritableCollection<MappedFrequentPattern>>> output, int k, bool expandPerfectExtensions, int mineUntilItem, FrequentPatternMaxHeap[] itemHeaps)
         {
             if( output == null )
                 throw new ArgumentNullException("output");
 
-            FrequentPatternCollector collector = new FrequentPatternCollector(_headerTable.Length, _weight, output, expandPerfectExtensions, _minSupport, k);
+            FrequentPatternCollector collector = new FrequentPatternCollector(_headerTable.Length, _weight, output, expandPerfectExtensions, _minSupport, k, itemHeaps);
 
             _mineUntilItem = mineUntilItem;
             Mine(null, collector);
 
             // If we didn't mine the entire item set, those items we did mine can still have found patterns containing the lower items, so we need to report those as well.
-            for( int x = mineUntilItem - 1; x >= 0; --x )
-                collector.ReportTopK(x);
+            return collector.ItemHeaps;
         }
 
         public void PrintTree(TextWriter writer)
@@ -124,12 +118,25 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
             }
         }
 
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
         private void Mine(int? currentItem, FrequentPatternCollector collector)
         {
             int lower = currentItem == null ? _mineUntilItem : 0;
             for( int x = _headerTable.Length - 1; x >= lower; --x )
             {
                 MineItem(currentItem, collector, x);
+                if( currentItem == null )
+                {
+                    int total = _headerTable.Length - lower;
+                    int processed = _headerTable.Length - x;
+                    Progress = processed / (float)total;
+                    OnProgressChanged(EventArgs.Empty);
+                }
             }
         }
 
@@ -144,7 +151,11 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
         private void MineItem(int? currentItem, FrequentPatternCollector collector, int item)
         {
             if( currentItem == null )
-                _log.InfoFormat("Mining for patterns with item {0}", item);
+            {
+                string message = string.Format("Mining for patterns with item id: {0}", item);
+                _log.InfoFormat(message);
+                _config.StatusMessage = message;
+            }
             int minSupport = collector.GetMinSupportForItem(currentItem == null ? item : currentItem.Value);
             if( _headerTable[item].Support >= minSupport )
             {
@@ -158,24 +169,23 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
                 }
                 else
                 {
-                    FPTree conditionalPatternTree = CreateConditionalTree(_headerTable[item].FirstNode);
-                    conditionalPatternTree.ReduceTree(minSupport);
-                    conditionalPatternTree.CollectPerfectItems(collector);
-                    conditionalPatternTree.PruneTree(minSupport);
-                    if( currentItem == null )
-                        conditionalPatternTree.MineTopDown(item, collector);
-                    else
-                        conditionalPatternTree.Mine(currentItem, collector);
+                    using( FPTree conditionalPatternTree = CreateConditionalTree(_headerTable[item].FirstNode) )
+                    {
+                        conditionalPatternTree.ReduceTree(minSupport);
+                        conditionalPatternTree.CollectPerfectItems(collector);
+                        conditionalPatternTree.PruneTree(minSupport);
+                        if( currentItem == null )
+                            conditionalPatternTree.MineTopDown(item, collector);
+                        else
+                            conditionalPatternTree.Mine(currentItem, collector);
+                    }
                 }
                 collector.Report();
                 collector.Remove(1);
-
-                if( currentItem == null )
-                    collector.ReportTopK(item);
             }
         }
 
-        
+
         private void BuildTree(IEnumerable<ITransaction> transactions)
         {
             int count = 0;
@@ -219,43 +229,6 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
                 return support;
             else
                 return 0;
-        }
-
-        private static List<KeyValuePair<int, int>> GetFrequentItems(IEnumerable<ITransaction> transactions, int minSupport)
-        {
-            Dictionary<int, Count> counts = new Dictionary<int, Count>();
-            int n = 0;
-            foreach( var t in transactions )
-            {
-                if( ++n % 10000 == 0 )
-                    Console.Write("\r{0} transactions counted.", n);
-
-                foreach( var item in t.Items )
-                {
-                    Count c;
-                    if( counts.TryGetValue(item, out c) )
-                        c.Value++;
-                    else
-                    {
-                        c = new Count() { Value = 1 };
-                        counts.Add(item, c);
-                    }
-                }
-            }
-
-            return (from c in counts
-                    let support = c.Value.Value
-                    where support >= minSupport
-                    orderby support descending, c.Key ascending
-                    select new KeyValuePair<int, int>(c.Key, support)).ToList();
-
-            /*return (from t in transactions
-                    from item in t.Items
-                    group t by item into itemGroup
-                    let support = (from t2 in itemGroup select t2.Count).Sum()
-                    where support >= minSupport
-                    orderby support descending, itemGroup.Key ascending
-                    select new KeyValuePair<T, int>(itemGroup.Key, support)).ToList();*/
         }
 
         private FPTree CreateConditionalTree(int firstNode)
@@ -416,7 +389,7 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
             int childCount = _nodeChildren[node].Count;
             if( childCount > 0 )
             {
-                int[] children = _nodeChildren[node].Children;
+                int* children = _nodeChildren[node].Children;
                 for( int x = 0; x < childCount; ++x )
                 {
                     int child = children[x];
@@ -430,24 +403,28 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
 
         private int CreateNode(int parentNode, int id, int count)
         {
-            if( _nodeCount == _nodes.Length )
+            if( _nodeCount == _nodesLength )
                 Resize();
 
             int newNode = _nodeCount++;
+            _nodes[newNode] = new FPTreeNode();
             _nodes[newNode].Id = id;
             _nodes[newNode].Count = count;
             _nodes[newNode].Parent = parentNode;
+            _nodeChildren[newNode] = new NodeChildList();
             _nodeChildren[parentNode].Add(newNode);
 
             return newNode;
+
         }
 
         private int CreateConditionalNode(int id, int count)
         {
-            if( _nodeCount == _nodes.Length )
+            if( _nodeCount == _nodesLength )
                 Resize();
 
             int newNode = _nodeCount++;
+            _nodes[newNode] = new FPTreeNode();
             _nodes[newNode].Id = id;
             _nodes[newNode].Count = count;
             _nodes[newNode].NodeLink = _headerTable[id].FirstNode;
@@ -474,23 +451,46 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
 
         private void Resize()
         {
-            int newSize = (int)(_nodes.Length * _growthRate);
-            Array.Resize(ref _nodes, newSize);
-            Array.Resize(ref _nodeChildren, newSize);
+            _nodesLength = (int)(_nodesLength * _growthRate);
+            _nodes = (FPTreeNode*)Marshal.ReAllocHGlobal((IntPtr)_nodes, new IntPtr(_nodesLength * sizeof(FPTreeNode)));
+            if( _nodeChildren != null )
+                _nodeChildren = (NodeChildList*)Marshal.ReAllocHGlobal((IntPtr)_nodeChildren, new IntPtr(_nodesLength * sizeof(NodeChildList)));
         }
 
-        //private static List<Pattern> Combine(List<Pattern> first, List<Pattern> second)
-        //{
-        //    List<Pattern> result = new List<Pattern>();
-        //    foreach( Pattern p1 in first )
-        //    {
-        //        foreach( Pattern p2 in second )
-        //        {
-        //            result.Add(new Pattern(p1.Items.Concat(p2.Items).ToList(), Math.Min(p1.Count, p2.Count)));
-        //        }
-        //    }
+        private void OnProgressChanged(EventArgs e)
+        {
+            EventHandler handler = ProgressChanged;
+            if( handler != null )
+                handler(this, e);
+        }
 
-        //    return result;
-        //}
+        private void CleanupChildren()
+        {
+            if( _nodeChildren != null )
+            {
+                for( int x = 0; x < _nodeCount; ++x )
+                {
+                    if( _nodeChildren[x].Children != null )
+                        Marshal.FreeHGlobal((IntPtr)_nodeChildren[x].Children);
+                }
+                Marshal.FreeHGlobal((IntPtr)_nodeChildren);
+                _nodeChildren = null;
+            }
+        }
+
+        private void Dispose(bool disposing)
+        {
+            if( !_disposed )
+            {
+                _disposed = true;
+                CleanupChildren();
+                if( _nodes != null )
+                {
+                    Marshal.FreeHGlobal((IntPtr)_nodes);
+                    _nodes = null;
+                }
+            }
+        }
+
     }
 }

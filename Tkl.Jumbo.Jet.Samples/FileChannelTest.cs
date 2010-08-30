@@ -52,10 +52,11 @@ namespace Tkl.Jumbo.Jet.Samples
         /// </summary>
         /// <param name="input"></param>
         /// <param name="output"></param>
-        public static void RecordCounterTask(RecordReader<GenSortRecord> input, RecordWriter<long> output)
+        /// <param name="context"></param>
+        public static void RecordCounterTask(RecordReader<GenSortRecord> input, RecordWriter<long> output, TaskContext context)
         {
             long recordCount = 0;
-            foreach( GenSortRecord record in input.EnumerateRecords() )
+            while( input.ReadRecord() )
                 ++recordCount;
 
             output.WriteRecord(recordCount);
@@ -71,14 +72,14 @@ namespace Tkl.Jumbo.Jet.Samples
 
             CheckAndCreateOutputPath(dfsClient, _outputPath);
 
-            var input = builder.CreateRecordReader<GenSortRecord>(_inputPath, typeof(GenSortRecordReader));
-            var output = builder.CreateRecordWriter<long>(_outputPath, typeof(TextRecordWriter<long>), (int)BlockSize.Value, ReplicationFactor);
-            RecordCollector<GenSortRecord> collector = new RecordCollector<GenSortRecord>() { ChannelType = ChannelType.Pipeline, PartitionerType = typeof(RangePartitioner), PartitionCount = _mergeTasks };
-            RecordCollector<GenSortRecord> collector2 = new RecordCollector<GenSortRecord>() { ChannelType = ChannelType.File, PartitionerType = typeof(RangePartitioner), PartitionCount = _mergeTasks };
+            var input = new DfsInput(_inputPath, typeof(GenSortRecordReader));
+            var output = CreateDfsOutput(_outputPath, typeof(TextRecordWriter<long>));
+            var partitionChannel = new Channel() { ChannelType = ChannelType.Pipeline, PartitionerType = typeof(RangePartitioner), PartitionCount = _mergeTasks };
+            var sortChannel = new Channel() { ChannelType = ChannelType.File, PartitionerType = typeof(RangePartitioner), PartitionCount = _mergeTasks };
 
-            builder.PartitionRecords(input, collector.CreateRecordWriter());
-            builder.ProcessRecords(collector.CreateRecordReader(), collector2.CreateRecordWriter(), typeof(SortTask<GenSortRecord>));
-            builder.ProcessRecords(collector2.CreateRecordReader(), output, RecordCounterTask);
+            builder.PartitionRecords(input, partitionChannel);
+            builder.ProcessRecords(partitionChannel, sortChannel, typeof(SortTask<GenSortRecord>));
+            builder.ProcessRecords<GenSortRecord, long>(sortChannel, output, RecordCounterTask);
         }
 
         /// <summary>
@@ -94,11 +95,10 @@ namespace Tkl.Jumbo.Jet.Samples
             DfsClient dfsClient = new DfsClient(DfsConfiguration);
             dfsClient.NameServer.CreateDirectory(partitionFileDirectory);
 
-            var dfsInputs = from stage in jobConfiguration.Stages
-                            where stage.DfsInputs != null
-                            from input in stage.DfsInputs
-                            select input;
-            RangePartitioner.CreatePartitionFile(dfsClient, partitionFileName, dfsInputs.ToArray(), jobConfiguration.GetStage("RecordCounterTask").TaskCount, SampleSize);
+            var dfsInput = (from stage in jobConfiguration.Stages
+                            where stage.DfsInput != null
+                            select stage.DfsInput).SingleOrDefault();
+            RangePartitioner.CreatePartitionFile(dfsClient, partitionFileName, dfsInput, jobConfiguration.GetStage("MergeStage").TaskCount, SampleSize);
 
             jobConfiguration.AddSetting("partitionFile", partitionFileName);
         }

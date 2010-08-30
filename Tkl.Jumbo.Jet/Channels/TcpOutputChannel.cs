@@ -13,11 +13,12 @@ namespace Tkl.Jumbo.Jet.Channels
     /// <summary>
     /// Represents the writing end of a TCP channel between two tasks.
     /// </summary>
-    public sealed class TcpOutputChannel : OutputChannel
+    public sealed class TcpOutputChannel : OutputChannel, IHasMetrics
     {
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(TcpOutputChannel));
 
         private const int _retryDelay = 2000;
+        private IRecordWriter _writer;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="TcpOutputChannel"/> class.
@@ -36,11 +37,18 @@ namespace Tkl.Jumbo.Jet.Channels
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1004:GenericMethodsShouldProvideTypeParameter")]
         public override RecordWriter<T> CreateRecordWriter<T>()
         {
+            if( _writer != null )
+                throw new InvalidOperationException("Channel record writer was already created.");
+
             List<RecordWriter<T>> writers = CreateOutputWriters<T>();
+            RecordWriter<T> writer;
             if( writers.Count == 1 )
-                return writers[0];
+                writer = writers[0];
             else
-                return CreateMultiRecordWriter(writers);
+                writer = CreateMultiRecordWriter(writers);
+
+            _writer = writer;
+            return writer;
         }
 
         private List<RecordWriter<T>> CreateOutputWriters<T>()
@@ -50,7 +58,7 @@ namespace Tkl.Jumbo.Jet.Channels
             foreach( string taskId in OutputIds )
             {
                 TcpClient client = ConnectToOutput(taskId);
-                writers.Add(new NetworkRecordWriter<T>(client, TaskExecution.Configuration.TaskId.ToString()));
+                writers.Add(new NetworkRecordWriter<T>(client, TaskExecution.Context.TaskId.ToString()));
             }
 
             return writers;
@@ -63,7 +71,7 @@ namespace Tkl.Jumbo.Jet.Channels
             ServerAddress taskServer;
             do
             {
-                taskServer = TaskExecution.JetClient.JobServer.GetTaskServerForTask(TaskExecution.Configuration.JobId, taskId);
+                taskServer = TaskExecution.JetClient.JobServer.GetTaskServerForTask(TaskExecution.Context.JobId, taskId);
                 if( taskServer == null )
                 {
                     _log.DebugFormat("Task {0} is not yet assigned to a server, waiting for retry...", taskId);
@@ -77,7 +85,8 @@ namespace Tkl.Jumbo.Jet.Channels
             int port;
             do
             {
-                port = taskServerClient.GetTcpChannelPort(TaskExecution.Configuration.JobId, taskId);
+                // Since a task failure fails the job with the TCP channel, the attempt number will always be 1.
+                port = taskServerClient.GetTcpChannelPort(TaskExecution.Context.JobId, new TaskAttemptId(new TaskId(taskId), 1));
                 if( port == 0 )
                 {
                     _log.DebugFormat("Task {0} has not yet registered a port number, waiting for retry...", taskId);
@@ -88,6 +97,44 @@ namespace Tkl.Jumbo.Jet.Channels
             _log.InfoFormat("Connecting to task {0} at TCP channel server {1}:{2}", taskId, taskServer.HostName, port);
 
             return new TcpClient(taskServer.HostName, port);
+        }
+
+        /// <summary>
+        /// Gets the number of bytes read from the local disk.
+        /// </summary>
+        /// <value>The local bytes read.</value>
+        public long LocalBytesRead
+        {
+            get { return 0L; }
+        }
+
+        /// <summary>
+        /// Gets the number of bytes written to the local disk.
+        /// </summary>
+        /// <value>The local bytes written.</value>
+        public long LocalBytesWritten
+        {
+            get { return 0L; }
+        }
+
+        /// <summary>
+        /// Gets the number of bytes read over the network.
+        /// </summary>
+        /// <value>The network bytes read.</value>
+        /// <remarks>Only channels should normally use this property.</remarks>
+        public long NetworkBytesRead
+        {
+            get { return 0L; }
+        }
+
+        /// <summary>
+        /// Gets the number of bytes written over the network.
+        /// </summary>
+        /// <value>The network bytes written.</value>
+        /// <remarks>Only channels should normally use this property.</remarks>
+        public long NetworkBytesWritten
+        {
+            get { return _writer == null ? 0L : _writer.BytesWritten; }
         }
     }
 }

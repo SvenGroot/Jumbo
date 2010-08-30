@@ -28,6 +28,7 @@ namespace Tkl.Jumbo.IO
         private readonly long _end;
         private readonly bool _allowRecordReuse;
         private static readonly IValueWriter<T> _valueWriter = ValueWriter<T>.Writer;
+        private readonly IRecordInputStream _recordInputStream;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="RecordFileReader{T}"/> class that reads from the specified stream.
@@ -75,12 +76,19 @@ namespace Tkl.Jumbo.IO
             if( offset > stream.Position )
             {
                 stream.Position = offset;
-                SeekToRecordMarker();
+                _recordInputStream = stream as IRecordInputStream;
+                if( _recordInputStream == null || (_recordInputStream.RecordOptions & RecordStreamOptions.DoNotCrossBoundary) != RecordStreamOptions.DoNotCrossBoundary ||
+                    _recordInputStream.OffsetFromBoundary(offset) != 0 )
+                {
+                    SeekToRecordMarker();
+                    FirstRecordOffset = stream.Position;
+                }
             }
             else
             {
                 _lastRecordMarkerPosition = stream.Position - RecordFile.RecordMarkerSize;
             }
+            FirstRecordOffset = stream.Position;
         }
 
         /// <summary>
@@ -101,7 +109,7 @@ namespace Tkl.Jumbo.IO
 
             while( true )
             {
-                if( _lastRecordMarkerPosition >= _end || Stream.Position == Stream.Length )
+                if( _lastRecordMarkerPosition >= _end || Stream.Position == Stream.Length || (_recordInputStream != null && _recordInputStream.IsStopped) )
                 {
                     CurrentRecord = default(T);
                     return false;

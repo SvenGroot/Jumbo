@@ -2,14 +2,15 @@
 //
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+using System.Diagnostics;
+using System.Globalization;
 using System.IO;
+using System.Linq;
+using System.Net;
 using System.Net.Sockets;
 using System.Runtime.Serialization.Formatters.Binary;
-using System.Diagnostics;
 using System.Threading;
-using System.Net;
+using Tkl.Jumbo.IO;
 
 namespace Tkl.Jumbo.Dfs
 {
@@ -17,7 +18,7 @@ namespace Tkl.Jumbo.Dfs
     /// Provides a stream for reading a block from the distributed file system.
     /// </summary>
     /// <threadsafety static="true" instance="false" />
-    public class DfsInputStream : Stream
+    public class DfsInputStream : Stream, IRecordInputStream
     {
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(DfsInputStream));
 
@@ -28,9 +29,13 @@ namespace Tkl.Jumbo.Dfs
         private readonly PacketBuffer _packetBuffer = new PacketBuffer(_bufferSize);
         private DataServerClientProtocolResult _lastResult = DataServerClientProtocolResult.Ok;
         private Exception _lastException;
-        private Thread _fillBufferThread;
+        private volatile Thread _readBufferThread;
         private bool _disposed;
         private Packet _currentPacket;
+        private volatile int _lastBlockToDownload = -1;
+        private long _endOffset;
+        private readonly object _endOffsetLock = new object();
+        private long _paddingSkipped;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="DfsInputStream"/> with the specified name server and file.
@@ -46,13 +51,13 @@ namespace Tkl.Jumbo.Dfs
                 throw new ArgumentNullException("path");
 
             _nameServer = nameServer;
-            _log.Debug("Retrieving file information.");
+            _log.DebugFormat("Opening file {0} from the DFS.", path);
             _file = nameServer.GetFileInfo(path);
             // GetFileInfo doesn't throw if the file doesn't exist; we do.
             if( _file == null )
                 throw new FileNotFoundException(string.Format(System.Globalization.CultureInfo.CurrentCulture, "The file '{0}' does not exist on the distributed file system.", path));
             BlockSize = _file.BlockSize;
-            _log.Debug("DfsInputStream construction complete.");
+            _endOffset = _file.Size;
         }
 
         /// <summary>
@@ -150,6 +155,88 @@ namespace Tkl.Jumbo.Dfs
         public int DataServerErrors { get; private set; }
 
         /// <summary>
+        /// Gets the number of blocks read.
+        /// </summary>
+        /// <value>The blocks read.</value>
+        public int BlocksRead { get; private set; }
+
+        /// <summary>
+        /// Gets the record options applied to this stream.
+        /// </summary>
+        /// <value>One or more of the <see cref="RecordStreamOptions"/> values.</value>
+        public RecordStreamOptions RecordOptions
+        {
+            get { return _file.RecordOptions; }
+        }
+
+
+        /// <summary>
+        /// Gets or sets the position in the stream after which no data will be read.
+        /// </summary>
+        /// <value>
+        /// The position after which <see cref="System.IO.Stream.Read"/> method will not return any data. The default value is the length of the stream.
+        /// </value>
+        /// <remarks>
+        /// 	<para>
+        /// For a stream where <see cref="RecordOptions"/> is set to <see cref="RecordStreamOptions.DoNotCrossBoundary"/> you can use this property
+        /// to ensure that no data after the boundary is read if you only wish to read records up to the boundary.
+        /// </para>
+        /// 	<para>
+        /// On the Jumbo DFS, crossing a block boundary will cause a network connection to be established and data to be read from
+        /// a different data server. If you are reading records from only a single block (as is often the case for Jumbo Jet tasks)
+        /// this property can be used to ensure that no data from the next block will be read.
+        /// </para>
+        /// 	<para>
+        /// Setting this property to a value other than the stream length if <see cref="RecordStreamOptions.DoNotCrossBoundary"/> is not set, or
+        /// to a value that is not on a structural boundary can cause reading to halt in the middle of a record, and is therefore not recommended.
+        /// </para>
+        /// </remarks>
+        public long StopReadingAtPosition
+        {
+            get { return _endOffset; }
+            set
+            {
+                if( value < _position || value > Length )
+                    throw new ArgumentOutOfRangeException("value");
+
+                // The lock here ensure that if you're increasing this value, if the ReadBufferThread hasn't
+                // stopped already it isn't going to stop, and if it has already stopped _feadBufferThread will
+                // already be null so Read will restart it.
+                lock( _endOffsetLock )
+                {
+                    _endOffset = value;
+                    if( value > 0 )
+                        _lastBlockToDownload = (int)((value - 1) / _file.BlockSize);
+                    else
+                        _lastBlockToDownload = 0;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Gets the amount of padding skipped while reading from the stream.
+        /// </summary>
+        /// <value>The amount of padding bytes skipped.</value>
+        public long PaddingBytesSkipped
+        {
+            get { return _paddingSkipped; }
+        }
+
+        /// <summary>
+        /// Gets a value indicating whether this instance has stopped reading.
+        /// </summary>
+        /// <value>
+        /// 	<see langword="true"/> if the stream has reached the position indicated by <see cref="StopReadingAtPosition"/>; otherwise, <see langword="false"/>.
+        /// </value>
+        /// <remarks>
+        /// If this property is <see langword="true"/> it means the next call to <see cref="Read"/> will return 0.
+        /// </remarks>
+        public bool IsStopped
+        {
+            get { return _position >= _endOffset; }
+        }
+
+        /// <summary>
         /// Reads a sequence of bytes from the current stream and advances the position within the stream by the number of bytes read. 
         /// </summary>
         /// <param name="buffer">An array of bytes. When this method returns, the buffer contains the specified byte array with the values between offset and (offset + count - 1) replaced by the bytes read from the current source.</param>
@@ -170,27 +257,22 @@ namespace Tkl.Jumbo.Dfs
             if( offset + count > buffer.Length )
                 throw new ArgumentException("The sum of offset and count is greater than the buffer length.");
 
-            if( _fillBufferThread == null )
-            {
-                // We don't start the thread in the constructor because that'd be a waste if you immediately seek after that.
-                _fillBufferThread = new Thread(ReadBufferThread);
-                _fillBufferThread.IsBackground = true;
-                _fillBufferThread.Name = "FillBuffer";
-                _fillBufferThread.Start();
-            }
+            if( _position + count > _endOffset )
+                count = (int)(_endOffset - _position);
 
-            if( _position + count > Length )
-                count = (int)(Length - _position);
-
+            int sizeRemaining = count;
             if( count > 0 )
             {
-                int sizeRemaining = count;
-
-                while( _lastResult == DataServerClientProtocolResult.Ok && sizeRemaining > 0 )
+                while( _position < _endOffset && _lastResult == DataServerClientProtocolResult.Ok && sizeRemaining > 0 )
                 {
                     //Debug.WriteLine(string.Format("Read: {0}", _bufferReadPos));
                     if( _currentPacket == null )
+                    {
+                        EnsureReadBufferThreadStarted();
                         _currentPacket = _packetBuffer.ReadItem;
+                    }
+
+                    ThrowIfErrorOccurred();
 
                     // Where in the current packet do we need to read?
                     int packetOffset = (int)(_position % Packet.PacketSize);
@@ -201,20 +283,24 @@ namespace Tkl.Jumbo.Dfs
                     offset += copied;
                     sizeRemaining -= copied;
                     _position += copied;
+                    packetOffset += copied;
 
-                    if( _position % Packet.PacketSize == 0 )
+                    if( packetOffset == _currentPacket.Size )
                     {
+                        // If this is the last packet in the block but not the last packet in the file, and the size is less than the max packet size,
+                        // it means this packet is padded so we should adjust the position.
+                        if( _currentPacket.IsLastPacket && _position < Length )
+                        {
+                            int padding = Packet.PacketSize - _currentPacket.Size;
+                            _position += padding;
+                            _paddingSkipped += padding;
+                        }
                         _currentPacket = null;
                     }
                 }
-                if( _lastException != null )
-                    throw new DfsException("Couldn't read data from the server.", _lastException);
-                if( _lastResult != DataServerClientProtocolResult.Ok )
-                    throw new DfsException("Couldn't read data from the server.");
-
-                Debug.Assert(sizeRemaining == 0);
+                ThrowIfErrorOccurred();
             }
-            return count;
+            return count - sizeRemaining;
         }
 
         /// <summary>
@@ -242,11 +328,11 @@ namespace Tkl.Jumbo.Dfs
                 throw new ArgumentOutOfRangeException("offset");
             if( newPosition != _position )
             {
-                if( _fillBufferThread != null )
+                if( _readBufferThread != null )
                 {
                     _packetBuffer.Cancel();
-                    _fillBufferThread.Join();
-                    _fillBufferThread = null;
+                    _readBufferThread.Join();
+                    _readBufferThread = null;
                 }
                 _lastResult = DataServerClientProtocolResult.Ok;
                 _position = newPosition;
@@ -278,6 +364,40 @@ namespace Tkl.Jumbo.Dfs
         }
 
         /// <summary>
+        /// Determines the offset of the specified position from the directly preceding structural boundary (e.g. a block boundary on the DFS).
+        /// </summary>
+        /// <param name="position">The position.</param>
+        /// <returns>
+        /// The offset from the structural boundary that directly precedes the specified position.
+        /// </returns>
+        public long OffsetFromBoundary(long position)
+        {
+            if( position < 0 || position > Length )
+                throw new ArgumentOutOfRangeException("position");
+
+            return position % _file.BlockSize;
+        }
+
+        /// <summary>
+        /// Determines whether the range between two specified positions does not cross a structural boundary (e.g. a block boundary on the DFS).
+        /// </summary>
+        /// <param name="position1">The first position.</param>
+        /// <param name="position2">The second position.</param>
+        /// <returns>
+        /// 	<see langword="true"/> if the <paramref name="position1"/> and <paramref name="position2"/> fall inside the same boundaries (e.g. if
+        /// both positions are in the same block in the DFS); otherwise, <see langword="false"/>.
+        /// </returns>
+        public bool AreInsideSameBoundary(long position1, long position2)
+        {
+            if( position1 < 0 || position1 > Length )
+                throw new ArgumentOutOfRangeException("position1");
+            if( position2 < 0 || position2 > Length )
+                throw new ArgumentOutOfRangeException("position2");
+
+            return position1 / _file.BlockSize == position2 / _file.BlockSize;
+        }
+
+        /// <summary>
         /// Releases the unmanaged resources used by the <see cref="DfsInputStream"/> and optionally releases the managed resources.
         /// </summary>
         /// <param name="disposing"><see langword="true"/> to release both managed and unmanaged resources; <see langword="false"/> to release only unmanaged resources.</param>
@@ -289,11 +409,11 @@ namespace Tkl.Jumbo.Dfs
 			  //if( _readTime != null )
 			  //    _log.DebugFormat("Total: {0}, count: {1}, average: {2}", _readTime.ElapsedMilliseconds, _totalReads, _readTime.ElapsedMilliseconds / (float)_totalReads);
                 _disposed = true;
-                if( _fillBufferThread != null )
+                if( _readBufferThread != null )
                 {
                     _packetBuffer.Cancel();
-                    _fillBufferThread.Join();
-                    _fillBufferThread = null;
+                    _readBufferThread.Join();
+                    _readBufferThread = null;
                 }
                 if( _packetBuffer != null )
                     _packetBuffer.Dispose();
@@ -306,19 +426,16 @@ namespace Tkl.Jumbo.Dfs
             Random rnd = new Random();
             try
             {
-                long position = _position;
-                while( !_disposed && position < _file.Size && _lastResult == DataServerClientProtocolResult.Ok )
+                int blockOffset = (int)(_position % BlockSize);
+                for( int blockIndex = (int)(_position / BlockSize); !_disposed && blockIndex < _file.Blocks.Count && _lastResult == DataServerClientProtocolResult.Ok; ++blockIndex )
                 {
-                    int blockIndex = (int)(position / BlockSize);
                     Guid block = _file.Blocks[blockIndex];
-                    _log.DebugFormat("Retrieving list of servers for block {{{0}}}.", block);
                     List<ServerAddress> servers = _nameServer.GetDataServersForBlock(block).ToList();
 
                     bool retry;
                     do
                     {
                         retry = false;
-                        int blockOffset = (int)(position % BlockSize);
                         ServerAddress server;
                         if( servers[0].HostName == Dns.GetHostName() )
                             server = servers[0];
@@ -327,8 +444,19 @@ namespace Tkl.Jumbo.Dfs
                         _log.DebugFormat("Connecting to server {0} to read block {1}.", server, block);
                         try
                         {
-                            if( !DownloadBlock(ref position, blockOffset, block, server) )
+                            if( !DownloadBlock(ref blockOffset, block, server, blockIndex) )
                                 return; // cancelled
+
+                            lock( _endOffsetLock )
+                            {
+                                if( blockIndex == _lastBlockToDownload )
+                                {
+                                    _readBufferThread = null;
+                                    return;
+                                }
+                            }
+
+                            blockOffset = 0;
                         }
                         catch( Exception ex )
                         {
@@ -356,11 +484,11 @@ namespace Tkl.Jumbo.Dfs
             }
         }
 
-        private bool DownloadBlock(ref long position, int blockOffset, Guid block, ServerAddress server)
+        private bool DownloadBlock(ref int blockOffset, Guid block, ServerAddress server, int blockIndex)
         {
+            ++BlocksRead;
             using( TcpClient client = new TcpClient(server.HostName, server.Port) )
             {
-                _log.Debug("Connection established.");
                 DataServerClientProtocolReadHeader header = new DataServerClientProtocolReadHeader();
                 header.BlockId = block;
                 header.Offset = blockOffset;
@@ -375,12 +503,18 @@ namespace Tkl.Jumbo.Dfs
                     bufferedStream.Flush();
 
                     DataServerClientProtocolResult status = (DataServerClientProtocolResult)reader.ReadInt32();
+                    if( status == DataServerClientProtocolResult.OutOfRange && blockOffset > 0 && blockIndex < _file.Blocks.Count - 1 && _file.RecordOptions == IO.RecordStreamOptions.DoNotCrossBoundary )
+                    {
+                        // We tried to seek into padding, so go to the next block.
+                        // Because this can only happen after a seek operation the packet buffer is empty, which means no other threads can access _position so we can update it.
+                        long oldPosition = _position;
+                        _position = (blockIndex + 1) * BlockSize;
+                        _paddingSkipped += _position - oldPosition;
+                        return true;
+                    }
                     if( status != DataServerClientProtocolResult.Ok )
                         throw new DfsException("The server encountered an error while sending data.");
-                    _log.Debug("Header sent and accepted by server.");
-                    int offset = reader.ReadInt32();
-                    int difference = blockOffset - offset;
-                    position -= difference; // Correct position
+                    blockOffset = reader.ReadInt32();
 
                     Packet packet = null;
                     while( !_disposed && _lastResult == DataServerClientProtocolResult.Ok && (packet == null || !packet.IsLastPacket) )
@@ -398,7 +532,8 @@ namespace Tkl.Jumbo.Dfs
                         {
                             packet.Read(reader, false, true);
 
-                            position += packet.Size;
+                            blockOffset += packet.Size;
+
                             // There is no need to lock this write because no other threads will update this value.
                             _packetBuffer.NotifyWrite();
                         }
@@ -406,6 +541,26 @@ namespace Tkl.Jumbo.Dfs
                 }
             }
             return true;
-        } 
+        }
+
+        private void ThrowIfErrorOccurred()
+        {
+            if( _lastException != null )
+                throw new DfsException("Couldn't read data from the server.", _lastException);
+            if( _lastResult != DataServerClientProtocolResult.Ok )
+                throw new DfsException(string.Format(CultureInfo.CurrentCulture, "Couldn't read data from the server: {0}", _lastResult));
+        }
+
+        private void EnsureReadBufferThreadStarted()
+        {
+            if( _readBufferThread == null && _packetBuffer.ReadItemWillBlock )
+            {
+                // We don't start the thread in the constructor because that'd be a waste if you immediately seek after that.
+                _readBufferThread = new Thread(ReadBufferThread);
+                _readBufferThread.IsBackground = true;
+                _readBufferThread.Name = "FillBuffer";
+                _readBufferThread.Start();
+            }
+        }    
     }
 }

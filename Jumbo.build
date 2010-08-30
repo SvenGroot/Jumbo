@@ -10,6 +10,7 @@
         <include name="nunit.sh"/>
       </fileset>
     </copy>
+    <exec program="gen-scripts.sh" />
   </target>
   <target name="clean">
     <delete dir="nantbin" failonerror="false"/>

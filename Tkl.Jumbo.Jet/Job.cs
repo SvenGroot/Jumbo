@@ -64,11 +64,25 @@ namespace Tkl.Jumbo.Jet
         /// Creates the full task id for the specified task.
         /// </summary>
         /// <param name="jobId">The job ID.</param>
+        /// <param name="taskAttemptId">The task attempt id.</param>
+        /// <returns>
+        /// The full task ID of the form "{jobID}_taskID_attempt".
+        /// </returns>
+        public static string CreateFullTaskId(Guid jobId, TaskAttemptId taskAttemptId)
+        {
+            return string.Format(System.Globalization.CultureInfo.InvariantCulture, "{{{0}}}_{1}", jobId, taskAttemptId);
+        }
+
+        /// <summary>
+        /// Creates the full task id for the specified task.
+        /// </summary>
+        /// <param name="jobId">The job ID.</param>
         /// <param name="taskId">The task ID.</param>
         /// <returns>The full task ID of the form "{jobID}_taskID".</returns>
-        public static string CreateFullTaskId(Guid jobId, string taskId)
+        public static string CreateFullTaskId(Guid jobId, TaskId taskId)
         {
             return string.Format(System.Globalization.CultureInfo.InvariantCulture, "{{{0}}}_{1}", jobId, taskId);
         }
+    
     }
 }

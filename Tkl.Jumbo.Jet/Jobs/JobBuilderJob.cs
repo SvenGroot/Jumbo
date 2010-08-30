@@ -29,12 +29,12 @@ namespace Tkl.Jumbo.Jet.Jobs
 
             BuildJob(builder);
 
-            JobConfiguration config = builder.JobConfiguration;
+            JobConfiguration config = builder.CreateJob();
 
             if( config.JobName == null )
                 config.JobName = GetType().Name; // Use the class name as the job's friendly name, if it hasn't been set explicitly.
 
-            AddJobSettings(config);
+            ApplyJobPropertiesAndSettings(config);
 
             Job job = jetClient.JobServer.CreateJob();
 
@@ -64,19 +64,18 @@ namespace Tkl.Jumbo.Jet.Jobs
         }
 
         /// <summary>
-        /// Creates a record writer that uses <see cref="BaseJobRunner.BlockSize"/> and <see cref="BaseJobRunner.ReplicationFactor"/>.
+        /// Creates a <see cref="DfsOutput"/> that uses <see cref="BaseJobRunner.BlockSize"/> and <see cref="BaseJobRunner.ReplicationFactor"/>.
         /// </summary>
-        /// <typeparam name="T">The type of the records.</typeparam>
-        /// <param name="builder">The builder to use to create the record writer.</param>
-        /// <param name="output">The output path.</param>
+        /// <param name="outputPath">The output path.</param>
         /// <param name="recordWriterType">The type of the record writer to use.</param>
-        /// <returns>A record writer.</returns>
-        protected RecordWriter<T> CreateRecordWriter<T>(JobBuilder builder, string output, Type recordWriterType)
+        /// <returns>A <see cref="DfsOutput"/>.</returns>
+        protected DfsOutput CreateDfsOutput(string outputPath, Type recordWriterType)
         {
-            if( builder == null )
-                throw new ArgumentNullException("builder");
-
-            return builder.CreateRecordWriter<T>(output, recordWriterType, (int)BlockSize.Value, ReplicationFactor);
+            return new DfsOutput(outputPath, recordWriterType) 
+            { 
+                BlockSize = (int)BlockSize.Value, 
+                ReplicationFactor = ReplicationFactor 
+            };
         }
     }
 }

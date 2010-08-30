@@ -3,6 +3,10 @@
     <h2>File system status</h2>
     <table>
         <tr>
+            <th scope="row">Name server</th>
+            <td id="NameServerColumn" runat="server"></td>
+        </tr>
+        <tr>
             <th scope="row">Total size</th>
             <td id="TotalSizeColumn" runat="server"></td>
         </tr>
@@ -28,7 +32,7 @@
         </tr>
     </table>
     <p>
-        <a href="logfile.aspx">View name server log file.</a><br />
+        View name server log file: <a href="logfile.aspx?maxSize=100KB">last 100KB</a>, <a href="logfile.aspx?maxSize=0">all</a><br />
         <a href="filesystem.aspx">Browse file system namespace.</a>
     </p>
     <h2>Data servers</h2>

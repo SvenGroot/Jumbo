@@ -16,6 +16,7 @@ using Tkl.Jumbo;
 using System.Threading;
 using System.Collections.ObjectModel;
 using Tkl.Jumbo.Topology;
+using Tkl.Jumbo.IO;
 using Tkl.Jumbo.Rpc;
 
 namespace NameServerApplication
@@ -46,7 +47,7 @@ namespace NameServerApplication
         private bool _safeMode = true;
         private System.Threading.ManualResetEvent _safeModeEvent = new System.Threading.ManualResetEvent(false);
         private readonly Timer _checkpointTimer;
-
+        private readonly ServerAddress _localAddress;
 
 
         private NameServer(JumboConfiguration jumboConfig, DfsConfiguration dfsConfig, bool replayLog)
@@ -57,6 +58,7 @@ namespace NameServerApplication
                 throw new ArgumentNullException("config");
 
             Configuration = dfsConfig;
+            _localAddress = new ServerAddress(ServerContext.LocalHostName, dfsConfig.NameServer.Port);
             _topology = new NetworkTopology(jumboConfig);
             _replicaPlacement = new ReplicaPlacement(Configuration, _topology);
             _replicationFactor = dfsConfig.NameServer.ReplicationFactor;
@@ -231,18 +233,18 @@ namespace NameServerApplication
         }
 
 
-        public BlockAssignment CreateFile(string path, int blockSize, int replicationFactor)
+        public BlockAssignment CreateFile(string path, int blockSize, int replicationFactor, bool useLocalReplica, RecordStreamOptions recordOptions)
         {
             _log.Debug("CreateFile called");
             CheckSafeMode();
-            BlockInfo block = _fileSystem.CreateFile(path, blockSize == 0 ? BlockSize : blockSize, replicationFactor == 0 ? _replicationFactor : replicationFactor);
+            BlockInfo block = _fileSystem.CreateFile(path, blockSize == 0 ? BlockSize : blockSize, replicationFactor == 0 ? _replicationFactor : replicationFactor, recordOptions);
             try
             {
                 lock( _pendingBlocks )
                 {
                     _pendingBlocks.Add(block.BlockId, new PendingBlock(block));
                 } 
-                return AssignBlockToDataServers(block);
+                return AssignBlockToDataServers(block, useLocalReplica);
             }
             catch( Exception )
             {
@@ -278,7 +280,7 @@ namespace NameServerApplication
             return _fileSystem.GetFileSystemEntryInfo(path);
         }
 
-        public BlockAssignment AppendBlock(string path)
+        public BlockAssignment AppendBlock(string path, bool useLocalReplica)
         {
             _log.Debug("AppendBlock called");
             CheckSafeMode();
@@ -295,7 +297,7 @@ namespace NameServerApplication
                 _pendingBlocks.Add(block.BlockId, new PendingBlock(block));
             }
 
-            return AssignBlockToDataServers(block);
+            return AssignBlockToDataServers(block, useLocalReplica);
         }
 
         public void CloseFile(string path)
@@ -342,7 +344,11 @@ namespace NameServerApplication
         public DfsMetrics GetMetrics()
         {
             _log.Debug("GetMetrics called");
-            DfsMetrics metrics = new DfsMetrics();
+            DfsMetrics metrics = new DfsMetrics()
+            {
+                NameServer = _localAddress
+            };
+
             lock( _blocks )
             {
                 metrics.TotalBlockCount = _blocks.Count;
@@ -787,7 +793,7 @@ namespace NameServerApplication
             return null;
         }
 
-        private BlockAssignment AssignBlockToDataServers(BlockInfo block)
+        private BlockAssignment AssignBlockToDataServers(BlockInfo block, bool useLocalReplica)
         {
             // If we are assigning a new block, the server context's client host name is the client that called AppendBlock and therefore the writer of the block.
             // If we are re-assigning an existing block, this is done internally so there won't be a server context.
@@ -797,7 +803,7 @@ namespace NameServerApplication
 
             lock( _dataServers )
             {
-                return _replicaPlacement.AssignBlockToDataServers(_dataServers.Values, block, writerHostName);
+                return _replicaPlacement.AssignBlockToDataServers(_dataServers.Values, block, writerHostName, useLocalReplica);
             }
         }
 
@@ -810,7 +816,7 @@ namespace NameServerApplication
             }
             else
             {
-                BlockAssignment assignment = AssignBlockToDataServers(block);
+                BlockAssignment assignment = AssignBlockToDataServers(block, true); // Doesn't really matter what we pass for useLocalReplica, there's no writer.
 
                 DataServerInfo source = block.DataServers[0];
 

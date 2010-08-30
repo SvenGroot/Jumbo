@@ -15,6 +15,7 @@ namespace Tkl.Jumbo.Rpc
     {
         [ThreadStatic]
         private static ServerContext _current;
+        private static readonly string _localHostName = System.Net.Dns.GetHostName();
 
         /// <summary>
         /// Gets the currently active server context for this thread.
@@ -35,5 +36,13 @@ namespace Tkl.Jumbo.Rpc
         /// </summary>
         public IPAddress ClientHostAddress { get; set; }
 
+        /// <summary>
+        /// Gets the name of the local host.
+        /// </summary>
+        /// <value>The name of the local host.</value>
+        public static string LocalHostName
+        {
+            get { return _localHostName; }
+        }
     }
 }

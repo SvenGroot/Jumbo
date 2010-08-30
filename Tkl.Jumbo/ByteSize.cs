@@ -36,8 +36,10 @@ namespace Tkl.Jumbo
         /// </summary>
         public const long Petabyte = 1024L * 1024L * 1024L * 1024L * 1024L;
 
+
         private static readonly char[] _numbers = new[] { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9' };
-        private long _value;
+        private static readonly ByteSize _zero = new ByteSize();
+        private readonly long _value;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ByteSize"/> structure with the specified value.
@@ -54,7 +56,15 @@ namespace Tkl.Jumbo
         public long Value
         {
             get { return _value; }
-            set { _value = value; }
+        }
+
+        /// <summary>
+        /// Gets a zero-valued <see cref="ByteSize"/> instance.
+        /// </summary>
+        /// <value>A <see cref="ByteSize"/> instance with <see cref="Value"/> set to zero.</value>
+        public static ByteSize Zero
+        {
+            get { return _zero; }
         }
 
         /// <summary>
@@ -95,7 +105,7 @@ namespace Tkl.Jumbo
             if( suffix != null )
                 size *= GetSuffixMultiplicationFactor(suffix);
 
-            return new ByteSize() { Value = (long)size };
+            return new ByteSize((long)size);
         }
 
         /// <summary>

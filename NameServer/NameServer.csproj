@@ -58,8 +58,6 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\lib\log4net.dll</HintPath>
     </Reference>
-    <Reference Include="Microsoft.VisualStudio.QualityTools.UnitTestFramework, Version=9.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a" />
-    <Reference Include="Microsoft.VisualStudio.TeamSystem.Data.UnitTesting, Version=9.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a" />
     <Reference Include="System" />
     <Reference Include="System.configuration" />
     <Reference Include="System.Core">
@@ -74,6 +72,7 @@
       <Link>Properties\Version.cs</Link>
     </Compile>
     <Compile Include="BlockInfo.cs" />
+    <Compile Include="ChecksumOutputStream.cs" />
     <Compile Include="DataServerInfo.cs" />
     <Compile Include="EditLog.cs" />
     <Compile Include="FileDeletedEventArgs.cs" />

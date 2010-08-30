@@ -44,6 +44,7 @@
     <WarningLevel>4</WarningLevel>
     <DocumentationFile>bin\Debug\Tkl.Jumbo.Jet.Samples.XML</DocumentationFile>
     <CodeAnalysisRuleSet>AllRules.ruleset</CodeAnalysisRuleSet>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -54,6 +55,7 @@
     <WarningLevel>4</WarningLevel>
     <DocumentationFile>bin\Release\Tkl.Jumbo.Jet.Samples.XML</DocumentationFile>
     <CodeAnalysisRuleSet>AllRules.ruleset</CodeAnalysisRuleSet>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="log4net, Version=1.2.10.0, Culture=neutral, PublicKeyToken=1b44e1d426115821, processorArchitecture=MSIL">
@@ -88,20 +90,20 @@
     <Compile Include="FPGrowth\MappedFrequentPattern.cs" />
     <Compile Include="FPGrowth\FrequentPatternCollector.cs" />
     <Compile Include="FPGrowth\FrequentPatternMaxHeap.cs" />
-    <Compile Include="FPGrowth\GenFGList.cs" />
     <Compile Include="FPGrowth\ITransaction.cs" />
+    <Compile Include="FPGrowth\NodeChildList.cs" />
     <Compile Include="FPGrowth\PFPGrowth.cs" />
     <Compile Include="FPGrowth\Transaction.cs" />
+    <Compile Include="FPGrowth\TransactionMiningTask.cs" />
     <Compile Include="FPGrowth\TransactionTree.cs" />
     <Compile Include="FPGrowth\WeightedTransaction.cs" />
     <Compile Include="GenSort2.cs" />
-    <Compile Include="GraySort2.cs" />
+    <Compile Include="GraySort.cs" />
     <Compile Include="IO\UInt128Writer.cs" />
     <Compile Include="ValSort2.cs" />
     <Compile Include="WordCount2.cs" />
     <Compile Include="GenSort.cs" />
     <Compile Include="GenWords.cs" />
-    <Compile Include="GraySort.cs" />
     <Compile Include="DbGen.cs" />
     <Compile Include="IO\GenSortRecord.cs" />
     <Compile Include="IO\GenSortRecordReader.cs" />

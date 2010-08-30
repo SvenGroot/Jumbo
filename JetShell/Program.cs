@@ -19,14 +19,10 @@ namespace JetShell
 {
     static class Program
     {
-        // This field isn't used but the constructor does the work so
-        // it needs to be there.
-#pragma warning disable 414
-        private static readonly AssemblyResolver _resolver = new AssemblyResolver();
-#pragma warning restore 414
-
-        public static void Main(string[] args)
+        public static int Main(string[] args)
         {
+            AssemblyResolver.Register();
+
             log4net.Config.BasicConfigurator.Configure();
             log4net.LogManager.GetRepository().Threshold = log4net.Core.Level.Info;
 
@@ -68,6 +64,7 @@ namespace JetShell
                         {
                             command.JetClient = new JetClient();
                             command.Run();
+                            return command.ExitStatus;
                         }
                         catch( SocketException ex )
                         {
@@ -97,6 +94,7 @@ namespace JetShell
             }
 
             RpcHelper.CloseConnections();
+            return 1;
         }
 
         private static void PrintUsage()

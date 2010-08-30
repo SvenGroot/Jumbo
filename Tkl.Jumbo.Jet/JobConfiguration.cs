@@ -11,6 +11,7 @@ using Tkl.Jumbo.IO;
 using Tkl.Jumbo.Jet.Channels;
 using System.Reflection;
 using System.Collections.ObjectModel;
+using System.Globalization;
 
 namespace Tkl.Jumbo.Jet
 {
@@ -28,6 +29,7 @@ namespace Tkl.Jumbo.Jet
         private static readonly XmlSerializer _serializer = new XmlSerializer(typeof(JobConfiguration));
         private readonly ExtendedCollection<string> _assemblyFileNames = new ExtendedCollection<string>();
         private readonly ExtendedCollection<StageConfiguration> _stages = new ExtendedCollection<StageConfiguration>();
+        private readonly ExtendedCollection<AdditionalProgressCounter> _additionalProgressCounters = new ExtendedCollection<AdditionalProgressCounter>();
 
         /// <summary>
         /// Initializes a new instance of the <see cref="JobConfiguration"/> class.
@@ -76,6 +78,15 @@ namespace Tkl.Jumbo.Jet
         public Collection<StageConfiguration> Stages
         {
             get { return _stages; }
+        }
+
+        /// <summary>
+        /// Gets the additional progress counters.
+        /// </summary>
+        /// <value>The additional progress counters.</value>
+        public Collection<AdditionalProgressCounter> AdditionalProgressCounters
+        {
+            get { return _additionalProgressCounters; }
         }
 
         /// <summary>
@@ -220,7 +231,10 @@ namespace Tkl.Jumbo.Jet
                 if( hasInputs )
                 {
                     if( inputStages.Count() > 1 )
+                    {
                         stage.MultiInputRecordReaderType = stageMultiInputRecordReaderType;
+                        AddAdditionalProgressCounter(stageMultiInputRecordReaderType);
+                    }
 
                     ValidateChannelConnectivityConstraints(inputStages, stage);
 
@@ -244,8 +258,12 @@ namespace Tkl.Jumbo.Jet
                             MultiInputRecordReaderType = info.MultiInputRecordReaderType,
                             OutputStage = stageId,
                             PartitionsPerTask = info.PartitionsPerTask,
+                            PartitionAssignmentMethod = info.PartitionAssignmentMethod,
+                            DisableDynamicPartitionAssignment = info.DisableDynamicPartitionAssignment
                         };
                         info.InputStage.OutputChannel = channel;
+                        AddAdditionalProgressCounter(info.ChannelType == ChannelType.Tcp ? typeof(TcpInputChannel) : typeof(FileInputChannel));
+                        AddAdditionalProgressCounter(info.MultiInputRecordReaderType);
                     }
                 }
                 Stages.Add(stage);
@@ -301,14 +319,18 @@ namespace Tkl.Jumbo.Jet
         private static void AddChildStage(Type partitionerType, Type inputType, StageConfiguration stage, StageConfiguration parentStage)
         {
             if( parentStage.ChildStage != null )
-                throw new ArgumentException("The input stage already has a child stage.");
+                throw new ArgumentException(string.Format(CultureInfo.CurrentCulture, "Cannot add child stage to stage {0} because it already has a child stage.", stage.CompoundStageId));
             if( stage.TaskCount > 1 && parentStage.InternalPartitionCount > 1 )
-                throw new ArgumentException("The input stage already has internal partitioning, cannot add another child stage with internal partitioning.");
+                throw new ArgumentException(string.Format(CultureInfo.CurrentCulture, "Cannot add child stage with internal partitioning to stage {0} because it already uses internal partitioning.", stage.CompoundStageId));
+            if( stage.OutputChannel != null )
+                throw new ArgumentException(string.Format(CultureInfo.CurrentCulture, "Cannot add child stage to stage {0} because it already has an output channel.", stage.CompoundStageId));
+            if( stage.DependentStages != null && stage.DependentStages.Count > 0 )
+                throw new ArgumentException(string.Format(CultureInfo.CurrentCulture, "Cannot add child stage to stage {0} because other stages have a scheduling dependency on it.", stage.CompoundStageId));
             parentStage.ChildStage = stage;
             parentStage.ChildStagePartitionerType = partitionerType ?? typeof(HashPartitioner<>).MakeGenericType(inputType);
         }
 
-        private static StageConfiguration CreateStage(string stageId, Type taskType, int taskCount, string outputPath, Type recordWriterType, IEnumerable<DfsFile> inputs, Type recordReaderType)
+        private StageConfiguration CreateStage(string stageId, Type taskType, int taskCount, string outputPath, Type recordWriterType, IEnumerable<DfsFile> inputs, Type recordReaderType)
         {
             StageConfiguration stage = new StageConfiguration()
             {
@@ -322,26 +344,30 @@ namespace Tkl.Jumbo.Jet
 
             if( inputs != null )
             {
+                StageDfsInput stageInput = new StageDfsInput() { RecordReaderType = recordReaderType };
                 foreach( DfsFile file in inputs )
                 {
                     for( int block = 0; block < file.Blocks.Count; ++block )
                     {
-                        stage.DfsInputs.Add(new TaskDfsInput()
+                        stageInput.TaskInputs.Add(new TaskDfsInput()
                         {
                             Path = file.FullPath,
                             Block = block,
-                            RecordReaderType = recordReaderType 
                         });
                     }
                 }
+                stage.DfsInput = stageInput;
             }
+
+            AddAdditionalProgressCounter(taskType);
+
             return stage;
         }
 
         /// <summary>
-        /// Gets the stage with the specified ID.
+        /// Gets the root stage with the specified ID.
         /// </summary>
-        /// <param name="stageId">The ID of the task.</param>
+        /// <param name="stageId">The ID of the stage. This may not be a compound stage ID.</param>
         /// <returns>The <see cref="StageConfiguration"/> for the stage, or <see langword="null"/> if no stage with that ID exists.</returns>
         public StageConfiguration GetStage(string stageId)
         {
@@ -351,7 +377,7 @@ namespace Tkl.Jumbo.Jet
         }
 
         /// <summary>
-        /// Gets all stages in a compount stage ID.
+        /// Gets all stages in a compound stage ID.
         /// </summary>
         /// <param name="compoundStageId">The compound stage ID.</param>
         /// <returns>A list of all <see cref="StageConfiguration"/> instances for the stages, or <see langword="null"/> if any of the components
@@ -375,6 +401,30 @@ namespace Tkl.Jumbo.Jet
                     stages.Add(current);
             }
             return stages;
+        }
+
+        /// <summary>
+        /// Gets the stage with the specified compound stage ID.
+        /// </summary>
+        /// <param name="compoundStageId">The compound stage ID.</param>
+        /// <returns>The <see cref="StageConfiguration"/> for the stage, or <see langword="null"/> if no stage with that ID exists.</returns>
+        public StageConfiguration GetStageWithCompoundId(string compoundStageId)
+        {
+            if( compoundStageId == null )
+                throw new ArgumentNullException("compoundStageId");
+
+            string[] stageIds = compoundStageId.Split(TaskId.ChildStageSeparator);
+            List<StageConfiguration> stages = new List<StageConfiguration>(stageIds.Length);
+            StageConfiguration current = GetStage(stageIds[0]);
+            for( int x = 0; x < stageIds.Length; ++x )
+            {
+                if( x > 0 )
+                    current = current.GetNamedChildStage(stageIds[x]);
+
+                if( current == null )
+                    return null;
+            }
+            return current;
         }
 
         /// <summary>
@@ -415,7 +465,17 @@ namespace Tkl.Jumbo.Jet
         {
             if( stream == null )
                 throw new ArgumentNullException("stream");
-            _serializer.Serialize(stream, this);
+            XmlWriterSettings settings = new XmlWriterSettings()
+            {
+                Indent = true,
+                IndentChars = "  "
+            };
+            using( XmlWriter writer = XmlWriter.Create(stream, settings) )
+            {
+                writer.WriteStartDocument();
+                writer.WriteProcessingInstruction("xml-stylesheet", "type=\"text/xsl\" href=\"config.xslt\"");
+                _serializer.Serialize(writer, this);
+            }
         }
 
         /// <summary>
@@ -425,17 +485,30 @@ namespace Tkl.Jumbo.Jet
         /// <returns>The input stages.</returns>
         public IEnumerable<StageConfiguration> GetInputStagesForStage(string stageId)
         {
-            Queue<StageConfiguration> nestedStages = new Queue<StageConfiguration>(Stages);
-            while( nestedStages.Count > 0 )
+            return GetDependenciesForStage(stageId, true);
+        }
+
+        /// <summary>
+        /// Gets the stages that the specified stage depends on.
+        /// </summary>
+        /// <param name="stageId">The stage ID of the stage whose dependencies to retrieve.</param>
+        /// <param name="channelDependenciesOnly"><see langword="true"/> to return only stages connected to the specified stage's input channel; <see langword="false"/> to return
+        /// both stages connected by channel and dependencies indicated by <see cref="StageConfiguration.DependentStages"/>.</param>
+        /// <returns></returns>
+        public IEnumerable<StageConfiguration> GetDependenciesForStage(string stageId, bool channelDependenciesOnly)
+        {
+            if( stageId == null )
+                throw new ArgumentNullException("stageId");
+
+            foreach( StageConfiguration stage in Stages )
             {
-                // TODO: This code was adapted from when multiple child stages was still possibe, it might not be the best solution anymore.
-                StageConfiguration stage = nestedStages.Dequeue();
-                if( stage.ChildStage != null )
-                {
-                    nestedStages.Enqueue(stage.ChildStage);
-                }
-                else if( stage.OutputChannel != null && stage.OutputChannel.OutputStage == stageId )
-                    yield return stage;
+                StageConfiguration leafStage = stage;
+                while( leafStage.ChildStage != null )
+                    leafStage = leafStage.ChildStage;
+
+                if( (leafStage.OutputChannel != null && leafStage.OutputChannel.OutputStage == stageId) ||
+                    (!channelDependenciesOnly && leafStage.DependentStages.Contains(stageId)) )
+                    yield return leafStage;
             }
         }
 
@@ -451,9 +524,17 @@ namespace Tkl.Jumbo.Jet
             if( newName == null )
                 throw new ArgumentNullException("newName");
 
-            foreach( StageConfiguration inputStage in GetInputStagesForStage(stage.StageId) )
+            if( stage.Parent == null )
             {
-                inputStage.OutputChannel.OutputStage = newName;
+                foreach( StageConfiguration inputStage in GetDependenciesForStage(stage.StageId, false) )
+                {
+                    if( inputStage.OutputChannel.OutputStage == stage.StageId )
+                        inputStage.OutputChannel.OutputStage = newName;
+                    else if( inputStage.DependentStages.Remove(stage.StageId) )
+                    {
+                        inputStage.DependentStages.Add(newName);
+                    }
+                }
             }
             stage.StageId = newName;
         }
@@ -477,6 +558,43 @@ namespace Tkl.Jumbo.Jet
                 else if( stage.OutputChannel != null )
                     yield return stage.OutputChannel;
             }
+        }
+
+        /// <summary>
+        /// Gets the top-level stages of the task in dependency order (if stage B depends on the output of stage A, then B will come after A in the order).
+        /// </summary>
+        /// <returns>The ordered list of stages.</returns>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1024:UsePropertiesWhereAppropriate")]
+        public IEnumerable<StageConfiguration> GetDependencyOrderedStages()
+        {
+            List<StageConfiguration> result = new List<StageConfiguration>(Stages.Count);
+
+            // Start with the DFS input stages.
+            var inputStages = from stage in Stages
+                              where GetDependenciesForStage(stage.StageId, false).Count() == 0
+                              select stage;
+
+            Queue<StageConfiguration> nextStages = new Queue<StageConfiguration>(inputStages);
+
+            while( nextStages.Count > 0 )
+            {
+                StageConfiguration nextStage = nextStages.Dequeue();
+
+                // If a stage has multiple input stages it might already be in the list. In that case we must remove it and re-add it at the end.
+                result.Remove(nextStage);
+                result.Add(nextStage);
+
+                while( nextStage.ChildStage != null )
+                    nextStage = nextStage.ChildStage;
+
+                if( nextStage.OutputChannel != null )
+                    nextStages.Enqueue(GetStage(nextStage.OutputChannel.OutputStage));
+
+                foreach( string stageId in nextStage.DependentStages )
+                    nextStages.Enqueue(GetStage(stageId));
+            }
+
+            return result;
         }
 
         /// <summary>
@@ -504,6 +622,31 @@ namespace Tkl.Jumbo.Jet
             {
                 return LoadXml(stream);
             }
+        }
+
+        /// <summary>
+        /// Adds an additional progress counter for the specified type.
+        /// </summary>
+        /// <param name="type">The type.</param>
+        /// <returns><see langword="true"/> if the additional counter was added; <see langword="false"/> if <paramref name="type"/> was already added or didn't
+        /// define an additional progress counter.</returns>
+        public bool AddAdditionalProgressCounter(Type type)
+        {
+            if( type == null )
+                throw new ArgumentNullException("type");
+            if( type.GetInterfaces().Contains(typeof(IHasAdditionalProgress)) )
+            {
+                AdditionalProgressCounter counter = new AdditionalProgressCounter() { TypeName = type.FullName };
+                // DisplayName isn't used in comparied AdditionalProgressCounter objects so we can postpone setting it.
+                if( !_additionalProgressCounters.Contains(counter) )
+                {
+                    AdditionalProgressCounterAttribute attribute = (AdditionalProgressCounterAttribute)Attribute.GetCustomAttribute(type, typeof(AdditionalProgressCounterAttribute));
+                    counter.DisplayName = attribute == null ? type.Name : attribute.DisplayName;
+                    _additionalProgressCounters.Add(counter);
+                    return true;
+                }
+            }
+            return false;
         }
 
         private StageConfiguration AddInputStage(string stageId, IEnumerable<DfsFile> inputFiles, Type taskType, Type recordReaderType, string outputPath, Type recordWriterType)
@@ -575,6 +718,24 @@ namespace Tkl.Jumbo.Jet
                 return defaultValue;
             else
                 return JobSettings.GetTypedSetting(key, defaultValue);
+        }
+
+        /// <summary>
+        /// Tries to get a setting with the specified type from the job settings.
+        /// </summary>
+        /// <typeparam name="T">The type of the setting.</typeparam>
+        /// <param name="key">The name of the setting..</param>
+        /// <param name="value">If the function returns <see langword="true"/>, receives the value of the setting.</param>
+        /// <returns><see langword="true"/> if the settings dictionary contained the specified setting; otherwise, <see langword="false"/>.</returns>
+        public bool TryGetTypedSetting<T>(string key, out T value)
+        {
+            if( JobSettings == null )
+            {
+                value = default(T);
+                return false;
+            }
+            else
+                return JobSettings.TryGetTypedSetting(key, out value);
         }
 
         /// <summary>

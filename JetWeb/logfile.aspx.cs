@@ -20,12 +20,15 @@ public partial class logfile : System.Web.UI.Page
         string maxSizeString = Request.QueryString["maxSize"];
         int maxSize = 102400;
         if( maxSizeString != null )
-            maxSize = Convert.ToInt32(maxSizeString);
+            maxSize = (int)ByteSize.Parse(maxSizeString);
+        if( maxSize <= 0 )
+            maxSize = Int32.MaxValue;
         if( taskServer == null )
         {
-            Title = "Job server log file - Jumbo Jet";
-            HeaderText.InnerText = "Job server log file";
             JetClient client = new JetClient();
+            JetMetrics metrics = client.JobServer.GetMetrics();
+            Title = string.Format("Job server {0} log file - Jumbo Jet", metrics.JobServer);
+            HeaderText.InnerText = string.Format("Job server {0} log file", metrics.JobServer);
             string log = client.JobServer.GetLogFileContents(maxSize);
             LogFileContents.InnerText = log;
         }
@@ -48,13 +51,13 @@ public partial class logfile : System.Web.UI.Page
 
                 if( Request.QueryString["profile"] == "true" )
                 {
-                    LogFileContents.InnerText = client.GetTaskProfileOutput(jobId, taskId, attempt);
+                    LogFileContents.InnerText = client.GetTaskProfileOutput(jobId, new TaskAttemptId(new TaskId(taskId), attempt));
                     Title = string.Format("Task {{{0}}}_{1}_{2} profile output (on {3}) - Jumbo Jet", jobId, taskId, attempt, taskServer);
                     HeaderText.InnerText = string.Format("Task {{{0}}}_{1}_{2} profile output (on {3})", jobId, taskId, attempt, taskServer);
                 }
                 else
                 {
-                    LogFileContents.InnerText = client.GetTaskLogFileContents(jobId, taskId, attempt, maxSize);
+                    LogFileContents.InnerText = client.GetTaskLogFileContents(jobId, new TaskAttemptId(new TaskId(taskId), attempt), maxSize);
                     Title = string.Format("Task {{{0}}}_{1}_{2} log file (on {3}) - Jumbo Jet", jobId, taskId, attempt, taskServer);
                     HeaderText.InnerText = string.Format("Task {{{0}}}_{1}_{2} log file (on {3})", jobId, taskId, attempt, taskServer);
                 }

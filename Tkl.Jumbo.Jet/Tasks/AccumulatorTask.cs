@@ -89,7 +89,7 @@ namespace Tkl.Jumbo.Jet.Tasks
         {
             if( output == null )
                 throw new ArgumentNullException("output");
-            bool allowRecordReuse = TaskAttemptConfiguration.StageConfiguration.AllowOutputRecordReuse;
+            bool allowRecordReuse = TaskContext.StageConfiguration.AllowOutputRecordReuse;
             Pair<TKey, TValue> record = null;
             if( allowRecordReuse )
                 record = new Pair<TKey, TValue>();

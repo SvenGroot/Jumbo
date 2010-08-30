@@ -13,6 +13,7 @@ namespace Tkl.Jumbo
     /// </summary>
     public struct TypeReference : IXmlSerializable
     {
+        private static bool _resolveTypes = true;
         private string _typeName;
         private Type _type;
 
@@ -27,6 +28,36 @@ namespace Tkl.Jumbo
         }
 
         /// <summary>
+        /// Initializes a new instance of the <see cref="TypeReference"/> structure using the specified type name.
+        /// </summary>
+        /// <param name="typeName">Name of the type. May be <see langword="null"/>.</param>
+        public TypeReference(string typeName)
+        {
+            _type = null;
+            _typeName = typeName;
+        }
+
+        /// <summary>
+        /// Gets or sets a value indicating whether <see cref="TypeReference"/> instances should resolve the type specified by <see cref="TypeName"/>
+        /// if <see cref="ReferencedType"/> wasn't explicitly set.
+        /// </summary>
+        /// <value>
+        /// 	<see langword="true"/> if types should be resolved; otherwise, <see langword="false"/>. The default value is <see langword="true"/>.
+        /// </value>
+        /// <remarks>
+        /// <para>
+        ///   The <see cref="TypeReference"/> class is used as part of the configuration for Jumbo Jet jobs. The job server will load the
+        ///   configuration, but loading referenced assemblies into the job server should be avoided. This property allows you to ensure
+        ///   that even if e.g. a debugger accesses the <see cref="ReferencedType"/> property the type will not be loaded.
+        /// </para>
+        /// </remarks>
+        public static bool ResolveTypes
+        {
+            get { return _resolveTypes; }
+            set { _resolveTypes = value; }
+        }
+
+        /// <summary>
         /// Gets or sets the type that this <see cref="TypeReference"/> references.
         /// </summary>
         public Type ReferencedType
@@ -34,14 +65,13 @@ namespace Tkl.Jumbo
             get
             {
                 if( _type == null && _typeName != null )
-                    _type = Type.GetType(_typeName, true);
+                {
+                    if( ResolveTypes )
+                        _type = Type.GetType(_typeName, true);
+                    else
+                        throw new InvalidOperationException("Resolving type references is disabled.");
+                }
                 return _type;
-            }
-            set
-            {
-                _type = value;
-                if( value != null )
-                    _typeName = _type.AssemblyQualifiedName;
             }
         }
 
@@ -53,11 +83,6 @@ namespace Tkl.Jumbo
             get
             {
                 return _typeName;
-            }
-            set
-            {
-                _typeName = value;
-                _type = null;
             }
         }
 
@@ -145,7 +170,8 @@ namespace Tkl.Jumbo
                 reader.ReadStartElement();
             else
             {
-                TypeName = reader.ReadString();
+                _typeName = reader.ReadString();
+                _type = null;
                 reader.ReadEndElement();
             }
         }

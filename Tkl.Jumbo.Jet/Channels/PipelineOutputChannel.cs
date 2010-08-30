@@ -23,53 +23,6 @@ namespace Tkl.Jumbo.Jet.Channels
     /// </remarks>
     public sealed class PipelineOutputChannel : IOutputChannel
     {
-        #region Nested types
-
-        private sealed class PipelineRecordWriter<TRecord, TPipelinedTaskOutput> : RecordWriter<TRecord>
-        {
-            private IPushTask<TRecord, TPipelinedTaskOutput> _task;
-            private RecordWriter<TPipelinedTaskOutput> _output;
-
-            public PipelineRecordWriter(IPushTask<TRecord, TPipelinedTaskOutput> task, RecordWriter<TPipelinedTaskOutput> output)
-            {
-                if( task == null )
-                    throw new ArgumentNullException("task");
-                if( output == null )
-                    throw new ArgumentNullException("output");
-
-                _task = task;
-                _output = output;
-            }
-
-            protected override void WriteRecordInternal(TRecord record)
-            {
-                if( _task == null )
-                    throw new ObjectDisposedException(typeof(PipelineRecordWriter<TRecord, TPipelinedTaskOutput>).FullName);
-                _task.ProcessRecord(record, _output);
-            }
-
-            protected override void Dispose(bool disposing)
-            {
-                try
-                {
-                    if( disposing )
-                    {
-                        if( _output != null )
-                        {
-                            _output.Dispose();
-                            _output = null;
-                        }
-                    }
-                }
-                finally
-                {
-                    base.Dispose(disposing);
-                }
-            }
-        }
-
-        #endregion
-
         private TaskExecutionUtility _taskExecution;
 
         /// <summary>
@@ -92,48 +45,41 @@ namespace Tkl.Jumbo.Jet.Channels
         /// <typeparam name="T">The type of record.</typeparam>
         /// <returns>A record writer for the channel.</returns>
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1004:GenericMethodsShouldProvideTypeParameter")]
-        public Tkl.Jumbo.IO.RecordWriter<T> CreateRecordWriter<T>()
+        public RecordWriter<T> CreateRecordWriter<T>()
         {
-            StageConfiguration childStage = _taskExecution.Configuration.StageConfiguration.ChildStage;
-            if( childStage.TaskCount == 1 )
-                return CreateRecordWriter<T>(_taskExecution.CreateAssociatedTask(childStage, 1));
+            StageConfiguration childStage = _taskExecution.Context.StageConfiguration.ChildStage;
+            IPartitioner<T> partitioner;
+            int taskCount = childStage.TaskCount;
+
+            if( _taskExecution.Context.StageConfiguration.IsOutputPrepartitioned && _taskExecution.Context.StageConfiguration.InternalPartitionCount != 1 )
+            {
+                // If the parent stage has multiple internal partitions and uses pre-partitioned output, but the next childstage doesn't use IPrepartitionedPushTask
+                // we need to split here to match the number of internal partitions.
+                taskCount = _taskExecution.Context.StageConfiguration.InternalPartitionCount;
+            }
+
+            if( childStage.IsOutputPrepartitioned )
+            {
+                partitioner = (IPartitioner<T>)JetActivator.CreateInstance(_taskExecution.Context.StageConfiguration.ChildStagePartitionerType.ReferencedType, _taskExecution);
+                return (RecordWriter<T>)_taskExecution.CreateAssociatedTask(childStage, 1).CreatePipelineRecordWriter(partitioner);
+            }
+            else if( taskCount == 1 )
+                return (RecordWriter<T>)_taskExecution.CreateAssociatedTask(childStage, 1).CreatePipelineRecordWriter(null);
             else
             {
                 List<RecordWriter<T>> writers = new List<RecordWriter<T>>();
-                IPartitioner<T> partitioner = (IPartitioner<T>)JetActivator.CreateInstance(_taskExecution.Configuration.StageConfiguration.ChildStagePartitionerType.ReferencedType, _taskExecution);
+                partitioner = (IPartitioner<T>)JetActivator.CreateInstance(_taskExecution.Context.StageConfiguration.ChildStagePartitionerType.ReferencedType, _taskExecution);
 
-                for( int x = 1; x <= childStage.TaskCount; ++x )
+                for( int x = 1; x <= taskCount; ++x )
                 {
                     TaskExecutionUtility childTaskExecution = _taskExecution.CreateAssociatedTask(childStage, x);
-                    writers.Add(CreateRecordWriter<T>(childTaskExecution));
+                    writers.Add((RecordWriter<T>)childTaskExecution.CreatePipelineRecordWriter(null));
                 }
                 return new MultiRecordWriter<T>(writers, partitioner);
             }
         }
 
         #endregion
-
-        private RecordWriter<T> CreateRecordWriter<T>(TaskExecutionUtility pipelinedTask)
-        {
-            MethodInfo createWriterMethod = typeof(PipelineOutputChannel)
-                                                .GetMethod("CreateRecordWriterInternal", BindingFlags.NonPublic | BindingFlags.Static)
-                                                .MakeGenericMethod(typeof(T), pipelinedTask.OutputRecordType);
-            return (RecordWriter<T>)createWriterMethod.Invoke(this, new object[] { pipelinedTask });
-        }
-
-// disable Mono C# compile warning about unused method; it's used via reflection.
-#pragma warning disable 169
-
-        private static RecordWriter<TRecord> CreateRecordWriterInternal<TRecord, TPipelinedTaskOutput>(TaskExecutionUtility pipelinedTask)
-        {
-            RecordWriter<TPipelinedTaskOutput> output = pipelinedTask.GetOutputWriter<TPipelinedTaskOutput>();
-
-            IPushTask<TRecord, TPipelinedTaskOutput> task = (IPushTask<TRecord, TPipelinedTaskOutput>)pipelinedTask.GetTaskInstance<TRecord, TPipelinedTaskOutput>();
-
-            return new PipelineRecordWriter<TRecord, TPipelinedTaskOutput>(task, output);
-        }
-
-#pragma warning restore 169
 
     }
 }

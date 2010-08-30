@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading;
+using Tkl.Jumbo;
 
 namespace JobServerApplication
 {
@@ -14,6 +15,7 @@ namespace JobServerApplication
 
         public static void Main(string[] args)
         {
+            JumboConfiguration.GetConfiguration().Log.ConfigureLogger();
             AppDomain.CurrentDomain.UnhandledException += new UnhandledExceptionEventHandler(CurrentDomain_UnhandledException);
             Console.CancelKeyPress += new ConsoleCancelEventHandler(Console_CancelKeyPress);
 

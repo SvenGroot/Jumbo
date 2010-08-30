@@ -161,7 +161,7 @@ namespace Tkl.Jumbo.Dfs
         /// <summary>
         /// Adds a packet to the upload queue.
         /// </summary>
-        /// <param name="data">The data to in the packet.</param>
+        /// <param name="data">The data to put in the packet.</param>
         /// <param name="size">The size of the data in the packet.</param>
         /// <param name="isLastPacket"><see langword="true"/> if this is the last packet being sent; otherwise <see langword="false"/>.</param>
         /// <remarks>
@@ -188,6 +188,42 @@ namespace Tkl.Jumbo.Dfs
                 throw new InvalidOperationException("The operation has been aborted.");
 
             packet.CopyFrom(data, size, isLastPacket);
+
+            if( isLastPacket )
+            {
+                _hasLastPacket = true;
+            }
+            _buffer.NotifyWrite();
+        }
+
+        /// <summary>
+        /// Adds a packet to the upload queue.
+        /// </summary>
+        /// <param name="stream">The stream containing the data to put in the packet.</param>
+        /// <param name="isLastPacket"><see langword="true"/> if this is the last packet being sent; otherwise <see langword="false"/>.</param>
+        /// <remarks>
+        /// <para>
+        ///   The packet will not be sent immediately, but rather it will be added to a queue and sent asynchronously.
+        /// </para>
+        /// <para>
+        ///   <see cref="BlockSender"/> does not know anything about the block size; it is up to the caller to
+        ///   make sure not more packets than are allowed are submitted, and that the <see cref="Packet.IsLastPacket"/>
+        ///   property is set to <see langword="true"/> on the last packet.
+        /// </para>
+        /// </remarks>
+        public void AddPacket(Stream stream, bool isLastPacket)
+        {
+            CheckDisposed();
+
+            if( _hasLastPacket )
+                throw new InvalidOperationException("You cannot add additional packets after adding the last packet.");
+
+            Packet packet = _buffer.WriteItem;
+            ThrowIfErrorOccurred();
+            if( packet == null )
+                throw new InvalidOperationException("The operation has been aborted.");
+
+            packet.CopyFrom(stream, isLastPacket);
 
             if( isLastPacket )
             {

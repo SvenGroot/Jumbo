@@ -61,11 +61,14 @@ namespace Tkl.Jumbo.Test.Jet
                 records.Add(value);
             }
             ListRecordWriter<int> output = new ListRecordWriter<int>();
+            MultiRecordWriter<int> multiOutput = new MultiRecordWriter<int>(new[] { output }, new PrepartitionedPartitioner<int>());
+            PrepartitionedRecordWriter<int> prepartitionedOutput = new PrepartitionedRecordWriter<int>(multiOutput);
 
             SortTask<int> target = new SortTask<int>();
+            target.NotifyConfigurationChanged();
             foreach( int record in records )
-                target.ProcessRecord(record, output);
-            target.Finish(output);
+                target.ProcessRecord(record, 0, prepartitionedOutput);
+            target.Finish(prepartitionedOutput);
 
             records.Sort();
             Assert.AreNotSame(records, output.List);
@@ -77,7 +80,7 @@ namespace Tkl.Jumbo.Test.Jet
         {
             JobConfiguration jobConfig = new JobConfiguration();
             StageConfiguration stageConfig = jobConfig.AddStage("Accumulate", typeof(TestAccumulator), 1, null, null, null);
-            TaskAttemptConfiguration config = new TaskAttemptConfiguration(Guid.NewGuid(), jobConfig, new TaskId("Accumulate", 1), stageConfig, Utilities.TestOutputPath, "/JumboJet/fake", 1, null);
+            TaskContext config = new TaskContext(Guid.NewGuid(), jobConfig, new TaskAttemptId(new TaskId("Accumulate", 1), 1), stageConfig, Utilities.TestOutputPath, "/JumboJet/fake");
 
             IPushTask<Pair<Utf8String, int>, Pair<Utf8String, int>> task = new TestAccumulator();
             JetActivator.ApplyConfiguration(task, null, null, config);
@@ -109,7 +112,7 @@ namespace Tkl.Jumbo.Test.Jet
         {
             JobConfiguration jobConfig = new JobConfiguration();
             StageConfiguration stageConfig = jobConfig.AddStage("Accumulate", typeof(TestAccumulator), 1, null, null, null);
-            TaskAttemptConfiguration config = new TaskAttemptConfiguration(Guid.NewGuid(), jobConfig, new TaskId("Accumulate", 1), stageConfig, Utilities.TestOutputPath, "/JumboJet/fake", 1, null);
+            TaskContext config = new TaskContext(Guid.NewGuid(), jobConfig, new TaskAttemptId(new TaskId("Accumulate", 1), 1), stageConfig, Utilities.TestOutputPath, "/JumboJet/fake");
 
             IPushTask<Pair<Utf8String, int>, Pair<Utf8String, int>> task = new TestRecordReuseAccumulator();
             JetActivator.ApplyConfiguration(task, null, null, config);

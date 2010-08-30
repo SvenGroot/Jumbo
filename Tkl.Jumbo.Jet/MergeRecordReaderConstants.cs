@@ -14,14 +14,19 @@ namespace Tkl.Jumbo.Jet
     {
         /// <summary>
         /// The name of the setting in <see cref="StageConfiguration.StageSettings"/> that specifies the maximum number
-        /// of files to merge in one pass.
+        /// of files to merge in one pass. This setting must be a <see cref="Int32"/> that is greater than or equal to 2.
+        /// If this setting is not specified, the value of the <see cref="MergeRecordReaderConfigurationElement.MaxFileInputs"/>
+        /// setting is used.
         /// </summary>
-        public const string MaxMergeInputsSetting = "MergeRecordReader.MaxMergeTasks";
+        public const string MaxFileInputsSetting = "MergeRecordReader.MaxFileInputs";
 
         /// <summary>
-        /// The default maximum number of files to merge in one pass.
+        /// The name of the setting in the <see cref="StageConfiguration.StageSettings"/> or <see cref="JobConfiguration.JobSettings"/>
+        /// that specifies the usage level of the channel's memory storage that will trigger a merge pass. This
+        /// setting must be a <see cref="Single"/> between 0 and 1. If it isn't specified, the value of the <see cref="MergeRecordReaderConfigurationElement.MemoryStorageTriggerLevel"/>
+        /// property will be used.
         /// </summary>
-        public const int DefaultMaxMergeInputs = 100;
+        public const string MemoryStorageTriggerLevelSetting = "MergeRecordReader.MemoryStorageTriggerLevel";
 
         /// <summary>
         /// The name of the setting in <see cref="StageConfiguration.StageSettings"/> that specifies the <see cref="IComparer{T}"/>

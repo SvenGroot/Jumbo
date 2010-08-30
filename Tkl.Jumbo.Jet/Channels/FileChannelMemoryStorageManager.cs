@@ -8,6 +8,7 @@ using Tkl.Jumbo.IO;
 using System.IO;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using System.Threading;
 
 namespace Tkl.Jumbo.Jet.Channels
 {
@@ -21,12 +22,27 @@ namespace Tkl.Jumbo.Jet.Channels
         private long _currentSize;
         private bool _disposed;
 
+        public event EventHandler StreamRemoved;
+
         private FileChannelMemoryStorageManager(long maxSize)
         {
             if( maxSize < 0 )
                 throw new ArgumentOutOfRangeException("maxSize", "Memory storage size must be larger than zero.");
             _maxSize = maxSize;
             _log.InfoFormat("Created memory storage with maximum size {0}.", maxSize);
+        }
+
+        public float Level
+        {
+            get
+            {
+                lock( _inputs )
+                {
+                    if( _maxSize == 0L )
+                        return 0f;
+                    return (float)_currentSize / (float)_maxSize;
+                }
+            }
         }
 
         [MethodImpl(MethodImplOptions.Synchronized)]
@@ -60,6 +76,13 @@ namespace Tkl.Jumbo.Jet.Channels
             }
         }
 
+        private void OnStreamRemoved(EventArgs e)
+        {
+            EventHandler handler = StreamRemoved;
+            if( handler != null )
+                handler(this, e);
+        }
+
         private void RemoveStream(UnmanagedBufferMemoryStream stream)
         {
             lock( _inputs )
@@ -68,6 +91,7 @@ namespace Tkl.Jumbo.Jet.Channels
                 {
                     _currentSize -= stream.InitialCapacity;
                     _log.DebugFormat("Removed stream from memory storage, space used now {0}.", _currentSize);
+                    OnStreamRemoved(EventArgs.Empty);
                 }
                 else
                 {

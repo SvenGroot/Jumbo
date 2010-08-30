@@ -78,13 +78,11 @@ namespace Tkl.Jumbo.Jet.Samples
             DfsClient dfsClient = new DfsClient(DfsConfiguration);
             CheckAndCreateOutputPath(dfsClient, _outputPath);
 
-            RecordWriter<GenSortRecord> output = builder.CreateRecordWriter<GenSortRecord>(_outputPath, typeof(GenSortRecordWriter), (int)BlockSize.Value, ReplicationFactor);
+            var output = CreateDfsOutput(_outputPath, typeof(GenSortRecordWriter));
 
-            SettingsDictionary settings = new SettingsDictionary();
-            settings.AddTypedSetting(_startRecordSetting, _startRecord);
-            settings.AddTypedSetting(_countSetting, _recordCount);
-
-            builder.GenerateRecords(output, GenSort, _taskCount, settings);
+            StageBuilder stage = builder.GenerateRecords<GenSortRecord>(output, GenSort, _taskCount);
+            stage.AddSetting(_startRecordSetting, _startRecord, StageSettingCategory.Task);
+            stage.AddSetting(_countSetting, _recordCount, StageSettingCategory.Task);
         }
 
         /// <summary>
@@ -92,7 +90,7 @@ namespace Tkl.Jumbo.Jet.Samples
         /// </summary>
         /// <param name="output"></param>
         /// <param name="configuration"></param>
-        public static void GenSort(RecordWriter<GenSortRecord> output, TaskAttemptConfiguration configuration)
+        public static void GenSort(RecordWriter<GenSortRecord> output, TaskContext configuration)
         {
             ulong startRecord = configuration.StageConfiguration.GetTypedSetting(_startRecordSetting, 0UL);
             ulong count = configuration.StageConfiguration.GetTypedSetting(_countSetting, 0UL);

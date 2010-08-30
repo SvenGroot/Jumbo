@@ -10,7 +10,7 @@ using Tkl.Jumbo.IO;
 namespace Tkl.Jumbo.Test.Tasks
 {
     [AllowRecordReuse]
-    public class LineAdderTask : IPullTask<int, int>
+    public class LineAdderTask : Configurable, IPullTask<int, int>
     {
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(LineAdderTask));
 
@@ -23,6 +23,7 @@ namespace Tkl.Jumbo.Test.Tasks
             foreach( int value in input.EnumerateRecords() )
             {
                 totalLines += value;
+                TaskContext.StatusMessage = string.Format("Counted {0} lines", totalLines);
                 _log.Info(value);
             }
             _log.InfoFormat("Total: {0}", totalLines);

@@ -11,7 +11,6 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
 {
     class FrequentPatternCollector
     {
-        private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(FrequentPatternCollector));
 
         private int _count;
         //private int _prefixCount;
@@ -21,27 +20,32 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
         private readonly int[] _perfectExtensionCount;
         private readonly int[] _perfectExtensions;
         private int _perfectExtensionItemIndex;
-        private readonly RecordWriter<Pair<int, WritableCollection<MappedFrequentPattern>>> _output;
         private readonly FrequentPatternMaxHeap[] _itemHeaps;
         private readonly int _minSupport;
         private readonly bool _expandPerfectExtensions;
         private readonly int _heapSize;
 
-        public FrequentPatternCollector(int itemCount, int weight, RecordWriter<Pair<int, WritableCollection<MappedFrequentPattern>>> output, bool expandPerfectExtensions, int minSupport, int k)
+        public FrequentPatternCollector(int itemCount, int weight, RecordWriter<Pair<int, WritableCollection<MappedFrequentPattern>>> output, bool expandPerfectExtensions, int minSupport, int k, FrequentPatternMaxHeap[] itemHeaps)
         {
             _items = new int[itemCount];
             _perfectExtensions = new int[itemCount];
             _supports = new int[itemCount + 1];
             _perfectExtensionCount = new int[itemCount + 1];
             _supports[0] = weight;
-            _output = output;
             _minSupport = minSupport;
             _expandPerfectExtensions = expandPerfectExtensions;
 
             if( k > 0 )
             {
                 _heapSize = k;
-                _itemHeaps = new FrequentPatternMaxHeap[itemCount];
+                if( itemHeaps == null || itemHeaps.Length < itemCount )
+                {
+                    _itemHeaps = new FrequentPatternMaxHeap[itemCount];
+                    if( itemHeaps != null )
+                        Array.Copy(itemHeaps, _itemHeaps, itemHeaps.Length);
+                }
+                else
+                    _itemHeaps = itemHeaps;
             }
         }
 
@@ -53,6 +57,11 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
         public int GetMinSupportForItem(int item)
         {
             return (_itemHeaps == null || _itemHeaps[item] == null) ? _minSupport : _itemHeaps[item].MinSupport;
+        }
+
+        public FrequentPatternMaxHeap[] ItemHeaps
+        {
+            get { return _itemHeaps; }
         }
 
         public void Add(int item, int support)
@@ -101,28 +110,6 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
 
             if( _perfectExtensionItemIndex == 0 || _expandPerfectExtensions )
                 Output();
-        }
-
-        public void ReportTopK(int item)
-        {
-            if( _itemHeaps != null )
-            {
-                FrequentPatternMaxHeap heap = _itemHeaps[item];
-                if( heap != null )
-                {
-                    WritableCollection<MappedFrequentPattern> patterns = new WritableCollection<MappedFrequentPattern>();
-                    PriorityQueue<MappedFrequentPattern> queue = heap.Queue;
-                    _log.InfoFormat("{2}: Found {0} frequent items with min support {1}.", queue.Count, queue.Peek().Support, item);
-                    while( queue.Count > 0 )
-                    {
-                        patterns.Add(queue.Dequeue());
-                    }
-
-                    _output.WriteRecord(Pair.MakePair(item, patterns));
-
-                    _itemHeaps[item] = null;
-                }
-            }
         }
 
         private void ReportPerfectExtensions(int index)

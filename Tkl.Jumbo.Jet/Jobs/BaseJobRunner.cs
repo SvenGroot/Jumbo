@@ -47,6 +47,64 @@ namespace Tkl.Jumbo.Jet.Jobs
         [NamedCommandLineArgument("blockSize"), Description("Block size of the job's output files.")]
         public ByteSize BlockSize { get; set; }
 
+        /// <summary>
+        /// Gets or sets the property values that will override predefined values in the job configuration.
+        /// </summary>
+        /// <value>The job properties.</value>
+        /// <remarks>
+        /// <para>
+        ///   This property is used to override the value of various properties in the job configuration
+        ///   after the job runner has created it.
+        /// </para>
+        /// <para>
+        ///   Each item in the array takes the form "PropertyName=value" or "CompoundStageId:PropertyName=value".
+        ///   The first form is used to modify properties of the <see cref="JobConfiguration"/> object,
+        ///   and the second form is used to modify properties of the <see cref="StageConfiguration"/> object
+        ///   for the stage with the specified compound stage ID.
+        /// </para>
+        /// <para>
+        ///   You can access properties that are more than one level deep, for instance "MyStage:OutputChannel.PartitionsPerTask=2"
+        ///   is used to set the <see cref="Channels.ChannelConfiguration.PartitionsPerTask"/> property for the <see cref="StageConfiguration.OutputChannel"/>
+        ///   property. This will cause an error if <see cref="StageConfiguration.OutputChannel"/> is <see langword="null"/>.
+        /// </para>
+        /// <para>
+        ///   This method for adjusting properties can only be done with properties whose values are of a type
+        ///   that can be converted to from a string. You cannot use this method to modify collection properties,
+        ///   or to rename stages.
+        /// </para>
+        /// <para>
+        ///   To apply the properties specified in this manner, call the <see cref="ApplyJobPropertiesAndSettings"/> method
+        ///   in a derived class after creating your job configuration.
+        /// </para>
+        /// </remarks>
+        [NamedCommandLineArgument("P"), Description("Modifies the value of one of the properties in the job configuration after the job has been created. Uses the format \"PropertyName=value\" or \"CompoundStageId:PropertyName=value\". You can access properties more than one level deep, e.g. \"MyStage:OutputChannel.PartitionsPerTask=2\". Can be specified more than once.")]
+        public string[] JobOrStageProperties { get; set; }
+
+        /// <summary>
+        /// Gets or sets additional job or stage settings that will be defined in the job configuration.
+        /// </summary>
+        /// <value>The job or stage settings.</value>
+        /// <remarks>
+        /// <para>
+        ///   You can use this property to specify or override the value of a job or stage setting
+        ///   after the job runner has created the job configuration.
+        /// </para>
+        /// <para>
+        ///   Each item in the array takes the form of "SettingName=value" for job settings, or
+        ///   "CompoundStageId:SettingName=value" for stage settings.
+        /// </para>
+        /// <para>
+        ///   If the setting is already defined, its value will be modified to the value specified
+        ///   in this property.
+        /// </para>
+        /// <para>
+        ///   To apply the settings specified in this manner, call the <see cref="ApplyJobPropertiesAndSettings"/> method
+        ///   in a derived class after creating your job configuration.
+        /// </para>
+        /// </remarks>
+        [NamedCommandLineArgument("D"), Description("Defines or overrides a job or stage setting in the job configuration. Uses the format \"SettingName=value\" or \"CompoundStageId:SettingName=value\". Can be specified more than once.")]
+        public string[] JobOrStageSettings { get; set; }
+
         #region IJobRunner Members
 
         /// <summary>
@@ -159,14 +217,25 @@ namespace Tkl.Jumbo.Jet.Jobs
         }
 
         /// <summary>
-        /// Adds the values of properties marked with the <see cref="JobSettingAttribute"/> to the <see cref="JobConfiguration.JobSettings"/> dictionary.
+        /// Adds the values of properties marked with the <see cref="JobSettingAttribute"/> to the <see cref="JobConfiguration.JobSettings"/> dictionary, 
+        /// applies properties set by the <see cref="JobOrStageProperties"/> property, and adds settings defined by the <see cref="JobOrStageSettings"/> property,
+        /// and .
         /// </summary>
         /// <param name="jobConfiguration">The job configuration.</param>
-        protected void AddJobSettings(JobConfiguration jobConfiguration)
+        protected void ApplyJobPropertiesAndSettings(JobConfiguration jobConfiguration)
         {
             if( jobConfiguration == null )
                 throw new ArgumentNullException("jobConfiguration");
 
+            ApplySettingProperties(jobConfiguration);
+
+            ApplyJobProperties(jobConfiguration);
+
+            ApplyJobOrStageSettings(jobConfiguration);
+        }
+
+        private void ApplySettingProperties(JobConfiguration jobConfiguration)
+        {
             PropertyInfo[] props = GetType().GetProperties();
             foreach( PropertyInfo prop in props )
             {
@@ -180,6 +249,112 @@ namespace Tkl.Jumbo.Jet.Jobs
                     jobConfiguration.AddSetting(key, prop.GetValue(this, null));
                 }
             }
+        }
+
+        private void ApplyJobOrStageSettings(JobConfiguration jobConfiguration)
+        {
+            if( JobOrStageSettings != null )
+            {
+                foreach( string setting in JobOrStageSettings )
+                {
+                    string compoundStageId;
+                    string settingName;
+                    string settingValue;
+                    ParsePropertyOrSetting(setting, out compoundStageId, out settingName, out settingValue);
+
+                    SettingsDictionary target = null;
+                    if( compoundStageId == null )
+                    {
+                        if( jobConfiguration.JobSettings == null )
+                            jobConfiguration.JobSettings = new SettingsDictionary();
+                        target = jobConfiguration.JobSettings;
+                    }
+                    else
+                    {
+                        StageConfiguration stage = jobConfiguration.GetStageWithCompoundId(compoundStageId);
+                        if( stage == null )
+                            throw new InvalidOperationException(string.Format(CultureInfo.CurrentCulture, "Stage {0} specified in command line argument -D:{1} does not exist.", compoundStageId, setting));
+                        if( stage.StageSettings == null )
+                            stage.StageSettings = new SettingsDictionary();
+                        target = stage.StageSettings;
+                    }
+
+                    target[settingName] = settingValue;
+                }
+            }
+        }
+
+        private void ApplyJobProperties(JobConfiguration jobConfiguration)
+        {
+            if( JobOrStageProperties != null )
+            {
+                foreach( string prop in JobOrStageProperties )
+                {
+                    ApplyJobProperty(jobConfiguration, prop);
+                }
+            }
+        }
+
+        private static void ApplyJobProperty(JobConfiguration job, string prop)
+        {
+            string compoundStageId;
+            string propName;
+            string propValue;
+            ParsePropertyOrSetting(prop, out compoundStageId, out propName, out propValue);
+
+            object target = job;
+            if( compoundStageId != null )
+            {
+                target = job.GetStageWithCompoundId(compoundStageId);
+                if( target == null )
+                    throw new InvalidOperationException(string.Format(CultureInfo.CurrentCulture, "Stage {0} specified in command line argument -P:{1} does not exist.", compoundStageId, prop));
+            }
+
+            ApplyJobProperty(target, propName, propValue);
+        }
+
+        private static void ParsePropertyOrSetting(string propOrSetting, out string compoundStageId, out string name, out string value)
+        {
+            compoundStageId = null;
+
+            int colonIndex = propOrSetting.IndexOf(':');
+            if( colonIndex >= 0 )
+            {
+                compoundStageId = propOrSetting.Substring(0, colonIndex);
+            }
+
+            int equalsIndex = propOrSetting.IndexOf('=', colonIndex + 1);
+            if( equalsIndex < 0 )
+                throw new InvalidOperationException(string.Format(CultureInfo.CurrentCulture, "Job property specified in command line argument -P:{0} has no value.", propOrSetting));
+
+            name = propOrSetting.Substring(colonIndex + 1, equalsIndex - colonIndex - 1);
+            value = propOrSetting.Substring(equalsIndex + 1);
+        }
+
+        private static void ApplyJobProperty(object target, string path, string value)
+        {
+            string[] pathItems = path.Split('.');
+            PropertyInfo prop = null;
+            foreach( string propName in pathItems )
+            {
+                if( prop != null )
+                {
+                    if( !prop.CanRead )
+                        throw new InvalidOperationException(string.Format(CultureInfo.CurrentCulture, "Property {0} in property path {1} is not readable.", prop.Name, path));
+                    target = prop.GetValue(target, null);
+                }
+                prop = target.GetType().GetProperty(propName);
+                if( prop == null )
+                    throw new InvalidOperationException(string.Format(CultureInfo.CurrentCulture, "Property {0} in property path {1} is does not exist.", propName, path));
+            }
+
+            if( !prop.CanWrite )
+                throw new InvalidOperationException(string.Format(CultureInfo.CurrentCulture, "Property {0} is not writable.", path));
+
+            TypeConverter converter = TypeDescriptor.GetConverter(prop.PropertyType);
+            object convertedValue = converter.ConvertFromString(value);
+
+            prop.SetValue(target, convertedValue, null);
         }
     }
 }

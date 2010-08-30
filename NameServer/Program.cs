@@ -10,6 +10,7 @@ using System.Runtime.Remoting.Channels;
 using System.Runtime.Remoting.Channels.Tcp;
 using System.Collections;
 using System.Threading;
+using Tkl.Jumbo;
 
 namespace NameServerApplication
 {
@@ -22,6 +23,7 @@ namespace NameServerApplication
 
         static void Main(string[] args)
         {
+            JumboConfiguration.GetConfiguration().Log.ConfigureLogger();
             AppDomain.CurrentDomain.UnhandledException += new UnhandledExceptionEventHandler(CurrentDomain_UnhandledException);
             System.Threading.Thread.CurrentThread.Name = "main";
 

@@ -32,6 +32,16 @@ namespace Tkl.Jumbo
         }
 
         /// <summary>
+        /// Gets the global logger configuration.
+        /// </summary>
+        /// <value>The global logger configuration.B</value>
+        [ConfigurationProperty("log", IsRequired = false, IsKey = false)]
+        public LogConfigurationElement Log
+        {
+            get { return (LogConfigurationElement)this["log"]; }
+        }
+
+        /// <summary>
         /// Loads the Jumbo configuration from the application configuration file.
         /// </summary>
         /// <returns>A <see cref="JumboConfiguration"/> object representing the settings in the application configuration file, or

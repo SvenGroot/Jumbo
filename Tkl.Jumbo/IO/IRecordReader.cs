@@ -15,7 +15,7 @@ namespace Tkl.Jumbo.IO
     ///   Record readers must inherit from <see cref="RecordReader{T}"/>, not just implement this interface.
     /// </note>
     /// </remarks>
-    public interface IRecordReader
+    public interface IRecordReader : IDisposable
     {
         /// <summary>
         /// Gets the number of records that has been read by this record reader.
@@ -23,8 +23,24 @@ namespace Tkl.Jumbo.IO
         int RecordsRead { get; }
 
         /// <summary>
-        /// Gets the number of bytes read, if applicable.
+        /// Gets the size of the records before deserialization.
         /// </summary>
+        /// <value>
+        /// The size of the records before deserialization, or 0 if the records were not read from a serialized source.
+        /// </value>
+        long InputBytes { get; }
+
+        /// <summary>
+        /// Gets the actual number of bytes read from the input.
+        /// </summary>
+        /// <value>
+        /// The number of bytes read from the input.
+        /// </value>
+        /// <remarks>
+        /// <para>
+        ///   This is the value of <see cref="InputBytes"/>, adjusted for compression (if applicable) and including any additional data read by the record reader (if any).
+        /// </para>
+        /// </remarks>
         long BytesRead { get; }
 
         /// <summary>

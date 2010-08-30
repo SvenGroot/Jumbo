@@ -14,6 +14,12 @@ namespace Tkl.Jumbo.Jet
     public class TaskServerConfigurationElement : ConfigurationElement
     {
         /// <summary>
+        /// The key of the setting in <see cref="JobConfiguration.JobSettings"/> used to override the default <see cref="TaskTimeout"/>.
+        /// The setting should be an <see cref="Int32"/> indicating the timeout in milliseconds.
+        /// </summary>
+        public const string TaskTimeoutJobSettingKey = "TaskServer.TaskTimeout";
+
+        /// <summary>
         /// Gets or sets the local directory for task files.
         /// </summary>
         [ConfigurationProperty("taskDirectory", DefaultValue = "", IsRequired = true, IsKey = false)]
@@ -89,6 +95,17 @@ namespace Tkl.Jumbo.Jet
         }
 
         /// <summary>
+        /// Gets or sets the maximum number of partition file index entries to keep in the index cache.
+        /// </summary>
+        /// <value>The file server max index cache size.</value>
+        [ConfigurationProperty("fileServerMaxIndexCacheSize", DefaultValue = 25, IsRequired = false, IsKey = false)]
+        public int FileServerMaxIndexCacheSize
+        {
+            get { return (int)this["fileServerMaxIndexCacheSize"]; }
+            set { this["fileServerMaxIndexCacheSize"] = value; }
+        }
+
+        /// <summary>
         /// Gets or sets the number of milliseconds to wait between creating TaskHost processes.
         /// </summary>
         [ConfigurationProperty("processCreationDelay", DefaultValue = 0, IsRequired = false, IsKey = false)]
@@ -113,17 +130,6 @@ namespace Tkl.Jumbo.Jet
         }
 
         /// <summary>
-        /// Gets or sets a value that indicates whether the task host should use multiple threads to call <see cref="IPushTask{TInput,TOutput}.Finish"/> on
-        /// child stage tasks, if there is more than one.
-        /// </summary>
-        [ConfigurationProperty("multiThreadedTaskFinish", DefaultValue = false, IsRequired = false, IsKey = false)]
-        public bool MultithreadedTaskFinish
-        {
-            get { return (bool)this["multiThreadedTaskFinish"]; }
-            set { this["multiThreadedTaskFinish"] = value; }
-        }
-
-        /// <summary>
         /// Gets or sets a value that indicates whether the task should periodically log processor and memory usage status.
         /// </summary>
         [ConfigurationProperty("logSystemStatus", DefaultValue = false, IsRequired = false, IsKey = false)]
@@ -131,6 +137,38 @@ namespace Tkl.Jumbo.Jet
         {
             get { return (bool)this["logSystemStatus"]; }
             set { this["logSystemStatus"] = value; }
+        }
+
+        /// <summary>
+        /// Gets or sets the progress interval.
+        /// </summary>
+        /// <value>The progress interval.</value>
+        [ConfigurationProperty("progressInterval", DefaultValue = 3000, IsRequired = false, IsKey = false)]
+        public int ProgressInterval
+        {
+            get { return (int)this["progressInterval"]; }
+            set { this["progressInterval"] = value; }
+        }
+
+        /// <summary>
+        /// Gets or sets the heartbeat interval.
+        /// </summary>
+        /// <value>The heartbeat interval.</value>
+        [ConfigurationProperty("heartbeatInterval", DefaultValue = 3000, IsRequired = false, IsKey = false)]
+        public int HeartbeatInterval
+        {
+            get { return (int)this["heartbeatInterval"]; }
+            set { this["heartbeatInterval"] = value; }
+        }
+
+        /// <summary>
+        /// Gets or sets the timeout, in milliseconds, after which a task is declared dead if it hasn't reported progress.
+        /// </summary>
+        [ConfigurationProperty("taskTimeout", DefaultValue = 600000, IsRequired = false, IsKey = false)]
+        public int TaskTimeout
+        {
+            get { return (int)this["taskTimeout"]; }
+            set { this["taskTimeout"] = value; }
         }
     }
 }

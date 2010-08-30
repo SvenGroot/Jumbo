@@ -26,10 +26,14 @@ public class JobStatusService : System.Web.Services.WebService
     }
 
     [WebMethod]
-    public JobStatus GetJobStatus(Guid jobId, DateTime lastUpdateTime)
+    public JobStatusData GetJobStatus(Guid jobId, DateTime lastUpdateTime, bool archived)
     {
         JetClient client = new JetClient();
-        JobStatus job = client.JobServer.GetJobStatus(jobId);
+        JobStatus job;
+        if( archived )
+            job = client.JobServer.GetArchivedJobStatus(jobId);
+        else
+            job = client.JobServer.GetJobStatus(jobId);
         // Set the end time to the current time for jobs that are running so they get displayed correctly.
         foreach( StageStatus stage in job.Stages )
         {
@@ -45,7 +49,7 @@ public class JobStatusService : System.Web.Services.WebService
             stage.Tasks.Clear();
             stage.Tasks.AddRange(tasks);
         }
-        return job;
+        return new JobStatusData(job);
     }
 
 }

@@ -11,7 +11,7 @@ namespace Tkl.Jumbo.Jet
     /// Heartbeat data informing the server of the status 
     /// </summary>
     [Serializable]
-    public class StatusJetHeartbeatData : JetHeartbeatData 
+    public class InitialStatusJetHeartbeatData : JetHeartbeatData 
     {
         /// <summary>
         /// Gets or sets the maximum number of tasks that this task server will accept.

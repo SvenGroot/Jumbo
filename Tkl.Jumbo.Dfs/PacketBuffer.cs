@@ -25,6 +25,9 @@ namespace Tkl.Jumbo.Dfs
         private int _bufferWritePos;
         private readonly AutoResetEvent _bufferReadEvent = new AutoResetEvent(false);
         private readonly AutoResetEvent _bufferWriteEvent = new AutoResetEvent(false);
+        private readonly ManualResetEvent _cancelEvent = new ManualResetEvent(false);
+        private readonly WaitHandle[] _readWaitEvents;
+        private readonly WaitHandle[] _writeWaitEvents;
         private bool _cancelled;
         private bool _disposed;
 
@@ -38,6 +41,10 @@ namespace Tkl.Jumbo.Dfs
             for( int x = 0; x < bufferSize; ++x )
                 _buffer[x] = new Packet();
             _bufferReadPos = bufferSize - 1;
+
+            // ReadItem waits on _bufferWriteEvent, and NotifyWrite waits on _bufferReadEvent.
+            _readWaitEvents = new WaitHandle[] { _bufferWriteEvent, _cancelEvent };
+            _writeWaitEvents = new WaitHandle[] { _bufferReadEvent, _cancelEvent };
         }
 
         public Packet ReadItem
@@ -49,12 +56,20 @@ namespace Tkl.Jumbo.Dfs
                 _bufferReadEvent.Set();
                 while( !_cancelled && _bufferReadPos == _bufferWritePos )
                 {
-                    _bufferWriteEvent.WaitOne();
+                    WaitHandle.WaitAny(_readWaitEvents);
                 }
                 // Because of the threading restrictions (see class remarks) _bufferReadPos cannot be changed
                 // outside this method. _bufferWritePos can change, but it once the while loop condition becomes
                 // false it cannot become true without _bufferReadPos changing, so this is safe without further locking.
                 return _cancelled ? null : _buffer[_bufferReadPos];
+            }
+        }
+
+        public bool ReadItemWillBlock
+        {
+            get
+            {
+                return !_cancelled && (_bufferReadPos + 1) % _bufferSize == _bufferWritePos;
             }
         }
 
@@ -81,7 +96,7 @@ namespace Tkl.Jumbo.Dfs
             int newPos = (_bufferWritePos + 1) % _bufferSize;
             while( !_cancelled && newPos == _bufferReadPos )
             {
-                _bufferReadEvent.WaitOne();
+                WaitHandle.WaitAny(_writeWaitEvents);
             }
             _bufferWritePos = newPos;
             _bufferWriteEvent.Set();
@@ -90,8 +105,7 @@ namespace Tkl.Jumbo.Dfs
         public void Cancel()
         {
             _cancelled = true;
-            _bufferWriteEvent.Set();
-            _bufferReadEvent.Set();
+            _cancelEvent.Set();
         }
 
         /// <summary>
@@ -102,6 +116,7 @@ namespace Tkl.Jumbo.Dfs
             _bufferReadPos = _bufferSize - 1;
             _bufferWritePos = 0;
             _cancelled = false;
+            _cancelEvent.Reset();
         }
 
         #region IDisposable Members
@@ -116,11 +131,11 @@ namespace Tkl.Jumbo.Dfs
             {
                 _disposed = true;
                 _cancelled = true;
-                _bufferWriteEvent.Set();
-                _bufferReadEvent.Set();
+                _cancelEvent.Set();
 
                 ((IDisposable)_bufferReadEvent).Dispose();
                 ((IDisposable)_bufferWriteEvent).Dispose();
+                ((IDisposable)_cancelEvent).Dispose();
             }
             GC.SuppressFinalize(this);
         }

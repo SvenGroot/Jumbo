@@ -19,12 +19,10 @@ namespace Tkl.Jumbo.Jet
     public class StageConfiguration
     {
         private string _stageId;
-        private string _taskTypeName;
-        private Type _taskType;
         private int _taskCount;
         private bool? _allowRecordReuse;
         private bool? _allowOutputRecordReuse;
-        private readonly ExtendedCollection<TaskDfsInput> _dfsInputs = new ExtendedCollection<TaskDfsInput>();
+        private readonly ExtendedCollection<string> _dependentStages = new ExtendedCollection<string>();
         private StageConfiguration _childStage;
 
         /// <summary>
@@ -50,51 +48,23 @@ namespace Tkl.Jumbo.Jet
         }
 
         /// <summary>
-        /// Gets or sets the name of the type that implements the task.
-        /// </summary>
-        [XmlAttribute("type")]
-        public string TaskTypeName
-        {
-            get { return _taskTypeName; }
-            set 
-            {
-                _taskType = null;
-                _taskTypeName = value; 
-            }
-        }
-
-        /// <summary>
         /// Gets or sets the type that implements the task.
         /// </summary>
-        [XmlIgnore]
-        public Type TaskType
-        {
-            get 
-            {
-                if( _taskType == null && _taskTypeName != null )
-                    _taskType = Type.GetType(_taskTypeName, true);
-                return _taskType; 
-            }
-            set 
-            { 
-                _taskType = value;
-                _taskTypeName = value == null ? null : value.AssemblyQualifiedName;
-            }
-        }
+        public TypeReference TaskType { get; set; }
 
         /// <summary>
         /// Gets or sets the number of tasks in this stage.
         /// </summary>
         /// <remarks>
-        /// This property is ignored if <see cref="DfsInputs"/> is not <see langword="null"/>.
+        /// This property is ignored if <see cref="DfsInput"/> is not <see langword="null"/>.
         /// </remarks>
         [XmlAttribute("taskCount")]
         public int TaskCount
         {
             get 
             {
-                if( DfsInputs != null && DfsInputs.Count > 0 )
-                    return DfsInputs.Count;
+                if( DfsInput != null )
+                    return DfsInput.TaskInputs.Count;
                 return _taskCount; 
             }
             set 
@@ -110,10 +80,7 @@ namespace Tkl.Jumbo.Jet
         /// If this property is not <see langword="null"/>, then the stage will have as many tasks as there are inputs, and
         /// the <see cref="TaskCount"/> property will be ignored.
         /// </remarks>
-        public Collection<TaskDfsInput> DfsInputs
-        {
-            get { return _dfsInputs; }
-        }
+        public StageDfsInput DfsInput { get; set; }
 
         /// <summary>
         /// Gets or sets a child stage that will be connected to this stage's tasks via a <see cref="Channels.PipelineOutputChannel"/>.
@@ -141,6 +108,22 @@ namespace Tkl.Jumbo.Jet
         /// </summary>
         [XmlIgnore]
         public StageConfiguration Parent { get; private set; }
+
+        /// <summary>
+        /// Gets the root stage of this compound stage.
+        /// </summary>
+        /// <value>The root.</value>
+        [XmlIgnore]
+        public StageConfiguration Root
+        {
+            get
+            {
+                StageConfiguration root = this;
+                while( root.Parent != null )
+                    root = root.Parent;
+                return root;
+            }
+        }
 
         /// <summary>
         /// Gets or sets the name of the type of the partitioner to use to partitioner elements amount the child stages' tasks.
@@ -176,6 +159,23 @@ namespace Tkl.Jumbo.Jet
         public TypeReference MultiInputRecordReaderType { get; set; }
 
         /// <summary>
+        /// Gets the IDs of stages that have a dependency on this stage that is not represented by a channel.
+        /// </summary>
+        /// <value>The IDs of the dependent stages.</value>
+        /// <remarks>
+        /// <para>
+        ///   In some cases, a stage may depend on the work done by another stage in a way that cannot be
+        ///   represented by a channel. For example, if the stage requires DFS output that was produced
+        ///   by that stage, it must not be scheduled before that stage finishes even though there is no
+        ///   channel between them.
+        /// </para>
+        /// </remarks>
+        public Collection<string> DependentStages
+        {
+            get { return _dependentStages; }
+        }
+
+        /// <summary>
         /// Gets a value that indicates whether the task type allows reusing the same object instance for every record.
         /// </summary>
         /// <remarks>
@@ -200,13 +200,19 @@ namespace Tkl.Jumbo.Jet
             {
                 if( _allowRecordReuse == null )
                 {
-                    AllowRecordReuseAttribute attribute = (AllowRecordReuseAttribute)Attribute.GetCustomAttribute(TaskType, typeof(AllowRecordReuseAttribute));
-                    if( attribute == null )
+                    // If this is a child stage and the task is a pull task then record reuse is not allowed, because the PipelinePullTaskRecordWriter doesn't support it.
+                    if( Parent != null && TaskType.ReferencedType.FindGenericInterfaceType(typeof(IPullTask<,>), false) != null )
                         _allowRecordReuse = false;
-                    else if( attribute.PassThrough )
-                        _allowRecordReuse = AllowOutputRecordReuse;
                     else
-                        _allowRecordReuse = true;
+                    {
+                        AllowRecordReuseAttribute attribute = (AllowRecordReuseAttribute)Attribute.GetCustomAttribute(TaskType.ReferencedType, typeof(AllowRecordReuseAttribute));
+                        if( attribute == null )
+                            _allowRecordReuse = false;
+                        else if( attribute.PassThrough )
+                            _allowRecordReuse = AllowOutputRecordReuse;
+                        else
+                            _allowRecordReuse = true;
+                    }
                 }
                 return _allowRecordReuse.Value;
             }
@@ -298,6 +304,15 @@ namespace Tkl.Jumbo.Jet
             }
         }
 
+        [XmlIgnore]
+        internal bool IsOutputPrepartitioned
+        {
+            get
+            {
+                return TaskType.ReferencedType.FindGenericInterfaceType(typeof(IPrepartitionedPushTask<,>), false) != null;
+            }
+        }
+
         /// <summary>
         /// Gets a child stage of this stage.
         /// </summary>
@@ -327,11 +342,11 @@ namespace Tkl.Jumbo.Jet
                 throw new ArgumentNullException("outputPath");
             if( recordWriterType == null )
                 throw new ArgumentNullException("recordWriterType");
-            if( TaskType == null || string.IsNullOrEmpty(StageId) )
+            if( TaskType.TypeName == null || string.IsNullOrEmpty(StageId) )
                 throw new InvalidOperationException("Cannot set output before stage ID and task type are set.");
             if( ChildStage != null || OutputChannel != null || DfsOutput != null )
                 throw new InvalidOperationException("This stage already has output.");
-            JobConfiguration.ValidateOutputType(outputPath, recordWriterType, TaskType.FindGenericInterfaceType(typeof(ITask<,>)));
+            JobConfiguration.ValidateOutputType(outputPath, recordWriterType, TaskType.ReferencedType.FindGenericInterfaceType(typeof(ITask<,>)));
 
             DfsOutput = new TaskDfsOutput()
             {
@@ -353,6 +368,24 @@ namespace Tkl.Jumbo.Jet
                 return defaultValue;
             else
                 return StageSettings.GetTypedSetting(key, defaultValue);
+        }
+
+        /// <summary>
+        /// Tries to get a setting with the specified type from the stage settings.
+        /// </summary>
+        /// <typeparam name="T">The type of the setting.</typeparam>
+        /// <param name="key">The name of the setting..</param>
+        /// <param name="value">If the function returns <see langword="true"/>, receives the value of the setting.</param>
+        /// <returns><see langword="true"/> if the settings dictionary contained the specified setting; otherwise, <see langword="false"/>.</returns>
+        public bool TryGetTypedSetting<T>(string key, out T value)
+        {
+            if( StageSettings == null )
+            {
+                value = default(T);
+                return false;
+            }
+            else
+                return StageSettings.TryGetTypedSetting(key, out value);
         }
 
         /// <summary>

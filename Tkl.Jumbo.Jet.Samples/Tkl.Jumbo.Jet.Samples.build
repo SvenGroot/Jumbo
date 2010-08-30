@@ -10,7 +10,7 @@
   <target name="build">
     <mkdir dir="nantbin"/>
     <csc output="nantbin/Tkl.Jumbo.Jet.Samples.dll" target="library" debug="${debug}" optimize="${not debug}"
-         define="${define}" doc="nantbin/Tkl.Jumbo.Jet.xml" keyfile="jumbo.snk" rebuild="${rebuild}">
+         define="${define}" doc="nantbin/Tkl.Jumbo.Jet.xml" unsafe="true" keyfile="jumbo.snk" rebuild="${rebuild}">
       <references>
         <include name="System.dll"/>
         <include name="System.Configuration.dll"/>

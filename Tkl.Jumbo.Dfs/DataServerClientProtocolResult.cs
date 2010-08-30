@@ -19,6 +19,10 @@ namespace Tkl.Jumbo.Dfs
         /// <summary>
         /// An error occurred while receiving or processing the packet.
         /// </summary>
-        Error
+        Error,
+        /// <summary>
+        /// The requested block offset was larger than the block size.
+        /// </summary>
+        OutOfRange,
     }
 }

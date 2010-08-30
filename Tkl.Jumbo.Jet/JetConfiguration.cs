@@ -42,6 +42,16 @@ namespace Tkl.Jumbo.Jet
         }
 
         /// <summary>
+        /// Gets configuration for the merge record reader.
+        /// </summary>
+        /// <value>A <see cref="MergeRecordReaderConfigurationElement"/> with the configuratin for the merge record reader.</value>
+        [ConfigurationProperty("mergeRecordReader", IsRequired = false, IsKey = false)]
+        public MergeRecordReaderConfigurationElement MergeRecordReader
+        {
+            get { return (MergeRecordReaderConfigurationElement)this["mergeRecordReader"]; }
+        }
+
+        /// <summary>
         /// Loads the Jet configuration from the application configuration file.
         /// </summary>
         /// <returns>A <see cref="JetConfiguration"/> object representing the settings in the application configuration file, or

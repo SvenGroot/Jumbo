@@ -93,12 +93,18 @@
     <Compile Include="CommandLine\PositionalCommandLineArgument.cs" />
     <Compile Include="CommandLine\ShellCommandAttribute.cs" />
     <Compile Include="CommandLine\StringExtensions.cs" />
+    <Compile Include="CountdownEvent.cs" />
     <Compile Include="ExtendedCollection.cs" />
     <Compile Include="CompressionUtility.cs" />
     <Compile Include="CompressionType.cs" />
     <Compile Include="DriveSpaceInfo.cs" />
     <Compile Include="IndividualProcessorStatus.cs" />
     <Compile Include="IO\ChildReaderException.cs" />
+    <Compile Include="IO\CurrentPartitionChangingEventArgs.cs" />
+    <Compile Include="IO\IMultiRecordWriter.cs" />
+    <Compile Include="IO\IRecordInputStream.cs" />
+    <Compile Include="IO\IRecordOutputStream.cs" />
+    <Compile Include="IO\RecordStreamOptions.cs" />
     <Compile Include="IO\ValueWriter.cs" />
     <Compile Include="IO\IMultiInputRecordReader.cs" />
     <Compile Include="IO\InnerJoinRecordReader.cs" />
@@ -111,6 +117,7 @@
     <Compile Include="IO\WritableNotNullAttribute.cs" />
     <Compile Include="IO\WritableIgnoreAttribute.cs" />
     <Compile Include="JumboConfiguration.cs" />
+    <Compile Include="LogConfigurationElement.cs" />
     <Compile Include="MemoryStatus.cs" />
     <Compile Include="NativeMethods.cs" />
     <Compile Include="ProcessorStatus.cs" />

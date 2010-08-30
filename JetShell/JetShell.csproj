@@ -76,6 +76,7 @@
     <Compile Include="..\Version.cs">
       <Link>Properties\Version.cs</Link>
     </Compile>
+    <Compile Include="Commands\AbortJobCommand.cs" />
     <Compile Include="Commands\JetShellCommand.cs" />
     <Compile Include="Commands\PrintMetricsCommand.cs" />
     <Compile Include="Commands\PrintVersionCommand.cs" />

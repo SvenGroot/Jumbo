@@ -15,7 +15,7 @@ namespace JobServerApplication.Scheduling
         private static DateTime _mapUpdatedTime = DateTime.MinValue;
         private const int _maxMapAgeSeconds = 180;
 
-        public static ServerAddress[] GetDataServersForTaskServer(ServerAddress taskServer, IEnumerable<ServerAddress> taskServers, DfsClient dfsClient)
+        public static ServerAddress[] GetDataServersForTaskServer(ServerAddress taskServer, IEnumerable<TaskServerInfo> taskServers, DfsClient dfsClient)
         {
             lock( _serverMap )
             {
@@ -32,20 +32,20 @@ namespace JobServerApplication.Scheduling
             }
         }
 
-        private static void BuildServerMap(IEnumerable<ServerAddress> taskServers, DfsClient dfsClient)
+        private static void BuildServerMap(IEnumerable<TaskServerInfo> taskServers, DfsClient dfsClient)
         {
             DfsMetrics metrics = dfsClient.NameServer.GetMetrics();
 
             _serverMap.Clear();
 
-            foreach( ServerAddress taskServer in taskServers )
+            foreach( TaskServerInfo taskServer in taskServers )
             {
-                if( !_serverMap.ContainsKey(taskServer.HostName) )
+                if( !_serverMap.ContainsKey(taskServer.Address.HostName) )
                 {
                     var dataServers = from server in metrics.DataServers
-                                      where server.Address.HostName == taskServer.HostName
+                                      where server.Address.HostName == taskServer.Address.HostName
                                       select server.Address;
-                    _serverMap.Add(taskServer.HostName, dataServers.ToArray());
+                    _serverMap.Add(taskServer.Address.HostName, dataServers.ToArray());
                 }
 
                 _mapUpdatedTime = DateTime.Now;

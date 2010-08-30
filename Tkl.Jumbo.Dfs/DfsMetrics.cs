@@ -18,11 +18,17 @@ namespace Tkl.Jumbo.Dfs
         private readonly Collection<DataServerMetrics> _dataServers = new Collection<DataServerMetrics>();
 
         /// <summary>
+        /// Gets or sets the address of the name server.
+        /// </summary>
+        /// <value>The address of the name server.</value>
+        public ServerAddress NameServer { get; set; }
+
+        /// <summary>
         /// Gets or sets the total size of all files.
         /// </summary>
         /// <value>
         /// The size of all files in the DFS added together; note that the actual space used on the
-        /// data servers will be N times higher where N is the replication factor.
+        /// data servers will be higher due to replication.
         /// </value>
         public long TotalSize { get; set; }
 
@@ -57,6 +63,7 @@ namespace Tkl.Jumbo.Dfs
         {
             if( writer == null )
                 throw new ArgumentNullException("writer");
+            writer.WriteLine("Name server:      {0}", NameServer);
             writer.WriteLine("Total size:       {0:#,0} bytes", TotalSize);
             writer.WriteLine("Blocks:           {0} (excl. pending blocks)", TotalBlockCount);
             writer.WriteLine("Under-replicated: {0}", UnderReplicatedBlockCount);

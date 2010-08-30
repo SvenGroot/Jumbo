@@ -8,6 +8,7 @@ using System.IO;
 using System.Diagnostics;
 using Tkl.Jumbo.Dfs;
 using Tkl.Jumbo.Test.Tasks;
+using Tkl.Jumbo.IO;
 
 namespace Tkl.Jumbo.Test
 {
@@ -49,6 +50,18 @@ namespace Tkl.Jumbo.Test
                 rnd.NextBytes(buffer);
                 stream.Write(buffer, 0, writeSize);
                 sizeRemaining -= writeSize;
+            }
+        }
+
+        public static IEnumerable<Utf8String> GenerateUtf8TextData(int records, int recordSize)
+        {
+            Random rnd = new Random();
+            byte[] data = new byte[recordSize];
+            for( int x = 0; x < records; ++x )
+            {
+                for( int i = 0; i < recordSize; ++i )
+                    data[i] = (byte)rnd.Next('a', 'z');
+                yield return new Utf8String(data);
             }
         }
 

@@ -16,9 +16,6 @@
             <th scope="col">Non data local tasks</th>
         </tr>
     </table>
-    <p>
-        <a id="_downloadLink" href="jobinfo.ashx" visible="false" runat="server">Download job information.</a>
-    </p>
     <script type="text/javascript" src="Silverlight.js"></script>
     <script type="text/javascript">
         function onSilverlightError(sender, args) {

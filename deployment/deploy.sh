@@ -14,40 +14,20 @@ checkConfig()
     echo $configFile;
 }
 
-deployConfig()
-{
-    local configFile=$1
-    local configBaseName=$2
-    local slave=$3
-    if [ -f $configFile ]; then
-	scp $configFile $slave:$jumboDir/$configBaseName.config > /dev/null &
-    fi
-}
-
 scriptDir=$(dirname $0)
 . $scriptDir/jumbo-config.sh
+mode=$1
+if [ "$mode" == "" ]; then
+    mode="all"
+fi
 
 for group in `cat $scriptDir/groups`; do
     groupDfsConfig=$(checkConfig dfs $group)
     groupJetConfig=$(checkConfig jet $group)
 
     for slave in `cat $scriptDir/$group`; do
-	echo $group/$slave: creating directory
-	ssh $slave mkdir -p $jumboDir &
-    done
-    wait
-
-    for slave in `cat $scriptDir/$group`; do
-	echo $group/$slave: deploying binaries
-	scp -r $scriptDir/../nantbin/* $slave:$jumboDir > /dev/null &
-    done
-    wait
-
-    for slave in `cat $scriptDir/$group`; do
-	echo $group/$slave: deploying config
-	scp $scriptDir/jumbo-config.sh $slave:$jumboDir > /dev/null &
-	deployConfig $groupDfsConfig dfs $slave
-	deployConfig $groupJetConfig jet $slave
+	echo $group/$slave: deploying $mode
+	$scriptDir/server-deploy.sh $slave $groupDfsConfig $groupJetConfig $mode &
     done
     wait
 done

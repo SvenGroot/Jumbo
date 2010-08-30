@@ -94,6 +94,26 @@ namespace Tkl.Jumbo.Dfs
         }
 
         /// <summary>
+        /// Resets the data in the packet using the specified stream.
+        /// </summary>
+        /// <param name="stream">The stream containing the data..</param>
+        /// <param name="isLastPacket"><see langword="true"/> if this is the last packet being sent; otherwise <see langword="false"/>.</param>
+        public void CopyFrom(Stream stream, bool isLastPacket)
+        {
+            if( stream == null )
+                throw new ArgumentNullException("stream");
+
+            int size = (int)Math.Min(PacketSize, stream.Length);
+            if( !isLastPacket && size != PacketSize )
+                throw new ArgumentException("The packet has an invalid size.");
+
+            stream.Read(_data, 0, size);
+            Size = size;
+            IsLastPacket = isLastPacket;
+            RecomputeChecksum();
+        }
+
+        /// <summary>
         /// Resets the data in the packet using the data from the specified packet.
         /// </summary>
         /// <param name="packet">The packet whose data to copy.</param>

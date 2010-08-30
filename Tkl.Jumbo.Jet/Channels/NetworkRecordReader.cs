@@ -14,12 +14,14 @@ namespace Tkl.Jumbo.Jet.Channels
     sealed class NetworkRecordReader<T> : RecordReader<T>
     {
         private readonly TcpClient _client;
-        private readonly NetworkStream _stream;
+        private readonly NetworkStream _networkStream;
+        private readonly SizeRecordingStream _stream;
         private readonly BinaryReader _reader;
         private bool _disposed;
         private readonly bool _allowRecordReuse;
         private T _record;
         private readonly IValueWriter<T> _valueWriter;
+        private long _protocolBytesRead;
 
         public NetworkRecordReader(TcpClient client, bool allowRecordReuse)
         {
@@ -31,12 +33,14 @@ namespace Tkl.Jumbo.Jet.Channels
             }
 
             _client = client;
-            _stream = client.GetStream();
+            _networkStream = client.GetStream();
+            _stream = new SizeRecordingStream(_networkStream);
             _reader = new BinaryReader(_stream);
             _allowRecordReuse = allowRecordReuse;
             SourceName = _reader.ReadString();
             if( allowRecordReuse )
                 _record = (T)FormatterServices.GetUninitializedObject(typeof(T));
+            _protocolBytesRead = _stream.BytesRead;
         }
 
         protected override bool ReadRecordInternal()
@@ -44,6 +48,7 @@ namespace Tkl.Jumbo.Jet.Channels
             CheckDisposed();
 
             bool hasRecord = _reader.ReadBoolean();
+            ++_protocolBytesRead;
             if( !hasRecord )
             {
                 CurrentRecord = default(T);
@@ -79,11 +84,27 @@ namespace Tkl.Jumbo.Jet.Channels
             }
         }
 
+        public override long InputBytes
+        {
+            get
+            {
+                return _stream.BytesRead - _protocolBytesRead;
+            }
+        }
+
+        public override long BytesRead
+        {
+            get
+            {
+                return _stream.BytesRead;
+            }
+        }
+
         public override bool RecordsAvailable
         {
             get
             {
-                return _stream.DataAvailable;
+                return _networkStream.DataAvailable;
             }
         }
 
@@ -99,6 +120,8 @@ namespace Tkl.Jumbo.Jet.Channels
                             ((IDisposable)_reader).Dispose();
                         if( _stream != null )
                             _stream.Dispose();
+                        if( _networkStream != null )
+                            _networkStream.Dispose();
                         if( _client != null )
                             ((IDisposable)_client).Dispose();
                     }

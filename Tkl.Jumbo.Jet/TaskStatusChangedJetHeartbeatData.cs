@@ -17,18 +17,20 @@ namespace Tkl.Jumbo.Jet
         /// Initializes a new instance of the <see cref="TaskStatusChangedJetHeartbeatData"/> class.
         /// </summary>
         /// <param name="jobId">The job ID.</param>
-        /// <param name="taskId">The task ID.</param>
+        /// <param name="taskAttemptId">The task ID.</param>
         /// <param name="status">The new status.</param>
         /// <param name="progress">The progress of the task.</param>
-        public TaskStatusChangedJetHeartbeatData(Guid jobId, string taskId, TaskAttemptStatus status, float progress)
+        /// <param name="metrics">The metrics collected during task execution.</param>
+        public TaskStatusChangedJetHeartbeatData(Guid jobId, TaskAttemptId taskAttemptId, TaskAttemptStatus status, TaskProgress progress, TaskMetrics metrics)
         {
-            if( taskId == null )
-                throw new ArgumentNullException("taskId");
+            if( taskAttemptId == null )
+                throw new ArgumentNullException("taskAttemptId");
 
             JobId = jobId;
-            TaskId = taskId;
+            TaskAttemptId = taskAttemptId;
             Status = status;
             Progress = progress;
+            Metrics = metrics;
         }
 
         /// <summary>
@@ -39,7 +41,7 @@ namespace Tkl.Jumbo.Jet
         /// <summary>
         /// Gets the ID of the task whose status has changed.
         /// </summary>
-        public string TaskId { get; private set; }
+        public TaskAttemptId TaskAttemptId { get; private set; }
 
         /// <summary>
         /// Gets the new status of the task.
@@ -47,8 +49,14 @@ namespace Tkl.Jumbo.Jet
         public TaskAttemptStatus Status { get; private set; }
 
         /// <summary>
-        /// Gets the progress of the task, between 0 and 1.
+        /// Gets the progress of the task.
         /// </summary>
-        public float Progress { get; private set; }
+        public TaskProgress Progress { get; private set; }
+
+        /// <summary>
+        /// Gets the metrics collected during task execution.
+        /// </summary>
+        /// <value>The metrics.</value>
+        public TaskMetrics Metrics { get; private set; }
     }
 }

@@ -24,14 +24,15 @@ namespace Tkl.Jumbo.Jet
         }
 
         /// <summary>
-        /// Gets or sets the buffer size to use for the <see cref="MergeRecordReader{T}"/>.
+        /// Gets or sets the buffer size used by the file output channel to write to intermediate files.
         /// </summary>
-        [ConfigurationProperty("mergeTaskReadBufferSize", DefaultValue = "1MB", IsRequired = false, IsKey = false)]
-        public ByteSize MergeTaskReadBufferSize
+        [ConfigurationProperty("writeBufferSize", DefaultValue = "64KB", IsRequired = false, IsKey = false)]
+        public ByteSize WriteBufferSize
         {
-            get { return (ByteSize)this["mergeTaskReadBufferSize"]; }
-            set { this["mergeTaskReadBufferSize"] = value; }
+            get { return (ByteSize)this["writeBufferSize"]; }
+            set { this["writeBufferSize"] = value; }
         }
+
         /// <summary>
         /// Gets or sets a value that indicates whether intermediate files should be deleted after the task or job is finished.
         /// </summary>
@@ -70,6 +71,38 @@ namespace Tkl.Jumbo.Jet
         {
             get { return (int)this["downloadThreads"]; }
             set { this["downloadThreads"] = value; }
+        }
+
+        /// <summary>
+        /// Gets or sets a value that indicates whether the output of the file channel should be stored in a single file for all partitions.
+        /// </summary>
+        [ConfigurationProperty("singleFileOutput", DefaultValue = false, IsRequired = false, IsKey = false)]
+        public bool SingleFileOutput
+        {
+            get { return (bool)this["singleFileOutput"]; }
+            set { this["singleFileOutput"] = value; }
+        }
+
+        /// <summary>
+        /// Gets or sets the size of the single file output buffer.
+        /// </summary>
+        /// <value>The size of the single file output buffer.</value>
+        [ConfigurationProperty("singleFileOutputBufferSize", DefaultValue = "100MB", IsRequired = false, IsKey = false)]
+        public ByteSize SingleFileOutputBufferSize
+        {
+            get { return (ByteSize)this["singleFileOutputBufferSize"]; }
+            set { this["singleFileOutputBufferSize"] = value; }
+        }
+
+        /// <summary>
+        /// Gets or sets the percentage of single file output buffer usage at which the file output channel should start writing the buffer to disk.
+        /// </summary>
+        /// <value>The single file output buffer limit.</value>
+        [ConfigurationProperty("singleFileOutputBufferLimit", DefaultValue = 0.6f, IsRequired = false, IsKey = false)]
+        public float SingleFileOutputBufferLimit
+        {
+            get { return (float)this["singleFileOutputBufferLimit"]; }
+            set { this["singleFileOutputBufferLimit"] = value; }
         }
     }
 }

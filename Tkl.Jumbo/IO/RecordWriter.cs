@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text;
 using System.IO;
 using Tkl.Jumbo.IO;
+using System.Globalization;
 
 namespace Tkl.Jumbo.IO
 {
@@ -16,6 +17,7 @@ namespace Tkl.Jumbo.IO
     public abstract class RecordWriter<T> : IRecordWriter, IDisposable
     {
         private int _recordsWritten;
+        private readonly bool _recordTypeIsSealed = typeof(T).IsSealed;
 
         /// <summary>
         /// Gets the total number of records written by this record writer.
@@ -26,19 +28,27 @@ namespace Tkl.Jumbo.IO
         }
 
         /// <summary>
-        /// Gets the total number of bytes written by this record reader, if applicable.
+        /// Gets the size of the written records after serialization.
         /// </summary>
-        public virtual long BytesWritten 
+        /// <value>
+        /// The size of the written records after serialization, or 0 if this writer did not serialize the records.
+        /// </value>
+        public virtual long OutputBytes 
         {
             get { return 0; }
         }
 
         /// <summary>
-        /// Gets the number of bytes written to the stream after compression, or 0 if the stream was not compressed.
+        /// Gets the number of bytes that were actually written to the output.
         /// </summary>
-        public virtual long CompressedBytesWritten
+        /// <value>The number of bytes written to the output.</value>
+        /// <remarks>
+        /// This is the value of <see cref="OutputBytes"/>, adjusted for compression (if applicable) and including any additional data written by the record writer (if any).
+        /// If this property is not overridden, the value of <see cref="OutputBytes"/> is returned.
+        /// </remarks>
+        public virtual long BytesWritten
         {
-            get { return 0; }
+            get { return OutputBytes; }
         }
 
         /// <summary>
@@ -47,6 +57,11 @@ namespace Tkl.Jumbo.IO
         /// <param name="record">The record to write.</param>
         public void WriteRecord(T record)
         {
+            if( record == null )
+                throw new ArgumentNullException("record");
+            // Skip the type check if the record type is sealed.
+            if( !_recordTypeIsSealed && record.GetType() != typeof(T) )
+                throw new ArgumentException(string.Format(CultureInfo.CurrentCulture, "The record was type {0} rather than {1}.", record.GetType(), typeof(T)), "record");
             WriteRecordInternal(record);
             // Increment this after the write, so if the implementation of WriteRecordsInternal throws an exception the count
             // is not incremented.
@@ -66,6 +81,11 @@ namespace Tkl.Jumbo.IO
         /// to clean up unmanaged resources only.</param>
         protected virtual void Dispose(bool disposing)
         {
+        }
+
+        void IRecordWriter.WriteRecord(object record)
+        {
+            WriteRecord((T)record);
         }
 
         #region IDisposable Members

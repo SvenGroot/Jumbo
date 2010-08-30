@@ -15,7 +15,7 @@ namespace Tkl.Jumbo.IO
     ///   Record writers must inherit from <see cref="RecordWriter{T}"/>, not just implement this interface.
     /// </note>
     /// </remarks>
-    public interface IRecordWriter
+    public interface IRecordWriter : IDisposable
     {
         /// <summary>
         /// Gets the total number of records written by this record writer.
@@ -23,13 +23,30 @@ namespace Tkl.Jumbo.IO
         int RecordsWritten { get; }
 
         /// <summary>
-        /// Gets the number of bytes written to the stream.
+        /// Gets the size of the written records after serialization.
         /// </summary>
+        /// <value>
+        /// The size of the written records after serialization, or 0 if this writer did not serialize the records.
+        /// </value>
+        long OutputBytes { get; }
+
+        /// <summary>
+        /// Gets the number of bytes that were actually written to the output.
+        /// </summary>
+        /// <value>
+        /// The number of bytes written to the output.
+        /// </value>
+        /// <remarks>
+        /// <para>
+        ///   This is the value of <see cref="OutputBytes"/>, adjusted for compression (if applicable) and including any additional data written by the record writer (if any).
+        /// </para>
+        /// </remarks>
         long BytesWritten { get; }
 
         /// <summary>
-        /// Gets the number of bytes written to the stream after compression, or 0 if the stream was not compressed.
+        /// Writes a record.
         /// </summary>
-        long CompressedBytesWritten { get; }
+        /// <param name="record">The record to write.</param>
+        void WriteRecord(object record);
     }
 }

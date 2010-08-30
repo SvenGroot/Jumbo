@@ -119,7 +119,15 @@ namespace Tkl.Jumbo.Jet.Jobs
             if( args == null )
                 throw new ArgumentNullException("args");
 
-            IJobRunner jobRunner = (IJobRunner)CommandLineParser.Parse(args, index);
+            IJobRunner jobRunner = null;
+            try
+            {
+                jobRunner = (IJobRunner)CommandLineParser.Parse(args, index);
+            }
+            catch( CommandLineArgumentException ex )
+            {
+                Console.Error.WriteLine(ex.Message);
+            }
 
             if( jobRunner != null )
             {
@@ -133,7 +141,10 @@ namespace Tkl.Jumbo.Jet.Jobs
                         logMessage.Append(", ");
                         logMessage.Append(argument.PropertyName);
                         logMessage.Append(" = ");
-                        logMessage.Append(argument.Value);
+                        if( argument.ArgumentType.IsArray )
+                            AppendMultiValueArgument(logMessage, (Array)argument.Value);
+                        else
+                            logMessage.Append(argument.Value);
                     }
                 }
                 foreach( PositionalCommandLineArgument argument in CommandLineParser.PositionalArguments )
@@ -143,7 +154,10 @@ namespace Tkl.Jumbo.Jet.Jobs
                         logMessage.Append(", ");
                         logMessage.Append(argument.Name);
                         logMessage.Append(" = ");
-                        logMessage.Append(argument.Value);
+                        if( argument.ArgumentType.IsArray )
+                            AppendMultiValueArgument(logMessage, (Array)argument.Value);
+                        else
+                            logMessage.Append(argument.Value);
                     }
                 }
 
@@ -164,6 +178,23 @@ namespace Tkl.Jumbo.Jet.Jobs
         public IJobRunner CreateInstance(string[] args, int index)
         {
             return CreateInstance(DfsConfiguration.GetConfiguration(), JetConfiguration.GetConfiguration(), args, index);
+        }
+
+        private static void AppendMultiValueArgument(StringBuilder logMessage, Array value)
+        {
+            if( value.Length > 1 )
+                logMessage.Append("{ ");
+            bool first = true;
+            foreach( object item in value )
+            {
+                if( first )
+                    first = false;
+                else
+                    logMessage.Append(", ");
+                logMessage.Append(item);
+            }
+            if( value.Length > 1 )
+                logMessage.Append(" }");
         }
     }
 }

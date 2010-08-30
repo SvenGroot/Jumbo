@@ -27,6 +27,11 @@ namespace Tkl.Jumbo.CommandLine
         }
 
         /// <summary>
+        /// Gets or sets the exit status for the process.
+        /// </summary>
+        public int ExitStatus { get; protected set; }
+
+        /// <summary>
         /// Runs the command.
         /// </summary>
         public abstract void Run();

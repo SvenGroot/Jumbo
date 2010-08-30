@@ -16,8 +16,9 @@ namespace Tkl.Jumbo.Jet
     [Serializable]
     public class JobStatus
     {
-        private ExtendedCollection<TaskStatus> _failedTaskAttempts = new ExtendedCollection<TaskStatus>();
+        private readonly ExtendedCollection<TaskStatus> _failedTaskAttempts = new ExtendedCollection<TaskStatus>();
         private readonly ExtendedCollection<StageStatus> _stages = new ExtendedCollection<StageStatus>();
+        private readonly ExtendedCollection<AdditionalProgressCounter> _additionalProgressCounters = new ExtendedCollection<AdditionalProgressCounter>();
 
         internal const string DatePattern = "yyyy'-'MM'-'dd' 'HH':'mm':'ss'.'fff'Z'";
 
@@ -45,6 +46,15 @@ namespace Tkl.Jumbo.Jet
         public Collection<TaskStatus> FailedTaskAttempts
         {
             get { return _failedTaskAttempts; }
+        }
+
+        /// <summary>
+        /// Gets the additional progress counters.
+        /// </summary>
+        /// <value>The additional progress counters.</value>
+        public Collection<AdditionalProgressCounter> AdditionalProgressCounters
+        {
+            get { return _additionalProgressCounters; }
         }
 
         /// <summary>
@@ -139,7 +149,40 @@ namespace Tkl.Jumbo.Jet
         /// <returns>A string representation of this <see cref="JobStatus"/>.</returns>
         public override string ToString()
         {
-            return string.Format(System.Globalization.CultureInfo.CurrentCulture, "{6:0.0}%, tasks: {0}, running: {1}, pending {2}, finished: {3}, errors: {4}, not local: {5}", TaskCount, RunningTaskCount, UnscheduledTaskCount, FinishedTaskCount, ErrorTaskCount, NonDataLocalTaskCount, Progress * 100);
+            StringBuilder result = new StringBuilder(100);
+            result.AppendFormat("{0:P1}; finished: {1}/{2} tasks", Progress, FinishedTaskCount, TaskCount);
+            foreach( StageStatus stage in Stages )
+            {
+                result.AppendFormat("; {0}: {1:P1}", stage.StageId, stage.Progress);
+            }
+            if( ErrorTaskCount > 0 )
+                result.AppendFormat(" ({0} errors)", ErrorTaskCount);
+
+            return result.ToString();
+        }
+
+        /// <summary>
+        /// Gets the friendly name for an additional progress counter.
+        /// </summary>
+        /// <param name="sourceName">Name of the source of the counter.</param>
+        /// <returns>The friendly name of the counter.</returns>
+        public string GetFriendlyNameForAdditionalProgressCounter(string sourceName)
+        {
+            return (from counter in _additionalProgressCounters
+                    where counter.TypeName == sourceName
+                    select counter.DisplayName ?? counter.TypeName).Single();
+        }
+
+        /// <summary>
+        /// Gets the stage with the specified ID.
+        /// </summary>
+        /// <param name="stageId">The stage ID.</param>
+        /// <returns>The specified stage, or <see langword="null"/> if no stage with the specified ID exists.</returns>
+        public StageStatus GetStage(string stageId)
+        {
+            return (from stage in Stages
+                    where stage.StageId == stageId
+                    select stage).SingleOrDefault();
         }
 
         /// <summary>
@@ -148,9 +191,10 @@ namespace Tkl.Jumbo.Jet
         /// <returns>An <see cref="XDocument"/> containing the job status.</returns>
         public XDocument ToXml()
         {
-            return new XDocument(new XDeclaration("1.0", "utf-8", null),
+            return new XDocument(new XDeclaration("1.0", "utf-8", null), new XProcessingInstruction("xml-stylesheet", "type=\"text/xsl\" href=\"summary.xslt\""),
                 new XElement("Job",
                     new XAttribute("id", JobId.ToString()),
+                    new XAttribute("name", JobName),
                     new XElement("JobInfo",
                         new XAttribute("startTime", StartTime.ToString(DatePattern, System.Globalization.CultureInfo.InvariantCulture)),
                         new XAttribute("endTime", EndTime.ToString(DatePattern, System.Globalization.CultureInfo.InvariantCulture)),
@@ -167,7 +211,14 @@ namespace Tkl.Jumbo.Jet
                         null : 
                         new XElement("FailedTaskAttempts",
                             from task in FailedTaskAttempts
-                            select task.ToXml())));
+                            select task.ToXml()),
+                    new XElement("StageMetrics",
+                        from stage in Stages
+                        select new XElement("Stage",
+                            new XAttribute("id", stage.StageId),
+                            stage.Metrics.ToXml()))
+                )
+            );
         }
 
         /// <summary>
@@ -186,10 +237,12 @@ namespace Tkl.Jumbo.Jet
             JobStatus jobStatus = new JobStatus()
             {
                 JobId = new Guid(job.Attribute("id").Value),
+                JobName = job.Attribute("name") == null ? null : job.Attribute("name").Value,
                 StartTime = DateTime.ParseExact(jobInfo.Attribute("startTime").Value, JobStatus.DatePattern, System.Globalization.CultureInfo.InvariantCulture),
                 EndTime = DateTime.ParseExact(jobInfo.Attribute("endTime").Value, JobStatus.DatePattern, System.Globalization.CultureInfo.InvariantCulture),
                 FinishedTaskCount = (int)jobInfo.Attribute("finishedTasks"),
                 NonDataLocalTaskCount = (int)jobInfo.Attribute("nonDataLocalTasks"),
+                IsFinished = true
             };
 
             var stages = from task in job.Element("Tasks").Elements("Task")
@@ -209,6 +262,17 @@ namespace Tkl.Jumbo.Jet
                 jobStatus.FailedTaskAttempts.AddRange(from task in job.Element("FailedTaskAttempts").Elements("Task")
                                                       select TaskStatus.FromXml(task, jobStatus));
             }
+
+            XElement metricsElement = job.Element("StageMetrics");
+            if( metricsElement != null )
+            {
+                foreach( XElement stage in metricsElement.Elements("Stage") )
+                {
+                    string stageId = stage.Attribute("id").Value;
+                    jobStatus.GetStage(stageId).Metrics = TaskMetrics.FromXml(stage.Element("Metrics"));
+                }
+            }
+
             return jobStatus;
 
         }

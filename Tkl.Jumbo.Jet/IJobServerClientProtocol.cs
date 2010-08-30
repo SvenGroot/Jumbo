@@ -26,6 +26,19 @@ namespace Tkl.Jumbo.Jet
         void RunJob(Guid jobId);
 
         /// <summary>
+        /// Aborts execution of a job.
+        /// </summary>
+        /// <param name="jobId">The ID of the job to abort.</param>
+        /// <returns>
+        ///   <see langword="true"/> if the job was aborted; otherwise, <see langword="false"/>.
+        /// </returns>
+        /// <remarks>
+        /// If the job was created but not started, calling this method will remove the job from the pending queue, and the
+        /// method will return <see langword="true"/>.
+        /// </remarks>
+        bool AbortJob(Guid jobId);
+
+        /// <summary>
         /// Gets the address of the task server that is running the specified task.
         /// </summary>
         /// <param name="jobId">The ID of the job containing the task.</param>
@@ -42,19 +55,17 @@ namespace Tkl.Jumbo.Jet
         CompletedTask[] CheckTaskCompletion(Guid jobId, string[] tasks);
 
         /// <summary>
-        /// Gets the partitions that a task reading from a channel should process.
-        /// </summary>
-        /// <param name="jobId">The ID of the job containing the task.</param>
-        /// <param name="taskId">The ID of the task.</param>
-        /// <returns>A list of partition numbers that the task should process.</returns>
-        int[] GetPartitionsForTask(Guid jobId, string taskId);
-
-        /// <summary>
         /// Gets the current status for the specified job.
         /// </summary>
         /// <param name="jobId">The job ID.</param>
         /// <returns>The status of the job, or <see langword="null"/> if the job doesn't exist.</returns>
         JobStatus GetJobStatus(Guid jobId);
+
+        /// <summary>
+        /// Gets the status for all currently running jobs.
+        /// </summary>
+        /// <returns>An array of status objects for each running job.</returns>
+        JobStatus[] GetRunningJobs();
 
         /// <summary>
         /// Gets current metrics for the distributed execution engine.
@@ -69,5 +80,25 @@ namespace Tkl.Jumbo.Jet
         /// <param name="maxSize">The maximum size of the log data to return.</param>
         /// <returns>The contents of the diagnostic log file.</returns>
         string GetLogFileContents(int maxSize);
+
+        /// <summary>
+        /// Gets a list of archived jobs.
+        /// </summary>
+        /// <returns>A list of archived jobs.</returns>
+        ArchivedJob[] GetArchivedJobs();
+
+        /// <summary>
+        /// Gets the job status for an archived job.
+        /// </summary>
+        /// <param name="jobId">The job ID.</param>
+        /// <returns>The status for the archived job, or <see langword="null"/> if the job wasn't found.</returns>
+        JobStatus GetArchivedJobStatus(Guid jobId);
+
+        /// <summary>
+        /// Gets the job configuration for an archived job.
+        /// </summary>
+        /// <param name="jobId">The job ID.</param>
+        /// <returns>The raw XML of the archived job's configuration, or <see langword="null"/> if the job wasn't found.</returns>
+        string GetArchivedJobConfiguration(Guid jobId);
     }
 }

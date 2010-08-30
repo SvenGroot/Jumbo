@@ -94,6 +94,7 @@
     <Compile Include="Dfs\NameServerTests.cs" />
     <Compile Include="Dfs\NewBlockHeartbeatDataTests.cs" />
     <Compile Include="Dfs\PacketTests.cs" />
+    <Compile Include="Dfs\RecordReaderWriterTests.cs" />
     <Compile Include="Dfs\ReplicaPlacementTests.cs" />
     <Compile Include="InnerJoinRecordReaderTests.cs" />
     <Compile Include="Jet\FileChannelCompressionTests.cs" />
@@ -102,9 +103,8 @@
     <Compile Include="Jet\JobBuilderTests.cs" />
     <Compile Include="Jet\JobConfigurationTests.cs" />
     <Compile Include="Jet\MergeRecordReaderTests.cs" />
-    <Compile Include="Jet\MultiThreadedTaskFinishTests.cs" />
+    <Compile Include="Jet\TaskIdTests.cs" />
     <Compile Include="Jet\TaskTests.cs" />
-    <Compile Include="Jet\PipelineOutputChannelTests.cs" />
     <Compile Include="Jet\TestJetCluster.cs" />
     <Compile Include="PriorityQueueTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
@@ -112,6 +112,7 @@
     <Compile Include="Dfs\TestDfsCluster.cs" />
     <Compile Include="Dfs\TestSetup.cs" />
     <Compile Include="RecordFileTests.cs" />
+    <Compile Include="UnmanagedBufferTests.cs" />
     <Compile Include="Utilities.cs" />
     <Compile Include="WritableUtilityTests.cs" />
   </ItemGroup>

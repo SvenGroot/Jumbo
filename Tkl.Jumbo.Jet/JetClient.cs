@@ -285,6 +285,14 @@ namespace Tkl.Jumbo.Jet
             sw.Stop();
             return status.IsFinished;
         }
+
+        internal static IJobServerTaskProtocol CreateJobServerTaskClient(JetConfiguration configuration)
+        {
+            if( configuration == null )
+                throw new ArgumentNullException("configuration");
+
+            return CreateJobServerClientInternal<IJobServerTaskProtocol>(configuration.JobServer.HostName, configuration.JobServer.Port);
+        }
         
         private static T CreateJobServerClientInternal<T>(string hostName, int port)
         {

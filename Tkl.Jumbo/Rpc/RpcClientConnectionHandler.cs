@@ -15,7 +15,6 @@ namespace Tkl.Jumbo.Rpc
     sealed class RpcClientConnectionHandler : IDisposable
     {
         private static readonly MethodBase _fixExceptionMethod = GetFixExceptionMethod();
-        private static readonly string _hostName = Dns.GetHostName();
         private readonly TcpClient _client;
         private readonly RpcStream _stream;
         private readonly BinaryFormatter _formatter = new BinaryFormatter();
@@ -37,7 +36,7 @@ namespace Tkl.Jumbo.Rpc
             {
                 if( !_hostNameSent )
                 {
-                    WriteString(_hostName, stream);
+                    WriteString(ServerContext.LocalHostName, stream);
                     _hostNameSent = true;
                 }
                 WriteString(objectName, stream);

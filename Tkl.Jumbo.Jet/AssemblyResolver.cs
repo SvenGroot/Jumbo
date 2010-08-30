@@ -5,23 +5,31 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 
 namespace Tkl.Jumbo.Jet
 {
     /// <summary>
     /// Enables the use of <see cref="Type.GetType(string)"/> to resolve types in assemblies loaded with <see cref="Assembly.LoadFrom(string)"/>.
     /// </summary>
-    public class AssemblyResolver
+    public static class AssemblyResolver
     {
+        private static bool _registered;
+
         /// <summary>
-        /// Initializes a new instance of the <see cref="AssemblyResolver"/> class.
+        /// Registers the assembly resolver with the current AppDomain.
         /// </summary>
-        public AssemblyResolver()
+        [MethodImpl(MethodImplOptions.Synchronized)]
+        public static void Register()
         {
-            AppDomain.CurrentDomain.AssemblyResolve += new ResolveEventHandler(CurrentDomain_AssemblyResolve);
+            if( !_registered )
+            {
+                AppDomain.CurrentDomain.AssemblyResolve += new ResolveEventHandler(CurrentDomain_AssemblyResolve);
+                _registered = true;
+            }
         }
 
-        private Assembly CurrentDomain_AssemblyResolve(object sender, ResolveEventArgs args)
+        private static Assembly CurrentDomain_AssemblyResolve(object sender, ResolveEventArgs args)
         {
             // The TaskHost wants to use Type.GetType to instantiate various types, and it wants to include the
             // assemblies loaded by Assembly.LoadFrom, which isn't done by default. We'll do that here.

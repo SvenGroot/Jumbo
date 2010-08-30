@@ -26,11 +26,15 @@ namespace Tkl.Jumbo.IO
         {
             public void Write(SByte value, System.IO.BinaryWriter writer)
             {
+                if( writer == null )
+                    throw new ArgumentNullException("writer");
                 writer.Write(value);
             }
 
             public SByte Read(BinaryReader reader)
             {
+                if( reader == null )
+                    throw new ArgumentNullException("reader");
                 return reader.ReadSByte();
             }
         }
@@ -39,11 +43,15 @@ namespace Tkl.Jumbo.IO
         {
             public void Write(Int16 value, System.IO.BinaryWriter writer)
             {
+                if( writer == null )
+                    throw new ArgumentNullException("writer");
                 writer.Write(value);
             }
 
             public Int16 Read(BinaryReader reader)
             {
+                if( reader == null )
+                    throw new ArgumentNullException("reader");
                 return reader.ReadInt16();
             }
         }
@@ -52,11 +60,15 @@ namespace Tkl.Jumbo.IO
         {
             public void Write(int value, System.IO.BinaryWriter writer)
             {
+                if( writer == null )
+                    throw new ArgumentNullException("writer");
                 writer.Write(value);
             }
 
             public int Read(BinaryReader reader)
             {
+                if( reader == null )
+                    throw new ArgumentNullException("reader");
                 return reader.ReadInt32();
             }
         }
@@ -65,11 +77,15 @@ namespace Tkl.Jumbo.IO
         {
             public void Write(Int64 value, System.IO.BinaryWriter writer)
             {
+                if( writer == null )
+                    throw new ArgumentNullException("writer");
                 writer.Write(value);
             }
 
             public Int64 Read(BinaryReader reader)
             {
+                if( reader == null )
+                    throw new ArgumentNullException("reader");
                 return reader.ReadInt64();
             }
         }
@@ -78,11 +94,15 @@ namespace Tkl.Jumbo.IO
         {
             public void Write(Byte value, System.IO.BinaryWriter writer)
             {
+                if( writer == null )
+                    throw new ArgumentNullException("writer");
                 writer.Write(value);
             }
 
             public Byte Read(BinaryReader reader)
             {
+                if( reader == null )
+                    throw new ArgumentNullException("reader");
                 return reader.ReadByte();
             }
         }
@@ -91,11 +111,15 @@ namespace Tkl.Jumbo.IO
         {
             public void Write(UInt16 value, System.IO.BinaryWriter writer)
             {
+                if( writer == null )
+                    throw new ArgumentNullException("writer");
                 writer.Write(value);
             }
 
             public UInt16 Read(BinaryReader reader)
             {
+                if( reader == null )
+                    throw new ArgumentNullException("reader");
                 return reader.ReadUInt16();
             }
         }
@@ -104,11 +128,15 @@ namespace Tkl.Jumbo.IO
         {
             public void Write(UInt32 value, System.IO.BinaryWriter writer)
             {
+                if( writer == null )
+                    throw new ArgumentNullException("writer");
                 writer.Write(value);
             }
 
             public UInt32 Read(BinaryReader reader)
             {
+                if( reader == null )
+                    throw new ArgumentNullException("reader");
                 return reader.ReadUInt32();
             }
         }
@@ -117,11 +145,15 @@ namespace Tkl.Jumbo.IO
         {
             public void Write(UInt64 value, System.IO.BinaryWriter writer)
             {
+                if( writer == null )
+                    throw new ArgumentNullException("writer");
                 writer.Write(value);
             }
 
             public UInt64 Read(BinaryReader reader)
             {
+                if( reader == null )
+                    throw new ArgumentNullException("reader");
                 return reader.ReadUInt64();
             }
         }
@@ -130,11 +162,15 @@ namespace Tkl.Jumbo.IO
         {
             public void Write(Decimal value, System.IO.BinaryWriter writer)
             {
+                if( writer == null )
+                    throw new ArgumentNullException("writer");
                 writer.Write(value);
             }
 
             public Decimal Read(BinaryReader reader)
             {
+                if( reader == null )
+                    throw new ArgumentNullException("reader");
                 return reader.ReadDecimal();
             }
         }
@@ -143,11 +179,15 @@ namespace Tkl.Jumbo.IO
         {
             public void Write(Single value, System.IO.BinaryWriter writer)
             {
+                if( writer == null )
+                    throw new ArgumentNullException("writer");
                 writer.Write(value);
             }
 
             public Single Read(BinaryReader reader)
             {
+                if( reader == null )
+                    throw new ArgumentNullException("reader");
                 return reader.ReadSingle();
             }
         }
@@ -156,11 +196,15 @@ namespace Tkl.Jumbo.IO
         {
             public void Write(Double value, System.IO.BinaryWriter writer)
             {
+                if( writer == null )
+                    throw new ArgumentNullException("writer");
                 writer.Write(value);
             }
 
             public Double Read(BinaryReader reader)
             {
+                if( reader == null )
+                    throw new ArgumentNullException("reader");
                 return reader.ReadDouble();
             }
         }
@@ -169,11 +213,15 @@ namespace Tkl.Jumbo.IO
         {
             public void Write(String value, System.IO.BinaryWriter writer)
             {
+                if( writer == null )
+                    throw new ArgumentNullException("writer");
                 writer.Write(value);
             }
 
             public String Read(BinaryReader reader)
             {
+                if( reader == null )
+                    throw new ArgumentNullException("reader");
                 return reader.ReadString();
             }
         }
@@ -182,15 +230,36 @@ namespace Tkl.Jumbo.IO
         {
             public void Write(DateTime value, System.IO.BinaryWriter writer)
             {
+                if( writer == null )
+                    throw new ArgumentNullException("writer");
                 writer.Write((int)value.Kind);
                 writer.Write(value.Ticks);
             }
 
             public DateTime Read(BinaryReader reader)
             {
+                if( reader == null )
+                    throw new ArgumentNullException("reader");
                 DateTimeKind kind = (DateTimeKind)reader.ReadInt32();
                 long ticks = reader.ReadInt64();
                 return new DateTime(ticks, kind);
+            }
+        }
+
+        private class BooleanWriter : IValueWriter<Boolean>
+        {
+            public void Write(bool value, BinaryWriter writer)
+            {
+                if( writer == null )
+                    throw new ArgumentNullException("writer");
+                writer.Write(value);
+            }
+
+            public bool Read(BinaryReader reader)
+            {
+                if( reader == null )
+                    throw new ArgumentNullException("reader");
+                return reader.ReadBoolean();
             }
         }
 
@@ -204,6 +273,7 @@ namespace Tkl.Jumbo.IO
         /// <value>
         /// An implementation of <see cref="IValueWriter{T}"/>, or <see langword="null"/> if it implements <see cref="IWritable"/>.
         /// </value>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1000:DoNotDeclareStaticMembersOnGenericTypes")]
         public static IValueWriter<T> Writer
         {
             get { return _writer; }
@@ -247,6 +317,8 @@ namespace Tkl.Jumbo.IO
                 return new DecimalWriter();
             else if( type == typeof(DateTime) )
                 return new DateTimeWriter();
+            else if( type == typeof(Boolean) )
+                return new BooleanWriter();
             else
                 throw new NotSupportedException(string.Format(System.Globalization.CultureInfo.InvariantCulture, "Could not find the writer for type {0} and the type does not implement IWritable.", type));
         }

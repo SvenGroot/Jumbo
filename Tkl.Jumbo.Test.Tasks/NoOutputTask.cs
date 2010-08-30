@@ -12,7 +12,7 @@ namespace Tkl.Jumbo.Test.Tasks
     {
         public void Run(RecordReader<Utf8String> input, RecordWriter<int> output)
         {
-            foreach( Utf8String record in input.EnumerateRecords() )
+            while( input.ReadRecord() )
             {
                 // Don't produce any output.
             }

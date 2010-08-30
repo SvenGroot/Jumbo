@@ -12,14 +12,14 @@ namespace TaskServerApplication
     {
         #region ITaskServerUmbilicalProtocol Members
 
-        public void ReportCompletion(Guid jobID, string taskID)
+        public void ReportCompletion(Guid jobID, TaskAttemptId taskAttemptId, TaskMetrics metrics)
         {
-            TaskServer.Instance.ReportCompletion(jobID, taskID);
+            TaskServer.Instance.ReportCompletion(jobID, taskAttemptId, metrics);
         }
 
-        public void ReportProgress(Guid jobId, string taskId, float progress)
+        public void ReportProgress(Guid jobId, TaskAttemptId taskAttemptId, TaskProgress progress)
         {
-            TaskServer.Instance.ReportProgress(jobId, taskId, progress);
+            TaskServer.Instance.ReportProgress(jobId, taskAttemptId, progress);
         }
 
         public void SetUncompressedTemporaryFileSize(Guid jobId, string fileName, long uncompressedSize)
@@ -32,9 +32,14 @@ namespace TaskServerApplication
             return TaskServer.Instance.GetUncompressedTemporaryFileSize(jobId, fileName);
         }
 
-        public void RegisterTcpChannelPort(Guid jobId, string taskId, int port)
+        public void RegisterTcpChannelPort(Guid jobId, TaskAttemptId taskAttemptId, int port)
         {
-            TaskServer.Instance.RegisterTcpChannelPort(jobId, taskId, port);
+            TaskServer.Instance.RegisterTcpChannelPort(jobId, taskAttemptId, port);
+        }
+
+        public string DownloadDfsFile(Guid jobId, string dfsPath)
+        {
+            return TaskServer.Instance.DownloadDfsFile(jobId, dfsPath);
         }
 
         #endregion
@@ -46,14 +51,14 @@ namespace TaskServerApplication
             get { return TaskServer.Instance.FileServerPort; }
         }
 
-        public TaskAttemptStatus GetTaskStatus(string fullTaskID)
+        public TaskAttemptStatus GetTaskStatus(Guid jobId, TaskAttemptId taskAttemptId)
         {
-            return TaskServer.Instance.GetTaskStatus(fullTaskID);
+            return TaskServer.Instance.GetTaskStatus(jobId, taskAttemptId);
         }
 
-        public string GetOutputFileDirectory(Guid jobId, string taskId)
+        public string GetOutputFileDirectory(Guid jobId)
         {
-            return TaskServer.Instance.GetOutputFileDirectory(jobId, taskId);
+            return TaskServer.Instance.GetOutputFileDirectory(jobId);
         }
 
         public string GetLogFileContents(int maxSize)
@@ -66,19 +71,19 @@ namespace TaskServerApplication
             return TaskServer.Instance.GetCompressedTaskLogFiles(jobId);
         }
 
-        public string GetTaskLogFileContents(Guid jobId, string taskId, int attempt, int maxSize)
+        public string GetTaskLogFileContents(Guid jobId, TaskAttemptId taskAttemptId, int maxSize)
         {
-            return TaskServer.Instance.GetTaskLogFileContents(jobId, taskId, attempt, maxSize);
+            return TaskServer.Instance.GetTaskLogFileContents(jobId, taskAttemptId, maxSize);
         }
 
-        public string GetTaskProfileOutput(Guid jobId, string taskId, int attempt)
+        public string GetTaskProfileOutput(Guid jobId, TaskAttemptId taskAttemptId)
         {
-            return TaskServer.Instance.GetTaskProfileOutput(jobId, taskId, attempt);
+            return TaskServer.Instance.GetTaskProfileOutput(jobId, taskAttemptId);
         }
 
-        public int GetTcpChannelPort(Guid jobId, string taskId)
+        public int GetTcpChannelPort(Guid jobId, TaskAttemptId taskAttemptId)
         {
-            return TaskServer.Instance.GetTcpChannelPort(jobId, taskId);
+            return TaskServer.Instance.GetTcpChannelPort(jobId, taskAttemptId);
         }
 
         #endregion

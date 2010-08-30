@@ -38,11 +38,10 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
         {
             _log.InfoFormat("Sorting feature list with {0} items...", _fgList.Count);
 
-            IComparer<int> intComparer = Comparer<int>.Default;
             // Sort the list by descending support
             _fgList.Sort();
 
-            int numGroups = TaskAttemptConfiguration.JobConfiguration.GetTypedSetting("GenFGList.Groups", 50);
+            int numGroups = TaskContext.JobConfiguration.GetTypedSetting("PFPGrowth.Groups", 50);
             int maxPerGroup = _fgList.Count / numGroups;
             if( _fgList.Count % numGroups != 0 )
                 maxPerGroup++;

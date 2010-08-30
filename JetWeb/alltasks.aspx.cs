@@ -19,7 +19,11 @@ public partial class alltasks : System.Web.UI.Page
         HeaderText.InnerText = string.Format("Job {0}", jobId);
         Title = string.Format("Job {0} - Jumbo Jet", jobId);
         JetClient client = new JetClient();
-        JobStatus job = client.JobServer.GetJobStatus(jobId);
+        JobStatus job;
+        if( Request.QueryString["archived"] == "true" )
+            job = client.JobServer.GetArchivedJobStatus(jobId);
+        else
+            job = client.JobServer.GetJobStatus(jobId);
 
         HtmlTableRow row = new HtmlTableRow() { ID = "CurrentJobRow" };
         row.Cells.Add(new HtmlTableCell() { InnerText = job.JobId.ToString() });
@@ -27,9 +31,6 @@ public partial class alltasks : System.Web.UI.Page
         TimeSpan duration;
         if( job.IsFinished )
         {
-            _downloadLink.HRef = "jobinfo.ashx?id=" + jobId.ToString();
-            _downloadLink.Visible = true;
-
             row.Cells.Add(new HtmlTableCell() { InnerText = job.EndTime.ToString(_datePattern, System.Globalization.CultureInfo.InvariantCulture) });
             duration = job.EndTime - job.StartTime;
         }
@@ -90,8 +91,8 @@ public partial class alltasks : System.Web.UI.Page
                 row.Cells.Add(new HtmlTableCell() { InnerText = "" });
             }
             if( includeProgress )
-                row.Cells.Add(new HtmlTableCell() { InnerText = (task.Progress * 100).ToString("0.0'%'") });
-            row.Cells.Add(new HtmlTableCell() { InnerHtml = string.Format("<a href=\"logfile.aspx?taskServer={0}&amp;port={1}&amp;job={2}&amp;task={3}&amp;attempt={4}\">View</a>", task.TaskServer.HostName, task.TaskServer.Port, job.JobId, task.TaskId, task.Attempts) });
+                row.Cells.Add(new HtmlTableCell() { InnerText = task.Progress.ToString("P1") }); // This page does not display complex progress.
+            row.Cells.Add(new HtmlTableCell() { InnerHtml = string.Format("<a href=\"logfile.aspx?taskServer={0}&amp;port={1}&amp;job={2}&amp;task={3}&amp;attempt={4}&amp;maxSize=100KB\">Last 100KB</a>, <a href=\"logfile.aspx?taskServer={0}&amp;port={1}&amp;job={2}&amp;task={3}&amp;attempt={4}&amp;maxSize=0\">all</a>", task.TaskServer.HostName, task.TaskServer.Port, job.JobId, task.TaskId, task.Attempts) });
         }
         else
         {

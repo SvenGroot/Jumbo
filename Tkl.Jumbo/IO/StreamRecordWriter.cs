@@ -15,6 +15,9 @@ namespace Tkl.Jumbo.IO
     /// <typeparam name="T">The type of the record.</typeparam>
     public abstract class StreamRecordWriter<T> : RecordWriter<T>
     {
+        private readonly IRecordOutputStream _recordOutputStream;
+        private readonly long _startPosition;
+
         /// <summary>
         /// Initializes a new instance of the <see cref="RecordWriter{T}"/> class.
         /// </summary>
@@ -24,6 +27,10 @@ namespace Tkl.Jumbo.IO
             if( stream == null )
                 throw new ArgumentNullException("stream");
             Stream = stream;
+            _startPosition = stream.Position;
+            _recordOutputStream = stream as IRecordOutputStream;
+            if( _recordOutputStream != null && _recordOutputStream.RecordOptions == RecordStreamOptions.None )
+                _recordOutputStream = null; // No need to waste time calling MarkRecord if there's no record options set.
         }
 
         /// <summary>
@@ -32,26 +39,45 @@ namespace Tkl.Jumbo.IO
         public Stream Stream { get; private set; }
 
         /// <summary>
-        /// Gets the number of bytes written to the stream.
+        /// Gets the size of the written records after serialization.
         /// </summary>
-        public override long BytesWritten
+        /// <value>
+        /// The number of bytes written to the output stream.
+        /// </value>
+        public override long OutputBytes
         {
-            get { return Stream.Length; }
+            get { return _recordOutputStream == null ? Stream.Position - _startPosition : _recordOutputStream.RecordsSize; }
         }
 
         /// <summary>
-        /// Gets the number of bytes written to the stream after compression, or 0 if the stream was not compressed.
+        /// Gets the number of bytes that were actually written to the output.
         /// </summary>
-        public override long CompressedBytesWritten
+        /// <value>If compression was used, the number of bytes written to the output after compression; otherwise, the same value as <see cref="OutputBytes"/>.</value>
+        public override long BytesWritten
         {
             get
             {
                 ICompressor compressionStream = Stream as ICompressor;
                 if( compressionStream == null )
-                    return 0;
+                    return Stream.Position - _startPosition;
                 else
                     return compressionStream.CompressedBytesWritten;
             }
+        }
+
+        /// <summary>
+        /// Writes a record.
+        /// </summary>
+        /// <param name="record">The record to write.</param>
+        /// <remarks>
+        /// <para>
+        ///   Derived classes should call the base class implementation after they wrote the record to the stream.
+        /// </para>
+        /// </remarks>
+        protected override void WriteRecordInternal(T record)
+        {
+            if( _recordOutputStream != null )
+                _recordOutputStream.MarkRecord();
         }
         
         /// <summary>

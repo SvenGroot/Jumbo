@@ -214,7 +214,7 @@ namespace Tkl.Jumbo.Jet.Jobs
 
             ConfigureDfsOutput(outputStage);
 
-            AddJobSettings(config);
+            ApplyJobPropertiesAndSettings(config);
 
             JetClient jetClient = new JetClient(JetConfiguration);
             Job job = jetClient.JobServer.CreateJob();

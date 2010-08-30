@@ -19,20 +19,21 @@ namespace Tkl.Jumbo.Test.Dfs
         public void TestConstructor()
         {
             DfsDirectory parent = new DfsDirectory(null, "", DateTime.UtcNow);
-            DfsFile target = new DfsFile(parent, "test", DateTime.UtcNow, _blockSize, _replicationFactor);
+            DfsFile target = new DfsFile(parent, "test", DateTime.UtcNow, _blockSize, _replicationFactor, IO.RecordStreamOptions.DoNotCrossBoundary);
             Assert.IsNotNull(target.Blocks);
             Assert.AreEqual(0, target.Blocks.Count);
             Assert.IsFalse(target.IsOpenForWriting);
             Assert.AreEqual(0, target.Size);
             Assert.AreEqual(_blockSize, target.BlockSize);
             Assert.AreEqual(_replicationFactor, target.ReplicationFactor);
+            Assert.AreEqual(IO.RecordStreamOptions.DoNotCrossBoundary, target.RecordOptions);
         }
 
         [Test]
         public void TestIsOpenForWriting()
         {
             DfsDirectory parent = new DfsDirectory(null, "", DateTime.UtcNow);
-            DfsFile target = new DfsFile(parent, "test", DateTime.UtcNow, _blockSize, _replicationFactor);
+            DfsFile target = new DfsFile(parent, "test", DateTime.UtcNow, _blockSize, _replicationFactor, IO.RecordStreamOptions.None);
             bool expected = true;
             target.IsOpenForWriting = expected;
             Assert.AreEqual(expected, target.IsOpenForWriting);
@@ -42,7 +43,7 @@ namespace Tkl.Jumbo.Test.Dfs
         public void TestSize()
         {
             DfsDirectory parent = new DfsDirectory(null, "", DateTime.UtcNow);
-            DfsFile target = new DfsFile(parent, "test", DateTime.UtcNow, _blockSize, _replicationFactor);
+            DfsFile target = new DfsFile(parent, "test", DateTime.UtcNow, _blockSize, _replicationFactor, IO.RecordStreamOptions.None);
             long expected = 0x1234567891234;
             target.Size = expected;
             Assert.AreEqual(expected, target.Size);

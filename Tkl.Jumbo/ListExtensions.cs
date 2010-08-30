@@ -88,7 +88,7 @@ namespace Tkl.Jumbo
         /// <summary>
         /// Gets the hash code for the specified sequence of elements.
         /// </summary>
-        /// <typeparam name="T">The type of the lements</typeparam>
+        /// <typeparam name="T">The type of the elements</typeparam>
         /// <param name="list">A list.</param>
         /// <returns>A hash code for the entire sequence.</returns>
         public static int GetSequenceHashCode<T>(this IEnumerable<T> list)
@@ -103,6 +103,25 @@ namespace Tkl.Jumbo
                 hash = itemHash ^ ((hash << 5) + hash);
             }
             return hash;
-        } 
+        }
+
+        /// <summary>
+        /// Swaps two elements in the specified list.
+        /// </summary>
+        /// <typeparam name="T">The type of the elements</typeparam>
+        /// <param name="list">The list.</param>
+        /// <param name="index1">The first index.</param>
+        /// <param name="index2">The second index.</param>
+        public static void Swap<T>(this IList<T> list, int index1, int index2)
+        {
+            if( list == null )
+                throw new ArgumentNullException("list");
+            if( index1 != index2 )
+            {
+                T temp = list[index1];
+                list[index1] = list[index2];
+                list[index2] = temp;
+            }
+        }
     }
 }
