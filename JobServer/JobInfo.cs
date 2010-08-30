@@ -27,7 +27,6 @@ namespace JobServerApplication
     {
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(JobInfo));
 
-        private readonly Dictionary<string, TaskInfo> _tasks = new Dictionary<string, TaskInfo>();
         private readonly Dictionary<string, TaskInfo> _schedulingTasksById = new Dictionary<string, TaskInfo>();
         private readonly List<TaskInfo> _orderedSchedulingDfsInputTasks = new List<TaskInfo>();
         private readonly List<TaskInfo> _orderedSchedulingNonInputTasks = new List<TaskInfo>();
@@ -71,9 +70,7 @@ namespace JobServerApplication
                     else
                         _orderedSchedulingDfsInputTasks.Add(taskInfo);
 
-                    _tasks.Add(taskInfo.TaskId.ToString(), taskInfo);
                     stageInfo.Tasks.Add(taskInfo);
-                    CreateChildTasks(taskInfo, stage);
                 }
                 stages.Add(stageInfo);
             }
@@ -163,7 +160,7 @@ namespace JobServerApplication
 
         public TaskInfo GetTask(string taskId)
         {
-            return _tasks[taskId];
+            return _schedulingTasksById[taskId];
         }
 
         public TaskInfo GetSchedulingTask(string taskId)
@@ -223,7 +220,7 @@ namespace JobServerApplication
         /// <param name="server"></param>
         public void CleanupServer(TaskServerInfo server)
         {
-            foreach( TaskInfo task in _tasks.Values )
+            foreach( TaskInfo task in _schedulingTasksById.Values )
             {
                 // No need to use the scheduler lock for a job in _jobsNeedingCleanup
                 server.SchedulerInfo.AssignedTasks.Remove(task);
@@ -277,20 +274,6 @@ namespace JobServerApplication
                 result.AdditionalProgressCounters.AddRange(_config.AdditionalProgressCounters);
             }
             return result;
-        }
-
-        private void CreateChildTasks(TaskInfo owner, StageConfiguration stage)
-        {
-            if( stage.ChildStage != null )
-            {
-                StageConfiguration childStage = stage.ChildStage;
-                for( int x = 1; x <= childStage.TaskCount; ++x )
-                {
-                    TaskInfo taskInfo = new TaskInfo(owner, new StageInfo(null, childStage), x);
-                    _tasks.Add(taskInfo.TaskId.ToString(), taskInfo);
-                    CreateChildTasks(taskInfo, childStage);
-                }
-            }
-        }    
+        }  
     }
 }

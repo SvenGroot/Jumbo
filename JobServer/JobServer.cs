@@ -899,7 +899,7 @@ namespace JobServerApplication
         private void ArchiveJob(JobInfo job)
         {
             string archiveDir = Configuration.JobServer.ArchiveDirectory;
-            if( archiveDir != null )
+            if( !string.IsNullOrEmpty(archiveDir) )
             {
                 Directory.CreateDirectory(archiveDir);
                 string archiveFilePath = Path.Combine(archiveDir, _archiveFileName);

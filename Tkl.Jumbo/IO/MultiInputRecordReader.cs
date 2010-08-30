@@ -282,7 +282,7 @@ namespace Tkl.Jumbo.IO
 
 
         /// <summary>
-        /// Gets the current number of inputs that have been added to the <see cref="MultiInputRecordReader{T}"/> for the current partition.
+        /// Gets the current number of inputs that have been added to the <see cref="MultiInputRecordReader{T}"/> for the currently active set of partitions.
         /// </summary>
         public int CurrentInputCount
         {
@@ -290,7 +290,7 @@ namespace Tkl.Jumbo.IO
             {
                 lock( _partitions )
                 {
-                    return _partitions.Count == 0 ? 0 : _partitions[_currentPartitionIndex].InputCount;
+                    return _partitions.Count == 0 ? 0 : _partitions[_firstActivePartitionIndex].InputCount;
                 }
             }
         }
