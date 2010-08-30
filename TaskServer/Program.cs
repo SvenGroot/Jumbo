@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading;
+using Tkl.Jumbo;
 
 namespace TaskServerApplication
 {
@@ -16,7 +17,7 @@ namespace TaskServerApplication
 
         static void Main(string[] args)
         {
-            log4net.Config.XmlConfigurator.Configure();
+            JumboConfiguration.GetConfiguration().Log.ConfigureLogger();
             AppDomain.CurrentDomain.UnhandledException += new UnhandledExceptionEventHandler(CurrentDomain_UnhandledException);
             Console.CancelKeyPress += new ConsoleCancelEventHandler(Console_CancelKeyPress);
             _mainThread = Thread.CurrentThread;

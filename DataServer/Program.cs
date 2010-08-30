@@ -19,6 +19,7 @@ namespace DataServerApplication
 
         private static void Main(string[] args)
         {
+            JumboConfiguration.GetConfiguration().Log.ConfigureLogger();
             AppDomain.CurrentDomain.UnhandledException += new UnhandledExceptionEventHandler(CurrentDomain_UnhandledException);
             System.Threading.Thread.CurrentThread.Name = "entry";
             //RemotingConfiguration.Configure("DataServer.exe.config", false);

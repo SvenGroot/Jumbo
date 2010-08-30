@@ -23,5 +23,4 @@ using System.Runtime.InteropServices;
 // The following GUID is for the ID of the typelib if this project is exposed to COM
 [assembly: Guid("7e2aea6a-f564-4f41-9950-79c4962f0871")]
 
-[assembly: log4net.Config.XmlConfigurator()]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Tkl.Jumbo.Dfs.Test, PublicKey=0024000004800000940000000602000000240000525341310004000001000100f330aae7f432ab1ccda5ed19b63d9d430311e9fc4cb2b8e7c54d8352a8009d16a5dcc3df112eab8854172485f8b4801833c9434e099b4ebd4f434680dec1f8481d0d8aa3f129687cacf43ca6928ef0cfb1ab93ebed00f06365c762593e7044c7f9aad317f5a0f3c6e078cfe60b6979b701af4d8a661bf934df5474cb10eaf0b2")]
