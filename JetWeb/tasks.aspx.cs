@@ -84,7 +84,7 @@ public partial class tasks : System.Web.UI.Page
 
                 foreach( TaskStatus task in tasks )
                 {
-                    HtmlTableRow row = CreateTaskTableRow(job, task, false, additionalProgressCount);
+                    HtmlTableRow row = CreateTaskTableRow(job, task, additionalProgressCount);
                     TasksTable.Rows.Add(row);
                 }
             }
@@ -164,7 +164,7 @@ public partial class tasks : System.Web.UI.Page
         return cell;
     }
 
-    private static HtmlTableRow CreateTaskTableRow(JobStatus job, TaskStatus task, bool useErrorEndTime, int additionalProgressCount)
+    private static HtmlTableRow CreateTaskTableRow(JobStatus job, TaskStatus task, int additionalProgressCount)
     {
         HtmlTableRow row = new HtmlTableRow() { ID = "TaskStatusRow_" + task.TaskId };
         row.Cells.Add(new HtmlTableCell() { InnerText = task.TaskId });
@@ -174,7 +174,7 @@ public partial class tasks : System.Web.UI.Page
         if( task.State >= TaskState.Running && task.TaskServer != null )
         {
             row.Cells.Add(new HtmlTableCell() { InnerText = task.StartTime.ToString(_datePattern, System.Globalization.CultureInfo.InvariantCulture) });
-            if( task.State == TaskState.Finished || (useErrorEndTime && task.State == TaskState.Error) )
+            if( task.State == TaskState.Finished || task.State == TaskState.Error )
             {
                 row.Cells.Add(new HtmlTableCell() { InnerText = task.EndTime.ToString(_datePattern, System.Globalization.CultureInfo.InvariantCulture) });
                 TimeSpan duration = task.EndTime - task.StartTime;
