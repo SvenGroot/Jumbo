@@ -10,7 +10,7 @@ using Tkl.Jumbo.Jet;
 using System.Web.UI.HtmlControls;
 using System.Globalization;
 
-public partial class stage : System.Web.UI.Page
+public partial class tasks : System.Web.UI.Page
 {
     private const string _datePattern = "yyyy'-'MM'-'dd' 'HH':'mm':'ss'.'fff'Z'";
 
@@ -21,10 +21,13 @@ public partial class stage : System.Web.UI.Page
 
         JetClient client = new JetClient();
         JobStatus job;
+        IEnumerable<TaskStatus> tasks;
+
         if( Request.QueryString["archived"] == "true" )
             job = client.JobServer.GetArchivedJobStatus(jobId);
         else
             job = client.JobServer.GetJobStatus(jobId);
+
         if( job == null )
         {
             HeaderText.InnerText = "Job not found.";
@@ -32,14 +35,96 @@ public partial class stage : System.Web.UI.Page
         }
         else
         {
-            StageStatus stage = (from s in job.Stages
-                                 where s.StageId == stageId
-                                 select s).Single();
+            if( string.IsNullOrEmpty(stageId) )
+            {
+                tasks = (from s in job.Stages
+                         from t in s.Tasks
+                         select t).Concat(job.FailedTaskAttempts);
 
-            Title = string.Format("Job {0} ({1}) stage {2} - Jumbo Jet", job.JobName, job.JobId, stage.StageId);
-            HeaderText.InnerText = string.Format("Job {0} ({1}) stage {2}", job.JobName, job.JobId, stage.StageId);
+                TasksHeader.Visible = false;
+                StagesTable.Visible = false;
+            }
+            else
+            {
+                tasks = GetTasks(stageId, job);
+            }
+
+            if( tasks != null )
+            {
+                tasks = FilterTasksByState(tasks);
+
+                Title = string.Format("Job {0} ({1}) tasks - Jumbo Jet", job.JobName, job.JobId);
+                HeaderText.InnerText = string.Format("Job {0} ({1}) tasks", job.JobName, job.JobId);
+
+
+                // See if any of the tasks reports complex progress. If it does, all tasks that report complex progress should report the same additional progress values as that one.
+                TaskProgress complexProgress = (from task in tasks
+                                                where task.TaskProgress != null && task.TaskProgress.AdditionalProgressValues != null
+                                                select task.TaskProgress).FirstOrDefault();
+
+                int additionalProgressCount = 0;
+                if( complexProgress != null )
+                {
+                    foreach( HtmlTableCell cell in TasksTable.Rows[0].Cells )
+                    {
+                        if( cell.InnerText != "Progress" )
+                            cell.RowSpan = 2;
+                        else
+                            cell.ColSpan = complexProgress.AdditionalProgressValues.Count + 2;
+                    }
+
+                    HtmlTableRow progressHeaderRow = new HtmlTableRow();
+                    progressHeaderRow.Cells.Add(new HtmlTableCell("th") { InnerText = "Overall" });
+                    progressHeaderRow.Cells.Add(new HtmlTableCell("th") { InnerText = "Base" });
+                    foreach( AdditionalProgressValue value in complexProgress.AdditionalProgressValues )
+                        progressHeaderRow.Cells.Add(new HtmlTableCell("th") { InnerText = job.GetFriendlyNameForAdditionalProgressCounter(value.SourceName) });
+                    TasksTable.Rows.Add(progressHeaderRow);
+                    additionalProgressCount = complexProgress.AdditionalProgressValues.Count;
+                }
+
+                foreach( TaskStatus task in tasks )
+                {
+                    HtmlTableRow row = CreateTaskTableRow(job, task, false, additionalProgressCount);
+                    TasksTable.Rows.Add(row);
+                }
+            }
+        }
+    }
+
+    private IEnumerable<TaskStatus> FilterTasksByState(IEnumerable<TaskStatus> tasks)
+    {
+        string stateString = Request.QueryString["state"];
+        if( !string.IsNullOrEmpty(stateString) )
+        {
+            TaskState state = (TaskState)Enum.Parse(typeof(TaskState), stateString, true);
+            tasks = from t in tasks
+                    where t.State == state
+                    select t;
+        }
+
+        return tasks;
+    }
+
+    private IEnumerable<TaskStatus> GetTasks(string stageId, JobStatus job)
+    {
+        IEnumerable<TaskStatus> tasks = null;
+        StageStatus stage = (from s in job.Stages
+                             where s.StageId == stageId
+                             select s).SingleOrDefault();
+
+        if( stage == null )
+        {
+            HeaderText.InnerText = "Stage not found.";
+            StageSummary.Visible = false;
+        }
+        else
+        {
+            tasks = stage.Tasks;
 
             HtmlTableRow row = new HtmlTableRow();
+
+            row.Cells.Add(new HtmlTableCell() { InnerText = stage.StageId });
+
             DateTime? startTime = stage.StartTime;
             if( startTime == null )
                 row.Cells.Add(new HtmlTableCell());
@@ -67,38 +152,8 @@ public partial class stage : System.Web.UI.Page
             row.Cells.Add(new HtmlTableCell() { InnerText = stage.FinishedTaskCount.ToString() });
 
             StagesTable.Rows.Add(row);
-
-            // See if any of the tasks reports complex progress. If it does, all tasks that report complex progress should report the same additional progress values as that one.
-            TaskProgress complexProgress = (from task in stage.Tasks
-                                            where task.TaskProgress != null && task.TaskProgress.AdditionalProgressValues != null
-                                            select task.TaskProgress).FirstOrDefault();
-
-            int additionalProgressCount = 0;
-            if( complexProgress != null )
-            {
-                foreach( HtmlTableCell cell in TasksTable.Rows[0].Cells )
-                {
-                    if( cell.InnerText != "Progress" )
-                        cell.RowSpan = 2;
-                    else
-                        cell.ColSpan = complexProgress.AdditionalProgressValues.Count + 2;
-                }
-
-                HtmlTableRow progressHeaderRow = new HtmlTableRow();
-                progressHeaderRow.Cells.Add(new HtmlTableCell("th") { InnerText = "Overall" });
-                progressHeaderRow.Cells.Add(new HtmlTableCell("th") { InnerText = "Base" });
-                foreach( AdditionalProgressValue value in complexProgress.AdditionalProgressValues )
-                    progressHeaderRow.Cells.Add(new HtmlTableCell("th") { InnerText = job.GetFriendlyNameForAdditionalProgressCounter(value.SourceName) });
-                TasksTable.Rows.Add(progressHeaderRow);
-                additionalProgressCount = complexProgress.AdditionalProgressValues.Count;
-            }
-
-            foreach( TaskStatus task in stage.Tasks )
-            {
-                row = CreateTaskTableRow(job, task, false, additionalProgressCount);
-                TasksTable.Rows.Add(row);
-            }
         }
+        return tasks;
     }
 
     private HtmlTableCell CreateProgressCell(float progress)

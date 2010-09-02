@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using Tkl.Jumbo.Jet;
+using Tkl.Jumbo;
 
 namespace TaskServerApplication
 {
@@ -61,9 +62,9 @@ namespace TaskServerApplication
             return TaskServer.Instance.GetOutputFileDirectory(jobId);
         }
 
-        public string GetLogFileContents(int maxSize)
+        public string GetLogFileContents(LogFileKind kind, int maxSize)
         {
-            return TaskServer.Instance.GetLogFileContents(maxSize);
+            return TaskServer.Instance.GetLogFileContents(kind, maxSize);
         }
 
         public byte[] GetCompressedTaskLogFiles(Guid jobId)

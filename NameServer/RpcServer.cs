@@ -101,9 +101,9 @@ namespace NameServerApplication
             return NameServer.Instance.GetDataServerBlocks(dataServer, blocks);
         }
 
-        public string GetLogFileContents(int maxSize)
+        public string GetLogFileContents(LogFileKind kind, int maxSize)
         {
-            return NameServer.Instance.GetLogFileContents(maxSize);
+            return NameServer.Instance.GetLogFileContents(kind, maxSize);
         }
 
         public void RemoveDataServer(ServerAddress dataServer)

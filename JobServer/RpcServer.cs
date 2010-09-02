@@ -62,9 +62,9 @@ namespace JobServerApplication
             return JobServer.Instance.GetMetrics();
         }
 
-        public string GetLogFileContents(int maxSize)
+        public string GetLogFileContents(LogFileKind kind, int maxSize)
         {
-            return JobServer.Instance.GetLogFileContents(maxSize);
+            return JobServer.Instance.GetLogFileContents(kind, maxSize);
         }
 
         public ArchivedJob[] GetArchivedJobs()

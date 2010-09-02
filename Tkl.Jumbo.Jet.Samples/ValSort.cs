@@ -54,6 +54,12 @@ namespace Tkl.Jumbo.Jet.Samples
             _outputPath = outputPath;
         }
 
+        /// <summary>
+        /// Gets or sets a value indicating whether verbose logging of unsorted record locations is enabled in the combiner task.
+        /// </summary>
+        /// <value>
+        /// 	<see langword="true"/> if verbose logging is enabled in the combiner task; otherwise, <see langword="false"/>. The default value is <see langword="false"/>.
+        /// </value>
         [NamedCommandLineArgument("v"), JobSetting, Description("Enables verbose logging of where unsorted records occured in the combiner task.")]
         public bool VerboseLogging { get; set; }
 

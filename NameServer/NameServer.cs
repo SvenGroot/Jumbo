@@ -17,6 +17,7 @@ using System.Threading;
 using System.Collections.ObjectModel;
 using Tkl.Jumbo.Topology;
 using Tkl.Jumbo.IO;
+using System.IO;
 
 namespace NameServerApplication
 {
@@ -427,31 +428,9 @@ namespace NameServerApplication
             }
         }
 
-        public string GetLogFileContents(int maxSize)
+        public string GetLogFileContents(LogFileKind kind, int maxSize)
         {
-            if( maxSize <= 0 )
-                throw new ArgumentException("maxSize must be positive.", "maxSize");
-            _log.Debug("GetLogFileContents");
-            foreach( log4net.Appender.IAppender appender in log4net.LogManager.GetRepository().GetAppenders() )
-            {
-                log4net.Appender.FileAppender fileAppender = appender as log4net.Appender.FileAppender;
-                if( fileAppender != null )
-                {
-                    using( System.IO.FileStream stream = System.IO.File.Open(fileAppender.File, System.IO.FileMode.Open, System.IO.FileAccess.Read, System.IO.FileShare.ReadWrite) )
-                    {
-                        using( System.IO.StreamReader reader = new System.IO.StreamReader(stream) )
-                        {
-                            if( stream.Length > maxSize )
-                            {
-                                stream.Position = stream.Length - maxSize;
-                                reader.ReadLine(); // Scan to the first new line.
-                            }
-                            return reader.ReadToEnd();
-                        }
-                    }
-                }
-            }
-            return null;
+            return LogFileHelper.GetLogFileContents("NameServer", kind, maxSize);
         }
 
         public void RemoveDataServer(ServerAddress dataServer)

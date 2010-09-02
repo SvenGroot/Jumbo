@@ -28,5 +28,16 @@ namespace Tkl.Jumbo.Dfs
         /// Gets the maximum size of the log data to return.
         /// </summary>
         public int MaxSize { get; private set; }
+
+        /// <summary>
+        /// Gets or sets the type of the log file that the data server return.
+        /// </summary>
+        /// <value>The type of the log file.</value>
+        /// <remarks>
+        /// <para>
+        ///   When returning standard error and standard output stream, it's assumed the files containing these are in the directory specified by <see cref="Tkl.Jumbo.LogConfigurationElement.Directory"/>.
+        /// </para>
+        /// </remarks>
+        public LogFileKind Kind { get; set; }
     }
 }

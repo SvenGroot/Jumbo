@@ -120,6 +120,8 @@
     <Compile Include="IO\WritableIgnoreAttribute.cs" />
     <Compile Include="JumboConfiguration.cs" />
     <Compile Include="LogConfigurationElement.cs" />
+    <Compile Include="LogFileHelper.cs" />
+    <Compile Include="LogFileKind.cs" />
     <Compile Include="MemoryStatus.cs" />
     <Compile Include="NativeMethods.cs" />
     <Compile Include="ProcessorStatus.cs" />

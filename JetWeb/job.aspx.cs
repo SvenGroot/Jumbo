@@ -63,17 +63,17 @@ public partial class job : System.Web.UI.Page
             row.Cells.Add(new HtmlTableCell() { InnerText = string.Format("{0} ({1}s)", duration, duration.TotalSeconds) });
             row.Cells.Add(new HtmlTableCell() { InnerHtml = CreateProgressBar(job.Progress) });
             row.Cells.Add(new HtmlTableCell() { InnerText = job.TaskCount.ToString() });
-            row.Cells.Add(new HtmlTableCell() { InnerText = job.RunningTaskCount.ToString() });
-            row.Cells.Add(new HtmlTableCell() { InnerText = job.UnscheduledTaskCount.ToString() });
-            row.Cells.Add(new HtmlTableCell() { InnerText = job.FinishedTaskCount.ToString() });
-            row.Cells.Add(new HtmlTableCell() { InnerText = job.ErrorTaskCount.ToString() });
+            CreateTasksLinkCell(row, jobId, null, TaskState.Running, job.RunningTaskCount.ToString(), archived);
+            CreateTasksLinkCell(row, jobId, null, TaskState.Created, job.UnscheduledTaskCount.ToString(), archived);
+            CreateTasksLinkCell(row, jobId, null, TaskState.Finished, job.FinishedTaskCount.ToString(), archived);
+            CreateTasksLinkCell(row, jobId, null, TaskState.Error, job.ErrorTaskCount.ToString(), archived);
             row.Cells.Add(new HtmlTableCell() { InnerText = job.NonDataLocalTaskCount.ToString() });
             RunningJobsTable.Rows.Add(row);
 
             foreach( StageStatus stage in job.Stages )
             {
                 row = new HtmlTableRow();
-                row.Cells.Add(new HtmlTableCell() { InnerHtml = string.Format("<a href=\"stage.aspx?job={0}&amp;stage={1}{2}\">{1}</a>", job.JobId, Server.HtmlEncode(stage.StageId), archived ? "&amp;archived=true" : "") });
+                row.Cells.Add(new HtmlTableCell() { InnerHtml = string.Format("<a href=\"tasks.aspx?job={0}&amp;stage={1}{2}\">{1}</a>", job.JobId, Server.HtmlEncode(stage.StageId), archived ? "&amp;archived=true" : "") });
                 DateTime? startTime = stage.StartTime;
                 if( startTime == null )
                     row.Cells.Add(new HtmlTableCell());
@@ -96,9 +96,9 @@ public partial class job : System.Web.UI.Page
 
                 row.Cells.Add(CreateProgressCell(job, stage, true));
                 row.Cells.Add(new HtmlTableCell() { InnerText = stage.Tasks.Count.ToString() });
-                row.Cells.Add(new HtmlTableCell() { InnerText = stage.RunningTaskCount.ToString() });
-                row.Cells.Add(new HtmlTableCell() { InnerText = stage.PendingTaskCount.ToString() });
-                row.Cells.Add(new HtmlTableCell() { InnerText = stage.FinishedTaskCount.ToString() });
+                CreateTasksLinkCell(row, jobId, stage.StageId, TaskState.Running, stage.RunningTaskCount.ToString(), archived);
+                CreateTasksLinkCell(row, jobId, stage.StageId, TaskState.Created, stage.PendingTaskCount.ToString(), archived);
+                CreateTasksLinkCell(row, jobId, stage.StageId, TaskState.Finished, stage.FinishedTaskCount.ToString(), archived);
 
                 StagesTable.Rows.Add(row);
             }
@@ -151,6 +151,14 @@ public partial class job : System.Web.UI.Page
     private static string CreateProgressBar(float progress)
     {
         return string.Format("<div class=\"progressBar\"><div class=\"progressBarValue\" style=\"width:{0}%\">&nbsp;</div></div> {1:P1}", (progress * 100).ToString("0.0", System.Globalization.CultureInfo.InvariantCulture), progress);
+    }
+
+    private static void CreateTasksLinkCell(HtmlTableRow row, Guid jobId, string stageId, TaskState state, string text, bool archived)
+    {
+        if( stageId == null )
+            row.Cells.Add(new HtmlTableCell() { InnerHtml = string.Format("<a href=\"tasks.aspx?job={0}&amp;state={1}{2}\">{3}</a>", jobId, state, archived ? "&amp;archived=true" : "", HttpUtility.HtmlEncode(text)) });
+        else
+            row.Cells.Add(new HtmlTableCell() { InnerHtml = string.Format("<a href=\"tasks.aspx?job={0}&amp;stage={1}&amp;state={2}{3}\">{4}</a>", jobId, HttpUtility.UrlEncode(stageId), state, archived ? "&amp;archived=true" : "", HttpUtility.HtmlEncode(text)) });
     }
 
     private void CreateMetricsTable(JobStatus job)

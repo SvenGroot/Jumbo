@@ -149,13 +149,14 @@ namespace Tkl.Jumbo.Dfs
         /// <summary>
         /// Gets the contents of the diagnostic log file.
         /// </summary>
+        /// <param name="kind">The kind of log file to return.</param>
         /// <param name="maxSize">The maximum number of bytes to return.</param>
         /// <returns>The contents of the diagnostic log file.</returns>
         /// <remarks>
         /// If the log file is larger than <paramref name="maxSize"/>, the tail of the file up to the
         /// specified size is returned.
         /// </remarks>
-        string GetLogFileContents(int maxSize);
+        string GetLogFileContents(LogFileKind kind, int maxSize);
 
         /// <summary>
         /// Removes the specified data server from the name server's list of known data servers.

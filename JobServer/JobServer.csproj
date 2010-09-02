@@ -93,6 +93,10 @@
     <Compile Include="TaskServerSchedulerInfo.cs" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="..\common.config">
+      <Link>common.config</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <None Include="..\dfs.config">
       <Link>dfs.config</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
