@@ -100,7 +100,7 @@
     <Compile Include="GenSort2.cs" />
     <Compile Include="GraySort.cs" />
     <Compile Include="IO\UInt128Writer.cs" />
-    <Compile Include="ValSort2.cs" />
+    <Compile Include="ValSort.cs" />
     <Compile Include="WordCount2.cs" />
     <Compile Include="GenSort.cs" />
     <Compile Include="GenWords.cs" />
@@ -131,7 +131,6 @@
     <Compile Include="Tasks\WordCountAccumulatorTask.cs" />
     <Compile Include="Tasks\WordCountTask.cs" />
     <Compile Include="TpcHQuery1.cs" />
-    <Compile Include="ValSort.cs" />
     <Compile Include="WordCount.cs" />
   </ItemGroup>
   <ItemGroup>
