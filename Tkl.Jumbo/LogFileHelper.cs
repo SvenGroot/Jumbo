@@ -45,7 +45,7 @@ namespace Tkl.Jumbo
                 fileName = Path.Combine(JumboConfiguration.GetConfiguration().Log.Directory, "out-" + serverName + "-" + ServerContext.LocalHostName + ".txt");
                 break;
             case LogFileKind.StdErr:
-                fileName = Path.Combine(JumboConfiguration.GetConfiguration().Log.Directory, "out-" + serverName + "-" + ServerContext.LocalHostName + ".txt");
+                fileName = Path.Combine(JumboConfiguration.GetConfiguration().Log.Directory, "err-" + serverName + "-" + ServerContext.LocalHostName + ".txt");
                 break;
             }
 
