@@ -172,7 +172,7 @@ namespace Tkl.Jumbo.Test.Jet
 
             var multiplied = (from item in expected
                              select item * factor).ToList();
-            CheckOutput(dfsClient, multiplied, DfsPath.Combine(outputPath, "MultiplyStage001"));
+            CheckOutput(dfsClient, multiplied, DfsPath.Combine(outputPath, "MultiplyStage-00001"));
         }
 
         [Test]
@@ -228,7 +228,7 @@ namespace Tkl.Jumbo.Test.Jet
             List<CustomerOrder> actual = new List<CustomerOrder>();
             for( int x = 0; x < joinTasks; ++x )
             {
-                using( DfsInputStream stream = dfsClient.OpenFile(DfsPath.Combine(outputPath, string.Format("Join{0:000}", x+1))) )
+                using( DfsInputStream stream = dfsClient.OpenFile(DfsPath.Combine(outputPath, string.Format("Join-{0:00000}", x+1))) )
                 using( RecordFileReader<CustomerOrder> reader = new RecordFileReader<CustomerOrder>(stream) )
                 {
                     while( reader.ReadRecord() )
@@ -295,7 +295,7 @@ namespace Tkl.Jumbo.Test.Jet
             List<CustomerOrder> actual = new List<CustomerOrder>();
             for( int x = 0; x < joinTasks; ++x )
             {
-                using( DfsInputStream stream = dfsClient.OpenFile(DfsPath.Combine(outputPath, string.Format("JoinStage{0:000}", x + 1))) )
+                using( DfsInputStream stream = dfsClient.OpenFile(DfsPath.Combine(outputPath, string.Format("JoinStage-{0:00000}", x + 1))) )
                 using( RecordFileReader<CustomerOrder> reader = new RecordFileReader<CustomerOrder>(stream) )
                 {
                     while( reader.ReadRecord() )
@@ -373,7 +373,7 @@ namespace Tkl.Jumbo.Test.Jet
 
             for( int x = 0; x < 6; ++x )
             {
-                string path = DfsPath.Combine(outputPath, string.Format(CultureInfo.InvariantCulture, "OutputTask{0:000}", x + 1));
+                string path = DfsPath.Combine(outputPath, string.Format(CultureInfo.InvariantCulture, "OutputTask-{0:00000}", x + 1));
                 using( DfsInputStream stream = dfsClient.OpenFile(path) )
                 using( StreamReader reader = new StreamReader(stream) )
                 {
@@ -399,7 +399,7 @@ namespace Tkl.Jumbo.Test.Jet
 
             JobConfiguration config = CreateConfiguration(dfsClient, dfsClient.NameServer.GetFileInfo(_fileName), outputPath, false, typeof(LineCounterTask), typeof(LineAdderTask), ChannelType.File);
             StageConfiguration stage = config.AddInputStage("VerificationStage", dfsClient.NameServer.GetFileInfo(lineCountPath), typeof(LineVerifierTask), typeof(RecordFileReader<int>), outputPath, typeof(TextRecordWriter<bool>));
-            stage.AddSetting("ActualOutputPath", DfsPath.Combine(outputPath, "OutputTask001"));
+            stage.AddSetting("ActualOutputPath", DfsPath.Combine(outputPath, "OutputTask-00001"));
             config.GetStage("OutputTask").DependentStages.Add(stage.StageId);
 
             Job job = target.RunJob(config, dfsClient, typeof(DelayTask).Assembly.Location);
@@ -411,7 +411,7 @@ namespace Tkl.Jumbo.Test.Jet
 
             ValidateLineCountOutput(outputPath, dfsClient, _lines);
 
-            using( DfsInputStream stream = dfsClient.OpenFile(DfsPath.Combine(outputPath, "VerificationStage001")) )
+            using( DfsInputStream stream = dfsClient.OpenFile(DfsPath.Combine(outputPath, "VerificationStage-00001")) )
             using( StreamReader reader = new StreamReader(stream) )
             {
                 Assert.AreEqual("True", reader.ReadLine());
@@ -583,7 +583,7 @@ namespace Tkl.Jumbo.Test.Jet
 
         private static void ValidateLineCountOutput(string outputPath, DfsClient dfsClient, int lines)
         {
-            string outputFileName = DfsPath.Combine(outputPath, "OutputTask001");
+            string outputFileName = DfsPath.Combine(outputPath, "OutputTask-00001");
 
             using( DfsInputStream stream = dfsClient.OpenFile(outputFileName) )
             using( StreamReader reader = new StreamReader(stream) )

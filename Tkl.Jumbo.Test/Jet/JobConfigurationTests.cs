@@ -217,7 +217,7 @@ namespace Tkl.Jumbo.Test.Jet
             if( useOutput )
             {
                 Assert.IsNotNull(stage.DfsOutput);
-                Assert.AreEqual(DfsPath.Combine(outputPath, stage.StageId + "{0:000}"), stage.DfsOutput.PathFormat);
+                Assert.AreEqual(DfsPath.Combine(outputPath, stage.StageId + "-{0:00000}"), stage.DfsOutput.PathFormat);
                 Assert.AreEqual(typeof(TextRecordWriter<int>).AssemblyQualifiedName, stage.DfsOutput.RecordWriterType.TypeName);
                 Assert.AreEqual(typeof(TextRecordWriter<int>), stage.DfsOutput.RecordWriterType.ReferencedType);
             }

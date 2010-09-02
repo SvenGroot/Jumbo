@@ -55,7 +55,7 @@ namespace Tkl.Jumbo.Test.Jet
 
             RunJob(dfsClient, config);
 
-            string outputFileName = DfsPath.Combine(outputPath, "MergeStage001");
+            string outputFileName = DfsPath.Combine(outputPath, "MergeStage-00001");
 
             CheckOutput(dfsClient, _expected, outputFileName);
         }
@@ -74,7 +74,7 @@ namespace Tkl.Jumbo.Test.Jet
 
             RunJob(dfsClient, config);
 
-            string outputFileName = DfsPath.Combine(outputPath, "SortStage001");
+            string outputFileName = DfsPath.Combine(outputPath, "SortStage-00001");
 
             CheckOutput(dfsClient, _expected, outputFileName);
         }
@@ -98,7 +98,7 @@ namespace Tkl.Jumbo.Test.Jet
 
             RunJob(dfsClient, config);
 
-            string outputFileName = DfsPath.Combine(outputPath, "SortStage001");
+            string outputFileName = DfsPath.Combine(outputPath, "SortStage-00001");
 
             CheckOutput(dfsClient, _expected, outputFileName);
         }
@@ -124,7 +124,7 @@ namespace Tkl.Jumbo.Test.Jet
 
             RunJob(dfsClient, config);
 
-            string outputFileName = DfsPath.Combine(outputPath, "SortStage001");
+            string outputFileName = DfsPath.Combine(outputPath, "SortStage-00001");
 
             CheckOutput(dfsClient, _expected, outputFileName);
         }

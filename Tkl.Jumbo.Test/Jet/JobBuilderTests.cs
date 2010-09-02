@@ -674,7 +674,7 @@ namespace Tkl.Jumbo.Test.Jet
                 Assert.IsNull(stage.ChildStage);
                 Assert.IsNull(stage.OutputChannel);
                 Assert.IsNotNull(stage.DfsOutput);
-                Assert.AreEqual(DfsPath.Combine(_outputPath, stageId + "{0:000}"), stage.DfsOutput.PathFormat);
+                Assert.AreEqual(DfsPath.Combine(_outputPath, stageId + "-{0:00000}"), stage.DfsOutput.PathFormat);
                 Assert.AreEqual(0, stage.DfsOutput.ReplicationFactor);
                 Assert.AreEqual(0, stage.DfsOutput.BlockSize);
                 Assert.AreEqual(recordWriterType, stage.DfsOutput.RecordWriterType.ReferencedType);
