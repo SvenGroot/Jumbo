@@ -62,7 +62,11 @@ namespace Tkl.Jumbo
                 return logStream;
             }
             else
+            {
+                if( fileName != null )
+                    _log.WarnFormat("Log file {0} not found.", fileName);
                 return null;
+            }
         }
 
         /// <summary>
@@ -74,7 +78,7 @@ namespace Tkl.Jumbo
         /// <returns>The contents of the log file, or <see langword="null"/> if the log file doesn't exist.</returns>
         public static string GetLogFileContents(string serverName, LogFileKind kind, int maxSize)
         {
-            using( Stream logStream = GetLogFileStream("NameServer", kind, maxSize) )
+            using( Stream logStream = GetLogFileStream(serverName, kind, maxSize) )
             {
                 if( logStream != null )
                 {
