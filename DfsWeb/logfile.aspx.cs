@@ -18,7 +18,7 @@ public partial class logfile : System.Web.UI.Page
     {
         string dataServer = Request.QueryString["dataServer"];
         string maxSizeString = Request.QueryString["maxSize"];
-        string kindString = Request.QueryString["log"];
+        string kindString = Request.QueryString["kind"];
         LogFileKind kind;
         switch( kindString )
         {
