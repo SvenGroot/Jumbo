@@ -530,7 +530,7 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
             var output = CreateDfsOutput(resultDirectory, BinaryOutput ? typeof(BinaryRecordWriter<>) : typeof(TextRecordWriter<>));
             builder.ProcessRecords<Pair<int, WritableCollection<MappedFrequentPattern>>, Pair<Utf8String, WritableCollection<FrequentPattern>>>(patternChannel, output, AggregatePatterns);
 
-            builder.AddSetting("PFPGrowth.FGListPath", DfsPath.Combine(fglistDirectory, "FeatureGroupTask001"));
+            builder.AddSetting("PFPGrowth.FGListPath", DfsPath.Combine(fglistDirectory, "FeatureGroupTask-00001"));
         }
     }
 }
