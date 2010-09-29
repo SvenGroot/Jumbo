@@ -125,23 +125,10 @@ namespace Tkl.Jumbo
                     remotingAction();
                     retry = false;
                 }
-                catch( System.Runtime.Remoting.RemotingException ex )
+                catch( Exception ex )
                 {
-                    if( !_abortRetries && (maxRetries == -1 || maxRetries > 0) )
-                    {
-                        _log.Error(string.Format(System.Globalization.CultureInfo.InvariantCulture, "An error occurred performing a remoting operation. Retrying in {0}.", retryInterval), ex);
-                        --maxRetries;
-                        Thread.Sleep(retryInterval);
-                    }
-                    else
-                    {
-                        _log.Error("An error occurred performing a remoting operation.", ex);
-                        throw;
-                    }
-                }
-                catch( System.Net.Sockets.SocketException ex )
-                {
-                    if( !_abortRetries && (maxRetries == -1 || maxRetries > 0) )
+                    if( (ex is RemotingException || ex is System.Net.Sockets.SocketException) &&
+                        !_abortRetries && (maxRetries == -1 || maxRetries > 0) )
                     {
                         _log.Error(string.Format(System.Globalization.CultureInfo.InvariantCulture, "An error occurred performing a remoting operation. Retrying in {0}.", retryInterval), ex);
                         if( maxRetries > 0 )
@@ -151,7 +138,6 @@ namespace Tkl.Jumbo
                     else
                     {
                         _log.Error("An error occurred performing a remoting operation.", ex);
-                        throw;
                     }
                 }
             } while( retry );
