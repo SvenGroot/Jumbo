@@ -614,44 +614,53 @@ namespace Tkl.Jumbo.Jet.Channels
             _log.InfoFormat(CultureInfo.InvariantCulture, "Downloading tasks {0} input files from server {1}:{2}.", server.TasksToDownload.ToDelimitedString(), server.TaskServer.HostName, server.FileServerPort);
 
             List<IList<RecordInput>> result = new List<IList<RecordInput>>(server.TasksToDownloadCount);
-            using( TcpClient client = new TcpClient(server.TaskServer.HostName, port) )
-            using( NetworkStream stream = client.GetStream() )
-            using( WriteBufferedStream bufferStream = new WriteBufferedStream(stream) )
-            using( BinaryWriter writer = new BinaryWriter(bufferStream) )
-            using( BinaryReader reader = new BinaryReader(stream) )
+            try
             {
-                int connectionAccepted = reader.ReadInt32();
-                if( connectionAccepted == 0 )
+                using( TcpClient client = new TcpClient(server.TaskServer.HostName, port) )
+                using( NetworkStream stream = client.GetStream() )
+                using( WriteBufferedStream bufferStream = new WriteBufferedStream(stream) )
+                using( BinaryWriter writer = new BinaryWriter(bufferStream) )
+                using( BinaryReader reader = new BinaryReader(stream) )
                 {
-                    _log.WarnFormat("Server {0}:{1} is busy.", server.TaskServer.HostName, port);
-                    return null;
-                }
-
-                writer.Write(_jobID.ToByteArray());
-                writer.Write(_inputUsesSingleFileFormat);
-                writer.Write(ActivePartitions.Count);
-                foreach( int partition in ActivePartitions )
-                    writer.Write(partition);
-                writer.Write(server.TasksToDownloadCount);
-                foreach( CompletedTask task in server.TasksToDownload )
-                    writer.Write(task.TaskAttemptId.ToString());
-                if( !_inputUsesSingleFileFormat )
-                    writer.Write(_outputStageId);
-
-                writer.Flush();
-
-                foreach( CompletedTask task in server.TasksToDownload )
-                {
-                    List<RecordInput> downloadedFiles = new List<RecordInput>(ActivePartitions.Count);
-                    result.Add(downloadedFiles);
-                    foreach( int partition in ActivePartitions )
+                    int connectionAccepted = reader.ReadInt32();
+                    if( connectionAccepted == 0 )
                     {
-                        DownloadPartition(task, downloadedFiles, stream, reader, partition);
+                        _log.WarnFormat("Server {0}:{1} is busy.", server.TaskServer.HostName, port);
+                        return null;
                     }
-                }
-                _log.Debug("Download complete.");
 
-                return result;
+                    writer.Write(_jobID.ToByteArray());
+                    writer.Write(_inputUsesSingleFileFormat);
+                    writer.Write(ActivePartitions.Count);
+                    foreach( int partition in ActivePartitions )
+                        writer.Write(partition);
+                    writer.Write(server.TasksToDownloadCount);
+                    foreach( CompletedTask task in server.TasksToDownload )
+                        writer.Write(task.TaskAttemptId.ToString());
+                    if( !_inputUsesSingleFileFormat )
+                        writer.Write(_outputStageId);
+
+                    writer.Flush();
+
+                    foreach( CompletedTask task in server.TasksToDownload )
+                    {
+                        List<RecordInput> downloadedFiles = new List<RecordInput>(ActivePartitions.Count);
+                        result.Add(downloadedFiles);
+                        foreach( int partition in ActivePartitions )
+                        {
+                            DownloadPartition(task, downloadedFiles, stream, reader, partition);
+                        }
+                    }
+                    _log.Debug("Download complete.");
+
+                    return result;
+                }
+            }
+            catch( SocketException ex )
+            {
+                // TODO: If this happens too often, we need to recover somehow.
+                _log.Error(string.Format("Error contacting server {0}:{1}.", server.TaskServer.HostName, port), ex);
+                return null;
             }
         }
 
