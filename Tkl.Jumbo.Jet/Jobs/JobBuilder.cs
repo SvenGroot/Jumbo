@@ -296,7 +296,7 @@ namespace Tkl.Jumbo.Jet.Jobs
             if( comparerType != null )
             {
                 AddAssemblies(comparerType.Assembly);
-                stage.AddSetting(SortTaskConstants.ComparerSettingKey, comparerType.AssemblyQualifiedName, StageSettingCategory.Task);
+                stage.AddSetting(TaskConstants.ComparerSettingKey, comparerType.AssemblyQualifiedName, StageSettingCategory.Task);
             }
 
             return stage;
@@ -447,6 +447,55 @@ namespace Tkl.Jumbo.Jet.Jobs
             StageBuilder stage = CombineRecords(new[] { outerSortChannel, innerSortChannel }, output, joinRecordReaderType);
             stage.StageId = "JoinStage";
             return stage;
+        }
+
+        /// <summary>
+        /// Sums the values of the key/value pairs in the input.
+        /// </summary>
+        /// <typeparam name="TKey">The type of the key.</typeparam>
+        /// <param name="input">The input, which must use record type <see cref="Pair{TKey, TValue}"/> with <typeparamref name="TKey"/> keys and <see cref="Int32"/> values.</param>
+        /// <param name="output">The output, which must use record type <see cref="Pair{TKey, TValue}"/> with <typeparamref name="TKey"/> keys and <see cref="Int32"/> values.</param>
+        /// <returns>A <see cref="StageBuilder"/> that can be used to customize the stage that will be created for the operation.</returns>
+        public StageBuilder SumValues<TKey>(IStageInput input, IStageOutput output)
+            where TKey : IComparable<TKey>
+        {
+            StageBuilder stage = AccumulateRecords(input, output, typeof(SumTask<TKey>));
+            stage.StageId = "SumStage";
+            return stage;
+        }
+
+        /// <summary>
+        /// Counts the number of occurrences of each unique record value in the input.
+        /// </summary>
+        /// <typeparam name="T">The type of the input records.</typeparam>
+        /// <param name="input">The input, which must use record type <typeparamref name="T"/>.</param>
+        /// <param name="output">The output, which must use record type <see cref="Pair{TKey, TValue}"/> with key type <typeparamref name="T"/> and value type <see cref="Int32"/>.</param>
+        /// <returns>The <see cref="StageBuilder"/> instances that can be used to customize the stages that will be created for the operation.</returns>
+        /// <remarks>
+        /// <para>
+        ///   This function creates two stages: one to transform the input into (key, 1) pairs, and one to sum the count values. They are
+        ///   returned in an array with length 2.
+        /// </para>
+        /// </remarks>
+        public StageBuilder[] Count<T>(IStageInput input, IStageOutput output)
+            where T : IComparable<T>
+        {
+            Channel sumChannel = new Channel();
+            Channel outputChannel = output as Channel;
+            if( outputChannel != null )
+            {
+                sumChannel.PartitionCount = outputChannel.PartitionCount;
+                sumChannel.PartitionsPerTask = outputChannel.PartitionsPerTask;
+                sumChannel.PartitionerType = outputChannel.PartitionerType;
+                sumChannel.DisableDynamicPartitionAssignment = outputChannel.DisableDynamicPartitionAssignment;
+                sumChannel.PartitionAssignmentMethod = outputChannel.PartitionAssignmentMethod;
+                sumChannel.MatchOutputChannelPartitions = true;
+            }
+            StageBuilder generateStage = ProcessRecords(input, sumChannel, typeof(GenerateInt32PairTask<T>));
+            generateStage.StageId = "CountStage";
+            StageBuilder sumStage = SumValues<T>(sumChannel, output);
+
+            return new[] { generateStage, sumStage };
         }
 
         /// <summary>
@@ -675,7 +724,7 @@ namespace Tkl.Jumbo.Jet.Jobs
             if( comparerType != null )
             {
                 _assemblies.Add(comparerType.Assembly);
-                stage.AddSetting(SortTaskConstants.ComparerSettingKey, comparerType.AssemblyQualifiedName, StageSettingCategory.Task);
+                stage.AddSetting(TaskConstants.ComparerSettingKey, comparerType.AssemblyQualifiedName, StageSettingCategory.Task);
             }
 
             return outputChannel;

@@ -111,10 +111,28 @@ namespace Tkl.Jumbo.Jet.Jobs
         /// <para>
         ///   If you set this property to <see langword="null"/> or an empty string (""), the stage ID will be automatically generated from the task type's name.
         /// </para>
+        /// <para>
+        ///   The string "{input}" in the stage ID will be replaced by the stage ID of the first input of this stage. If the name of
+        ///   the input stage ID is changed, the name of this stage is automatically updated.
+        /// </para>
         /// </remarks>
         public string StageId
         {
-            get { return _stageId ?? _taskType.Name; }
+            get
+            {
+                if( _stageId == null )
+                    return _taskType.Name;
+                else if( _stageId.Contains("{input}") )
+                {
+                    if( _inputs == null || _inputs.Count == 0 )
+                        throw new InvalidOperationException("Stage ID is dependent on input stage ID, but this stage has no inputs.");
+                    Channel channel = _inputs[0] as Channel;
+                    if( channel == null || channel.SendingStage == null )
+                        throw new InvalidOperationException("Stage ID is dependent on input stage ID, but the first input of the stage is not a channel or that channel does not have a sending stage.");
+                    return _stageId.Replace("{input}", channel.SendingStage.StageId);
+                }
+                return _stageId;
+            }
             set 
             {
                 if( value != null )

@@ -194,10 +194,12 @@
     <Compile Include="TaskStatus.cs" />
     <Compile Include="TaskStatusChangedJetHeartbeatData.cs" />
     <Compile Include="Tasks\AccumulatorTask.cs" />
+    <Compile Include="Tasks\GenerateInt32PairTask.cs" />
+    <Compile Include="Tasks\SumTask.cs" />
     <Compile Include="Tasks\EmptyTask.cs" />
     <Compile Include="MergeRecordReaderConstants.cs" />
     <Compile Include="Tasks\SortTask.cs" />
-    <Compile Include="Tasks\SortTaskConstants.cs" />
+    <Compile Include="Tasks\TaskConstants.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="jumbo.snk" />

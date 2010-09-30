@@ -16,6 +16,13 @@ namespace Tkl.Jumbo.Jet.Tasks
     /// <remarks>
     /// <para>
     ///   It is safe to reuse the same <see cref="Pair{TKey,TValue}"/> in every call to
+    ///   <see cref="ProcessRecord"/> if the key and value are either value types or 
+    ///   implement <see cref="ICloneable"/>.
+    /// </para>
+    /// <para>
+    ///   Therefore, if you specify the <see cref="AllowRecordReuseAttribute"/> on a class
+    ///   deriving from this class, the key and value must either be value types or
+    ///   implement <see cref="ICloneable"/>.
     /// </para>
     /// </remarks>
     public abstract class AccumulatorTask<TKey, TValue> : Configurable, IPushTask<Pair<TKey, TValue>, Pair<TKey, TValue>>

@@ -359,7 +359,7 @@ namespace Tkl.Jumbo.Test.Jet
             // file. As a result, it will assume you want one partition and create two stages, one to accumulate locally and one to combine the results.
             Assert.AreEqual(2, config.Stages.Count);
 
-            VerifyStage(config, config.Stages[0], 3, "Input" + typeof(FakeAccumulatorTask).Name, typeof(FakeAccumulatorTask), null, typeof(RecordFileReader<Pair<Utf8String, int>>), null, ChannelType.File, ChannelConnectivity.Full, typeof(HashPartitioner<Pair<Utf8String, int>>), typeof(MultiRecordReader<Pair<Utf8String, int>>), typeof(FakeAccumulatorTask).Name);
+            VerifyStage(config, config.Stages[0], 3, "Partial" + typeof(FakeAccumulatorTask).Name, typeof(FakeAccumulatorTask), null, typeof(RecordFileReader<Pair<Utf8String, int>>), null, ChannelType.File, ChannelConnectivity.Full, typeof(HashPartitioner<Pair<Utf8String, int>>), typeof(MultiRecordReader<Pair<Utf8String, int>>), typeof(FakeAccumulatorTask).Name);
             VerifyStage(config, config.Stages[1], 1, typeof(FakeAccumulatorTask).Name, typeof(FakeAccumulatorTask), null, null, typeof(TextRecordWriter<Pair<Utf8String, int>>), ChannelType.File, ChannelConnectivity.Full, null, null, null);
         }
 
@@ -380,8 +380,8 @@ namespace Tkl.Jumbo.Test.Jet
 
             Assert.AreEqual(2, config.Stages.Count);
 
-            VerifyStage(config, config.Stages[0], 3, typeof(FakeKvpProducingTask).Name, typeof(FakeKvpProducingTask), null, typeof(LineRecordReader), null, ChannelType.Pipeline, ChannelConnectivity.Full, typeof(HashPartitioner<Pair<Utf8String, int>>), null, "Input" + typeof(FakeAccumulatorTask).Name);
-            VerifyStage(config, config.Stages[0].ChildStage, 1, "Input" + typeof(FakeAccumulatorTask).Name, typeof(FakeAccumulatorTask), null, null, null, ChannelType.File, ChannelConnectivity.Full, typeof(HashPartitioner<Pair<Utf8String, int>>), typeof(MultiRecordReader<Pair<Utf8String, int>>), typeof(FakeAccumulatorTask).Name);
+            VerifyStage(config, config.Stages[0], 3, typeof(FakeKvpProducingTask).Name, typeof(FakeKvpProducingTask), null, typeof(LineRecordReader), null, ChannelType.Pipeline, ChannelConnectivity.Full, typeof(HashPartitioner<Pair<Utf8String, int>>), null, "Partial" + typeof(FakeAccumulatorTask).Name);
+            VerifyStage(config, config.Stages[0].ChildStage, 1, "Partial" + typeof(FakeAccumulatorTask).Name, typeof(FakeAccumulatorTask), null, null, null, ChannelType.File, ChannelConnectivity.Full, typeof(HashPartitioner<Pair<Utf8String, int>>), typeof(MultiRecordReader<Pair<Utf8String, int>>), typeof(FakeAccumulatorTask).Name);
             VerifyStage(config, config.Stages[1], 2, typeof(FakeAccumulatorTask).Name, typeof(FakeAccumulatorTask), null, null, typeof(TextRecordWriter<Pair<Utf8String, int>>), ChannelType.File, ChannelConnectivity.Full, null, null, null);
         }
 
@@ -436,8 +436,8 @@ namespace Tkl.Jumbo.Test.Jet
             Assert.AreEqual(4, config.Stages.Count);
 
             // Not verifying the first stage, not important.
-            VerifyStage(config, config.Stages[1], 1, typeof(FakeKvpProducingTask).Name, typeof(FakeKvpProducingTask), null, null, null, ChannelType.Pipeline, ChannelConnectivity.Full, typeof(HashPartitioner<Pair<Utf8String, int>>), null, "Input" + typeof(FakeAccumulatorTask).Name);
-            VerifyStage(config, config.Stages[1].ChildStage, 1, "Input" + typeof(FakeAccumulatorTask).Name, typeof(FakeAccumulatorTask), null, null, null, ChannelType.File, ChannelConnectivity.Full, typeof(HashPartitioner<Pair<Utf8String, int>>), typeof(MultiRecordReader<Pair<Utf8String, int>>), typeof(FakeAccumulatorTask).Name);
+            VerifyStage(config, config.Stages[1], 1, typeof(FakeKvpProducingTask).Name, typeof(FakeKvpProducingTask), null, null, null, ChannelType.Pipeline, ChannelConnectivity.Full, typeof(HashPartitioner<Pair<Utf8String, int>>), null, "Partial" + typeof(FakeAccumulatorTask).Name);
+            VerifyStage(config, config.Stages[1].ChildStage, 1, "Partial" + typeof(FakeAccumulatorTask).Name, typeof(FakeAccumulatorTask), null, null, null, ChannelType.File, ChannelConnectivity.Full, typeof(HashPartitioner<Pair<Utf8String, int>>), typeof(MultiRecordReader<Pair<Utf8String, int>>), typeof(FakeAccumulatorTask).Name);
             VerifyStage(config, config.Stages[2], 2, typeof(FakeAccumulatorTask).Name, typeof(EmptyTask<Pair<Utf8String, int>>), null, null, null, ChannelType.File, ChannelConnectivity.Full, typeof(HashPartitioner<Pair<Utf8String, int>>), typeof(MultiRecordReader<Pair<Utf8String, int>>), "SecondEmptyTask");
         }
 
@@ -457,7 +457,7 @@ namespace Tkl.Jumbo.Test.Jet
 
             Assert.AreEqual(2, config.Stages.Count);
 
-            VerifyStage(config, config.Stages[0], 3, "Input" + typeof(FakeAccumulatorTask).Name, typeof(FakeAccumulatorTask), null, typeof(RecordFileReader<Pair<Utf8String, int>>), null, ChannelType.File, ChannelConnectivity.Full, typeof(HashPartitioner<Pair<Utf8String, int>>), typeof(MultiRecordReader<Pair<Utf8String, int>>), typeof(FakeAccumulatorTask).Name);
+            VerifyStage(config, config.Stages[0], 3, "Partial" + typeof(FakeAccumulatorTask).Name, typeof(FakeAccumulatorTask), null, typeof(RecordFileReader<Pair<Utf8String, int>>), null, ChannelType.File, ChannelConnectivity.Full, typeof(HashPartitioner<Pair<Utf8String, int>>), typeof(MultiRecordReader<Pair<Utf8String, int>>), typeof(FakeAccumulatorTask).Name);
             VerifyStage(config, config.Stages[1], 1, typeof(FakeAccumulatorTask).Name, typeof(FakeAccumulatorTask), null, null, typeof(TextRecordWriter<Pair<Utf8String, int>>), ChannelType.File, ChannelConnectivity.Full, null, null, null);
         }
 
@@ -602,8 +602,8 @@ namespace Tkl.Jumbo.Test.Jet
             VerifyStage(config, config.Stages[0], 3, "JoinOuterSortStage", typeof(SortTask<Customer>), null, typeof(RecordFileReader<Customer>), null, ChannelType.File, ChannelConnectivity.Full, typeof(HashPartitioner<Customer>), typeof(MergeRecordReader<Customer>), "JoinStage");
             VerifyStage(config, config.Stages[1], 3, "JoinInnerSortStage", typeof(SortTask<Order>), null, typeof(RecordFileReader<Order>), null, ChannelType.File, ChannelConnectivity.Full, typeof(HashPartitioner<Order>), typeof(MergeRecordReader<Order>), "JoinStage");
             VerifyStage(config, config.Stages[2], 1, "JoinStage", typeof(EmptyTask<CustomerOrder>), typeof(CustomerOrderJoinRecordReader), null, typeof(RecordFileWriter<CustomerOrder>), ChannelType.File, ChannelConnectivity.Full, null, null, null);
-            Assert.IsNull(config.Stages[0].GetSetting(SortTaskConstants.ComparerSettingKey, null));
-            Assert.AreEqual(typeof(OrderJoinComparer).AssemblyQualifiedName, config.Stages[1].GetSetting(SortTaskConstants.ComparerSettingKey, null));
+            Assert.IsNull(config.Stages[0].GetSetting(TaskConstants.ComparerSettingKey, null));
+            Assert.AreEqual(typeof(OrderJoinComparer).AssemblyQualifiedName, config.Stages[1].GetSetting(TaskConstants.ComparerSettingKey, null));
         }
 
         [Test]
@@ -631,9 +631,73 @@ namespace Tkl.Jumbo.Test.Jet
             VerifyStage(config, config.Stages[1].ChildStage, 2, "JoinInnerSortStage", typeof(SortTask<Order>), null, null, null, ChannelType.File, ChannelConnectivity.Full, typeof(HashPartitioner<Order>), typeof(MergeRecordReader<Order>), typeof(EmptyTask<CustomerOrder>).Name);
             VerifyStage(config, config.Stages[2], 2, typeof(EmptyTask<CustomerOrder>).Name, typeof(EmptyTask<CustomerOrder>), typeof(CustomerOrderJoinRecordReader), null, typeof(RecordFileWriter<CustomerOrder>), ChannelType.File, ChannelConnectivity.Full, null, null, null);
             Assert.IsNull(config.Stages[0].GetSetting(PartitionerConstants.EqualityComparerSetting, null));
-            Assert.IsNull(config.Stages[0].ChildStage.GetSetting(SortTaskConstants.ComparerSettingKey, null));
+            Assert.IsNull(config.Stages[0].ChildStage.GetSetting(TaskConstants.ComparerSettingKey, null));
             Assert.AreEqual(typeof(OrderJoinComparer).AssemblyQualifiedName, config.Stages[1].GetSetting(PartitionerConstants.EqualityComparerSetting, null));
-            Assert.AreEqual(typeof(OrderJoinComparer).AssemblyQualifiedName, config.Stages[1].ChildStage.GetSetting(SortTaskConstants.ComparerSettingKey, null));
+            Assert.AreEqual(typeof(OrderJoinComparer).AssemblyQualifiedName, config.Stages[1].ChildStage.GetSetting(TaskConstants.ComparerSettingKey, null));
+        }
+
+        [Test]
+        public void TestSumValues()
+        {
+            JobBuilder builder = new JobBuilder(_dfsClient, _jetClient);
+
+            var input = new DfsInput(_inputPath, typeof(LineRecordReader));
+            var output = new DfsOutput(_outputPath, typeof(TextRecordWriter<Pair<Utf8String, int>>));
+            Channel channel = new Channel() { PartitionCount = 2 };
+
+            builder.ProcessRecords(input, channel, typeof(FakeKvpProducingTask));
+            builder.SumValues<Utf8String>(channel, output);
+
+            JobConfiguration config = builder.CreateJob();
+            Assert.AreEqual(8, config.AssemblyFileNames.Count); // Includes all the stuff Tkl.Jumbo.Test references, including NameServer.exe, etc. which isn't a problem because we're not executing it.
+
+            Assert.AreEqual(2, config.Stages.Count);
+
+            VerifyStage(config, config.Stages[0], 3, typeof(FakeKvpProducingTask).Name, typeof(FakeKvpProducingTask), null, typeof(LineRecordReader), null, ChannelType.Pipeline, ChannelConnectivity.Full, typeof(HashPartitioner<Pair<Utf8String, int>>), null, "PartialSumStage");
+            VerifyStage(config, config.Stages[0].ChildStage, 1, "PartialSumStage", typeof(SumTask<Utf8String>), null, null, null, ChannelType.File, ChannelConnectivity.Full, typeof(HashPartitioner<Pair<Utf8String, int>>), typeof(MultiRecordReader<Pair<Utf8String, int>>), "SumStage");
+            VerifyStage(config, config.Stages[1], 2, "SumStage", typeof(SumTask<Utf8String>), null, null, typeof(TextRecordWriter<Pair<Utf8String, int>>), ChannelType.File, ChannelConnectivity.Full, null, null, null);
+        }
+
+        [Test]
+        public void TestCountDfsOutput()
+        {
+            JobBuilder builder = new JobBuilder(_dfsClient, _jetClient);
+
+            var input = new DfsInput(_inputPath, typeof(LineRecordReader));
+            var output = new DfsOutput(_outputPath, typeof(TextRecordWriter<Pair<Utf8String, int>>));
+
+            builder.Count<Utf8String>(input, output);
+
+            JobConfiguration config = builder.CreateJob();
+            Assert.AreEqual(0, config.AssemblyFileNames.Count); // Includes all the stuff Tkl.Jumbo.Test references, including NameServer.exe, etc. which isn't a problem because we're not executing it.
+
+            Assert.AreEqual(2, config.Stages.Count);
+
+            VerifyStage(config, config.Stages[0], 3, "CountStage", typeof(GenerateInt32PairTask<Utf8String>), null, typeof(LineRecordReader), null, ChannelType.Pipeline, ChannelConnectivity.Full, typeof(HashPartitioner<Pair<Utf8String, int>>), null, "PartialSumStage");
+            VerifyStage(config, config.Stages[0].ChildStage, 1, "PartialSumStage", typeof(SumTask<Utf8String>), null, null, null, ChannelType.File, ChannelConnectivity.Full, typeof(HashPartitioner<Pair<Utf8String, int>>), typeof(MultiRecordReader<Pair<Utf8String, int>>), "SumStage");
+            VerifyStage(config, config.Stages[1], 1, "SumStage", typeof(SumTask<Utf8String>), null, null, typeof(TextRecordWriter<Pair<Utf8String, int>>), ChannelType.File, ChannelConnectivity.Full, null, null, null);
+        }
+
+        [Test]
+        public void TestCountChannelOutput()
+        {
+            JobBuilder builder = new JobBuilder(_dfsClient, _jetClient);
+
+            var input = new DfsInput(_inputPath, typeof(LineRecordReader));
+            var output = new DfsOutput(_outputPath, typeof(TextRecordWriter<Pair<Utf8String, int>>));
+            Channel channel = new Channel() { PartitionCount = 2 };
+
+            builder.Count<Utf8String>(input, channel);
+            builder.ProcessRecords(channel, output, typeof(EmptyTask<Pair<Utf8String, int>>));
+
+            JobConfiguration config = builder.CreateJob();
+            Assert.AreEqual(0, config.AssemblyFileNames.Count); // Includes all the stuff Tkl.Jumbo.Test references, including NameServer.exe, etc. which isn't a problem because we're not executing it.
+
+            Assert.AreEqual(3, config.Stages.Count);
+
+            VerifyStage(config, config.Stages[0], 3, "CountStage", typeof(GenerateInt32PairTask<Utf8String>), null, typeof(LineRecordReader), null, ChannelType.Pipeline, ChannelConnectivity.Full, typeof(HashPartitioner<Pair<Utf8String, int>>), null, "PartialSumStage");
+            VerifyStage(config, config.Stages[0].ChildStage, 1, "PartialSumStage", typeof(SumTask<Utf8String>), null, null, null, ChannelType.File, ChannelConnectivity.Full, typeof(HashPartitioner<Pair<Utf8String, int>>), typeof(MultiRecordReader<Pair<Utf8String, int>>), "SumStage");
+            VerifyStage(config, config.Stages[1], 2, "SumStage", typeof(SumTask<Utf8String>), null, null, null, ChannelType.File, ChannelConnectivity.Full, typeof(HashPartitioner<Pair<Utf8String, int>>), typeof(MultiRecordReader<Pair<Utf8String, int>>), typeof(EmptyTask<Pair<Utf8String, int>>).Name);
         }
 
         private static void VerifyStage(JobConfiguration config, StageConfiguration stage, int taskCount, string stageId, Type taskType, Type stageMultiInputRecordReader, Type recordReaderType, Type recordWriterType, ChannelType channelType, ChannelConnectivity channelConnectivity, Type partitionerType, Type multiInputRecordReader, string outputStageId)
