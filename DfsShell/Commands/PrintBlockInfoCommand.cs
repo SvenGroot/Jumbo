@@ -22,10 +22,18 @@ namespace DfsShell.Commands
 
         public override void Run()
         {
-            ServerAddress[] servers = Client.NameServer.GetDataServersForBlock(_blockId);
-            Console.WriteLine("Data server list for block {0:B}:", _blockId);
-            foreach( ServerAddress server in servers )
-                Console.WriteLine(server);
+            string file = Client.NameServer.GetFileForBlock(_blockId);
+            if( file == null )
+                Console.Error.WriteLine("Unknown block ID.");
+            else
+            {
+                Console.WriteLine("Block ID: {0:B}", _blockId);
+                Console.WriteLine("File: {0}", file);
+                ServerAddress[] servers = Client.NameServer.GetDataServersForBlock(_blockId);
+                Console.WriteLine("Data server list for block {0:B}:", _blockId);
+                foreach( ServerAddress server in servers )
+                    Console.WriteLine(server);
+            }
         }
     }
 }

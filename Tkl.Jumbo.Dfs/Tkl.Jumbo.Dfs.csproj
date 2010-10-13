@@ -75,6 +75,7 @@
       <Link>Properties\Version.cs</Link>
     </Compile>
     <Compile Include="BlockAssignment.cs" />
+    <Compile Include="BlockKind.cs" />
     <Compile Include="BlockReportHeartbeatData.cs" />
     <Compile Include="BlockSender.cs" />
     <Compile Include="ChecksumConfigurationElement.cs" />

@@ -106,6 +106,20 @@ namespace Tkl.Jumbo.Dfs
         ServerAddress[] GetDataServersForBlock(Guid blockId);
 
         /// <summary>
+        /// Gets the file that the specified block belongs to.
+        /// </summary>
+        /// <param name="blockId">The block id.</param>
+        /// <returns>The path of the file that the block belongs to, or <see langword="null"/> if the specified block ID isn't known to the DFS.</returns>
+        string GetFileForBlock(Guid blockId);
+
+        /// <summary>
+        /// Gets the blocks known to the DFS.
+        /// </summary>
+        /// <param name="kind">The kind of blocks to include in the results.</param>
+        /// <returns>A list of blocks.</returns>
+        Guid[] GetBlocks(BlockKind kind);
+
+        /// <summary>
         /// Waits until safe mode is off or the time out expires.
         /// </summary>
         /// <param name="timeout">The maximum time to wait for safe mode to be turned off in milliseconds, or <see cref="System.Threading.Timeout.Infinite"/> to wait indefinitely.</param>

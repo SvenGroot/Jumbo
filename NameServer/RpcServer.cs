@@ -65,6 +65,16 @@ namespace NameServerApplication
             return NameServer.Instance.GetDataServersForBlock(blockID);
         }
 
+        public string GetFileForBlock(Guid blockId)
+        {
+            return NameServer.Instance.GetFileForBlock(blockId);
+        }
+
+        public Guid[] GetBlocks(BlockKind kind)
+        {
+            return NameServer.Instance.GetBlocks(kind);
+        }
+
         public bool WaitForSafeModeOff(int timeout)
         {
             return NameServer.Instance.WaitForSafeModeOff(timeout);

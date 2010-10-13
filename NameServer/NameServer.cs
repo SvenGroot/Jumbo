@@ -331,6 +331,43 @@ namespace NameServerApplication
             }
         }
 
+        public string GetFileForBlock(Guid blockId)
+        {
+            // This call is allowed even if safemode is on.
+            lock( _blocks )
+            {
+                BlockInfo block;
+                if( _blocks.TryGetValue(blockId, out block) )
+                    return block.File.FullPath;
+                else
+                    return null;
+            }
+        }
+
+        public Guid[] GetBlocks(BlockKind kind)
+        {
+            switch( kind )
+            {
+            case BlockKind.Normal:
+                lock( _blocks )
+                {
+                    return _blocks.Keys.ToArray();
+                }
+            case BlockKind.Pending:
+                lock( _pendingBlocks )
+                {
+                    return _pendingBlocks.Keys.ToArray();
+                }
+            case BlockKind.UnderReplicated:
+                lock( _underReplicatedBlocks )
+                {
+                    return _underReplicatedBlocks.Keys.ToArray();
+                }
+            }
+
+            throw new ArgumentException("Invalid block kind.", "kind");
+        }
+
         public bool WaitForSafeModeOff(int timeOut)
         {
             _log.Debug("WaitForSafeModeOff called");
