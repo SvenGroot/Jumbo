@@ -32,8 +32,8 @@
         <include name="Properties/Resources.resx"/>
       </resources>
       <nowarn>
-	      <warning number="1584"
-	      if="${nant.settings.currentframework=='mono-2.0'}" />
+	      <warning number="1584" />
+        <warning number="1574" />
       </nowarn>
     </csc>
     <copy file="../lib/log4net.dll" todir="nantbin"/>
