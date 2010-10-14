@@ -60,7 +60,7 @@ public partial class job : System.Web.UI.Page
                 row.Cells.Add(new HtmlTableCell());
                 duration = DateTime.UtcNow - job.StartTime;
             }
-            row.Cells.Add(new HtmlTableCell() { InnerText = string.Format("{0} ({1}s)", duration, duration.TotalSeconds) });
+            row.Cells.Add(new HtmlTableCell() { InnerText = string.Format(@"{0:hh\:mm\:ss\.ff} ({1:0.00}s)", duration, duration.TotalSeconds) });
             row.Cells.Add(new HtmlTableCell() { InnerHtml = CreateProgressBar(job.Progress) });
             row.Cells.Add(new HtmlTableCell() { InnerText = job.TaskCount.ToString() });
             CreateTasksLinkCell(row, jobId, null, TaskState.Running, job.RunningTaskCount.ToString(), archived);
@@ -91,7 +91,7 @@ public partial class job : System.Web.UI.Page
                 else
                 {
                     duration = endTime == null ? DateTime.UtcNow - startTime.Value : endTime.Value - startTime.Value;
-                    row.Cells.Add(new HtmlTableCell() { InnerText = string.Format("{0} ({1}s)", duration, duration.TotalSeconds) });
+                    row.Cells.Add(new HtmlTableCell() { InnerText = string.Format(@"{0:hh\:mm\:ss\.ff} ({1:0.00}s)", duration, duration.TotalSeconds) });
                 }
 
                 row.Cells.Add(CreateProgressCell(job, stage, true));
