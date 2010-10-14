@@ -106,6 +106,20 @@ namespace Tkl.Jumbo.Dfs
         ServerAddress[] GetDataServersForBlock(Guid blockId);
 
         /// <summary>
+        /// Gets the file that the specified block belongs to.
+        /// </summary>
+        /// <param name="blockId">The block id.</param>
+        /// <returns>The path of the file that the block belongs to, or <see langword="null"/> if the specified block ID isn't known to the DFS.</returns>
+        string GetFileForBlock(Guid blockId);
+
+        /// <summary>
+        /// Gets the blocks known to the DFS.
+        /// </summary>
+        /// <param name="kind">The kind of blocks to include in the results.</param>
+        /// <returns>A list of blocks.</returns>
+        Guid[] GetBlocks(BlockKind kind);
+
+        /// <summary>
         /// Waits until safe mode is off or the time out expires.
         /// </summary>
         /// <param name="timeout">The maximum time to wait for safe mode to be turned off in milliseconds, or <see cref="System.Threading.Timeout.Infinite"/> to wait indefinitely.</param>
@@ -149,13 +163,14 @@ namespace Tkl.Jumbo.Dfs
         /// <summary>
         /// Gets the contents of the diagnostic log file.
         /// </summary>
+        /// <param name="kind">The kind of log file to return.</param>
         /// <param name="maxSize">The maximum number of bytes to return.</param>
         /// <returns>The contents of the diagnostic log file.</returns>
         /// <remarks>
         /// If the log file is larger than <paramref name="maxSize"/>, the tail of the file up to the
         /// specified size is returned.
         /// </remarks>
-        string GetLogFileContents(int maxSize);
+        string GetLogFileContents(LogFileKind kind, int maxSize);
 
         /// <summary>
         /// Removes the specified data server from the name server's list of known data servers.

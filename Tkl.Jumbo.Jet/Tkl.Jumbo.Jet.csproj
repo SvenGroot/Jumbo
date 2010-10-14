@@ -10,7 +10,7 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>Tkl.Jumbo.Jet</RootNamespace>
     <AssemblyName>Tkl.Jumbo.Jet</AssemblyName>
-    <TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <SignAssembly>true</SignAssembly>
     <AssemblyOriginatorKeyFile>jumbo.snk</AssemblyOriginatorKeyFile>
@@ -33,6 +33,7 @@
     <IsWebBootstrapper>false</IsWebBootstrapper>
     <UseApplicationTrust>false</UseApplicationTrust>
     <BootstrapperEnabled>true</BootstrapperEnabled>
+    <TargetFrameworkProfile />
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -194,10 +195,12 @@
     <Compile Include="TaskStatus.cs" />
     <Compile Include="TaskStatusChangedJetHeartbeatData.cs" />
     <Compile Include="Tasks\AccumulatorTask.cs" />
+    <Compile Include="Tasks\GenerateInt32PairTask.cs" />
+    <Compile Include="Tasks\SumTask.cs" />
     <Compile Include="Tasks\EmptyTask.cs" />
     <Compile Include="MergeRecordReaderConstants.cs" />
     <Compile Include="Tasks\SortTask.cs" />
-    <Compile Include="Tasks\SortTaskConstants.cs" />
+    <Compile Include="Tasks\TaskConstants.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="jumbo.snk" />

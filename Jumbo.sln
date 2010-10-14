@@ -65,7 +65,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "JetShell", "JetShell\JetShe
 EndProject
 Project("{E24C65DC-7377-472B-9ABA-BC803B73C61A}") = "DfsWeb", "DfsWeb\", "{0B4087DF-01EE-4720-849F-850A797AEBF5}"
 	ProjectSection(WebsiteProperties) = preProject
-		TargetFrameworkMoniker = ".NETFramework,Version%3Dv3.5"
+		TargetFrameworkMoniker = ".NETFramework,Version%3Dv4.0"
 		ProjectReferences = "{17C7CE1A-4F9F-4173-8BA8-9C26A4F644C6}|Tkl.Jumbo.dll;{67D71A3A-4FDA-4136-8423-07A7C1592E65}|Tkl.Jumbo.Dfs.dll;"
 		Debug.AspNetCompiler.VirtualPath = "/DfsWeb"
 		Debug.AspNetCompiler.PhysicalPath = "DfsWeb\"
@@ -87,7 +87,7 @@ Project("{E24C65DC-7377-472B-9ABA-BC803B73C61A}") = "DfsWeb", "DfsWeb\", "{0B408
 EndProject
 Project("{E24C65DC-7377-472B-9ABA-BC803B73C61A}") = "JetWeb", "JetWeb\", "{846592A0-A34E-499B-9052-8F3981062FE1}"
 	ProjectSection(WebsiteProperties) = preProject
-		TargetFrameworkMoniker = ".NETFramework,Version%3Dv3.5"
+		TargetFrameworkMoniker = ".NETFramework,Version%3Dv4.0"
 		ProjectReferences = "{17C7CE1A-4F9F-4173-8BA8-9C26A4F644C6}|Tkl.Jumbo.dll;{E739829A-3507-42EA-A8B4-D8D41060DF95}|Tkl.Jumbo.Jet.dll;{67D71A3A-4FDA-4136-8423-07A7C1592E65}|Tkl.Jumbo.Dfs.dll;"
 		Debug.AspNetCompiler.VirtualPath = "/JetWeb"
 		Debug.AspNetCompiler.PhysicalPath = "JetWeb\"

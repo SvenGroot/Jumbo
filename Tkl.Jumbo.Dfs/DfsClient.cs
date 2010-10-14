@@ -137,14 +137,15 @@ namespace Tkl.Jumbo.Dfs
         /// Gets the contents of the diagnostic log file of a data server.
         /// </summary>
         /// <param name="address">The <see cref="ServerAddress"/> of the data server.</param>
+        /// <param name="kind">The kind of log file.</param>
         /// <param name="maxSize">The maximum size of the log data to return.</param>
         /// <returns>The contents of the log file.</returns>
-        public static string GetDataServerLogFileContents(ServerAddress address, int maxSize)
+        public static string GetDataServerLogFileContents(ServerAddress address, LogFileKind kind, int maxSize)
         {
             if( address == null )
                 throw new ArgumentNullException("address");
 
-            return GetDataServerLogFileContents(address.HostName, address.Port, maxSize);
+            return GetDataServerLogFileContents(address.HostName, address.Port, kind, maxSize);
         }
 
         /// <summary>
@@ -152,9 +153,10 @@ namespace Tkl.Jumbo.Dfs
         /// </summary>
         /// <param name="hostName">The host name of the data server.</param>
         /// <param name="port">The port on which the data server is listening.</param>
+        /// <param name="kind">The kind of log file.</param>
         /// <param name="maxSize">The maximum size of the log data to return.</param>
         /// <returns>The contents of the log file.</returns>
-        public static string GetDataServerLogFileContents(string hostName, int port, int maxSize)
+        public static string GetDataServerLogFileContents(string hostName, int port, LogFileKind kind, int maxSize)
         {
             if( hostName == null )
                 throw new ArgumentNullException("hostName");
@@ -162,7 +164,7 @@ namespace Tkl.Jumbo.Dfs
             using( TcpClient client = new TcpClient(hostName, port) )
             using( NetworkStream stream = client.GetStream() )
             {
-                DataServerClientProtocolHeader header = new DataServerClientProtocolGetLogFileContentsHeader(maxSize);
+                DataServerClientProtocolHeader header = new DataServerClientProtocolGetLogFileContentsHeader(maxSize) { Kind = kind };
                 BinaryFormatter formatter = new BinaryFormatter();
                 formatter.Serialize(stream, header);
                 using( StreamReader reader = new StreamReader(stream) )

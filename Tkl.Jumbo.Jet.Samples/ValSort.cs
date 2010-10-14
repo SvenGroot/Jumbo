@@ -12,6 +12,7 @@ using Tkl.Jumbo.Jet.Samples.IO;
 using Tkl.Jumbo.Jet.Tasks;
 using Tkl.Jumbo.Jet.Channels;
 using Tkl.Jumbo.IO;
+using Tkl.Jumbo.CommandLine;
 
 namespace Tkl.Jumbo.Jet.Samples
 {
@@ -30,7 +31,7 @@ namespace Tkl.Jumbo.Jet.Samples
     /// </para>
     /// </remarks>
     [Description("Validates whether the input is correctly sorted.")]
-    public class ValSort : BaseJobRunner
+    public class ValSort : JobBuilderJob
     {
         private readonly string _inputPath;
         private readonly string _outputPath;
@@ -41,7 +42,7 @@ namespace Tkl.Jumbo.Jet.Samples
         /// </summary>
         /// <param name="inputPath">The input file or directory for the job.</param>
         /// <param name="outputPath">The output directory for the job.</param>
-        public ValSort([Description("The input file or directory on the Jumbo DFS containing the data to validate.")] string inputPath, 
+        public ValSort([Description("The input file or directory on the Jumbo DFS containing the data to validate.")] string inputPath,
                        [Description("The output directory on the Jumbo DFS where the results of the validation will be written.")] string outputPath)
         {
             if( inputPath == null )
@@ -54,34 +55,41 @@ namespace Tkl.Jumbo.Jet.Samples
         }
 
         /// <summary>
-        /// Starts the job.
+        /// Gets or sets a value indicating whether verbose logging of unsorted record locations is enabled in the combiner task.
         /// </summary>
-        /// <returns>The job ID of the newly created job.</returns>
-        public override Guid RunJob()
+        /// <value>
+        /// 	<see langword="true"/> if verbose logging is enabled in the combiner task; otherwise, <see langword="false"/>. The default value is <see langword="false"/>.
+        /// </value>
+        [NamedCommandLineArgument("v"), JobSetting, Description("Enables verbose logging of where unsorted records occured in the combiner task.")]
+        public bool VerboseLogging { get; set; }
+
+        /// <summary>
+        /// Builds the job.
+        /// </summary>
+        /// <param name="builder">The job builder.</param>
+        protected override void BuildJob(JobBuilder builder)
         {
-            PromptIfInteractive(true);
+            CheckAndCreateOutputPath(_outputPath);
 
-            DfsClient dfsClient = new DfsClient(DfsConfiguration);
+            var input = new DfsInput(_inputPath, typeof(GenSortRecordReader));
+            var valSortChannel = new Channel() { PartitionCount = 1 };
+            var combinerChannel = new Channel() { ChannelType = ChannelType.Pipeline, PartitionCount = 1 };
+            var output = CreateDfsOutput(_outputPath, typeof(TextRecordWriter<string>));
 
-            CheckAndCreateOutputPath(dfsClient, _outputPath);
+            builder.ProcessRecords(input, valSortChannel, typeof(ValSortTask)).StageId = "ValSortStage";
+            // Not using SortRecords because each ValSortTask produces only one output record, so there's no sense to the merge sort strategy.
+            builder.ProcessRecords(valSortChannel, combinerChannel, typeof(SortTask<ValSortRecord>)).StageId = "SortStage";
+            builder.ProcessRecords(combinerChannel, output, typeof(ValSortCombinerTask)).StageId = "CombinerStage";
+        }
 
-            JobConfiguration job = new JobConfiguration(typeof(ValSortTask).Assembly);
-            job.JobName = GetType().Name; // Use the class name as the job's friendly name.
-
-            FileSystemEntry input = GetInputFileSystemEntry(dfsClient, _inputPath);
-            StageConfiguration valSortStage = job.AddInputStage("ValSortStage", input, typeof(ValSortTask), typeof(GenSortRecordReader));
-
-            // Sort the records by input ID, this ensures that the combiner task gets the records in order of file and block so it can easily compre the first and last records
-            // of consecutive files.
-            StageConfiguration sortStage = job.AddStage("SortStage", typeof(SortTask<ValSortRecord>), 1, new InputStageInfo(valSortStage), null, null);
-            valSortStage.OutputChannel.ForceFileDownload = true;
-            StageConfiguration combinerStage = job.AddStage("CombinerStage", typeof(ValSortCombinerTask), 1, new InputStageInfo(sortStage) { ChannelType = ChannelType.Pipeline }, _outputPath, typeof(TextRecordWriter<string>));
-            _outputFile = combinerStage.DfsOutput.GetPath(1);
-
-            ConfigureDfsOutput(combinerStage);
-
-            JetClient jetClient = new JetClient(JetConfiguration);
-            return jetClient.RunJob(job, typeof(ValSortTask).Assembly.Location).JobId;
+        /// <summary>
+        /// Overrides <see cref="JobBuilderJob.OnJobCreated"/>.
+        /// </summary>
+        /// <param name="job"></param>
+        /// <param name="jobConfiguration"></param>
+        protected override void OnJobCreated(Job job, JobConfiguration jobConfiguration)
+        {
+            _outputFile = jobConfiguration.GetStage("SortStage").GetNamedChildStage("CombinerStage").DfsOutput.GetPath(1);
         }
 
         /// <summary>

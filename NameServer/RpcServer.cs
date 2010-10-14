@@ -65,6 +65,16 @@ namespace NameServerApplication
             return NameServer.Instance.GetDataServersForBlock(blockID);
         }
 
+        public string GetFileForBlock(Guid blockId)
+        {
+            return NameServer.Instance.GetFileForBlock(blockId);
+        }
+
+        public Guid[] GetBlocks(BlockKind kind)
+        {
+            return NameServer.Instance.GetBlocks(kind);
+        }
+
         public bool WaitForSafeModeOff(int timeout)
         {
             return NameServer.Instance.WaitForSafeModeOff(timeout);
@@ -101,9 +111,9 @@ namespace NameServerApplication
             return NameServer.Instance.GetDataServerBlocksFromList(dataServer, blocks);
         }
 
-        public string GetLogFileContents(int maxSize)
+        public string GetLogFileContents(LogFileKind kind, int maxSize)
         {
-            return NameServer.Instance.GetLogFileContents(maxSize);
+            return NameServer.Instance.GetLogFileContents(kind, maxSize);
         }
 
         public void RemoveDataServer(ServerAddress dataServer)

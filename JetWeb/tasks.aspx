@@ -1,10 +1,11 @@
-﻿<%@ Page Title="" Language="C#" MasterPageFile="~/Jumbo.master" AutoEventWireup="true" CodeFile="stage.aspx.cs" Inherits="stage" %>
+﻿<%@ Page Title="" Language="C#" MasterPageFile="~/Jumbo.master" AutoEventWireup="true" CodeFile="tasks.aspx.cs" Inherits="tasks" %>
 
 <asp:Content ID="Content1" ContentPlaceHolderID="MainContentPlaceHolder" Runat="Server">
-    <h2 id="HeaderText" runat="server">Job stage</h2>
+    <h2 id="HeaderText" runat="server">Tasks</h2>
     <div id="StageSummary" runat="server">
         <table id="StagesTable" runat="server">
             <tr>
+                <th scope="col">Stage name</th>
                 <th scope="col">Start time</th>
                 <th scope="col">End time</th>
                 <th scope="col">Duration</th>
@@ -15,7 +16,7 @@
                 <th scope="col">Finished tasks</th>
             </tr>
         </table>
-        <h3>
+        <h3 id="TasksHeader" runat="server">
             Tasks
         </h3>
         <table id="TasksTable" runat="server">

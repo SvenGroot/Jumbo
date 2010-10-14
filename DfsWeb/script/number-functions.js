@@ -2,6 +2,7 @@
  * Copyright (C) 2006 Baron Schwartz <baron at sequent dot org>
  *
  * 2009-05-06: Fixed 1.9x getting rounded to 1.1 instead of 2.0 (Sven Groot)
+ * 2010-09-29: Changed Number.addSeparators function to work around IE9 beta regexp replacement bug (https://connect.microsoft.com/IE/feedback/details/603957/regexp-replace-with-group-variables-fails-on-some-patterns) (Sven Groot)
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU Lesser General Public License as published by the
@@ -259,7 +260,7 @@ Number.injectIntoFormat = function(val, format, stuffExtras) {
 }
 
 Number.addSeparators = function(val) {
-    return val.reverse().replace(/(\d{3})/g, "$1,").reverse().replace(/^(-)?,/, "$1");
+    return val.reverse().replace(/(\d{3})/g, "$1,").reverse().replace(/^(-?),/, "$1");
 }
 
 String.prototype.reverse = function() {

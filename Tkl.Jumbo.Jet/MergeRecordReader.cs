@@ -17,7 +17,7 @@ namespace Tkl.Jumbo.Jet
     /// <typeparam name="T">The type of the records.</typeparam>
     /// <remarks>
     /// <para>
-    ///   If <see cref="Channel"/> is not <see langword="null"/>, the <see cref="MergeRecordReader{T}"/> will use the <see cref="Tasks.SortTaskConstants.ComparerSettingKey"/>
+    ///   If <see cref="Channel"/> is not <see langword="null"/>, the <see cref="MergeRecordReader{T}"/> will use the <see cref="Tasks.TaskConstants.ComparerSettingKey"/>
     ///   on the <see cref="StageConfiguration.StageSettings"/> of the input stage to determine the comparer to use. Otherwise, it will use the 
     ///   <see cref="MergeRecordReaderConstants.ComparerSetting"/> of the current stage. If neither is specified, <see cref="Comparer{T}.Default"/> will be used.
     /// </para>
@@ -314,7 +314,7 @@ namespace Tkl.Jumbo.Jet
             if( Channel == null || Channel.InputStage == null )
                 comparerTypeName = TaskContext.StageConfiguration.GetSetting(MergeRecordReaderConstants.ComparerSetting, null);
             else
-                comparerTypeName = Channel.InputStage.GetSetting(Tasks.SortTaskConstants.ComparerSettingKey, null);
+                comparerTypeName = Channel.InputStage.GetSetting(Tasks.TaskConstants.ComparerSettingKey, null);
 
             if( !string.IsNullOrEmpty(comparerTypeName) )
             {

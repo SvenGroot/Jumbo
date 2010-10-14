@@ -23,13 +23,30 @@ public partial class logfile : System.Web.UI.Page
             maxSize = (int)ByteSize.Parse(maxSizeString);
         if( maxSize <= 0 )
             maxSize = Int32.MaxValue;
+
+        string kindString = Request.QueryString["kind"];
+        LogFileKind kind;
+        switch( kindString )
+        {
+        case "out":
+            kind = LogFileKind.StdOut;
+            break;
+        case "err":
+            kind = LogFileKind.StdErr;
+            break;
+        default:
+            kind = LogFileKind.Log;
+            break;
+        }
+
+
         if( taskServer == null )
         {
             JetClient client = new JetClient();
             JetMetrics metrics = client.JobServer.GetMetrics();
             Title = string.Format("Job server {0} log file - Jumbo Jet", metrics.JobServer);
             HeaderText.InnerText = string.Format("Job server {0} log file", metrics.JobServer);
-            string log = client.JobServer.GetLogFileContents(maxSize);
+            string log = client.JobServer.GetLogFileContents(kind, maxSize);
             LogFileContents.InnerText = log;
         }
         else
@@ -40,7 +57,7 @@ public partial class logfile : System.Web.UI.Page
             string taskId = Request.QueryString["task"];
             if( taskId == null )
             {
-                LogFileContents.InnerText = client.GetLogFileContents(maxSize);
+                LogFileContents.InnerText = client.GetLogFileContents(kind, maxSize);
                 Title = string.Format("Task server {0} log file - Jumbo Jet", taskServer);
                 HeaderText.InnerText = string.Format("Task server {0} log file", taskServer);
             }

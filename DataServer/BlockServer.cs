@@ -306,34 +306,10 @@ namespace DataServerApplication
 
         private void SendLogFile(NetworkStream stream, DataServerClientProtocolGetLogFileContentsHeader header)
         {
-            _log.InfoFormat("GetLogFileContents command received.");
-            foreach( log4net.Appender.IAppender appender in log4net.LogManager.GetRepository().GetAppenders() )
+            using( Stream logStream = LogFileHelper.GetLogFileStream("DataServer", header.Kind, header.MaxSize) )
             {
-                log4net.Appender.FileAppender fileAppender = appender as log4net.Appender.FileAppender;
-                if( fileAppender != null )
-                {
-                    using( System.IO.FileStream logStream = System.IO.File.Open(fileAppender.File, System.IO.FileMode.Open, System.IO.FileAccess.Read, System.IO.FileShare.ReadWrite) )
-                    {
-                        if( logStream.Length > header.MaxSize )
-                        {
-                            logStream.Position = logStream.Length - header.MaxSize;
-                            while( logStream.ReadByte() != '\n' )
-                                ;
-                        }
-                        CopyStream(logStream, stream);
-                    }
-                }
-            }
-
-        }
-
-        private static void CopyStream(Stream inputStream, Stream outputStream)
-        {
-            byte[] buffer = new byte[4096];
-            int bytesRead;
-            while( (bytesRead = inputStream.Read(buffer, 0, buffer.Length)) != 0 )
-            {
-                outputStream.Write(buffer, 0, bytesRead);
+                if( logStream != null )
+                    logStream.CopyTo(stream);
             }
         }
     }

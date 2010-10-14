@@ -36,9 +36,10 @@ namespace Tkl.Jumbo.Jet
         /// <summary>
         /// Gets the contents of the diagnostic log file.
         /// </summary>
+        /// <param name="kind">The kind of log file to return.</param>
         /// <param name="maxSize">The maximum size of the log data to return.</param>
         /// <returns>The contents of the diagnostic log file.</returns>
-        string GetLogFileContents(int maxSize);
+        string GetLogFileContents(LogFileKind kind, int maxSize);
 
         /// <summary>
         /// Gets the contents of the diagnostic log file for the specified task.

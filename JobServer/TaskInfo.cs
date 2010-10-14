@@ -23,7 +23,6 @@ namespace JobServerApplication
         private readonly string _fullTaskId;
         private readonly JobInfo _job;
         private readonly TaskPartitionInfo _partitionInfo;
-        private readonly TaskInfo _owner;
         private readonly TaskSchedulerInfo _schedulerInfo;
 
         private long _startTimeUtcTicks;
@@ -46,18 +45,6 @@ namespace JobServerApplication
             }
 
             _schedulerInfo = new TaskSchedulerInfo(this);
-        }
-
-        public TaskInfo(TaskInfo owner, StageInfo stage, int taskNumber)
-        {
-            if( owner == null )
-                throw new ArgumentNullException("owner");
-            if( stage == null )
-                throw new ArgumentNullException("stage");
-            _job = owner.Job;
-            _stage = stage;
-            _taskId = new TaskId(owner.TaskId, stage.StageId, taskNumber);
-            _owner = owner;
         }
 
         public StageInfo Stage
@@ -90,10 +77,7 @@ namespace JobServerApplication
         {
             get 
             {
-                if( _owner == null )
-                    return _schedulerInfo.State;
-                else
-                    return _owner.State;
+                return _schedulerInfo.State;
             }
         }
 
@@ -101,10 +85,7 @@ namespace JobServerApplication
         {
             get
             {
-                if( _owner == null )
-                    return _schedulerInfo.Server;
-                else
-                    return _owner.Server;
+                return _schedulerInfo.Server;
             }
         }
 
@@ -112,10 +93,7 @@ namespace JobServerApplication
         {
             get
             {
-                if( _owner == null )
-                    return _schedulerInfo.CurrentAttempt;
-                else
-                    throw new NotSupportedException("Cannot retrieve current attempt of a non-scheduling task.");
+                return _schedulerInfo.CurrentAttempt;
             }
         }
 
@@ -123,10 +101,7 @@ namespace JobServerApplication
         {
             get
             {
-                if( _owner == null )
-                    return _schedulerInfo.SuccessfulAttempt;
-                else
-                    throw new NotSupportedException("Cannot retrieve successful attempt of a non-scheduling task.");
+                return _schedulerInfo.SuccessfulAttempt;
             }
         }
 
@@ -150,10 +125,7 @@ namespace JobServerApplication
         {
             get
             {
-                if( _owner == null )
-                    return _schedulerInfo.Attempts;
-                else
-                    return _owner.Attempts;
+                return _schedulerInfo.Attempts;
             }
         }
 

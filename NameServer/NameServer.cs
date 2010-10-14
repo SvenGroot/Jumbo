@@ -2,22 +2,15 @@
 //
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using Tkl.Jumbo.Dfs;
-using System.Runtime.Remoting.Messaging;
 using System.Configuration;
-using System.Collections;
-using System.Runtime.Remoting.Channels;
-using System.Runtime.Remoting.Channels.Tcp;
-using System.Runtime.Remoting;
 using System.Diagnostics;
-using Tkl.Jumbo;
+using System.Linq;
 using System.Threading;
-using System.Collections.ObjectModel;
-using Tkl.Jumbo.Topology;
+using Tkl.Jumbo;
+using Tkl.Jumbo.Dfs;
 using Tkl.Jumbo.IO;
 using Tkl.Jumbo.Rpc;
+using Tkl.Jumbo.Topology;
 
 namespace NameServerApplication
 {
@@ -331,6 +324,43 @@ namespace NameServerApplication
             }
         }
 
+        public string GetFileForBlock(Guid blockId)
+        {
+            // This call is allowed even if safemode is on.
+            lock( _blocks )
+            {
+                BlockInfo block;
+                if( _blocks.TryGetValue(blockId, out block) )
+                    return block.File.FullPath;
+                else
+                    return null;
+            }
+        }
+
+        public Guid[] GetBlocks(BlockKind kind)
+        {
+            switch( kind )
+            {
+            case BlockKind.Normal:
+                lock( _blocks )
+                {
+                    return _blocks.Keys.ToArray();
+                }
+            case BlockKind.Pending:
+                lock( _pendingBlocks )
+                {
+                    return _pendingBlocks.Keys.ToArray();
+                }
+            case BlockKind.UnderReplicated:
+                lock( _underReplicatedBlocks )
+                {
+                    return _underReplicatedBlocks.Keys.ToArray();
+                }
+            }
+
+            throw new ArgumentException("Invalid block kind.", "kind");
+        }
+
         public bool WaitForSafeModeOff(int timeOut)
         {
             _log.Debug("WaitForSafeModeOff called");
@@ -428,31 +458,9 @@ namespace NameServerApplication
             }
         }
 
-        public string GetLogFileContents(int maxSize)
+        public string GetLogFileContents(LogFileKind kind, int maxSize)
         {
-            if( maxSize <= 0 )
-                throw new ArgumentException("maxSize must be positive.", "maxSize");
-            _log.Debug("GetLogFileContents");
-            foreach( log4net.Appender.IAppender appender in log4net.LogManager.GetRepository().GetAppenders() )
-            {
-                log4net.Appender.FileAppender fileAppender = appender as log4net.Appender.FileAppender;
-                if( fileAppender != null )
-                {
-                    using( System.IO.FileStream stream = System.IO.File.Open(fileAppender.File, System.IO.FileMode.Open, System.IO.FileAccess.Read, System.IO.FileShare.ReadWrite) )
-                    {
-                        using( System.IO.StreamReader reader = new System.IO.StreamReader(stream) )
-                        {
-                            if( stream.Length > maxSize )
-                            {
-                                stream.Position = stream.Length - maxSize;
-                                reader.ReadLine(); // Scan to the first new line.
-                            }
-                            return reader.ReadToEnd();
-                        }
-                    }
-                }
-            }
-            return null;
+            return LogFileHelper.GetLogFileContents("NameServer", kind, maxSize);
         }
 
         public void RemoveDataServer(ServerAddress dataServer)

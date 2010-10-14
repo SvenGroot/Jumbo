@@ -10,7 +10,7 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>Tkl.Jumbo.Jet.Samples</RootNamespace>
     <AssemblyName>Tkl.Jumbo.Jet.Samples</AssemblyName>
-    <TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <SignAssembly>true</SignAssembly>
     <AssemblyOriginatorKeyFile>jumbo.snk</AssemblyOriginatorKeyFile>
@@ -33,6 +33,7 @@
     <IsWebBootstrapper>false</IsWebBootstrapper>
     <UseApplicationTrust>false</UseApplicationTrust>
     <BootstrapperEnabled>true</BootstrapperEnabled>
+    <TargetFrameworkProfile />
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -100,8 +101,8 @@
     <Compile Include="GenSort2.cs" />
     <Compile Include="GraySort.cs" />
     <Compile Include="IO\UInt128Writer.cs" />
-    <Compile Include="ValSort2.cs" />
-    <Compile Include="WordCount2.cs" />
+    <Compile Include="ValSort.cs" />
+    <Compile Include="WordCount.cs" />
     <Compile Include="GenSort.cs" />
     <Compile Include="GenWords.cs" />
     <Compile Include="DbGen.cs" />
@@ -131,8 +132,6 @@
     <Compile Include="Tasks\WordCountAccumulatorTask.cs" />
     <Compile Include="Tasks\WordCountTask.cs" />
     <Compile Include="TpcHQuery1.cs" />
-    <Compile Include="ValSort.cs" />
-    <Compile Include="WordCount.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="jumbo.snk" />

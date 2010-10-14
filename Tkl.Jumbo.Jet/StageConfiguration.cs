@@ -350,7 +350,7 @@ namespace Tkl.Jumbo.Jet
 
             DfsOutput = new TaskDfsOutput()
             {
-                PathFormat = DfsPath.Combine(outputPath, StageId + "{0:000}"),
+                PathFormat = DfsPath.Combine(outputPath, StageId + "-{0:00000}"),
                 RecordWriterType = recordWriterType,
             };
         }

@@ -18,6 +18,21 @@ public partial class logfile : System.Web.UI.Page
     {
         string dataServer = Request.QueryString["dataServer"];
         string maxSizeString = Request.QueryString["maxSize"];
+        string kindString = Request.QueryString["kind"];
+        LogFileKind kind;
+        switch( kindString )
+        {
+        case "out":
+            kind = LogFileKind.StdOut;
+            break;
+        case "err":
+            kind = LogFileKind.StdErr;
+            break;
+        default:
+            kind = LogFileKind.Log;
+            break;
+        }
+
         int maxSize = 102400;
         if( maxSizeString != null )
             maxSize = (int)ByteSize.Parse(maxSizeString);
@@ -29,13 +44,13 @@ public partial class logfile : System.Web.UI.Page
             DfsMetrics metrics = client.NameServer.GetMetrics();
             Title = string.Format("Name server {0} log file - Jumbo DFS", metrics.NameServer);
             HeaderText.InnerText = string.Format("Name server {0} log file", metrics.NameServer);
-            string log = client.NameServer.GetLogFileContents(maxSize);
+            string log = client.NameServer.GetLogFileContents(kind, maxSize);
             LogFileContents.InnerText = log;
         }
         else
         {
             int port = Convert.ToInt32(Request.QueryString["port"]);
-            LogFileContents.InnerText = DfsClient.GetDataServerLogFileContents(dataServer, port, maxSize);
+            LogFileContents.InnerText = DfsClient.GetDataServerLogFileContents(dataServer, port, kind, maxSize);
             Title = string.Format("Data server {0} log file - Jumbo DFS", dataServer);
             HeaderText.InnerText = string.Format("Data server {0} log file", dataServer);
         }

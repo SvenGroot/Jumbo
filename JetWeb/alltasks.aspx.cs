@@ -39,7 +39,7 @@ public partial class alltasks : System.Web.UI.Page
             row.Cells.Add(new HtmlTableCell());
             duration = DateTime.UtcNow - job.StartTime;
         }
-        row.Cells.Add(new HtmlTableCell() { InnerText = string.Format("{0} ({1}s)", duration, duration.TotalSeconds) });
+        row.Cells.Add(new HtmlTableCell() { InnerText = string.Format(@"{0:hh\:mm\:ss\.ff} ({1:0.00}s)", duration, duration.TotalSeconds) });
         row.Cells.Add(new HtmlTableCell() { InnerText = (job.Progress * 100).ToString("0.0'%'") });
         row.Cells.Add(new HtmlTableCell() { InnerText = job.TaskCount.ToString() });
         row.Cells.Add(new HtmlTableCell() { InnerText = job.RunningTaskCount.ToString() });
@@ -83,7 +83,7 @@ public partial class alltasks : System.Web.UI.Page
             {
                 row.Cells.Add(new HtmlTableCell() { InnerText = task.EndTime.ToString(_datePattern, System.Globalization.CultureInfo.InvariantCulture) });
                 TimeSpan duration = task.EndTime - task.StartTime;
-                row.Cells.Add(new HtmlTableCell() { InnerText = string.Format("{0} ({1}s)", duration, duration.TotalSeconds) });
+                row.Cells.Add(new HtmlTableCell() { InnerText = string.Format(@"{0:hh\:mm\:ss\.ff} ({1:0.00}s)", duration, duration.TotalSeconds) });
             }
             else
             {

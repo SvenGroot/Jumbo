@@ -93,7 +93,7 @@ namespace Tkl.Jumbo.Jet
             return new XElement("Task",
                 new XAttribute("id", TaskId),
                 new XAttribute("state", State.ToString()),
-                new XAttribute("server", TaskServer.ToString()),
+                new XAttribute("server", TaskServer == null ? "" : TaskServer.ToString()),
                 new XAttribute("attempts", Attempts.ToString(System.Globalization.CultureInfo.InvariantCulture)),
                 new XAttribute("startTime", StartTime.ToString(JobStatus.DatePattern, System.Globalization.CultureInfo.InvariantCulture)),
                 new XAttribute("endTime", EndTime.ToString(JobStatus.DatePattern, System.Globalization.CultureInfo.InvariantCulture)),
@@ -120,7 +120,7 @@ namespace Tkl.Jumbo.Jet
             {
                 TaskId = task.Attribute("id").Value,
                 State = (TaskState)Enum.Parse(typeof(TaskState), task.Attribute("state").Value),
-                TaskServer = new ServerAddress(task.Attribute("server").Value),
+                TaskServer = string.IsNullOrEmpty(task.Attribute("server").Value) ? null : new ServerAddress(task.Attribute("server").Value),
                 Attempts = (int)task.Attribute("attempts"),
                 StartTime = DateTime.ParseExact(task.Attribute("startTime").Value, JobStatus.DatePattern, System.Globalization.CultureInfo.InvariantCulture),
                 EndTime = DateTime.ParseExact(task.Attribute("endTime").Value, JobStatus.DatePattern, System.Globalization.CultureInfo.InvariantCulture),

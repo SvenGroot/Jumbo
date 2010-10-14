@@ -10,7 +10,7 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>Tkl.Jumbo.Dfs</RootNamespace>
     <AssemblyName>Tkl.Jumbo.Dfs</AssemblyName>
-    <TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <SignAssembly>true</SignAssembly>
     <AssemblyOriginatorKeyFile>jumbo.snk</AssemblyOriginatorKeyFile>
@@ -33,6 +33,7 @@
     <IsWebBootstrapper>false</IsWebBootstrapper>
     <UseApplicationTrust>false</UseApplicationTrust>
     <BootstrapperEnabled>true</BootstrapperEnabled>
+    <TargetFrameworkProfile />
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -75,6 +76,7 @@
       <Link>Properties\Version.cs</Link>
     </Compile>
     <Compile Include="BlockAssignment.cs" />
+    <Compile Include="BlockKind.cs" />
     <Compile Include="BlockReportHeartbeatData.cs" />
     <Compile Include="BlockSender.cs" />
     <Compile Include="ChecksumConfigurationElement.cs" />

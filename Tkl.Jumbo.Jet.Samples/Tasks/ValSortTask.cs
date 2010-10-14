@@ -16,6 +16,8 @@ namespace Tkl.Jumbo.Jet.Samples.Tasks
     /// </summary>
     public class ValSortTask : Configurable, IPullTask<GenSortRecord, ValSortRecord>
     {
+        private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(ValSortTask));
+
         private Crc32 _crc = new Crc32();
 
         #region IPullTask<GenSortRecord,ValSortRecord> Members
@@ -60,6 +62,8 @@ namespace Tkl.Jumbo.Jet.Samples.Tasks
             }
 
             TaskDfsInput dfsInput = TaskContext.StageConfiguration.DfsInput.TaskInputs[TaskContext.TaskId.TaskNumber - 1];
+            _log.InfoFormat("Input file {0} block {1} contains {2} unordered records.", dfsInput.Path, dfsInput.Block, unsorted);
+
             ValSortRecord result = new ValSortRecord()
             {
                 InputId = dfsInput.Path + "_" + dfsInput.Block.ToString("00000"),

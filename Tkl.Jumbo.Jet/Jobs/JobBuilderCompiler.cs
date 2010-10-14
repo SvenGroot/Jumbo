@@ -207,6 +207,9 @@ namespace Tkl.Jumbo.Jet.Jobs
 
             _jobBuilder.AddAssemblies(taskType.Assembly);
 
+            if( outputWriterType != null )
+                _jobBuilder.AddAssemblies(outputWriterType.Assembly);
+
             return stageConfig;
         }
 
@@ -232,7 +235,7 @@ namespace Tkl.Jumbo.Jet.Jobs
         private StageConfiguration CreateAdditionalChildStage(StageBuilder stage, JobConfiguration job, Channel inputChannel, int partitionCount, StageConfiguration sendingStage)
         {
             Type childTaskType = stage.UsePipelineTaskOverrides ? stage.PipelineStageTaskOverride : stage.TaskType;
-            string childStageId = stage.PipelineStageId ?? "Input" + stage.StageId;
+            string childStageId = stage.PipelineStageId ?? "Partial" + stage.StageId;
             int childTaskCount = stage.PipelineCreation == PipelineCreationMethod.PostPartitioned || inputChannel.SendingStage.StageConfiguration.InternalPartitionCount > 1 ? 1 : partitionCount;
             if( CanReplaceEmptyTask(job, inputChannel.SendingStage.StageConfiguration, childTaskCount, ChannelType.Pipeline, inputChannel.PartitionerType, null) )
             {
@@ -273,12 +276,13 @@ namespace Tkl.Jumbo.Jet.Jobs
             // For a stage that specifies a pipeline creation mode we must treat DFS input as a single range, therefore, it must be gathered into a single partition.
             if( stage.PipelineCreation != PipelineCreationMethod.None && blockCount > 1 )
             {
-                stageId = stage.PipelineStageId ?? "Input" + stage.StageId;
+                stageId = stage.PipelineStageId ?? "Partial" + stage.StageId;
                 if( stage.UsePipelineTaskOverrides )
                     taskType = stage.PipelineStageTaskOverride;
             }
 
             StageConfiguration stageConfig = job.AddInputStage(MakeUniqueStageId(stageId), dfsEntry, stage.TaskType, dfsInput.RecordReaderType, null, null);
+            _jobBuilder.AddAssemblies(dfsInput.RecordReaderType.Assembly);
 
             if( stage.PipelineCreation != PipelineCreationMethod.None && blockCount > 1 )
             {
@@ -292,7 +296,10 @@ namespace Tkl.Jumbo.Jet.Jobs
                 _jobBuilder.AddAssemblies(secondTaskType.Assembly);
             }
             else if( outputPath != null )
+            {
                 stageConfig.SetDfsOutput(outputPath, outputWriterType);
+                _jobBuilder.AddAssemblies(outputWriterType.Assembly);
+            }
 
             _jobBuilder.AddAssemblies(taskType.Assembly);
 
