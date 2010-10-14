@@ -142,7 +142,7 @@ public partial class tasks : System.Web.UI.Page
             else
             {
                 TimeSpan duration = endTime == null ? DateTime.UtcNow - startTime.Value : endTime.Value - startTime.Value;
-                row.Cells.Add(new HtmlTableCell() { InnerText = string.Format("{0} ({1}s)", duration, duration.TotalSeconds) });
+                row.Cells.Add(new HtmlTableCell() { InnerText = string.Format(@"{0:hh\:mm\:ss\.ff} ({1:0.00}s)", duration, duration.TotalSeconds) });
             }
 
             row.Cells.Add(CreateProgressCell(stage.Progress));
@@ -178,7 +178,7 @@ public partial class tasks : System.Web.UI.Page
             {
                 row.Cells.Add(new HtmlTableCell() { InnerText = task.EndTime.ToString(_datePattern, System.Globalization.CultureInfo.InvariantCulture) });
                 TimeSpan duration = task.EndTime - task.StartTime;
-                row.Cells.Add(new HtmlTableCell() { InnerText = string.Format("{0} ({1}s)", duration, duration.TotalSeconds) });
+                row.Cells.Add(new HtmlTableCell() { InnerText = string.Format(@"{0:hh\:mm\:ss\.ff} ({1:0.00}s)", duration, duration.TotalSeconds) });
             }
             else
             {

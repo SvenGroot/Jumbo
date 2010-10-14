@@ -30,8 +30,10 @@
         <include name="../Version.cs"/>
       </sources>
       <nowarn>
-        <warning number="1584"
-        if="${nant.settings.currentframework=='mono-2.0'}" />
+        <!-- XML comment warnings; this is somewhat broken in Mono. -->
+        <warning number="1584" />
+        <warning number="1574" />
+        <warning number="0419" />
       </nowarn>
     </csc>
     <copy todir="nantbin">

@@ -17,7 +17,7 @@
         <include name="System.Configuration.dll"/>
         <include name="System.Core.dll"/>
         <include name="../lib/log4net.dll"/>
-        <include name="${nunitpath}bin/net-2.0/nunit.framework.dll"/>
+        <include name="${path::combine(nunitpath, 'bin/net-2.0/nunit.framework.dll')}"/>
         <include name="../Tkl.Jumbo/nantbin/Tkl.Jumbo.dll"/>
         <include name="../Tkl.Jumbo.Dfs/nantbin/Tkl.Jumbo.Dfs.dll"/>
         <include name="../Tkl.Jumbo.Jet/nantbin/Tkl.Jumbo.Jet.dll"/>
@@ -38,7 +38,7 @@
     <copy todir="nantbin">
       <fileset>
         <include name="../lib/log4net.dll"/>
-        <include name="${nunitpath}bin/nunit.framework.dll"/>
+        <include name="${path::combine(nunitpath, 'bin/net-2.0/nunit.framework.dll')}"/>
         <include name="../Tkl.Jumbo/nantbin/*.*"/>
         <include name="../Tkl.Jumbo.Dfs/nantbin/*.*"/>
         <include name="../Tkl.Jumbo.Jet/nantbin/*.*"/>
