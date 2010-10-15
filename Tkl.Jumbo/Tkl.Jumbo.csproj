@@ -135,10 +135,12 @@
     <Compile Include="SpinWait.cs" />
     <Compile Include="Topology\NetworkTopology.cs" />
     <Compile Include="Topology\NetworkTopologyConfigurationElement.cs" />
+    <Compile Include="Topology\PatternType.cs" />
     <Compile Include="Topology\RackConfigurationElement.cs" />
     <Compile Include="Topology\RackConfigurationElementCollection.cs" />
-    <Compile Include="Topology\RegexTopologyResolver.cs" />
-    <Compile Include="Topology\RegexTopologyResolverConfigurationElement.cs" />
+    <Compile Include="Topology\RangeExpression.cs" />
+    <Compile Include="Topology\PatternTopologyResolver.cs" />
+    <Compile Include="Topology\PatternTopologyResolverConfigurationElement.cs" />
     <Compile Include="Topology\TopologyNode.cs" />
     <Compile Include="Topology\ITopologyResolver.cs" />
     <Compile Include="Topology\Rack.cs" />

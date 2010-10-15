@@ -16,7 +16,7 @@ namespace Tkl.Jumbo.Topology
         /// <summary>
         /// Gets or sets the type name of the resolver to use.
         /// </summary>
-        [ConfigurationProperty("resolver", DefaultValue = "Tkl.Jumbo.Topology.RegexTopologyResolver, Tkl.Jumbo", IsRequired = true, IsKey = false)]
+        [ConfigurationProperty("resolver", DefaultValue = "Tkl.Jumbo.Topology.PatternTopologyResolver, Tkl.Jumbo", IsRequired = true, IsKey = false)]
         public string Resolver
         {
             get { return (string)this["resolver"]; }

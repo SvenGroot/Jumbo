@@ -9,7 +9,7 @@ using System.Configuration;
 namespace Tkl.Jumbo.Topology
 {
     /// <summary>
-    /// Provides configuration for a rack for the <see cref="RegexTopologyResolver"/>.
+    /// Provides configuration for a rack for the <see cref="PatternTopologyResolver"/>.
     /// </summary>
     public class RackConfigurationElement : ConfigurationElement
     {
@@ -24,13 +24,13 @@ namespace Tkl.Jumbo.Topology
         }
 
         /// <summary>
-        /// Gets or sets the regex used to identify nodes of this rack.
+        /// Gets or sets the pattern used to identify nodes of this rack.
         /// </summary>
-        [ConfigurationProperty("nodeRegex", DefaultValue = "", IsRequired = true, IsKey = false)]
-        public string NodeRegex
+        [ConfigurationProperty("pattern", DefaultValue = "", IsRequired = true, IsKey = false)]
+        public string Pattern
         {
-            get { return (string)this["nodeRegex"]; }
-            set { this["nodeRegex"] = value; }
+            get { return (string)this["pattern"]; }
+            set { this["pattern"] = value; }
         }
     }
 }

@@ -28,7 +28,7 @@ namespace Tkl.Jumbo.Topology
                 configuration = JumboConfiguration.GetConfiguration();
 
             _log.InfoFormat("Using topology resolver type {0}.", configuration.NetworkTopology.Resolver);
-            _resolver = (ITopologyResolver)Activator.CreateInstance(Type.GetType(configuration.NetworkTopology.Resolver), configuration);
+            _resolver = (ITopologyResolver)Activator.CreateInstance(Type.GetType(configuration.NetworkTopology.Resolver, true), configuration);
         }
 
         /// <summary>

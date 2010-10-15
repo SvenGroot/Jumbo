@@ -91,6 +91,7 @@
     <None Include="..\common.config">
       <Link>common.config</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <SubType>Designer</SubType>
     </None>
     <None Include="..\dfs.config">
       <Link>dfs.config</Link>
