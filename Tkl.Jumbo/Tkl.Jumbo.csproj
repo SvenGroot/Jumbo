@@ -104,6 +104,7 @@
     <Compile Include="IndividualProcessorStatus.cs" />
     <Compile Include="IO\ChildReaderException.cs" />
     <Compile Include="IO\CurrentPartitionChangingEventArgs.cs" />
+    <Compile Include="IO\DefaultValueWriter.cs" />
     <Compile Include="IO\IMultiRecordWriter.cs" />
     <Compile Include="IO\IRecordInputStream.cs" />
     <Compile Include="IO\IRecordOutputStream.cs" />

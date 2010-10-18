@@ -116,6 +116,7 @@
     <Compile Include="RecordFileTests.cs" />
     <Compile Include="UnmanagedBufferTests.cs" />
     <Compile Include="Utilities.cs" />
+    <Compile Include="ValueWriterTests.cs" />
     <Compile Include="WritableUtilityTests.cs" />
   </ItemGroup>
   <ItemGroup>
