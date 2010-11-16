@@ -7,6 +7,7 @@ using System.Text;
 using Tkl.Jumbo;
 using Tkl.Jumbo.Jet;
 using System.Threading;
+using Tkl.Jumbo.Topology;
 
 namespace JobServerApplication
 {
@@ -14,23 +15,15 @@ namespace JobServerApplication
     /// Information about a task server. This class is safe to access without locking, except for the <see cref="SchedulerInfo"/> property
     /// which may only be accessed inside the scheduler lock.
     /// </summary>
-    sealed class TaskServerInfo
+    sealed class TaskServerInfo : TopologyNode
     {
-        private readonly ServerAddress _address;
         private readonly TaskServerSchedulerInfo _schedulerInfo;
         private long _lastContactUtcTicks;
 
         public TaskServerInfo(ServerAddress address)
+            : base(address)
         {
-            if( address == null )
-                throw new ArgumentNullException("address");
-            _address = address;
             _schedulerInfo = new TaskServerSchedulerInfo(this);
-        }
-
-        public ServerAddress Address
-        {
-            get { return _address; }
         }
 
         public bool HasReportedStatus { get; set; }
@@ -57,15 +50,10 @@ namespace JobServerApplication
             get { return _schedulerInfo; }
         }
 
-        public bool IsTimedOut
-        {
-            get { return (DateTime.UtcNow - LastContactUtc).TotalMilliseconds > JobServer.Instance.Configuration.JobServer.TaskServerTimeout; }
-        }
-
         public bool IsActive
         {
             // Don't schedule tasks on servers that haven't reported for a while
-            get { return HasReportedStatus && (DateTime.UtcNow - LastContactUtc).TotalSeconds <= 60; }
+            get { return HasReportedStatus && (DateTime.UtcNow - LastContactUtc).TotalMilliseconds < JobServer.Instance.Configuration.JobServer.TaskServerSoftTimeout; }
         }
     }
 }

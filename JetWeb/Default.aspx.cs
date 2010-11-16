@@ -37,6 +37,7 @@ public partial class _Default : System.Web.UI.Page
                 row.BgColor = "yellow";
             row.Cells.Add(new HtmlTableCell() { InnerText = server.Address.HostName });
             row.Cells.Add(new HtmlTableCell() { InnerText = server.Address.Port.ToString() });
+            row.Cells.Add(new HtmlTableCell() { InnerText = server.RackId ?? "(unknown)" });
             row.Cells.Add(new HtmlTableCell() { InnerText = string.Format("{0:0.0}s ago", lastContact.TotalSeconds) });
             row.Cells.Add(new HtmlTableCell() { InnerText = server.MaxTasks.ToString() });
             row.Cells.Add(new HtmlTableCell() { InnerText = server.MaxNonInputTasks.ToString() });

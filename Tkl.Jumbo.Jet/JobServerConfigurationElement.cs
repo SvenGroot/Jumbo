@@ -103,5 +103,16 @@ namespace Tkl.Jumbo.Jet
             get { return (int)this["taskServerTimeout"]; }
             set { this["taskServerTimeout"] = value; }
         }
+
+        /// <summary>
+        /// Gets or sets the timeout, in milliseconds, after which new tasks are not scheduled on a task server if it has not sent a heartbeat.
+        /// </summary>
+        /// <value>The task server soft timeout.</value>
+        [ConfigurationProperty("taskServerSoftTimeout", DefaultValue = 60000, IsRequired = false, IsKey = false)]
+        public int TaskServerSoftTimeout
+        {
+            get { return (int)this["taskServerSoftTimeout"]; }
+            set { this["taskServerSoftTimeout"] = value; }
+        }
     }
 }

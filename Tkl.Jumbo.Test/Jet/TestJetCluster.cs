@@ -54,7 +54,7 @@ namespace Tkl.Jumbo.Test.Jet
 
             Utilities.TraceLineAndFlush("Jet cluster starting.");
 
-            JobServer.Run(jetConfig, dfsConfig);
+            JobServer.Run(new JumboConfiguration(), jetConfig, dfsConfig);
             _taskServerThread = new Thread(() => TaskServerThread(jetConfig, dfsConfig));
             _taskServerThread.Name = "TaskServer";
             _taskServerThread.Start();

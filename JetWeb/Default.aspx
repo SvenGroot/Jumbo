@@ -44,6 +44,7 @@
         <tr>
             <th scope="col">Name</th>
             <th scope="col">Port</th>
+            <th scope="col">Rack</th>
             <th scope="col">Last contact</th>
             <th scope="col">Max tasks</th>
             <th scope="col">Max non-input tasks</th>

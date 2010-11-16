@@ -13,6 +13,8 @@ using System.Collections;
 using System.IO;
 using Tkl.Jumbo.IO;
 using System.Xml.Linq;
+using Tkl.Jumbo.Topology;
+using System.Collections.Concurrent;
 
 namespace JobServerApplication
 {
@@ -20,7 +22,8 @@ namespace JobServerApplication
     {
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(JobServer));
 
-        private readonly Hashtable _taskServers = new Hashtable(); // Using hashtable rather than Dictionary for its concurrency properties
+        private readonly ConcurrentDictionary<ServerAddress, TaskServerInfo> _taskServers = new ConcurrentDictionary<ServerAddress, TaskServerInfo>();
+        private readonly NetworkTopology _topology; // Lock _topology when accessing.
         private readonly Dictionary<Guid, Job> _pendingJobs = new Dictionary<Guid, Job>(); // Jobs that have been created but aren't running yet.
         private readonly Hashtable _jobs = new Hashtable(); // Using hashtable rather than Dictionary for its concurrency properties
         private readonly Dictionary<Guid, JobInfo> _finishedJobs = new Dictionary<Guid, JobInfo>();
@@ -40,16 +43,21 @@ namespace JobServerApplication
         private const int _schedulerTimeoutMilliseconds = 30000;
         private const string _archiveFileName = "archive";
 
-        private JobServer(JetConfiguration configuration, DfsConfiguration dfsConfiguration)
+        private JobServer(JumboConfiguration jumboConfiguration, JetConfiguration jetConfiguration, DfsConfiguration dfsConfiguration)
         {
-            if( configuration == null )
+            if( jumboConfiguration == null )
+                throw new ArgumentNullException("jumboConfiguration");
+            if( jetConfiguration == null )
                 throw new ArgumentNullException("configuration");
+            if( dfsConfiguration == null )
+                throw new ArgumentNullException("dfsConfiguration");
 
-            Configuration = configuration;
+            Configuration = jetConfiguration;
+            _topology = new NetworkTopology(jumboConfiguration);
             _dfsClient = new DfsClient(dfsConfiguration);
-            _localAddress = new ServerAddress(ServerContext.LocalHostName, configuration.JobServer.Port);
+            _localAddress = new ServerAddress(ServerContext.LocalHostName, jetConfiguration.JobServer.Port);
 
-            _scheduler = (Scheduling.IScheduler)Activator.CreateInstance(Type.GetType("JobServerApplication.Scheduling." + configuration.JobServer.Scheduler));
+            _scheduler = (Scheduling.IScheduler)Activator.CreateInstance(Type.GetType("JobServerApplication.Scheduling." + jetConfiguration.JobServer.Scheduler));
             _running = true;
         }
 
@@ -59,13 +67,13 @@ namespace JobServerApplication
 
         public static void Run()
         {
-            Run(JetConfiguration.GetConfiguration(), DfsConfiguration.GetConfiguration());
+            Run(JumboConfiguration.GetConfiguration(), JetConfiguration.GetConfiguration(), DfsConfiguration.GetConfiguration());
         }
 
         [MethodImpl(MethodImplOptions.Synchronized)]
-        public static void Run(JetConfiguration configuration, DfsConfiguration dfsConfiguration)
+        public static void Run(JumboConfiguration jumboConfiguration, JetConfiguration jetConfiguration, DfsConfiguration dfsConfiguration)
         {
-            if( configuration == null )
+            if( jetConfiguration == null )
                 throw new ArgumentNullException("configuration");
 
             _log.Info("-----Job server is starting-----");
@@ -74,8 +82,8 @@ namespace JobServerApplication
             // Prevent type references in job configurations from accidentally loading assemblies into the job server.
             TypeReference.ResolveTypes = false;
 
-            Instance = new JobServer(configuration, dfsConfiguration);
-            RpcHelper.RegisterServerChannels(configuration.JobServer.Port, configuration.JobServer.ListenIPv4AndIPv6);
+            Instance = new JobServer(jumboConfiguration, jetConfiguration, dfsConfiguration);
+            RpcHelper.RegisterServerChannels(jetConfiguration.JobServer.Port, jetConfiguration.JobServer.ListenIPv4AndIPv6);
             RpcHelper.RegisterService(typeof(RpcServer), "JobServer");
 
             _log.Info("Rpc server started.");
@@ -264,19 +272,16 @@ namespace JobServerApplication
                                            where job.Value.State == JobState.Failed
                                            select job.Key);
             }
-            // Lock _taskServers because enumerating is not thread safe.
-            lock( _taskServers )
-            {
-                var taskServers = _taskServers.Values.Cast<TaskServerInfo>();
-                result.TaskServers.AddRange(from server in taskServers
-                                            select new TaskServerMetrics()
-                                            {
-                                                Address = server.Address,
-                                                LastContactUtc = server.LastContactUtc,
-                                                MaxTasks = server.MaxTasks,
-                                                MaxNonInputTasks = server.MaxNonInputTasks
-                                            });
-            }
+
+            result.TaskServers.AddRange(from server in _taskServers.Values
+                                        select new TaskServerMetrics()
+                                        {
+                                            Address = server.Address,
+                                            RackId = server.Rack == null ? null : server.Rack.RackId,
+                                            LastContactUtc = server.LastContactUtc,
+                                            MaxTasks = server.MaxTasks,
+                                            MaxNonInputTasks = server.MaxNonInputTasks
+                                        });
             result.Capacity = result.TaskServers.Sum(s => s.MaxTasks);
             result.NonInputTaskCapacity = result.TaskServers.Sum(s => s.MaxNonInputTasks);
             result.Scheduler = _scheduler.GetType().Name;
@@ -399,39 +404,35 @@ namespace JobServerApplication
             if( address == null )
                 throw new ArgumentNullException("address");
 
-            // Reading from a hashtable is safe without locking as long as writes are serialized.
-            TaskServerInfo server = (TaskServerInfo)_taskServers[address];
-            List<JetHeartbeatResponse> responses = null;
-            if( server == null )
+            TaskServerInfo server = _taskServers.GetOrAdd(address, key => new TaskServerInfo(key));
+
+            if( !server.HasReportedStatus )
             {
-                // Lock for adding
-                lock( _taskServers )
+                if( data == null || !data.Any(d => d is InitialStatusJetHeartbeatData) )
                 {
-                    // Check again after locking to prevent two threads adding the same task server.
-                    server = (TaskServerInfo)_taskServers[address];
-                    if( server == null || !server.HasReportedStatus )
+                    _log.WarnFormat("Task server {0} has not sent any status data before (or it was declared dead) but didn't send any.", address);
+                    return new[] { new JetHeartbeatResponse(TaskServerHeartbeatCommand.ReportStatus) };
+                }
+                else
+                {
+                    lock( _topology )
                     {
-                        if( data == null || (from d in data where d is InitialStatusJetHeartbeatData select d).Count() == 0 )
-                        {
-                            _log.WarnFormat("Task server {0} reported for the first time (or re-reported after being declared dead) but didn't send status data.", address);
-                            return new[] { new JetHeartbeatResponse(TaskServerHeartbeatCommand.ReportStatus) };
-                        }
-                        else
-                        {
-                            if( server == null )
-                                _log.InfoFormat("Task server {0} reported for the first time.", address);
-                            else
-                                _log.InfoFormat("Timed-out task server {0} reported again.", address);
-                            server = new TaskServerInfo(address);
-                            _taskServers.Add(address, server);
-                            _schedulerTaskServers = null; // The list of task servers has changed, so the scheduler needs to make a new copy next time around.
-                        }
+                        // server.Rack might not be null if this is a dead data server that's re-reporting.
+                        if( server.Rack == null )
+                            _topology.AddNode(server);
+                    }
+                    _log.InfoFormat("Received initial status data for task server {0} in rack {1}.", address, server.Rack.RackId);
+                    // Lock to guard changing of _schedulerTaskServers
+                    lock( _taskServers )
+                    {
+                        _schedulerTaskServers = null;
                     }
                 }
             }
 
             server.LastContactUtc = DateTime.UtcNow;
 
+            List<JetHeartbeatResponse> responses = null;
             if( data != null )
             {
                 foreach( JetHeartbeatData item in data )
@@ -809,16 +810,14 @@ namespace JobServerApplication
                     else
                     {
                         List<TaskServerInfo> taskServers;
-                        // Lock because enumerating over a Hashtable is not thread safe
+                        // Lock to guard _schedulerTaskServers creation.
                         lock( _taskServers )
                         {
                             taskServers = _schedulerTaskServers;
                             if( taskServers == null )
                             {
                                 // Make a copy of the list of servers that the scheduler can use without needing to keep _taskServers locked.
-                                taskServers = new List<TaskServerInfo>(_taskServers.Count);
-                                foreach( TaskServerInfo taskServer in _taskServers.Values )
-                                    taskServers.Add(taskServer);
+                                taskServers = new List<TaskServerInfo>(_taskServers.Values);
                                 _schedulerTaskServers = taskServers;
                             }
                         }
@@ -850,18 +849,15 @@ namespace JobServerApplication
             {
                 List<TaskServerInfo> deadServers = null;
                 Thread.Sleep(sleepTime);
-                // Lock to enumerate
-                lock( _taskServers )
+
+                foreach( TaskServerInfo server in _taskServers.Values )
                 {
-                    foreach( TaskServerInfo server in _taskServers.Values )
+                    if( server.HasReportedStatus && (DateTime.UtcNow - server.LastContactUtc).TotalMilliseconds > timeout )
                     {
-                        if( (DateTime.UtcNow - server.LastContactUtc).TotalMilliseconds > timeout )
-                        {
-                            if( deadServers == null )
-                                deadServers = new List<TaskServerInfo>();
-                            deadServers.Add(server);
-                            server.HasReportedStatus = false;
-                        }
+                        if( deadServers == null )
+                            deadServers = new List<TaskServerInfo>();
+                        deadServers.Add(server);
+                        server.HasReportedStatus = false;
                     }
                 }
 
