@@ -11,6 +11,6 @@ namespace JobServerApplication.Scheduling
 {
     interface IScheduler
     {
-        IEnumerable<TaskServerInfo> ScheduleTasks(IList<TaskServerInfo> taskServers, JobInfo job, DfsClient dfsClient);
+        void ScheduleTasks(IEnumerable<JobInfo> jobs, DfsClient dfsClient);
     }
 }

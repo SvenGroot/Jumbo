@@ -28,7 +28,10 @@ namespace JobServerApplication.Scheduling
                 if( _serverMap.TryGetValue(taskServer.HostName, out dataServers) )
                     return dataServers;
                 else
-                    return null;
+                {
+                    BuildServerMap(taskServers, dfsClient);
+                    return _serverMap[taskServer.HostName];
+                }
             }
         }
 

@@ -91,6 +91,7 @@
     <Compile Include="TaskPartitionInfo.cs" />
     <Compile Include="TaskSchedulerInfo.cs" />
     <Compile Include="TaskServerInfo.cs" />
+    <Compile Include="TaskServerJobInfo.cs" />
     <Compile Include="TaskServerSchedulerInfo.cs" />
   </ItemGroup>
   <ItemGroup>

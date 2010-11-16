@@ -18,7 +18,8 @@ namespace JobServerApplication
     /// </remarks>
     sealed class JobSchedulerInfo
     {
-        private readonly HashSet<ServerAddress> _taskServers = new HashSet<ServerAddress>();
+        private readonly Dictionary<ServerAddress, TaskServerJobInfo> _taskServers = new Dictionary<ServerAddress,TaskServerJobInfo>();
+        private readonly Dictionary<string, List<TaskInfo>> _rackTasks = new Dictionary<string, List<TaskInfo>>();
         private Dictionary<Guid, List<TaskInfo>> _inputBlockMap;
         private readonly JobInfo _job;
         private readonly Dictionary<string, DfsFile> _files = new Dictionary<string, DfsFile>();
@@ -38,12 +39,75 @@ namespace JobServerApplication
 
         public int NonDataLocal { get; set; }
 
-        public HashSet<ServerAddress> TaskServers
+        public TaskServerJobInfo GetTaskServer(ServerAddress address)
         {
-            get { return _taskServers; }
+            TaskServerJobInfo server;
+            if( _taskServers.TryGetValue(address, out server) )
+                return server;
+            else
+                return null;
         }
 
-        public TaskInfo GetTaskForInputBlock(Guid blockId, DfsClient dfsClient)
+        public void AddTaskServer(TaskServerInfo server)
+        {
+            if( !_taskServers.ContainsKey(server.Address) )
+                _taskServers.Add(server.Address, new TaskServerJobInfo(server, _job));
+        }
+
+        public int TaskServerCount
+        {
+            get { return _taskServers.Count; }
+        }
+
+        public List<TaskInfo> GetRackTasks(string rackId)
+        {
+            List<TaskInfo> tasks;
+            if( _rackTasks.TryGetValue(rackId, out tasks) )
+                return tasks;
+            else
+                return null;
+        }
+
+        public void AddRackTasks(string rackId, List<TaskInfo> tasks)
+        {
+            if( tasks == null )
+                throw new ArgumentNullException("tasks");
+
+            _rackTasks.Add(rackId, tasks);
+        }
+
+        public IEnumerable<TaskServerJobInfo> TaskServers
+        {
+            get { return _taskServers.Values; }
+        }
+
+        public bool NeedsCleanup
+        {
+            get { return _taskServers.Values.Any(server => server.NeedsCleanup); }
+        }
+
+        public Guid[] GetInputBlocks(DfsClient dfsClient)
+        {
+            EnsureInputBlockMapCreated(dfsClient);
+
+            return _inputBlockMap.Keys.ToArray();
+        }
+
+        //public TaskInfo GetTaskForInputBlock(Guid blockId, DfsClient dfsClient)
+        //{
+        //    EnsureInputBlockMapCreated(dfsClient);
+
+        //    return _inputBlockMap[blockId].Where(task => task.Server == null && task.Stage.IsReadyForScheduling).FirstOrDefault();
+        //}
+
+        public IEnumerable<TaskInfo> GetTasksForInputBlock(Guid blockId, DfsClient dfsClient)
+        {
+            EnsureInputBlockMapCreated(dfsClient);
+
+            return _inputBlockMap[blockId];
+        }
+
+        private void EnsureInputBlockMapCreated(DfsClient dfsClient)
         {
             if( _inputBlockMap == null )
             {
@@ -61,8 +125,6 @@ namespace JobServerApplication
                     blockTasks.Add(task);
                 }
             }
-
-            return _inputBlockMap[blockId].Where(task => task.Server == null && task.Stage.IsReadyForScheduling).FirstOrDefault();
         }
 
         public DfsFile GetFileInfo(DfsClient dfsClient, string path)

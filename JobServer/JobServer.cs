@@ -23,6 +23,7 @@ namespace JobServerApplication
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(JobServer));
 
         private readonly ConcurrentDictionary<ServerAddress, TaskServerInfo> _taskServers = new ConcurrentDictionary<ServerAddress, TaskServerInfo>();
+        private volatile bool _taskServersModified;
         private readonly NetworkTopology _topology; // Lock _topology when accessing.
         private readonly Dictionary<Guid, Job> _pendingJobs = new Dictionary<Guid, Job>(); // Jobs that have been created but aren't running yet.
         private readonly Hashtable _jobs = new Hashtable(); // Using hashtable rather than Dictionary for its concurrency properties
@@ -33,8 +34,6 @@ namespace JobServerApplication
         private readonly object _schedulerLock = new object();
         private readonly ServerAddress _localAddress;
         private volatile bool _running;
-        // A list of task servers that only the scheduler can access. Setting or getting this field should be done inside the _taskServers lock. You should never modify the collection after storing it in this field.
-        private List<TaskServerInfo> _schedulerTaskServers;
         private readonly Queue<JobInfo> _schedulerJobQueue = new Queue<JobInfo>();
         private Thread _schedulerThread;
         private readonly object _schedulerThreadLock = new object();
@@ -64,6 +63,17 @@ namespace JobServerApplication
         public static JobServer Instance { get; private set; }
 
         public JetConfiguration Configuration { get; private set; }
+
+        public int RackCount
+        {
+            get
+            {
+                lock( _topology )
+                {
+                    return _topology.Racks.Count;
+                }
+            }
+        }
 
         public static void Run()
         {
@@ -422,11 +432,7 @@ namespace JobServerApplication
                             _topology.AddNode(server);
                     }
                     _log.InfoFormat("Received initial status data for task server {0} in rack {1}.", address, server.Rack.RackId);
-                    // Lock to guard changing of _schedulerTaskServers
-                    lock( _taskServers )
-                    {
-                        _schedulerTaskServers = null;
-                    }
+                    _taskServersModified = true;
                 }
             }
 
@@ -514,16 +520,17 @@ namespace JobServerApplication
                 {
                     // Although we're accessing scheduler info, there's no need to take the scheduler lock because this job is in _jobsNeedingCleanup
                     JobInfo job = _jobsNeedingCleanup[x];
-                    if( job.SchedulerInfo.TaskServers.Contains(server.Address) )
+                    TaskServerJobInfo info = job.SchedulerInfo.GetTaskServer(server.Address);
+                    if( info != null && info.NeedsCleanup )
                     {
                         job.CleanupServer(server);
                         _log.InfoFormat("Sending cleanup command for job {{{0}}} to server {1}.", job.Job.JobId, server.Address);
                         if( responses == null )
                             responses = new List<JetHeartbeatResponse>();
                         responses.Add(new CleanupJobJetHeartbeatResponse(job.Job.JobId));
-                        job.SchedulerInfo.TaskServers.Remove(server.Address);
+                        info.NeedsCleanup = false;
                     }
-                    if( job.SchedulerInfo.TaskServers.Count == 0 )
+                    if( !job.SchedulerInfo.NeedsCleanup )
                     {
                         _log.InfoFormat("Job {{{0}}} cleanup complete.", job.Job.JobId);
                         _jobsNeedingCleanup.RemoveAt(x);
@@ -809,24 +816,20 @@ namespace JobServerApplication
                         _log.WarnFormat("Scheduler was asked to schedule job {{{0}}} that isn't running (this could be the aftermath of a failed or aborted job).", job.Job.JobId);
                     else
                     {
-                        List<TaskServerInfo> taskServers;
-                        // Lock to guard _schedulerTaskServers creation.
-                        lock( _taskServers )
-                        {
-                            taskServers = _schedulerTaskServers;
-                            if( taskServers == null )
-                            {
-                                // Make a copy of the list of servers that the scheduler can use without needing to keep _taskServers locked.
-                                taskServers = new List<TaskServerInfo>(_taskServers.Values);
-                                _schedulerTaskServers = taskServers;
-                            }
-                        }
-
                         lock( _schedulerLock )
                         {
+                            if( _taskServersModified || _taskServers.Count != job.SchedulerInfo.TaskServerCount )
+                            {
+                                _taskServersModified = false;
+                                foreach( TaskServerInfo server in _taskServers.Values )
+                                {
+                                    job.SchedulerInfo.AddTaskServer(server);
+                                }
+                            }
+
                             try
                             {
-                                _scheduler.ScheduleTasks(taskServers, job, _dfsClient);
+                                _scheduler.ScheduleTasks(new[] { job }, _dfsClient);
                             }
                             catch( Exception ex )
                             {
