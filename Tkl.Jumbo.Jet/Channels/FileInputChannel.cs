@@ -622,6 +622,9 @@ namespace Tkl.Jumbo.Jet.Channels
                 using( BinaryWriter writer = new BinaryWriter(bufferStream) )
                 using( BinaryReader reader = new BinaryReader(stream) )
                 {
+                    stream.ReadTimeout = 30000;
+                    stream.WriteTimeout = 30000;
+
                     int connectionAccepted = reader.ReadInt32();
                     if( connectionAccepted == 0 )
                     {
