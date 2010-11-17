@@ -248,7 +248,7 @@ namespace Tkl.Jumbo.Jet
                 StartTime = DateTime.ParseExact(jobInfo.Attribute("startTime").Value, JobStatus.DatePattern, System.Globalization.CultureInfo.InvariantCulture),
                 EndTime = DateTime.ParseExact(jobInfo.Attribute("endTime").Value, JobStatus.DatePattern, System.Globalization.CultureInfo.InvariantCulture),
                 FinishedTaskCount = (int)jobInfo.Attribute("finishedTasks"),
-                RackLocalTaskCount = (int)jobInfo.Attribute("rackLocalTasks"),
+                RackLocalTaskCount = jobInfo.Attribute("rackLocalTasks") == null ? 0 : (int)jobInfo.Attribute("rackLocalTasks"),
                 NonDataLocalTaskCount = (int)jobInfo.Attribute("nonDataLocalTasks"),
                 IsFinished = true
             };
