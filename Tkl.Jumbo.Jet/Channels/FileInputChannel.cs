@@ -665,6 +665,16 @@ namespace Tkl.Jumbo.Jet.Channels
                 _log.Error(string.Format("Error contacting server {0}:{1}.", server.TaskServer.HostName, port), ex);
                 return null;
             }
+            catch( IOException ex )
+            {
+                if( ex.InnerException is SocketException )
+                {
+                    _log.Error(string.Format("Error contacting server {0}:{1}.", server.TaskServer.HostName, port), ex);
+                    return null;
+                }
+                else
+                    throw;
+            }
         }
 
         private void DownloadPartition(CompletedTask task, List<RecordInput> downloadedFiles, NetworkStream stream, BinaryReader reader, int partition)

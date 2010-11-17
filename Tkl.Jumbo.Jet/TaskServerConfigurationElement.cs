@@ -170,5 +170,18 @@ namespace Tkl.Jumbo.Jet
             get { return (int)this["taskTimeout"]; }
             set { this["taskTimeout"] = value; }
         }
+
+        /// <summary>
+        /// Gets or sets a value indicating whether the task server immediately notifies the job server when a task completes.
+        /// </summary>
+        /// <value>
+        /// 	<see langword="true"/> if the task server immediately notifies the job server of a completed task; <see langword="false"/> to wait for the next heartbeat instead.
+        /// </value>
+        [ConfigurationProperty("immediateCompletedTaskNotification", DefaultValue = true, IsRequired = false, IsKey = false)]
+        public bool ImmediateCompletedTaskNotification
+        {
+            get { return (bool)this["immediateCompletedTaskNotification"]; }
+            set { this["immediateCompletedTaskNotification"] = value; }
+        }
     }
 }
