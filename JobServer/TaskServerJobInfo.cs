@@ -93,9 +93,9 @@ namespace JobServerApplication
 
         private List<TaskInfo> CreateRackLocalTaskList(DfsClient dfsClient)
         {
+            var taskServers = _job.SchedulerInfo.TaskServers.Select(server => server.TaskServer);
             var dataServers = from TaskServerInfo taskServer in _taskServer.Rack.Nodes
-                              where taskServer != _taskServer
-                              from dataServer in DataServerMap.GetDataServersForTaskServer(_taskServer.Address, _job.SchedulerInfo.TaskServers.Select(server => server.TaskServer), dfsClient)
+                              from dataServer in DataServerMap.GetDataServersForTaskServer(taskServer.Address, taskServers, dfsClient)
                               select dataServer;
 
             return CreateTaskListForServers(dfsClient, dataServers);
