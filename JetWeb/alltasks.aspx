@@ -3,17 +3,20 @@
     <h2 id="HeaderText" runat="server">Job</h2>
     <table id="RunningJobsTable" runat="server">
         <tr>
-            <th scope="col">Job ID</th>
-            <th scope="col">Start time</th>
-            <th scope="col">End time</th>
-            <th scope="col">Duration</th>
-            <th scope="col">Progress</th>
-            <th scope="col">Tasks</th>
-            <th scope="col">Running tasks</th>
-            <th scope="col">Pending tasks</th>
-            <th scope="col">Finished tasks</th>
+            <th scope="col" rowspan="2">Start time</th>
+            <th scope="col" rowspan="2">End time</th>
+            <th scope="col" rowspan="2">Duration</th>
+            <th scope="col" rowspan="2">Progress</th>
+            <th scope="colgroup" colspan="7">Tasks</th>
+        </tr>
+        <tr>
+            <th scope="col">Total</th>
+            <th scope="col">Running</th>
+            <th scope="col">Pending</th>
+            <th scope="col">Finished</th>
             <th scope="col">Errors</th>
-            <th scope="col">Non data local tasks</th>
+            <th scope="col">Rack local</th>
+            <th scope="col">Non data local</th>
         </tr>
     </table>
     <script type="text/javascript" src="Silverlight.js"></script>

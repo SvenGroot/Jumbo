@@ -67,6 +67,7 @@ public partial class job : System.Web.UI.Page
             CreateTasksLinkCell(row, jobId, null, TaskState.Created, job.UnscheduledTaskCount.ToString(), archived);
             CreateTasksLinkCell(row, jobId, null, TaskState.Finished, job.FinishedTaskCount.ToString(), archived);
             CreateTasksLinkCell(row, jobId, null, TaskState.Error, job.ErrorTaskCount.ToString(), archived);
+            row.Cells.Add(new HtmlTableCell() { InnerText = job.RackLocalTaskCount.ToString() });
             row.Cells.Add(new HtmlTableCell() { InnerText = job.NonDataLocalTaskCount.ToString() });
             RunningJobsTable.Rows.Add(row);
 

@@ -46,6 +46,7 @@ public partial class alltasks : System.Web.UI.Page
         row.Cells.Add(new HtmlTableCell() { InnerText = job.UnscheduledTaskCount.ToString() });
         row.Cells.Add(new HtmlTableCell() { InnerText = job.FinishedTaskCount.ToString() });
         row.Cells.Add(new HtmlTableCell() { InnerText = job.ErrorTaskCount.ToString() });
+        row.Cells.Add(new HtmlTableCell() { InnerText = job.RackLocalTaskCount.ToString() });
         row.Cells.Add(new HtmlTableCell() { InnerText = job.NonDataLocalTaskCount.ToString() });
         RunningJobsTable.Rows.Add(row);
 

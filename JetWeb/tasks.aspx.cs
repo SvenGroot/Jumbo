@@ -70,14 +70,23 @@ public partial class tasks : System.Web.UI.Page
                         if( cell.InnerText != "Progress" )
                             cell.RowSpan = 2;
                         else
+                        {
                             cell.ColSpan = complexProgress.AdditionalProgressValues.Count + 2;
+                            cell.Attributes["scope"] = "colgroup";
+                        }
                     }
 
                     HtmlTableRow progressHeaderRow = new HtmlTableRow();
                     progressHeaderRow.Cells.Add(new HtmlTableCell("th") { InnerText = "Overall" });
+                    progressHeaderRow.Cells[0].Attributes["scope"] = "col";
                     progressHeaderRow.Cells.Add(new HtmlTableCell("th") { InnerText = "Base" });
+                    progressHeaderRow.Cells[1].Attributes["scope"] = "col";
                     foreach( AdditionalProgressValue value in complexProgress.AdditionalProgressValues )
-                        progressHeaderRow.Cells.Add(new HtmlTableCell("th") { InnerText = job.GetFriendlyNameForAdditionalProgressCounter(value.SourceName) });
+                    {
+                        HtmlTableCell cell = new HtmlTableCell("th") { InnerText = job.GetFriendlyNameForAdditionalProgressCounter(value.SourceName) };
+                        cell.Attributes["scope"] = "col";
+                        progressHeaderRow.Cells.Add(cell);
+                    }
                     TasksTable.Rows.Add(progressHeaderRow);
                     additionalProgressCount = complexProgress.AdditionalProgressValues.Count;
                 }

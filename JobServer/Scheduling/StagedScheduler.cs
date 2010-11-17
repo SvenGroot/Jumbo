@@ -102,9 +102,10 @@ namespace JobServerApplication.Scheduling
                             server.TaskServer.SchedulerInfo.AssignTask(job, task);
                             --availableCapacity;
                             --unscheduledTasks;
-                            // TODO: Distinguish rack-local.
-                            if( distance > 0 )
+                            if( distance > 1 )
                                 ++job.SchedulerInfo.NonDataLocal;
+                            else if( distance > 0 )
+                                ++job.SchedulerInfo.RackLocal;
 
                             _log.InfoFormat("Task {0} has been assigned to server {1} ({2}).", task.FullTaskId, server.TaskServer.Address, distance == 0 ? "data local" : (distance == 1 ? "rack local" : "NOT data local"));
 

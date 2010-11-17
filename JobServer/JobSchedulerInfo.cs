@@ -39,6 +39,8 @@ namespace JobServerApplication
 
         public int NonDataLocal { get; set; }
 
+        public int RackLocal { get; set; }
+
         public TaskServerJobInfo GetTaskServer(ServerAddress address)
         {
             TaskServerJobInfo server;
