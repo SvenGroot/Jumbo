@@ -90,8 +90,10 @@ namespace JobServerApplication.Scheduling
 
             // We schedule in round-robin fashion to spread the work over as many servers as possible. Whether this is the best
             // option remains to be investigated (see research diary 2010-11-16).
-            while( availableCapacity > 0 && unscheduledTasks > 0 )
+            bool scheduledTasks = true;
+            while( scheduledTasks && availableCapacity > 0 && unscheduledTasks > 0 )
             {
+                scheduledTasks = false; // We want to break the loop if we couldn't schedule any tasks at the current distance, even if there are tasks or capacity left.
                 foreach( TaskServerJobInfo server in job.SchedulerInfo.TaskServers )
                 {
                     if( server.TaskServer.IsActive && server.TaskServer.SchedulerInfo.AvailableTasks > 0 )
@@ -100,6 +102,7 @@ namespace JobServerApplication.Scheduling
                         if( task != null )
                         {
                             server.TaskServer.SchedulerInfo.AssignTask(job, task);
+                            scheduledTasks = true;
                             --availableCapacity;
                             --unscheduledTasks;
                             if( distance > 1 )
