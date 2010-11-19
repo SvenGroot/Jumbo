@@ -30,6 +30,7 @@ namespace Tkl.Jumbo.Jet
         private readonly ExtendedCollection<string> _assemblyFileNames = new ExtendedCollection<string>();
         private readonly ExtendedCollection<StageConfiguration> _stages = new ExtendedCollection<StageConfiguration>();
         private readonly ExtendedCollection<AdditionalProgressCounter> _additionalProgressCounters = new ExtendedCollection<AdditionalProgressCounter>();
+        private SchedulerOptions _schedulerOptions;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="JobConfiguration"/> class.
@@ -87,6 +88,16 @@ namespace Tkl.Jumbo.Jet
         public Collection<AdditionalProgressCounter> AdditionalProgressCounters
         {
             get { return _additionalProgressCounters; }
+        }
+
+        /// <summary>
+        /// Gets or sets the options controlling the scheduler behavior.
+        /// </summary>
+        /// <value>The scheduler options.</value>
+        public SchedulerOptions SchedulerOptions
+        {
+            get { return _schedulerOptions ?? (_schedulerOptions = new SchedulerOptions()); }
+            set { _schedulerOptions = value; }
         }
 
         /// <summary>

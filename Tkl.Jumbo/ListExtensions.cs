@@ -123,5 +123,22 @@ namespace Tkl.Jumbo
                 list[index2] = temp;
             }
         }
+
+        /// <summary>
+        /// Sorts the elements of a sequence in ascending or descending order according to a key.
+        /// </summary>
+        /// <typeparam name="TElement">The type of the element of <paramref name="source"/>.</typeparam>
+        /// <typeparam name="TKey">The type of the key returned by <paramref name="keySelector"/>.</typeparam>
+        /// <param name="source">A sequence of values to order.</param>
+        /// <param name="keySelector">A function to extract a key from an element.</param>
+        /// <param name="ascending"><see langword="true"/> to sort in ascending order; <see langword="false"/> to sort in descending order.</param>
+        /// <returns>An <see cref="IOrderedEnumerable{TElement}"/> whose elements are sorted according to a key.</returns>
+        public static IOrderedEnumerable<TElement> OrderBy<TElement, TKey>(this IEnumerable<TElement> source, Func<TElement, TKey> keySelector, bool ascending)
+        {
+            if( ascending )
+                return source.OrderBy(keySelector);
+            else
+                return source.OrderByDescending(keySelector);
+        }
     }
 }

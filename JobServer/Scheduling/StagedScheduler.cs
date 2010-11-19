@@ -12,10 +12,29 @@ using System.Diagnostics;
 namespace JobServerApplication.Scheduling
 {
     // There is no need for explicit locking inside a scheduler because a scheduler's methods are always called inside the scheduler lock.
-    class StagedScheduler : IScheduler
+    sealed class StagedScheduler : IScheduler
     {
+        #region Nested types
+
+        private sealed class TaskServerNonInputComparer : IComparer<TaskServerJobInfo>
+        {
+            public bool Invert { get; set; }
+
+            public int Compare(TaskServerJobInfo x, TaskServerJobInfo y)
+            {
+                if( x.TaskServer.SchedulerInfo.AvailableNonInputTasks < y.TaskServer.SchedulerInfo.AvailableNonInputTasks )
+                    return Invert ? 1 : -1;
+                else if( x.TaskServer.SchedulerInfo.AvailableNonInputTasks > y.TaskServer.SchedulerInfo.AvailableNonInputTasks )
+                    return Invert ? -1 : 1;
+                else
+                    return 0;
+            }
+        }
+
+        #endregion
+
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(StagedScheduler));
-        private readonly Random _random = new Random();
+        private readonly TaskServerNonInputComparer _comparer = new TaskServerNonInputComparer();
 
         public void ScheduleTasks(IEnumerable<JobInfo> jobs, DfsClient dfsClient)
         {
@@ -29,11 +48,14 @@ namespace JobServerApplication.Scheduling
                 tasksLeft = false;
                 foreach( JobInfo job in jobs )
                 {
-                    // All jobs must have the same set of task servers (just the job-specific info for them is different), so we can compute this for the first job and then reuse it.
-                    if( availableDfsInputTaskCapacity == -1 )
-                        availableDfsInputTaskCapacity = job.SchedulerInfo.TaskServers.Sum(server => server.TaskServer.SchedulerInfo.AvailableTasks);
+                    if( job.UnscheduledTasks > 0 && distance <= job.Configuration.SchedulerOptions.MaximumDataDistance )
+                    {
+                        // All jobs must have the same set of task servers (just the job-specific info for them is different), so we can compute this for the first job and then reuse it.
+                        if( availableDfsInputTaskCapacity == -1 )
+                            availableDfsInputTaskCapacity = job.SchedulerInfo.TaskServers.Sum(server => server.TaskServer.SchedulerInfo.AvailableTasks);
 
-                    tasksLeft |= ScheduleDfsInputTasks(job, dfsClient, ref availableDfsInputTaskCapacity, distance);
+                        tasksLeft |= ScheduleDfsInputTasks(job, dfsClient, ref availableDfsInputTaskCapacity, distance);
+                    }
                 }
             }
 
@@ -41,48 +63,10 @@ namespace JobServerApplication.Scheduling
             {
                 if( job.UnscheduledTasks > 0 )
                 {
-                    ScheduleNonInputTasks(job, job.GetNonInputSchedulingTasks().ToList(), dfsClient);
+                    ScheduleNonInputTasks(job);
                 }
             }
         }
-
-        #region IScheduler Members
-
-        //public IEnumerable<TaskServerInfo> ScheduleTasks(IList<TaskServerInfo> taskServers, JobInfo job, Tkl.Jumbo.Dfs.DfsClient dfsClient)
-        //{
-        //    List<TaskInfo> inputTasks = (from task in job.GetDfsInputTasks()
-        //                                 where task.Server == null
-        //                                 select task).ToList();
-        //    List<TaskServerInfo> newServers = new List<TaskServerInfo>();
-
-        //    if( inputTasks.Count > 0 )
-        //    {
-        //        int capacity = (from server in taskServers
-        //                        select server.SchedulerInfo.AvailableTasks).Sum();
-
-        //        Guid[] inputBlocks = (from task in inputTasks
-        //                              select task.SchedulerInfo.GetBlockId(dfsClient)).ToArray();
-
-        //        capacity = ScheduleInputTasks(job, taskServers, capacity, inputBlocks, dfsClient, newServers);
-        //        if( capacity > 0 && job.UnscheduledTasks > 0 )
-        //        {
-        //            // Remove tasks that have been scheduled.
-        //            inputTasks.RemoveAll((task) => task.Server != null);
-        //            if( inputTasks.Count > 0 )
-        //            {
-        //                ScheduleInputTasksNonLocal(job, taskServers, capacity, inputTasks, newServers);
-        //            }
-        //        }
-        //    }
-
-        //    if( job.UnscheduledTasks > 0 )
-        //    {
-        //        ScheduleNonInputTasks(taskServers, job, job.GetNonInputSchedulingTasks().ToList(), dfsClient, newServers);
-        //    }
-        //    return newServers;
-        //}
-
-        #endregion
 
         private bool ScheduleDfsInputTasks(JobInfo job, DfsClient dfsClient, ref int availableCapacity, int distance)
         {
@@ -98,23 +82,28 @@ namespace JobServerApplication.Scheduling
                 {
                     if( server.TaskServer.IsActive && server.TaskServer.SchedulerInfo.AvailableTasks > 0 )
                     {
-                        TaskInfo task = server.FindTaskToSchedule(dfsClient, distance);
-                        if( task != null )
+                        TaskInfo task = null;
+                        do
                         {
-                            server.TaskServer.SchedulerInfo.AssignTask(job, task);
-                            scheduledTasks = true;
-                            --availableCapacity;
-                            --unscheduledTasks;
-                            if( distance > 1 )
-                                ++job.SchedulerInfo.NonDataLocal;
-                            else if( distance > 0 )
-                                ++job.SchedulerInfo.RackLocal;
+                            task = server.FindTaskToSchedule(dfsClient, distance);
+                            if( task != null )
+                            {
+                                server.TaskServer.SchedulerInfo.AssignTask(job, task);
+                                scheduledTasks = true;
+                                --availableCapacity;
+                                --unscheduledTasks;
+                                if( distance > 1 )
+                                    ++job.SchedulerInfo.NonDataLocal;
+                                else if( distance > 0 )
+                                    ++job.SchedulerInfo.RackLocal;
 
-                            _log.InfoFormat("Task {0} has been assigned to server {1} ({2}).", task.FullTaskId, server.TaskServer.Address, distance == 0 ? "data local" : (distance == 1 ? "rack local" : "NOT data local"));
+                                _log.InfoFormat("Task {0} has been assigned to server {1} ({2}).", task.FullTaskId, server.TaskServer.Address, distance == 0 ? "data local" : (distance == 1 ? "rack local" : "NOT data local"));
 
-                            if( availableCapacity == 0 || unscheduledTasks == 0 )
-                                break;
-                        }
+                                if( availableCapacity == 0 || unscheduledTasks == 0 )
+                                    break;
+                            }
+                            // We continue scheduling tasks to the same server if SpreadDfsInputTasks is false (and there are tasks left and we can still schedule on this server)
+                        } while( !job.Configuration.SchedulerOptions.SpreadDfsInputTasks && unscheduledTasks > 0 && task != null && server.TaskServer.SchedulerInfo.AvailableTasks > 0 );
                     }
                 }
             }
@@ -122,117 +111,76 @@ namespace JobServerApplication.Scheduling
             return unscheduledTasks > 0;
         }
 
-        
-
-        //private int ScheduleInputTasks(JobInfo job, IList<TaskServerInfo> servers, int capacity, Guid[] inputBlocks, DfsClient dfsClient, List<TaskServerInfo> newServers)
-        //{
-        //    HashSet<Guid> inputBlockSet = new HashSet<Guid>(inputBlocks);
-        //    foreach( TaskServerInfo taskServer in servers )
-        //    {
-        //        if( taskServer.IsActive && taskServer.SchedulerInfo.AvailableTasks > 0 )
-        //        {
-        //            ServerAddress[] dataServers = DataServerMap.GetDataServersForTaskServer(taskServer.Address, servers, dfsClient);
-        //            List<Guid> localBlocks = null;
-        //            if( dataServers != null )
-        //            {
-        //                localBlocks = new List<Guid>();
-        //                foreach( ServerAddress dataServer in dataServers )
-        //                {
-        //                    localBlocks.AddRange(dfsClient.NameServer.GetDataServerBlocks(dataServer, inputBlocks));
-        //                }
-        //            }
-
-        //            if( localBlocks != null && localBlocks.Count > 0 )
-        //            {
-        //                int block = 0;
-        //                while( taskServer.SchedulerInfo.AvailableTasks > 0 && block < localBlocks.Count )
-        //                {
-        //                    TaskInfo task = job.SchedulerInfo.GetTaskForInputBlock(localBlocks[block], dfsClient);
-        //                    if( task != null && !task.SchedulerInfo.BadServers.Contains(taskServer) )
-        //                    {
-        //                        taskServer.SchedulerInfo.AssignTask(job, task);
-        //                        if( !newServers.Contains(taskServer) )
-        //                            newServers.Add(taskServer);
-        //                        inputBlockSet.Remove(localBlocks[block]);
-        //                        _log.InfoFormat("Task {0} has been assigned to server {1} (data local).", task.FullTaskId, taskServer.Address);
-        //                        --capacity;
-        //                    }
-        //                    ++block;
-        //                }
-        //                if( capacity > 0 )
-        //                    inputBlocks = inputBlockSet.ToArray();
-        //            }
-        //        }
-        //    }
-
-        //    return capacity;
-        //}
-
-        //private int ScheduleInputTasksNonLocal(JobInfo job, IList<TaskServerInfo> servers, int capacity, IList<TaskInfo> unscheduledTasks, IList<TaskServerInfo> newServers)
-        //{
-        //    foreach( TaskServerInfo taskServer in servers )
-        //    {
-        //        if( taskServer.IsActive && taskServer.SchedulerInfo.AvailableTasks > 0 )
-        //        {
-        //            var eligibleTasks = (from task in unscheduledTasks
-        //                                 where !task.SchedulerInfo.BadServers.Contains(taskServer) && task.Server == null
-        //                                 select task).ToList();
-
-        //            while( taskServer.SchedulerInfo.AvailableTasks > 0 && eligibleTasks.Count > 0 )
-        //            {
-        //                // TODO: This should try to schedule a task with input that's at least on the same rack.
-        //                // One way to do that would be to change NameServer.GetDataServerBlocks to return blocks within a certain distance, and then retry with increasing distance.
-        //                int index = _random.Next(eligibleTasks.Count);
-        //                TaskInfo task = eligibleTasks[index];
-        //                taskServer.SchedulerInfo.AssignTask(job, task);
-        //                _log.InfoFormat("Task {0} has been assigned to server {1} (NOT data local).", task.FullTaskId, taskServer.Address);
-        //                if( !newServers.Contains(taskServer) )
-        //                    newServers.Add(taskServer);
-        //                eligibleTasks.RemoveAt(index);
-        //                --capacity;
-        //                ++job.SchedulerInfo.NonDataLocal;
-        //            }
-        //        }
-        //    }
-
-        //    return capacity;
-        //}
-
-        public void ScheduleNonInputTasks(JobInfo job, IList<TaskInfo> tasks, DfsClient dfsClient)
+        public void ScheduleNonInputTasks(JobInfo job)
         {
-            int taskIndex = 0;
-            bool outOfSlots = false;
-            Random rnd = new Random();
-            while( !outOfSlots && taskIndex < tasks.Count )
+            List<TaskInfo> unscheduledTasks = job.GetNonInputSchedulingTasks().Where(t => t.Server == null).ToList();
+            if( unscheduledTasks.Count > 0 )
             {
-                outOfSlots = true;
-                while( taskIndex < tasks.Count && tasks[taskIndex].State != TaskState.Created )
-                    ++taskIndex;
-                if( taskIndex == tasks.Count )
-                    break;
-                TaskInfo task = tasks[taskIndex];
-                var availableServers = from server in job.SchedulerInfo.TaskServers
-                                       where server.TaskServer.IsActive && server.TaskServer.SchedulerInfo.AvailableNonInputTasks > 0
-                                       orderby server.TaskServer.SchedulerInfo.AvailableNonInputTasks descending, rnd.Next()
-                                       select server;
-                outOfSlots = availableServers.Count() == 0;
-                if( !outOfSlots )
+                var availableTaskServers = job.SchedulerInfo.TaskServers.Where(server => server.TaskServer.IsActive && server.TaskServer.SchedulerInfo.AvailableNonInputTasks > 0);
+                // If spreading we want high amounts of available tasks at the front of the queue.
+                _comparer.Invert = job.Configuration.SchedulerOptions.SpreadNonInputTasks;
+                PriorityQueue<TaskServerJobInfo> taskServers = new PriorityQueue<TaskServerJobInfo>(availableTaskServers, _comparer);
+
+                while( taskServers.Count > 0 && unscheduledTasks.Count > 0 )
                 {
-                    TaskServerInfo taskServer = (from server in availableServers
-                                                 where !task.SchedulerInfo.BadServers.Contains(server.TaskServer)
-                                                 select server.TaskServer).FirstOrDefault();
-                    if( taskServer != null )
+                    TaskServerJobInfo server = taskServers.Peek();
+                    // We search backwards because that will make the remove operation cheaper.
+                    int taskIndex = unscheduledTasks.FindLastIndex(task => !task.SchedulerInfo.BadServers.Contains(server.TaskServer));
+                    if( taskIndex >= 0 )
                     {
-                        taskServer.SchedulerInfo.AssignTask(job, task);
-                        _log.InfoFormat("Task {0} has been assigned to server {1}.", task.FullTaskId, taskServer.Address);
-                        outOfSlots = false;
+                        // Found a task we can schedule.
+                        TaskInfo task = unscheduledTasks[taskIndex];
+                        unscheduledTasks.RemoveAt(taskIndex);
+                        server.TaskServer.SchedulerInfo.AssignTask(job, task);
+                        _log.InfoFormat("Task {0} has been assigned to server {1}.", task.FullTaskId, server.TaskServer.Address);
+                        if( server.TaskServer.SchedulerInfo.AvailableNonInputTasks == 0 )
+                            taskServers.Dequeue(); // No more available tasks, remove it from the queue
+                        else
+                            taskServers.AdjustFirstItem(); // Available tasks changed so re-evaluate its position in the queue.
                     }
-                    ++taskIndex;
+                    else
+                        taskServers.Dequeue(); // If there's no task we can schedule on this server, remove it from the queue.
                 }
             }
-            if( outOfSlots && taskIndex < tasks.Count )
-                _log.InfoFormat("Job {{{0}}}: not all non-input tasks could be immediately scheduled.", job.Job.JobId);
         }
+
+        //public void ScheduleNonInputTasks(JobInfo job, IList<TaskInfo> tasks, DfsClient dfsClient)
+        //{
+        //    int taskIndex = 0;
+        //    bool outOfSlots = false;
+        //    while( !outOfSlots && taskIndex < tasks.Count )
+        //    {
+        //        outOfSlots = true;
+        //        while( taskIndex < tasks.Count && tasks[taskIndex].State != TaskState.Created )
+        //            ++taskIndex;
+        //        if( taskIndex == tasks.Count )
+        //            break;
+        //        TaskInfo task = tasks[taskIndex];
+
+        //        // We sort ascending on number of tasks if SpreadNonInputTasks is false to use as few servers as possible.
+        //        var availableServers = job.SchedulerInfo.TaskServers
+        //                                .Where(server => server.TaskServer.IsActive && server.TaskServer.SchedulerInfo.AvailableNonInputTasks > 0)
+        //                                .OrderBy(server => server.TaskServer.SchedulerInfo.AvailableNonInputTasks, !job.Configuration.SchedulerOptions.SpreadNonInputTasks)
+        //                                .ThenBy(server => _random.Next());
+
+        //        outOfSlots = availableServers.Count() == 0;
+        //        if( !outOfSlots )
+        //        {
+        //            TaskServerInfo taskServer = (from server in availableServers
+        //                                         where !task.SchedulerInfo.BadServers.Contains(server.TaskServer)
+        //                                         select server.TaskServer).FirstOrDefault();
+        //            if( taskServer != null )
+        //            {
+        //                taskServer.SchedulerInfo.AssignTask(job, task);
+        //                _log.InfoFormat("Task {0} has been assigned to server {1}.", task.FullTaskId, taskServer.Address);
+        //                outOfSlots = false;
+        //            }
+        //            ++taskIndex;
+        //        }
+        //    }
+        //    if( outOfSlots && taskIndex < tasks.Count )
+        //        _log.InfoFormat("Job {{{0}}}: not all non-input tasks could be immediately scheduled.", job.Job.JobId);
+        //}
 
     }
 }
