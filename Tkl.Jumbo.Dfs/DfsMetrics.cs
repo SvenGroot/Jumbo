@@ -33,6 +33,46 @@ namespace Tkl.Jumbo.Dfs
         public long TotalSize { get; set; }
 
         /// <summary>
+        /// Gets the total storage capacity of the DFS.
+        /// </summary>
+        /// <value>The total capacity. This is the total disk space of all the data servers combined.</value>
+        public long TotalCapacity
+        {
+            get
+            {
+                return (from server in DataServers
+                        select server.DiskSpaceTotal).Sum();
+            }
+        }
+
+        /// <summary>
+        /// Gets or sets the storage capacity that is used by files on the DFS.
+        /// </summary>
+        /// <value>The storage capacity that is used by files on the DFS; this includes space used by replicated blocks.</value>
+        public long DfsCapacityUsed
+        {
+            get
+            {
+                return (from server in DataServers
+                        select server.DiskSpaceUsed).Sum();
+            }
+        }
+
+        /// <summary>
+        /// Gets or sets the storage capacity that is available.
+        /// </summary>
+        /// <value>The storage capacity that is available, which is the value of <see cref="TotalCapacity"/>
+        /// minus <see cref="DfsCapacityUsed"/> minus the capacity used by other files on the same disks.</value>
+        public long AvailableCapacity
+        {
+            get
+            {
+                return (from server in DataServers
+                        select server.DiskSpaceFree).Sum();
+            }
+        }
+
+        /// <summary>
         /// Gets or sets the total number of blocks. This does not include pending blocks.
         /// </summary>
         public int TotalBlockCount { get; set; }

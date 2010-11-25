@@ -11,6 +11,18 @@
             <td id="TotalSizeColumn" runat="server"></td>
         </tr>
         <tr>
+            <th scope="row">Total capacity</th>
+            <td id="TotalCapacityColumn" runat="server"></td>
+        </tr>
+        <tr>
+            <th scope="row">DFS capacity used</th>
+            <td id="DfsCapacityUsedColumn" runat="server"></td>
+        </tr>
+        <tr>
+            <th scope="row">Available capacity</th>
+            <td id="AvailableCapacityColumn" runat="server"></td>
+        </tr>
+        <tr>
             <th scope="row">Total blocks (excluding pending)</th>
             <td id="BlocksColumn" runat="server"></td>
         </tr>
