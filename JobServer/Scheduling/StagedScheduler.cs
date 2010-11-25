@@ -31,30 +31,41 @@ namespace JobServerApplication.Scheduling
             }
         }
 
+        private sealed class TaskServerDfsInputComparer : IComparer<TaskServerJobInfo>
+        {
+            public bool Invert { get; set; }
+
+            public int Compare(TaskServerJobInfo x, TaskServerJobInfo y)
+            {
+                if( x.TaskServer.SchedulerInfo.AvailableTasks < y.TaskServer.SchedulerInfo.AvailableTasks )
+                    return Invert ? 1 : -1;
+                else if( x.TaskServer.SchedulerInfo.AvailableTasks > y.TaskServer.SchedulerInfo.AvailableTasks )
+                    return Invert ? -1 : 1;
+                else
+                    return 0;
+            }
+        }
+
         #endregion
 
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(StagedScheduler));
-        private readonly TaskServerNonInputComparer _comparer = new TaskServerNonInputComparer();
+        private readonly TaskServerNonInputComparer _nonInputComparer = new TaskServerNonInputComparer();
+        private readonly TaskServerDfsInputComparer _dfsInputComparer = new TaskServerDfsInputComparer();
 
         public void ScheduleTasks(IEnumerable<JobInfo> jobs, DfsClient dfsClient)
         {
-            int availableDfsInputTaskCapacity = -1;
-            bool tasksLeft = true;
+            bool tasksAndCapacityLeft = true;
             // Schedule with increasing data distance or until we run out of capacity or tasks
             // If the cluster has only one rack, distance 1 is the same as distance 2, and the cluster must run out of either tasks or capacity
             // for distance 1 so there's no need to check and short-circuit the loop.
-            for( int distance = 0; distance < 3 && availableDfsInputTaskCapacity != 0 && tasksLeft; ++distance )
+            for( int distance = 0; distance < 3 && tasksAndCapacityLeft; ++distance )
             {
-                tasksLeft = false;
+                tasksAndCapacityLeft = false;
                 foreach( JobInfo job in jobs )
                 {
                     if( job.UnscheduledTasks > 0 && distance <= job.Configuration.SchedulerOptions.MaximumDataDistance )
                     {
-                        // All jobs must have the same set of task servers (just the job-specific info for them is different), so we can compute this for the first job and then reuse it.
-                        if( availableDfsInputTaskCapacity == -1 )
-                            availableDfsInputTaskCapacity = job.SchedulerInfo.TaskServers.Sum(server => server.TaskServer.SchedulerInfo.AvailableTasks);
-
-                        tasksLeft |= ScheduleDfsInputTasks(job, dfsClient, ref availableDfsInputTaskCapacity, distance);
+                        tasksAndCapacityLeft |= ScheduleDfsInputTasks(job, dfsClient, distance);
                     }
                 }
             }
@@ -68,47 +79,47 @@ namespace JobServerApplication.Scheduling
             }
         }
 
-        private bool ScheduleDfsInputTasks(JobInfo job, DfsClient dfsClient, ref int availableCapacity, int distance)
+        private bool ScheduleDfsInputTasks(JobInfo job, DfsClient dfsClient, int distance)
         {
-            int unscheduledTasks = job.GetDfsInputTasks().Where(task => task.Server == null).Count(); // Tasks that can be schedule but haven't been scheduled yet.
+            int unscheduledTasks = job.GetDfsInputTasks().Where(task => task.Server == null).Count(); // Tasks that can be scheduled but haven't been scheduled yet.
+            bool capacityRemaining = false;
 
-            // We schedule in round-robin fashion to spread the work over as many servers as possible. Whether this is the best
-            // option remains to be investigated (see research diary 2010-11-16).
-            bool scheduledTasks = true;
-            while( scheduledTasks && availableCapacity > 0 && unscheduledTasks > 0 )
+            if( unscheduledTasks > 0 )
             {
-                scheduledTasks = false; // We want to break the loop if we couldn't schedule any tasks at the current distance, even if there are tasks or capacity left.
-                foreach( TaskServerJobInfo server in job.SchedulerInfo.TaskServers )
+                var availableTaskServers = job.SchedulerInfo.TaskServers.Where(server => server.TaskServer.IsActive && server.TaskServer.SchedulerInfo.AvailableTasks > 0);
+                // If spreading we want high amounts of available tasks at the front of the queue.
+                _dfsInputComparer.Invert = job.Configuration.SchedulerOptions.SpreadDfsInputTasks;
+                PriorityQueue<TaskServerJobInfo> taskServers = new PriorityQueue<TaskServerJobInfo>(availableTaskServers, _dfsInputComparer);
+
+                while( taskServers.Count > 0 && unscheduledTasks > 0 )
                 {
-                    if( server.TaskServer.IsActive && server.TaskServer.SchedulerInfo.AvailableTasks > 0 )
+                    TaskServerJobInfo server = taskServers.Peek();
+                    TaskInfo task = server.FindTaskToSchedule(dfsClient, distance);
+                    if( task != null )
                     {
-                        TaskInfo task = null;
-                        do
-                        {
-                            task = server.FindTaskToSchedule(dfsClient, distance);
-                            if( task != null )
-                            {
-                                server.TaskServer.SchedulerInfo.AssignTask(job, task);
-                                scheduledTasks = true;
-                                --availableCapacity;
-                                --unscheduledTasks;
-                                if( distance > 1 )
-                                    ++job.SchedulerInfo.NonDataLocal;
-                                else if( distance > 0 )
-                                    ++job.SchedulerInfo.RackLocal;
+                        server.TaskServer.SchedulerInfo.AssignTask(job, task);
+                        --unscheduledTasks;
+                        if( distance > 1 )
+                            ++job.SchedulerInfo.NonDataLocal;
+                        else if( distance > 0 )
+                            ++job.SchedulerInfo.RackLocal;
 
-                                _log.InfoFormat("Task {0} has been assigned to server {1} ({2}).", task.FullTaskId, server.TaskServer.Address, distance == 0 ? "data local" : (distance == 1 ? "rack local" : "NOT data local"));
-
-                                if( availableCapacity == 0 || unscheduledTasks == 0 )
-                                    break;
-                            }
-                            // We continue scheduling tasks to the same server if SpreadDfsInputTasks is false (and there are tasks left and we can still schedule on this server)
-                        } while( !job.Configuration.SchedulerOptions.SpreadDfsInputTasks && unscheduledTasks > 0 && task != null && server.TaskServer.SchedulerInfo.AvailableTasks > 0 );
+                        _log.InfoFormat("Task {0} has been assigned to server {1} ({2}).", task.FullTaskId, server.TaskServer.Address, distance == 0 ? "data local" : (distance == 1 ? "rack local" : "NOT data local"));
+                        if( server.TaskServer.SchedulerInfo.AvailableTasks == 0 )
+                            taskServers.Dequeue(); // No more available tasks, remove it from the queue
+                        else
+                            taskServers.AdjustFirstItem(); // Available tasks changed so re-evaluate its position in the queue.
+                    }
+                    else
+                    {
+                        capacityRemaining = true; // Indicate that we removed a task server from the queue that still has capacity left.
+                        taskServers.Dequeue(); // If there's no task we can schedule on this server, remove it from the queue.
                     }
                 }
             }
 
-            return unscheduledTasks > 0;
+            // Return true if there's task left to schedule, and capacity where they can be scheduled.
+            return unscheduledTasks > 0 && capacityRemaining;
         }
 
         public void ScheduleNonInputTasks(JobInfo job)
@@ -118,8 +129,8 @@ namespace JobServerApplication.Scheduling
             {
                 var availableTaskServers = job.SchedulerInfo.TaskServers.Where(server => server.TaskServer.IsActive && server.TaskServer.SchedulerInfo.AvailableNonInputTasks > 0);
                 // If spreading we want high amounts of available tasks at the front of the queue.
-                _comparer.Invert = job.Configuration.SchedulerOptions.SpreadNonInputTasks;
-                PriorityQueue<TaskServerJobInfo> taskServers = new PriorityQueue<TaskServerJobInfo>(availableTaskServers, _comparer);
+                _nonInputComparer.Invert = job.Configuration.SchedulerOptions.SpreadNonInputTasks;
+                PriorityQueue<TaskServerJobInfo> taskServers = new PriorityQueue<TaskServerJobInfo>(availableTaskServers, _nonInputComparer);
 
                 while( taskServers.Count > 0 && unscheduledTasks.Count > 0 )
                 {
