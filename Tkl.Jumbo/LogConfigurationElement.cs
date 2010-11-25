@@ -29,7 +29,8 @@ namespace Tkl.Jumbo
         public void ConfigureLogger()
         {
             string dir = Directory;
-            if( !(dir.EndsWith(Path.DirectorySeparatorChar) || dir.EndsWith(Path.AltDirectorySeparatorChar)) )
+
+            if( !string.IsNullOrEmpty(dir) && !(dir[dir.Length - 1] == Path.DirectorySeparatorChar || dir[dir.Length - 1] == Path.AltDirectorySeparatorChar) )
                 dir += Path.DirectorySeparatorChar;
             log4net.GlobalContext.Properties["LogDirectory"] = dir;
             log4net.GlobalContext.Properties["LocalHostName"] = ServerContext.LocalHostName;
