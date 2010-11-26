@@ -188,6 +188,7 @@ namespace TaskServerApplication
             catch( Exception ex )
             {
                 _log.Error(string.Format("Error running task {0} in app domain", FullTaskAttemptId), ex);
+                _taskServer.ReportError(JobId, TaskAttemptId, ex.ToString());
             }
             finally
             {

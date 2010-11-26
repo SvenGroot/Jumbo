@@ -15,6 +15,7 @@ using Tkl.Jumbo.IO;
 using System.Xml.Linq;
 using Tkl.Jumbo.Topology;
 using System.Collections.Concurrent;
+using System.Globalization;
 
 namespace JobServerApplication
 {
@@ -189,6 +190,7 @@ namespace JobServerApplication
                 else if( job.State == JobState.Running )
                 {
                     _log.InfoFormat("Aborting job {0}.", jobId);
+                    job.FailureReason = "Job aborted.";
                     job.SchedulerInfo.State = JobState.Failed;
                     FinishOrFailJob(job);
                     return true;
@@ -606,7 +608,7 @@ namespace JobServerApplication
 
                 if( data.Progress != null )
                 {
-                    if( task.State == TaskState.Running )
+                    if( task.State == TaskState.Running && data.Status != TaskAttemptStatus.Error )
                     {
                         task.Progress = data.Progress;
                         _log.InfoFormat("Task {0} reported progress: {1}", task.FullTaskId, data.Progress);
@@ -650,10 +652,25 @@ namespace JobServerApplication
                             task.SchedulerInfo.State = TaskState.Error;
                             if( task.PartitionInfo != null )
                                 task.PartitionInfo.Reset();
-                            task.Progress = null;
                             _log.WarnFormat("Task {0} encountered an error.", Job.CreateFullTaskId(data.JobId, data.TaskAttemptId));
                             TaskStatus failedAttempt = task.ToTaskStatus();
+                            task.Progress = null;
                             failedAttempt.EndTime = DateTime.UtcNow;
+                            if( data.Progress != null )
+                            {
+                                // Task server sends a task progress containing the failure reason as the status message
+                                // but no other data, so if we had other progress data we keep it.
+                                if( failedAttempt.TaskProgress != null )
+                                    failedAttempt.TaskProgress.StatusMessage = data.Progress.StatusMessage;
+                                else
+                                    failedAttempt.TaskProgress = data.Progress;
+                            }
+                            else
+                            {
+                                if( failedAttempt.TaskProgress == null )
+                                    failedAttempt.TaskProgress = new TaskProgress();
+                                failedAttempt.TaskProgress.StatusMessage = "Unknown failure reason.";
+                            }
                             job.AddFailedTaskAttempt(failedAttempt);
                             if( task.Attempts < Configuration.JobServer.MaxTaskAttempts )
                             {
@@ -664,7 +681,8 @@ namespace JobServerApplication
                             }
                             else
                             {
-                                _log.ErrorFormat("Task {0} failed more than {1} times; aborting the job.", Job.CreateFullTaskId(data.JobId, data.TaskAttemptId.TaskId), Configuration.JobServer.MaxTaskAttempts);
+                                job.FailureReason = string.Format(CultureInfo.InvariantCulture, "Task {0} failed more than {1} times.", Job.CreateFullTaskId(data.JobId, data.TaskAttemptId.TaskId), Configuration.JobServer.MaxTaskAttempts);
+                                _log.ErrorFormat("{0}; aborting the job.", job.FailureReason);
                                 job.SchedulerInfo.State = JobState.Failed;
                             }
                             ++job.SchedulerInfo.Errors;
@@ -701,7 +719,9 @@ namespace JobServerApplication
             }
             else
             {
-                _log.ErrorFormat("Job {0} failed or was killed.", job.Job.JobId);
+                if( job.FailureReason == null )
+                    job.FailureReason = "Unknown failure reason.";
+                _log.ErrorFormat("Job {0} failed or was killed: {1}", job.Job.JobId, job.FailureReason);
                 job.SchedulerInfo.AbortTasks();
             }
 
@@ -760,6 +780,7 @@ namespace JobServerApplication
                 lock( _schedulerLock )
                 {
                     job.SchedulerInfo.State = JobState.Failed;
+                    job.FailureReason = "Scheduler timed out.";
                     FinishOrFailJob(job);
                 }
             }
@@ -833,7 +854,8 @@ namespace JobServerApplication
                             }
                             catch( Exception ex )
                             {
-                                _log.Error(string.Format("The scheduler encountered an error scheduling job {{{0}}}.", job.Job.JobId), ex);
+                                job.FailureReason = string.Format("The scheduler encountered an error scheduling job {{{0}}}.", job.Job.JobId);
+                                _log.Error(job.FailureReason, ex);
                                 job.SchedulerInfo.State = JobState.Failed;
                                 FinishOrFailJob(job);
                             }

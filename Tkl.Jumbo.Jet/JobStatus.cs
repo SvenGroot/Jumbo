@@ -116,6 +116,12 @@ namespace Tkl.Jumbo.Jet
         public bool IsFinished { get; set; }
 
         /// <summary>
+        /// Gets or sets the reason the job failed, if it failed.
+        /// </summary>
+        /// <value>The failure reason, or <see langword="null"/> if the job hasn't failed.</value>
+        public string FailureReason { get; set; }
+
+        /// <summary>
         /// Gets the number of task attempts that failed.
         /// </summary>
         [XmlIgnore]

@@ -117,6 +117,13 @@ namespace TaskServerApplication
             _taskRunner.ReportProgress(Job.CreateFullTaskId(jobId, taskAttemptId), progress);
         }
 
+        public void ReportError(Guid jobId, TaskAttemptId taskAttemptId, string failureReason)
+        {
+            if( taskAttemptId == null )
+                throw new ArgumentNullException("taskAttemptId");
+            _taskRunner.ReportError(Job.CreateFullTaskId(jobId, taskAttemptId), failureReason);
+        }
+
         public void SetUncompressedTemporaryFileSize(Guid jobId, string fileName, long uncompressedSize)
         {
             _log.DebugFormat("Uncompressed file size of job {0} file {1} is {2}.", jobId, fileName, uncompressedSize);

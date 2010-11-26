@@ -11,6 +11,7 @@ using Tkl.Jumbo.Dfs;
 using System.Diagnostics;
 using Tkl.Jumbo;
 using System.ComponentModel;
+using System.Globalization;
 
 namespace TaskServerApplication
 {
@@ -153,6 +154,26 @@ namespace TaskServerApplication
             }
         }
 
+        public void ReportError(string fullTaskId, string failureReason)
+        {
+            if( fullTaskId == null )
+                throw new ArgumentNullException("fullTaskId");
+
+            lock( _runningTasks )
+            {
+                RunningTask task;
+                if( _runningTasks.TryGetValue(fullTaskId, out task) &&(task.State == TaskAttemptStatus.Running || task.State == TaskAttemptStatus.Error) )
+                {
+                    _log.InfoFormat("Task {0} has encountered an error: {1}", task.FullTaskAttemptId, failureReason);
+                    task.State = TaskAttemptStatus.Error;
+                    _taskServer.NotifyTaskStatusChanged(task.JobId, task.TaskAttemptId, task.State, new TaskProgress() { StatusMessage = failureReason }, null);
+                }
+                else
+                    _log.WarnFormat("Task {0} reported an error but was not running.", fullTaskId);
+
+            }
+        }
+
         public void CleanupJobTasks(Guid jobID)
         {
             lock( _runningTasks )
@@ -284,12 +305,12 @@ namespace TaskServerApplication
                 RunningTask task = (RunningTask)sender;
                 lock( _runningTasks )
                 {
-                    if( task.State != TaskAttemptStatus.Completed )
+                    if( task.State < TaskAttemptStatus.Completed )
                     {
-                        _log.ErrorFormat("Task {0} did not complete sucessfully.", task.FullTaskAttemptId);
+                        _log.ErrorFormat("Task {0} ended without sending success/failure status.", task.FullTaskAttemptId);
                         task.State = TaskAttemptStatus.Error;
                         _runningTasks.Remove(task.FullTaskAttemptId);
-                        _taskServer.NotifyTaskStatusChanged(task.JobId, task.TaskAttemptId, task.State, null, null);
+                        _taskServer.NotifyTaskStatusChanged(task.JobId, task.TaskAttemptId, task.State, new TaskProgress() { StatusMessage = "Task ended without sending success/failure status." }, null);
                         task.Dispose();
                     }
                     _log.InfoFormat("Task {0} has finished, state = {1}.", task.FullTaskAttemptId, task.State);

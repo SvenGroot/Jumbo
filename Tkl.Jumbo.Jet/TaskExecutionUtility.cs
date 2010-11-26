@@ -336,26 +336,29 @@ namespace Tkl.Jumbo.Jet
 
                 _log.Info("Creating RPC clients.");
                 ITaskServerUmbilicalProtocol umbilical = JetClient.CreateTaskServerUmbilicalClient(jetConfig.TaskServer.Port);
-                DfsClient dfsClient = new DfsClient(dfsConfig);
-                JetClient jetClient = new JetClient(jetConfig);
 
-
-                string xmlConfigPath = Path.Combine(jobDirectory, Job.JobConfigFileName);
-                _log.DebugFormat("Loading job configuration from local file {0}.", xmlConfigPath);
-                JobConfiguration config = JobConfiguration.LoadXml(xmlConfigPath);
-                _log.Debug("Job configuration loaded.");
-
-                if( config.AssemblyFileNames != null )
-                {
-                    foreach( string assemblyFileName in config.AssemblyFileNames )
-                    {
-                        _log.DebugFormat("Loading assembly {0}.", assemblyFileName);
-                        Assembly.LoadFrom(Path.Combine(jobDirectory, assemblyFileName));
-                    }
-                }
+                AppDomain.CurrentDomain.UnhandledException += (sender, e) => { try { umbilical.ReportError(jobId, taskAttemptId, e.ExceptionObject.ToString()); } catch { } };
 
                 try
                 {
+                    DfsClient dfsClient = new DfsClient(dfsConfig);
+                    JetClient jetClient = new JetClient(jetConfig);
+
+
+                    string xmlConfigPath = Path.Combine(jobDirectory, Job.JobConfigFileName);
+                    _log.DebugFormat("Loading job configuration from local file {0}.", xmlConfigPath);
+                    JobConfiguration config = JobConfiguration.LoadXml(xmlConfigPath);
+                    _log.Debug("Job configuration loaded.");
+
+                    if( config.AssemblyFileNames != null )
+                    {
+                        foreach( string assemblyFileName in config.AssemblyFileNames )
+                        {
+                            _log.DebugFormat("Loading assembly {0}.", assemblyFileName);
+                            Assembly.LoadFrom(Path.Combine(jobDirectory, assemblyFileName));
+                        }
+                    }
+
                     TaskMetrics metrics;
                     using( TaskExecutionUtility taskExecution = TaskExecutionUtility.Create(dfsClient, jetClient, umbilical, jobId, config, taskAttemptId, dfsJobDirectory, jobDirectory) )
                     {
@@ -370,6 +373,13 @@ namespace Tkl.Jumbo.Jet
                 catch( Exception ex )
                 {
                     _log.Fatal("Failed to execute task.", ex);
+                    try
+                    {
+                        umbilical.ReportError(jobId, taskAttemptId, ex.ToString());
+                    }
+                    catch
+                    {
+                    }
                 }
                 _log.InfoFormat("Task host finished execution of task, execution time: {0}s", sw.Elapsed.TotalSeconds);
                 processorStatus.Refresh();

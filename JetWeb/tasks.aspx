@@ -32,6 +32,7 @@
                 <th scope="col">End time</th>
                 <th scope="col">Duration</th>
                 <th scope="col">Progress</th>
+                <th scope="col">Status</th>
                 <th scope="col">Log file</th>
             </tr>
         </table>

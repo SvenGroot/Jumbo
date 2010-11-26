@@ -71,6 +71,13 @@ public partial class job : System.Web.UI.Page
             row.Cells.Add(new HtmlTableCell() { InnerText = job.NonDataLocalTaskCount.ToString() });
             RunningJobsTable.Rows.Add(row);
 
+            if( job.IsFinished && !job.IsSuccessful )
+            {
+                _failureReason.Visible = true;
+                _failureReason.InnerText = "Job failed: " + (job.FailureReason ?? "Unknown reason.");
+            }
+
+
             foreach( StageStatus stage in job.Stages )
             {
                 row = new HtmlTableRow();

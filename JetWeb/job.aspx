@@ -26,6 +26,7 @@
         <p>
             <a id="_downloadLink" href="jobinfo.ashx" visible="false" runat="server">Download job information.</a>
         </p>
+        <p id="_failureReason" visible="false" runat="server"></p>
         <h3>Stages</h3>
         <table id="StagesTable" runat="server">
             <tr>

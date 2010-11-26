@@ -141,6 +141,8 @@ namespace JobServerApplication
             get { return _schedulerInfo.RackLocal; }
         }
 
+        public string FailureReason { get; set; }
+
         public DateTime EndTimeUtc
         {
             get { return new DateTime(Interlocked.Read(ref _endTimeUtcTicks), DateTimeKind.Utc); }
@@ -269,7 +271,8 @@ namespace JobServerApplication
                 RackLocalTaskCount = RackLocal,
                 NonDataLocalTaskCount = NonDataLocal,
                 StartTime = StartTimeUtc,
-                EndTime = EndTimeUtc
+                EndTime = EndTimeUtc,
+                FailureReason = FailureReason
             };
             result.Stages.AddRange(from stage in Stages select stage.ToStageStatus());
             if( _failedTaskAttempts != null )

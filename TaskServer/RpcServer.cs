@@ -23,6 +23,11 @@ namespace TaskServerApplication
             TaskServer.Instance.ReportProgress(jobId, taskAttemptId, progress);
         }
 
+        public void ReportError(Guid jobId, TaskAttemptId taskAttemptId, string failureReason)
+        {
+            TaskServer.Instance.ReportError(jobId, taskAttemptId, failureReason);
+        }
+
         public void SetUncompressedTemporaryFileSize(Guid jobId, string fileName, long uncompressedSize)
         {
             TaskServer.Instance.SetUncompressedTemporaryFileSize(jobId, fileName, uncompressedSize);

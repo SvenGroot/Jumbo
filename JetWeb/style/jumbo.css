@@ -23,6 +23,12 @@ pre
     font-size: 100%;
     font-family: Consolas, monospace;
 }
+td pre
+{
+    margin: 0;
+    padding: 0;
+    white-space: pre-wrap;
+}
 .vertical .label, .vertical label
 {
 	float: none;

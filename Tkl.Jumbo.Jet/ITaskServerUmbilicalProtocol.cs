@@ -29,6 +29,14 @@ namespace Tkl.Jumbo.Jet
         void ReportProgress(Guid jobId, TaskAttemptId taskAttemptId, TaskProgress progress);
 
         /// <summary>
+        /// Reports that the task has encountered an unrecoverable error.
+        /// </summary>
+        /// <param name="jobId">The job ID of the job containing the task.</param>
+        /// <param name="taskAttemptId">The task attempt id.</param>
+        /// <param name="failureReason">The failure reason.</param>
+        void ReportError(Guid jobId, TaskAttemptId taskAttemptId, string failureReason);
+
+        /// <summary>
         /// Informs the task server of the uncompressed size of a temporary file used by the file channel.
         /// </summary>
         /// <param name="jobId">The job ID of the job containing the task that generated the file.</param>
