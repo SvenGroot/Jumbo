@@ -52,6 +52,7 @@ public partial class tasks : System.Web.UI.Page
             if( tasks != null )
             {
                 tasks = FilterTasksByState(tasks);
+                tasks = FilterTasksByDistance(tasks);
 
                 Title = string.Format("Job {0} ({1}) tasks - Jumbo Jet", job.JobName, job.JobId);
                 HeaderText.InnerText = string.Format("Job {0} ({1}) tasks", job.JobName, job.JobId);
@@ -108,6 +109,20 @@ public partial class tasks : System.Web.UI.Page
             TaskState state = (TaskState)Enum.Parse(typeof(TaskState), stateString, true);
             tasks = from t in tasks
                     where t.State == state
+                    select t;
+        }
+
+        return tasks;
+    }
+
+    private IEnumerable<TaskStatus> FilterTasksByDistance(IEnumerable<TaskStatus> tasks)
+    {
+        string distanceString = Request.QueryString["dataDistance"];
+        int distance;
+        if( !string.IsNullOrEmpty(distanceString) && int.TryParse(distanceString, out distance) )
+        {
+            tasks = from t in tasks
+                    where t.DataDistance == distance
                     select t;
         }
 

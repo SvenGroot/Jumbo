@@ -135,10 +135,7 @@ namespace JobServerApplication.Scheduling
                     {
                         server.TaskServer.SchedulerInfo.AssignTask(job, task);
                         --unscheduledTasks;
-                        if( distance > 1 )
-                            ++job.SchedulerInfo.NonDataLocal;
-                        else if( distance > 0 )
-                            ++job.SchedulerInfo.RackLocal;
+                        task.SchedulerInfo.CurrentAttemptDataDistance = distance;
 
                         _log.InfoFormat("Task {0} has been assigned to server {1} ({2}).", task.FullTaskId, server.TaskServer.Address, distance == 0 ? "data local" : (distance == 1 ? "rack local" : "NOT data local"));
                         if( server.TaskServer.SchedulerInfo.AvailableTasks == 0 )

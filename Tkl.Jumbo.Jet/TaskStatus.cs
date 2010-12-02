@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Xml.Linq;
 using System.Xml.Serialization;
+using System.Globalization;
 
 namespace Tkl.Jumbo.Jet
 {
@@ -68,6 +69,12 @@ namespace Tkl.Jumbo.Jet
         }
 
         /// <summary>
+        /// Gets or sets the distance to the input data, if this task read from the DFS.
+        /// </summary>
+        /// <value>-1 if this task didn't read from the DFS, 0 if this task was scheduled data-local, 1 if it was rack-local, 2 if it was neither data nor rack-local.</value>
+        public int DataDistance { get; set; }
+
+        /// <summary>
         /// Gets the duration of the task.
         /// </summary>
         public TimeSpan Duration
@@ -97,7 +104,8 @@ namespace Tkl.Jumbo.Jet
                 new XAttribute("attempts", Attempts.ToString(System.Globalization.CultureInfo.InvariantCulture)),
                 new XAttribute("startTime", StartTime.ToString(JobStatus.DatePattern, System.Globalization.CultureInfo.InvariantCulture)),
                 new XAttribute("endTime", EndTime.ToString(JobStatus.DatePattern, System.Globalization.CultureInfo.InvariantCulture)),
-                new XAttribute("duration", Duration.TotalSeconds.ToString(System.Globalization.CultureInfo.InvariantCulture)));
+                new XAttribute("duration", Duration.TotalSeconds.ToString(System.Globalization.CultureInfo.InvariantCulture)),
+                DataDistance < 0 ? null : new XAttribute("dataDistance", DataDistance.ToString(CultureInfo.InvariantCulture)));
         }
 
         /// <summary>
@@ -124,7 +132,8 @@ namespace Tkl.Jumbo.Jet
                 Attempts = (int)task.Attribute("attempts"),
                 StartTime = DateTime.ParseExact(task.Attribute("startTime").Value, JobStatus.DatePattern, System.Globalization.CultureInfo.InvariantCulture),
                 EndTime = DateTime.ParseExact(task.Attribute("endTime").Value, JobStatus.DatePattern, System.Globalization.CultureInfo.InvariantCulture),
-                TaskProgress = new TaskProgress() { Progress = 1f }
+                TaskProgress = new TaskProgress() { Progress = 1f },
+                DataDistance = task.Attribute("dataDistance") == null ? -1 : (int)task.Attribute("dataDistance")
             };
             status.StartOffset = status.StartTime - job.StartTime;
             return status;

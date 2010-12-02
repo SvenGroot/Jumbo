@@ -28,6 +28,7 @@ namespace JobServerApplication
         public TaskSchedulerInfo(TaskInfo task)
         {
             _task = task;
+            CurrentAttemptDataDistance = -1;
         }
 
         public TaskState State
@@ -58,6 +59,8 @@ namespace JobServerApplication
         public TaskAttemptId CurrentAttempt { get; set; }
 
         public TaskAttemptId SuccessfulAttempt { get; set; }
+
+        public int CurrentAttemptDataDistance { get; set; }
 
         public int Attempts { get; set; }
 

@@ -86,10 +86,10 @@
             <xsl:value-of select="@errors"/>
           </td>
           <td>
-            <xsl:value-of select="@rackLocalTasks"/>
+            <xsl:value-of select="count((Tasks | FailedTaskAttempts)[@dataDistance=1])"/>
           </td>
           <td>
-            <xsl:value-of select="@nonDataLocalTasks"/>
+            <xsl:value-of select="count((Tasks | FailedTaskAttempts)[@dataDistance=2])"/>
           </td>
         </tr>
       </tbody>

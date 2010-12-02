@@ -138,16 +138,6 @@ namespace JobServerApplication
             get { return _schedulerInfo.Errors; }
         }
 
-        public int NonDataLocal
-        {
-            get { return _schedulerInfo.NonDataLocal; }
-        }
-
-        public int RackLocal
-        {
-            get { return _schedulerInfo.RackLocal; }
-        }
-
         public string FailureReason { get; set; }
 
         public DateTime EndTimeUtc
@@ -275,8 +265,6 @@ namespace JobServerApplication
                 RunningTaskCount = RunningTaskCount,
                 UnscheduledTaskCount = UnscheduledTasks,
                 FinishedTaskCount = FinishedTasks,
-                RackLocalTaskCount = RackLocal,
-                NonDataLocalTaskCount = NonDataLocal,
                 StartTime = StartTimeUtc,
                 EndTime = EndTimeUtc,
                 FailureReason = FailureReason
