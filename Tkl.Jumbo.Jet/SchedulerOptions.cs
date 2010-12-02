@@ -21,8 +21,6 @@ namespace Tkl.Jumbo.Jet
         /// </summary>
         public SchedulerOptions()
         {
-            SpreadDfsInputTasks = true;
-            SpreadNonInputTasks = true;
         }
 
         /// <summary>
@@ -43,41 +41,41 @@ namespace Tkl.Jumbo.Jet
         
 
         /// <summary>
-        /// Gets or sets a value indicating whether to spread the DFS input tasks over as many servers as possible.
+        /// Gets or sets a value indicating how the server will assign DFS input tasks to task servers.
         /// </summary>
         /// <value>
-        /// 	<see langword="true"/> if the DFS input tasks are spread over as many servers as possible; otherwise, <see langword="false"/>. The default
-        /// 	value is <see langword="true"/>.
+        /// 	One of the values of the <see cref="SchedulingMode"/> enumeration.
         /// </value>
         /// <remarks>
         /// <para>
-        ///   When this property is <see langword="false"/>, the scheduler will assign a single task to a server and then move on to the next server, repeatedly iterating over
-        ///   the servers until there are no more tasks it can schedule.
+        ///   When this property is set to <see cref="SchedulingMode.MoreServers"/>, the scheduler will prefer the server with the most available tasks, while
+        ///   <see cref="SchedulingMode.FewerServers"/> means it will prefer the server with the fewest available tasks. Note that in either case, it will
+        ///   still prefer a local task of a non-local one regardless of the number of available tasks.
         /// </para>
         /// <para>
-        ///   When this property is <see langword="false"/>, the scheduler will assign as many tasks as possible to a server before moving on to the next.
+        ///   When this property is set to <see cref="SchedulingMode.OptimalLocality"/>, the scheduler will attempt to schedule in a way that minimizes the
+        ///   number of non-local tasks, without looking at the number of available tasks on the server.
         /// </para>
         /// </remarks>
-        [XmlAttribute("spreadDfsInputTasks")]
-        public bool SpreadDfsInputTasks { get; set; }
+        [XmlAttribute("dfsInputSchedulingMode")]
+        public SchedulingMode DfsInputSchedulingMode { get; set; }
 
         /// <summary>
-        /// Gets or sets a value indicating whether to spread tasks that do not read from the DFS over as many servers as possible.
+        /// Gets or sets a value indicating how the server will assign tasks that do not have DFS input to task servers.
         /// </summary>
         /// <value>
-        /// 	<see langword="true"/> if tasks that do not read from the DFS are spread over as many servers as possible; otherwise, <see langword="false"/>. The default
-        /// 	value is <see langword="true"/>.
+        /// 	One of the values of the <see cref="SchedulingMode"/> enumeration.
         /// </value>
         /// <remarks>
         /// <para>
-        ///   When this property is <see langword="false"/>, the scheduler will assign a single task to a server and then move on to the next server, repeatedly iterating over
-        ///   the servers until there are no more tasks it can schedule.
+        ///   When this property is set to <see cref="SchedulingMode.MoreServers"/>, the scheduler will prefer the server with the most available tasks, while
+        ///   <see cref="SchedulingMode.FewerServers"/> means it will prefer the server with the fewest available tasks.
         /// </para>
         /// <para>
-        ///   When this property is <see langword="false"/>, the scheduler will assign as many tasks as possible to a server before moving on to the next.
+        ///   The value of <see cref="SchedulingMode.OptimalLocality"/> is not valid for this property; it will be treated as <see cref="SchedulingMode.Default"/>.
         /// </para>
         /// </remarks>
-        [XmlAttribute("spreadNonInputTasks")]
-        public bool SpreadNonInputTasks { get; set; }
+        [XmlAttribute("nonInputSchedulingMode")]
+        public SchedulingMode NonInputSchedulingMode { get; set; }
     }
 }

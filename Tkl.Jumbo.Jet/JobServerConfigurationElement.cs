@@ -114,5 +114,37 @@ namespace Tkl.Jumbo.Jet
             get { return (int)this["taskServerSoftTimeout"]; }
             set { this["taskServerSoftTimeout"] = value; }
         }
+
+        /// <summary>
+        /// Gets or sets the default scheduling mode for tasks with DFS input.
+        /// </summary>
+        /// <value>The DFS input scheduling mode.</value>
+        /// <remarks>
+        /// <para>
+        ///   If the value of this property is set to <see cref="SchedulingMode.Default"/>, it will be treated as <see cref="SchedulingMode.MoreServers"/>.
+        /// </para>
+        /// </remarks>
+        [ConfigurationProperty("dfsInputSchedulingMode", DefaultValue = SchedulingMode.MoreServers, IsRequired = false, IsKey = false)]
+        public SchedulingMode DfsInputSchedulingMode
+        {
+            get { return (SchedulingMode)this["dfsInputSchedulingMode"]; }
+            set { this["dfsInputSchedulingMode"] = value; }
+        }
+
+        /// <summary>
+        /// Gets or sets the default scheduling mode for tasks without DFS input.
+        /// </summary>
+        /// <value>The DFS input scheduling mode.</value>
+        /// <remarks>
+        /// <para>
+        ///   If the value of this property is set to <see cref="SchedulingMode.Default"/> or <see cref="SchedulingMode.OptimalLocality"/>, it will be treated as <see cref="SchedulingMode.MoreServers"/>.
+        /// </para>
+        /// </remarks>
+        [ConfigurationProperty("nonInputSchedulingMode", DefaultValue = SchedulingMode.MoreServers, IsRequired = false, IsKey = false)]
+        public SchedulingMode NonInputSchedulingMode
+        {
+            get { return (SchedulingMode)this["nonInputSchedulingMode"]; }
+            set { this["nonInputSchedulingMode"] = value; }
+        }
     }
 }

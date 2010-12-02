@@ -37,6 +37,13 @@ namespace JobServerApplication
 
         public bool NeedsCleanup { get; set; }
 
+        public int GetSchedulableLocalTaskCount(DfsClient dfsClient)
+        {
+            return (from task in GetLocalTasks(dfsClient)
+                    where task.Stage.IsReadyForScheduling && task.Server == null && !task.SchedulerInfo.BadServers.Contains(_taskServer)
+                    select task).Count();
+        }
+
         public TaskInfo FindTaskToSchedule(DfsClient dfsClient, int distance)
         {
             IEnumerable<TaskInfo> eligibleTasks;

@@ -46,11 +46,30 @@ namespace JobServerApplication.Scheduling
             }
         }
 
+        private sealed class TaskServerDfsInputLocalTasksComparer : IComparer<TaskServerJobInfo>
+        {
+            public DfsClient DfsClient { get; set; }
+
+            public int Compare(TaskServerJobInfo x, TaskServerJobInfo y)
+            {
+                int tasksX = x.GetSchedulableLocalTaskCount(DfsClient);
+                int tasksY = y.GetSchedulableLocalTaskCount(DfsClient);
+
+                if( tasksX < tasksY )
+                    return -1;
+                else if( tasksX > tasksY )
+                    return 1;
+                else
+                    return 0;
+            }
+        }
+
         #endregion
 
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(StagedScheduler));
         private readonly TaskServerNonInputComparer _nonInputComparer = new TaskServerNonInputComparer();
         private readonly TaskServerDfsInputComparer _dfsInputComparer = new TaskServerDfsInputComparer();
+        private readonly TaskServerDfsInputLocalTasksComparer _dfsInputLocalTasksComparer = new TaskServerDfsInputLocalTasksComparer();
 
         public void ScheduleTasks(IEnumerable<JobInfo> jobs, DfsClient dfsClient)
         {
@@ -87,9 +106,26 @@ namespace JobServerApplication.Scheduling
             if( unscheduledTasks > 0 )
             {
                 var availableTaskServers = job.SchedulerInfo.TaskServers.Where(server => server.TaskServer.IsActive && server.TaskServer.SchedulerInfo.AvailableTasks > 0);
-                // If spreading we want high amounts of available tasks at the front of the queue.
-                _dfsInputComparer.Invert = job.Configuration.SchedulerOptions.SpreadDfsInputTasks;
-                PriorityQueue<TaskServerJobInfo> taskServers = new PriorityQueue<TaskServerJobInfo>(availableTaskServers, _dfsInputComparer);
+                IComparer<TaskServerJobInfo> comparer;
+
+                switch( job.Configuration.SchedulerOptions.DfsInputSchedulingMode )
+                {
+                case SchedulingMode.FewerServers:
+                    _dfsInputComparer.Invert = false;
+                    comparer = _dfsInputComparer;
+                    break;
+                case SchedulingMode.OptimalLocality:
+                    _dfsInputLocalTasksComparer.DfsClient = dfsClient;
+                    comparer = _dfsInputLocalTasksComparer;
+                    break;
+                default:
+                    // If spreading we want high amounts of available tasks at the front of the queue.
+                    _dfsInputComparer.Invert = true;
+                    comparer = _dfsInputComparer;
+                    break;
+                }
+
+                PriorityQueue<TaskServerJobInfo> taskServers = new PriorityQueue<TaskServerJobInfo>(availableTaskServers, comparer);
 
                 while( taskServers.Count > 0 && unscheduledTasks > 0 )
                 {
@@ -128,8 +164,8 @@ namespace JobServerApplication.Scheduling
             if( unscheduledTasks.Count > 0 )
             {
                 var availableTaskServers = job.SchedulerInfo.TaskServers.Where(server => server.TaskServer.IsActive && server.TaskServer.SchedulerInfo.AvailableNonInputTasks > 0);
-                // If spreading we want high amounts of available tasks at the front of the queue.
-                _nonInputComparer.Invert = job.Configuration.SchedulerOptions.SpreadNonInputTasks;
+
+                _nonInputComparer.Invert = job.Configuration.SchedulerOptions.NonInputSchedulingMode != SchedulingMode.FewerServers;
                 PriorityQueue<TaskServerJobInfo> taskServers = new PriorityQueue<TaskServerJobInfo>(availableTaskServers, _nonInputComparer);
 
                 while( taskServers.Count > 0 && unscheduledTasks.Count > 0 )

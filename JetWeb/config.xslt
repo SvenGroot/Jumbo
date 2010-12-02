@@ -415,15 +415,15 @@
           </td>
         </tr>
         <tr>
-          <th scope="row">Spread DFS input tasks:</th>
+          <th scope="row">DFS input task scheduling mode:</th>
           <td>
-            <xsl:value-of select="@spreadDfsInputTasks"/>
+            <xsl:value-of select="@dfsInputSchedulingMode"/>
           </td>
         </tr>
         <tr>
-          <th scope="row">Spread non-input tasks:</th>
+          <th scope="row">Non-input task scheduling mode:</th>
           <td>
-            <xsl:value-of select="@spreadNonInputTasks"/>
+            <xsl:value-of select="@nonInputSchedulingMode"/>
           </td>
         </tr>
       </tbody>

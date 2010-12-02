@@ -58,6 +58,18 @@ namespace JobServerApplication
             _localAddress = new ServerAddress(ServerContext.LocalHostName, jetConfiguration.JobServer.Port);
 
             _scheduler = (Scheduling.IScheduler)Activator.CreateInstance(Type.GetType("JobServerApplication.Scheduling." + jetConfiguration.JobServer.Scheduler));
+
+            if( Configuration.JobServer.DfsInputSchedulingMode == SchedulingMode.Default )
+            {
+                _log.Warn("DfsInputSchedulingMode was set to SchedulingMode.Default; SchedulingMode.MoreServers will be used instead.");
+                Configuration.JobServer.DfsInputSchedulingMode = SchedulingMode.MoreServers;
+            }
+            if( Configuration.JobServer.NonInputSchedulingMode == SchedulingMode.Default || Configuration.JobServer.NonInputSchedulingMode == SchedulingMode.OptimalLocality )
+            {
+                _log.WarnFormat("NonInputSchedulingMode was set to SchedulingMode.{0}; SchedulingMode.MoreServers will be used instead.", Configuration.JobServer.NonInputSchedulingMode);
+                Configuration.JobServer.NonInputSchedulingMode = SchedulingMode.MoreServers;
+            }
+
             _running = true;
         }
 
