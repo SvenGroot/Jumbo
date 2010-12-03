@@ -418,6 +418,37 @@ namespace Tkl.Jumbo.Test.Jet
             }
         }
 
+        [Test]
+        public void TestMultipleJobExecution()
+        {
+            const string outputPath1 = "/multiple1";
+            const string outputPath2 = "/multiple2";
+            DfsClient dfsClient = new DfsClient(Dfs.TestDfsCluster.CreateClientConfig());
+            dfsClient.NameServer.CreateDirectory(outputPath1);
+            dfsClient.NameServer.CreateDirectory(outputPath2);
+            Tkl.Jumbo.Dfs.DfsFile file = dfsClient.NameServer.GetFileInfo(_fileName);
+            JobConfiguration config1 = CreateConfiguration(dfsClient, file, outputPath1, false, typeof(LineCounterTask), typeof(LineAdderTask), ChannelType.File);
+            JobConfiguration config2 = CreateConfiguration(dfsClient, file, outputPath2, false, typeof(LineCounterTask), typeof(LineAdderTask), ChannelType.File);
+
+            JetClient target = new JetClient(TestJetCluster.CreateClientConfig());
+            Job job1 = target.RunJob(config1, dfsClient, typeof(LineCounterTask).Assembly.Location);
+            Job job2 = target.RunJob(config2, dfsClient, typeof(LineCounterTask).Assembly.Location);
+
+            bool complete1 = target.WaitForJobCompletion(job1.JobId, Timeout.Infinite, 1000);
+            bool complete2 = target.WaitForJobCompletion(job2.JobId, Timeout.Infinite, 1000);
+            Assert.IsTrue(complete1);
+            Assert.IsTrue(complete2);
+            JobStatus status = target.JobServer.GetJobStatus(job1.JobId);
+            Assert.IsTrue(status.IsSuccessful);
+            Assert.AreEqual(0, status.ErrorTaskCount);
+            status = target.JobServer.GetJobStatus(job2.JobId);
+            Assert.IsTrue(status.IsSuccessful);
+            Assert.AreEqual(0, status.ErrorTaskCount);
+
+            ValidateLineCountOutput(outputPath1, dfsClient, _lines);
+            ValidateLineCountOutput(outputPath2, dfsClient, _lines);
+        }
+
         private void TestJobExecutionSort(string inputFileName, string outputPath, int mergeTasks, int partitionsPerTask, bool forceFileDownload, bool singleFileOutput)
         {
             const int recordCount = 2500000;

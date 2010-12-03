@@ -27,15 +27,16 @@ namespace JobServerApplication
         private volatile bool _taskServersModified;
         private readonly NetworkTopology _topology; // Lock _topology when accessing.
         private readonly Dictionary<Guid, Job> _pendingJobs = new Dictionary<Guid, Job>(); // Jobs that have been created but aren't running yet.
-        private readonly Hashtable _jobs = new Hashtable(); // Using hashtable rather than Dictionary for its concurrency properties
+        private readonly ConcurrentDictionary<Guid, JobInfo> _jobs = new ConcurrentDictionary<Guid, JobInfo>();
+        private readonly List<JobInfo> _orderedJobs = new List<JobInfo>(); // Jobs in the order that they should be scheduled.
         private readonly Dictionary<Guid, JobInfo> _finishedJobs = new Dictionary<Guid, JobInfo>();
         private readonly List<JobInfo> _jobsNeedingCleanup = new List<JobInfo>();
         private readonly DfsClient _dfsClient;
         private readonly Scheduling.IScheduler _scheduler;
         private readonly object _schedulerLock = new object();
         private readonly ServerAddress _localAddress;
-        private volatile bool _running;
-        private readonly Queue<JobInfo> _schedulerJobQueue = new Queue<JobInfo>();
+        private readonly BlockingCollection<ManualResetEventSlim> _schedulerRequests = new BlockingCollection<ManualResetEventSlim>();
+        private readonly CancellationTokenSource _cancellation = new CancellationTokenSource();
         private Thread _schedulerThread;
         private readonly object _schedulerThreadLock = new object();
         private readonly ManualResetEvent _schedulerWaitingEvent = new ManualResetEvent(false);
@@ -69,8 +70,6 @@ namespace JobServerApplication
                 _log.WarnFormat("NonInputSchedulingMode was set to SchedulingMode.{0}; SchedulingMode.MoreServers will be used instead.", Configuration.JobServer.NonInputSchedulingMode);
                 Configuration.JobServer.NonInputSchedulingMode = SchedulingMode.MoreServers;
             }
-
-            _running = true;
         }
 
         public static JobServer Instance { get; private set; }
@@ -170,15 +169,17 @@ namespace JobServerApplication
 
 
             JobInfo jobInfo = new JobInfo(job, config);
-            // Lock because we're adding to the Hashtable
-            lock( _jobs )
+            if( !_jobs.TryAdd(jobId, jobInfo) )
+                throw new ArgumentException("The job is already running.");
+
+            lock( _orderedJobs )
             {
-                _jobs.Add(jobId, jobInfo);
+                _orderedJobs.Add(jobInfo);
             }
 
             _log.InfoFormat("Job {0} has entered the running state. Number of tasks: {1}.", jobId, jobInfo.UnscheduledTasks);
 
-            ScheduleTasks(jobInfo);
+            RunScheduler();
         }
 
         public bool AbortJob(Guid jobId)
@@ -196,8 +197,8 @@ namespace JobServerApplication
 
             lock( _schedulerLock )
             {
-                JobInfo job = (JobInfo)_jobs[jobId];
-                if( job == null )
+                JobInfo job;
+                if( !_jobs.TryGetValue(jobId, out job) )
                     _log.InfoFormat("Didn't abort job {0} because it wasn't found in the running job list.", jobId);
                 else if( job.State == JobState.Running )
                 {
@@ -219,7 +220,7 @@ namespace JobServerApplication
             _log.DebugFormat("GetTaskServerForTask, jobID = {{{0}}}, taskID = \"{1}\"", jobID, taskID);
             if( taskID == null )
             throw new ArgumentNullException("taskID");
-            JobInfo job = (JobInfo)_jobs[jobID];
+            JobInfo job = _jobs[jobID];
             TaskInfo task = job.GetTask(taskID);
             TaskServerInfo server = task.Server; // For thread-safety, we should do only one read of the property.
             return server == null ? null : server.Address;
@@ -253,8 +254,8 @@ namespace JobServerApplication
 
         public JobStatus GetJobStatus(Guid jobId)
         {
-            JobInfo job = (JobInfo)_jobs[jobId];
-            if( job == null )
+            JobInfo job;
+            if( !_jobs.TryGetValue(jobId, out job) )
             {
                 lock( _finishedJobs )
                 {
@@ -267,12 +268,8 @@ namespace JobServerApplication
 
         public JobStatus[] GetRunningJobs()
         {
-            // Locking because enumeration is not thread-safe
-            lock( _jobs )
-            {
-                return (from job in _jobs.Values.Cast<JobInfo>()
-                        select job.ToJobStatus()).ToArray();
-            }
+            return (from job in _jobs.Values
+                    select job.ToJobStatus()).ToArray();
         }
 
         public JetMetrics GetMetrics()
@@ -282,11 +279,7 @@ namespace JobServerApplication
                 JobServer = _localAddress
             };
 
-            // Locking _jobs because enumeration is not thread-safe.
-            lock( _jobs )
-            {
-                result.RunningJobs.AddRange(from job in _jobs.Values.Cast<JobInfo>() where job.State == JobState.Running select job.Job.JobId);
-            }
+            result.RunningJobs.AddRange(from job in _jobs.Values where job.State == JobState.Running select job.Job.JobId);
             lock( _finishedJobs )
             {
                 result.FinishedJobs.AddRange(from job in _finishedJobs
@@ -378,8 +371,8 @@ namespace JobServerApplication
             if( taskId == null )
                 throw new ArgumentNullException("taskId");
 
-            JobInfo job = (JobInfo)_jobs[jobId];
-            if( job == null )
+            JobInfo job;
+            if( !_jobs.TryGetValue(jobId, out job) )
                 throw new ArgumentException("Unknown job ID.");
             TaskInfo task = job.GetTask(taskId.ToString());
             return task.PartitionInfo == null ? null : task.PartitionInfo.GetAssignedPartitions();
@@ -390,8 +383,8 @@ namespace JobServerApplication
             if( taskId == null )
                 throw new ArgumentNullException("taskId");
 
-            JobInfo job = (JobInfo)_jobs[jobId];
-            if( job == null )
+            JobInfo job;
+            if( !_jobs.TryGetValue(jobId, out job) )
                 throw new ArgumentException("Unknown job ID.");
             TaskInfo task = job.GetTask(taskId.ToString());
             if( task.PartitionInfo == null )
@@ -405,8 +398,8 @@ namespace JobServerApplication
             if( taskId == null )
                 throw new ArgumentNullException("taskId");
 
-            JobInfo job = (JobInfo)_jobs[jobId];
-            if( job == null )
+            JobInfo job;
+            if( !_jobs.TryGetValue(jobId, out job) )
                 throw new ArgumentException("Unknown job ID.");
             TaskInfo task = job.GetTask(taskId.ToString());
             if( task.PartitionInfo == null )
@@ -478,23 +471,8 @@ namespace JobServerApplication
                 // If this is a new task server and there are running jobs, we want to run the scheduler to see if we can assign any tasks to the new server.
                 // At this point we know we've gotten the StatusHeartbeat because this function would've returned above if the new server didn't send one.
                 // Locking jobs because we're enumerating
-                JobInfo jobToSchedule = null;
-                lock( _jobs )
-                {
-                    foreach( JobInfo job in _jobs.Values )
-                    {
-                        if( job.UnscheduledTasks > 0 )
-                        {
-                            jobToSchedule = job;
-                            break;
-                        }
-                    }
-                }
-
-                if( jobToSchedule != null )
-                {
-                    ScheduleTasks(jobToSchedule);
-                }
+                if( _jobs.Values.Any(j => j.UnscheduledTasks > 0) )
+                    RunScheduler();
             }
 
             lock( _schedulerLock )
@@ -597,8 +575,8 @@ namespace JobServerApplication
         {
             if( data.Status >= TaskAttemptStatus.Running )
             {
-                JobInfo job = (JobInfo)_jobs[data.JobId];
-                if( job == null )
+                JobInfo job;
+                if( !_jobs.TryGetValue(data.JobId, out job) )
                 {
                     _log.WarnFormat("Task server {0} reported status for unknown job {1} (this may be the aftermath of a failed job).", server.Address, data.JobId);
                     if( data.Status == TaskAttemptStatus.Running )
@@ -634,7 +612,6 @@ namespace JobServerApplication
 
                 if( data.Status > TaskAttemptStatus.Running )
                 {
-                    bool schedule = false;
                     // This access schedulerinfo in the task server info and various job and task state so must be done inside the scheduler lock
                     lock( _schedulerLock )
                     {
@@ -705,12 +682,7 @@ namespace JobServerApplication
                         {
                             FinishOrFailJob(job);
                         }
-                        else if( job.UnscheduledTasks > 0 )
-                            schedule = true;
                     } // lock( _schedulerLock )
-
-                    if( schedule )
-                        ScheduleTasks(job); // TODO: Once multiple jobs at once are supported, this shouldn't just consider that job
                 }
             }
 
@@ -737,9 +709,11 @@ namespace JobServerApplication
                 job.SchedulerInfo.AbortTasks();
             }
 
-            lock( _jobs )
+            JobInfo job2;
+            _jobs.TryRemove(job.Job.JobId, out job2);
+            lock( _orderedJobs )
             {
-                _jobs.Remove(job.Job.JobId);
+                _orderedJobs.Remove(job);
             }
             lock( _finishedJobs )
             {
@@ -755,22 +729,51 @@ namespace JobServerApplication
             ArchiveJob(job);
         }
 
-        /// <summary>
-        /// NOTE: Don't call inside the scheduler lock, will lead to deadlock.
-        /// </summary>
-        /// <param name="job"></param>
-        private void ScheduleTasks(JobInfo job)
+        private void RunScheduler()
         {
-            System.Diagnostics.Stopwatch sw = new System.Diagnostics.Stopwatch();
-            sw.Start();
-            lock( _schedulerJobQueue )
-            {
-                if( !_schedulerJobQueue.Contains(job) )
-                    _schedulerJobQueue.Enqueue(job);
-                _schedulerWaitingEvent.Reset(); // We know that the scheduler queue contains items at this point and since we're holding the lock there's no way this can cross with the SchedulerThread
-                Monitor.Pulse(_schedulerJobQueue);
-            }
+            StartSchedulerThread();
 
+            using( ManualResetEventSlim evt = new ManualResetEventSlim() )
+            {
+                _schedulerRequests.Add(evt, _cancellation.Token);
+                if( !evt.Wait(_schedulerTimeoutMilliseconds, _cancellation.Token) )
+                {
+                    _log.ErrorFormat("The scheduler timed out while waiting for scheduling run.");
+                    lock( _schedulerThreadLock )
+                    {
+                        AbortSchedulerThread();
+
+                        lock( _schedulerLock )
+                        {
+                            // TODO: Fail only the responsible job
+                            List<JobInfo> jobs;
+                            lock( _orderedJobs )
+                            {
+                                // Create a new List because FinishOrFailJob will remove items from _orderedJobs
+                                jobs = new List<JobInfo>(_orderedJobs);
+                            }
+
+                            foreach( JobInfo job in jobs )
+                            {
+                                job.SchedulerInfo.State = JobState.Failed;
+                                job.FailureReason = "Scheduler timed out.";
+                                FinishOrFailJob(job);
+                            }
+                        }
+
+                        // Restart the scheduler so that any requests in the queue will get signalled.
+                        StartSchedulerThread();
+                    }
+                }
+            }
+        }
+
+        private void StartSchedulerThread()
+        {
+            // Although running the scheduler on the thread pool might make sense, we don't want to do that
+            // because the RunScheduler function itself might run on the thread pool, and it has to wait
+            // for the scheduler to finish. A thread pool thread waiting for a thread pool thread can
+            // lead to deadlock.
             lock( _schedulerThreadLock )
             {
                 if( _schedulerThread == null )
@@ -779,41 +782,75 @@ namespace JobServerApplication
                     _schedulerThread.Start();
                 }
             }
+        }
 
-            if( !_schedulerWaitingEvent.WaitOne(_schedulerTimeoutMilliseconds) )
+        private void AbortSchedulerThread()
+        {
+            lock( _schedulerThreadLock )
             {
-                // Scheduler timed out
-                _log.ErrorFormat("The scheduler timed out while waiting for scheduling of job {{{0}}}.", job.Job.JobId);
-                lock( _schedulerThreadLock )
+                if( _schedulerThread != null )
                 {
                     _schedulerThread.Abort();
                     _schedulerThread = null;
                 }
-                lock( _schedulerLock )
-                {
-                    job.SchedulerInfo.State = JobState.Failed;
-                    job.FailureReason = "Scheduler timed out.";
-                    FinishOrFailJob(job);
-                }
             }
-
-            sw.Stop();
-            _log.DebugFormat("Scheduling run took {0}", sw.Elapsed.TotalSeconds);
         }
+
+        ///// <summary>
+        ///// NOTE: Don't call inside the scheduler lock, will lead to deadlock.
+        ///// </summary>
+        ///// <param name="job"></param>
+        //private void ScheduleTasks(JobInfo job)
+        //{
+        //    System.Diagnostics.Stopwatch sw = new System.Diagnostics.Stopwatch();
+        //    sw.Start();
+        //    lock( _schedulerJobQueue )
+        //    {
+        //        if( !_schedulerJobQueue.Contains(job) )
+        //            _schedulerJobQueue.Enqueue(job);
+        //        _schedulerWaitingEvent.Reset(); // We know that the scheduler queue contains items at this point and since we're holding the lock there's no way this can cross with the SchedulerThread
+        //        Monitor.Pulse(_schedulerJobQueue);
+        //    }
+
+        //    lock( _schedulerThreadLock )
+        //    {
+        //        if( _schedulerThread == null )
+        //        {
+        //            _schedulerThread = new Thread(SchedulerThread) { Name = "SchedulerThread", IsBackground = true };
+        //            _schedulerThread.Start();
+        //        }
+        //    }
+
+        //    if( !_schedulerWaitingEvent.WaitOne(_schedulerTimeoutMilliseconds) )
+        //    {
+        //        // Scheduler timed out
+        //        _log.ErrorFormat("The scheduler timed out while waiting for scheduling of job {{{0}}}.", job.Job.JobId);
+        //        lock( _schedulerLock )
+        //        {
+        //            lock( _schedulerThreadLock )
+        //            {
+        //                _schedulerThread.Abort();
+        //                _schedulerThread = null;
+        //            }
+        //            job.SchedulerInfo.State = JobState.Failed;
+        //            job.FailureReason = "Scheduler timed out.";
+        //            FinishOrFailJob(job);
+        //        }
+        //    }
+
+        //    sw.Stop();
+        //    _log.DebugFormat("Scheduling run took {0}", sw.Elapsed.TotalSeconds);
+        //}
 
         private void ShutdownInternal()
         {
-            lock( _schedulerJobQueue )
-            {
-                _running = false;
-                Monitor.Pulse(_schedulerJobQueue);
-            }
+            _cancellation.Cancel();
         }
 
         private JobInfo GetRunningOrFinishedJob(Guid jobId)
         {
-            JobInfo job = (JobInfo)_jobs[jobId];
-            if( job == null )
+            JobInfo job;
+            if( !_jobs.TryGetValue(jobId, out job) )
             {
                 lock( _finishedJobs )
                 {
@@ -827,54 +864,71 @@ namespace JobServerApplication
 
         private void SchedulerThread()
         {
-            while( _running )
+            try
             {
-                JobInfo job = null;
-                lock( _schedulerJobQueue )
+                List<JobInfo> jobs = new List<JobInfo>();
+                foreach( ManualResetEventSlim request in _schedulerRequests.GetConsumingEnumerable(_cancellation.Token) )
                 {
-                    if( _schedulerJobQueue.Count == 0 )
+                    try
                     {
-                        _schedulerWaitingEvent.Set();
-                        Monitor.Wait(_schedulerJobQueue, 10000);
+                        DoSchedulingRun(jobs);
                     }
-                    else
+                    finally
                     {
-                        job = _schedulerJobQueue.Dequeue();
-                    }
-                }
-
-                if( job != null )
-                {
-                    if( job.State != JobState.Running )
-                        _log.WarnFormat("Scheduler was asked to schedule job {{{0}}} that isn't running (this could be the aftermath of a failed or aborted job).", job.Job.JobId);
-                    else
-                    {
-                        lock( _schedulerLock )
-                        {
-                            if( _taskServersModified || _taskServers.Count != job.SchedulerInfo.TaskServerCount )
-                            {
-                                _taskServersModified = false;
-                                foreach( TaskServerInfo server in _taskServers.Values )
-                                {
-                                    job.SchedulerInfo.AddTaskServer(server);
-                                }
-                            }
-
-                            try
-                            {
-                                _scheduler.ScheduleTasks(new[] { job }, _dfsClient);
-                            }
-                            catch( Exception ex )
-                            {
-                                job.FailureReason = string.Format("The scheduler encountered an error scheduling job {{{0}}}.", job.Job.JobId);
-                                _log.Error(job.FailureReason, ex);
-                                job.SchedulerInfo.State = JobState.Failed;
-                                FinishOrFailJob(job);
-                            }
-                        }
+                        request.Set();
                     }
                 }
             }
+            catch( OperationCanceledException )
+            {
+                _log.InfoFormat("Scheduler thread shut down due to cancellation.");
+            }
+        }
+
+        private void DoSchedulingRun(List<JobInfo> jobs)
+        {
+            lock( _orderedJobs )
+            {
+                jobs.AddRange(_orderedJobs);
+            }
+
+            lock( _schedulerLock )
+            {
+                var sw = System.Diagnostics.Stopwatch.StartNew();
+
+                foreach( JobInfo job in jobs )
+                {
+                    if( _taskServersModified || _taskServers.Count != job.SchedulerInfo.TaskServerCount )
+                    {
+                        foreach( TaskServerInfo server in _taskServers.Values )
+                        {
+                            job.SchedulerInfo.AddTaskServer(server);
+                        }
+                    }
+                    _taskServersModified = false;
+                }
+                
+                try
+                {
+                    _scheduler.ScheduleTasks(jobs, _dfsClient);
+                }
+                catch( Exception ex )
+                {
+                    // TODO: Fail only the responsible job.
+                    _log.Error("The scheduler encountered an error.", ex);
+                    foreach( JobInfo job in jobs )
+                    {
+                        job.FailureReason = "The scheduler encountered an error.";
+                        job.SchedulerInfo.State = JobState.Failed;
+                        FinishOrFailJob(job);
+                    }
+                }
+
+                sw.Stop();
+                _log.DebugFormat("Scheduling run took {0}ms.", sw.ElapsedMilliseconds);
+            }
+
+            jobs.Clear();
         }
 
         private void CheckTaskServerTimeoutThread()
@@ -882,7 +936,7 @@ namespace JobServerApplication
             int timeout = Configuration.JobServer.TaskServerTimeout;
             int sleepTime = timeout / 3;
 
-            while( _running )
+            while( !_cancellation.IsCancellationRequested )
             {
                 List<TaskServerInfo> deadServers = null;
                 Thread.Sleep(sleepTime);
