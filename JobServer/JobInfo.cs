@@ -82,6 +82,8 @@ namespace JobServerApplication
 
             _log.InfoFormat("Job {0:B} is using DFS input scheduling mode {1} and non-input scheduling mode {1}.", job.JobId, _config.SchedulerOptions.DfsInputSchedulingMode, _config.SchedulerOptions.NonInputSchedulingMode);
 
+            _orderedSchedulingNonInputTasks.Reverse(); // HACK: Reverse the list because the StagedScheduler searches backwards.
+
             _startTimeUtc = DateTime.UtcNow;
             _schedulerInfo = new JobSchedulerInfo(this)
             {
