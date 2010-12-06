@@ -64,7 +64,7 @@ namespace Tkl.Jumbo.Jet
             get 
             {
                 if( DfsInput != null )
-                    return DfsInput.TaskInputs.Count;
+                    return DfsInput.SplitCount;
                 return _taskCount; 
             }
             set 

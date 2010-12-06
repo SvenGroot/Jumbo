@@ -419,6 +419,12 @@ namespace Tkl.Jumbo.Test.Jet
         }
 
         [Test]
+        public void TestJobExecutionMultipleTasksPerBlock()
+        {
+            RunJob(false, "/jobsplitsoutput", TaskKind.Pull, ChannelType.File, 2);
+        }
+
+        [Test]
         public void TestMultipleJobExecution()
         {
             const string outputPath1 = "/multiple1";
@@ -572,7 +578,7 @@ namespace Tkl.Jumbo.Test.Jet
             return expected;
         }
 
-        private void RunJob(bool forceFileDownload, string outputPath, TaskKind taskKind, ChannelType channelType)
+        private void RunJob(bool forceFileDownload, string outputPath, TaskKind taskKind, ChannelType channelType, int splitsPerBlock = 1)
         {
             DfsClient dfsClient = new DfsClient(Dfs.TestDfsCluster.CreateClientConfig());
             dfsClient.NameServer.CreateDirectory(outputPath);
@@ -598,7 +604,7 @@ namespace Tkl.Jumbo.Test.Jet
             }
 
             Tkl.Jumbo.Dfs.DfsFile file = dfsClient.NameServer.GetFileInfo(_fileName);
-            JobConfiguration config = CreateConfiguration(dfsClient, file, outputPath, forceFileDownload, counterTask, adderTask, channelType);
+            JobConfiguration config = CreateConfiguration(dfsClient, file, outputPath, forceFileDownload, counterTask, adderTask, channelType, splitsPerBlock);
 
             JetClient target = new JetClient(TestJetCluster.CreateClientConfig());
             Job job = target.RunJob(config, dfsClient, typeof(LineCounterTask).Assembly.Location);
@@ -608,6 +614,7 @@ namespace Tkl.Jumbo.Test.Jet
             JobStatus status = target.JobServer.GetJobStatus(job.JobId);
             Assert.IsTrue(status.IsSuccessful);
             Assert.AreEqual(0, status.ErrorTaskCount);
+            Assert.AreEqual(config.Stages.Sum(s => s.TaskCount), status.FinishedTaskCount);
 
             ValidateLineCountOutput(outputPath, dfsClient, lines);
         }
@@ -623,12 +630,13 @@ namespace Tkl.Jumbo.Test.Jet
             }
         }
 
-        private static JobConfiguration CreateConfiguration(DfsClient dfsClient, Tkl.Jumbo.Dfs.DfsFile file, string outputPath, bool forceFileDownload, Type counterTask, Type adderTask, ChannelType channelType)
+        private static JobConfiguration CreateConfiguration(DfsClient dfsClient, Tkl.Jumbo.Dfs.DfsFile file, string outputPath, bool forceFileDownload, Type counterTask, Type adderTask, ChannelType channelType, int splitsPerBlock = 1)
         {
 
             JobConfiguration config = new JobConfiguration(System.IO.Path.GetFileName(typeof(LineCounterTask).Assembly.Location));
 
             StageConfiguration stage = config.AddInputStage("Task", file, counterTask, typeof(LineRecordReader));
+            stage.DfsInput.SplitsPerBlock = splitsPerBlock;
             if( channelType == ChannelType.Pipeline )
             {
                 // Pipeline channel cannot merge so we will add another stage in between.

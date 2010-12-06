@@ -61,8 +61,8 @@ namespace Tkl.Jumbo.Jet.Samples.Tasks
                 ++count;
             }
 
-            TaskDfsInput dfsInput = TaskContext.StageConfiguration.DfsInput.TaskInputs[TaskContext.TaskId.TaskNumber - 1];
-            _log.InfoFormat("Input file {0} block {1} contains {2} unordered records.", dfsInput.Path, dfsInput.Block, unsorted);
+            TaskDfsInput dfsInput = TaskContext.StageConfiguration.DfsInput.TaskInputs[TaskContext.StageConfiguration.DfsInput.GetInputIndex(TaskContext.TaskId)];
+            _log.InfoFormat("Input file {0} block {1} split {2} contains {3} unordered records.", dfsInput.Path, dfsInput.Block, TaskContext.TaskId.TaskNumber % TaskContext.StageConfiguration.DfsInput.SplitsPerBlock, unsorted);
 
             ValSortRecord result = new ValSortRecord()
             {

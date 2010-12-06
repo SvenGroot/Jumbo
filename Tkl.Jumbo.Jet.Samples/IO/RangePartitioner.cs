@@ -136,9 +136,9 @@ namespace Tkl.Jumbo.Jet.Samples.IO
         /// <param name="sampleSize">The total number of records to sample.</param>
         public static void CreatePartitionFile(DfsClient dfsClient, string partitionFilePath, StageDfsInput input, int partitions, int sampleSize)
         {
-            int samples = Math.Min(10, input.TaskInputs.Count);
+            int samples = Math.Min(10, input.SplitCount);
             int recordsPerSample = sampleSize / samples;
-            int sampleStep = input.TaskInputs.Count / samples;
+            int sampleStep = input.SplitCount / samples;
             _log.InfoFormat("Sampling {0} records in {1} samples ({2} records per sample) to create {3} partitions.", sampleSize, samples, recordsPerSample, partitions);
 
             List<byte[]> sampleData = new List<byte[]>(sampleSize);
