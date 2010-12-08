@@ -126,6 +126,22 @@ namespace Tkl.Jumbo.Jet
         }
 
         /// <summary>
+        /// Gets the deepest nested child stage of this compound stage.
+        /// </summary>
+        /// <value>The leaf child stage.</value>
+        [XmlIgnore]
+        public StageConfiguration Leaf
+        {
+            get
+            {
+                StageConfiguration leaf = this;
+                while( leaf.ChildStage != null )
+                    leaf = leaf.ChildStage;
+                return leaf;
+            }
+        }
+
+        /// <summary>
         /// Gets or sets the name of the type of the partitioner to use to partitioner elements amount the child stages' tasks.
         /// </summary>
         public TypeReference ChildStagePartitionerType { get; set; }

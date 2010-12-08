@@ -146,5 +146,16 @@ namespace Tkl.Jumbo.Jet
             get { return (SchedulingMode)this["nonInputSchedulingMode"]; }
             set { this["nonInputSchedulingMode"] = value; }
         }
+
+        /// <summary>
+        /// Gets or sets the percentage of tasks of the input channel's sending stage that need to be finished before a stage can be scheduled.
+        /// </summary>
+        /// <value>A value between 0 and 1 that indicates the scheduling threshold. The default value is 0.4.</value>
+        [ConfigurationProperty("schedulingThreshold", DefaultValue = 0.4f, IsRequired = false, IsKey = false)]
+        public float SchedulingThreshold
+        {
+            get { return (float)this["schedulingThreshold"]; }
+            set { this["schedulingThreshold"] = value; }
+        }
     }
 }

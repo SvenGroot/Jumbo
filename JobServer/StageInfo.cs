@@ -13,12 +13,15 @@ namespace JobServerApplication
 {
     sealed class StageInfo
     {
+        private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(StageInfo));
+
         private readonly List<TaskInfo> _tasks = new List<TaskInfo>();
         private readonly StageConfiguration _configuration;
         private List<StageInfo> _softDependentStages;
         private List<StageInfo> _hardDependentStages;
         private int _remainingTasks;
         private int _remainingSchedulingDependencies;
+        private readonly float _schedulingThreshold;
 
         public StageInfo(JobInfo job, StageConfiguration configuration)
         {
@@ -27,19 +30,29 @@ namespace JobServerApplication
 
             if( job != null )
             {
-                IEnumerable<StageConfiguration> dependencies = job.Configuration.GetDependenciesForStage(configuration.StageId, false);
-                foreach( StageConfiguration dependency in dependencies )
+                if( !configuration.TryGetTypedSetting(JobConfiguration.SchedulingThresholdSettingKey, out _schedulingThreshold) )
+                    _schedulingThreshold = job.Configuration.GetTypedSetting(JobConfiguration.SchedulingThresholdSettingKey, JobServer.Instance.Configuration.JobServer.SchedulingThreshold);
+
+                if( _schedulingThreshold < 0 || _schedulingThreshold > 1 )
+                {
+                    _log.WarnFormat("Invalid scheduling threshold {0} for stage {1}, using 0 instead.", _schedulingThreshold, configuration.StageId);
+                    _schedulingThreshold = 0;
+                }
+
+                // We need to be notified if the dependency is finished if it is a hard dependency, or if it isn't ready for scheduling itself.
+                foreach( StageConfiguration dependency in job.Configuration.GetExplicitDependenciesForStage(configuration.StageId) )
                 {
                     StageInfo stage = job.GetStage(dependency.Root.StageId);
-                    // We need to be notified if the dependency is finished if it is a hard dependency, or if it isn't ready for scheduling itself.
-                    if( !(dependency.OutputChannel != null && dependency.OutputChannel.OutputStage == configuration.StageId) )
-                    {
-                        ++_remainingSchedulingDependencies;
-                        if( stage._hardDependentStages == null )
-                            stage._hardDependentStages = new List<StageInfo>();
-                        stage._hardDependentStages.Add(this);
-                    }
-                    else if( !stage.IsReadyForScheduling )
+                    ++_remainingSchedulingDependencies;
+                    if( stage._hardDependentStages == null )
+                        stage._hardDependentStages = new List<StageInfo>();
+                    stage._hardDependentStages.Add(this);
+                }
+                foreach( StageConfiguration inputStage in job.Configuration.GetInputStagesForStage(configuration.StageId) )
+                {
+                    StageInfo stage = job.GetStage(inputStage.Root.StageId);
+                    // Ignore scheduling threshold for TCP channels.
+                    if( !stage.IsReadyForScheduling || (_schedulingThreshold > 0 && inputStage.OutputChannel.ChannelType != Tkl.Jumbo.Jet.Channels.ChannelType.Tcp) )
                     {
                         ++_remainingSchedulingDependencies;
                         if( stage._softDependentStages == null )
@@ -70,16 +83,14 @@ namespace JobServerApplication
             get { return _remainingSchedulingDependencies == 0; }
         }
 
+        /// <summary>
+        /// NOTE: Only call inside scheduler lock
+        /// </summary>
         public void NotifyTaskFinished()
         {
             if( Interlocked.Decrement(ref _remainingTasks) == 0 )
                 NotifyHardDependentStages();
-        }
-
-        public void NotifyDependencyFinished()
-        {
-            if( Interlocked.Decrement(ref _remainingSchedulingDependencies) == 0 )
-                NotifySoftDependentStages();
+            NotifySoftDependentStages();
         }
 
         public StageStatus ToStageStatus()
@@ -93,18 +104,45 @@ namespace JobServerApplication
         {
             if( _hardDependentStages != null )
             {
+                // This can happen only once, so there's no need to remove items from the _hardDependentStages collection.
                 foreach( StageInfo stage in _hardDependentStages )
-                    stage.NotifyDependencyFinished();
+                    stage.NotifyDependencyFinished(1.0f); // Hard dependencies are only notified when all tasks are finished.
             }
         }
 
         private void NotifySoftDependentStages()
         {
+            System.Diagnostics.Debug.Assert(IsReadyForScheduling);
+            float percentTasksFinished = (_tasks.Count() - _remainingTasks) / (float)_tasks.Count;
             if( _softDependentStages != null )
             {
-                foreach( StageInfo stage in _softDependentStages )
-                    stage.NotifyDependencyFinished();
+                for( int x = 0; x < _softDependentStages.Count; ++x )
+                {
+                    StageInfo stage = _softDependentStages[x];
+                    if( stage.NotifyDependencyFinished(percentTasksFinished) )
+                    {
+                        // Don't notify soft dependent stages again after they're satisfied.
+                        _softDependentStages.RemoveAt(x);
+                        --x;
+                    }
+                }
             }
+        }
+
+        private bool NotifyDependencyFinished(float percentTasksCompleted)
+        {
+            // This function is called if a hard dependency finishes all tasks, or a soft dependency finished a task or
+            // became ready for scheduling.
+            if( percentTasksCompleted >= _schedulingThreshold )
+            {
+                if( Interlocked.Decrement(ref _remainingSchedulingDependencies) == 0 )
+                {
+                    _log.InfoFormat("Stage {0} is ready for scheduling.", _configuration.StageId);
+                    NotifySoftDependentStages();
+                }
+                return true;
+            }
+            return false;
         }
     }
 }
