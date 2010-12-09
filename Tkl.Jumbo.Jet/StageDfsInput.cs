@@ -66,12 +66,12 @@ namespace Tkl.Jumbo.Jet
         /// </summary>
         /// <param name="splitIndex">Zero-based index of the split.</param>
         /// <returns>The zero-based input index.</returns>
-        public int GetInputIndex(int splitIndex)
+        public TaskDfsInput GetInput(int splitIndex)
         {
             int inputIndex = splitIndex / SplitsPerBlock;
             if( inputIndex < 0 || inputIndex >= _taskInputs.Count )
                 throw new ArgumentOutOfRangeException("splitIndex");
-            return inputIndex;
+            return TaskInputs[inputIndex];
         }
 
         /// <summary>
@@ -79,11 +79,11 @@ namespace Tkl.Jumbo.Jet
         /// </summary>
         /// <param name="taskId">The task id.</param>
         /// <returns>The zero-based input index.</returns>
-        public int GetInputIndex(TaskId taskId)
+        public TaskDfsInput GetInput(TaskId taskId)
         {
             if( taskId == null )
                 throw new ArgumentNullException("taskId");
-            return GetInputIndex(taskId.TaskNumber - 1);
+            return GetInput(taskId.TaskNumber - 1);
         }
 
         /// <summary>
