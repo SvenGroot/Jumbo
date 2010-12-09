@@ -120,6 +120,65 @@ namespace Tkl.Jumbo.Jet.Channels
             }
         }
 
+        private sealed class TaskCompletionBroadcastServer : UdpServer
+        {
+            private readonly FileInputChannel _channel;
+            private readonly byte[] _jobId;
+
+            public TaskCompletionBroadcastServer(FileInputChannel channel, IPAddress[] localAddresses, int port)
+                : base(localAddresses, port, true)
+            {
+                _channel = channel;
+                _jobId = _channel._jobID.ToByteArray();
+            }
+
+            protected override void HandleMessage(byte[] message, IPEndPoint remoteEndPoint)
+            {
+                if( message == null || message.Length < 17 )
+                    _log.Warn("Received invalid task completion broadcast message.");
+                else
+                {
+                    for( int x = 0; x < 16; ++x )
+                    {
+                        if( _jobId[x] != message[x] )
+                            return; // Job ID doesn't match, not meant for us.
+                    }
+
+                    CompletedTask task = new CompletedTask() { JobId = _channel._jobID };
+
+                    try
+                    {
+                        int index = 16;
+                        int length = message[index++];
+                        TaskId taskId = new TaskId(Encoding.UTF8.GetString(message, index, length));
+                        index += length;
+                        task.TaskAttemptId = new TaskAttemptId(taskId, message[index++]);
+                        length = message[index++];
+                        string serverName = Encoding.UTF8.GetString(message, index, length);
+                        index += length;
+                        int port = message[index++] | message[index++] << 8;
+                        task.TaskServer = new ServerAddress(serverName, port);
+                        task.TaskServerFileServerPort = message[index++] | message[index++];
+                    }
+                    catch( IndexOutOfRangeException )
+                    {
+                        // Should probably do some checks so we can handle this without exceptions.
+                        _log.Warn("Received invalid task completion broadcast message.");
+                    }
+                    catch( FormatException )
+                    {
+                        _log.Warn("Received invalid task completion broadcast message.");
+                    }
+                    catch( ArgumentException )
+                    {
+                        _log.Warn("Received invalid task completion broadcast message.");
+                    }
+
+                    _channel.NotifyTaskCompletion(task);
+                }
+            }
+        }
+
         #endregion
 
         /// <summary>
@@ -147,7 +206,8 @@ namespace Tkl.Jumbo.Jet.Channels
         private readonly FileChannelMemoryStorageManager _memoryStorage;
         private readonly Dictionary<ServerAddress, InputServer> _servers = new Dictionary<ServerAddress, InputServer>();
         private readonly List<InputServer> _orderedServers = new List<InputServer>();
-        private volatile bool _allInputTasksCompleted;
+        private HashSet<string> _tasksLeft; // Only access while _orderedServers is locked.
+        private readonly ManualResetEvent _allInputTasksCompleted = new ManualResetEvent(false);
         private readonly Type _inputReaderType;
         private readonly bool _inputUsesSingleFileFormat;
         private int _filesRetrieved;
@@ -155,6 +215,7 @@ namespace Tkl.Jumbo.Jet.Channels
         private int _totalPartitions;
         private IMultiInputRecordReader _reader;
         private volatile bool _hasNonMemoryInputs;
+        private TaskCompletionBroadcastServer _taskCompletionBroadcastServer;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="FileInputChannel"/> class.
@@ -319,7 +380,7 @@ namespace Tkl.Jumbo.Jet.Channels
         /// </remarks>
         public override void AssignAdditionalPartitions(IList<int> additionalPartitions)
         {
-            if( !_allInputTasksCompleted )
+            if( !_allInputTasksCompleted.WaitOne(0) )
                 throw new InvalidOperationException("Cannot assign additinoal partitions until the current partitions have finished downloading.");
 
             // Just making sure the threads have exited.
@@ -334,7 +395,7 @@ namespace Tkl.Jumbo.Jet.Channels
                 base.AssignAdditionalPartitions(additionalPartitions);
 
                 _totalPartitions += ActivePartitions.Count;
-                _allInputTasksCompleted = false;
+                _allInputTasksCompleted.Reset();
 
                 StartThreads();
             }
@@ -362,6 +423,9 @@ namespace Tkl.Jumbo.Jet.Channels
             if( !_disposed && disposing )
             {
                 ((IDisposable)_readyEvent).Dispose();
+                ((IDisposable)_allInputTasksCompleted).Dispose();
+                if( _taskCompletionBroadcastServer != null )
+                    _taskCompletionBroadcastServer.Dispose();
             }
             lock( _orderedServers )
             {
@@ -376,14 +440,24 @@ namespace Tkl.Jumbo.Jet.Channels
             try
             {
                 Random rnd = new Random();
-                HashSet<string> tasksLeft = new HashSet<string>(InputTaskIds);
-                string[] tasksLeftArray = tasksLeft.ToArray();
+                bool hasTasksLeft;
+                lock( _tasksLeft )
+                {
+                    hasTasksLeft = _tasksLeft.Count > 0;
+                    _log.InfoFormat("Start checking for output file completion of {0} tasks, {1} partitions, timeout {2}ms", _tasksLeft.Count, ActivePartitions.Count, _pollingInterval);
+                }
 
-                _log.InfoFormat("Start checking for output file completion of {0} tasks, {1} partitions, timeout {2}ms", tasksLeft.Count, ActivePartitions.Count, _pollingInterval);
+                string[] tasksLeftArray = null;
 
-                while( !_disposed && tasksLeft.Count > 0 )
+                while( !_disposed && hasTasksLeft )
                 {
                     TaskExecution.ReportProgress(); // Ping the job server for progress to ensure our task doesn't time out while waiting for input.
+
+                    lock( _orderedServers )
+                    {
+                        if( tasksLeftArray == null || _tasksLeft.Count != tasksLeftArray.Length )
+                            tasksLeftArray = _tasksLeft.ToArray();
+                    }
 
                     CompletedTask[] completedTasks = _jobServer.CheckTaskCompletion(_jobID, tasksLeftArray);
                     if( completedTasks != null && completedTasks.Length > 0 )
@@ -394,33 +468,25 @@ namespace Tkl.Jumbo.Jet.Channels
                         {
                             foreach( CompletedTask task in completedTasks )
                             {
-                                InputServer server;
-                                if( !_servers.TryGetValue(task.TaskServer, out server) )
-                                {
-                                    server = new InputServer(task.TaskServer, task.TaskServerFileServerPort);
-                                    _servers.Add(task.TaskServer, server);
-                                    // Randomize the position of the server in the list to prevent all tasks hitting the same server.
-                                    // We don't do this using insert (because that'd be slower) and we leave open the possility of the new item staying at the end of the list.
-                                    _orderedServers.Add(server);
-                                    _orderedServers.Swap(_orderedServers.Count - 1, rnd.Next(_orderedServers.Count));
-                                }
-                                server.AddCompletedTask(task);
-
-                                tasksLeft.Remove(task.TaskAttemptId.TaskId.ToString());
+                                AddCompletedTaskForDownloading(rnd, task);
                             }
-                            tasksLeftArray = tasksLeft.ToArray();
                             // Wake up the download thread.
                             Monitor.Pulse(_orderedServers);
+
+                            hasTasksLeft = _tasksLeft.Count > 0;
                         }
                     }
 
 
-                    if( tasksLeft.Count > 0 )
-                        Thread.Sleep(_pollingInterval);
+                    if( hasTasksLeft )
+                        hasTasksLeft = !_allInputTasksCompleted.WaitOne(_pollingInterval);
                 }
+
+                _taskCompletionBroadcastServer.Dispose();
+
                 lock( _orderedServers )
                 {
-                    _allInputTasksCompleted = true;
+                    _allInputTasksCompleted.Set();
                     // Just making sure the download thread wakes up after this flag is set.
                     Monitor.Pulse(_orderedServers);
                 }
@@ -435,6 +501,39 @@ namespace Tkl.Jumbo.Jet.Channels
                 // we're done here. We ignore it.
                 Debug.Assert(ex.ObjectName == "MultiRecordReader");
                 _log.WarnFormat("MultiRecordReader was disposed prematurely; object name = \"{0}\"", ex.ObjectName);
+            }
+        }
+
+        private void AddCompletedTaskForDownloading(Random rnd, CompletedTask task)
+        {
+            if( _tasksLeft.Remove(task.TaskAttemptId.TaskId.ToString()) )
+            {
+                InputServer server;
+                if( !_servers.TryGetValue(task.TaskServer, out server) )
+                {
+                    if( rnd == null )
+                        rnd = new Random();
+                    server = new InputServer(task.TaskServer, task.TaskServerFileServerPort);
+                    _servers.Add(task.TaskServer, server);
+                    // Randomize the position of the server in the list to prevent all tasks hitting the same server.
+                    // We don't do this using insert (because that'd be slower) and we leave open the possility of the new item staying at the end of the list.
+                    _orderedServers.Add(server);
+                    _orderedServers.Swap(_orderedServers.Count - 1, rnd.Next(_orderedServers.Count));
+                }
+                server.AddCompletedTask(task);
+            }
+        }
+
+        private void NotifyTaskCompletion(CompletedTask task)
+        {
+            lock( _orderedServers )
+            {
+                AddCompletedTaskForDownloading(null, task);
+
+                Monitor.Pulse(_orderedServers);
+
+                if( _tasksLeft.Count == 0 )
+                    _allInputTasksCompleted.Set();
             }
         }
 
@@ -490,7 +589,7 @@ namespace Tkl.Jumbo.Jet.Channels
 
                     if( servers.Count == 0 )
                     {
-                        if( _allInputTasksCompleted )
+                        if( _allInputTasksCompleted.WaitOne(0) )
                             return false;
                         Monitor.Wait(_orderedServers);
                     }
@@ -725,10 +824,22 @@ namespace Tkl.Jumbo.Jet.Channels
 
         private void StartThreads()
         {
+            lock( _orderedServers )
+            {
+                _tasksLeft = new HashSet<string>(InputTaskIds);
+            }
             _inputPollThread = new Thread(InputPollThread) { Name = "FileInputChannelPolling", IsBackground = true };
             _inputPollThread.Start();
             _downloadThread = new Thread(DownloadThread) { Name = "FileInputChannelDownload", IsBackground = true };
             _downloadThread.Start();
+
+            int broadcastPort = TaskExecution.JetClient.Configuration.JobServer.BroadcastPort;
+            if( broadcastPort > 0 )
+            {
+                // Only supports IPv4 at the moment.
+                _taskCompletionBroadcastServer = new TaskCompletionBroadcastServer(this, new[] { IPAddress.Any }, broadcastPort);
+                _taskCompletionBroadcastServer.Start();
+            }
         }
 
         private void _memoryStorage_StreamRemoved(object sender, EventArgs e)

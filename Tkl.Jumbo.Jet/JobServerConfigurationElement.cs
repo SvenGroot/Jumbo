@@ -157,5 +157,33 @@ namespace Tkl.Jumbo.Jet
             get { return (float)this["schedulingThreshold"]; }
             set { this["schedulingThreshold"] = value; }
         }
+
+        /// <summary>
+        /// Gets or sets the IP broadcast address to use when broadcasting task completion messages.
+        /// </summary>
+        /// <value>The broadcast address. The default value is the IPv4 global broadcast address 255.255.255.255.</value>
+        /// <remarks>
+        /// This should be set to the broadcast address of your local network.
+        /// </remarks>
+        [ConfigurationProperty("broadcastAddress", DefaultValue = "255.255.255.255", IsRequired = false, IsKey = false)]
+        public string BroadcastAddress
+        {
+            get { return (string)this["broadcastAddress"]; }
+            set { this["broadcastAddress"] = value; }
+        }
+
+        /// <summary>
+        /// Gets or sets the UDP port number to use when broadcasting task completion messages.
+        /// </summary>
+        /// <value>The broadcast port.</value>
+        /// <remarks>
+        /// Set to zero to disable broadcasting.
+        /// </remarks>
+        [ConfigurationProperty("broadcastPort", DefaultValue = 9550, IsRequired = false, IsKey = false)]
+        public int BroadcastPort
+        {
+            get { return (int)this["broadcastPort"]; }
+            set { this["broadcastPort"] = value; }
+        }
     }
 }
