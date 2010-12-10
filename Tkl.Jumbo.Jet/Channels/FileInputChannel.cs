@@ -459,23 +459,29 @@ namespace Tkl.Jumbo.Jet.Channels
                             tasksLeftArray = _tasksLeft.ToArray();
                     }
 
-                    CompletedTask[] completedTasks = _jobServer.CheckTaskCompletion(_jobID, tasksLeftArray);
-                    if( completedTasks != null && completedTasks.Length > 0 )
+                    // Tasks left count may have reached 0 in between the event timing out and lock acquisition above.
+                    if( tasksLeftArray.Length > 0 )
                     {
-                        _log.InfoFormat("Received {0} new completed tasks.", completedTasks.Length);
-
-                        lock( _orderedServers )
+                        CompletedTask[] completedTasks = _jobServer.CheckTaskCompletion(_jobID, tasksLeftArray);
+                        if( completedTasks != null && completedTasks.Length > 0 )
                         {
-                            foreach( CompletedTask task in completedTasks )
-                            {
-                                AddCompletedTaskForDownloading(rnd, task);
-                            }
-                            // Wake up the download thread.
-                            Monitor.Pulse(_orderedServers);
+                            _log.InfoFormat("Received {0} new completed tasks.", completedTasks.Length);
 
-                            hasTasksLeft = _tasksLeft.Count > 0;
+                            lock( _orderedServers )
+                            {
+                                foreach( CompletedTask task in completedTasks )
+                                {
+                                    AddCompletedTaskForDownloading(rnd, task);
+                                }
+                                // Wake up the download thread.
+                                Monitor.Pulse(_orderedServers);
+
+                                hasTasksLeft = _tasksLeft.Count > 0;
+                            }
                         }
                     }
+                    else
+                        hasTasksLeft = false;
 
 
                     if( hasTasksLeft )
