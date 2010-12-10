@@ -423,7 +423,6 @@ namespace Tkl.Jumbo.Dfs
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1031:DoNotCatchGeneralExceptionTypes")]
         private void ReadBufferThread()
         {
-            Random rnd = new Random();
             try
             {
                 int blockOffset = (int)(_position % BlockSize);
@@ -436,11 +435,7 @@ namespace Tkl.Jumbo.Dfs
                     do
                     {
                         retry = false;
-                        ServerAddress server;
-                        if( servers[0].HostName == Dns.GetHostName() )
-                            server = servers[0];
-                        else
-                            server = servers[rnd.Next(0, servers.Count)];
+                        ServerAddress server = servers[0];
                         _log.DebugFormat("Connecting to server {0} to read block {1}.", server, block);
                         try
                         {
