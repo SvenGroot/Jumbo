@@ -482,10 +482,10 @@ namespace Tkl.Jumbo.Jet.Channels
                         hasTasksLeft = !_allInputTasksCompleted.WaitOne(_pollingInterval);
                 }
 
-                _taskCompletionBroadcastServer.Dispose();
-
                 lock( _orderedServers )
                 {
+                    if( _taskCompletionBroadcastServer != null )
+                        _taskCompletionBroadcastServer.Dispose();
                     _allInputTasksCompleted.Set();
                     // Just making sure the download thread wakes up after this flag is set.
                     Monitor.Pulse(_orderedServers);
@@ -528,6 +528,7 @@ namespace Tkl.Jumbo.Jet.Channels
         {
             lock( _orderedServers )
             {
+                _log.DebugFormat("Received notification of task {0} completion through job server broadcast.", task.TaskAttemptId);
                 AddCompletedTaskForDownloading(null, task);
 
                 Monitor.Pulse(_orderedServers);
@@ -827,18 +828,18 @@ namespace Tkl.Jumbo.Jet.Channels
             lock( _orderedServers )
             {
                 _tasksLeft = new HashSet<string>(InputTaskIds);
-            }
-            _inputPollThread = new Thread(InputPollThread) { Name = "FileInputChannelPolling", IsBackground = true };
-            _inputPollThread.Start();
-            _downloadThread = new Thread(DownloadThread) { Name = "FileInputChannelDownload", IsBackground = true };
-            _downloadThread.Start();
+                _inputPollThread = new Thread(InputPollThread) { Name = "FileInputChannelPolling", IsBackground = true };
+                _inputPollThread.Start();
+                _downloadThread = new Thread(DownloadThread) { Name = "FileInputChannelDownload", IsBackground = true };
+                _downloadThread.Start();
 
-            int broadcastPort = TaskExecution.JetClient.Configuration.JobServer.BroadcastPort;
-            if( broadcastPort > 0 )
-            {
-                // Only supports IPv4 at the moment.
-                _taskCompletionBroadcastServer = new TaskCompletionBroadcastServer(this, new[] { IPAddress.Any }, broadcastPort);
-                _taskCompletionBroadcastServer.Start();
+                int broadcastPort = TaskExecution.JetClient.Configuration.JobServer.BroadcastPort;
+                if( broadcastPort > 0 )
+                {
+                    // Only supports IPv4 at the moment.
+                    _taskCompletionBroadcastServer = new TaskCompletionBroadcastServer(this, new[] { IPAddress.Any }, broadcastPort);
+                    _taskCompletionBroadcastServer.Start();
+                }
             }
         }
 

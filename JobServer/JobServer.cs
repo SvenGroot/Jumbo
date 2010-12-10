@@ -43,6 +43,7 @@ namespace JobServerApplication
         private readonly object _archiveLock = new object();
         private const int _schedulerTimeoutMilliseconds = 30000;
         private const string _archiveFileName = "archive";
+        private readonly TaskCompletionBroadcaster _broadcaster; // Only access inside scheduler lock
 
         private JobServer(JumboConfiguration jumboConfiguration, JetConfiguration jetConfiguration, DfsConfiguration dfsConfiguration)
         {
@@ -69,6 +70,10 @@ namespace JobServerApplication
             {
                 _log.WarnFormat("NonInputSchedulingMode was set to SchedulingMode.{0}; SchedulingMode.MoreServers will be used instead.", Configuration.JobServer.NonInputSchedulingMode);
                 Configuration.JobServer.NonInputSchedulingMode = SchedulingMode.MoreServers;
+            }
+            if( Configuration.JobServer.BroadcastPort > 0 )
+            {
+                _broadcaster = new TaskCompletionBroadcaster(Configuration.JobServer.BroadcastAddress, Configuration.JobServer.BroadcastPort);
             }
         }
 
@@ -635,6 +640,10 @@ namespace JobServerApplication
                                 task.Progress.SetFinished();
 
                             ++job.SchedulerInfo.FinishedTasks;
+
+                            if( _broadcaster != null )
+                                _broadcaster.BroadcastTaskCompletion(data.JobId, data.TaskAttemptId, server);
+
                             break;
                         case TaskAttemptStatus.Error:
                             task.SchedulerInfo.CurrentAttempt = null;

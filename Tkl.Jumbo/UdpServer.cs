@@ -25,6 +25,7 @@ namespace Tkl.Jumbo
             {
                 _socket = new Socket(localAddress.AddressFamily, SocketType.Dgram, ProtocolType.Udp);
                 _socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, allowAddressReuse);
+                _socket.Bind(new IPEndPoint(localAddress, port));
             }
 
             public IAsyncResult BeginReceive(AsyncCallback callback, object state)
@@ -133,17 +134,25 @@ namespace Tkl.Jumbo
 
         private void ReceiveFromCallback(IAsyncResult ar)
         {
-            SlimUdpClient client = (SlimUdpClient)ar.AsyncState;
-            IPEndPoint remoteEndPoint;
-            byte[] message = client.EndReceive(ar, out remoteEndPoint);
-            client.BeginReceive(_callback, client);
             try
             {
-                HandleMessage(message, remoteEndPoint);
+                SlimUdpClient client = (SlimUdpClient)ar.AsyncState;
+                IPEndPoint remoteEndPoint;
+                byte[] message;
+                message = client.EndReceive(ar, out remoteEndPoint);
+                client.BeginReceive(_callback, client);
+                try
+                {
+                    HandleMessage(message, remoteEndPoint);
+                }
+                catch( Exception ex )
+                {
+                    _log.Error(string.Format("Error handling UDP message from {0}.", remoteEndPoint), ex);
+                }
             }
-            catch( Exception ex )
+            catch( ObjectDisposedException )
             {
-                _log.Error(string.Format("Error handling UDP message from {0}.", remoteEndPoint), ex);
+                // Thrown if the BeginReceiveFrom call was cancelled by the Dispose method.
             }
         }
     }
