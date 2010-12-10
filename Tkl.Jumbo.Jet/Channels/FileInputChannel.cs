@@ -158,7 +158,7 @@ namespace Tkl.Jumbo.Jet.Channels
                         index += length;
                         int port = message[index++] | message[index++] << 8;
                         task.TaskServer = new ServerAddress(serverName, port);
-                        task.TaskServerFileServerPort = message[index++] | message[index++];
+                        task.TaskServerFileServerPort = message[index++] | message[index++] << 8;
                     }
                     catch( IndexOutOfRangeException )
                     {
