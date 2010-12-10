@@ -216,6 +216,7 @@ namespace Tkl.Jumbo.Jet.Channels
         private IMultiInputRecordReader _reader;
         private volatile bool _hasNonMemoryInputs;
         private TaskCompletionBroadcastServer _taskCompletionBroadcastServer;
+        private readonly Random _rnd = new Random(); // Use only inside _orderedServers lock
 
         /// <summary>
         /// Initializes a new instance of the <see cref="FileInputChannel"/> class.
@@ -471,7 +472,7 @@ namespace Tkl.Jumbo.Jet.Channels
                             {
                                 foreach( CompletedTask task in completedTasks )
                                 {
-                                    AddCompletedTaskForDownloading(rnd, task);
+                                    AddCompletedTaskForDownloading(task);
                                 }
                                 // Wake up the download thread.
                                 Monitor.Pulse(_orderedServers);
@@ -510,21 +511,19 @@ namespace Tkl.Jumbo.Jet.Channels
             }
         }
 
-        private void AddCompletedTaskForDownloading(Random rnd, CompletedTask task)
+        private void AddCompletedTaskForDownloading(CompletedTask task)
         {
             if( _tasksLeft.Remove(task.TaskAttemptId.TaskId.ToString()) )
             {
                 InputServer server;
                 if( !_servers.TryGetValue(task.TaskServer, out server) )
                 {
-                    if( rnd == null )
-                        rnd = new Random();
                     server = new InputServer(task.TaskServer, task.TaskServerFileServerPort);
                     _servers.Add(task.TaskServer, server);
                     // Randomize the position of the server in the list to prevent all tasks hitting the same server.
                     // We don't do this using insert (because that'd be slower) and we leave open the possility of the new item staying at the end of the list.
                     _orderedServers.Add(server);
-                    _orderedServers.Swap(_orderedServers.Count - 1, rnd.Next(_orderedServers.Count));
+                    _orderedServers.Swap(_orderedServers.Count - 1, _rnd.Next(_orderedServers.Count));
                 }
                 server.AddCompletedTask(task);
             }
@@ -535,7 +534,7 @@ namespace Tkl.Jumbo.Jet.Channels
             lock( _orderedServers )
             {
                 _log.DebugFormat("Received notification of task {0} completion through job server broadcast.", task.TaskAttemptId);
-                AddCompletedTaskForDownloading(null, task);
+                AddCompletedTaskForDownloading(task);
 
                 Monitor.Pulse(_orderedServers);
 
@@ -548,7 +547,6 @@ namespace Tkl.Jumbo.Jet.Channels
         {
             IMultiInputRecordReader reader = _reader;
             List<InputServer> servers = new List<InputServer>();
-            Random rnd = new Random();
             while( WaitForTasksToDownload(servers) )
             {
                 Debug.Assert(servers.Count > 0);
@@ -562,14 +560,15 @@ namespace Tkl.Jumbo.Jet.Channels
 
                 if( noSucceededDownloads )
                 {
-                    int interval = _downloadRetryInterval + rnd.Next(_downloadRetryIntervalRandomization);
-                    _log.InfoFormat("Couldn't download any files, will retry after {0}ms.", interval);
-                    Thread.Sleep(interval); // If we couldn't download any of the files, we will wait a bit to prevent hammering the servers
+                    int interval;
                     lock( _orderedServers )
                     {
+                        interval = _downloadRetryInterval + _rnd.Next(_downloadRetryIntervalRandomization);
                         // Re-randomize the list of servers if we couldn't download anything.
-                        _orderedServers.Randomize(rnd);
+                        _orderedServers.Randomize(_rnd);
                     }
+                    _log.InfoFormat("Couldn't download any files, will retry after {0}ms.", interval);
+                    Thread.Sleep(interval); // If we couldn't download any of the files, we will wait a bit to prevent hammering the servers
                 }
             }
 
