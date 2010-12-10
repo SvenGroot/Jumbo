@@ -75,6 +75,15 @@ namespace JobServerApplication
                 stages.Add(stageInfo);
             }
 
+            if( _config.SchedulerOptions.DfsInputSchedulingMode == SchedulingMode.Default )
+                _config.SchedulerOptions.DfsInputSchedulingMode = JobServer.Instance.Configuration.JobServer.DfsInputSchedulingMode;
+            if( _config.SchedulerOptions.NonInputSchedulingMode == SchedulingMode.Default || _config.SchedulerOptions.NonInputSchedulingMode == SchedulingMode.OptimalLocality )
+                _config.SchedulerOptions.NonInputSchedulingMode = JobServer.Instance.Configuration.JobServer.NonInputSchedulingMode;
+
+            _log.InfoFormat("Job {0:B} is using DFS input scheduling mode {1} and non-input scheduling mode {1}.", job.JobId, _config.SchedulerOptions.DfsInputSchedulingMode, _config.SchedulerOptions.NonInputSchedulingMode);
+
+            _orderedSchedulingNonInputTasks.Reverse(); // HACK: Reverse the list because the StagedScheduler searches backwards.
+
             _startTimeUtc = DateTime.UtcNow;
             _schedulerInfo = new JobSchedulerInfo(this)
             {
@@ -115,22 +124,23 @@ namespace JobServerApplication
         {
             get { return _schedulerInfo.State; }
         }
+
         public int UnscheduledTasks
         {
             get { return _schedulerInfo.UnscheduledTasks; }
         }
+
         public int FinishedTasks
         {
             get { return _schedulerInfo.FinishedTasks; }
         }
+
         public int Errors
         {
             get { return _schedulerInfo.Errors; }
         }
-        public int NonDataLocal
-        {
-            get { return _schedulerInfo.NonDataLocal; }
-        }
+
+        public string FailureReason { get; set; }
 
         public DateTime EndTimeUtc
         {
@@ -257,9 +267,9 @@ namespace JobServerApplication
                 RunningTaskCount = RunningTaskCount,
                 UnscheduledTaskCount = UnscheduledTasks,
                 FinishedTaskCount = FinishedTasks,
-                NonDataLocalTaskCount = NonDataLocal,
                 StartTime = StartTimeUtc,
-                EndTime = EndTimeUtc
+                EndTime = EndTimeUtc,
+                FailureReason = FailureReason
             };
             result.Stages.AddRange(from stage in Stages select stage.ToStageStatus());
             if( _failedTaskAttempts != null )

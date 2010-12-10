@@ -12,10 +12,27 @@ namespace Tkl.Jumbo.Topology
     /// </summary>
     public class TopologyNode
     {
+        private readonly ServerAddress _address;
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="TopologyNode"/> class.
+        /// </summary>
+        /// <param name="address">The address of the node.</param>
+        public TopologyNode(ServerAddress address)
+        {
+            if( address == null )
+                throw new ArgumentNullException("address");
+
+            _address = address;
+        }
+
         /// <summary>
         /// Gets the address of the node.
         /// </summary>
-        public ServerAddress Address { get; protected set; }
+        public ServerAddress Address
+        {
+            get { return _address; }
+        }
 
         /// <summary>
         /// Gets the rack this node belongs to.

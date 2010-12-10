@@ -23,12 +23,12 @@ namespace Tkl.Jumbo
         }
 
         /// <summary>
-        /// Gets the configuration for the <see cref="Tkl.Jumbo.Topology.RegexTopologyResolver"/> class.
+        /// Gets the configuration for the <see cref="Tkl.Jumbo.Topology.PatternTopologyResolver"/> class.
         /// </summary>
-        [ConfigurationProperty("regexTopologyResolver", IsRequired = false, IsKey = false)]
-        public Topology.RegexTopologyResolverConfigurationElement RegexTopologyResolver
+        [ConfigurationProperty("patternTopologyResolver", IsRequired = false, IsKey = false)]
+        public Topology.PatternTopologyResolverConfigurationElement PatternTopologyResolver
         {
-            get { return (Topology.RegexTopologyResolverConfigurationElement)this["regexTopologyResolver"]; }
+            get { return (Topology.PatternTopologyResolverConfigurationElement)this["patternTopologyResolver"]; }
         }
 
         /// <summary>

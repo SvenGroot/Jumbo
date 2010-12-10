@@ -37,6 +37,7 @@ public partial class _Default : System.Web.UI.Page
                 row.BgColor = "yellow";
             row.Cells.Add(new HtmlTableCell() { InnerText = server.Address.HostName });
             row.Cells.Add(new HtmlTableCell() { InnerText = server.Address.Port.ToString() });
+            row.Cells.Add(new HtmlTableCell() { InnerText = server.RackId ?? "(unknown)" });
             row.Cells.Add(new HtmlTableCell() { InnerText = string.Format("{0:0.0}s ago", lastContact.TotalSeconds) });
             row.Cells.Add(new HtmlTableCell() { InnerText = server.MaxTasks.ToString() });
             row.Cells.Add(new HtmlTableCell() { InnerText = server.MaxNonInputTasks.ToString() });
@@ -59,6 +60,7 @@ public partial class _Default : System.Web.UI.Page
             row.Cells.Add(new HtmlTableCell() { InnerText = job.UnscheduledTaskCount.ToString() });
             row.Cells.Add(new HtmlTableCell() { InnerText = job.FinishedTaskCount.ToString() });
             row.Cells.Add(new HtmlTableCell() { InnerText = job.ErrorTaskCount.ToString() });
+            row.Cells.Add(new HtmlTableCell() { InnerText = job.RackLocalTaskCount.ToString() });
             row.Cells.Add(new HtmlTableCell() { InnerText = job.NonDataLocalTaskCount.ToString() });
             RunningJobsTable.Rows.Add(row);
         }
@@ -75,6 +77,7 @@ public partial class _Default : System.Web.UI.Page
             row.Cells.Add(new HtmlTableCell() { InnerText = string.Format(@"{0:hh\:mm\:ss\.ff} ({1:0.00}s)", duration, duration.TotalSeconds) });
             row.Cells.Add(new HtmlTableCell() { InnerText = job.TaskCount.ToString() });
             row.Cells.Add(new HtmlTableCell() { InnerText = job.ErrorTaskCount.ToString() });
+            row.Cells.Add(new HtmlTableCell() { InnerText = job.RackLocalTaskCount.ToString() });
             row.Cells.Add(new HtmlTableCell() { InnerText = job.NonDataLocalTaskCount.ToString() });
             FinishedJobsTable.Rows.Add(row);
         }
@@ -91,6 +94,7 @@ public partial class _Default : System.Web.UI.Page
             row.Cells.Add(new HtmlTableCell() { InnerText = string.Format(@"{0:hh\:mm\:ss\.ff} ({1:0.00}s)", duration, duration.TotalSeconds) });
             row.Cells.Add(new HtmlTableCell() { InnerText = job.TaskCount.ToString() });
             row.Cells.Add(new HtmlTableCell() { InnerText = job.ErrorTaskCount.ToString() });
+            row.Cells.Add(new HtmlTableCell() { InnerText = job.RackLocalTaskCount.ToString() });
             row.Cells.Add(new HtmlTableCell() { InnerText = job.NonDataLocalTaskCount.ToString() });
             FailedJobsTable.Rows.Add(row);
         }

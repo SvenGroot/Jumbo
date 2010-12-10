@@ -139,6 +139,7 @@
         <h2>Stages</h2>
         <xsl:apply-templates select="job:Job/job:Stages/job:Stage" />
         <xsl:apply-templates select="job:Job/job:JobSettings" />
+        <xsl:apply-templates select="job:Job/job:SchedulerOptions" />
         <xsl:apply-templates select="job:Job/job:AssemblyFileNames" />
       </body>
     </html>
@@ -396,5 +397,36 @@
         </li>
       </xsl:for-each>
     </ul>
+  </xsl:template>
+  <xsl:template match="job:SchedulerOptions">
+    <h2>Scheduler options</h2>
+    <table class="scheduler">
+      <tbody>
+        <tr>
+          <th scope="row">Allowed data distance:</th>
+          <td>
+            <xsl:text>local</xsl:text>
+            <xsl:if test="@maximumDataDistance > 0">
+              <xsl:text>, rack local</xsl:text>
+            </xsl:if>
+            <xsl:if test="@maximumDataDistance > 1">
+              <xsl:text>, non local</xsl:text>
+            </xsl:if>
+          </td>
+        </tr>
+        <tr>
+          <th scope="row">DFS input task scheduling mode:</th>
+          <td>
+            <xsl:value-of select="@dfsInputSchedulingMode"/>
+          </td>
+        </tr>
+        <tr>
+          <th scope="row">Non-input task scheduling mode:</th>
+          <td>
+            <xsl:value-of select="@nonInputSchedulingMode"/>
+          </td>
+        </tr>
+      </tbody>
+    </table>
   </xsl:template>
 </xsl:stylesheet>

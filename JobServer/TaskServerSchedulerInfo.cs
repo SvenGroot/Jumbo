@@ -45,19 +45,14 @@ namespace JobServerApplication
 
         public void AssignTask(JobInfo job, TaskInfo task)
         {
-            AssignTask(job, task, true);
-        }
-
-        public void AssignTask(JobInfo job, TaskInfo task, bool isInputTask)
-        {
-            if( isInputTask )
+            if( task.Stage.Configuration.DfsInput != null )
                 AssignedTasks.Add(task);
             else
                 AssignedNonInputTasks.Add(task);
             task.SchedulerInfo.Server = _taskServer;
             task.SchedulerInfo.State = TaskState.Scheduled;
             --job.SchedulerInfo.UnscheduledTasks;
-            job.SchedulerInfo.TaskServers.Add(_taskServer.Address); // Record all servers involved with the task to give them cleanup instructions later.
+            job.SchedulerInfo.GetTaskServer(_taskServer.Address).NeedsCleanup = true;
         }
 
         public void UnassignFailedTask(TaskInfo task)

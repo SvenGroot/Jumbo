@@ -14,6 +14,12 @@ namespace Tkl.Jumbo.IO
     /// Abstract base class for classes that write records.
     /// </summary>
     /// <typeparam name="T">The type of the record.</typeparam>
+    /// <remarks>
+    /// <para>
+    ///   All records passed to <see cref="RecordWriter{T}.WriteRecord"/> must be <typeparamref name="T"/>; they may not be a type derived
+    ///   from <typeparamref name="T"/>.
+    /// </para>
+    /// </remarks>
     public abstract class RecordWriter<T> : IRecordWriter, IDisposable
     {
         private int _recordsWritten;

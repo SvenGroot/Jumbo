@@ -20,14 +20,15 @@ namespace TaskServerApplication
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(TaskServer));
 
         private readonly int _heartbeatInterval = 3000;
-
+        private readonly AutoResetEvent _heartbeatEvent = new AutoResetEvent(false);
+        private readonly ManualResetEvent _shutdownEvent = new ManualResetEvent(false);
         private IJobServerHeartbeatProtocol _jobServer;
-        private volatile bool _running;
         private readonly List<JetHeartbeatData> _pendingHeartbeatData = new List<JetHeartbeatData>();
         private TaskRunner _taskRunner;
         private static object _startupLock = new object();
         private FileChannelServer _fileServer;
         private readonly Dictionary<Guid, JobInfo> _jobs = new Dictionary<Guid, JobInfo>();
+        private readonly bool _immediateCompletedTaskNotification;
 
         private TaskServer()
             : this(JetConfiguration.GetConfiguration(), DfsConfiguration.GetConfiguration())
@@ -47,6 +48,7 @@ namespace TaskServerApplication
 
             _jobServer = JetClient.CreateJobServerHeartbeatClient(config);
             _heartbeatInterval = config.TaskServer.HeartbeatInterval;
+            _immediateCompletedTaskNotification = config.TaskServer.ImmediateCompletedTaskNotification;
         }
 
         public static TaskServer Instance { get; private set; }
@@ -54,7 +56,6 @@ namespace TaskServerApplication
         public JetConfiguration Configuration { get; private set; }
         public DfsConfiguration DfsConfiguration { get; private set; }
         public ServerAddress LocalAddress { get; private set; }
-        public bool IsRunning { get { return _running; } }
 
         public static void Run()
         {
@@ -92,8 +93,8 @@ namespace TaskServerApplication
         public void NotifyTaskStatusChanged(Guid jobID, TaskAttemptId taskAttemptId, TaskAttemptStatus newStatus, TaskProgress progress, TaskMetrics metrics)
         {
             AddDataForNextHeartbeat(new TaskStatusChangedJetHeartbeatData(jobID, taskAttemptId, newStatus, progress, metrics));
-            if( newStatus == TaskAttemptStatus.Completed )
-                SendHeartbeat();
+            if( _immediateCompletedTaskNotification && newStatus == TaskAttemptStatus.Completed )
+                _heartbeatEvent.Set();
         }
 
         public string GetJobDirectory(Guid jobID)
@@ -115,6 +116,13 @@ namespace TaskServerApplication
         public void ReportProgress(Guid jobId, TaskAttemptId taskAttemptId, TaskProgress progress)
         {
             _taskRunner.ReportProgress(Job.CreateFullTaskId(jobId, taskAttemptId), progress);
+        }
+
+        public void ReportError(Guid jobId, TaskAttemptId taskAttemptId, string failureReason)
+        {
+            if( taskAttemptId == null )
+                throw new ArgumentNullException("taskAttemptId");
+            _taskRunner.ReportError(Job.CreateFullTaskId(jobId, taskAttemptId), failureReason);
         }
 
         public void SetUncompressedTemporaryFileSize(Guid jobId, string fileName, long uncompressedSize)
@@ -276,7 +284,6 @@ namespace TaskServerApplication
         {
             _log.Info("-----Task server is starting-----");
             _log.LogEnvironmentInformation();
-            _running = true;
 
             _taskRunner = new TaskRunner(this);
 
@@ -300,12 +307,13 @@ namespace TaskServerApplication
             _fileServer = new FileChannelServer(this, addresses, Configuration.TaskServer.FileServerPort, Configuration.TaskServer.FileServerMaxConnections, Configuration.TaskServer.FileServerMaxIndexCacheSize);
             _fileServer.Start();
 
-            while( _running )
+            WaitHandle[] handles = new WaitHandle[] { _heartbeatEvent, _shutdownEvent };
+
+            do
             {
                 SendHeartbeat();
                 _taskRunner.KillTimedOutTasks();
-                Thread.Sleep(_heartbeatInterval);
-            }
+            } while( WaitHandle.WaitAny(handles, _heartbeatInterval) != 1 );
         }
 
         private void ShutdownInternal()
@@ -313,7 +321,7 @@ namespace TaskServerApplication
             _taskRunner.Stop();
             if( _fileServer != null )
                 _fileServer.Stop();
-            _running = false;
+            _shutdownEvent.Set();
             RpcHelper.AbortRetries();
             RpcHelper.CloseConnections();
             _log.InfoFormat("-----Task server is shutting down-----");

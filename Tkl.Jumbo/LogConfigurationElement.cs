@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Configuration;
 using Tkl.Jumbo.Rpc;
+using System.IO;
 
 namespace Tkl.Jumbo
 {
@@ -28,7 +29,11 @@ namespace Tkl.Jumbo
         /// </summary>
         public void ConfigureLogger()
         {
-            log4net.GlobalContext.Properties["LogDirectory"] = Directory;
+            string dir = Directory;
+
+            if( !string.IsNullOrEmpty(dir) && !(dir[dir.Length - 1] == Path.DirectorySeparatorChar || dir[dir.Length - 1] == Path.AltDirectorySeparatorChar) )
+                dir += Path.DirectorySeparatorChar;
+            log4net.GlobalContext.Properties["LogDirectory"] = dir;
             log4net.GlobalContext.Properties["LocalHostName"] = ServerContext.LocalHostName;
             log4net.Config.XmlConfigurator.Configure();
         }

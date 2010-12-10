@@ -30,6 +30,14 @@ namespace Tkl.Jumbo.Jet
         private readonly ExtendedCollection<string> _assemblyFileNames = new ExtendedCollection<string>();
         private readonly ExtendedCollection<StageConfiguration> _stages = new ExtendedCollection<StageConfiguration>();
         private readonly ExtendedCollection<AdditionalProgressCounter> _additionalProgressCounters = new ExtendedCollection<AdditionalProgressCounter>();
+        private SchedulerOptions _schedulerOptions;
+
+        /// <summary>
+        /// The key that can be used in the <see cref="JobSettings"/> or <see cref="StageConfiguration.StageSettings"/> to override the
+        /// <see cref="JobServerConfigurationElement.SchedulingThreshold"/> setting. The value of this setting is a <see cref="Single"/>
+        /// between 0 and 1 that indicates the scheduling threshold.
+        /// </summary>
+        public const string SchedulingThresholdSettingKey = "Jumbo.SchedulingThreshold";
 
         /// <summary>
         /// Initializes a new instance of the <see cref="JobConfiguration"/> class.
@@ -87,6 +95,16 @@ namespace Tkl.Jumbo.Jet
         public Collection<AdditionalProgressCounter> AdditionalProgressCounters
         {
             get { return _additionalProgressCounters; }
+        }
+
+        /// <summary>
+        /// Gets or sets the options controlling the scheduler behavior.
+        /// </summary>
+        /// <value>The scheduler options.</value>
+        public SchedulerOptions SchedulerOptions
+        {
+            get { return _schedulerOptions ?? (_schedulerOptions = new SchedulerOptions()); }
+            set { _schedulerOptions = value; }
         }
 
         /// <summary>
@@ -482,34 +500,32 @@ namespace Tkl.Jumbo.Jet
         /// Gets the output channel configuration for a specific stage.
         /// </summary>
         /// <param name="stageId">The stage ID. This may not be a compound stage ID.</param>
-        /// <returns>The input stages.</returns>
+        /// <returns>A list of root stages whose <see cref="StageConfiguration.Leaf"/> child stage has an <see cref="OutputChannel"/> connected to the stage with the specified <paramref name="stageId"/>.</returns>
         public IEnumerable<StageConfiguration> GetInputStagesForStage(string stageId)
-        {
-            return GetDependenciesForStage(stageId, true);
-        }
-
-        /// <summary>
-        /// Gets the stages that the specified stage depends on.
-        /// </summary>
-        /// <param name="stageId">The stage ID of the stage whose dependencies to retrieve.</param>
-        /// <param name="channelDependenciesOnly"><see langword="true"/> to return only stages connected to the specified stage's input channel; <see langword="false"/> to return
-        /// both stages connected by channel and dependencies indicated by <see cref="StageConfiguration.DependentStages"/>.</param>
-        /// <returns></returns>
-        public IEnumerable<StageConfiguration> GetDependenciesForStage(string stageId, bool channelDependenciesOnly)
         {
             if( stageId == null )
                 throw new ArgumentNullException("stageId");
 
-            foreach( StageConfiguration stage in Stages )
-            {
-                StageConfiguration leafStage = stage;
-                while( leafStage.ChildStage != null )
-                    leafStage = leafStage.ChildStage;
+            return from stage in Stages
+                   let leaf = stage.Leaf
+                   where leaf.OutputChannel != null && leaf.OutputChannel.OutputStage == stageId
+                   select leaf;
+        }
 
-                if( (leafStage.OutputChannel != null && leafStage.OutputChannel.OutputStage == stageId) ||
-                    (!channelDependenciesOnly && leafStage.DependentStages.Contains(stageId)) )
-                    yield return leafStage;
-            }
+        /// <summary>
+        /// Gets the stages that the specified stage explicitly depends on.
+        /// </summary>
+        /// <param name="stageId">The stage ID of the stage whose dependencies to retrieve.</param>
+        /// <returns>A list of root stages that have the specified <paramref name="stageId"/> listed in their <see cref="StageConfiguration.Leaf"/> child stage's <see cref="StageConfiguration.DependentStages"/> collection.</returns>
+        public IEnumerable<StageConfiguration> GetExplicitDependenciesForStage(string stageId)
+        {
+            if( stageId == null )
+                throw new ArgumentNullException("stageId");
+
+            return from stage in Stages
+                   let leaf = stage.Leaf
+                   where leaf.DependentStages.Contains(stageId)
+                   select leaf;
         }
 
         /// <summary>
@@ -526,14 +542,14 @@ namespace Tkl.Jumbo.Jet
 
             if( stage.Parent == null )
             {
-                foreach( StageConfiguration inputStage in GetDependenciesForStage(stage.StageId, false) )
+                foreach( StageConfiguration dependency in GetExplicitDependenciesForStage(stage.StageId) )
                 {
-                    if( inputStage.OutputChannel.OutputStage == stage.StageId )
-                        inputStage.OutputChannel.OutputStage = newName;
-                    else if( inputStage.DependentStages.Remove(stage.StageId) )
-                    {
-                        inputStage.DependentStages.Add(newName);
-                    }
+                    dependency.DependentStages.Remove(stage.StageId);
+                    dependency.DependentStages.Add(newName);
+                }
+                foreach( StageConfiguration inputStage in GetInputStagesForStage(stage.StageId) )
+                {
+                    inputStage.OutputChannel.OutputStage = newName;
                 }
             }
             stage.StageId = newName;
@@ -571,7 +587,7 @@ namespace Tkl.Jumbo.Jet
 
             // Start with the DFS input stages.
             var inputStages = from stage in Stages
-                              where GetDependenciesForStage(stage.StageId, false).Count() == 0
+                              where GetExplicitDependenciesForStage(stage.StageId).Count() == 0 && GetInputStagesForStage(stage.StageId).Count() == 0
                               select stage;
 
             Queue<StageConfiguration> nextStages = new Queue<StageConfiguration>(inputStages);
@@ -584,8 +600,7 @@ namespace Tkl.Jumbo.Jet
                 result.Remove(nextStage);
                 result.Add(nextStage);
 
-                while( nextStage.ChildStage != null )
-                    nextStage = nextStage.ChildStage;
+                nextStage = nextStage.Leaf;
 
                 if( nextStage.OutputChannel != null )
                     nextStages.Enqueue(GetStage(nextStage.OutputChannel.OutputStage));

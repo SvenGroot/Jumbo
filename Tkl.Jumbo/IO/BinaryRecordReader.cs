@@ -13,13 +13,16 @@ namespace Tkl.Jumbo.IO
     /// <summary>
     /// A record reader that reads from a stream created with a <see cref="BinaryRecordWriter{T}"/>.
     /// </summary>
-    /// <typeparam name="T">The type of the record. Must implement <see cref="IWritable"/>.</typeparam>
+    /// <typeparam name="T">The type of the record. Must implement <see cref="IWritable"/> or have an associated <see cref="IValueWriter{T}"/> implementation.</typeparam>
     /// <remarks>
     /// <para>
-    ///   No attempt is made to verify that the stream contains the correct type of record.
+    ///   No attempt is made to verify that the stream contains the correct type of record. The stream
+    ///   must contain records of type <typeparamref name="T"/>. They may not be of a type derived
+    ///   from <typeparamref name="T"/>.
     /// </para>
     /// <para>
-    ///   This class cannot be used to read starting from any offset other than zero, because a file created
+    ///   This class cannot be used to read starting from any offset other than zero or a structural
+    ///   boundary in a record aware stream with the <see cref="RecordStreamOptions.DoNotCrossBoundary"/> option set, because a file created
     ///   with <see cref="BinaryRecordWriter{T}"/> does not contain any record boundaries that can be used
     ///   to sync the file when starting at a random offset.
     /// </para>
@@ -33,7 +36,6 @@ namespace Tkl.Jumbo.IO
         private bool _allowRecordReuse;
         private string _fileName;
         private bool _deleteFile;
-        private static readonly IValueWriter<T> _valueWriter = ValueWriter<T>.Writer;
         private readonly long _end;
 
         /// <summary>
@@ -94,9 +96,14 @@ namespace Tkl.Jumbo.IO
             }
 
             _reader = new BinaryReader(stream);
-            if( allowRecordReuse && _valueWriter == null )
-                _record = (T)FormatterServices.GetUninitializedObject(typeof(T));
-            _allowRecordReuse = allowRecordReuse;
+            // IValueWriter{T} doesn't support record reuse to we never set _allowRecordReuse to true in that case.
+            if( ValueWriter<T>.Writer == null )
+            {
+                // T implements IWritable
+                if( allowRecordReuse )
+                    _record = (T)FormatterServices.GetUninitializedObject(typeof(T));
+                _allowRecordReuse = allowRecordReuse;
+            }
             _end = offset + size;
         }
 
@@ -114,23 +121,19 @@ namespace Tkl.Jumbo.IO
                 Dispose(); // This will delete the file if necessary.
                 return false;
             }
-            T record;
 
-            if( _valueWriter != null )
+            if( _allowRecordReuse )
             {
-                record = _valueWriter.Read(_reader);
+                // _allowRecordReuse can only be true if the type implements IWritable
+                ((IWritable)_record).Read(_reader);
+                CurrentRecord = _record;
             }
             else
             {
-                if( _allowRecordReuse )
-                    record = _record;
-                else
-                    record = (T)FormatterServices.GetUninitializedObject(typeof(T));
-
-                ((IWritable)record).Read(_reader);
+                T record = ValueWriter<T>.ReadValue(_reader);
+                CurrentRecord = record;
             }
 
-            CurrentRecord = record;
             return true;
         }
 

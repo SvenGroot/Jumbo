@@ -12,160 +12,219 @@ using System.Diagnostics;
 namespace JobServerApplication.Scheduling
 {
     // There is no need for explicit locking inside a scheduler because a scheduler's methods are always called inside the scheduler lock.
-    class StagedScheduler : IScheduler
+    sealed class StagedScheduler : IScheduler
     {
-        private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(StagedScheduler));
-        private readonly Random _random = new Random();
+        #region Nested types
 
-        #region IScheduler Members
-
-        public IEnumerable<TaskServerInfo> ScheduleTasks(IList<TaskServerInfo> taskServers, JobInfo job, Tkl.Jumbo.Dfs.DfsClient dfsClient)
+        private sealed class TaskServerNonInputComparer : IComparer<TaskServerJobInfo>
         {
-            List<TaskInfo> inputTasks = (from task in job.GetDfsInputTasks()
-                                         where task.Server == null
-                                         select task).ToList();
-            List<TaskServerInfo> newServers = new List<TaskServerInfo>();
+            public bool Invert { get; set; }
 
-            if( inputTasks.Count > 0 )
+            public int Compare(TaskServerJobInfo x, TaskServerJobInfo y)
             {
-                int capacity = (from server in taskServers
-                                select server.SchedulerInfo.AvailableTasks).Sum();
-
-                Guid[] inputBlocks = (from task in inputTasks
-                                      select task.SchedulerInfo.GetBlockId(dfsClient)).ToArray();
-
-                capacity = ScheduleInputTasks(job, taskServers, capacity, inputBlocks, dfsClient, newServers);
-                if( capacity > 0 && job.UnscheduledTasks > 0 )
-                {
-                    // Remove tasks that have been scheduled.
-                    inputTasks.RemoveAll((task) => task.Server != null);
-                    if( inputTasks.Count > 0 )
-                    {
-                        ScheduleInputTasksNonLocal(job, taskServers, capacity, inputTasks, newServers);
-                    }
-                }
+                if( x.TaskServer.SchedulerInfo.AvailableNonInputTasks < y.TaskServer.SchedulerInfo.AvailableNonInputTasks )
+                    return Invert ? 1 : -1;
+                else if( x.TaskServer.SchedulerInfo.AvailableNonInputTasks > y.TaskServer.SchedulerInfo.AvailableNonInputTasks )
+                    return Invert ? -1 : 1;
+                else
+                    return 0;
             }
+        }
 
-            if( job.UnscheduledTasks > 0 )
+        private sealed class TaskServerDfsInputComparer : IComparer<TaskServerJobInfo>
+        {
+            public bool Invert { get; set; }
+
+            public int Compare(TaskServerJobInfo x, TaskServerJobInfo y)
             {
-                ScheduleNonInputTasks(taskServers, job, job.GetNonInputSchedulingTasks().ToList(), dfsClient, newServers);
+                if( x.TaskServer.SchedulerInfo.AvailableTasks < y.TaskServer.SchedulerInfo.AvailableTasks )
+                    return Invert ? 1 : -1;
+                else if( x.TaskServer.SchedulerInfo.AvailableTasks > y.TaskServer.SchedulerInfo.AvailableTasks )
+                    return Invert ? -1 : 1;
+                else
+                    return 0;
             }
-            return newServers;
+        }
+
+        private sealed class TaskServerDfsInputLocalTasksComparer : IComparer<TaskServerJobInfo>
+        {
+            public DfsClient DfsClient { get; set; }
+
+            public int Compare(TaskServerJobInfo x, TaskServerJobInfo y)
+            {
+                int tasksX = x.GetSchedulableLocalTaskCount(DfsClient);
+                int tasksY = y.GetSchedulableLocalTaskCount(DfsClient);
+
+                if( tasksX < tasksY )
+                    return -1;
+                else if( tasksX > tasksY )
+                    return 1;
+                else
+                    return 0;
+            }
         }
 
         #endregion
 
-        private int ScheduleInputTasks(JobInfo job, IList<TaskServerInfo> servers, int capacity, Guid[] inputBlocks, DfsClient dfsClient, List<TaskServerInfo> newServers)
-        {
-            HashSet<Guid> inputBlockSet = new HashSet<Guid>(inputBlocks);
-            foreach( TaskServerInfo taskServer in servers )
-            {
-                if( taskServer.IsActive && taskServer.SchedulerInfo.AvailableTasks > 0 )
-                {
-                    ServerAddress[] dataServers = DataServerMap.GetDataServersForTaskServer(taskServer.Address, servers, dfsClient);
-                    List<Guid> localBlocks = null;
-                    if( dataServers != null )
-                    {
-                        localBlocks = new List<Guid>();
-                        foreach( ServerAddress dataServer in dataServers )
-                        {
-                            localBlocks.AddRange(dfsClient.NameServer.GetDataServerBlocksFromList(dataServer, inputBlocks));
-                        }
-                    }
+        private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(StagedScheduler));
+        private readonly TaskServerNonInputComparer _nonInputComparer = new TaskServerNonInputComparer();
+        private readonly TaskServerDfsInputComparer _dfsInputComparer = new TaskServerDfsInputComparer();
+        private readonly TaskServerDfsInputLocalTasksComparer _dfsInputLocalTasksComparer = new TaskServerDfsInputLocalTasksComparer();
 
-                    if( localBlocks != null && localBlocks.Count > 0 )
+        public void ScheduleTasks(IEnumerable<JobInfo> jobs, DfsClient dfsClient)
+        {
+            bool tasksAndCapacityLeft = true;
+            // Schedule with increasing data distance or until we run out of capacity or tasks
+            // If the cluster has only one rack, distance 1 is the same as distance 2, and the cluster must run out of either tasks or capacity
+            // for distance 1 so there's no need to check and short-circuit the loop.
+            for( int distance = 0; distance < 3 && tasksAndCapacityLeft; ++distance )
+            {
+                tasksAndCapacityLeft = false;
+                foreach( JobInfo job in jobs )
+                {
+                    if( job.UnscheduledTasks > 0 && distance <= job.Configuration.SchedulerOptions.MaximumDataDistance )
                     {
-                        int block = 0;
-                        while( taskServer.SchedulerInfo.AvailableTasks > 0 && block < localBlocks.Count )
-                        {
-                            TaskInfo task = job.SchedulerInfo.GetTaskForInputBlock(localBlocks[block], dfsClient);
-                            if( task != null && !task.SchedulerInfo.BadServers.Contains(taskServer) )
-                            {
-                                taskServer.SchedulerInfo.AssignTask(job, task);
-                                if( !newServers.Contains(taskServer) )
-                                    newServers.Add(taskServer);
-                                inputBlockSet.Remove(localBlocks[block]);
-                                _log.InfoFormat("Task {0} has been assigned to server {1} (data local).", task.FullTaskId, taskServer.Address);
-                                --capacity;
-                            }
-                            ++block;
-                        }
-                        if( capacity > 0 )
-                            inputBlocks = inputBlockSet.ToArray();
+                        tasksAndCapacityLeft |= ScheduleDfsInputTasks(job, dfsClient, distance);
                     }
                 }
             }
 
-            return capacity;
-        }
-
-        private int ScheduleInputTasksNonLocal(JobInfo job, IList<TaskServerInfo> servers, int capacity, IList<TaskInfo> unscheduledTasks, IList<TaskServerInfo> newServers)
-        {
-            foreach( TaskServerInfo taskServer in servers )
+            foreach( JobInfo job in jobs )
             {
-                if( taskServer.IsActive && taskServer.SchedulerInfo.AvailableTasks > 0 )
+                if( job.UnscheduledTasks > 0 )
                 {
-                    var eligibleTasks = (from task in unscheduledTasks
-                                         where !task.SchedulerInfo.BadServers.Contains(taskServer) && task.Server == null
-                                         select task).ToList();
-
-                    while( taskServer.SchedulerInfo.AvailableTasks > 0 && eligibleTasks.Count > 0 )
-                    {
-                        // TODO: This should try to schedule a task with input that's at least on the same rack.
-                        // One way to do that would be to change NameServer.GetDataServerBlocks to return blocks within a certain distance, and then retry with increasing distance.
-                        int index = _random.Next(eligibleTasks.Count);
-                        TaskInfo task = eligibleTasks[index];
-                        taskServer.SchedulerInfo.AssignTask(job, task);
-                        _log.InfoFormat("Task {0} has been assigned to server {1} (NOT data local).", task.FullTaskId, taskServer.Address);
-                        if( !newServers.Contains(taskServer) )
-                            newServers.Add(taskServer);
-                        eligibleTasks.RemoveAt(index);
-                        --capacity;
-                        ++job.SchedulerInfo.NonDataLocal;
-                    }
+                    ScheduleNonInputTasks(job);
                 }
             }
-
-            return capacity;
         }
 
-        public void ScheduleNonInputTasks(IList<TaskServerInfo> taskServers, JobInfo job, IList<TaskInfo> tasks, DfsClient dfsClient, List<TaskServerInfo> newServers)
+        private bool ScheduleDfsInputTasks(JobInfo job, DfsClient dfsClient, int distance)
         {
-            int taskIndex = 0;
-            bool outOfSlots = false;
-            Random rnd = new Random();
-            while( !outOfSlots && taskIndex < tasks.Count )
+            int unscheduledTasks = job.GetDfsInputTasks().Where(task => task.Server == null).Count(); // Tasks that can be scheduled but haven't been scheduled yet.
+            bool capacityRemaining = false;
+
+            if( unscheduledTasks > 0 )
             {
-                outOfSlots = true;
-                while( taskIndex < tasks.Count && tasks[taskIndex].State != TaskState.Created )
-                    ++taskIndex;
-                if( taskIndex == tasks.Count )
+                var availableTaskServers = job.SchedulerInfo.TaskServers.Where(server => server.TaskServer.IsActive && server.TaskServer.SchedulerInfo.AvailableTasks > 0);
+                IComparer<TaskServerJobInfo> comparer;
+
+                switch( job.Configuration.SchedulerOptions.DfsInputSchedulingMode )
+                {
+                case SchedulingMode.FewerServers:
+                    _dfsInputComparer.Invert = false;
+                    comparer = _dfsInputComparer;
                     break;
-                TaskInfo task = tasks[taskIndex];
-                var availableServers = from server in taskServers
-                                       where server.IsActive && server.SchedulerInfo.AvailableNonInputTasks > 0
-                                       orderby server.SchedulerInfo.AvailableNonInputTasks descending, rnd.Next()
-                                       select server;
-                outOfSlots = availableServers.Count() == 0;
-                if( !outOfSlots )
+                case SchedulingMode.OptimalLocality:
+                    _dfsInputLocalTasksComparer.DfsClient = dfsClient;
+                    comparer = _dfsInputLocalTasksComparer;
+                    break;
+                default:
+                    // If spreading we want high amounts of available tasks at the front of the queue.
+                    _dfsInputComparer.Invert = true;
+                    comparer = _dfsInputComparer;
+                    break;
+                }
+
+                PriorityQueue<TaskServerJobInfo> taskServers = new PriorityQueue<TaskServerJobInfo>(availableTaskServers, comparer);
+
+                while( taskServers.Count > 0 && unscheduledTasks > 0 )
                 {
-                    TaskServerInfo taskServer = (from server in availableServers
-                                                 where !task.SchedulerInfo.BadServers.Contains(server)
-                                                 select server).FirstOrDefault();
-                    if( taskServer != null )
+                    TaskServerJobInfo server = taskServers.Peek();
+                    TaskInfo task = server.FindTaskToSchedule(dfsClient, distance);
+                    if( task != null )
                     {
-                        taskServer.SchedulerInfo.AssignTask(job, task, false);
-                        if( !newServers.Contains(taskServer) )
-                            newServers.Add(taskServer);
-                        _log.InfoFormat("Task {0} has been assigned to server {1}.", task.FullTaskId, taskServer.Address);
-                        outOfSlots = false;
+                        server.TaskServer.SchedulerInfo.AssignTask(job, task);
+                        --unscheduledTasks;
+                        task.SchedulerInfo.CurrentAttemptDataDistance = distance;
+
+                        _log.InfoFormat("Task {0} has been assigned to server {1} ({2}).", task.FullTaskId, server.TaskServer.Address, distance == 0 ? "data local" : (distance == 1 ? "rack local" : "NOT data local"));
+                        if( server.TaskServer.SchedulerInfo.AvailableTasks == 0 )
+                            taskServers.Dequeue(); // No more available tasks, remove it from the queue
+                        else
+                            taskServers.AdjustFirstItem(); // Available tasks changed so re-evaluate its position in the queue.
                     }
-                    ++taskIndex;
+                    else
+                    {
+                        capacityRemaining = true; // Indicate that we removed a task server from the queue that still has capacity left.
+                        taskServers.Dequeue(); // If there's no task we can schedule on this server, remove it from the queue.
+                    }
                 }
             }
-            if( outOfSlots && taskIndex < tasks.Count )
-                _log.InfoFormat("Job {{{0}}}: not all non-input tasks could be immediately scheduled.", job.Job.JobId);
+
+            // Return true if there's task left to schedule, and capacity where they can be scheduled.
+            return unscheduledTasks > 0 && capacityRemaining;
         }
+
+        public void ScheduleNonInputTasks(JobInfo job)
+        {
+            List<TaskInfo> unscheduledTasks = job.GetNonInputSchedulingTasks().Where(t => t.Server == null).ToList();
+            if( unscheduledTasks.Count > 0 )
+            {
+                var availableTaskServers = job.SchedulerInfo.TaskServers.Where(server => server.TaskServer.IsActive && server.TaskServer.SchedulerInfo.AvailableNonInputTasks > 0);
+
+                _nonInputComparer.Invert = job.Configuration.SchedulerOptions.NonInputSchedulingMode != SchedulingMode.FewerServers;
+                PriorityQueue<TaskServerJobInfo> taskServers = new PriorityQueue<TaskServerJobInfo>(availableTaskServers, _nonInputComparer);
+
+                while( taskServers.Count > 0 && unscheduledTasks.Count > 0 )
+                {
+                    TaskServerJobInfo server = taskServers.Peek();
+                    // We search backwards because that will make the remove operation cheaper.
+                    int taskIndex = unscheduledTasks.FindLastIndex(task => !task.SchedulerInfo.BadServers.Contains(server.TaskServer));
+                    if( taskIndex >= 0 )
+                    {
+                        // Found a task we can schedule.
+                        TaskInfo task = unscheduledTasks[taskIndex];
+                        unscheduledTasks.RemoveAt(taskIndex);
+                        server.TaskServer.SchedulerInfo.AssignTask(job, task);
+                        _log.InfoFormat("Task {0} has been assigned to server {1}.", task.FullTaskId, server.TaskServer.Address);
+                        if( server.TaskServer.SchedulerInfo.AvailableNonInputTasks == 0 )
+                            taskServers.Dequeue(); // No more available tasks, remove it from the queue
+                        else
+                            taskServers.AdjustFirstItem(); // Available tasks changed so re-evaluate its position in the queue.
+                    }
+                    else
+                        taskServers.Dequeue(); // If there's no task we can schedule on this server, remove it from the queue.
+                }
+            }
+        }
+
+        //public void ScheduleNonInputTasks(JobInfo job, IList<TaskInfo> tasks, DfsClient dfsClient)
+        //{
+        //    int taskIndex = 0;
+        //    bool outOfSlots = false;
+        //    while( !outOfSlots && taskIndex < tasks.Count )
+        //    {
+        //        outOfSlots = true;
+        //        while( taskIndex < tasks.Count && tasks[taskIndex].State != TaskState.Created )
+        //            ++taskIndex;
+        //        if( taskIndex == tasks.Count )
+        //            break;
+        //        TaskInfo task = tasks[taskIndex];
+
+        //        // We sort ascending on number of tasks if SpreadNonInputTasks is false to use as few servers as possible.
+        //        var availableServers = job.SchedulerInfo.TaskServers
+        //                                .Where(server => server.TaskServer.IsActive && server.TaskServer.SchedulerInfo.AvailableNonInputTasks > 0)
+        //                                .OrderBy(server => server.TaskServer.SchedulerInfo.AvailableNonInputTasks, !job.Configuration.SchedulerOptions.SpreadNonInputTasks)
+        //                                .ThenBy(server => _random.Next());
+
+        //        outOfSlots = availableServers.Count() == 0;
+        //        if( !outOfSlots )
+        //        {
+        //            TaskServerInfo taskServer = (from server in availableServers
+        //                                         where !task.SchedulerInfo.BadServers.Contains(server.TaskServer)
+        //                                         select server.TaskServer).FirstOrDefault();
+        //            if( taskServer != null )
+        //            {
+        //                taskServer.SchedulerInfo.AssignTask(job, task);
+        //                _log.InfoFormat("Task {0} has been assigned to server {1}.", task.FullTaskId, taskServer.Address);
+        //                outOfSlots = false;
+        //            }
+        //            ++taskIndex;
+        //        }
+        //    }
+        //    if( outOfSlots && taskIndex < tasks.Count )
+        //        _log.InfoFormat("Job {{{0}}}: not all non-input tasks could be immediately scheduled.", job.Job.JobId);
+        //}
 
     }
 }

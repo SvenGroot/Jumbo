@@ -12,11 +12,17 @@ namespace Tkl.Jumbo.IO
     /// <summary>
     /// A record writer that writes to a file using a binary format based on <see cref="IWritable"/> serialization.
     /// </summary>
-    /// <typeparam name="T">The type of the record to write. Must implement <see cref="IWritable"/>.</typeparam>
+    /// <typeparam name="T">The type of the record to write. Must implement <see cref="IWritable"/> or have an associated <see cref="IValueWriter{T}"/> implementation.</typeparam>
+    /// <remarks>
+    /// <para>
+    ///   The data written by this class can be read back by a <see cref="BinaryRecordReader{T}"/> class with the same value for <typeparamref name="T"/>.
+    ///   All records passed to <see cref="RecordWriter{T}.WriteRecord"/> must be <typeparamref name="T"/>; they may not be a type derived
+    ///   from <typeparamref name="T"/>.
+    /// </para>
+    /// </remarks>
     public class BinaryRecordWriter<T> : StreamRecordWriter<T>
     {
         private BinaryWriter _writer;
-        private static readonly IValueWriter<T> _valueWriter = ValueWriter<T>.Writer;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="BinaryRecordWriter{T}"/> class.
@@ -38,10 +44,7 @@ namespace Tkl.Jumbo.IO
                 throw new ArgumentNullException("record");
             CheckDisposed();
 
-            if( _valueWriter == null )
-                ((IWritable)record).Write(_writer);
-            else
-                _valueWriter.Write(record, _writer);
+            ValueWriter<T>.WriteValue(record, _writer);
 
             base.WriteRecordInternal(record);
         }

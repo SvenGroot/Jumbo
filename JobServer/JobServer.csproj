@@ -87,10 +87,12 @@
     <Compile Include="Scheduling\IScheduler.cs" />
     <Compile Include="Scheduling\StagedScheduler.cs" />
     <Compile Include="StageInfo.cs" />
+    <Compile Include="TaskCompletionBroadcaster.cs" />
     <Compile Include="TaskInfo.cs" />
     <Compile Include="TaskPartitionInfo.cs" />
     <Compile Include="TaskSchedulerInfo.cs" />
     <Compile Include="TaskServerInfo.cs" />
+    <Compile Include="TaskServerJobInfo.cs" />
     <Compile Include="TaskServerSchedulerInfo.cs" />
   </ItemGroup>
   <ItemGroup>

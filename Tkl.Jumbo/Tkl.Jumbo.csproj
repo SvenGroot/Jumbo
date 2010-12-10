@@ -102,6 +102,7 @@
     <Compile Include="IndividualProcessorStatus.cs" />
     <Compile Include="IO\ChildReaderException.cs" />
     <Compile Include="IO\CurrentPartitionChangingEventArgs.cs" />
+    <Compile Include="IO\DefaultValueWriter.cs" />
     <Compile Include="IO\IMultiRecordWriter.cs" />
     <Compile Include="IO\IRecordInputStream.cs" />
     <Compile Include="IO\IRecordOutputStream.cs" />
@@ -145,10 +146,12 @@
     <Compile Include="SpinWait.cs" />
     <Compile Include="Topology\NetworkTopology.cs" />
     <Compile Include="Topology\NetworkTopologyConfigurationElement.cs" />
+    <Compile Include="Topology\PatternType.cs" />
     <Compile Include="Topology\RackConfigurationElement.cs" />
     <Compile Include="Topology\RackConfigurationElementCollection.cs" />
-    <Compile Include="Topology\RegexTopologyResolver.cs" />
-    <Compile Include="Topology\RegexTopologyResolverConfigurationElement.cs" />
+    <Compile Include="Topology\RangeExpression.cs" />
+    <Compile Include="Topology\PatternTopologyResolver.cs" />
+    <Compile Include="Topology\PatternTopologyResolverConfigurationElement.cs" />
     <Compile Include="Topology\TopologyNode.cs" />
     <Compile Include="Topology\ITopologyResolver.cs" />
     <Compile Include="Topology\Rack.cs" />
@@ -194,6 +197,7 @@
     <Compile Include="TcpServer.cs" />
     <Compile Include="TypeExtensions.cs" />
     <Compile Include="TypeReference.cs" />
+    <Compile Include="UdpServer.cs" />
     <Compile Include="UnmanagedBuffer.cs" />
     <Compile Include="UnmanagedBufferMemoryStream.cs" />
   </ItemGroup>

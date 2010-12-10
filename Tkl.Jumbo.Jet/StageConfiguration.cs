@@ -64,7 +64,7 @@ namespace Tkl.Jumbo.Jet
             get 
             {
                 if( DfsInput != null )
-                    return DfsInput.TaskInputs.Count;
+                    return DfsInput.SplitCount;
                 return _taskCount; 
             }
             set 
@@ -122,6 +122,22 @@ namespace Tkl.Jumbo.Jet
                 while( root.Parent != null )
                     root = root.Parent;
                 return root;
+            }
+        }
+
+        /// <summary>
+        /// Gets the deepest nested child stage of this compound stage.
+        /// </summary>
+        /// <value>The leaf child stage.</value>
+        [XmlIgnore]
+        public StageConfiguration Leaf
+        {
+            get
+            {
+                StageConfiguration leaf = this;
+                while( leaf.ChildStage != null )
+                    leaf = leaf.ChildStage;
+                return leaf;
             }
         }
 

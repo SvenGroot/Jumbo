@@ -22,6 +22,10 @@ namespace Tkl.Jumbo.Jet
 
         internal const string DatePattern = "yyyy'-'MM'-'dd' 'HH':'mm':'ss'.'fff'Z'";
 
+        // Used to support loading of old-style job status which didn't record this on a per-task basis.
+        private int _rackLocalTaskCount = -1;
+        private int _nonDataLocalTaskCount = -1;
+
         /// <summary>
         /// Gets or sets the ID of the job whose status this object represents.
         /// </summary>
@@ -84,12 +88,24 @@ namespace Tkl.Jumbo.Jet
         public int FinishedTaskCount { get; set; }
 
         /// <summary>
-        /// Gets or sets the number of tasks that were not scheduled data local.
+        /// Gets or sets the number of DFS input tasks that were scheduled on the same rack as their input data, but not the same server.
+        /// </summary>
+        /// <value>The rack local task count.</value>
+        public int RackLocalTaskCount
+        {
+            get { return _rackLocalTaskCount >= 0 ? _rackLocalTaskCount : GetTasksWithDistance(1); }
+        }
+
+        /// <summary>
+        /// Gets or sets the number of tasks that were not scheduled on the same server or rack as their input data.
         /// </summary>
         /// <remarks>
         /// This only includes DFS input tasks; tasks that do not read from the DFS are never data local, and are not counted here.
         /// </remarks>
-        public int NonDataLocalTaskCount { get; set; }
+        public int NonDataLocalTaskCount
+        {
+            get { return _nonDataLocalTaskCount >= 0 ? _nonDataLocalTaskCount : GetTasksWithDistance(2); }
+        }
 
         /// <summary>
         /// Gets or sets the UTC start time of the 
@@ -108,6 +124,12 @@ namespace Tkl.Jumbo.Jet
         /// Gets or sets a value that indicates whether the job has finished.
         /// </summary>
         public bool IsFinished { get; set; }
+
+        /// <summary>
+        /// Gets or sets the reason the job failed, if it failed.
+        /// </summary>
+        /// <value>The failure reason, or <see langword="null"/> if the job hasn't failed.</value>
+        public string FailureReason { get; set; }
 
         /// <summary>
         /// Gets the number of task attempts that failed.
@@ -202,7 +224,8 @@ namespace Tkl.Jumbo.Jet
                         new XAttribute("tasks", TaskCount.ToString(System.Globalization.CultureInfo.InvariantCulture)),
                         new XAttribute("finishedTasks", FinishedTaskCount.ToString(System.Globalization.CultureInfo.InvariantCulture)),
                         new XAttribute("errors", ErrorTaskCount.ToString(System.Globalization.CultureInfo.InvariantCulture)),
-                        new XAttribute("nonDataLocalTasks", NonDataLocalTaskCount.ToString(System.Globalization.CultureInfo.InvariantCulture))),
+                        _rackLocalTaskCount < 0 ? null : new XAttribute("rackLocalTasks", RackLocalTaskCount.ToString(System.Globalization.CultureInfo.InvariantCulture)),
+                        _nonDataLocalTaskCount < 0 ? null : new XAttribute("nonDataLocalTasks", NonDataLocalTaskCount.ToString(System.Globalization.CultureInfo.InvariantCulture))),
                     new XElement("Tasks",
                         from stage in Stages
                         from task in stage.Tasks
@@ -241,7 +264,8 @@ namespace Tkl.Jumbo.Jet
                 StartTime = DateTime.ParseExact(jobInfo.Attribute("startTime").Value, JobStatus.DatePattern, System.Globalization.CultureInfo.InvariantCulture),
                 EndTime = DateTime.ParseExact(jobInfo.Attribute("endTime").Value, JobStatus.DatePattern, System.Globalization.CultureInfo.InvariantCulture),
                 FinishedTaskCount = (int)jobInfo.Attribute("finishedTasks"),
-                NonDataLocalTaskCount = (int)jobInfo.Attribute("nonDataLocalTasks"),
+                _rackLocalTaskCount = jobInfo.Attribute("rackLocalTasks") == null ? -1 : (int)jobInfo.Attribute("rackLocalTasks"),
+                _nonDataLocalTaskCount = jobInfo.Attribute("nonDataLocalTasks") == null ? -1 : (int)jobInfo.Attribute("nonDataLocalTasks"),
                 IsFinished = true
             };
 
@@ -275,6 +299,14 @@ namespace Tkl.Jumbo.Jet
 
             return jobStatus;
 
+        }
+
+        private int GetTasksWithDistance(int distance)
+        {
+            return (from stage in _stages
+                    from task in stage.Tasks
+                    where task.DataDistance == distance
+                    select task).Count();
         }
     }
 }

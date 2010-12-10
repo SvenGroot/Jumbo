@@ -17,8 +17,8 @@ namespace NameServerApplication
         private readonly HashSet<Guid> _pendingBlocks = new HashSet<Guid>();
 
         public DataServerInfo(ServerAddress address)
+            : base(address)
         {
-            Address = address;
         }
 
         public bool HasReportedBlocks { get; set; }

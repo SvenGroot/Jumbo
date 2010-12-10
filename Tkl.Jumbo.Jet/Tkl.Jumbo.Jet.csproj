@@ -172,6 +172,8 @@
     <Compile Include="ProcessAllInputPartitionsAttribute.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="RunTaskJetHeartbeatResponse.cs" />
+    <Compile Include="SchedulerOptions.cs" />
+    <Compile Include="SchedulingMode.cs" />
     <Compile Include="ServerShutdownException.cs" />
     <Compile Include="SettingsDictionary.cs" />
     <Compile Include="StageConfiguration.cs" />

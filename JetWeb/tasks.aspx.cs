@@ -52,6 +52,7 @@ public partial class tasks : System.Web.UI.Page
             if( tasks != null )
             {
                 tasks = FilterTasksByState(tasks);
+                tasks = FilterTasksByDistance(tasks);
 
                 Title = string.Format("Job {0} ({1}) tasks - Jumbo Jet", job.JobName, job.JobId);
                 HeaderText.InnerText = string.Format("Job {0} ({1}) tasks", job.JobName, job.JobId);
@@ -70,14 +71,23 @@ public partial class tasks : System.Web.UI.Page
                         if( cell.InnerText != "Progress" )
                             cell.RowSpan = 2;
                         else
+                        {
                             cell.ColSpan = complexProgress.AdditionalProgressValues.Count + 2;
+                            cell.Attributes["scope"] = "colgroup";
+                        }
                     }
 
                     HtmlTableRow progressHeaderRow = new HtmlTableRow();
                     progressHeaderRow.Cells.Add(new HtmlTableCell("th") { InnerText = "Overall" });
+                    progressHeaderRow.Cells[0].Attributes["scope"] = "col";
                     progressHeaderRow.Cells.Add(new HtmlTableCell("th") { InnerText = "Base" });
+                    progressHeaderRow.Cells[1].Attributes["scope"] = "col";
                     foreach( AdditionalProgressValue value in complexProgress.AdditionalProgressValues )
-                        progressHeaderRow.Cells.Add(new HtmlTableCell("th") { InnerText = job.GetFriendlyNameForAdditionalProgressCounter(value.SourceName) });
+                    {
+                        HtmlTableCell cell = new HtmlTableCell("th") { InnerText = job.GetFriendlyNameForAdditionalProgressCounter(value.SourceName) };
+                        cell.Attributes["scope"] = "col";
+                        progressHeaderRow.Cells.Add(cell);
+                    }
                     TasksTable.Rows.Add(progressHeaderRow);
                     additionalProgressCount = complexProgress.AdditionalProgressValues.Count;
                 }
@@ -99,6 +109,20 @@ public partial class tasks : System.Web.UI.Page
             TaskState state = (TaskState)Enum.Parse(typeof(TaskState), stateString, true);
             tasks = from t in tasks
                     where t.State == state
+                    select t;
+        }
+
+        return tasks;
+    }
+
+    private IEnumerable<TaskStatus> FilterTasksByDistance(IEnumerable<TaskStatus> tasks)
+    {
+        string distanceString = Request.QueryString["dataDistance"];
+        int distance;
+        if( !string.IsNullOrEmpty(distanceString) && int.TryParse(distanceString, out distance) )
+        {
+            tasks = from t in tasks
+                    where t.DataDistance == distance
                     select t;
         }
 
@@ -214,6 +238,7 @@ public partial class tasks : System.Web.UI.Page
             }
             else
                 row.Cells.Add(new HtmlTableCell() { InnerText = task.Progress.ToString("P1") });
+            row.Cells.Add(new HtmlTableCell() { InnerHtml = "<pre>" + (task.TaskProgress == null ? "" : HttpUtility.HtmlEncode(task.TaskProgress.StatusMessage ?? "")) + "</pre>" });
             row.Cells.Add(new HtmlTableCell() { InnerHtml = string.Format("<a href=\"logfile.aspx?taskServer={0}&amp;port={1}&amp;job={2}&amp;task={3}&amp;attempt={4}&amp;maxSize=100KB\">Last 100KB</a>, <a href=\"logfile.aspx?taskServer={0}&amp;port={1}&amp;job={2}&amp;task={3}&amp;attempt={4}&amp;maxSize=0\">all</a>", task.TaskServer.HostName, task.TaskServer.Port, job.JobId, task.TaskId, task.Attempts) });
         }
         else
@@ -227,6 +252,7 @@ public partial class tasks : System.Web.UI.Page
                 for( int x = 0; x <= additionalProgressCount; ++x )
                     row.Cells.Add(new HtmlTableCell() { InnerText = "" });
             }
+            row.Cells.Add(new HtmlTableCell() { InnerText = "" });
             row.Cells.Add(new HtmlTableCell() { InnerText = "" });
         }
         return row;

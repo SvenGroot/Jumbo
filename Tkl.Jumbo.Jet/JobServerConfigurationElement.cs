@@ -103,5 +103,87 @@ namespace Tkl.Jumbo.Jet
             get { return (int)this["taskServerTimeout"]; }
             set { this["taskServerTimeout"] = value; }
         }
+
+        /// <summary>
+        /// Gets or sets the timeout, in milliseconds, after which new tasks are not scheduled on a task server if it has not sent a heartbeat.
+        /// </summary>
+        /// <value>The task server soft timeout.</value>
+        [ConfigurationProperty("taskServerSoftTimeout", DefaultValue = 60000, IsRequired = false, IsKey = false)]
+        public int TaskServerSoftTimeout
+        {
+            get { return (int)this["taskServerSoftTimeout"]; }
+            set { this["taskServerSoftTimeout"] = value; }
+        }
+
+        /// <summary>
+        /// Gets or sets the default scheduling mode for tasks with DFS input.
+        /// </summary>
+        /// <value>The DFS input scheduling mode.</value>
+        /// <remarks>
+        /// <para>
+        ///   If the value of this property is set to <see cref="SchedulingMode.Default"/>, it will be treated as <see cref="SchedulingMode.MoreServers"/>.
+        /// </para>
+        /// </remarks>
+        [ConfigurationProperty("dfsInputSchedulingMode", DefaultValue = SchedulingMode.MoreServers, IsRequired = false, IsKey = false)]
+        public SchedulingMode DfsInputSchedulingMode
+        {
+            get { return (SchedulingMode)this["dfsInputSchedulingMode"]; }
+            set { this["dfsInputSchedulingMode"] = value; }
+        }
+
+        /// <summary>
+        /// Gets or sets the default scheduling mode for tasks without DFS input.
+        /// </summary>
+        /// <value>The DFS input scheduling mode.</value>
+        /// <remarks>
+        /// <para>
+        ///   If the value of this property is set to <see cref="SchedulingMode.Default"/> or <see cref="SchedulingMode.OptimalLocality"/>, it will be treated as <see cref="SchedulingMode.MoreServers"/>.
+        /// </para>
+        /// </remarks>
+        [ConfigurationProperty("nonInputSchedulingMode", DefaultValue = SchedulingMode.MoreServers, IsRequired = false, IsKey = false)]
+        public SchedulingMode NonInputSchedulingMode
+        {
+            get { return (SchedulingMode)this["nonInputSchedulingMode"]; }
+            set { this["nonInputSchedulingMode"] = value; }
+        }
+
+        /// <summary>
+        /// Gets or sets the percentage of tasks of the input channel's sending stage that need to be finished before a stage can be scheduled.
+        /// </summary>
+        /// <value>A value between 0 and 1 that indicates the scheduling threshold. The default value is 0.4.</value>
+        [ConfigurationProperty("schedulingThreshold", DefaultValue = 0.4f, IsRequired = false, IsKey = false)]
+        public float SchedulingThreshold
+        {
+            get { return (float)this["schedulingThreshold"]; }
+            set { this["schedulingThreshold"] = value; }
+        }
+
+        /// <summary>
+        /// Gets or sets the IP broadcast address to use when broadcasting task completion messages.
+        /// </summary>
+        /// <value>The broadcast address. The default value is the IPv4 global broadcast address 255.255.255.255.</value>
+        /// <remarks>
+        /// This should be set to the broadcast address of your local network.
+        /// </remarks>
+        [ConfigurationProperty("broadcastAddress", DefaultValue = "255.255.255.255", IsRequired = false, IsKey = false)]
+        public string BroadcastAddress
+        {
+            get { return (string)this["broadcastAddress"]; }
+            set { this["broadcastAddress"] = value; }
+        }
+
+        /// <summary>
+        /// Gets or sets the UDP port number to use when broadcasting task completion messages.
+        /// </summary>
+        /// <value>The broadcast port.</value>
+        /// <remarks>
+        /// Set to zero to disable broadcasting.
+        /// </remarks>
+        [ConfigurationProperty("broadcastPort", DefaultValue = 9550, IsRequired = false, IsKey = false)]
+        public int BroadcastPort
+        {
+            get { return (int)this["broadcastPort"]; }
+            set { this["broadcastPort"] = value; }
+        }
     }
 }

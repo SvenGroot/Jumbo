@@ -67,8 +67,16 @@ public partial class job : System.Web.UI.Page
             CreateTasksLinkCell(row, jobId, null, TaskState.Created, job.UnscheduledTaskCount.ToString(), archived);
             CreateTasksLinkCell(row, jobId, null, TaskState.Finished, job.FinishedTaskCount.ToString(), archived);
             CreateTasksLinkCell(row, jobId, null, TaskState.Error, job.ErrorTaskCount.ToString(), archived);
-            row.Cells.Add(new HtmlTableCell() { InnerText = job.NonDataLocalTaskCount.ToString() });
+            CreateTasksLinkCell(row, jobId, 1, job.RackLocalTaskCount.ToString(), archived);
+            CreateTasksLinkCell(row, jobId, 2, job.NonDataLocalTaskCount.ToString(), archived);
             RunningJobsTable.Rows.Add(row);
+
+            if( job.IsFinished && !job.IsSuccessful )
+            {
+                _failureReason.Visible = true;
+                _failureReason.InnerText = "Job failed: " + (job.FailureReason ?? "Unknown reason.");
+            }
+
 
             foreach( StageStatus stage in job.Stages )
             {
@@ -159,6 +167,11 @@ public partial class job : System.Web.UI.Page
             row.Cells.Add(new HtmlTableCell() { InnerHtml = string.Format("<a href=\"tasks.aspx?job={0}&amp;state={1}{2}\">{3}</a>", jobId, state, archived ? "&amp;archived=true" : "", HttpUtility.HtmlEncode(text)) });
         else
             row.Cells.Add(new HtmlTableCell() { InnerHtml = string.Format("<a href=\"tasks.aspx?job={0}&amp;stage={1}&amp;state={2}{3}\">{4}</a>", jobId, HttpUtility.UrlEncode(stageId), state, archived ? "&amp;archived=true" : "", HttpUtility.HtmlEncode(text)) });
+    }
+
+    private static void CreateTasksLinkCell(HtmlTableRow row, Guid jobId, int dataDistance, string text, bool archived)
+    {
+        row.Cells.Add(new HtmlTableCell() { InnerHtml = string.Format(CultureInfo.InvariantCulture, "<a href=\"tasks.aspx?job={0}&amp;dataDistance={1}{2}\">{3}</a>", jobId, dataDistance, archived ? "&amp;archived=true" : "", HttpUtility.HtmlEncode(text)) });
     }
 
     private void CreateMetricsTable(JobStatus job)

@@ -18,6 +18,7 @@ namespace Tkl.Jumbo.Jet
     public sealed class StageDfsInput
     {
         private readonly ExtendedCollection<TaskDfsInput> _taskInputs = new ExtendedCollection<TaskDfsInput>();
+        private int _splitsPerBlock = 1;
 
         /// <summary>
         /// Gets the inputs for each task in the stage.
@@ -34,6 +35,56 @@ namespace Tkl.Jumbo.Jet
         /// <value>The type of the record reader.</value>
         public TypeReference RecordReaderType { get; set; }
 
+        /// <summary>
+        /// Gets or sets the number of tasks per input.
+        /// </summary>
+        /// <value>The number of tasks per input.</value>
+        [XmlAttribute("splitsPerBlock")]
+        public int SplitsPerBlock
+        {
+            get { return _splitsPerBlock; }
+            set 
+            {
+                if( value < 1 )
+                    throw new ArgumentOutOfRangeException("value");
+                _splitsPerBlock = value; 
+            }
+        }
+
+        /// <summary>
+        /// Gets the number of input splits.
+        /// </summary>
+        /// <value>The input split count.</value>
+        [XmlIgnore]
+        public int SplitCount
+        {
+            get { return TaskInputs.Count * SplitsPerBlock; }
+        }
+
+        /// <summary>
+        /// Gets the index of the input for the specified split.
+        /// </summary>
+        /// <param name="splitIndex">Zero-based index of the split.</param>
+        /// <returns>The zero-based input index.</returns>
+        public TaskDfsInput GetInput(int splitIndex)
+        {
+            int inputIndex = splitIndex / SplitsPerBlock;
+            if( inputIndex < 0 || inputIndex >= _taskInputs.Count )
+                throw new ArgumentOutOfRangeException("splitIndex");
+            return TaskInputs[inputIndex];
+        }
+
+        /// <summary>
+        /// Gets the index of the input for the specified task.
+        /// </summary>
+        /// <param name="taskId">The task id.</param>
+        /// <returns>The zero-based input index.</returns>
+        public TaskDfsInput GetInput(TaskId taskId)
+        {
+            if( taskId == null )
+                throw new ArgumentNullException("taskId");
+            return GetInput(taskId.TaskNumber - 1);
+        }
 
         /// <summary>
         /// Creates a record reader for the specified <see cref="TaskExecutionUtility"/>.
@@ -51,28 +102,33 @@ namespace Tkl.Jumbo.Jet
         /// Creates a record reader for the specified task number.
         /// </summary>
         /// <param name="dfsClient">The <see cref="DfsClient"/> to use to access the DFS.</param>
-        /// <param name="inputIndex">The zero-based index of the input to use.</param>
+        /// <param name="splitIndex">The zero-based index of the input to use.</param>
         /// <returns>
         /// A <see cref="RecordReader{T}"/> that reads the input specified in the <see cref="TaskDfsInput"/> for the task number.
         /// </returns>
-        public IRecordReader CreateRecordReader(DfsClient dfsClient, int inputIndex)
+        public IRecordReader CreateRecordReader(DfsClient dfsClient, int splitIndex)
         {
-            return CreateRecordReader(dfsClient, null, inputIndex);
+            return CreateRecordReader(dfsClient, null, splitIndex);
         }
 
-        private IRecordReader CreateRecordReader(DfsClient dfsClient, TaskExecutionUtility taskExecution, int inputIndex)
+        private IRecordReader CreateRecordReader(DfsClient dfsClient, TaskExecutionUtility taskExecution, int splitIndex)
         {
             if( dfsClient == null )
                 throw new ArgumentNullException("dfsClient");
             Type recordReaderType = RecordReaderType.ReferencedType;
+            int inputIndex = splitIndex / SplitsPerBlock;
+            int blockSplitIndex = splitIndex % SplitsPerBlock;
             TaskDfsInput taskInput = _taskInputs[inputIndex];
             DfsInputStream inputStream = dfsClient.OpenFile(taskInput.Path);
-            long offset;
-            long size;
             long blockSize = inputStream.BlockSize;
-            offset = blockSize * (long)taskInput.Block;
-            size = Math.Min(blockSize, inputStream.Length - offset);
-            return (IRecordReader)JetActivator.CreateInstance(recordReaderType, taskExecution, inputStream, offset, size, taskExecution == null ? false : taskExecution.AllowRecordReuse);
+            long offset = blockSize * (long)taskInput.Block;
+            blockSize = Math.Min(blockSize, inputStream.Length - offset);
+            long splitSize = (blockSize / SplitsPerBlock);
+            offset += (splitSize * blockSplitIndex);
+            if( blockSplitIndex == SplitsPerBlock )
+                splitSize = blockSize - offset;
+
+            return (IRecordReader)JetActivator.CreateInstance(recordReaderType, taskExecution, inputStream, offset, splitSize, taskExecution == null ? false : taskExecution.AllowRecordReuse);
         }
     }
 }

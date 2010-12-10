@@ -20,6 +20,9 @@ public partial class _Default : System.Web.UI.Page
         Title = string.Format("Jumbo DFS ({0})", metrics.NameServer);
         NameServerColumn.InnerText = metrics.NameServer.ToString();
         TotalSizeColumn.InnerHtml = FormatSize(metrics.TotalSize);
+        TotalCapacityColumn.InnerHtml = FormatSize(metrics.TotalCapacity);
+        DfsCapacityUsedColumn.InnerHtml = FormatSize(metrics.DfsCapacityUsed);
+        AvailableCapacityColumn.InnerHtml = FormatSize(metrics.AvailableCapacity);
         BlocksColumn.InnerHtml = string.Format("<a href=\"blocklist.aspx\">{0}</a>", metrics.TotalBlockCount);
         UnderReplicatedBlocksColumn.InnerHtml = string.Format("<a href=\"blocklist.aspx?kind=UnderReplicated\">{0}</a>", metrics.UnderReplicatedBlockCount);
         PendingBlocksColumn.InnerHtml = string.Format("<a href=\"blocklist.aspx?kind=Pending\">{0}</a>", metrics.PendingBlockCount);

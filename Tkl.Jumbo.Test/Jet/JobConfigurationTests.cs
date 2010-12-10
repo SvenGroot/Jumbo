@@ -60,7 +60,9 @@ namespace Tkl.Jumbo.Test.Jet
 
             StageConfiguration stage = target.AddInputStage("InputStage", file, typeof(Tasks.LineCounterTask), typeof(LineRecordReader));
 
-            Assert.AreEqual(file.Blocks.Count, stage.TaskCount);
+            stage.DfsInput.SplitsPerBlock = 2;
+            Assert.AreEqual(file.Blocks.Count * stage.DfsInput.SplitsPerBlock, stage.TaskCount);
+            Assert.AreEqual(stage.TaskCount, stage.DfsInput.SplitCount);
             Assert.AreEqual(1, target.Stages.Count);
             Assert.AreEqual(stage, target.Stages[0]);
             Assert.AreEqual("InputStage", stage.StageId);

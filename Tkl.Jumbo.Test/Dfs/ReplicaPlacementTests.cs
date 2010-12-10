@@ -170,7 +170,7 @@ namespace Tkl.Jumbo.Test.Dfs
             JumboConfiguration config = new JumboConfiguration();
             for( int rack = 0; rack < racks; ++rack )
             {
-                config.RegexTopologyResolver.Racks.Add(new RackConfigurationElement() { RackId = string.Format("rack{0}", rack + 1), NodeRegex = string.Format(@"^rack{0}_\d$", rack + 1) });
+                config.PatternTopologyResolver.Racks.Add(new RackConfigurationElement() { RackId = string.Format("rack{0}", rack + 1), Pattern = string.Format(@"^rack{0}_\d$", rack + 1) });
             }
 
             NetworkTopology topology = new NetworkTopology(config);

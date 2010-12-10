@@ -28,6 +28,7 @@ namespace JobServerApplication
         public TaskSchedulerInfo(TaskInfo task)
         {
             _task = task;
+            CurrentAttemptDataDistance = -1;
         }
 
         public TaskState State
@@ -59,6 +60,8 @@ namespace JobServerApplication
 
         public TaskAttemptId SuccessfulAttempt { get; set; }
 
+        public int CurrentAttemptDataDistance { get; set; }
+
         public int Attempts { get; set; }
 
         /// <summary>
@@ -70,7 +73,7 @@ namespace JobServerApplication
         {
             if( _inputBlock == null )
             {
-                TaskDfsInput input = _task.Stage.Configuration.DfsInput.TaskInputs[_task.TaskId.TaskNumber - 1];
+                TaskDfsInput input = _task.Stage.Configuration.DfsInput.GetInput(_task.TaskId);
                 Tkl.Jumbo.Dfs.DfsFile file = _task.Job.SchedulerInfo.GetFileInfo(dfsClient, input.Path);
                 _inputBlock = file.Blocks[input.Block];
             }

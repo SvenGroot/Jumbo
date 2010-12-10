@@ -50,58 +50,68 @@
   </xsl:template>
   <xsl:template match="JobInfo">
     <table>
-      <tr>
-        <th scope="col" rowspan="2">Start time</th>
-        <th scope="col" rowspan="2">End time</th>
-        <th scope="col" rowspan="2">Duration</th>
-        <th scope="colgroup" colspan="4">Tasks</th>
-      </tr>
-      <tr>
-        <th scope="col">Total</th>
-        <th scope="col">Finished</th>
-        <th scope="col">Errors</th>
-        <th scope="col">Non data local</th>
-      </tr>
-      <tr>
-        <td>
-          <xsl:value-of select="@startTime"/>
-        </td>
-        <td>
-          <xsl:value-of select="@endTime"/>
-        </td>
-        <td>
-          <xsl:value-of select="@duration"/>
-        </td>
-        <td>
-          <xsl:value-of select="@tasks"/>
-        </td>
-        <td>
-          <xsl:value-of select="@finishedTasks"/>
-        </td>
-        <td>
-          <xsl:value-of select="@errors"/>
-        </td>
-        <td>
-          <xsl:value-of select="@nonDataLocalTasks"/>
-        </td>
-      </tr>
+      <thead>
+        <tr>
+          <th scope="col" rowspan="2">Start time</th>
+          <th scope="col" rowspan="2">End time</th>
+          <th scope="col" rowspan="2">Duration</th>
+          <th scope="colgroup" colspan="5">Tasks</th>
+        </tr>
+        <tr>
+          <th scope="col">Total</th>
+          <th scope="col">Finished</th>
+          <th scope="col">Errors</th>
+          <th scope="col">Rack local</th>
+          <th scope="col">Non data local</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>
+            <xsl:value-of select="@startTime"/>
+          </td>
+          <td>
+            <xsl:value-of select="@endTime"/>
+          </td>
+          <td>
+            <xsl:value-of select="@duration"/>
+          </td>
+          <td>
+            <xsl:value-of select="@tasks"/>
+          </td>
+          <td>
+            <xsl:value-of select="@finishedTasks"/>
+          </td>
+          <td>
+            <xsl:value-of select="@errors"/>
+          </td>
+          <td>
+            <xsl:value-of select="count((Tasks | FailedTaskAttempts)[@dataDistance=1])"/>
+          </td>
+          <td>
+            <xsl:value-of select="count((Tasks | FailedTaskAttempts)[@dataDistance=2])"/>
+          </td>
+        </tr>
+      </tbody>
     </table>
   </xsl:template>
   <xsl:template match="Tasks | FailedTaskAttempts">
     <xsl:apply-templates select="." mode="title" />
     <table>
-      <tr>
-        <th scope="col">Task ID</th>
-        <th scope="col">State</th>
-        <th scope="col">Task server</th>
-        <th scope="col">Attempts</th>
-        <th scope="col">Start time</th>
-        <th scope="col">End time</th>
-        <th scope="col">Duration</th>
-      </tr>
-      <tr>
+      <thead>
+        <tr>
+          <th scope="col">Task ID</th>
+          <th scope="col">State</th>
+          <th scope="col">Task server</th>
+          <th scope="col">Attempts</th>
+          <th scope="col">Start time</th>
+          <th scope="col">End time</th>
+          <th scope="col">Duration</th>
+        </tr>
+      </thead>
+      <tbody>
         <xsl:apply-templates select="Task" />
-      </tr>
+      </tbody>
     </table>
   </xsl:template>
   <xsl:template match="Tasks" mode="title">
@@ -138,11 +148,15 @@
   <xsl:template match="StageMetrics">
     <h2>Metrics</h2>
     <table>
-      <tr>
-        <td>&#160;</td>
-        <xsl:apply-templates select="Stage" mode="header" />
-      </tr>
-      <xsl:apply-templates select="Stage[position()=1]/Metrics/*" />
+      <thead>
+        <tr>
+          <th>&#160;</th>
+          <xsl:apply-templates select="Stage" mode="header" />
+        </tr>
+      </thead>
+      <tbody>
+        <xsl:apply-templates select="Stage[position()=1]/Metrics/*" />
+      </tbody>
     </table>
   </xsl:template>
   <xsl:template match="Stage" mode="header">

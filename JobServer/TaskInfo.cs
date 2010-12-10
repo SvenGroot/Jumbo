@@ -105,6 +105,11 @@ namespace JobServerApplication
             }
         }
 
+        public int CurrentAttemptDataDistance
+        {
+            get { return _schedulerInfo.CurrentAttemptDataDistance; }
+        }
+
         public DateTime StartTimeUtc
         {
             get { return new DateTime(Interlocked.Read(ref _startTimeUtcTicks), DateTimeKind.Utc); }
@@ -153,6 +158,7 @@ namespace JobServerApplication
                 StartOffset = startTimeUtc - _job.StartTimeUtc,
                 TaskProgress = Progress,
                 Metrics = Metrics,
+                DataDistance = CurrentAttemptDataDistance
             };
         }
     }
