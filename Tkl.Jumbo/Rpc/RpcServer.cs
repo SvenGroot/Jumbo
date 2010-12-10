@@ -22,7 +22,9 @@ namespace Tkl.Jumbo.Rpc
             if( localAddresses.Length == 0 )
                 throw new ArgumentException("You must specify a local address to listen on.");
 
-            _listeners = (from address in localAddresses select new TcpListener(address, port)).ToArray();
+            _listeners = new TcpListener[localAddresses.Length];
+            for( int x = 0; x < localAddresses.Length; ++x )
+                _listeners[x] = new TcpListener(localAddresses[x], port);
             _acceptSocketCallback = new AsyncCallback(AcceptSocketCallback);
         }
 
@@ -30,7 +32,7 @@ namespace Tkl.Jumbo.Rpc
         {
             foreach( TcpListener listener in _listeners )
             {
-                listener.Start();
+                listener.Start(Int32.MaxValue);
                 listener.BeginAcceptSocket(_acceptSocketCallback, listener);
             }
             _isListening = true;
