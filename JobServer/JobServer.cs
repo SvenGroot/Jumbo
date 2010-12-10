@@ -854,6 +854,7 @@ namespace JobServerApplication
         private void ShutdownInternal()
         {
             _cancellation.Cancel();
+            _broadcaster.Dispose();
         }
 
         private JobInfo GetRunningOrFinishedJob(Guid jobId)

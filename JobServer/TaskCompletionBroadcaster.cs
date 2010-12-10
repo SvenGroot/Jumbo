@@ -56,7 +56,7 @@ namespace JobServerApplication
 
         public void Dispose()
         {
-            _socket.Dispose();
+            ((IDisposable)_socket).Dispose();
             GC.SuppressFinalize(this);
         }
     }
