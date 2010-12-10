@@ -53,8 +53,9 @@ namespace Tkl.Jumbo
             if( maxConnections < 0 )
                 throw new ArgumentOutOfRangeException("maxConnections", "The maximum number of connections must be zero or more.");
 
-            _listeners = (from address in localAddresses
-                          select new TcpListener(address, port)).ToArray();
+            _listeners = new TcpListener[localAddresses.Length];
+            for( int x = 0; x < localAddresses.Length; ++x )
+                _listeners[x] = new TcpListener(localAddresses[x], port);
             _maxConnections = maxConnections;
         }
 
