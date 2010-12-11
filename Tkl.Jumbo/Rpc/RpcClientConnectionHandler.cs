@@ -24,7 +24,7 @@ namespace Tkl.Jumbo.Rpc
         public RpcClientConnectionHandler(string hostName, int port, ServerConnectionCache cache)
         {
             _client = new TcpClient(hostName, port);
-            _client.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.KeepAlive, 1);
+            //_client.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.KeepAlive, 1);
             _client.NoDelay = true;
             _stream = new RpcStream(_client);
             _cache = cache;

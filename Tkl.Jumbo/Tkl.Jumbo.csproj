@@ -134,6 +134,7 @@
     <Compile Include="Rpc\RpcClientConnectionHandler.cs" />
     <Compile Include="Rpc\RpcException.cs" />
     <Compile Include="Rpc\RpcHelper.cs" />
+    <Compile Include="Rpc\RpcProxyBase.cs" />
     <Compile Include="Rpc\RpcProxyBuilder.cs" />
     <Compile Include="Rpc\RpcRequestHandler.cs" />
     <Compile Include="Rpc\RpcResponseStatus.cs" />

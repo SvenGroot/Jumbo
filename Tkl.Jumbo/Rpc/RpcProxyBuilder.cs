@@ -47,22 +47,19 @@ namespace Tkl.Jumbo.Rpc
             if( interfaceType.IsGenericType || interfaceType.IsGenericTypeDefinition )
                 throw new ArgumentException("Generic types are not supported.");
 
-            TypeBuilder proxyType = _proxyModule.DefineType("Tkl.Jumbo.Rpc.DynamicProxy." + interfaceType.FullName.Replace('.', '_').Replace('+', '_'), TypeAttributes.Class | TypeAttributes.Sealed | TypeAttributes.Public | TypeAttributes.BeforeFieldInit, typeof(object), new[] { interfaceType });
-            FieldBuilder hostNameField = proxyType.DefineField("_hostName", typeof(string), FieldAttributes.Private | FieldAttributes.InitOnly);
-            FieldBuilder portField = proxyType.DefineField("_port", typeof(int), FieldAttributes.Private | FieldAttributes.InitOnly);
-            FieldBuilder objectNameField = proxyType.DefineField("_objectName", typeof(string), FieldAttributes.Private | FieldAttributes.InitOnly);
+            TypeBuilder proxyType = _proxyModule.DefineType("Tkl.Jumbo.Rpc.DynamicProxy." + interfaceType.FullName.Replace('.', '_').Replace('+', '_'), TypeAttributes.Class | TypeAttributes.Sealed | TypeAttributes.Public | TypeAttributes.BeforeFieldInit, typeof(RpcProxyBase), new[] { interfaceType });
 
-            CreateConstructor(proxyType, hostNameField, portField, objectNameField);
+            CreateConstructor(proxyType, interfaceType);
 
             foreach( MemberInfo member in interfaceType.GetMembers() )
             {
                 switch( member.MemberType )
                 {
                 case MemberTypes.Method:
-                    CreateMethod(interfaceType, (MethodInfo)member, proxyType, hostNameField, portField, objectNameField);
+                    CreateMethod(proxyType, (MethodInfo)member);
                     break;
                 case MemberTypes.Property:
-                    CreateProperty(interfaceType, (PropertyInfo)member, proxyType, hostNameField, portField, objectNameField);
+                    CreateProperty(proxyType, (PropertyInfo)member);
                     break;
                 default:
                     throw new NotSupportedException("Interface has unsupported member type.");
@@ -72,14 +69,17 @@ namespace Tkl.Jumbo.Rpc
             return proxyType.CreateType();
         }
 
-        private static MethodBuilder CreateMethod(Type interfaceType, MethodInfo interfaceMethod, TypeBuilder proxyType, FieldBuilder hostNameField, FieldBuilder portField, FieldBuilder objectNameField)
+        private static MethodBuilder CreateMethod(TypeBuilder proxyType, MethodInfo interfaceMethod)
         {
             if( interfaceMethod.IsGenericMethod || interfaceMethod.IsGenericMethodDefinition )
                 throw new NotSupportedException("Generic methods are not supported.");
 
             ParameterInfo[] parameters = interfaceMethod.GetParameters();
+            Type[] parameterTypes = new Type[parameters.Length];
+            for( int x = 0; x < parameters.Length; ++x )
+                parameterTypes[x] = parameters[x].ParameterType;
             MethodAttributes attributes = interfaceMethod.Attributes & ~(MethodAttributes.Abstract) | MethodAttributes.Virtual | MethodAttributes.Final;
-            MethodBuilder proxyMethod = proxyType.DefineMethod(interfaceMethod.Name, attributes, interfaceMethod.CallingConvention, interfaceMethod.ReturnType, parameters.Select(p => p.ParameterType).ToArray());
+            MethodBuilder proxyMethod = proxyType.DefineMethod(interfaceMethod.Name, attributes, interfaceMethod.CallingConvention, interfaceMethod.ReturnType, parameterTypes);
             foreach( ParameterInfo param in parameters )
             {
                 if( param.ParameterType.IsByRef )
@@ -89,13 +89,7 @@ namespace Tkl.Jumbo.Rpc
 
             ILGenerator generator = proxyMethod.GetILGenerator();
             generator.DeclareLocal(typeof(object[]));
-            generator.Emit(OpCodes.Ldarg_0); // Load this
-            generator.Emit(OpCodes.Ldfld, hostNameField); // Load the host name field
-            generator.Emit(OpCodes.Ldarg_0); // Load this
-            generator.Emit(OpCodes.Ldfld, portField); // Load the port field
-            generator.Emit(OpCodes.Ldarg_0); // Load this
-            generator.Emit(OpCodes.Ldfld, objectNameField); // Load the object name field
-            generator.Emit(OpCodes.Ldstr, interfaceType.AssemblyQualifiedName); // Load the interface name
+            generator.Emit(OpCodes.Ldarg_0); // Load "this" (for the SendRequest call later)
             generator.Emit(OpCodes.Ldstr, interfaceMethod.Name); // Load the method name
             if( parameters.Length == 0 )
                 generator.Emit(OpCodes.Ldnull);
@@ -116,7 +110,7 @@ namespace Tkl.Jumbo.Rpc
 
                 generator.Emit(OpCodes.Ldloc_0); // Load the array
             }
-            MethodInfo sendRequestMethod = typeof(RpcClient).GetMethod("SendRequest");
+            MethodInfo sendRequestMethod = typeof(RpcProxyBase).GetMethod("SendRequest", BindingFlags.NonPublic | BindingFlags.Instance);
             generator.Emit(OpCodes.Call, sendRequestMethod); // Call the SendRequest method
 
             if( interfaceMethod.ReturnType == typeof(void) )
@@ -131,25 +125,28 @@ namespace Tkl.Jumbo.Rpc
             return proxyMethod;
         }
 
-        private static void CreateProperty(Type interfaceType, PropertyInfo interfaceProperty, TypeBuilder proxyType, FieldBuilder hostNameField, FieldBuilder portField, FieldBuilder objectNameField)
+        private static void CreateProperty(TypeBuilder proxyType, PropertyInfo interfaceProperty)
         {
             ParameterInfo[] indexParameters = interfaceProperty.GetIndexParameters();
-            PropertyBuilder proxyProperty = proxyType.DefineProperty(interfaceProperty.Name, interfaceProperty.Attributes, interfaceProperty.PropertyType, indexParameters.Select(p => p.ParameterType).ToArray());
+            Type[] parameterTypes = new Type[indexParameters.Length];
+            for( int x = 0; x < indexParameters.Length; ++x )
+                parameterTypes[x] = indexParameters[x].ParameterType;
+            PropertyBuilder proxyProperty = proxyType.DefineProperty(interfaceProperty.Name, interfaceProperty.Attributes, interfaceProperty.PropertyType, parameterTypes);
 
             if( interfaceProperty.CanRead )
             {
-                MethodBuilder getMethod = CreateMethod(interfaceType, interfaceProperty.GetGetMethod(), proxyType, hostNameField, portField, objectNameField);
+                MethodBuilder getMethod = CreateMethod(proxyType, interfaceProperty.GetGetMethod());
                 proxyProperty.SetGetMethod(getMethod);
             }
 
             if( interfaceProperty.CanWrite )
             {
-                MethodBuilder setMethod = CreateMethod(interfaceType, interfaceProperty.GetSetMethod(), proxyType, hostNameField, portField, objectNameField);
+                MethodBuilder setMethod = CreateMethod(proxyType, interfaceProperty.GetSetMethod());
                 proxyProperty.SetSetMethod(setMethod);
             }
         }
 
-        private static void CreateConstructor(TypeBuilder proxyType, FieldBuilder hostNameField, FieldBuilder portField, FieldBuilder objectNameField)
+        private static void CreateConstructor(TypeBuilder proxyType, Type interfaceType)
         {
             ConstructorBuilder ctor = proxyType.DefineConstructor(MethodAttributes.Public, CallingConventions.HasThis, new[] { typeof(string), typeof(int), typeof(string) });
             ctor.DefineParameter(1, ParameterAttributes.In, "hostName");
@@ -158,16 +155,11 @@ namespace Tkl.Jumbo.Rpc
 
             ILGenerator generator = ctor.GetILGenerator();
             generator.Emit(OpCodes.Ldarg_0); // Load "this"
-            generator.Emit(OpCodes.Call, proxyType.BaseType.GetConstructor(Type.EmptyTypes)); // Call base class constructor
-            generator.Emit(OpCodes.Ldarg_0); // Load "this"
-            generator.Emit(OpCodes.Ldarg_1); // Load argument
-            generator.Emit(OpCodes.Stfld, hostNameField); // Store in the field
-            generator.Emit(OpCodes.Ldarg_0); // Load "this"
-            generator.Emit(OpCodes.Ldarg_2); // Load argument
-            generator.Emit(OpCodes.Stfld, portField); // Store in the field
-            generator.Emit(OpCodes.Ldarg_0); // Load "this"
-            generator.Emit(OpCodes.Ldarg_3); // Load argument
-            generator.Emit(OpCodes.Stfld, objectNameField); // Store in the field
+            generator.Emit(OpCodes.Ldarg_1); // Load hostName argument
+            generator.Emit(OpCodes.Ldarg_2); // Load port argument
+            generator.Emit(OpCodes.Ldarg_3); // Load objectName argument
+            generator.Emit(OpCodes.Ldstr, interfaceType.AssemblyQualifiedName);
+            generator.Emit(OpCodes.Call, proxyType.BaseType.GetConstructor(BindingFlags.NonPublic | BindingFlags.Instance, null, new[] { typeof(string), typeof(int), typeof(string), typeof(string) }, null)); // Call base class constructor
             generator.Emit(OpCodes.Ret);
         }
     }

@@ -11,10 +11,7 @@ using System.Threading;
 
 namespace Tkl.Jumbo.Rpc
 {
-    /// <summary>
-    /// Provides RPC client functionality. This class is for Jumbo internal use only, and should not be used by your code.
-    /// </summary>
-    public static class RpcClient
+    static class RpcClient
     {
         // Using Hashtable instead of generic Dictionary because Hashtable supports multiple readers without locking in the presence of a single writer.
         private static readonly Hashtable _connectionCache = new Hashtable();
@@ -31,16 +28,6 @@ namespace Tkl.Jumbo.Rpc
             _registeredTimeoutEvent = ThreadPool.RegisterWaitForSingleObject(_timeoutEvent, _timeoutCallback, null, _connectionTimeout, true);
         }
 
-        /// <summary>
-        /// Sends an RPC request. This method is for Jumbo internal use only, and should not be used by your code.
-        /// </summary>
-        /// <param name="hostName"></param>
-        /// <param name="port"></param>
-        /// <param name="objectName"></param>
-        /// <param name="interfaceName"></param>
-        /// <param name="operationName"></param>
-        /// <param name="parameters"></param>
-        /// <returns></returns>
         public static object SendRequest(string hostName, int port, string objectName, string interfaceName, string operationName, object[] parameters)
         {
             // This method is public only because the dynamic assemblies must be able to access it.
