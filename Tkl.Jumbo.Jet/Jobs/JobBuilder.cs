@@ -499,6 +499,73 @@ namespace Tkl.Jumbo.Jet.Jobs
         }
 
         /// <summary>
+        /// Runs a map function over the specified input.
+        /// </summary>
+        /// <typeparam name="TInput">The type of the input.</typeparam>
+        /// <typeparam name="TOutput">The type of the output.</typeparam>
+        /// <param name="input">The input, which much use record type <typeparamref name="TInput"/>.</param>
+        /// <param name="output">The output, which much use record type <typeparamref name="TOutput"/>.</param>
+        /// <param name="map">The map function.</param>
+        /// <returns>A <see cref="StageBuilder"/> that can be used to customize the stage that will be created for the operation.</returns>
+        /// <remarks>
+        /// <para>
+        ///   The difference between <see cref="MapRecords{TInput,TOutput}"/> and <see cref="ProcessRecords{TInput,TOutput}(IStageInput,IStageOutput,PushTaskFunction{TInput,TOutput})"/>
+        ///   is purely semantic. By using <see cref="MapRecords{TInput,TOutput}"/> you guarantee that your function processes one record at a time and is completely
+        ///   stateless, which the <see cref="JobBuilder"/> may use to perform optimizations.
+        /// </para>
+        /// </remarks>
+        public StageBuilder MapRecords<TInput, TOutput>(IStageInput input, IStageOutput output, MapFunction<TInput, TOutput> map)
+        {
+            if( input == null )
+                throw new ArgumentNullException("input");
+            if( output == null )
+                throw new ArgumentNullException("output");
+            if( map == null )
+                throw new ArgumentNullException("map");
+
+            return ProcessRecordsPushTask<TInput, TOutput>(input, output, map.Method);
+        }
+
+        /// <summary>
+        /// Runs a reduce function over the specified input.
+        /// </summary>
+        /// <typeparam name="TKey">The type of the key on the input records.</typeparam>
+        /// <typeparam name="TValue">The type of the value of the input records.</typeparam>
+        /// <typeparam name="TOutput">The type of the output of the output records.</typeparam>
+        /// <param name="input">The input, which must use record type <see cref="Pair{TKey,TValue}"/>.</param>
+        /// <param name="output">The output, which must use record type <typeparamref name="TOutput"/>.</param>
+        /// <param name="reduce">The reduce function.</param>
+        /// <returns>A <see cref="StageBuilder"/> that can be used to customize the stage that will be created for the operation.</returns>
+        /// <remarks>
+        /// <para>
+        ///   The input of a reduce stage must be grouped by key. The easiest way to achieve that is to first sort them using <see cref="SortRecords"/>.
+        /// </para>
+        /// <para>
+        ///   If you use an accumulator (created with <see cref="AccumulateRecords{TKey,TValue}"/>) in the stage before the reduce stage (this
+        ///   can serve a purpose similar to a combiner in Map-Reduce), the output of the accumulator must still be sorted before being
+        ///   processed by the reduce stage.
+        /// </para>
+        /// </remarks>
+        public StageBuilder ReduceRecords<TKey, TValue, TOutput>(IStageInput input, IStageOutput output, ReduceFunction<TKey, TValue, TOutput> reduce)
+            where TKey : IComparable<TKey>
+        {
+            if( input == null )
+                throw new ArgumentNullException("input");
+            if( output == null )
+                throw new ArgumentNullException("output");
+            if( reduce == null )
+                throw new ArgumentNullException("reduce");
+
+            // Even if input was grouped on the sending side using some method other than sorting, we must still
+            // merge is on this side to ensure grouping is maintained.
+            Channel inputChannel = input as Channel;
+            if( inputChannel != null )
+                inputChannel.MultiInputRecordReaderType = typeof(MergeRecordReader<Pair<TKey, TValue>>);
+
+            return ReduceRecords<TKey, TValue, TOutput>(input, output, reduce.Method);
+        }
+
+        /// <summary>
         /// Adds a setting to the job settings.
         /// </summary>
         /// <param name="key">The name of the setting.</param>
@@ -599,6 +666,42 @@ namespace Tkl.Jumbo.Jet.Jobs
             Type taskType = taskTypeBuilder.CreateType();
 
             AddAssemblies(taskMethod.DeclaringType.Assembly);
+
+            return ProcessRecords(input, output, taskType);
+        }
+
+        private StageBuilder ReduceRecords<TKey, TValue, TOutput>(IStageInput input, IStageOutput output, MethodInfo reduceMethod)
+            where TKey : IComparable<TKey>
+        {
+            if( !(reduceMethod.IsStatic && reduceMethod.IsPublic) )
+                throw new ArgumentException("The reduce method specified must be public and static.", "reduceMethod");
+
+            CheckJobCreated();
+
+            CreateDynamicAssembly();
+
+            TypeBuilder taskTypeBuilder = _dynamicModule.DefineType(_dynamicAssembly.GetName().Name + "." + reduceMethod.Name, TypeAttributes.Class | TypeAttributes.Public | TypeAttributes.Sealed, typeof(ReduceTask<TKey, TValue, TOutput>));
+
+            SetTaskAttributes(reduceMethod, taskTypeBuilder);
+
+            MethodBuilder reduceTaskMethod = taskTypeBuilder.DefineMethod("Reduce", MethodAttributes.Public | MethodAttributes.Virtual, null, new[] { typeof(TKey), typeof(IEnumerable<TValue>), typeof(RecordWriter<TOutput>) });
+            reduceTaskMethod.DefineParameter(1, ParameterAttributes.None, "key");
+            reduceTaskMethod.DefineParameter(2, ParameterAttributes.None, "values");
+            reduceTaskMethod.DefineParameter(3, ParameterAttributes.None, "output");
+
+            ILGenerator generator = reduceTaskMethod.GetILGenerator();
+            generator.Emit(OpCodes.Ldarg_1); // Load the key
+            generator.Emit(OpCodes.Ldarg_2); // Load the values
+            generator.Emit(OpCodes.Ldarg_3); // Load the output
+            // Put the task context on the stack
+            generator.Emit(OpCodes.Ldarg_0);
+            generator.Emit(OpCodes.Call, typeof(Configurable).GetProperty("TaskContext").GetGetMethod());
+            generator.Emit(OpCodes.Call, reduceMethod);
+            generator.Emit(OpCodes.Ret);
+
+            Type taskType = taskTypeBuilder.CreateType();
+
+            AddAssemblies(reduceMethod.DeclaringType.Assembly);
 
             return ProcessRecords(input, output, taskType);
         }

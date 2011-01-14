@@ -32,5 +32,12 @@ namespace Tkl.Jumbo.Jet.Tasks
         /// specified in the stage settings, not in the job settings.
         /// </summary>
         public const string GeneratePairTaskDefaultValueKey = "GeneratePairTask.DefaultValue";
+
+        /// <summary>
+        /// The name of the setting in <see cref="StageConfiguration.StageSettings"/> that specifies the <see cref="IEqualityComparer{T}"/>
+        /// to use for the <see cref="ReduceTask{TKey,TValue,TOutput}"/>. The value of the setting is a <see cref="String"/> that specifies the assembly-qualified type name of the comparer.
+        /// The default value is <see langword="null"/>, indicating the <see cref="EqualityComparer{T}.Default"/> will be used.
+        /// </summary>
+        public const string ReduceTaskKeyComparerSettingKey = "ReduceTask.KeyComparer";
     }
 }

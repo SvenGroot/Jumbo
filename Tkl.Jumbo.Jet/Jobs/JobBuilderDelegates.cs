@@ -59,6 +59,28 @@ namespace Tkl.Jumbo.Jet.Jobs
     /// <param name="context">The configuration for the task.</param>
     public delegate void OutputOnlyTaskFunction<T>(RecordWriter<T> output, TaskContext context);
 
+    /// <summary>
+    /// Delegate for map tasks.
+    /// </summary>
+    /// <typeparam name="TInput">The type of the input records.</typeparam>
+    /// <typeparam name="TOutput">The type of the output records.</typeparam>
+    /// <param name="record">The input record to process.</param>
+    /// <param name="output">The record writer collecting the output records.</param>
+    /// <param name="context">The <see cref="TaskContext"/> for the task.</param>
+    public delegate void MapFunction<TInput, TOutput>(TInput record, RecordWriter<TOutput> output, TaskContext context);
+
+    /// <summary>
+    /// Delegate for reduce tasks.
+    /// </summary>
+    /// <typeparam name="TKey">The type of the key of the input records.</typeparam>
+    /// <typeparam name="TValue">The type of the value of the input records.</typeparam>
+    /// <typeparam name="TOutput">The type of the output records.</typeparam>
+    /// <param name="key">The key of the current set of records.</param>
+    /// <param name="values">The values for the current <paramref name="key"/>.</param>
+    /// <param name="output">The record writer collecting the output records.</param>
+    /// <param name="context">The <see cref="TaskContext"/> for the task.</param>
+    public delegate void ReduceFunction<TKey, TValue, TOutput>(TKey key, IEnumerable<TValue> values, RecordWriter<TOutput> output, TaskContext context);
+
 #pragma warning restore 1587
 #pragma warning restore 1591
 

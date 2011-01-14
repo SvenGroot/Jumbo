@@ -34,6 +34,15 @@ namespace Tkl.Jumbo.Test.Jet
             }
         }
 
+        private class TestReducer : ReduceTask<Utf8String, int, Pair<Utf8String, int>>
+        {
+            protected override void Reduce(Utf8String key, IEnumerable<int> values, RecordWriter<Pair<Utf8String, int>> output)
+            {
+                int sum = values.Sum();
+                output.WriteRecord(Pair.MakePair(key, sum));
+            }
+        }
+
         #endregion
 
         [TestFixtureSetUp]
@@ -145,6 +154,41 @@ namespace Tkl.Jumbo.Test.Jet
             task.Finish(output);
 
             var result = output.List;
+            ValidateOutput(result);
+        }
+
+        [Test]
+        public void TestReduceTask()
+        {
+            TestReducer task = new TestReducer();
+            task.NotifyConfigurationChanged();
+            var records = CreateRecords();
+
+            records.Sort();
+
+            ListRecordWriter<Pair<Utf8String, int>> output = new ListRecordWriter<Pair<Utf8String,int>>();
+            task.Run(new EnumerableRecordReader<Pair<Utf8String, int>>(records), output);
+
+            ValidateOutput(output.List);
+        }
+
+        private List<Pair<Utf8String, int>> CreateRecords()
+        {
+            List<Pair<Utf8String, int>> records = new List<Pair<Utf8String,int>>();
+            records.Add(new Pair<Utf8String, int>(new Utf8String("hello"), 1));
+            records.Add(new Pair<Utf8String, int>(new Utf8String("bye"), 2));
+            records.Add(new Pair<Utf8String, int>(new Utf8String("bye"), 3));
+            records.Add(new Pair<Utf8String, int>(new Utf8String("hello"), 4));
+            records.Add(new Pair<Utf8String, int>(new Utf8String("hello"), 5));
+            records.Add(new Pair<Utf8String, int>(new Utf8String("bye"), 1));
+            records.Add(new Pair<Utf8String, int>(new Utf8String("foo"), 1));
+            records.Add(new Pair<Utf8String, int>(new Utf8String("bye"), 1));
+
+            return records;
+        }
+
+        private static void ValidateOutput(System.Collections.ObjectModel.ReadOnlyCollection<Pair<Utf8String, int>> result)
+        {
             Assert.AreEqual(3, result.Count);
             Assert.Contains(new Pair<Utf8String, int>(new Utf8String("hello"), 10), result);
             Assert.Contains(new Pair<Utf8String, int>(new Utf8String("bye"), 7), result);
@@ -153,5 +197,6 @@ namespace Tkl.Jumbo.Test.Jet
             CollectionAssert.DoesNotContain(result, new Pair<Utf8String, int>(new Utf8String("hello"), 9));
             CollectionAssert.DoesNotContain(result, new Pair<Utf8String, int>(new Utf8String("bar"), 1));
         }
+
     }
 }

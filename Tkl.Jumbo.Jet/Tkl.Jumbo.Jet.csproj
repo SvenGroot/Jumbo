@@ -198,6 +198,7 @@
     <Compile Include="TaskStatusChangedJetHeartbeatData.cs" />
     <Compile Include="Tasks\AccumulatorTask.cs" />
     <Compile Include="Tasks\GenerateInt32PairTask.cs" />
+    <Compile Include="Tasks\ReduceTask.cs" />
     <Compile Include="Tasks\SumTask.cs" />
     <Compile Include="Tasks\EmptyTask.cs" />
     <Compile Include="MergeRecordReaderConstants.cs" />
