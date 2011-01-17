@@ -13,6 +13,7 @@ using Tkl.Jumbo.Jet.Tasks;
 using System.Globalization;
 using System.Collections.ObjectModel;
 using Tkl.Jumbo.Jet.Channels;
+using System.Runtime.Serialization.Formatters.Binary;
 
 namespace Tkl.Jumbo.Jet.Jobs
 {
@@ -132,8 +133,11 @@ namespace Tkl.Jumbo.Jet.Jobs
         /// <param name="input">The <see cref="Channel"/> or <see cref="DfsInput"/> to read records to process from.</param>
         /// <param name="output">The <see cref="Channel"/> or <see cref="DfsOutput"/> to write the result to.</param>
         /// <param name="task">The task function.</param>
-        /// <returns>A <see cref="StageBuilder"/> that can be used to customize the stage that will be created for the operation.</returns>
-        public StageBuilder ProcessRecords<TInput, TOutput>(IStageInput input, IStageOutput output, TaskFunction<TInput, TOutput> task)
+        /// <param name="recordReuseMode">The record reuse mode.</param>
+        /// <returns>
+        /// A <see cref="StageBuilder"/> that can be used to customize the stage that will be created for the operation.
+        /// </returns>
+        public StageBuilder ProcessRecords<TInput, TOutput>(IStageInput input, IStageOutput output, TaskFunction<TInput, TOutput> task, RecordReuseMode recordReuseMode = RecordReuseMode.Default)
         {
             if( input == null )
                 throw new ArgumentNullException("input");
@@ -142,7 +146,7 @@ namespace Tkl.Jumbo.Jet.Jobs
             if( task == null )
                 throw new ArgumentNullException("task");
 
-            return ProcessRecords<TInput, TOutput>(input, output, task.Method, true);
+            return ProcessRecords<TInput, TOutput>(input, output, task, recordReuseMode, true);
         }
 
         /// <summary>
@@ -153,8 +157,11 @@ namespace Tkl.Jumbo.Jet.Jobs
         /// <param name="input">The <see cref="Channel"/> or <see cref="DfsInput"/> to read records to process from.</param>
         /// <param name="output">The <see cref="Channel"/> or <see cref="DfsOutput"/> to write the result to.</param>
         /// <param name="task">The task function.</param>
-        /// <returns>A <see cref="StageBuilder"/> that can be used to customize the stage that will be created for the operation.</returns>
-        public StageBuilder ProcessRecords<TInput, TOutput>(IStageInput input, IStageOutput output, PushTaskFunction<TInput, TOutput> task)
+        /// <param name="recordReuseMode">The record reuse mode.</param>
+        /// <returns>
+        /// A <see cref="StageBuilder"/> that can be used to customize the stage that will be created for the operation.
+        /// </returns>
+        public StageBuilder ProcessRecords<TInput, TOutput>(IStageInput input, IStageOutput output, PushTaskFunction<TInput, TOutput> task, RecordReuseMode recordReuseMode = RecordReuseMode.Default)
         {
             if( input == null )
                 throw new ArgumentNullException("input");
@@ -163,7 +170,7 @@ namespace Tkl.Jumbo.Jet.Jobs
             if( task == null )
                 throw new ArgumentNullException("task");
 
-            return ProcessRecordsPushTask<TInput, TOutput>(input, output, task.Method);
+            return ProcessRecordsPushTask<TInput, TOutput>(input, output, task, recordReuseMode);
         }
 
         /// <summary>
@@ -197,8 +204,11 @@ namespace Tkl.Jumbo.Jet.Jobs
         /// <param name="input">The <see cref="Channel"/> or <see cref="DfsInput"/> to read records to process from.</param>
         /// <param name="output">The <see cref="Channel"/> or <see cref="DfsOutput"/> to write the result to.</param>
         /// <param name="accumulator">The accumulator function.</param>
-        /// <returns>A <see cref="StageBuilder"/> that can be used to customize the stage that will be created for the operation.</returns>
-        public StageBuilder AccumulateRecords<TKey, TValue>(IStageInput input, IStageOutput output, AccumulatorFunction<TKey, TValue> accumulator)
+        /// <param name="recordReuseMode">The record reuse mode.</param>
+        /// <returns>
+        /// A <see cref="StageBuilder"/> that can be used to customize the stage that will be created for the operation.
+        /// </returns>
+        public StageBuilder AccumulateRecords<TKey, TValue>(IStageInput input, IStageOutput output, AccumulatorFunction<TKey, TValue> accumulator, RecordReuseMode recordReuseMode = RecordReuseMode.Default)
             where TKey : IComparable<TKey>
         {
             if( input == null )
@@ -211,32 +221,37 @@ namespace Tkl.Jumbo.Jet.Jobs
             CheckJobCreated();
 
             MethodInfo accumulatorMethod = accumulator.Method;
-            if( !(accumulatorMethod.IsStatic && accumulatorMethod.IsPublic) )
-                throw new ArgumentException("The accumulator method specified must be public and static.", "accumulator");
+            if( !accumulatorMethod.IsStatic )
+                throw new ArgumentException("The accumulator method specified must be static.", "accumulator");
 
             AddAssemblies(accumulatorMethod.DeclaringType.Assembly);
 
-            CreateDynamicAssembly();
+            FieldBuilder delegateField;
+            TypeBuilder taskTypeBuilder = CreateTaskType<Pair<TKey, TValue>, Pair<TKey, TValue>>(accumulator, recordReuseMode, typeof(AccumulatorTask<TKey, TValue>), out delegateField);
 
-            TypeBuilder taskTypeBuilder = _dynamicModule.DefineType(_dynamicAssembly.GetName().Name + "." + accumulatorMethod.Name, TypeAttributes.Class | TypeAttributes.Sealed, typeof(AccumulatorTask<TKey, TValue>));
-
-            SetTaskAttributes(accumulatorMethod, taskTypeBuilder);
-
-            MethodBuilder accumulateMethod = taskTypeBuilder.DefineMethod("Accumulate", MethodAttributes.Public | MethodAttributes.Virtual, typeof(TValue), new[] { typeof(TKey), typeof(TValue), typeof(TValue) });
-            accumulateMethod.DefineParameter(1, ParameterAttributes.None, "key");
-            accumulateMethod.DefineParameter(2, ParameterAttributes.None, "currentValue");
-            accumulateMethod.DefineParameter(3, ParameterAttributes.None, "newValue");
+            MethodBuilder accumulateMethod = OverrideMethod(taskTypeBuilder, typeof(AccumulatorTask<TKey, TValue>).GetMethod("Accumulate", BindingFlags.NonPublic | BindingFlags.Instance));
 
             ILGenerator generator = accumulateMethod.GetILGenerator();
+            if( !accumulatorMethod.IsPublic )
+            {
+                generator.Emit(OpCodes.Ldarg_0);
+                generator.Emit(OpCodes.Ldfld, delegateField);
+            }
             generator.Emit(OpCodes.Ldarg_1);
             generator.Emit(OpCodes.Ldarg_2);
             generator.Emit(OpCodes.Ldarg_3);
-            generator.Emit(OpCodes.Call, accumulatorMethod);
+            if( accumulatorMethod.IsPublic )
+                generator.Emit(OpCodes.Call, accumulatorMethod);
+            else
+                generator.Emit(OpCodes.Callvirt, accumulator.GetType().GetMethod("Invoke"));
             generator.Emit(OpCodes.Ret);
 
             Type taskType = taskTypeBuilder.CreateType();
 
-            return AccumulateRecords(input, output, taskType);
+            StageBuilder stage = AccumulateRecords(input, output, taskType);
+            if( !accumulatorMethod.IsPublic )
+                SerializeDelegate(stage, accumulator);
+            return stage;
         }
 
         /// <summary>
@@ -348,8 +363,11 @@ namespace Tkl.Jumbo.Jet.Jobs
         /// <param name="output">The <see cref="Channel"/> or <see cref="DfsOutput"/> to write the result to.</param>
         /// <param name="task">The task function.</param>
         /// <param name="taskCount">The number of tasks in the stage.</param>
-        /// <returns>A <see cref="StageBuilder"/> that can be used to customize the stage that will be created for the operation.</returns>
-        public StageBuilder GenerateRecords<T>(IStageOutput output, OutputOnlyTaskFunction<T> task, int taskCount)
+        /// <param name="recordReuseMode">The record reuse mode.</param>
+        /// <returns>
+        /// A <see cref="StageBuilder"/> that can be used to customize the stage that will be created for the operation.
+        /// </returns>
+        public StageBuilder GenerateRecords<T>(IStageOutput output, OutputOnlyTaskFunction<T> task, int taskCount, RecordReuseMode recordReuseMode = RecordReuseMode.Default)
         {
             if( task == null )
                 throw new ArgumentNullException("task");
@@ -358,7 +376,7 @@ namespace Tkl.Jumbo.Jet.Jobs
             if( taskCount < 1 )
                 throw new ArgumentOutOfRangeException("taskCount");
 
-            StageBuilder stage = ProcessRecords<int, T>(null, output, task.Method, false);
+            StageBuilder stage = ProcessRecords<int, T>(null, output, task, recordReuseMode, false);
             stage.NoInputTaskCount = taskCount;
             return stage;
         }
@@ -506,15 +524,16 @@ namespace Tkl.Jumbo.Jet.Jobs
         /// <param name="input">The input, which much use record type <typeparamref name="TInput"/>.</param>
         /// <param name="output">The output, which much use record type <typeparamref name="TOutput"/>.</param>
         /// <param name="map">The map function.</param>
-        /// <returns>A <see cref="StageBuilder"/> that can be used to customize the stage that will be created for the operation.</returns>
+        /// <param name="recordReuseMode">The record reuse mode.</param>
+        /// <returns>
+        /// A <see cref="StageBuilder"/> that can be used to customize the stage that will be created for the operation.
+        /// </returns>
         /// <remarks>
-        /// <para>
-        ///   The difference between <see cref="MapRecords{TInput,TOutput}"/> and <see cref="ProcessRecords{TInput,TOutput}(IStageInput,IStageOutput,PushTaskFunction{TInput,TOutput})"/>
-        ///   is purely semantic. By using <see cref="MapRecords{TInput,TOutput}"/> you guarantee that your function processes one record at a time and is completely
-        ///   stateless, which the <see cref="JobBuilder"/> may use to perform optimizations.
-        /// </para>
+        /// The difference between <see cref="MapRecords{TInput,TOutput}"/> and <see cref="ProcessRecords{TInput,TOutput}(IStageInput,IStageOutput,PushTaskFunction{TInput,TOutput},RecordReuseMode)"/>
+        /// is purely semantic. By using <see cref="MapRecords{TInput,TOutput}"/> you guarantee that your function processes one record at a time and is completely
+        /// stateless, which the <see cref="JobBuilder"/> may use to perform optimizations.
         /// </remarks>
-        public StageBuilder MapRecords<TInput, TOutput>(IStageInput input, IStageOutput output, MapFunction<TInput, TOutput> map)
+        public StageBuilder MapRecords<TInput, TOutput>(IStageInput input, IStageOutput output, MapFunction<TInput, TOutput> map, RecordReuseMode recordReuseMode = RecordReuseMode.Default)
         {
             if( input == null )
                 throw new ArgumentNullException("input");
@@ -523,7 +542,7 @@ namespace Tkl.Jumbo.Jet.Jobs
             if( map == null )
                 throw new ArgumentNullException("map");
 
-            return ProcessRecordsPushTask<TInput, TOutput>(input, output, map.Method);
+            return ProcessRecordsPushTask<TInput, TOutput>(input, output, map, recordReuseMode);
         }
 
         /// <summary>
@@ -535,18 +554,21 @@ namespace Tkl.Jumbo.Jet.Jobs
         /// <param name="input">The input, which must use record type <see cref="Pair{TKey,TValue}"/>.</param>
         /// <param name="output">The output, which must use record type <typeparamref name="TOutput"/>.</param>
         /// <param name="reduce">The reduce function.</param>
-        /// <returns>A <see cref="StageBuilder"/> that can be used to customize the stage that will be created for the operation.</returns>
+        /// <param name="recordReuseMode">The record reuse mode.</param>
+        /// <returns>
+        /// A <see cref="StageBuilder"/> that can be used to customize the stage that will be created for the operation.
+        /// </returns>
         /// <remarks>
-        /// <para>
-        ///   The input of a reduce stage must be grouped by key. The easiest way to achieve that is to first sort them using <see cref="SortRecords"/>.
+        /// 	<para>
+        /// The input of a reduce stage must be grouped by key. The easiest way to achieve that is to first sort them using <see cref="SortRecords(IStageInput,IStageOutput)"/>.
         /// </para>
-        /// <para>
-        ///   If you use an accumulator (created with <see cref="AccumulateRecords{TKey,TValue}"/>) in the stage before the reduce stage (this
-        ///   can serve a purpose similar to a combiner in Map-Reduce), the output of the accumulator must still be sorted before being
-        ///   processed by the reduce stage.
+        /// 	<para>
+        /// If you use an accumulator (created with <see cref="AccumulateRecords{TKey,TValue}"/>) in the stage before the reduce stage (this
+        /// can serve a purpose similar to a combiner in Map-Reduce), the output of the accumulator must still be sorted before being
+        /// processed by the reduce stage.
         /// </para>
         /// </remarks>
-        public StageBuilder ReduceRecords<TKey, TValue, TOutput>(IStageInput input, IStageOutput output, ReduceFunction<TKey, TValue, TOutput> reduce)
+        public StageBuilder ReduceRecords<TKey, TValue, TOutput>(IStageInput input, IStageOutput output, ReduceFunction<TKey, TValue, TOutput> reduce, RecordReuseMode recordReuseMode = RecordReuseMode.Default)
             where TKey : IComparable<TKey>
         {
             if( input == null )
@@ -562,7 +584,7 @@ namespace Tkl.Jumbo.Jet.Jobs
             if( inputChannel != null )
                 inputChannel.MultiInputRecordReaderType = typeof(MergeRecordReader<Pair<TKey, TValue>>);
 
-            return ReduceRecords<TKey, TValue, TOutput>(input, output, reduce.Method);
+            return ReduceRecords<TKey, TValue, TOutput>(input, output, reduce.Method, recordReuseMode);
         }
 
         /// <summary>
@@ -590,6 +612,40 @@ namespace Tkl.Jumbo.Jet.Jobs
             _settings.AddTypedSetting(key, value);
         }
 
+        /// <summary>
+        /// Deserializes a delegate. This method is for internal Jumbo use only.
+        /// </summary>
+        /// <param name="context">The context.</param>
+        /// <returns></returns>
+        public static object DeserializeDelegate(TaskContext context)
+        {
+            if( context != null )
+            {
+                string base64Delegate = context.StageConfiguration.GetSetting(TaskConstants.JobBuilderDelegateSettingKey, null);
+                if( base64Delegate != null )
+                {
+                    BinaryFormatter formatter = new BinaryFormatter();
+                    byte[] serializedDelegate = Convert.FromBase64String(base64Delegate);
+                    using( MemoryStream stream = new MemoryStream(serializedDelegate) )
+                    {
+                        return formatter.Deserialize(stream);
+                    }
+                }
+            }
+
+            return null;
+        }
+
+        private static void SerializeDelegate(StageBuilder stage, object taskDelegate)
+        {
+            BinaryFormatter formatter = new BinaryFormatter();
+            using( MemoryStream stream = new MemoryStream() )
+            {
+                formatter.Serialize(stream, taskDelegate);
+                stage.AddSetting(TaskConstants.JobBuilderDelegateSettingKey, Convert.ToBase64String(stream.ToArray()), StageSettingCategory.Task);
+            }
+        }
+
         private StageBuilder ProcessRecordsNoArgumentValidation(IStageInput input, IStageOutput output, Type taskType)
         {
             CheckJobCreated();
@@ -601,76 +657,146 @@ namespace Tkl.Jumbo.Jet.Jobs
             return stage;
         }
 
-        private StageBuilder ProcessRecords<TInput, TOutput>(IStageInput input, IStageOutput output, MethodInfo taskMethod, bool useInput)
+        private StageBuilder ProcessRecords<TInput, TOutput>(IStageInput input, IStageOutput output, Delegate taskDelegate, RecordReuseMode recordReuseMode, bool useInput)
         {
-            if( !(taskMethod.IsStatic && taskMethod.IsPublic) )
-                throw new ArgumentException("The task method specified must be public and static.", "taskMethod");
+            MethodInfo taskMethod = taskDelegate.Method;
+            if( !taskMethod.IsStatic )
+                throw new ArgumentException("The task method specified must be static.", "taskMethod");
 
             CheckJobCreated();
 
-            CreateDynamicAssembly();
+            FieldBuilder delegateField;
+            TypeBuilder taskTypeBuilder = CreateTaskType<TInput, TOutput>(taskDelegate, recordReuseMode, typeof(IPullTask<TInput, TOutput>), out delegateField);
 
-            TypeBuilder taskTypeBuilder = _dynamicModule.DefineType(_dynamicAssembly.GetName().Name + "." + taskMethod.Name, TypeAttributes.Class | TypeAttributes.Public | TypeAttributes.Sealed, typeof(Configurable), new[] { typeof(IPullTask<TInput, TOutput>) });
-
-            SetTaskAttributes(taskMethod, taskTypeBuilder);
-
-            MethodBuilder runMethod = taskTypeBuilder.DefineMethod("Run", MethodAttributes.Public | MethodAttributes.Virtual, null, new[] { typeof(RecordReader<TInput>), typeof(RecordWriter<TOutput>) });
-            runMethod.DefineParameter(1, ParameterAttributes.None, "input");
-            runMethod.DefineParameter(2, ParameterAttributes.None, "output");
+            MethodBuilder runMethod = OverrideMethod(taskTypeBuilder, typeof(IPullTask<TInput, TOutput>).GetMethod("Run"));
 
             ILGenerator generator = runMethod.GetILGenerator();
-            if( useInput )
+            if( !taskMethod.IsPublic )
             {
-                generator.Emit(OpCodes.Ldarg_1);
+                generator.Emit(OpCodes.Ldarg_0); // Put "this" on the stack
+                generator.Emit(OpCodes.Ldfld, delegateField); // Put the delegate on the stack.
             }
+
+            if( useInput )
+                generator.Emit(OpCodes.Ldarg_1);
             generator.Emit(OpCodes.Ldarg_2);
             // Put the TaskContext on the stack.
             generator.Emit(OpCodes.Ldarg_0);
             generator.Emit(OpCodes.Call, typeof(Configurable).GetProperty("TaskContext").GetGetMethod());
-            generator.Emit(OpCodes.Call, taskMethod);
+            if( taskMethod.IsPublic )
+                generator.Emit(OpCodes.Call, taskMethod);
+            else
+                generator.Emit(OpCodes.Callvirt, taskDelegate.GetType().GetMethod("Invoke"));
             generator.Emit(OpCodes.Ret);
 
             Type taskType = taskTypeBuilder.CreateType();
 
             AddAssemblies(taskMethod.DeclaringType.Assembly);
 
-            return ProcessRecordsNoArgumentValidation(input, output, taskType);
+            StageBuilder stage = ProcessRecordsNoArgumentValidation(input, output, taskType);
+            if( !taskMethod.IsPublic )
+                SerializeDelegate(stage, taskDelegate);
+            return stage;
         }
 
-        private StageBuilder ProcessRecordsPushTask<TInput, TOutput>(IStageInput input, IStageOutput output, MethodInfo taskMethod)
+        private MethodBuilder OverrideMethod(TypeBuilder taskTypeBuilder, MethodInfo interfaceMethod)
         {
-            if( !(taskMethod.IsStatic && taskMethod.IsPublic) )
-                throw new ArgumentException("The task method specified must be public and static.", "taskMethod");
+            ParameterInfo[] parameters = interfaceMethod.GetParameters();
+            MethodBuilder method = taskTypeBuilder.DefineMethod(interfaceMethod.Name, MethodAttributes.Public | MethodAttributes.Virtual, interfaceMethod.ReturnType, parameters.Select(p => p.ParameterType).ToArray());
+            foreach( ParameterInfo parameter in parameters )
+            {
+                method.DefineParameter(parameter.Position, parameter.Attributes, parameter.Name);
+            }
+
+            return method;
+        }
+
+        private TypeBuilder CreateTaskType<TInput, TOutput>(Delegate taskDelegate, RecordReuseMode recordReuseMode, Type baseOrInterfaceType, out FieldBuilder delegateField)
+        {
+            CreateDynamicAssembly();
+
+            Type[] interfaces = null;
+            if( baseOrInterfaceType.IsInterface )
+            {
+                interfaces = new[] { baseOrInterfaceType };
+                baseOrInterfaceType = typeof(Configurable);
+            }
+
+            TypeBuilder taskTypeBuilder = _dynamicModule.DefineType(_dynamicAssembly.GetName().Name + "." + taskDelegate.Method.Name, TypeAttributes.Class | TypeAttributes.Public | TypeAttributes.Sealed, baseOrInterfaceType, interfaces);
+
+            SetTaskAttributes(taskDelegate.Method, recordReuseMode, taskTypeBuilder);
+
+            if( !taskDelegate.Method.IsPublic )
+                delegateField = CreateDelegateField(taskDelegate, taskTypeBuilder);
+            else
+                delegateField = null;
+
+            return taskTypeBuilder;
+        }
+
+        private static FieldBuilder CreateDelegateField(Delegate taskDelegate, TypeBuilder taskTypeBuilder)
+        {
+            FieldBuilder delegateField;
+            delegateField = taskTypeBuilder.DefineField("_taskFunction", taskDelegate.GetType(), FieldAttributes.Private);
+            MethodBuilder configMethod = taskTypeBuilder.DefineMethod("NotifyConfigurationChanged", MethodAttributes.Public | MethodAttributes.Virtual);
+            ILGenerator configGenerator = configMethod.GetILGenerator();
+            configGenerator.Emit(OpCodes.Ldarg_0); // Put this on stack (for stfld)
+            configGenerator.Emit(OpCodes.Call, taskTypeBuilder.BaseType.GetMethod("NotifyConfigurationChanged"));
+            configGenerator.Emit(OpCodes.Ldarg_0); // Put this on stack (for stfld)
+            configGenerator.Emit(OpCodes.Ldarg_0); // Put this on stack (for call)
+            configGenerator.Emit(OpCodes.Call, typeof(Configurable).GetProperty("TaskContext").GetGetMethod()); // Put task context on stack
+            configGenerator.Emit(OpCodes.Call, typeof(JobBuilder).GetMethod("DeserializeDelegate")); // Call deserialize method
+            configGenerator.Emit(OpCodes.Castclass, taskDelegate.GetType());
+            configGenerator.Emit(OpCodes.Stfld, delegateField);
+            configGenerator.Emit(OpCodes.Ret);
+            return delegateField;
+        }
+
+        private StageBuilder ProcessRecordsPushTask<TInput, TOutput>(IStageInput input, IStageOutput output, Delegate taskDelegate, RecordReuseMode recordReuseMode)
+        {
+            if( !taskDelegate.Method.IsStatic )
+                throw new ArgumentException("The task method specified must be static.", "taskMethod");
 
             CheckJobCreated();
 
-            CreateDynamicAssembly();
+            FieldBuilder delegateField;
+            TypeBuilder taskTypeBuilder = CreateTaskType<TInput, TOutput>(taskDelegate, recordReuseMode, typeof(IPushTask<TInput, TOutput>), out delegateField);
 
-            TypeBuilder taskTypeBuilder = _dynamicModule.DefineType(_dynamicAssembly.GetName().Name + "." + taskMethod.Name, TypeAttributes.Class | TypeAttributes.Public | TypeAttributes.Sealed, typeof(Configurable), new[] { typeof(IPushTask<TInput, TOutput>) });
+            MethodBuilder processMethod = OverrideMethod(taskTypeBuilder, typeof(IPushTask<TInput, TOutput>).GetMethod("ProcessRecord"));
 
-            SetTaskAttributes(taskMethod, taskTypeBuilder);
-
-            MethodBuilder processMethod = taskTypeBuilder.DefineMethod("ProcessRecord", MethodAttributes.Public | MethodAttributes.Virtual, null, new[] { typeof(TInput), typeof(RecordWriter<TOutput>) });
-            processMethod.DefineParameter(1, ParameterAttributes.None, "record");
-            processMethod.DefineParameter(2, ParameterAttributes.None, "output");
-
+            MethodInfo taskMethod = taskDelegate.Method;
             ILGenerator generator = processMethod.GetILGenerator();
+            if( !taskMethod.IsPublic )
+            {
+                generator.Emit(OpCodes.Ldarg_0); // Put "this" on the stack
+                generator.Emit(OpCodes.Ldfld, delegateField); // Put the delegate on the stack.
+            }
             generator.Emit(OpCodes.Ldarg_1); // Load the record.
             generator.Emit(OpCodes.Ldarg_2); // Load the output writer.
             // Put the TaskContext on the stack.
             generator.Emit(OpCodes.Ldarg_0);
             generator.Emit(OpCodes.Call, typeof(Configurable).GetProperty("TaskContext").GetGetMethod());
-            generator.Emit(OpCodes.Call, taskMethod);
+            if( taskMethod.IsPublic )
+                generator.Emit(OpCodes.Call, taskMethod);
+            else
+                generator.Emit(OpCodes.Callvirt, taskDelegate.GetType().GetMethod("Invoke"));
+            generator.Emit(OpCodes.Ret);
+
+            MethodBuilder finishMethod = OverrideMethod(taskTypeBuilder, typeof(IPushTask<TInput, TOutput>).GetMethod("Finish"));
+            generator = finishMethod.GetILGenerator();
             generator.Emit(OpCodes.Ret);
 
             Type taskType = taskTypeBuilder.CreateType();
 
             AddAssemblies(taskMethod.DeclaringType.Assembly);
 
-            return ProcessRecords(input, output, taskType);
+            StageBuilder stage = ProcessRecords(input, output, taskType);
+            if( !taskMethod.IsPublic )
+                SerializeDelegate(stage, taskDelegate);
+            return stage;
         }
 
-        private StageBuilder ReduceRecords<TKey, TValue, TOutput>(IStageInput input, IStageOutput output, MethodInfo reduceMethod)
+        private StageBuilder ReduceRecords<TKey, TValue, TOutput>(IStageInput input, IStageOutput output, MethodInfo reduceMethod, RecordReuseMode recordReuseMode)
             where TKey : IComparable<TKey>
         {
             if( !(reduceMethod.IsStatic && reduceMethod.IsPublic) )
@@ -682,7 +808,7 @@ namespace Tkl.Jumbo.Jet.Jobs
 
             TypeBuilder taskTypeBuilder = _dynamicModule.DefineType(_dynamicAssembly.GetName().Name + "." + reduceMethod.Name, TypeAttributes.Class | TypeAttributes.Public | TypeAttributes.Sealed, typeof(ReduceTask<TKey, TValue, TOutput>));
 
-            SetTaskAttributes(reduceMethod, taskTypeBuilder);
+            SetTaskAttributes(reduceMethod, recordReuseMode, taskTypeBuilder);
 
             MethodBuilder reduceTaskMethod = taskTypeBuilder.DefineMethod("Reduce", MethodAttributes.Public | MethodAttributes.Virtual, null, new[] { typeof(TKey), typeof(IEnumerable<TValue>), typeof(RecordWriter<TOutput>) });
             reduceTaskMethod.DefineParameter(1, ParameterAttributes.None, "key");
@@ -713,22 +839,25 @@ namespace Tkl.Jumbo.Jet.Jobs
                 // Use a Guid to ensure a unique name.
                 AssemblyName name = new AssemblyName("Tkl.Jumbo.Jet.Generated." + Guid.NewGuid().ToString("N"));
                 _dynamicAssemblyDir = Path.GetTempPath();
-                _dynamicAssembly = AppDomain.CurrentDomain.DefineDynamicAssembly(name, AssemblyBuilderAccess.Save, _dynamicAssemblyDir);
+                _dynamicAssembly = AppDomain.CurrentDomain.DefineDynamicAssembly(name, AssemblyBuilderAccess.RunAndSave, _dynamicAssemblyDir);
                 _dynamicModule = _dynamicAssembly.DefineDynamicModule(name.Name, name.Name + ".dll");
             }
         }
 
-        private static void SetTaskAttributes(MethodInfo taskMethod, TypeBuilder taskTypeBuilder)
+        private static void SetTaskAttributes(MethodInfo taskMethod, RecordReuseMode mode, TypeBuilder taskTypeBuilder)
         {
-            Type allowRecordReuseAttributeType = typeof(AllowRecordReuseAttribute);
-            AllowRecordReuseAttribute allowRecordReuse = (AllowRecordReuseAttribute)Attribute.GetCustomAttribute(taskMethod, allowRecordReuseAttributeType);
-            if( allowRecordReuse != null )
+            if( mode != RecordReuseMode.DontAllow )
             {
-                ConstructorInfo ctor = allowRecordReuseAttributeType.GetConstructor(Type.EmptyTypes);
-                PropertyInfo passThrough = allowRecordReuseAttributeType.GetProperty("PassThrough");
+                Type allowRecordReuseAttributeType = typeof(AllowRecordReuseAttribute);
+                AllowRecordReuseAttribute allowRecordReuse = (AllowRecordReuseAttribute)Attribute.GetCustomAttribute(taskMethod, allowRecordReuseAttributeType);
+                if( mode == RecordReuseMode.Allow || mode == RecordReuseMode.PassThrough || allowRecordReuse != null )
+                {
+                    ConstructorInfo ctor = allowRecordReuseAttributeType.GetConstructor(Type.EmptyTypes);
+                    PropertyInfo passThrough = allowRecordReuseAttributeType.GetProperty("PassThrough");
 
-                CustomAttributeBuilder allowRecordReuseBuilder = new CustomAttributeBuilder(ctor, new object[] { }, new[] { passThrough }, new object[] { allowRecordReuse.PassThrough });
-                taskTypeBuilder.SetCustomAttribute(allowRecordReuseBuilder);
+                    CustomAttributeBuilder allowRecordReuseBuilder = new CustomAttributeBuilder(ctor, new object[] { }, new[] { passThrough }, new object[] { mode == RecordReuseMode.PassThrough || (allowRecordReuse != null && allowRecordReuse.PassThrough) });
+                    taskTypeBuilder.SetCustomAttribute(allowRecordReuseBuilder);
+                }
             }
 
             if( Attribute.IsDefined(taskMethod, typeof(ProcessAllInputPartitionsAttribute)) )

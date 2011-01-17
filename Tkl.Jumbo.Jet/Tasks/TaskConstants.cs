@@ -39,5 +39,13 @@ namespace Tkl.Jumbo.Jet.Tasks
         /// The default value is <see langword="null"/>, indicating the <see cref="EqualityComparer{T}.Default"/> will be used.
         /// </summary>
         public const string ReduceTaskKeyComparerSettingKey = "ReduceTask.KeyComparer";
+
+        /// <summary>
+        /// The name of the setting in <see cref="StageConfiguration.StageSettings"/> that specifies the delegate to
+        /// be called in any of the task types that use a delegate. The value of the setting is a base64-encoded binary serialization
+        /// of the delegateThis setting is used by the <see cref="Tkl.Jumbo.Jet.Jobs.JobBuilder"/>
+        /// and should not normally be used by your code.
+        /// </summary>
+        public const string JobBuilderDelegateSettingKey = "JobBuilder.Delegate";
     }
 }

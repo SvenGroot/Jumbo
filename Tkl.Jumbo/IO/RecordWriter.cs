@@ -75,6 +75,25 @@ namespace Tkl.Jumbo.IO
         }
 
         /// <summary>
+        /// Writes the specified sequence of records.
+        /// </summary>
+        /// <param name="records">The records to write.</param>
+        /// <remarks>
+        /// <para>
+        ///   This is primarily a helper function so that you can easily write the result of a LINQ expression
+        ///   to a record writer.
+        /// </para>
+        /// </remarks>
+        public void WriteRecords(IEnumerable<T> records)
+        {
+            if( records == null )
+                throw new ArgumentNullException("records");
+
+            foreach( T record in records )
+                WriteRecord(record);
+        }
+
+        /// <summary>
         /// When implemented in a derived class, writes a record.
         /// </summary>
         /// <param name="record">The record to write.</param>

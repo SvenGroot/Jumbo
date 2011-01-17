@@ -133,6 +133,7 @@
     <Compile Include="Jobs\JobSettingAttribute.cs" />
     <Compile Include="Jobs\JobBuilder.cs" />
     <Compile Include="Jobs\PipelineCreationMethod.cs" />
+    <Compile Include="Jobs\RecordReuseMode.cs" />
     <Compile Include="Jobs\StageBuilder.cs" />
     <Compile Include="Jobs\StageSettingCategory.cs" />
     <Compile Include="KillTaskJetHeartbeatResponse.cs" />
@@ -197,6 +198,7 @@
     <Compile Include="TaskStatus.cs" />
     <Compile Include="TaskStatusChangedJetHeartbeatData.cs" />
     <Compile Include="Tasks\AccumulatorTask.cs" />
+    <Compile Include="Tasks\DelegatePullTask.cs" />
     <Compile Include="Tasks\GenerateInt32PairTask.cs" />
     <Compile Include="Tasks\ReduceTask.cs" />
     <Compile Include="Tasks\SumTask.cs" />

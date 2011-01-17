@@ -691,13 +691,99 @@ namespace Tkl.Jumbo.Test.Jet
             builder.ProcessRecords(channel, output, typeof(EmptyTask<Pair<Utf8String, int>>));
 
             JobConfiguration config = builder.CreateJob();
-            Assert.AreEqual(0, config.AssemblyFileNames.Count); // Includes all the stuff Tkl.Jumbo.Test references, including NameServer.exe, etc. which isn't a problem because we're not executing it.
+            Assert.AreEqual(0, config.AssemblyFileNames.Count);
 
             Assert.AreEqual(3, config.Stages.Count);
 
             VerifyStage(config, config.Stages[0], 3, "CountStage", typeof(GenerateInt32PairTask<Utf8String>), null, typeof(LineRecordReader), null, ChannelType.Pipeline, ChannelConnectivity.Full, typeof(HashPartitioner<Pair<Utf8String, int>>), null, "PartialSumStage");
             VerifyStage(config, config.Stages[0].ChildStage, 1, "PartialSumStage", typeof(SumTask<Utf8String>), null, null, null, ChannelType.File, ChannelConnectivity.Full, typeof(HashPartitioner<Pair<Utf8String, int>>), typeof(MultiRecordReader<Pair<Utf8String, int>>), "SumStage");
             VerifyStage(config, config.Stages[1], 2, "SumStage", typeof(SumTask<Utf8String>), null, null, null, ChannelType.File, ChannelConnectivity.Full, typeof(HashPartitioner<Pair<Utf8String, int>>), typeof(MultiRecordReader<Pair<Utf8String, int>>), typeof(EmptyTask<Pair<Utf8String, int>>).Name);
+        }
+
+        [Test]
+        public void TestProcessRecordsDelegatePrivate()
+        {
+            JobBuilder builder = new JobBuilder(_dfsClient, _jetClient);
+
+            var input = new DfsInput(_inputPath, typeof(LineRecordReader));
+            var output = new DfsOutput(_outputPath, typeof(TextRecordWriter<int>));
+            StageBuilder stage = builder.ProcessRecords<Utf8String, int>(input, output, (i, o, c) => o.WriteRecords(i.EnumerateRecords().Select(r => r.CharLength)), RecordReuseMode.Allow);
+            stage.StageId = "CharCountStage";
+
+            JobConfiguration config = builder.CreateJob();
+            Assert.AreEqual(9, config.AssemblyFileNames.Count); // Includes all the stuff Tkl.Jumbo.Test references, including NameServer.exe, etc. which isn't a problem because we're not executing it.
+            Assert.AreEqual(1, config.Stages.Count);
+
+            VerifyStage(config, config.Stages[0], 3, "CharCountStage", stage.TaskType, null, typeof(LineRecordReader), typeof(TextRecordWriter<int>), ChannelType.File, ChannelConnectivity.Full, null, null, null);
+
+            Assert.IsTrue(Attribute.IsDefined(stage.TaskType, typeof(AllowRecordReuseAttribute)));
+            TaskContext context = new TaskContext(Guid.Empty, config, new TaskAttemptId(new TaskId("CharCountStage", 1), 1), config.Stages[0], Path.GetTempPath(), "/foo");
+            IPullTask<Utf8String, int> task = (IPullTask<Utf8String, int>)JetActivator.CreateInstance(stage.TaskType, _dfsClient.Configuration, _jetClient.Configuration, context);
+            using( EnumerableRecordReader<Utf8String> reader = new EnumerableRecordReader<Utf8String>(new[] { new Utf8String("foo"), new Utf8String("hello") }) )
+            using( ListRecordWriter<int> writer = new ListRecordWriter<int>() )
+            {
+                task.Run(reader, writer);
+                CollectionAssert.AreEqual(new[] { 3, 5 }, writer.List);
+            }
+        }
+
+        [Test]
+        public void TestProcessRecordsPushTaskDelegatePrivate()
+        {
+            JobBuilder builder = new JobBuilder(_dfsClient, _jetClient);
+
+            var input = new DfsInput(_inputPath, typeof(LineRecordReader));
+            var output = new DfsOutput(_outputPath, typeof(TextRecordWriter<int>));
+            StageBuilder stage = builder.ProcessRecords<Utf8String, int>(input, output, (r, o, c) => o.WriteRecord(r.CharLength), RecordReuseMode.Allow);
+            stage.StageId = "CharCountStage";
+
+            JobConfiguration config = builder.CreateJob();
+            Assert.AreEqual(9, config.AssemblyFileNames.Count); // Includes all the stuff Tkl.Jumbo.Test references, including NameServer.exe, etc. which isn't a problem because we're not executing it.
+            Assert.AreEqual(1, config.Stages.Count);
+
+            VerifyStage(config, config.Stages[0], 3, "CharCountStage", stage.TaskType, null, typeof(LineRecordReader), typeof(TextRecordWriter<int>), ChannelType.File, ChannelConnectivity.Full, null, null, null);
+
+            Assert.IsTrue(Attribute.IsDefined(stage.TaskType, typeof(AllowRecordReuseAttribute)));
+            TaskContext context = new TaskContext(Guid.Empty, config, new TaskAttemptId(new TaskId("CharCountStage", 1), 1), config.Stages[0], Path.GetTempPath(), "/foo");
+            IPushTask<Utf8String, int> task = (IPushTask<Utf8String, int>)JetActivator.CreateInstance(stage.TaskType, _dfsClient.Configuration, _jetClient.Configuration, context);
+            using( ListRecordWriter<int> writer = new ListRecordWriter<int>() )
+            {
+                task.ProcessRecord(new Utf8String("foo"), writer);
+                task.ProcessRecord(new Utf8String("hello"), writer);
+                task.Finish(writer);
+                CollectionAssert.AreEqual(new[] { 3, 5 }, writer.List);
+            }
+        }
+
+        [Test]
+        public void TestAccumulateRecordsDelegatePrivate()
+        {
+            JobBuilder builder = new JobBuilder(_dfsClient, _jetClient);
+
+            var input = new DfsInput(_inputPath, typeof(LineRecordReader));
+            var output = new DfsOutput(_outputPath, typeof(TextRecordWriter<Pair<Utf8String, int>>));
+            Channel channel = new Channel();
+            builder.ProcessRecords(input, channel, typeof(FakeKvpProducingTask));
+            StageBuilder stage = builder.AccumulateRecords<Utf8String, int>(channel, output, (key, oldValue, newValue) => oldValue + newValue, RecordReuseMode.Allow);
+            stage.StageId = "AccumulatorStage";
+
+            JobConfiguration config = builder.CreateJob();
+            Assert.AreEqual(9, config.AssemblyFileNames.Count); // Includes all the stuff Tkl.Jumbo.Test references, including NameServer.exe, etc. which isn't a problem because we're not executing it.
+            Assert.AreEqual(2, config.Stages.Count);
+
+            VerifyStage(config, config.Stages[1], 1, "AccumulatorStage", stage.TaskType, null, null, typeof(TextRecordWriter<Pair<Utf8String, int>>), ChannelType.File, ChannelConnectivity.Full, null, null, null);
+
+            Assert.IsTrue(Attribute.IsDefined(stage.TaskType, typeof(AllowRecordReuseAttribute)));
+            TaskContext context = new TaskContext(Guid.Empty, config, new TaskAttemptId(new TaskId("AccumulatorStage", 1), 1), config.Stages[1], Path.GetTempPath(), "/foo");
+            AccumulatorTask<Utf8String, int> task = (AccumulatorTask<Utf8String, int>)JetActivator.CreateInstance(stage.TaskType, _dfsClient.Configuration, _jetClient.Configuration, context);
+            using( ListRecordWriter<Pair<Utf8String, int>> writer = new ListRecordWriter<Pair<Utf8String, int>>(true) )
+            {
+                task.ProcessRecord(Pair.MakePair(new Utf8String("foo"), 3), writer);
+                task.ProcessRecord(Pair.MakePair(new Utf8String("foo"), 4), writer);
+                task.ProcessRecord(Pair.MakePair(new Utf8String("hello"), 2), writer);
+                task.Finish(writer);
+                CollectionAssert.AreEquivalent(new[] { Pair.MakePair(new Utf8String("foo"), 7), Pair.MakePair(new Utf8String("hello"), 2) }, writer.List);
+            }
         }
 
         private static void VerifyStage(JobConfiguration config, StageConfiguration stage, int taskCount, string stageId, Type taskType, Type stageMultiInputRecordReader, Type recordReaderType, Type recordWriterType, ChannelType channelType, ChannelConnectivity channelConnectivity, Type partitionerType, Type multiInputRecordReader, string outputStageId)
