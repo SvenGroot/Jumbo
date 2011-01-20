@@ -96,6 +96,7 @@ namespace Tkl.Jumbo.Jet.Samples.IO
         private Utf8String _word;
         private long _position;
         private long _end;
+        private readonly bool _allowRecordReuse;
 
         /// <summary>
         /// Initializes a new instance of the <see
@@ -134,8 +135,7 @@ namespace Tkl.Jumbo.Jet.Samples.IO
             _word = _reader.Word;
             _position = offset;
             _end = offset + size;
-            if( !allowRecordReuse )
-                throw new NotSupportedException("This reader can only be used for tasks that allow record reuse.");
+            _allowRecordReuse = allowRecordReuse;
             if( _end == stream.Length )
                 --_end;
             if( offset != 0 )
@@ -195,7 +195,10 @@ namespace Tkl.Jumbo.Jet.Samples.IO
                     return false;
                 }
             } while( skipEmpty && _word.ByteLength == 0 );
-            CurrentRecord = _word;
+            if( _allowRecordReuse )
+                CurrentRecord = _word;
+            else
+                CurrentRecord = new Utf8String(_word);
             return true;
         }
     }

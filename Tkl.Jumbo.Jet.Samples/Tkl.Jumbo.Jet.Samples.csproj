@@ -101,6 +101,7 @@
     <Compile Include="GenSort2.cs" />
     <Compile Include="GraySort.cs" />
     <Compile Include="IO\UInt128Writer.cs" />
+    <Compile Include="Tasks\WordCountCombinerTask.cs" />
     <Compile Include="ValSort.cs" />
     <Compile Include="WordCount.cs" />
     <Compile Include="GenSort.cs" />
@@ -130,6 +131,7 @@
     <Compile Include="IO\ValSortRecord.cs" />
     <Compile Include="Tasks\ValSortTask.cs" />
     <Compile Include="TpcHQuery1.cs" />
+    <Compile Include="WordCountMapReduce.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="jumbo.snk" />
