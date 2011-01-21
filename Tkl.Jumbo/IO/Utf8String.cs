@@ -301,15 +301,12 @@ namespace Tkl.Jumbo.IO
         /// <returns><see langword="true"/> if this instance is equal to <paramref name="other"/>; otherwise, <see langword="false"/>.</returns>
         public bool Equals(Utf8String other)
         {
-            if( other == null || other._byteLength != _byteLength )
+            if( (object)other == (object)this )
+                return true;
+            if( (object)other == null || other._byteLength != _byteLength )
                 return false;
 
-            for( int x = 0; x < _byteLength; ++x )
-            {
-                if( _utf8Bytes[x] != other._utf8Bytes[x] )
-                    return false;
-            }
-            return true;
+            return UnsafeCompare(_utf8Bytes, _byteLength, other._utf8Bytes, _byteLength) == 0;            
         }
 
         #endregion
