@@ -227,6 +227,17 @@ namespace Tkl.Jumbo.IO
         }
 
         /// <summary>
+        /// Gets the bytes of the utf-8 encoded string.
+        /// </summary>
+        /// <returns>The utf-8 encoded string.</returns>
+        public byte[] GetBytes()
+        {
+            byte[] result = new byte[_byteLength];
+            Buffer.BlockCopy(_utf8Bytes, 0, result, 0, _byteLength);
+            return result;
+        }
+
+        /// <summary>
         /// Gets a hash code for this <see cref="Utf8String"/>.
         /// </summary>
         /// <returns>A 32-bit hash code for this <see cref="Utf8String"/>.</returns>
