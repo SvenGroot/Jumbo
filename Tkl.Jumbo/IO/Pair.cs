@@ -220,9 +220,7 @@ namespace Tkl.Jumbo.IO
         /// <returns>A 32-bit signed integer that indicates the relative order of the objects being compared.</returns>
         public int CompareTo(Pair<TKey, TValue> other)
         {
-            if( object.ReferenceEquals(this, other) )
-                return 0;
-            if( object.ReferenceEquals(other, null) )
+            if( (object)other == null )
                 return 1;
             return _keyComparer.Compare(Key, other.Key);
         }

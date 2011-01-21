@@ -325,20 +325,12 @@ namespace Tkl.Jumbo.IO
         /// <returns>A 32-bit signed integer that indicates the relative order of the objects being compared.</returns>
         public int CompareTo(Utf8String other)
         {
-            if( other == null )
+            if( (object)other == null )
                 return 1;
+            if( (object)other == (object)this )
+                return 0;
 
-            if( other._byteLength != _byteLength )
-                return _byteLength - other._byteLength;
-
-            for( int x = 0; x < _byteLength; ++x )
-            {
-                byte b1 = _utf8Bytes[x];
-                byte b2 = other._utf8Bytes[x];
-                if( b1 != b2 )
-                    return b1 - b2;
-            }
-            return 0;
+            return UnsafeCompare(_utf8Bytes, _byteLength, other._utf8Bytes, other._byteLength);
         }
 
         #endregion
@@ -419,6 +411,24 @@ namespace Tkl.Jumbo.IO
             unchecked
             {
                 return (size & (int)0xFFFFFFFC) + 4;
+            }
+        }
+
+        private static unsafe int UnsafeCompare(byte[] str1, int length1, byte[] str2, int length2)
+        {
+            fixed( byte* str1ptr = str1, str2ptr = str2 )
+            {
+                byte* left = str1ptr;
+                byte* end = left + Math.Min(length1, length2);
+                byte* right = str2ptr;
+                while( left < end )
+                {
+                    if( *left != *right )
+                        return *left - *right;
+                    ++left;
+                    ++right;
+                }
+                return length1 - length2;
             }
         }
     }
