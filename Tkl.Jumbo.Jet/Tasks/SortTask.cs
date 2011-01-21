@@ -91,10 +91,12 @@ namespace Tkl.Jumbo.Jet.Tasks
             {
                 List<T> records = _partitions[partition];
                 records.Sort(_comparer);
+                _log.DebugFormat("Done sorting partition {0}.", partition);
                 foreach( T record in records )
                 {
                     output.WriteRecord(record, partition);
                 }
+                _log.DebugFormat("Done writing partition {0}.", partition);
             }
             _log.Debug("Done sorting.");
         }
