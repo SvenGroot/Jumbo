@@ -310,11 +310,9 @@ namespace Tkl.Jumbo.Jet
         {
             IComparer<T> recordComparer;
 
-            string comparerTypeName;
-            if( Channel == null || Channel.InputStage == null )
-                comparerTypeName = TaskContext.StageConfiguration.GetSetting(MergeRecordReaderConstants.ComparerSetting, null);
-            else
-                comparerTypeName = Channel.InputStage.GetSetting(Tasks.TaskConstants.ComparerSettingKey, null);
+            string comparerTypeName = TaskContext.StageConfiguration.GetSetting(MergeRecordReaderConstants.ComparerSetting, null);
+            if( comparerTypeName == null && !(Channel == null || Channel.InputStage == null) )
+                comparerTypeName = Channel.InputStage.GetSetting(Tasks.TaskConstants.ComparerSettingKey, null);                
 
             if( !string.IsNullOrEmpty(comparerTypeName) )
             {

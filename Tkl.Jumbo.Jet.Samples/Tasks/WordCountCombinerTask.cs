@@ -9,9 +9,9 @@ namespace Tkl.Jumbo.Jet.Samples.Tasks
     /// <summary>
     /// Combiner for Map-Reduce style WordCount
     /// </summary>
-    public sealed class WordCountCombinerTask : IPrepartitionedPushTask<Pair<Utf8String, int>, Pair<Utf8String, int>>
+    public sealed class WordCountCombinerTask : IPrepartitionedPushTask<Pair<string, int>, Pair<string, int>>
     {
-        private Pair<Utf8String, int> _currentRecord = new Pair<Utf8String,int>();
+        private Pair<string, int> _currentRecord = new Pair<string, int>();
         private int _currentPartition;
 
         /// <summary>
@@ -20,9 +20,9 @@ namespace Tkl.Jumbo.Jet.Samples.Tasks
         /// <param name="record">The record.</param>
         /// <param name="partition">The partition.</param>
         /// <param name="output">The output.</param>
-        public void ProcessRecord(Pair<Utf8String, int> record, int partition, PrepartitionedRecordWriter<Pair<Utf8String, int>> output)
+        public void ProcessRecord(Pair<string, int> record, int partition, PrepartitionedRecordWriter<Pair<string, int>> output)
         {
-            if( _currentRecord.Key == null || !_currentRecord.Key.Equals(record.Key) )
+            if( _currentRecord.Key == null || !_currentRecord.Key.Equals(record.Key, StringComparison.Ordinal) )
             {
                 if( _currentRecord.Key != null )
                     output.WriteRecord(_currentRecord, _currentPartition);
@@ -38,7 +38,7 @@ namespace Tkl.Jumbo.Jet.Samples.Tasks
         /// Finishes the specified output.
         /// </summary>
         /// <param name="output">The output.</param>
-        public void Finish(PrepartitionedRecordWriter<Pair<Utf8String, int>> output)
+        public void Finish(PrepartitionedRecordWriter<Pair<string, int>> output)
         {
             if( _currentRecord.Key != null )
                 output.WriteRecord(_currentRecord, _currentPartition);

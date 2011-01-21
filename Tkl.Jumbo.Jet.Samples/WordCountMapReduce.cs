@@ -55,18 +55,34 @@ namespace Tkl.Jumbo.Jet.Samples
             CheckAndCreateOutputPath(dfsClient, _outputPath);
 
             var input = new DfsInput(_inputPath, typeof(WordRecordReader));
-            var output = CreateDfsOutput(_outputPath, typeof(TextRecordWriter<Pair<Utf8String, int>>));
+            var output = CreateDfsOutput(_outputPath, typeof(TextRecordWriter<Pair<string, int>>));
 
             Channel mapChannel = new Channel() { PartitionCount = _combinerTasks, ChannelType = ChannelType.Pipeline };
-            StageBuilder mapStage = builder.ProcessRecords(input, mapChannel, typeof(GenerateInt32PairTask<Utf8String>));
+            StageBuilder mapStage = builder.ProcessRecords<Utf8String, Pair<string, int>>(input, mapChannel, WordCount);
             mapStage.StageId = "Map";
             Channel sortChannel = new Channel() { ChannelType = ChannelType.Pipeline };
-            builder.SortRecords(mapChannel, sortChannel);
+            builder.SortRecords(mapChannel, sortChannel, typeof(StringPairComparer));
             Channel combineChannel = new Channel();
             builder.ProcessRecords(sortChannel, combineChannel, typeof(WordCountCombinerTask));
 
-            StageBuilder reduceStage = builder.ReduceRecords<Utf8String, int, Pair<Utf8String, int>>(combineChannel, output, WordCountReduce);
+            StageBuilder reduceStage = builder.ReduceRecords<string, int, Pair<string, int>>(combineChannel, output, WordCountReduce);
             reduceStage.StageId = "Reduce";
+            reduceStage.AddSetting(MergeRecordReaderConstants.ComparerSetting, typeof(StringPairComparer).AssemblyQualifiedName, StageSettingCategory.InputRecordReader);
+        }
+
+        /// <summary>
+        /// Words the count.
+        /// </summary>
+        /// <param name="input">The input.</param>
+        /// <param name="output">The output.</param>
+        /// <param name="context">The context.</param>
+        [AllowRecordReuse]
+        public static void WordCount(RecordReader<Utf8String> input, RecordWriter<Pair<string, int>> output, TaskContext context)
+        {
+            foreach( Utf8String record in input.EnumerateRecords() )
+            {
+                output.WriteRecord(Pair.MakePair(record.ToString(), 1));
+            }
         }
 
         /// <summary>
@@ -77,7 +93,7 @@ namespace Tkl.Jumbo.Jet.Samples
         /// <param name="output">The output.</param>
         /// <param name="context">The context.</param>
         [AllowRecordReuse]
-        public static void WordCountReduce(Utf8String key, IEnumerable<int> values, RecordWriter<Pair<Utf8String, int>> output, TaskContext context)
+        public static void WordCountReduce(string key, IEnumerable<int> values, RecordWriter<Pair<string, int>> output, TaskContext context)
         {
             output.WriteRecord(Pair.MakePair(key, values.Sum()));
         }
