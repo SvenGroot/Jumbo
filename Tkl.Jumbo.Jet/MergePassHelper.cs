@@ -215,7 +215,17 @@ namespace Tkl.Jumbo.Jet
                     return MergePassResult.InsufficientData;
 
                 fileInputCount = Math.Min(_fileInputs.Count, _reader.MaxFileInputs);
-                var inputs = fileOnlyPass ? _fileInputs.Take(fileInputCount) : _memoryInputs.Concat(_fileInputs.Take(fileInputCount));
+                IEnumerable<RecordInput> inputs;
+                // If we've received all inputs and we're simply doing this as a memory purge pass, and all file inputs can be processed in the final pass, we only do a memory pass.
+                if( _noMemoryInputsInFinalPass && 
+                    _inputsProcessed + _fileInputs.Count + _memoryInputs.Count == _reader.TotalInputCount && 
+                    _fileInputs.Count + _previousPassOutputs.Count - _previousPassOutputsProcessed < _reader.MaxFileInputs )
+                {
+                    _log.Debug("Doing a memory-purge pass.");
+                    inputs = _memoryInputs;
+                }
+                else
+                    inputs = fileOnlyPass ? _fileInputs.Take(fileInputCount) : _memoryInputs.Concat(_fileInputs.Take(fileInputCount));
                 var readers = from input in inputs
                               let reader = input.Reader
                               where reader.ReadRecord()
