@@ -27,6 +27,7 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
         public void Run(RecordReader<Pair<int, Transaction>> input, RecordWriter<Pair<int, WritableCollection<MappedFrequentPattern>>> output)
         {
             _partitionReader = input as MultiPartitionRecordReader<Pair<int, Transaction>>;
+            bool reuseHeaps = TaskContext.GetTypedSetting("PFPGrowth.ReusePatternHeaps", true);
 
             if( input.ReadRecord() )
             {
@@ -59,6 +60,11 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
 
                         // The tree needs to do mining only for the items in its group.
                         itemHeaps = tree.Mine(k, false, groupId * maxPerGroup, itemHeaps);
+                        if( !reuseHeaps )
+                        {
+                            OutputPatternHeaps(output, itemHeaps);
+                            itemHeaps = null;
+                        }
                     }
                     ++_groupsProcessed;
                     if( _partitionReader != null )
@@ -70,14 +76,19 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
                     }
                 }
 
-                if( itemHeaps != null )
+                OutputPatternHeaps(output, itemHeaps);
+            }
+        }
+
+        private static void OutputPatternHeaps(RecordWriter<Pair<int, WritableCollection<MappedFrequentPattern>>> output, FrequentPatternMaxHeap[] itemHeaps)
+        {
+            if( itemHeaps != null )
+            {
+                for( int item = 0; item < itemHeaps.Length; ++item )
                 {
-                    for( int item = 0; item < itemHeaps.Length; ++item )
-                    {
-                        FrequentPatternMaxHeap heap = itemHeaps[item];
-                        if( heap != null )
-                            heap.OutputItems(item, output);
-                    }
+                    FrequentPatternMaxHeap heap = itemHeaps[item];
+                    if( heap != null )
+                        heap.OutputItems(item, output);
                 }
             }
         }
