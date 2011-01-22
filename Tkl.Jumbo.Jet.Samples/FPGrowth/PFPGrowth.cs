@@ -435,7 +435,7 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
 
         private static void OutputGroupTransaction(RecordWriter<Pair<int, Transaction>> transactionOutput, TransactionTree[] groups, int[] mappedItems, int currentGroupId, int x, TaskContext config)
         {
-            config.StatusMessage = "Generating group dependent transactions for group: " + currentGroupId.ToString(CultureInfo.InvariantCulture);
+            //config.StatusMessage = "Generating group dependent transactions for group: " + currentGroupId.ToString(CultureInfo.InvariantCulture);
             if( transactionOutput == null )
             {
                 if( groups[currentGroupId] == null )
