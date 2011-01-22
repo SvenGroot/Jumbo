@@ -106,7 +106,7 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
         {
             WritableCollection<MappedFrequentPattern> patterns = new WritableCollection<MappedFrequentPattern>();
             PriorityQueue<MappedFrequentPattern> queue = Queue;
-            _log.InfoFormat("{2}: Found {0} frequent items with min support {1}.", queue.Count, queue.Peek().Support, item);
+            //_log.InfoFormat("{2}: Found {0} frequent items with min support {1}.", queue.Count, queue.Peek().Support, item);
             while( queue.Count > 0 )
             {
                 patterns.Add(queue.Dequeue());
@@ -118,7 +118,7 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
         public void OutputItems(int item, RecordWriter<Pair<int, MappedFrequentPattern>> output)
         {
             PriorityQueue<MappedFrequentPattern> queue = Queue;
-            _log.InfoFormat("{2}: Found {0} frequent items with min support {1}.", queue.Count, queue.Peek().Support, item);
+            //_log.InfoFormat("{2}: Found {0} frequent items with min support {1}.", queue.Count, queue.Peek().Support, item);
             Pair<int, MappedFrequentPattern> record = new Pair<int,MappedFrequentPattern>();
             record.Key = item;
             while( queue.Count > 0 )
