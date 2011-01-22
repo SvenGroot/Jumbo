@@ -92,7 +92,13 @@
     <Compile Include="FPGrowth\FrequentPatternCollector.cs" />
     <Compile Include="FPGrowth\FrequentPatternMaxHeap.cs" />
     <Compile Include="FPGrowth\ITransaction.cs" />
+    <Compile Include="FPGrowth\MapReduce\AggregationReduceTask.cs" />
     <Compile Include="FPGrowth\MapReduce\FeatureCountingMapReduce.cs" />
+    <Compile Include="FPGrowth\MapReduce\IntPairComparer.cs" />
+    <Compile Include="FPGrowth\MapReduce\ParallelFPGrowthMapTask.cs" />
+    <Compile Include="FPGrowth\MapReduce\ParallelFPGrowthReduceTask.cs" />
+    <Compile Include="FPGrowth\MapReduce\PatternAggregationMapReduce.cs" />
+    <Compile Include="FPGrowth\MapReduce\PFPGrowthMapReduce.cs" />
     <Compile Include="FPGrowth\NodeChildList.cs" />
     <Compile Include="FPGrowth\PFPGrowth.cs" />
     <Compile Include="FPGrowth\Transaction.cs" />

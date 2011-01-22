@@ -332,7 +332,7 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
                 }
 
                 // The tree needs to do mining only for the items in its group.
-                itemHeaps = tree.Mine(output, k, false, groupId * maxPerGroup, itemHeaps);
+                itemHeaps = tree.Mine(k, false, groupId * maxPerGroup, itemHeaps);
             }
 
             if( itemHeaps != null )

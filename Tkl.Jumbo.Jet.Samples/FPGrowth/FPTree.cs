@@ -85,12 +85,9 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
 
         public float Progress { get; private set; }
 
-        public FrequentPatternMaxHeap[] Mine(RecordWriter<Pair<int, WritableCollection<MappedFrequentPattern>>> output, int k, bool expandPerfectExtensions, int mineUntilItem, FrequentPatternMaxHeap[] itemHeaps)
+        public FrequentPatternMaxHeap[] Mine(int k, bool expandPerfectExtensions, int mineUntilItem, FrequentPatternMaxHeap[] itemHeaps)
         {
-            if( output == null )
-                throw new ArgumentNullException("output");
-
-            FrequentPatternCollector collector = new FrequentPatternCollector(_headerTable.Length, _weight, output, expandPerfectExtensions, _minSupport, k, itemHeaps);
+            FrequentPatternCollector collector = new FrequentPatternCollector(_headerTable.Length, _weight, expandPerfectExtensions, _minSupport, k, itemHeaps);
 
             _mineUntilItem = mineUntilItem;
             Mine(null, collector);

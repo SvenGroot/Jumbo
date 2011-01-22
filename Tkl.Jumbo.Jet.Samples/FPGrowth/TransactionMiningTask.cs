@@ -58,7 +58,7 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
                         tree.ProgressChanged += new EventHandler(FPTree_ProgressChanged);
 
                         // The tree needs to do mining only for the items in its group.
-                        itemHeaps = tree.Mine(output, k, false, groupId * maxPerGroup, itemHeaps);
+                        itemHeaps = tree.Mine(k, false, groupId * maxPerGroup, itemHeaps);
                     }
                     ++_groupsProcessed;
                     if( _partitionReader != null )

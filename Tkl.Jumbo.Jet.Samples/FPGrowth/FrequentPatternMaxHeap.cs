@@ -115,6 +115,19 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
             output.WriteRecord(Pair.MakePair(item, patterns));
         }
 
+        public void OutputItems(int item, RecordWriter<Pair<int, MappedFrequentPattern>> output)
+        {
+            PriorityQueue<MappedFrequentPattern> queue = Queue;
+            _log.InfoFormat("{2}: Found {0} frequent items with min support {1}.", queue.Count, queue.Peek().Support, item);
+            Pair<int, MappedFrequentPattern> record = new Pair<int,MappedFrequentPattern>();
+            record.Key = item;
+            while( queue.Count > 0 )
+            {
+                record.Value = queue.Dequeue();
+                output.WriteRecord(record);
+            }
+        }
+
         private bool AddInternal(MappedFrequentPattern pattern)
         {
             ++_addCount;

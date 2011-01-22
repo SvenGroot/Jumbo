@@ -54,7 +54,7 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth.MapReduce
         public int Groups { get; set; }
 
         /// <summary>
-        /// Gets or sets the number of feature count accumulator tasks.
+        /// Gets or sets the number of reduce tasks.
         /// </summary>
         /// <value>The number of accumulator tasks.</value>
         [NamedCommandLineArgument("r", DefaultValue = 0), Description("The number of reduce tasks to use. Defaults to the capacity of the cluster.")]
@@ -91,7 +91,9 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth.MapReduce
             Channel combineChannel = new Channel() { PartitionCount = numPartitions, PartitionsPerTask = PartitionsPerTask };
             builder.ProcessRecords(sortChannel, combineChannel, typeof(WordCountCombinerTask)); // Can reuse this because it has the same semantics
             DfsOutput output = new DfsOutput(fullOutputPath, typeof(BinaryRecordWriter<Pair<string, int>>));
-            builder.ReduceRecords<string, int, Pair<string, int>>(combineChannel, output, ReduceRecords);
+            StageBuilder reduceStage = builder.ReduceRecords<string, int, Pair<string, int>>(combineChannel, output, ReduceRecords);
+            reduceStage.StageId = "Reduce";
+            reduceStage.AddSetting(MergeRecordReaderConstants.ComparerSetting, typeof(StringPairComparer).AssemblyQualifiedName, StageSettingCategory.InputRecordReader);
         }
 
         /// <summary>
@@ -129,7 +131,10 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth.MapReduce
 
                 int groupSize = 0;
                 int groupId = 0;
-                using( DfsOutputStream stream = client.CreateFile(DfsPath.Combine(_outputPath, "fglist")) )
+                string fgListPath = DfsPath.Combine(_outputPath, "fglist");
+                if( DeleteOutputBeforeRun )
+                    new DfsClient().NameServer.Delete(fgListPath, false);
+                using( DfsOutputStream stream = client.CreateFile(fgListPath) )
                 using( BinaryRecordWriter<FGListItem> output = new BinaryRecordWriter<FGListItem>(stream) )
                 {
                     foreach( FGListItem item in fgList )
@@ -155,7 +160,7 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth.MapReduce
         /// Maps the records.
         /// </summary>
         /// <param name="record">The record.</param>
-        /// <param name="writer">The writer.</param>
+        /// <param name="output">The output.</param>
         /// <param name="context">The context.</param>
         [AllowRecordReuse]
         public static void MapRecords(Utf8String record, RecordWriter<Pair<string, int>> output, TaskContext context)
