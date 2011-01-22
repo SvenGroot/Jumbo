@@ -52,7 +52,7 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
                     TaskContext.StatusMessage = message;
                     // Prevent fetching new partitions while building the FP tree.
                     if( _partitionReader != null )
-                        _partitionReader.AllowAdditionalPartitions = false;
+                        _partitionReader.StopAtEndOfPartition = true;
 
                     using( FPTree tree = new FPTree(EnumerateGroup(input), minSupport, Math.Min((groupId + 1) * maxPerGroup, fglist.Count), TaskContext) )
                     {
@@ -70,7 +70,7 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
                     if( _partitionReader != null )
                     {
                         // Re-enable allow additional partitions, and if we had finished before try calling ReadRecord again.
-                        _partitionReader.AllowAdditionalPartitions = true;
+                        _partitionReader.StopAtEndOfPartition = false;
                         if( input.HasFinished )
                             input.ReadRecord();
                     }

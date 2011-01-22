@@ -96,6 +96,26 @@ namespace Tkl.Jumbo.Jet
         public bool AllowAdditionalPartitions { get; set; }
 
         /// <summary>
+        /// Gets or sets a value indicating whether reading records will halt at the end of the current partition.
+        /// </summary>
+        /// <value>
+        /// 	<see langword="true"/> if reading records will halt at the end of the current partition; otherwise, <see langword="false"/>.
+        /// </value>
+        /// <remarks>
+        /// <para>
+        ///   If this property is <see langword="false" />, the <see cref="RecordReader<T>.ReadRecord"/> function will return false when the
+        ///   end of the current partition is reached.
+        /// </para>
+        /// <para>
+        ///   Like setting <see cref="AllowAdditionalPartitions"/> to <see langword="false"/>, this will also prevent additional partitions from being fetched.
+        /// </para>
+        /// <para>
+        ///   To advance to the next partition, set this property back to <see langword="false"/>, and call <see cref="RecordReader<T>.ReadRecord"/> again.
+        /// </para>
+        /// </remarks>
+        public bool StopAtEndOfPartition { get; set; }
+
+        /// <summary>
         /// Reads a record.
         /// </summary>
         /// <returns><see langword="true"/> if an object was successfully read; <see langword="false"/> if there are no more records.</returns>
@@ -117,7 +137,7 @@ namespace Tkl.Jumbo.Jet
         private bool NextPartition()
         {
             // If .NextPartition fails we will check for additional partitions, and if we got any, we need to call NextPartition again.
-            if( !(_baseReader.NextPartition() || (AllowAdditionalPartitions && _taskExecution != null && _taskExecution.GetAdditionalPartitions(_baseReader) && _baseReader.NextPartition())) )
+            if( StopAtEndOfPartition || !(_baseReader.NextPartition() || (AllowAdditionalPartitions && _taskExecution != null && _taskExecution.GetAdditionalPartitions(_baseReader) && _baseReader.NextPartition())) )
                 return false;
 
             _log.InfoFormat("Now processing partition {0}.", _baseReader.CurrentPartition);
