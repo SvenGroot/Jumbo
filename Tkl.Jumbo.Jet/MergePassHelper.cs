@@ -65,7 +65,7 @@ namespace Tkl.Jumbo.Jet
         private int _inputsProcessed;
         private int _pass;
         private PriorityQueue<RecordReader<T>> _finalPassQueue;
-        private RecordReader<T>[] _finalPassRecordReaders;
+        private List<RecordReader<T>> _finalPassRecordReaders;
         private RecordReader<T> _currentReader;
         private bool _noMemoryInputsInFinalPass;
         // To access either _memoryInputs or _fileInputs, lock _fileInputs only.
@@ -224,7 +224,7 @@ namespace Tkl.Jumbo.Jet
                 if( finalPass )
                 {
                     Debug.Assert(_finalPassRecordReaders == null);
-                    _finalPassRecordReaders = readers.ToArray();
+                    _finalPassRecordReaders = readers.ToList();
                     readers = _finalPassRecordReaders;
                 }
 
@@ -248,6 +248,7 @@ namespace Tkl.Jumbo.Jet
                     RecordReader<T> reader = new BinaryRecordReader<T>(previousOutput.File, _reader.TaskContext.AllowRecordReuse, _reader.JetConfiguration.FileChannel.DeleteIntermediateFiles, _reader.BufferSize, _reader.CompressionType, previousOutput.UncompressedSize);
                     if( reader.ReadRecord() )
                     {
+                        _finalPassRecordReaders.Add(reader);
                         mergeQueue.Enqueue(reader);
                     }
                     ++_previousPassOutputsProcessed;
