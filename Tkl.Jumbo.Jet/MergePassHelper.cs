@@ -217,12 +217,13 @@ namespace Tkl.Jumbo.Jet
                 fileInputCount = Math.Min(_fileInputs.Count, _reader.MaxFileInputs);
                 IEnumerable<RecordInput> inputs;
                 // If we've received all inputs and we're simply doing this as a memory purge pass, and all file inputs can be processed in the final pass, we only do a memory pass.
-                if( _noMemoryInputsInFinalPass && 
+                if( _noMemoryInputsInFinalPass && !finalPass &&
                     _inputsProcessed + _fileInputs.Count + _memoryInputs.Count == _reader.TotalInputCount && 
                     _fileInputs.Count + (_previousPassOutputs == null ? 0 : (_previousPassOutputs.Count - _previousPassOutputsProcessed)) < _reader.MaxFileInputs )
                 {
                     _log.Debug("Doing a memory-purge pass.");
                     inputs = _memoryInputs;
+                    fileOnlyPass = false;
                 }
                 else
                     inputs = fileOnlyPass ? _fileInputs.Take(fileInputCount) : _memoryInputs.Concat(_fileInputs.Take(fileInputCount));
