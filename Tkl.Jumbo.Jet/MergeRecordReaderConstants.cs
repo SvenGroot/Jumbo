@@ -33,5 +33,12 @@ namespace Tkl.Jumbo.Jet
         /// to use. If this setting is not specified, <see cref="Comparer{T}.Default"/> will be used.
         /// </summary>
         public const string ComparerSetting = "MergeRecordReader.Comparer";
+
+        /// <summary>
+        /// The name of the setting in the <see cref="JobConfiguration.JobSettings"/> or <see cref="StageConfiguration.StageSettings"/>
+        /// that specifies whether all in-memory inputs must be merged and purged to disk before the final pass. The value
+        /// of this setting must be of type <see cref="Boolean"/>. The default value is the value of <see cref="MergeRecordReaderConfigurationElement.PurgeMemoryBeforeFinalPass"/>.
+        /// </summary>
+        public const string PurgeMemorySettingKey = "MergeRecordReader.PurgeMemory";
     }
 }

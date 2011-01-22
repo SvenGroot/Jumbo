@@ -67,15 +67,17 @@ namespace Tkl.Jumbo.Jet
         private PriorityQueue<RecordReader<T>> _finalPassQueue;
         private RecordReader<T>[] _finalPassRecordReaders;
         private RecordReader<T> _currentReader;
+        private bool _noMemoryInputsInFinalPass;
         // To access either _memoryInputs or _fileInputs, lock _fileInputs only.
         private readonly List<RecordInput> _memoryInputs = new List<RecordInput>();
         private readonly List<RecordInput> _fileInputs = new List<RecordInput>();
 
-        public MergePassHelper(MergeRecordReader<T> reader, int partition, IComparer<T> comparer)
+        public MergePassHelper(MergeRecordReader<T> reader, int partition, IComparer<T> comparer, bool noMemoryInputsInFinalPass)
         {
             _reader = reader;
             _partition = partition;
             _comparer = new MergeInputComparer(comparer);
+            _noMemoryInputsInFinalPass = noMemoryInputsInFinalPass;
         }
 
         public int PartitionNumber
@@ -196,7 +198,8 @@ namespace Tkl.Jumbo.Jet
                 int previousPassRemaining = _previousPassOutputs == null ? 0 : (_previousPassOutputs.Count - _previousPassOutputsProcessed);
                 // If we can process all our current file inputs in a single pass, and running this pass completes all inputs, this is the final pass so we return null.
                 if( _fileInputs.Count + previousPassRemaining < _reader.MaxFileInputs &&
-                    _inputsProcessed + _fileInputs.Count + _memoryInputs.Count == _reader.TotalInputCount )
+                    (_noMemoryInputsInFinalPass && _inputsProcessed + _fileInputs.Count == _reader.TotalInputCount && _memoryInputs.Count == 0 ||
+                    !_noMemoryInputsInFinalPass && _inputsProcessed + _fileInputs.Count + _memoryInputs.Count == _reader.TotalInputCount) )
                 {
                     if( !finalPass )
                     {

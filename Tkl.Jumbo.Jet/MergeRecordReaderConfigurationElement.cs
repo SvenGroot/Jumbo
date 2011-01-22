@@ -46,5 +46,19 @@ namespace Tkl.Jumbo.Jet
             get { return (ByteSize)this["mergeStreamReadBufferSize"]; }
             set { this["mergeStreamReadBufferSize"] = value; }
         }
+
+        /// <summary>
+        /// Gets or sets a value indicating whether all in-memory inputs must be merged and purged to disk before the final pass.
+        /// </summary>
+        /// <value>
+        /// 	<see langword="true"/> if all in-memory inputs must be merged and purged to disk before the final pass; otherwise, <see langword="false"/>.
+        /// 	The default value is <see langword="false"/>.
+        /// </value>
+        [ConfigurationProperty("purgeMemoryBeforeFinalPass", DefaultValue = false, IsRequired = false, IsKey = false)]
+        public bool PurgeMemoryBeforeFinalPass
+        {
+            get { return (bool)this["purgeMemoryBeforeFinalPass"]; }
+            set { this["purgeMemoryBeforeFinalPass"] = value; }
+        }
     }
 }

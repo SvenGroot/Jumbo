@@ -42,6 +42,7 @@ namespace Tkl.Jumbo.Jet
         private volatile bool _mergePassInProgress;
         private readonly object _mergePassLock = new object();
         private volatile bool _disposed;
+        private bool _purgeMemoryBeforeFinalPass;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="MergeRecordReader{T}"/> class.
@@ -395,6 +396,8 @@ namespace Tkl.Jumbo.Jet
                 if( _memoryStorageTriggerLevel < 0 || _memoryStorageTriggerLevel > 1 )
                     throw new InvalidOperationException("The memory storage trigger level must be between 0 and 1.");
 
+                _purgeMemoryBeforeFinalPass = TaskContext.GetTypedSetting(MergeRecordReaderConstants.PurgeMemorySettingKey, JetConfiguration.MergeRecordReader.PurgeMemoryBeforeFinalPass);
+
                 StartMergeThread(PartitionNumbers);
             }
         }
@@ -406,7 +409,7 @@ namespace Tkl.Jumbo.Jet
             _partitionMergers = new MergePassHelper<T>[partitionNumbers.Count];
             for( int x = 0; x < _partitionMergers.Length; ++x )
             {
-                _partitionMergers[x] = new MergePassHelper<T>(this, partitionNumbers[x], comparer);
+                _partitionMergers[x] = new MergePassHelper<T>(this, partitionNumbers[x], comparer, _purgeMemoryBeforeFinalPass);
             }
 
             _memoryStorageLevelMode = _memoryStorageTriggerLevel > 0 && Channel != null && Channel.UsesMemoryStorage;
