@@ -248,7 +248,8 @@ namespace Tkl.Jumbo.Jet
                     RecordReader<T> reader = new BinaryRecordReader<T>(previousOutput.File, _reader.TaskContext.AllowRecordReuse, _reader.JetConfiguration.FileChannel.DeleteIntermediateFiles, _reader.BufferSize, _reader.CompressionType, previousOutput.UncompressedSize);
                     if( reader.ReadRecord() )
                     {
-                        _finalPassRecordReaders.Add(reader);
+                        if( _finalPassRecordReaders != null )
+                            _finalPassRecordReaders.Add(reader);
                         mergeQueue.Enqueue(reader);
                     }
                     ++_previousPassOutputsProcessed;
