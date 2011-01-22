@@ -219,7 +219,7 @@ namespace Tkl.Jumbo.Jet
                 // If we've received all inputs and we're simply doing this as a memory purge pass, and all file inputs can be processed in the final pass, we only do a memory pass.
                 if( _noMemoryInputsInFinalPass && 
                     _inputsProcessed + _fileInputs.Count + _memoryInputs.Count == _reader.TotalInputCount && 
-                    _fileInputs.Count + _previousPassOutputs.Count - _previousPassOutputsProcessed < _reader.MaxFileInputs )
+                    _fileInputs.Count + (_previousPassOutputs == null ? 0 : (_previousPassOutputs.Count - _previousPassOutputsProcessed)) < _reader.MaxFileInputs )
                 {
                     _log.Debug("Doing a memory-purge pass.");
                     inputs = _memoryInputs;
