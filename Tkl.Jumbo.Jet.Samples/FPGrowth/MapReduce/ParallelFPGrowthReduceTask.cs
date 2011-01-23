@@ -41,6 +41,7 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth.MapReduce
             {
                 // The tree needs to do mining only for the items in its group.
                 itemHeaps = tree.Mine(_k, false, groupId * _maxPerGroup, itemHeaps);
+                _log.InfoFormat("Done mining.");
             }
 
             if( itemHeaps != null )
@@ -51,6 +52,7 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth.MapReduce
                     if( heap != null )
                         heap.OutputItems(item, output);
                 }
+                _log.InfoFormat("Done writing pattern heaps.");
             }
         }
 

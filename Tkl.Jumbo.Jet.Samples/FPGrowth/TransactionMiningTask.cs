@@ -91,7 +91,7 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
                     if( heap != null )
                         heap.OutputItems(item, output);
                 }
-                _log.InfoFormat("Done writing item heaps.");
+                _log.InfoFormat("Done writing pattern heaps.");
             }
         }
 
