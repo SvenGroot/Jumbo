@@ -266,6 +266,7 @@ namespace Tkl.Jumbo.Jet
             {
                 using( MultiPartitionRecordReader<TInput> partitionReader = new MultiPartitionRecordReader<TInput>(this, input) )
                 {
+                    _log.Info("Running pull task.");
                     taskStopwatch.Start();
                     pullTask.Run(partitionReader, output);
                     taskStopwatch.Stop();
@@ -276,6 +277,7 @@ namespace Tkl.Jumbo.Jet
                 input.CurrentPartitionChanging += new EventHandler<CurrentPartitionChangingEventArgs>(input_CurrentPartitionChanging);
                 TotalInputPartitions = input.PartitionCount;
                 bool firstPartition = true;
+                _log.Info("Running push task.");
                 do
                 {
                     _log.InfoFormat("Running task for partition {0}.", input.CurrentPartition);

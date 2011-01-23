@@ -60,6 +60,7 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
 
                         // The tree needs to do mining only for the items in its group.
                         itemHeaps = tree.Mine(k, false, groupId * maxPerGroup, itemHeaps);
+                        _log.InfoFormat("Done mining.");
                         if( !reuseHeaps )
                         {
                             OutputPatternHeaps(output, itemHeaps);
@@ -90,6 +91,7 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
                     if( heap != null )
                         heap.OutputItems(item, output);
                 }
+                _log.InfoFormat("Done writing item heaps.");
             }
         }
 

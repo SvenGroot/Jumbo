@@ -68,7 +68,7 @@ namespace Tkl.Jumbo.Jet.Channels
                     stream.Disposed += new EventHandler(UnmanagedBufferMemoryStream_Disposed);
                     _inputs.Add(stream);
                     _currentSize += size;
-                    _log.DebugFormat("Added stream of size {0} to memory storage; space used now {1}.", size, _currentSize);
+                    //_log.DebugFormat("Added stream of size {0} to memory storage; space used now {1}.", size, _currentSize);
                     return stream;
                 }
                 else
@@ -90,7 +90,7 @@ namespace Tkl.Jumbo.Jet.Channels
                 if( _inputs.Remove(stream) )
                 {
                     _currentSize -= stream.InitialCapacity;
-                    _log.DebugFormat("Removed stream from memory storage, space used now {0}.", _currentSize);
+                    //_log.DebugFormat("Removed stream from memory storage, space used now {0}.", _currentSize);
                     OnStreamRemoved(EventArgs.Empty);
                 }
                 else
