@@ -105,12 +105,14 @@
     <Compile Include="Channels\PartitionAssignmentMethod.cs" />
     <Compile Include="Channels\PartitionFileIndex.cs" />
     <Compile Include="Channels\PartitionFileIndexEntry.cs" />
+    <Compile Include="Channels\PartitionFileIndexEntryValueWriter.cs" />
     <Compile Include="Channels\PartitionFileStream.cs" />
     <Compile Include="Channels\PipelineOutputChannel.cs" />
     <Compile Include="Channels\PipelinePrepartitionedPushTaskRecordWriter.cs" />
     <Compile Include="Channels\PipelinePushTaskRecordWriter.cs" />
     <Compile Include="Channels\SingleFileMultiRecordWriter.cs" />
     <Compile Include="Channels\SizeRecordingStream.cs" />
+    <Compile Include="Channels\SpillRecordWriter.cs" />
     <Compile Include="Channels\TcpInputChannel.cs" />
     <Compile Include="Channels\TcpOutputChannel.cs" />
     <Compile Include="CleanupJobJetHeartbeatResponse.cs" />

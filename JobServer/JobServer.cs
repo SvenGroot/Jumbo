@@ -594,7 +594,7 @@ namespace JobServerApplication
 
                 if( task.Server != server || task.CurrentAttempt == null || task.CurrentAttempt.Attempt != data.TaskAttemptId.Attempt )
                 {
-                    _log.WarnFormat("Task server {0} reported status for task {{1}}_{2} which isn't an active attempt or was not assigned to that server.", server.Address, data.JobId, data.TaskAttemptId);
+                    _log.WarnFormat("Task server {0} reported status for task {{{1}}}_{2} which isn't an active attempt or was not assigned to that server.", server.Address, data.JobId, data.TaskAttemptId);
                     if( data.Status == TaskAttemptStatus.Running )
                         return new KillTaskJetHeartbeatResponse(data.JobId, data.TaskAttemptId);
                     else

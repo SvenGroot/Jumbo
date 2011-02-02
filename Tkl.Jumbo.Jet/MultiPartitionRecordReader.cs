@@ -103,14 +103,14 @@ namespace Tkl.Jumbo.Jet
         /// </value>
         /// <remarks>
         /// <para>
-        ///   If this property is <see langword="false" />, the <see cref="RecordReader<T>.ReadRecord"/> function will return false when the
+        ///   If this property is <see langword="false" />, the <see cref="RecordReader{T}.ReadRecord"/> function will return false when the
         ///   end of the current partition is reached.
         /// </para>
         /// <para>
         ///   Like setting <see cref="AllowAdditionalPartitions"/> to <see langword="false"/>, this will also prevent additional partitions from being fetched.
         /// </para>
         /// <para>
-        ///   To advance to the next partition, set this property back to <see langword="false"/>, and call <see cref="RecordReader<T>.ReadRecord"/> again.
+        ///   To advance to the next partition, set this property back to <see langword="false"/>, and call <see cref="RecordReader{T}.ReadRecord"/> again.
         /// </para>
         /// </remarks>
         public bool StopAtEndOfPartition { get; set; }

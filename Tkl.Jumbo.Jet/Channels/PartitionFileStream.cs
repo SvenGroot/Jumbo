@@ -78,7 +78,7 @@ namespace Tkl.Jumbo.Jet.Channels
             if( _baseStream == null )
                 _baseStream = new FileStream(_fileName, FileMode.Open, FileAccess.Read, FileShare.Read, _bufferSize);
 
-            if( _current == null || _segmentPosition == _current.Count )
+            if( _current.Count == 0 || _segmentPosition == _current.Count )
             {
                 if( !_indexEntries.MoveNext() )
                     return 0;
@@ -103,7 +103,7 @@ namespace Tkl.Jumbo.Jet.Channels
                 else
                 {
                     _segmentPosition = 0;
-                    _current = null;
+                    _current = default(PartitionFileIndexEntry);
                 }
             }
             else
