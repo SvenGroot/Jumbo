@@ -218,6 +218,11 @@ namespace Tkl.Jumbo.Jet
             get { return _dfsClient; }
         }
 
+        internal IJobServerTaskProtocol JobServerTaskClient
+        {
+            get { return _jobServerTaskClient; }
+        }
+
         internal bool AllowRecordReuse
         {
             get { return _configuration.StageConfiguration.AllowRecordReuse; }

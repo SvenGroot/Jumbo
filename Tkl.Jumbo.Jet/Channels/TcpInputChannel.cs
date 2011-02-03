@@ -8,6 +8,9 @@ using Tkl.Jumbo.IO;
 using System.Net.Sockets;
 using System.Net;
 using System.Threading;
+using System.IO;
+using System.Diagnostics;
+using System.Runtime.Serialization.Formatters.Binary;
 
 namespace Tkl.Jumbo.Jet.Channels
 {
@@ -16,11 +19,138 @@ namespace Tkl.Jumbo.Jet.Channels
     /// </summary>
     public class TcpInputChannel : InputChannel, IHasMetrics
     {
+        #region Nested types
+
+        private sealed class TcpChannelConnectionHandler : IDisposable
+        {
+            private readonly NetworkStream _stream;
+            private readonly Socket _socket;
+            private readonly byte[] _header = new byte[HeaderSize];
+            private readonly TcpInputChannel _channel;
+
+            public TcpChannelConnectionHandler(TcpInputChannel channel, Socket socket)
+            {
+                _channel = channel;
+                _socket = socket;
+                _stream = new NetworkStream(socket);
+                _stream.WriteTimeout = 30000;
+            }
+
+            public void HandleConnection()
+            {
+                try
+                {
+                    _stream.BeginRead(_header, 0, HeaderSize, BeginReadCallback, null);
+                }
+                catch( Exception ex )
+                {
+                    CloseOnError(ex);
+                    throw; // Transmission failure is a non-recoverable error for a TCP input channel
+                }
+            }
+
+            public void CloseOnError(Exception ex)
+            {
+                TrySendError(ex);
+                Close();
+            }
+
+            private void BeginReadCallback(IAsyncResult ar)
+            {
+                try
+                {
+                    int bytesRead = _stream.EndRead(ar);
+                    if( bytesRead != HeaderSize )
+                        throw new TcpChannelException("Bad TCP channel header format.");
+                    else
+                    {
+                        TcpChannelConnectionFlags flags = (TcpChannelConnectionFlags)_header[0];
+                        int sendingTaskNumber = ReadInt32(1);
+                        int segmentSize = ReadInt32(5);
+                        int segmentNumber = ReadInt32(9);
+
+                        if( sendingTaskNumber < 1 || sendingTaskNumber > _channel.InputStage.Root.TaskCount )
+                            throw new TcpChannelException("Invalid sending task number.");
+                        if( flags.HasFlag(TcpChannelConnectionFlags.KeepAlive) )
+                            _socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.KeepAlive, true);
+
+                        _stream.ReadTimeout = 30000;
+                        _channel.HandleSegment(sendingTaskNumber, segmentSize, segmentNumber, flags.HasFlag(TcpChannelConnectionFlags.FinalSegment), _stream);
+
+                        SendResponse(null); // Send success
+
+                        if( flags.HasFlag(TcpChannelConnectionFlags.KeepAlive) && !flags.HasFlag(TcpChannelConnectionFlags.FinalSegment) )
+                        {
+                            _stream.ReadTimeout = Timeout.Infinite;
+                            HandleConnection(); // Read the next header.
+                        }
+                        else
+                            Close(); // We're done
+                    }
+                }
+                catch( Exception ex )
+                {
+                    CloseOnError(ex);
+                    throw; // Transmission failure is a non-recoverable error for a TCP input channel
+                }           
+            }
+
+            private int ReadInt32(int index)
+            {
+                return _header[index] | _header[index + 1] << 8 | _header[index + 2] << 16 | _header[index + 3] << 24;
+            }
+
+
+            private void TrySendError(Exception ex)
+            {
+                try
+                {
+                    SendResponse(ex);
+                }
+                catch
+                {
+                }
+            }
+
+            private void SendResponse(Exception ex)
+            {
+                if( ex != null )
+                {
+                    using( MemoryStream contentStream = new MemoryStream() )
+                    {
+                        contentStream.WriteByte(0);
+                        BinaryFormatter formatter = new BinaryFormatter();
+                        formatter.Serialize(contentStream, ex);
+                        contentStream.WriteTo(_stream);
+                    }
+                }
+                else
+                    _stream.WriteByte(1);
+            }
+
+            private void Close()
+            {
+                _stream.Dispose();
+                _socket.Close();
+            }
+
+            public void Dispose()
+            {
+                Close();
+                GC.SuppressFinalize(this);
+            }
+        }
+
+        #endregion
+
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(TcpInputChannel));
+
+        internal const int HeaderSize = 13; // task number + flags + size
 
         private IMultiInputRecordReader _reader;
         private readonly Type _inputReaderType;
         private TcpListener[] _listeners;
+        private readonly ITcpChannelRecordReader[] _inputReaders;
         private volatile bool _running = true;
 
         /// <summary>
@@ -31,7 +161,8 @@ namespace Tkl.Jumbo.Jet.Channels
         public TcpInputChannel(TaskExecutionUtility taskExecution, StageConfiguration inputStage)
             : base(taskExecution, inputStage)
         {
-            _inputReaderType = typeof(NetworkRecordReader<>).MakeGenericType(InputRecordType);
+            _inputReaderType = typeof(TcpChannelRecordReader<>).MakeGenericType(InputRecordType);
+            _inputReaders = new ITcpChannelRecordReader[inputStage.Root.TaskCount];
         }
 
         /// <summary>
@@ -83,8 +214,7 @@ namespace Tkl.Jumbo.Jet.Channels
                 listener.Start();
                 if( port == 0 )
                     port = ((IPEndPoint)listener.LocalEndpoint).Port;
-                Thread listenerThread = new Thread(ListenerThread) { IsBackground = true, Name = "TcpChannelListenerThread_" + addresses[x].ToString() };
-                listenerThread.Start(listener);
+                listener.BeginAcceptSocket(BeginAcceptCallback, listener);
             }
             TaskExecution.Umbilical.RegisterTcpChannelPort(TaskExecution.Context.JobId, TaskExecution.Context.TaskAttemptId, port);
 
@@ -105,40 +235,51 @@ namespace Tkl.Jumbo.Jet.Channels
             throw new NotSupportedException();
         }
 
-        private void ListenerThread(object param)
+        private void BeginAcceptCallback(IAsyncResult ar)
         {
-            TcpListener listener = (TcpListener)param;
+            TcpListener listener = (TcpListener)ar.AsyncState;
+            if( _running )
+                listener.BeginAcceptSocket(BeginAcceptCallback, listener);
 
-            _log.InfoFormat("Begin listening for {0} inputs on {1}.", _reader.TotalInputCount, listener.LocalEndpoint);
-
-            RecordInput[] inputs = new RecordInput[1];
-
+            TcpChannelConnectionHandler handler = null;
+            Socket socket = null;
             try
             {
-                while( _running && _reader.CurrentInputCount < _reader.TotalInputCount )
-                {
-                    TcpClient client = listener.AcceptTcpClient();
-                    _log.InfoFormat("Accepted connection from {0}.", client.Client.RemoteEndPoint);
-                    inputs[0] = new RecordInput((IRecordReader)JetActivator.CreateInstance(_inputReaderType, TaskExecution, client, TaskExecution.AllowRecordReuse), false);
-                    _reader.AddInput(inputs);
-                }
-
-                _log.Info("Received all inputs; listener is shutting down.");
-
-                Stop();
+                socket = listener.EndAcceptSocket(ar);
+                socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.Linger, new LingerOption(true, 3));
+                socket.NoDelay = true;
+                handler = new TcpChannelConnectionHandler(this, socket);
+                handler.HandleConnection();
             }
-            catch( SocketException )
+            catch( Exception ex )
             {
-                if( _running )
-                    throw;
+                if( handler != null )
+                    handler.CloseOnError(ex);
+                else if( socket != null )
+                    socket.Close();
             }
         }
 
-        private void Stop()
+        private void HandleSegment(int taskNumber, int segmentSize, int segmentNumber, bool finalSegment, Stream segmentStream)
         {
-            _running = false;
-            foreach( TcpListener listener in _listeners )
-                listener.Stop();
+            ITcpChannelRecordReader reader;
+            lock( _inputReaders )
+            {
+                reader = _inputReaders[taskNumber];
+                if( reader == null )
+                {
+                    reader = (ITcpChannelRecordReader)JetActivator.CreateInstance(_inputReaderType, TaskExecution, TaskExecution.AllowRecordReuse);
+                    _inputReaders[taskNumber] = null;
+                    _reader.AddInput(new RecordInput[] { new RecordInput((IRecordReader)reader, true) });
+                }
+            }
+
+            lock( reader )
+            {
+                reader.AddSegment(segmentSize, segmentNumber, segmentStream);
+                if( finalSegment )
+                    reader.CompleteAdding();
+            }
         }
 
         private IPAddress[] GetListenerAddresses()

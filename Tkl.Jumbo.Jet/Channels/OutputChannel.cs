@@ -82,6 +82,7 @@ namespace Tkl.Jumbo.Jet.Channels
         /// <summary>
         /// Gets the IDs of the partitions that this channel writes output to.
         /// </summary>
+        /// <value>The output ids.</value>
         protected ReadOnlyCollection<string> OutputIds
         {
             get

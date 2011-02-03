@@ -35,7 +35,7 @@ namespace Tkl.Jumbo.Jet.Channels
             }
         }
 
-        protected override void  SpillOutput()
+        protected override void SpillOutput(bool finalSpill)
         {
             using( FileStream stream = new FileStream(_outputPath, FileMode.Append, FileAccess.Write, FileShare.None, _writeBufferSize) )
             using( FileStream indexStream = new FileStream(_outputPath + ".index", FileMode.Append, FileAccess.Write, FileShare.None, _writeBufferSize) )

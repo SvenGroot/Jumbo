@@ -99,6 +99,7 @@
     <Compile Include="Channels\IChannelMultiInputRecordReader.cs" />
     <Compile Include="Channels\IInputChannel.cs" />
     <Compile Include="Channels\IOutputChannel.cs" />
+    <Compile Include="Channels\ITcpChannelRecordReader.cs" />
     <Compile Include="Channels\NetworkRecordReader.cs" />
     <Compile Include="Channels\NetworkRecordWriter.cs" />
     <Compile Include="Channels\OutputChannel.cs" />
@@ -113,6 +114,9 @@
     <Compile Include="Channels\SingleFileMultiRecordWriter.cs" />
     <Compile Include="Channels\SizeRecordingStream.cs" />
     <Compile Include="Channels\SpillRecordWriter.cs" />
+    <Compile Include="Channels\TcpChannelConnectionFlags.cs" />
+    <Compile Include="Channels\TcpChannelException.cs" />
+    <Compile Include="Channels\TcpChannelRecordWriter.cs" />
     <Compile Include="Channels\TcpInputChannel.cs" />
     <Compile Include="Channels\TcpOutputChannel.cs" />
     <Compile Include="CleanupJobJetHeartbeatResponse.cs" />
@@ -208,6 +212,7 @@
     <Compile Include="MergeRecordReaderConstants.cs" />
     <Compile Include="Tasks\SortTask.cs" />
     <Compile Include="Tasks\TaskConstants.cs" />
+    <Compile Include="Channels\TcpChannelRecordReader.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="jumbo.snk" />
