@@ -111,9 +111,17 @@ namespace Tkl.Jumbo.Jet.Channels
                     _log.WarnFormat("Waiting for buffer space, current buffer pos {0}, buffer used {1}", _bufferPos, newBufferUsed);
                     _writer.RequestOutputSpill();
                     // This is only safe for one thread to use write, but record writers and streams are not thread safe, so no problem
-                    // If the cancel event was set while writing, the object was disposed.
+                    // If the cancel event was set while writing, the object was disposed or an error occurred in the spill thread.
                     if( WaitHandle.WaitAny(_bufferEvents) == 1 )
-                        throw new ObjectDisposedException(typeof(SpillRecordWriter<T>).FullName);
+                    {
+                        if( _writer._spillException != null )
+                        {
+                            _writer._spillExceptionThrown = true;
+                            throw new ChannelException("An error occurred while spilling records.", _writer._spillException);
+                        }
+                        else
+                            throw new ObjectDisposedException(typeof(SpillRecordWriter<T>).FullName);
+                    }
                     newBufferUsed = Thread.VolatileRead(ref _bufferUsed);
                     Debug.Assert(newBufferUsed >= count); // Make sure FreeBuffer doesn't free too much
                 }
@@ -123,7 +131,7 @@ namespace Tkl.Jumbo.Jet.Channels
             public void FreeBuffer(int size)
             {
                 Debug.Assert(size <= _bufferUsed);
-                Interlocked.Add(ref _bufferUsed, -size);
+                int newSize = Interlocked.Add(ref _bufferUsed, -size);
                 _freeBufferEvent.Set();
             }
 
@@ -195,11 +203,14 @@ namespace Tkl.Jumbo.Jet.Channels
         private readonly object _spillLock = new object();
         private int _spillStart;
         private int _spillEnd;
-        private bool _spillInProgress;
+        private volatile bool _spillInProgress;
         private AutoResetEvent _spillWaitingEvent = new AutoResetEvent(false);
         private Thread _spillThread;
         private ManualResetEvent _cancelEvent = new ManualResetEvent(false);
         private int _spillCount;
+        private Exception _spillException;
+        private bool _spillExceptionThrown;
+        private bool _disposed;
 
         //private StreamWriter _debugWriter;
 
@@ -217,6 +228,12 @@ namespace Tkl.Jumbo.Jet.Channels
 
         protected override void WriteRecordInternal(T record)
         {
+            if( _spillException != null )
+            {
+                _spillExceptionThrown = true;
+                throw new ChannelException("An exception occurred spilling the output records.", _spillException);
+            }
+
             if( _bufferRemaining <= 0 )
                 RequestOutputSpill();
 
@@ -286,6 +303,11 @@ namespace Tkl.Jumbo.Jet.Channels
             get { return _spillCount; }
         }
 
+        protected bool ErrorOccurred
+        {
+            get { return _spillException != null; }
+        }
+
         protected abstract void SpillOutput(bool finalSpill);
 
         protected int SpillDataSizeForPartition(int partition)
@@ -322,31 +344,43 @@ namespace Tkl.Jumbo.Jet.Channels
 
         protected override void Dispose(bool disposing)
         {
-            //_log.Debug("Disposing");
-            // Taking the lock causes it to wait until the current output is finished.
-
-            lock( _spillLock )
+            if( !_disposed )
             {
-                while( _spillInProgress )
-                    Monitor.Wait(_spillLock);
+                _disposed = true;
+                lock( _spillLock )
+                {
+                    while( _spillInProgress )
+                        Monitor.Wait(_spillLock);
 
-                _cancelEvent.Set();
+                    _cancelEvent.Set();
+                }
+
+                if( _spillException != null && !_spillExceptionThrown )
+                    throw new ChannelException("An exception occurred spilling the output records.", _spillException);
+
+                if( !_spillExceptionThrown && _buffer.BufferUsed > 0 )
+                {
+                    try
+                    {
+                        PrepareForSpill();
+                    }
+                    catch( InvalidOperationException ex )
+                    {
+                        // Thrown if there was actually nothing to spill. This can really only happen if the record writer gets disposed after an exception
+                        // so we don't want to mask that exception
+                        _log.Error("Failed to spill during dispose.", ex);
+                    }
+                    PerformSpill(true);
+                }
+                Debug.Assert(_spillExceptionThrown || _buffer.BufferUsed == 0);
+
+                base.Dispose(disposing);
+                if( disposing )
+                {
+                    ((IDisposable)_bufferWriter).Dispose();
+                    _buffer.Dispose();
+                }
             }
-
-            if( _buffer.BufferUsed > 0 )
-            {
-                PrepareForSpill();
-                PerformSpill(true);
-            }
-            Debug.Assert(_buffer.BufferUsed == 0);
-
-            base.Dispose(disposing);
-            if( disposing )
-            {
-                ((IDisposable)_bufferWriter).Dispose();
-                _buffer.Dispose();
-            }
-
         }
 
         private void RequestOutputSpill()
@@ -388,23 +422,35 @@ namespace Tkl.Jumbo.Jet.Channels
             _lastPartition = -1;
             _spillStart = _spillEnd; // _outputEnd contains the place where the last output stopped.
             _spillEnd = _lastRecordEnd; // End at the last record.
-            _bufferRemaining += _bufferLimit; // Update the buffer limit.
+            int spillSize = _spillEnd - _spillStart;
+            if( spillSize <= 0 )
+                spillSize += _buffer.Size;
+            _bufferRemaining += spillSize;
             _spillInProgress = true;
         }
 
         private void SpillThread()
         {
-            WaitHandle[] handles = new WaitHandle[] { _spillWaitingEvent, _cancelEvent };
-
-            while( WaitHandle.WaitAny(handles) != 1 )
+            try
             {
-                PerformSpill(false);
+                WaitHandle[] handles = new WaitHandle[] { _spillWaitingEvent, _cancelEvent };
+
+                while( WaitHandle.WaitAny(handles) != 1 )
+                {
+                    PerformSpill(false);
+                }
+            }
+            catch( Exception ex )
+            {
+                _spillException = ex;
+                _cancelEvent.Set(); // Make sure the writing thread doesn't get stuck waiting for buffer space to become available.
             }
         }
 
         private void PerformSpill(bool finalSpill)
         {
             Debug.Assert(_spillInProgress);
+            int spillSize = 0;
             try
             {
                 // We don't need to take the _spillLock for the actuall spill itself, because no one is going to access the relevant variables
@@ -415,10 +461,9 @@ namespace Tkl.Jumbo.Jet.Channels
                 //    _debugWriter.WriteLine("Starting output from {0} to {1}.", _outputStart, _outputEnd);
                 SpillOutput(finalSpill);
                 _log.DebugFormat("Finished writing output segment {0}.", _spillCount);
-                int spillSize = _spillEnd - _spillStart;
+                spillSize = _spillEnd - _spillStart;
                 if( spillSize <= 0 )
                     spillSize += _buffer.Size;
-                _buffer.FreeBuffer(spillSize);
             }
             finally
             {
@@ -428,6 +473,11 @@ namespace Tkl.Jumbo.Jet.Channels
                     Monitor.PulseAll(_spillLock);
                 }
             }
+            // DO NOT CALL THIS BEFORE SETTING _spillInProgress BACK TO FALSE
+            // There is a race condition that allows the buffer to be filled up again
+            // *before* _spillInProgress becomes false, causing the writing thread to
+            // not start a new spill and then hang waiting for the buffer to free up.
+            _buffer.FreeBuffer(spillSize);
         }
     }
 }

@@ -86,11 +86,28 @@ namespace Tkl.Jumbo.Jet
         /// <summary>
         /// Gets or sets the maximum number of times a task should be attempted if it encounters errors.
         /// </summary>
+        /// <remarks>
+        /// This number applies to an individual task. If the same task fails more often than this number, the job fails.
+        /// </remarks>
         [ConfigurationProperty("maxTaskAttempts", DefaultValue = 5, IsRequired = false, IsKey = false)]
         public int MaxTaskAttempts
         {
             get { return (int)this["maxTaskAttempts"]; }
             set { this["maxTaskAttempts"] = value; }
+        }
+
+        /// <summary>
+        /// Gets or sets the maximum number of task failures before a job fails.
+        /// </summary>
+        /// <value>The maximum number of task failures.</value>
+        /// <remarks>
+        /// This number applies to all tasks in a job. If a job encounters more task failures than this number, the job fails.
+        /// </remarks>
+        [ConfigurationProperty("maxTaskFailures", DefaultValue = 20, IsRequired = false, IsKey = false)]
+        public int MaxTaskFailures
+        {
+            get { return (int)this["maxTaskFailures"]; }
+            set { this["maxTaskFailures"] = value; }
         }
 
         /// <summary>

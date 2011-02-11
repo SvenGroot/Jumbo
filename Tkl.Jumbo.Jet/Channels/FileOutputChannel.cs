@@ -71,7 +71,7 @@ namespace Tkl.Jumbo.Jet.Channels
             }
             else
             {
-                _fileNames = (from taskId in OutputIds
+                _fileNames = (from taskId in OutputPartitionIds
                               select CreateChannelFileName(inputTaskAttemptId, taskId)).ToList();
 
                 if( _fileNames.Count == 0 )
@@ -143,7 +143,7 @@ namespace Tkl.Jumbo.Jet.Channels
                 _log.DebugFormat("Creating single file output writer with buffer size {0}, limit size {1} and write buffer size {2}.", outputBufferSize.Value, outputBufferLimitSize, writeBufferSize.Value);
 
                 IPartitioner<T> partitioner = CreatePartitioner<T>();
-                partitioner.Partitions = OutputIds.Count;
+                partitioner.Partitions = OutputPartitionIds.Count;
                 RecordWriter<T> result = new SingleFileMultiRecordWriter<T>(Path.Combine(_localJobDirectory, _fileNames[0]), partitioner, (int)outputBufferSize.Value, outputBufferLimitSize, (int)writeBufferSize.Value);
                 _writers = new[] { result };
                 return result;

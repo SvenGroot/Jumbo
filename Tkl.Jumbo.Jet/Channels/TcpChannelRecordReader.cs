@@ -32,7 +32,7 @@ namespace Tkl.Jumbo.Jet.Channels
 
         public override float Progress
         {
-            get { return _segments.IsCompleted ? 1.0f : 0.0f; }
+            get { return _disposed || _segments.IsCompleted ? 1.0f : 0.0f; }
         }
 
         public void AddSegment(int size, int number, Stream stream)
@@ -40,7 +40,7 @@ namespace Tkl.Jumbo.Jet.Channels
             CheckDisposed();
 
             if( ++_lastSegmentNumber != number )
-                throw new TcpChannelException(string.Format(CultureInfo.CurrentCulture, "Segment received out of order: expected {0}, got {1}.", _lastSegmentNumber, number));
+                throw new ChannelException(string.Format(CultureInfo.CurrentCulture, "Segment received out of order: expected {0}, got {1}.", _lastSegmentNumber, number));
 
             // TODO: Maybe we could use the memory storage for this, with file backing if necessary. Would have to check how that works with the merge record reader though
             // TODO: Maybe we should use async I/O for this
@@ -48,6 +48,7 @@ namespace Tkl.Jumbo.Jet.Channels
             {
                 UnmanagedBufferMemoryStream memoryStream = new UnmanagedBufferMemoryStream(size);
                 stream.CopySize(memoryStream, size);
+                memoryStream.Position = 0;
                 _segments.Add(memoryStream);
             }
         }

@@ -42,6 +42,16 @@ namespace Tkl.Jumbo.Jet
         }
 
         /// <summary>
+        /// Gets the configuration for the TCP channel.
+        /// </summary>
+        /// <value>The <see cref="TcpChannelConfigurationElement"/> for the TCP channel.</value>
+        [ConfigurationProperty("tcpChannel", IsRequired = false, IsKey = false)]
+        public TcpChannelConfigurationElement TcpChannel
+        {
+            get { return (TcpChannelConfigurationElement)this["tcpChannel"]; }
+        }
+
+        /// <summary>
         /// Gets configuration for the merge record reader.
         /// </summary>
         /// <value>A <see cref="MergeRecordReaderConfigurationElement"/> with the configuratin for the merge record reader.</value>

@@ -475,7 +475,7 @@ namespace Tkl.Jumbo.Dfs
             {
                 _lastException = ex;
                 _lastResult = DataServerClientProtocolResult.Error;
-                _packetBuffer.NotifyWrite();
+                _packetBuffer.Cancel();
             }
         }
 

@@ -36,6 +36,7 @@ namespace JobServerApplication
         private readonly string _jobName;
         private readonly JobConfiguration _config;
         private readonly JobSchedulerInfo _schedulerInfo;
+        private readonly int _maxTaskFailures;
 
         private long _endTimeUtcTicks;
         private volatile List<TaskStatus> _failedTaskAttempts;
@@ -50,11 +51,15 @@ namespace JobServerApplication
             _config = config;
 
             _jobName = config.JobName;
+            _maxTaskFailures = JobServer.Instance.Configuration.JobServer.MaxTaskFailures;
 
             List<StageInfo> stages = new List<StageInfo>();
             _stages = stages.AsReadOnly();
             foreach( StageConfiguration stage in config.GetDependencyOrderedStages() )
             {
+                // Don't allow failures for a job with a TCP channel.
+                if( stage.Leaf.OutputChannel != null && stage.Leaf.OutputChannel.ChannelType == Tkl.Jumbo.Jet.Channels.ChannelType.Tcp )
+                    _maxTaskFailures = 1;
                 bool nonInputStage = stage.DfsInput == null;
                 // Don't do the work trying to find the input stages if the stage has dfs inputs.
                 StageConfiguration[] inputStages = nonInputStage ? config.GetInputStagesForStage(stage.StageId).ToArray() : null;
@@ -153,6 +158,11 @@ namespace JobServerApplication
             get { return _stages; }
         }
 
+        public int MaxTaskFailures
+        {
+            get { return _maxTaskFailures; }
+        }
+
         public int SchedulingTaskCount
         {
             get { return _schedulingTasksById.Count; }
@@ -242,7 +252,7 @@ namespace JobServerApplication
         /// Adds a failed task attempt. Doesn't need any locking (because it does its own so that ToJobStatus can be called without locking).
         /// </summary>
         /// <param name="failedTaskAttempt"></param>
-        public void AddFailedTaskAttempt(TaskStatus failedTaskAttempt)
+        public int AddFailedTaskAttempt(TaskStatus failedTaskAttempt)
         {
 #pragma warning disable 420 // volatile field not treated as volatile warning
 
@@ -254,6 +264,7 @@ namespace JobServerApplication
             lock( _failedTaskAttempts )
             {
                 _failedTaskAttempts.Add(failedTaskAttempt);
+                return _failedTaskAttempts.Count;
             }
         }
 

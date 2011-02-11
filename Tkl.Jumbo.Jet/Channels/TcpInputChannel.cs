@@ -36,6 +36,11 @@ namespace Tkl.Jumbo.Jet.Channels
                 _stream.WriteTimeout = 30000;
             }
 
+            public NetworkStream Stream
+            {
+                get { return _stream; }
+            }
+
             public void HandleConnection()
             {
                 try
@@ -61,21 +66,20 @@ namespace Tkl.Jumbo.Jet.Channels
                 {
                     int bytesRead = _stream.EndRead(ar);
                     if( bytesRead != HeaderSize )
-                        throw new TcpChannelException("Bad TCP channel header format.");
+                        throw new ChannelException("Bad TCP channel header format.");
                     else
                     {
                         TcpChannelConnectionFlags flags = (TcpChannelConnectionFlags)_header[0];
                         int sendingTaskNumber = ReadInt32(1);
-                        int segmentSize = ReadInt32(5);
-                        int segmentNumber = ReadInt32(9);
+                        int segmentNumber = ReadInt32(5);
 
                         if( sendingTaskNumber < 1 || sendingTaskNumber > _channel.InputStage.Root.TaskCount )
-                            throw new TcpChannelException("Invalid sending task number.");
+                            throw new ChannelException("Invalid sending task number.");
                         if( flags.HasFlag(TcpChannelConnectionFlags.KeepAlive) )
                             _socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.KeepAlive, true);
 
                         _stream.ReadTimeout = 30000;
-                        _channel.HandleSegment(sendingTaskNumber, segmentSize, segmentNumber, flags.HasFlag(TcpChannelConnectionFlags.FinalSegment), _stream);
+                        _channel.HandleSegment(sendingTaskNumber, segmentNumber, flags.HasFlag(TcpChannelConnectionFlags.FinalSegment), this);
 
                         SendResponse(null); // Send success
 
@@ -93,6 +97,21 @@ namespace Tkl.Jumbo.Jet.Channels
                     CloseOnError(ex);
                     throw; // Transmission failure is a non-recoverable error for a TCP input channel
                 }           
+            }
+
+            public void ReadPartitionHeader(out int partition, out int partitionSize)
+            {
+                int totalBytesRead = 0;
+                do
+                {
+                    int bytesRead = _stream.Read(_header, totalBytesRead, PartitionHeaderSize - totalBytesRead);
+                    if( bytesRead == 0 )
+                        throw new ChannelException("Invalid segment format.");
+                    totalBytesRead += bytesRead;
+                } while( totalBytesRead < PartitionHeaderSize );
+
+                partition = ReadInt32(0);
+                partitionSize = ReadInt32(4);
             }
 
             private int ReadInt32(int index)
@@ -145,12 +164,13 @@ namespace Tkl.Jumbo.Jet.Channels
 
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(TcpInputChannel));
 
-        internal const int HeaderSize = 13; // task number + flags + size
+        internal const int HeaderSize = 9; // task number + flags + segment number
+        internal const int PartitionHeaderSize = 8; // partition number + size
 
         private IMultiInputRecordReader _reader;
         private readonly Type _inputReaderType;
         private TcpListener[] _listeners;
-        private readonly ITcpChannelRecordReader[] _inputReaders;
+        private readonly ITcpChannelRecordReader[][] _inputReaders;
         private volatile bool _running = true;
 
         /// <summary>
@@ -162,7 +182,7 @@ namespace Tkl.Jumbo.Jet.Channels
             : base(taskExecution, inputStage)
         {
             _inputReaderType = typeof(TcpChannelRecordReader<>).MakeGenericType(InputRecordType);
-            _inputReaders = new ITcpChannelRecordReader[inputStage.Root.TaskCount];
+            _inputReaders = new ITcpChannelRecordReader[inputStage.Root.TaskCount][];
         }
 
         /// <summary>
@@ -260,25 +280,41 @@ namespace Tkl.Jumbo.Jet.Channels
             }
         }
 
-        private void HandleSegment(int taskNumber, int segmentSize, int segmentNumber, bool finalSegment, Stream segmentStream)
+        private void HandleSegment(int taskNumber, int segmentNumber, bool finalSegment, TcpChannelConnectionHandler handler)
         {
-            ITcpChannelRecordReader reader;
+            ITcpChannelRecordReader[] readers;
             lock( _inputReaders )
             {
-                reader = _inputReaders[taskNumber];
-                if( reader == null )
+                readers = _inputReaders[taskNumber - 1];
+                if( readers == null )
                 {
-                    reader = (ITcpChannelRecordReader)JetActivator.CreateInstance(_inputReaderType, TaskExecution, TaskExecution.AllowRecordReuse);
-                    _inputReaders[taskNumber] = null;
-                    _reader.AddInput(new RecordInput[] { new RecordInput((IRecordReader)reader, true) });
+                    RecordInput[] inputs = new RecordInput[ActivePartitions.Count];
+                    readers = new ITcpChannelRecordReader[ActivePartitions.Count];
+                    for( int x = 0; x < readers.Length; ++x )
+                    {
+                        ITcpChannelRecordReader reader = (ITcpChannelRecordReader)JetActivator.CreateInstance(_inputReaderType, TaskExecution, TaskExecution.AllowRecordReuse);
+                        readers[x] = reader;
+                        inputs[x] = new RecordInput((IRecordReader)reader, true);
+                    }
+                    _inputReaders[taskNumber - 1] = readers;
+                    _reader.AddInput(inputs);
                 }
             }
 
-            lock( reader )
+            lock( readers )
             {
-                reader.AddSegment(segmentSize, segmentNumber, segmentStream);
-                if( finalSegment )
-                    reader.CompleteAdding();
+                for( int x = 0; x < readers.Length; ++x )
+                {
+                    ITcpChannelRecordReader reader = readers[x];
+                    int partition;
+                    int partitionSize;
+                    handler.ReadPartitionHeader(out partition, out partitionSize);
+                    if( partition != ActivePartitions[x] )
+                        throw new ChannelException(string.Format("Received partition {0}, excepted {1}.", partition, ActivePartitions[x]));
+                    reader.AddSegment(partitionSize, segmentNumber, handler.Stream);
+                    if( finalSegment )
+                        reader.CompleteAdding();
+                }
             }
         }
 

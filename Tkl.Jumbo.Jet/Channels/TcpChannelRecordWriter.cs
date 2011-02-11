@@ -1,4 +1,6 @@
-﻿using System;
+﻿// $Id$
+//
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -6,6 +8,7 @@ using Tkl.Jumbo.IO;
 using System.Net.Sockets;
 using System.Collections.ObjectModel;
 using System.Threading;
+using System.Runtime.Serialization.Formatters.Binary;
 
 namespace Tkl.Jumbo.Jet.Channels
 {
@@ -38,22 +41,35 @@ namespace Tkl.Jumbo.Jet.Channels
         private readonly TaskId[] _outputIds;
         private readonly int _partitions;
         private readonly bool _reuseConnections;
-        private readonly byte[] _header = new byte[TcpInputChannel.HeaderSize];
+        private readonly byte[] _header = new byte[TcpInputChannel.HeaderSize + TcpInputChannel.PartitionHeaderSize];
         private readonly TaskConnectionInfo[] _taskConnections;
         private readonly TaskExecutionUtility _taskExecution;
         private bool _hasFinalSpill;
         private bool _disposed;
+        private long _headerBytesWritten;
 
-        public TcpChannelRecordWriter(ReadOnlyCollection<string> outputIds, TaskExecutionUtility taskExecution, bool reuseConnections, IPartitioner<T> partitioner, int bufferSize, int limit)
+        public TcpChannelRecordWriter(TaskExecutionUtility taskExecution, bool reuseConnections, IPartitioner<T> partitioner, int bufferSize, int limit)
             : base(partitioner, bufferSize, limit)
         {
-            _outputIds = outputIds.Select(t => new TaskId(t)).ToArray();
+            StageConfiguration outputStage = taskExecution.Context.JobConfiguration.GetStage(taskExecution.Context.StageConfiguration.OutputChannel.OutputStage);
+            _outputIds = new TaskId[outputStage.TaskCount]; // We need this to be task based, not partition based.
+            for( int x = 0; x < _outputIds.Length; ++x )
+                _outputIds[x] = new TaskId(outputStage.StageId, x + 1);
             _partitions = partitioner.Partitions;
-            _taskConnections = new TaskConnectionInfo[outputIds.Count];
+            _taskConnections = new TaskConnectionInfo[_outputIds.Length];
             _taskExecution = taskExecution;
+            _reuseConnections = reuseConnections;
             if( reuseConnections )
                 _header[0] = (byte)TcpChannelConnectionFlags.KeepAlive;
-            WriteInt32ToHeader(1, taskExecution.Context.TaskAttemptId.TaskId.TaskNumber);
+            WriteInt32ToHeader(1, taskExecution.RootTask.Context.TaskAttemptId.TaskId.TaskNumber);
+        }
+
+        public override long BytesWritten
+        {
+            get
+            {
+                return base.BytesWritten + Interlocked.Read(ref _headerBytesWritten);
+            }
         }
 
         protected override void SpillOutput(bool finalSpill)
@@ -68,7 +84,7 @@ namespace Tkl.Jumbo.Jet.Channels
             if( !_disposed )
             {
                 _disposed = true;
-                if( !_hasFinalSpill )
+                if( !_hasFinalSpill && !ErrorOccurred )
                 {
                     SendSegments(true, false); // Send empty partitions to all tasks to signify the end of writing
                 }
@@ -83,7 +99,7 @@ namespace Tkl.Jumbo.Jet.Channels
 
         private void SendSegments(bool finalSpill, bool sendData)
         {
-            WriteInt32ToHeader(9, sendData ? SpillCount : (SpillCount + 1));
+            WriteInt32ToHeader(5, sendData ? SpillCount : (SpillCount + 1));
             if( finalSpill )
             {
                 _hasFinalSpill = true;
@@ -111,33 +127,45 @@ namespace Tkl.Jumbo.Jet.Channels
                     _taskConnections[taskIndex].Partitions = partitions;
                 }
 
+                bool sentHeader = false;
+                // Always send all partitions, even if they're empty
                 foreach( int partition in partitions )
                 {
-                    int size = SpillDataSizeForPartition(partition);
-                    // Always send a final spill, even if its empty.
-                    if( finalSpill || size > 0 )
+                    int size = sendData ? SpillDataSizeForPartition(partition - 1) : 0;
+                    if( stream == null )
                     {
-                        if( stream == null )
+                        disposeStream = true;
+                        client = ConnectToTask(taskIndex);
+                        stream = new WriteBufferedStream(client.GetStream());
+                        if( _reuseConnections )
                         {
-                            disposeStream = true;
-                            client = ConnectToTask(taskIndex);
-                            stream = new WriteBufferedStream(client.GetStream());
-                            if( _reuseConnections )
-                            {
-                                _taskConnections[taskIndex].Client = client;
-                                _taskConnections[taskIndex].ClientStream = stream;
-                                disposeStream = false;
-                            }
+                            _taskConnections[taskIndex].Client = client;
+                            _taskConnections[taskIndex].ClientStream = stream;
+                            disposeStream = false;
                         }
-
-                        WriteInt32ToHeader(5, size);
-                        stream.Write(_header, 0, _header.Length);
-                        if( sendData )
-                            WritePartition(partition, stream, null);
-                        stream.Flush();
                     }
-                }
 
+                    WriteInt32ToHeader(TcpInputChannel.HeaderSize, partition);
+                    WriteInt32ToHeader(TcpInputChannel.HeaderSize + 4, size);
+                    if( !sentHeader )
+                    {
+                        // Send header + partition header
+                        stream.Write(_header, 0, _header.Length);
+                        sentHeader = true;
+                        Interlocked.Add(ref _headerBytesWritten, _header.Length);
+                    }
+                    else
+                    {
+                        // Send partition header only
+                        stream.Write(_header, TcpInputChannel.HeaderSize, TcpInputChannel.PartitionHeaderSize);
+                        Interlocked.Add(ref _headerBytesWritten, TcpInputChannel.PartitionHeaderSize);
+                    }
+                    if( sendData && size > 0 )
+                        WritePartition(partition - 1, stream, null);
+
+                }
+                stream.Flush();
+                CheckResult(stream, taskIndex);
             }
             finally
             {
@@ -148,6 +176,19 @@ namespace Tkl.Jumbo.Jet.Channels
                     if( client != null )
                         ((IDisposable)client).Dispose();
                 }
+            }
+        }
+
+        private void CheckResult(WriteBufferedStream stream, int taskIndex)
+        {
+            int result = stream.ReadByte();
+            if( result == - 1 )
+                throw new ChannelException(string.Format("Task {0} did not send a status result.", _outputIds[taskIndex]));
+            else if( result == 0 )
+            {
+                BinaryFormatter formatter = new BinaryFormatter();
+                Exception ex = (Exception)formatter.Deserialize(stream);
+                throw new ChannelException(string.Format("Task {0} encountered an exception reading channel data.", _outputIds[taskIndex]), ex);
             }
         }
 
