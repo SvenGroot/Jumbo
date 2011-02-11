@@ -7,6 +7,7 @@ using System.Text;
 using Tkl.Jumbo.IO;
 using System.Net.Sockets;
 using System.Threading;
+using System.Configuration;
 
 namespace Tkl.Jumbo.Jet.Channels
 {
@@ -17,7 +18,24 @@ namespace Tkl.Jumbo.Jet.Channels
     {
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(TcpOutputChannel));
 
-        private const int _retryDelay = 2000;
+        /// <summary>
+        /// The key in the stage or job settings that can be used to specify the size of the spill buffer. The setting should have the type <see cref="ByteSize"/>,
+        /// and the default value is the value of <see cref="TcpChannelConfigurationElement.SpillBufferSize"/>.
+        /// </summary>
+        public const string SpillBufferSizeSettingKey = "TcpOutputChannel.SpillBufferSize";
+
+        /// <summary>
+        /// The key in the stage or job settings that can be used to specify the size of the spill buffer. The setting should have the type <see cref="Single"/>,
+        /// and the default value is the value of <see cref="TcpChannelConfigurationElement.SpillBufferLimit"/>.
+        /// </summary>
+        public const string SpillBufferLimitSettingKey = "TcpOutputChannel.SpillBufferLimit";
+
+        /// <summary>
+        /// The key in the stage or job settings that can be used to specify whether the connections to the receiving stage tasks are kept open.
+        /// The setting should have the type <see cref="Boolean"/> and the default value is the value of <see cref="TcpChannelConfigurationElement.ReuseConnections"/>.
+        /// </summary>
+        public const string ReuseConnectionsSettingKey = "TcpOutputChannel.ReuseConnections";
+
         private IRecordWriter _writer;
 
         /// <summary>
@@ -40,63 +58,20 @@ namespace Tkl.Jumbo.Jet.Channels
             if( _writer != null )
                 throw new InvalidOperationException("Channel record writer was already created.");
 
-            List<RecordWriter<T>> writers = CreateOutputWriters<T>();
-            RecordWriter<T> writer;
-            if( writers.Count == 1 )
-                writer = writers[0];
-            else
-                writer = CreateMultiRecordWriter(writers);
+            bool reuseConnections = TaskExecution.Context.GetTypedSetting(ReuseConnectionsSettingKey, TaskExecution.JetClient.Configuration.TcpChannel.ReuseConnections);
+            ByteSize spillBufferSize = TaskExecution.Context.GetTypedSetting(SpillBufferSizeSettingKey, TaskExecution.JetClient.Configuration.TcpChannel.SpillBufferSize);
+            float spillBufferLimit = TaskExecution.Context.GetTypedSetting(SpillBufferLimitSettingKey, TaskExecution.JetClient.Configuration.TcpChannel.SpillBufferLimit);
+            if( spillBufferSize.Value < 0 || spillBufferSize.Value > Int32.MaxValue )
+                throw new ConfigurationErrorsException("Invalid output buffer size: " + spillBufferSize.Value);
+            if( spillBufferLimit < 0.1f || spillBufferLimit > 1.0f )
+                throw new ConfigurationErrorsException("Invalid output buffer limit: " + spillBufferLimit);
 
+            IPartitioner<T> partitioner = CreatePartitioner<T>();
+            partitioner.Partitions = OutputPartitionIds.Count;
+            TcpChannelRecordWriter<T> writer = new TcpChannelRecordWriter<T>(TaskExecution, reuseConnections, partitioner, (int)spillBufferSize.Value, (int)(spillBufferSize.Value * spillBufferLimit));
             _writer = writer;
+
             return writer;
-        }
-
-        private List<RecordWriter<T>> CreateOutputWriters<T>()
-        {
-            List<RecordWriter<T>> writers = new List<RecordWriter<T>>(OutputIds.Count);
-
-            foreach( string taskId in OutputIds )
-            {
-                TcpClient client = ConnectToOutput(taskId);
-                writers.Add(new NetworkRecordWriter<T>(client, TaskExecution.Context.TaskId.ToString()));
-            }
-
-            return writers;
-        }
-
-        private TcpClient ConnectToOutput(string taskId)
-        {
-            _log.InfoFormat("Attempting to connect to output task {0}.", taskId);
-
-            ServerAddress taskServer;
-            do
-            {
-                taskServer = TaskExecution.JetClient.JobServer.GetTaskServerForTask(TaskExecution.Context.JobId, taskId);
-                if( taskServer == null )
-                {
-                    _log.DebugFormat("Task {0} is not yet assigned to a server, waiting for retry...", taskId);
-                    Thread.Sleep(_retryDelay);
-                }
-            } while( taskServer == null );
-
-            _log.InfoFormat("Task {0} is running on task server {1}", taskId, taskServer);
-
-            ITaskServerClientProtocol taskServerClient = JetClient.CreateTaskServerClient(taskServer);
-            int port;
-            do
-            {
-                // Since a task failure fails the job with the TCP channel, the attempt number will always be 1.
-                port = taskServerClient.GetTcpChannelPort(TaskExecution.Context.JobId, new TaskAttemptId(new TaskId(taskId), 1));
-                if( port == 0 )
-                {
-                    _log.DebugFormat("Task {0} has not yet registered a port number, waiting for retry...", taskId);
-                    Thread.Sleep(_retryDelay);
-                }
-            } while( port == 0 );
-
-            _log.InfoFormat("Connecting to task {0} at TCP channel server {1}:{2}", taskId, taskServer.HostName, port);
-
-            return new TcpClient(taskServer.HostName, port);
         }
 
         /// <summary>

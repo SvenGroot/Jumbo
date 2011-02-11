@@ -669,8 +669,13 @@ namespace JobServerApplication
                                     failedAttempt.TaskProgress = new TaskProgress();
                                 failedAttempt.TaskProgress.StatusMessage = "Unknown failure reason.";
                             }
-                            job.AddFailedTaskAttempt(failedAttempt);
-                            if( task.Attempts < Configuration.JobServer.MaxTaskAttempts )
+                            if( job.AddFailedTaskAttempt(failedAttempt) >= job.MaxTaskFailures )
+                            {
+                                job.FailureReason = string.Format(CultureInfo.InvariantCulture, "The job experienced the maximum of {0} task failures.", job.MaxTaskFailures);
+                                _log.ErrorFormat("{0} Aborting the job.", job.FailureReason);
+                                job.SchedulerInfo.State = JobState.Failed;
+                            }
+                            else if( task.Attempts < Configuration.JobServer.MaxTaskAttempts )
                             {
                                 // Reschedule
                                 task.Server.SchedulerInfo.UnassignFailedTask(task);
@@ -680,7 +685,7 @@ namespace JobServerApplication
                             else
                             {
                                 job.FailureReason = string.Format(CultureInfo.InvariantCulture, "Task {0} failed more than {1} times.", Job.CreateFullTaskId(data.JobId, data.TaskAttemptId.TaskId), Configuration.JobServer.MaxTaskAttempts);
-                                _log.ErrorFormat("{0}; aborting the job.", job.FailureReason);
+                                _log.ErrorFormat("{0} Aborting the job.", job.FailureReason);
                                 job.SchedulerInfo.State = JobState.Failed;
                             }
                             ++job.SchedulerInfo.Errors;

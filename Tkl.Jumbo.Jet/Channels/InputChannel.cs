@@ -50,10 +50,7 @@ namespace Tkl.Jumbo.Jet.Channels
             switch( inputStage.OutputChannel.Connectivity )
             {
             case ChannelConnectivity.Full:
-                IList<StageConfiguration> stages = taskExecution.Context.JobConfiguration.GetPipelinedStages(inputStage.CompoundStageId);
-                if( stages == null )
-                    throw new ArgumentException(string.Format(System.Globalization.CultureInfo.CurrentCulture, "Input stage ID {0} could not be found.", inputStage.StageId));
-                GetInputTaskIdsFull(stages);
+                GetInputTaskIdsFull();
                 break;
             case ChannelConnectivity.PointToPoint:
                 _inputTaskIds.Add(GetInputTaskIdPointToPoint());
@@ -203,10 +200,10 @@ namespace Tkl.Jumbo.Jet.Channels
             return reader;
         }
 
-        private void GetInputTaskIdsFull(IList<StageConfiguration> stages)
+        private void GetInputTaskIdsFull()
         {
             // We add only the root task IDs, we ignore child tasks.
-            StageConfiguration stage = stages[0];
+            StageConfiguration stage = InputStage.Root;
             for( int x = 1; x <= stage.TaskCount; ++x )
             {
                 TaskId taskId = new TaskId(stage.StageId, x);

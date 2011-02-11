@@ -19,14 +19,16 @@ namespace Tkl.Jumbo.Jet.Channels
         {
             private readonly byte[] _buffer;
             private int _bufferPos;
-            private volatile int _boundary;
-            private readonly AutoResetEvent _boundaryEvent = new AutoResetEvent(false);
+            private int _bufferUsed;
+            private readonly AutoResetEvent _freeBufferEvent = new AutoResetEvent(false);
             private readonly SpillRecordWriter<T> _writer;
+            private readonly WaitHandle[] _bufferEvents;
 
             public CircularBufferStream(SpillRecordWriter<T> writer, int size)
             {
                 _writer = writer;
                 _buffer = new byte[size];
+                _bufferEvents = new WaitHandle[] { _freeBufferEvent, writer._cancelEvent };
             }
 
             public int BufferPos
@@ -44,14 +46,9 @@ namespace Tkl.Jumbo.Jet.Channels
                 get { return _buffer; }
             }
 
-            public int Boundary
+            public int BufferUsed
             {
-                get { return _boundary; }
-                set
-                {
-                    _boundary = value;
-                    _boundaryEvent.Set();
-                }
+                get { return _bufferUsed; }
             }
 
 
@@ -108,17 +105,34 @@ namespace Tkl.Jumbo.Jet.Channels
 
             public override void Write(byte[] buffer, int offset, int count)
             {
-                // If our current writing position is before the boundary, we can simply check if we cross it.
-                // If our current writing position is after the boundary (suggesting that we are also after the current output end) then
-                // we add _buffer.Length to the boundary to make sure we don't cross it after wrapping around.
-                while( _bufferPos < _boundary ? _bufferPos + count >= _boundary : _bufferPos + count >= _boundary + _buffer.Length )
+                int newBufferUsed = Interlocked.Add(ref _bufferUsed, count);
+                while( newBufferUsed > _buffer.Length )
                 {
-                    _log.WarnFormat("Waiting for boundary, buffer pos {0}, boundary {1}", _bufferPos, _boundary);
-                    _writer.StartOutput();
-                    _boundaryEvent.WaitOne();
-                    //_log.WarnFormat("Boundary event signalled, buffer pos {0}, boundary {1}", _bufferPos, _boundary);
+                    _log.WarnFormat("Waiting for buffer space, current buffer pos {0}, buffer used {1}", _bufferPos, newBufferUsed);
+                    _writer.RequestOutputSpill();
+                    // This is only safe for one thread to use write, but record writers and streams are not thread safe, so no problem
+                    // If the cancel event was set while writing, the object was disposed or an error occurred in the spill thread.
+                    if( WaitHandle.WaitAny(_bufferEvents) == 1 )
+                    {
+                        if( _writer._spillException != null )
+                        {
+                            _writer._spillExceptionThrown = true;
+                            throw new ChannelException("An error occurred while spilling records.", _writer._spillException);
+                        }
+                        else
+                            throw new ObjectDisposedException(typeof(SpillRecordWriter<T>).FullName);
+                    }
+                    newBufferUsed = Thread.VolatileRead(ref _bufferUsed);
+                    Debug.Assert(newBufferUsed >= count); // Make sure FreeBuffer doesn't free too much
                 }
                 _bufferPos = CopyCircular(buffer, offset, _buffer, _bufferPos, count);
+            }
+
+            public void FreeBuffer(int size)
+            {
+                Debug.Assert(size <= _bufferUsed);
+                int newSize = Interlocked.Add(ref _bufferUsed, -size);
+                _freeBufferEvent.Set();
             }
 
             private static int CopyCircular(byte[] source, int sourceIndex, byte[] destination, int destinationIndex, int count)
@@ -181,17 +195,22 @@ namespace Tkl.Jumbo.Jet.Channels
         private readonly List<PartitionIndexEntry>[] _indices;
         private int _lastPartition = -1;
         private int _bufferRemaining;
+        private int _lastRecordEnd;
         private long _bytesWritten;
         private readonly int _bufferLimit;
 
-        private readonly PartitionIndexEntry[][] _outputIndices;
-        private readonly object _outputLock = new object();
-        private int _outputStart;
-        private int _outputEnd;
-        private volatile bool _outputInProgress;
-        private Thread _outputThread;
-        private volatile bool _finished;
-        private int _outputSegments;
+        private readonly PartitionIndexEntry[][] _spillIndices;
+        private readonly object _spillLock = new object();
+        private int _spillStart;
+        private int _spillEnd;
+        private volatile bool _spillInProgress;
+        private AutoResetEvent _spillWaitingEvent = new AutoResetEvent(false);
+        private Thread _spillThread;
+        private ManualResetEvent _cancelEvent = new ManualResetEvent(false);
+        private int _spillCount;
+        private Exception _spillException;
+        private bool _spillExceptionThrown;
+        private bool _disposed;
 
         //private StreamWriter _debugWriter;
 
@@ -203,27 +222,29 @@ namespace Tkl.Jumbo.Jet.Channels
             _indices = new List<PartitionIndexEntry>[partitioner.Partitions];
             _bufferRemaining = limit;
             _bufferLimit = limit;
-            _outputIndices = new PartitionIndexEntry[partitioner.Partitions][];
+            _spillIndices = new PartitionIndexEntry[partitioner.Partitions][];
             //_debugWriter = new StreamWriter(outputPath + ".debug.txt");
         }
 
         protected override void WriteRecordInternal(T record)
         {
-            if( _bufferRemaining <= 0 )
+            if( _spillException != null )
             {
-                StartOutput();
+                _spillExceptionThrown = true;
+                throw new ChannelException("An exception occurred spilling the output records.", _spillException);
             }
+
+            if( _bufferRemaining <= 0 )
+                RequestOutputSpill();
 
             int oldBufferPos = _buffer.BufferPos;
 
             // TODO: Make sure the entire record fits in the buffer.
-            if( _valueWriter == null )
-                ((IWritable)record).Write(_bufferWriter);
-            else
-                _valueWriter.Write(record, _bufferWriter);
-
+            ValueWriter<T>.WriteValue(record, _bufferWriter);
 
             int newBufferPos = _buffer.BufferPos;
+            _lastRecordEnd = newBufferPos;
+
             int bytesWritten;
             if( newBufferPos >= oldBufferPos )
                 bytesWritten = newBufferPos - oldBufferPos;
@@ -231,14 +252,6 @@ namespace Tkl.Jumbo.Jet.Channels
                 bytesWritten = (_buffer.Size - oldBufferPos) + newBufferPos;
 
             int partition = _partitioner.GetPartition(record);
-
-            if( oldBufferPos >= _outputStart && oldBufferPos < _outputEnd )
-                Debugger.Break();
-
-            //lock( _debugWriter )
-            //{
-            //    _debugWriter.WriteLine("{0} {1} {2}", partition, record, oldBufferPos);
-            //}
 
             List<PartitionIndexEntry> index = _indices[partition];
             if( partition == _lastPartition )
@@ -257,8 +270,8 @@ namespace Tkl.Jumbo.Jet.Channels
                     _indices[partition] = index;
                 }
                 index.Add(new PartitionIndexEntry(oldBufferPos, bytesWritten));
+                _lastPartition = partition;
             }
-            _lastPartition = partition;
 
             _bufferRemaining -= bytesWritten;
             _bytesWritten += bytesWritten;
@@ -285,14 +298,29 @@ namespace Tkl.Jumbo.Jet.Channels
             get { return _partitioner; }
         }
 
-        protected abstract void SpillOutput();
+        protected int SpillCount
+        {
+            get { return _spillCount; }
+        }
+
+        protected bool ErrorOccurred
+        {
+            get { return _spillException != null; }
+        }
+
+        protected abstract void SpillOutput(bool finalSpill);
+
+        protected int SpillDataSizeForPartition(int partition)
+        {
+            return _spillIndices[partition] == null ? 0 : _spillIndices[partition].Sum(i => i.Size);
+        }
 
         protected void WritePartition(int partition, Stream outputStream, BinaryRecordWriter<PartitionFileIndexEntry> indexWriter)
         {
-            PartitionIndexEntry[] index = _outputIndices[partition];
+            PartitionIndexEntry[] index = _spillIndices[partition];
             if( index != null )
             {
-                long startOffset = outputStream.Position;
+                long startOffset = indexWriter == null ? 0 : outputStream.Position;
                 for( int x = 0; x < index.Length; ++x )
                 {
                     if( index[x].Offset + index[x].Size > _buffer.Size )
@@ -316,106 +344,140 @@ namespace Tkl.Jumbo.Jet.Channels
 
         protected override void Dispose(bool disposing)
         {
-            //_log.Debug("Disposing");
-            // Taking the lock causes it to wait until the current output is finished.
-
-            while( true )
+            if( !_disposed )
             {
-                lock( _outputLock )
+                _disposed = true;
+                lock( _spillLock )
                 {
-                    if( _outputInProgress )
-                        continue;
-                    _finished = true;
-                    if( _outputEnd != _buffer.BufferPos ) // It can never reach that by looping around because the limit would be reached before that point triggering another output.
-                    {
-                        StartOutput();
-                    }
-                    else
-                    {
-                        _outputStart = _outputEnd;
-                        Monitor.Pulse(_outputLock);
-                    }
-                }
-                break;
-            }
+                    while( _spillInProgress )
+                        Monitor.Wait(_spillLock);
 
-
-            if( _outputThread != null )
-                _outputThread.Join();
-
-            base.Dispose(disposing);
-            if( disposing )
-            {
-                ((IDisposable)_bufferWriter).Dispose();
-                _buffer.Dispose();
-            }
-
-        }
-
-        private void StartOutput()
-        {
-            if( !_outputInProgress )
-            {
-                lock( _outputLock )
-                {
-                    for( int x = 0; x < _indices.Length; ++x )
-                    {
-                        List<PartitionIndexEntry> index = _indices[x];
-                        if( index != null && index.Count > 0 )
-                        {
-                            _outputIndices[x] = index.ToArray();
-                            index.Clear();
-                        }
-                        else
-                            _outputIndices[x] = null;
-                    }
-
-                    _lastPartition = -1;
-                    _outputStart = _outputEnd; // _outputEnd contains the place where the last output stopped.
-                    _outputEnd = _buffer.BufferPos; // End at the current buffer position.
-                    _bufferRemaining += _bufferLimit;
-                    _outputInProgress = true;
-                    Monitor.Pulse(_outputLock);
+                    _cancelEvent.Set();
                 }
 
-                if( _outputThread == null )
+                if( _spillException != null && !_spillExceptionThrown )
+                    throw new ChannelException("An exception occurred spilling the output records.", _spillException);
+
+                if( !_spillExceptionThrown && _buffer.BufferUsed > 0 )
                 {
-                    _outputThread = new Thread(OutputThread) { Name = "SpillRecordWriter.OutputThread", IsBackground = true };
-                    _outputThread.Start();
+                    try
+                    {
+                        PrepareForSpill();
+                    }
+                    catch( InvalidOperationException ex )
+                    {
+                        // Thrown if there was actually nothing to spill. This can really only happen if the record writer gets disposed after an exception
+                        // so we don't want to mask that exception
+                        _log.Error("Failed to spill during dispose.", ex);
+                    }
+                    PerformSpill(true);
+                }
+                Debug.Assert(_spillExceptionThrown || _buffer.BufferUsed == 0);
+
+                base.Dispose(disposing);
+                if( disposing )
+                {
+                    ((IDisposable)_bufferWriter).Dispose();
+                    _buffer.Dispose();
                 }
             }
         }
 
-        private void OutputThread()
+        private void RequestOutputSpill()
         {
-            lock( _outputLock )
+            lock( _spillLock )
             {
-                while( true )
+                if( !_spillInProgress )
                 {
-                    if( !_outputInProgress )
-                        Monitor.Wait(_outputLock);
+                    PrepareForSpill();
+                    _spillWaitingEvent.Set();
+                }
 
-                    if( _outputStart != _outputEnd )
-                    {
-                        ++_outputSegments;
-                        _log.DebugFormat("Writing output segment {0}, offset {1} to {2}.", _outputSegments, _outputStart, _outputEnd);
-                        //lock( _debugWriter )
-                        //    _debugWriter.WriteLine("Starting output from {0} to {1}.", _outputStart, _outputEnd);
-                        SpillOutput();
-                        _log.DebugFormat("Finished writing output segment {0}.", _outputSegments);
-
-                        _outputStart = _outputEnd;
-                        _outputInProgress = false;
-                        _buffer.Boundary = _outputEnd;
-                    }
-                    else
-                        _outputInProgress = false;
-
-                    // Check this inside the lock.
-                    if( _finished )
-                        return;
+                if( _spillThread == null )
+                {
+                    _spillThread = new Thread(SpillThread) { Name = "SpillRecordWriter.SpillThread", IsBackground = true };
+                    _spillThread.Start();
                 }
             }
+        }
+
+        private void PrepareForSpill()
+        {
+            bool hasRecords = false;
+            for( int x = 0; x < _indices.Length; ++x )
+            {
+                List<PartitionIndexEntry> index = _indices[x];
+                if( index != null && index.Count > 0 )
+                {
+                    hasRecords = true;
+                    _spillIndices[x] = index.ToArray();
+                    index.Clear();
+                }
+                else
+                    _spillIndices[x] = null;
+            }
+            if( !hasRecords )
+                throw new InvalidOperationException("Spill requested but nothing to spill.");
+
+            _lastPartition = -1;
+            _spillStart = _spillEnd; // _outputEnd contains the place where the last output stopped.
+            _spillEnd = _lastRecordEnd; // End at the last record.
+            int spillSize = _spillEnd - _spillStart;
+            if( spillSize <= 0 )
+                spillSize += _buffer.Size;
+            _bufferRemaining += spillSize;
+            _spillInProgress = true;
+        }
+
+        private void SpillThread()
+        {
+            try
+            {
+                WaitHandle[] handles = new WaitHandle[] { _spillWaitingEvent, _cancelEvent };
+
+                while( WaitHandle.WaitAny(handles) != 1 )
+                {
+                    PerformSpill(false);
+                }
+            }
+            catch( Exception ex )
+            {
+                _spillException = ex;
+                _cancelEvent.Set(); // Make sure the writing thread doesn't get stuck waiting for buffer space to become available.
+            }
+        }
+
+        private void PerformSpill(bool finalSpill)
+        {
+            Debug.Assert(_spillInProgress);
+            int spillSize = 0;
+            try
+            {
+                // We don't need to take the _spillLock for the actuall spill itself, because no one is going to access the relevant variables
+                // until _spillInProgress becomes false again.
+                ++_spillCount;
+                _log.DebugFormat("Writing output segment {0}, offset {1} to {2}.", _spillCount, _spillStart, _spillEnd);
+                //lock( _debugWriter )
+                //    _debugWriter.WriteLine("Starting output from {0} to {1}.", _outputStart, _outputEnd);
+                SpillOutput(finalSpill);
+                _log.DebugFormat("Finished writing output segment {0}.", _spillCount);
+                spillSize = _spillEnd - _spillStart;
+                if( spillSize <= 0 )
+                    spillSize += _buffer.Size;
+            }
+            finally
+            {
+                lock( _spillLock )
+                {
+                    _spillInProgress = false;
+                    Monitor.PulseAll(_spillLock);
+                }
+            }
+            // DO NOT CALL THIS BEFORE SETTING _spillInProgress BACK TO FALSE
+            // There is a race condition that allows the buffer to be filled up again
+            // *before* _spillInProgress becomes false, causing the writing thread to
+            // not start a new spill and then hang waiting for the buffer to free up.
+            _buffer.FreeBuffer(spillSize);
         }
     }
 }

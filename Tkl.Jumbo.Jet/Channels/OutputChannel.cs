@@ -20,7 +20,7 @@ namespace Tkl.Jumbo.Jet.Channels
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Naming", "CA1702:CompoundWordsShouldBeCasedCorrectly", MessageId = "TypeSetting")]
         public const string CompressionTypeSetting = "FileChannel.CompressionType";
 
-        private readonly List<string> _outputIds = new List<string>();
+        private readonly List<string> _outputPartitionIds = new List<string>();
         private ReadOnlyCollection<string> _outputIdsReadOnlyWrapper;
 
         /// <summary>
@@ -47,7 +47,7 @@ namespace Tkl.Jumbo.Jet.Channels
                         int partitionCount = outputStage.TaskCount * channelConfig.PartitionsPerTask;
                         for( int x = 1; x <= partitionCount; ++x )
                         {
-                            _outputIds.Add(TaskId.CreateTaskIdString(channelConfig.OutputStage, x));
+                            _outputPartitionIds.Add(TaskId.CreateTaskIdString(channelConfig.OutputStage, x));
                         }
                     }
                     else
@@ -55,7 +55,7 @@ namespace Tkl.Jumbo.Jet.Channels
                         // This task is a child task in a compound, which means partitioning has already been done. It is assumed the task counts are identical (should've been checked at job creation time)
                         // and this task produces only one file that is meant for the output task with a matching number. If there are multiple input stages for that output task, it is assumed they 
                         // all produce the same partitions.
-                        _outputIds.Add(TaskId.CreateTaskIdString(channelConfig.OutputStage, taskExecution.Context.TaskId.PartitionNumber));
+                        _outputPartitionIds.Add(TaskId.CreateTaskIdString(channelConfig.OutputStage, taskExecution.Context.TaskId.PartitionNumber));
                     }
                 }
             }
@@ -67,7 +67,7 @@ namespace Tkl.Jumbo.Jet.Channels
 
                     int outputTaskNumber = GetOutputTaskNumber();
 
-                    _outputIds.Add(TaskId.CreateTaskIdString(outputStageId, outputTaskNumber));
+                    _outputPartitionIds.Add(TaskId.CreateTaskIdString(outputStageId, outputTaskNumber));
                 }
             }
 
@@ -82,12 +82,13 @@ namespace Tkl.Jumbo.Jet.Channels
         /// <summary>
         /// Gets the IDs of the partitions that this channel writes output to.
         /// </summary>
-        protected ReadOnlyCollection<string> OutputIds
+        /// <value>The output ids.</value>
+        protected ReadOnlyCollection<string> OutputPartitionIds
         {
             get
             {
                 if( _outputIdsReadOnlyWrapper == null )
-                    System.Threading.Interlocked.CompareExchange(ref _outputIdsReadOnlyWrapper, _outputIds.AsReadOnly(), null);
+                    System.Threading.Interlocked.CompareExchange(ref _outputIdsReadOnlyWrapper, _outputPartitionIds.AsReadOnly(), null);
                 return _outputIdsReadOnlyWrapper;
             }
         }

@@ -31,12 +31,15 @@ namespace Tkl.Jumbo.Test.Jet
 
         private TestJetCluster _cluster;
         private const string _fileName = "/jobinput.txt";
+        private const string _sortInput = "/sortinput";
+        private const int _maxTasks = 2;
+        private List<int> _expectedSortResults;
         private int _lines;
 
         [TestFixtureSetUp]
         public void Setup()
         {
-            _cluster = new TestJetCluster(16777216, true, 2, CompressionType.None);
+            _cluster = new TestJetCluster(16777216, true, _maxTasks, CompressionType.None);
             DfsClient dfsClient = new DfsClient(Dfs.TestDfsCluster.CreateClientConfig());
             const int size = 50000000;
             using( DfsOutputStream stream = dfsClient.CreateFile(_fileName) )
@@ -113,6 +116,18 @@ namespace Tkl.Jumbo.Test.Jet
         }
 
         [Test]
+        public void TestJobExecutionTcpChannelSort()
+        {
+            TestJobExecutionSort("/tcpchannelsort", _maxTasks, 1, false, false, ChannelType.Tcp);
+        }
+
+        [Test]
+        public void TestJobExecutionTcpChannelSortMultiplePartitionsPerTask()
+        {
+            TestJobExecutionSort("/tcpchannelsort2", _maxTasks, 3, false, false, ChannelType.Tcp);
+        }
+
+        [Test]
         public void TestJobExecutionEmptyIntermediateData()
         {
             RunJob(false, "/joboutputempty", TaskKind.NoOutput, ChannelType.File);
@@ -127,31 +142,31 @@ namespace Tkl.Jumbo.Test.Jet
         [Test]
         public void TestJobExecutionSort()
         {
-            TestJobExecutionSort("/sortinput1", "/sortoutput1", 1, 1, false, false);
+            TestJobExecutionSort("/sortoutput1", 1, 1, false, false);
         }
 
         [Test]
         public void TestJobExecutionSortMultiplePartitionsPerTask()
         {
-            TestJobExecutionSort("/sortinput2", "/sortoutput2", 2, 3, false, false);
+            TestJobExecutionSort("/sortoutput2", 2, 3, false, false);
         }
 
         [Test]
         public void TestJobExecutionSortMultiplePartitionsPerTaskTcpFileDownload()
         {
-            TestJobExecutionSort("/sortinput3", "/sortoutput3", 2, 3, true, false);
+            TestJobExecutionSort("/sortoutput3", 2, 3, true, false);
         }
 
         [Test]
         public void TestJobExecutionSortSingleFileOutput()
         {
-            TestJobExecutionSort("/sortinput4", "/sortoutput4", 2, 1, false, true);
+            TestJobExecutionSort("/sortoutput4", 2, 1, false, true);
         }
 
         [Test]
         public void TestJobExecutionSortSingleFileOutputTcpFileDownload()
         {
-            TestJobExecutionSort("/sortinput5", "/sortoutput5", 2, 1, true, true);
+            TestJobExecutionSort("/sortoutput5", 2, 1, true, true);
         }
 
         [Test]
@@ -455,17 +470,20 @@ namespace Tkl.Jumbo.Test.Jet
             ValidateLineCountOutput(outputPath2, dfsClient, _lines);
         }
 
-        private void TestJobExecutionSort(string inputFileName, string outputPath, int mergeTasks, int partitionsPerTask, bool forceFileDownload, bool singleFileOutput)
+        private void TestJobExecutionSort(string outputPath, int mergeTasks, int partitionsPerTask, bool forceFileDownload, bool singleFileOutput, ChannelType channelType = ChannelType.File)
         {
             const int recordCount = 2500000;
             DfsClient dfsClient = new DfsClient(Dfs.TestDfsCluster.CreateClientConfig());
             dfsClient.NameServer.CreateDirectory(outputPath);
 
-            List<int> expected = CreateNumberListInputFile(recordCount, inputFileName, dfsClient);
-            expected.Sort();
+            if( _expectedSortResults == null )
+            {
+                _expectedSortResults = CreateNumberListInputFile(recordCount, _sortInput, dfsClient);
+                _expectedSortResults.Sort();
+            }
 
             JobConfiguration config = new JobConfiguration(typeof(StringConversionTask).Assembly);
-            StageConfiguration conversionStage = config.AddInputStage("ConversionStage", dfsClient.NameServer.GetFileInfo(inputFileName), typeof(StringConversionTask), typeof(LineRecordReader));
+            StageConfiguration conversionStage = config.AddInputStage("ConversionStage", dfsClient.NameServer.GetFileInfo(_sortInput), typeof(StringConversionTask), typeof(LineRecordReader));
             int taskCount = mergeTasks * partitionsPerTask;
             StageConfiguration sortStage = config.AddStage("SortStage", typeof(SortTask<int>), taskCount, new InputStageInfo(conversionStage) { ChannelType = ChannelType.Pipeline }, null, null);
             if( singleFileOutput )
@@ -473,12 +491,14 @@ namespace Tkl.Jumbo.Test.Jet
                 sortStage.AddTypedSetting(FileOutputChannel.SingleFileOutputSettingKey, true);
                 sortStage.AddTypedSetting(FileOutputChannel.SingleFileOutputBufferSizeSettingKey, "1MB");
             }
-            config.AddStage("MergeStage", typeof(EmptyTask<int>), mergeTasks, new InputStageInfo(sortStage) { MultiInputRecordReaderType = typeof(MergeRecordReader<int>), PartitionsPerTask = partitionsPerTask }, outputPath, typeof(BinaryRecordWriter<int>));
+            else if( channelType == ChannelType.Tcp )
+                sortStage.AddTypedSetting(TcpOutputChannel.SpillBufferSizeSettingKey, "1MB");
+            config.AddStage("MergeStage", typeof(EmptyTask<int>), mergeTasks, new InputStageInfo(sortStage) { MultiInputRecordReaderType = typeof(MergeRecordReader<int>), PartitionsPerTask = partitionsPerTask, ChannelType = channelType }, outputPath, typeof(BinaryRecordWriter<int>));
             sortStage.OutputChannel.ForceFileDownload = forceFileDownload;
 
             RunJob(dfsClient, config);
 
-            CheckOutput(dfsClient, expected, outputPath);
+            CheckOutput(dfsClient, _expectedSortResults, outputPath);
         }
 
         private static void CheckOutput(DfsClient dfsClient, IList<int> expected, string outputPath)
