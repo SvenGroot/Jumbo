@@ -15,13 +15,29 @@ namespace Tkl.Jumbo.IO
     public abstract class RecordReader<T> : IRecordReader, IDisposable
     {
         private int _recordsRead;
-        private bool _hasRecords = true;
+        private bool _hasRecords;
+        private bool _hasFinished;
+
+        /// <summary>
+        /// Occurs when the value of the <see cref="HasRecords"/> property changes.
+        /// </summary>
+        public event EventHandler HasRecordsChanged;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="RecordReader{T}"/> class.
         /// </summary>
         protected RecordReader()
+            : this(true)
         {
+        }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="RecordReader{T}"/> class.
+        /// </summary>
+        /// <param name="initialHasRecords">The initial value of the <see cref="HasRecords"/> property.</param>
+        protected RecordReader(bool initialHasRecords)
+        {
+            _hasRecords = initialHasRecords;
         }
 
         /// <summary>
@@ -77,15 +93,58 @@ namespace Tkl.Jumbo.IO
         /// <summary>
         /// Gets a value that indicates whether there are records available on the data source that this reader is reading from.
         /// </summary>
+        /// <value>
+        /// 	<see langword="true"/> if this instance has records available and is not waiting for input; otherwise, <see langword="false"/>.
+        /// </value>
         /// <remarks>
         /// <para>
-        ///   This is a default implementation for <see cref="IRecordReader.RecordsAvailable"/> that simply always returns <see langword="true"/> until
+        ///   The <see cref="HasRecords"/> property indicates if the record reader is waiting for an external source to provide it
+        ///   with data, or has data available from which it can read records immediately. If this property
+        ///   is <see langword="true"/>, it indicates that the <see cref="ReadRecord"/> method will not
+        ///   block waiting for an external event (it may, however, still block waiting for IO).
+        /// </para>
+        /// <para>
+        ///   For example, a multi-input record reader may use the <see cref="HasRecords"/> property to indicate whether any inputs
+        ///   have been added yet. If this multi-input record reader is reading from a file channel, this could
+        ///   be used to determine if the reader is waiting for data to be shuffled or if it is available now.
+        /// </para>
+        /// <para>
+        ///   If the <see cref="HasRecords"/> property is <see langword="false"/>, it is still safe to call <see cref="ReadRecord"/>,
+        ///   there is just no guarantee that the call will return immediately.
+        /// </para>
+        /// <para>
+        ///   If the <see cref="HasRecords"/> property is <see langword="false"/> and <see cref="HasFinished"/> is <see langword="false"/>,
+        ///   then the <see cref="HasRecords"/> property must become <see langword="true"/> at some point, provided there are no error
+        ///   conditions.
+        /// </para>
+        /// <para>
+        ///   If the <see cref="HasRecords"/> property is <see langword="true"/>, the next call to <see cref="ReadRecord"/> can
+        ///   still return <see langword="false"/>. After <see cref="ReadRecord"/> has returned <see langword="false"/>, the
+        ///   <see cref="HasRecords"/> property will also be <see langword="false"/>
+        /// </para>
+        /// <para>
+        ///   When the <see cref="HasRecords"/> property changes, the <see cref="HasRecordsChanged"/> event will be raised.
+        /// </para>
+        /// <para>
+        ///   For multi-input record readers, this property applies only to the current partition; if the current partition
+        ///   changes, the value of the <see cref="HasRecords"/> property should be reset.
+        /// </para>
+        /// <para>
+        ///   This is a default implementation for <see cref="IRecordReader.HasRecords"/> that simply always returns <see langword="true"/> until
         ///   a call to <see cref="ReadRecord"/> has returned <see langword="false"/>.
         /// </para>
         /// </remarks>
-        public virtual bool RecordsAvailable
+        public bool HasRecords
         {
-            get { return _hasRecords; }
+            get { return !_hasFinished && _hasRecords; }
+            protected set
+            {
+                if( _hasRecords != value )
+                {
+                    _hasRecords = value;
+                    OnHasRecordsChanged(EventArgs.Empty);
+                }
+            }
         }
 
         /// <summary>
@@ -96,7 +155,7 @@ namespace Tkl.Jumbo.IO
         /// </value>
         public bool HasFinished
         {
-            get { return !_hasRecords; }  // _hasRecords caches the result of the last ReadRecordInternal call, so we can use it for this.
+            get { return _hasFinished; }  // _hasRecords caches the result of the last ReadRecordInternal call, so we can use it for this.
         }
 
         /// <summary>
@@ -105,10 +164,20 @@ namespace Tkl.Jumbo.IO
         /// <returns><see langword="true"/> if an object was successfully read; <see langword="false"/> if there are no more records.</returns>
         public bool ReadRecord()
         {
-            _hasRecords = ReadRecordInternal();
-            if( _hasRecords )
+            if( ReadRecordInternal() )
+            {
                 ++_recordsRead;
-            return _hasRecords;
+                return true;
+            }
+            else
+            {
+                if( !_hasFinished )
+                {
+                    _hasFinished = true;
+                    OnHasRecordsChanged(EventArgs.Empty);
+                }
+                return false;
+            }
         }
 
         /// <summary>
@@ -128,6 +197,17 @@ namespace Tkl.Jumbo.IO
         /// </summary>
         /// <returns><see langword="true"/> if an object was successfully read; <see langword="false"/> if there are no more records.</returns>
         protected abstract bool ReadRecordInternal();
+
+        /// <summary>
+        /// Raises the <see cref="E:HasRecordsChanged"/> event.
+        /// </summary>
+        /// <param name="e">The <see cref="System.EventArgs"/> instance containing the event data.</param>
+        protected virtual void OnHasRecordsChanged(EventArgs e)
+        {
+            EventHandler handler = HasRecordsChanged;
+            if( handler != null )
+                handler(this, e);
+        }
 
         /// <summary>
         /// Cleans up all resources associated with this <see cref="RecordReader{T}"/>.

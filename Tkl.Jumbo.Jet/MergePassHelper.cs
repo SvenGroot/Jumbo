@@ -71,6 +71,9 @@ namespace Tkl.Jumbo.Jet
         // To access either _memoryInputs or _fileInputs, lock _fileInputs only.
         private readonly List<RecordInput> _memoryInputs = new List<RecordInput>();
         private readonly List<RecordInput> _fileInputs = new List<RecordInput>();
+        private EventHandler _hasRecordsChangedHandler;
+
+        public event EventHandler HasRecordsChanged;
 
         public MergePassHelper(MergeRecordReader<T> reader, int partition, IComparer<T> comparer, bool noMemoryInputsInFinalPass)
         {
@@ -95,6 +98,17 @@ namespace Tkl.Jumbo.Jet
                 {
                     return _finalPassRecordReaders.Average(r => r.Progress);
                 }
+            }
+        }
+
+        public bool HasRecords
+        {
+            get 
+            {
+                if( _currentReader == null )
+                    return _memoryInputs.All(i => i.HasRecords) && _fileInputs.All(i => i.HasRecords);
+                else
+                    return _currentReader.HasRecords; // This is the next one that we'll call ReadRecord on next.
             }
         }
 
@@ -204,6 +218,20 @@ namespace Tkl.Jumbo.Jet
                     if( !finalPass )
                     {
                         _log.InfoFormat("Partition {0} is ready for the final pass.", _partition);
+                        if( _hasRecordsChangedHandler == null )
+                        {
+                            _hasRecordsChangedHandler = new EventHandler(RecordReader_HasRecordsChanged);
+                            foreach( RecordInput input in _memoryInputs )
+                            {
+                                if( input.IsReaderCreated ) // If that's false, HasRecords will never change for the reader once its created so no need to attach the event handler
+                                    input.Reader.HasRecordsChanged += _hasRecordsChangedHandler;
+                            }
+                            foreach( RecordInput input in _fileInputs )
+                            {
+                                if( input.IsReaderCreated ) // If that's false, HasRecords will never change for the reader once its created so no need to attach the event handler
+                                    input.Reader.HasRecordsChanged += _hasRecordsChangedHandler;
+                            }
+                        }
                         return MergePassResult.ReadyForFinalPass;
                     }
                 }
@@ -271,6 +299,18 @@ namespace Tkl.Jumbo.Jet
                 }
             }
             return result;
+        }
+
+        private void RecordReader_HasRecordsChanged(object sender, EventArgs e)
+        {
+            OnHasRecordsChanged(EventArgs.Empty);
+        }
+
+        private void OnHasRecordsChanged(EventArgs e)
+        {
+            EventHandler handler = HasRecordsChanged;
+            if( handler != null )
+                handler(this, e);
         }
     }
 }

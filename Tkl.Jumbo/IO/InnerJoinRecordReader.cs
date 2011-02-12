@@ -31,8 +31,7 @@ namespace Tkl.Jumbo.IO
         private TOuter _tempOuterObject;
         private readonly List<TInner> _tempInnerList = new List<TInner>();
         private int _tempInnerListIndex;
-        private bool _innerHasRecords;
-        private bool _outerHasRecords;
+        private bool _started;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="InnerJoinRecordReader{TOuter, TInner, TResult}"/> class.
@@ -57,21 +56,20 @@ namespace Tkl.Jumbo.IO
         /// <returns><see langword="true"/> if an object was successfully read from the stream; <see langword="false"/> if the end of the stream or stream fragment was reached.</returns>
         protected sealed override bool ReadRecordInternal()
         {
-            if( _outer == null )
+            if( !_started )
             {
                 WaitForInputs(2, Timeout.Infinite);
-                _outer = (RecordReader<TOuter>)GetInputReader(0);
-                _inner = (RecordReader<TInner>)GetInputReader(1);
 
-                _outerHasRecords = _outer.ReadRecord();
-                _innerHasRecords = _inner.ReadRecord();
+                _outer.ReadRecord();
+                _inner.ReadRecord();
+                _started = true;
             }
 
             TOuter outer;
 
             while( _tempOuterObject == null )
             {
-                if( !(_outerHasRecords && _innerHasRecords) )
+                if( _outer.HasFinished || _inner.HasFinished )
                 {
                     CurrentRecord = default(TResult);
                     return false;
@@ -82,16 +80,16 @@ namespace Tkl.Jumbo.IO
 
                 int compareResult = Compare(outer, inner);
                 if( compareResult < 0 )
-                    _outerHasRecords = _outer.ReadRecord();
+                    _outer.ReadRecord();
                 else if( compareResult > 0 )
-                    _innerHasRecords = _inner.ReadRecord();
+                    _inner.ReadRecord();
                 else
                 {
                     if( AllowRecordReuse )
                         _tempOuterObject = (TOuter)((ICloneable)outer).Clone();
                     else
                         _tempOuterObject = outer;
-                    if( _outerHasRecords = _outer.ReadRecord() )
+                    if( _outer.ReadRecord() )
                     {
                         TOuter nextOuter = _outer.CurrentRecord;
                         if( Compare(nextOuter, inner) == 0 )
@@ -104,10 +102,9 @@ namespace Tkl.Jumbo.IO
                                     _tempInnerList.Add((TInner)((ICloneable)inner).Clone());
                                 else
                                     _tempInnerList.Add(inner);
-                                _innerHasRecords = _inner.ReadRecord();
-                                if( _innerHasRecords )
+                                if( _inner.ReadRecord() )
                                     inner = _inner.CurrentRecord;
-                            } while( _innerHasRecords && Compare(outer, inner) == 0 );
+                            } while( !_inner.HasFinished && Compare(outer, inner) == 0 );
                         }
                     }
                 }
@@ -123,13 +120,13 @@ namespace Tkl.Jumbo.IO
                 if( _tempInnerList.Count == _tempInnerListIndex )
                 {
                     _tempInnerListIndex = 0;
-                    if( _outerHasRecords && Compare(_outer.CurrentRecord, _tempInnerList[0]) == 0 )
+                    if( !_outer.HasFinished && Compare(_outer.CurrentRecord, _tempInnerList[0]) == 0 )
                     {
                         if( AllowRecordReuse )
                             _tempOuterObject = (TOuter)((ICloneable)_outer.CurrentRecord).Clone();
                         else
                             _tempOuterObject = _outer.CurrentRecord;
-                        _outerHasRecords = _outer.ReadRecord();
+                        _outer.ReadRecord();
                     }
                     else
                     {
@@ -141,13 +138,48 @@ namespace Tkl.Jumbo.IO
             else
             {
                 CreateJoinResult(CurrentRecord, _tempOuterObject, _inner.CurrentRecord);
-                _innerHasRecords = _inner.ReadRecord();
-                if( !(_innerHasRecords && Compare(_tempOuterObject, _inner.CurrentRecord) == 0) )
+                if( !(_inner.ReadRecord() && Compare(_tempOuterObject, _inner.CurrentRecord) == 0) )
                 {
                     _tempOuterObject = null;
                 }
             }
             return true;
+        }
+
+        /// <summary>
+        /// Adds the specified input to be read by this record reader.
+        /// </summary>
+        /// <param name="partitions">The partitions for this input, in the same order as the partition list provided to the constructor.</param>
+        /// <remarks>
+        /// <para>
+        ///   Which partitions a multi input record reader is responsible for is specified when that reader is created or
+        ///   when <see cref="AssignAdditionalPartitions"/> is called. All calls to <see cref="AddInput"/> must specify those
+        ///   exact same partitions, in the same order.
+        /// </para>
+        /// <para>
+        ///   If you override this method, you must call the base class implementation.
+        /// </para>
+        /// </remarks>
+        public override void AddInput(IList<RecordInput> partitions)
+        {
+            IRecordReader reader = partitions[0].Reader;
+            switch( CurrentInputCount )
+            {
+            case 0:
+                _outer = (RecordReader<TOuter>)reader;
+                break;
+            case 1:
+                _inner = (RecordReader<TInner>)reader;
+                _outer.HasRecordsChanged += new EventHandler(RecordReader_HasRecordsChanged);
+                _inner.HasRecordsChanged += new EventHandler(RecordReader_HasRecordsChanged);
+                HasRecords = _outer.HasRecords && _inner.HasRecords;
+                break;
+            default:
+                throw new InvalidOperationException();
+            }
+
+            // Call this last so that ReadRecordInternal doesn't get signalled before _outer and _inner are assigned.
+            base.AddInput(partitions);
         }
 
         /// <summary>
@@ -186,5 +218,12 @@ namespace Tkl.Jumbo.IO
         /// </para>
         /// </remarks>
         protected abstract void CreateJoinResult(TResult result, TOuter outer, TInner inner);
+
+        private void RecordReader_HasRecordsChanged(object sender, EventArgs e)
+        {
+            // Although ReadRecord may not need to wait even if one of them is false (because it's in the middle of computing a cross product)
+            // that's too difficult to guarantee so we just check both of them.
+            HasRecords = _outer.HasRecords && _inner.HasRecords;
+        }    
     }
 }

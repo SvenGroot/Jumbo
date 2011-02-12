@@ -19,6 +19,7 @@ namespace Tkl.Jumbo.IO
         private RecordReader<T> _currentReader;
         private int _currentReaderNumber;
         private readonly Stopwatch _timeWaitingStopwatch = new Stopwatch();
+        private EventHandler _hasRecordsChangedHandler;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="MultiRecordReader{T}"/> class.
@@ -56,6 +57,7 @@ namespace Tkl.Jumbo.IO
 
             while( !_currentReader.ReadRecord() )
             {
+                _currentReader.HasRecordsChanged -= _hasRecordsChangedHandler;
                 _currentReader.Dispose();
                 _currentReader = null;
                 if( !WaitForReaders() )
@@ -74,7 +76,11 @@ namespace Tkl.Jumbo.IO
         /// <param name="e">The <see cref="System.EventArgs"/> instance containing the event data.</param>
         protected override void OnCurrentPartitionChanged(EventArgs e)
         {
-            _currentReader = null;
+            if( _currentReader != null )
+            {
+                _currentReader.HasRecordsChanged -= _hasRecordsChangedHandler;
+                _currentReader = null;
+            }
             _currentReaderNumber = 0;
             base.OnCurrentPartitionChanged(e);
         }
@@ -93,8 +99,29 @@ namespace Tkl.Jumbo.IO
 
                 _currentReader = (RecordReader<T>)GetInputReader(_currentReaderNumber);
                 _currentReaderNumber = newReaderNumber;
+                if( _hasRecordsChangedHandler == null )
+                    _hasRecordsChangedHandler = new EventHandler(_currentReader_HasRecordsChanged);
+                _currentReader.HasRecordsChanged += _hasRecordsChangedHandler;
+                HasRecords = _currentReader.HasRecords;
             }
             return true;
+        }
+
+        public override void AddInput(IList<RecordInput> partitions)
+        {
+            base.AddInput(partitions);
+
+            // HACK: Need a different way of handling the events to be able to accurately watch for record availability.
+            if( CurrentInputCount == 1 )
+                HasRecords = true;
+        }
+
+        void _currentReader_HasRecordsChanged(object sender, EventArgs e)
+        {
+            // If the reader has finished, HasRecords will be updated by WaitForReaders (or if we're out of readers, by the RecordReader<T> itself).
+            if( !_currentReader.HasFinished )
+                HasRecords = _currentReader.HasRecords;
+            // HACK: This implementation is a bit flimsy, as ReadRecord can still block if we reach the end of the current record reader and the next one isn't available yet.
         }
     }
 }

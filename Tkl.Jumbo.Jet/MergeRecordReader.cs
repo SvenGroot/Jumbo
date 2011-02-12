@@ -41,8 +41,10 @@ namespace Tkl.Jumbo.Jet
         private volatile bool _needMergePass;
         private volatile bool _mergePassInProgress;
         private readonly object _mergePassLock = new object();
+        private readonly object _finalPassLock = new object();
         private volatile bool _disposed;
         private bool _purgeMemoryBeforeFinalPass;
+        private EventHandler _hasRecordsChangedHandler;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="MergeRecordReader{T}"/> class.
@@ -189,23 +191,10 @@ namespace Tkl.Jumbo.Jet
         {
             CheckDisposed();
 
-            if( _finalPassMergers == null )
+            if( _currentFinalPassMerger == null )
                 _finalPassEvent.WaitOne();
 
-            if( _currentFinalPassMerger == null )
-            {
-                bool needWait;
-                do
-                {
-                    lock( _finalPassMergers )
-                    {
-                        needWait = !_finalPassMergers.TryGetValue(CurrentPartition, out _currentFinalPassMerger);
-                    }
-
-                    if( needWait )
-                        _finalPassEvent.WaitOne();
-                } while( needWait );
-            }
+            Debug.Assert(_currentFinalPassMerger != null);
 
             T record;
             bool result = _currentFinalPassMerger.ReadFinalPassRecord(out record);
@@ -219,7 +208,19 @@ namespace Tkl.Jumbo.Jet
         /// <param name="e"></param>
         protected override void OnCurrentPartitionChanged(EventArgs e)
         {
-            _currentFinalPassMerger = null;
+            lock( _finalPassLock )
+            {
+                if( _currentFinalPassMerger != null )
+                {
+                    _currentFinalPassMerger.HasRecordsChanged -= _hasRecordsChangedHandler;
+                    _currentFinalPassMerger = null;
+                }
+                if( _finalPassMergers != null && _finalPassMergers.TryGetValue(CurrentPartition, out _currentFinalPassMerger) )
+                {
+                    _currentFinalPassMerger.HasRecordsChanged += _hasRecordsChangedHandler;
+                    HasRecords = _currentFinalPassMerger.HasRecords;
+                }
+            }
             base.OnCurrentPartitionChanged(e);
         }
 
@@ -293,17 +294,24 @@ namespace Tkl.Jumbo.Jet
             else
             {
                 _log.Info("All partitions are ready for the final pass.");
-                if( _finalPassMergers == null )
-                    _finalPassMergers = new Dictionary<int, MergePassHelper<T>>();
-                lock( _finalPassMergers )
+                lock( _finalPassLock )
                 {
+                    if( _finalPassMergers == null )
+                        _finalPassMergers = new Dictionary<int, MergePassHelper<T>>();
                     foreach( MergePassHelper<T> merger in _partitionMergers )
                     {
                         _finalPassMergers.Add(merger.PartitionNumber, merger);
                     }
+                    if( _currentFinalPassMerger == null )
+                    {
+                        _currentFinalPassMerger = _finalPassMergers[CurrentPartition];
+                        _currentFinalPassMerger.HasRecordsChanged += _hasRecordsChangedHandler;
+                        HasRecords = _currentFinalPassMerger.HasRecords;
+                    }
                 }
                 _partitionMergers = null;
                 _finalPassEvent.Set();
+                _hasRecordsChangedHandler = new EventHandler(MergePassHelper_HasRecordsChanged);
             }
         }
 
@@ -356,8 +364,6 @@ namespace Tkl.Jumbo.Jet
 
             return result;
         }
-
-        #region IConfigurable Members
 
         /// <summary>
         /// Gets or sets the configuration used to access the Distributed File System.
@@ -422,16 +428,15 @@ namespace Tkl.Jumbo.Jet
             _mergeThread.Start();
         }
 
-        #endregion
-
-        #region IChannelMultiInputRecordReader Members
-
         /// <summary>
         /// Gets or sets the input channel that this reader is reading from.
         /// </summary>
         /// <value>The channel.</value>
         public IInputChannel Channel { get; set; }
 
-        #endregion
+        private void MergePassHelper_HasRecordsChanged(object sender, EventArgs e)
+        {
+            HasRecords = ((MergePassHelper<T>)sender).HasRecords;
+        }
     }
 }

@@ -34,7 +34,7 @@ namespace Tkl.Jumbo.IO
         /// <summary>
         /// Initializes a new instance of the <see cref="RecordInput"/> class with the specified input file.
         /// </summary>
-        /// <param name="recordReaderType">The type of the record reader to be created to read the input file. This type be derived from <see cref="RecordReader{T}"/> and have a constructor with the same 
+        /// <param name="recordReaderType">The type of the record reader to be created to read the input file. This type must be derived from <see cref="RecordReader{T}"/> and have a constructor with the same 
         /// parameters as <see cref="BinaryRecordReader{T}(string,bool,bool,int,Tkl.Jumbo.CompressionType,long)"/>.</param>
         /// <param name="fileName">The file to read.</param>
         /// <param name="sourceName">A name used to identify the source of this input. Can be <see langword="null"/>.</param>
@@ -91,6 +91,27 @@ namespace Tkl.Jumbo.IO
             }
         }
 
+        /// <summary>
+        /// Gets a value indicating whether this instance has records available.
+        /// </summary>
+        /// <value>
+        /// 	<see langword="true"/> if the <see cref="RecordReader{T}.HasRecords"/> property is <see langword="true"/>; otherwise, <see langword="false"/>.
+        /// </value>
+        /// <remarks>
+        /// <para>
+        ///   This property can be accessed without creatig the record reader if it had not yet been created.
+        /// </para>
+        /// </remarks>
+        public bool HasRecords
+        {
+            get
+            {
+                // We treat inputs whose reader hasn't yet been created as if RecordsAvailable is true, as they are read from a file
+                // so their readers would always return true anyway.
+                return _reader == null || _reader.HasRecords;
+            }
+        }
+
         internal float Progress
         {
             get
@@ -108,7 +129,20 @@ namespace Tkl.Jumbo.IO
 
         internal IMultiInputRecordReader Input { get; set; }
 
-        internal bool IsReaderCreated
+        /// <summary>
+        /// Gets a value indicating whether the record reader has been created.
+        /// </summary>
+        /// <value>
+        /// 	<see langword="true"/> if the record reader has been created; otherwise, <see langword="false"/>.
+        /// </value>
+        /// <remarks>
+        /// <para>
+        ///   If this value is <see langword="false"/>, it means that the <see cref="Reader"/> property will
+        ///   create a file-based record reader when accessed, which is guaranteed never to return <see langword="false"/>
+        ///   for the <see cref="RecordReader{T}.HasRecords"/> property.
+        /// </para>
+        /// </remarks>
+        public bool IsReaderCreated
         {
             get
             {

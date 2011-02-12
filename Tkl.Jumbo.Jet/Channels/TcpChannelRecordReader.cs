@@ -50,6 +50,7 @@ namespace Tkl.Jumbo.Jet.Channels
                 stream.CopySize(memoryStream, size);
                 memoryStream.Position = 0;
                 _segments.Add(memoryStream);
+                HasRecords = true;
             }
         }
 
@@ -90,17 +91,10 @@ namespace Tkl.Jumbo.Jet.Channels
             {
                 _currentSegment.Dispose();
                 _currentSegment = null;
+                HasRecords = _segments.Count > 0;
             }
 
             return true;
-        }
-
-        public override bool RecordsAvailable
-        {
-            get
-            {
-                return _currentSegment != null || _segments.Count > 0;
-            }
         }
 
         protected override void Dispose(bool disposing)

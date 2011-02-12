@@ -36,6 +36,7 @@ namespace Tkl.Jumbo.Jet
         /// <param name="taskExecution">The task execution utility for this task. May be <see langword="null"/>.</param>
         /// <param name="baseReader">The <see cref="MultiInputRecordReader{T}"/> to read from.</param>
         public MultiPartitionRecordReader(TaskExecutionUtility taskExecution, MultiInputRecordReader<T> baseReader)
+            : base(false)
         {
             if( baseReader == null )
                 throw new ArgumentNullException("baseReader");
@@ -43,8 +44,10 @@ namespace Tkl.Jumbo.Jet
             _taskExecution = taskExecution;
             _baseReader = baseReader;
             _baseReader.CurrentPartitionChanging += new EventHandler<CurrentPartitionChangingEventArgs>(_baseReader_CurrentPartitionChanging);
+            _baseReader.HasRecordsChanged += new EventHandler(_baseReader_HasRecordsChanged);
             _log.InfoFormat("Now processing partition {0}.", _baseReader.CurrentPartition);
             AllowAdditionalPartitions = true;
+            HasRecords = baseReader.HasRecords;
         }
 
         /// <summary>
@@ -150,5 +153,9 @@ namespace Tkl.Jumbo.Jet
                 e.Cancel = !_taskExecution.NotifyStartPartitionProcessing(e.NewPartitionNumber);
         }
     
+        private void _baseReader_HasRecordsChanged(object sender, EventArgs e)
+        {
+            HasRecords = _baseReader.HasRecords;
+        }
     }
 }

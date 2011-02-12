@@ -23,6 +23,10 @@ namespace Tkl.Jumbo.IO
     /// <para>
     ///   If you accept inputs of types other than <typeparamref name="T"/>, you must specify that using the <see cref="InputTypeAttribute"/>.
     /// </para>
+    /// <para>
+    ///   The initial value of <see cref="RecordReader{T}.HasRecords"/> will be <see langword="false"/>. It is up to the deriving class
+    ///   to set it to <see langword="true"/> when appropriate.
+    /// </para>
     /// <note>
     ///   While the <see cref="AddInput"/>, <see cref="WaitForInputs"/> 
     ///   and <see cref="GetInputReader(int)"/> methods are thread safe, no other methods of this class are guaranteed to be thread
@@ -163,6 +167,7 @@ namespace Tkl.Jumbo.IO
         /// <param name="bufferSize">The buffer size to use to read input files.</param>
         /// <param name="compressionType">The compression type to us to read input files.</param>
         protected MultiInputRecordReader(IEnumerable<int> partitions, int totalInputCount, bool allowRecordReuse, int bufferSize, CompressionType compressionType)
+            : base(false)
         {
             if( partitions == null )
                 throw new ArgumentNullException("partitions");
@@ -263,23 +268,6 @@ namespace Tkl.Jumbo.IO
                 }
             }
         }
-
-        /// <summary>
-        /// Gets a value that indicates if any reader for the current partition has data available.
-        /// </summary>
-        public override bool RecordsAvailable
-        {
-            get
-            {
-                lock( _partitions )
-                {
-                    // We treat inputs whose reader hasn't yet been created as if RecordsAvailable is true, as they are read from a file
-                    // so their readers would always return true anyway.
-                    return _partitions.Exists(p => p.Exists(i => !i.IsReaderCreated || i.Reader.RecordsAvailable));
-                }
-            }
-        }
-
 
         /// <summary>
         /// Gets the current number of inputs that have been added to the <see cref="MultiInputRecordReader{T}"/> for the currently active set of partitions.
