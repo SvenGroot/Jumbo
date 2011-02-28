@@ -168,7 +168,7 @@ namespace Tkl.Jumbo.IO
             {
                 if( _hasFinished ) // Can happen with record readers that process multiple partitions.
                 {
-                    _hasFinished = true;
+                    _hasFinished = false;
                     OnHasRecordsChanged(EventArgs.Empty);
                 }
                 ++_recordsRead;
