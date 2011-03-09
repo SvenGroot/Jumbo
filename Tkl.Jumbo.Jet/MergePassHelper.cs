@@ -270,7 +270,7 @@ namespace Tkl.Jumbo.Jet
                 }
 
                 mergeQueue = new PriorityQueue<RecordReader<T>>(readers, _comparer);
-                _inputsProcessed += mergeQueue.Count;
+                _inputsProcessed += inputs.Count();
 
                 if( !memoryOnlyPass )
                     _fileInputs.RemoveRange(0, fileInputCount);
