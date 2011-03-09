@@ -358,11 +358,11 @@ namespace Tkl.Jumbo.Jet.Channels
                 if( _spillException != null && !_spillExceptionThrown )
                     throw new ChannelException("An exception occurred spilling the output records.", _spillException);
 
-                if( !_spillExceptionThrown && _buffer.BufferUsed > 0 )
+                if( !_spillExceptionThrown && _buffer.BufferUsed > 0 || _spillCount == 0 )
                 {
                     try
                     {
-                        PrepareForSpill();
+                        PrepareForSpill(true);
                     }
                     catch( InvalidOperationException ex )
                     {
@@ -389,7 +389,7 @@ namespace Tkl.Jumbo.Jet.Channels
             {
                 if( !_spillInProgress )
                 {
-                    PrepareForSpill();
+                    PrepareForSpill(false);
                     _spillWaitingEvent.Set();
                 }
 
@@ -401,7 +401,7 @@ namespace Tkl.Jumbo.Jet.Channels
             }
         }
 
-        private void PrepareForSpill()
+        private void PrepareForSpill(bool allowEmptySpill)
         {
             bool hasRecords = false;
             for( int x = 0; x < _indices.Length; ++x )
@@ -416,7 +416,7 @@ namespace Tkl.Jumbo.Jet.Channels
                 else
                     _spillIndices[x] = null;
             }
-            if( !hasRecords )
+            if( !(hasRecords || allowEmptySpill) )
                 throw new InvalidOperationException("Spill requested but nothing to spill.");
 
             _lastPartition = -1;
