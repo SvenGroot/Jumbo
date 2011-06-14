@@ -107,6 +107,10 @@ namespace Tkl.Jumbo.IO
             return true;
         }
 
+        /// <summary>
+        /// Adds the input.
+        /// </summary>
+        /// <param name="partitions">The partitions.</param>
         public override void AddInput(IList<RecordInput> partitions)
         {
             base.AddInput(partitions);

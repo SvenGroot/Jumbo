@@ -1,0 +1,1263 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>Ookii.CommandLine</name>
+    </assembly>
+    <members>
+        <member name="T:Ookii.CommandLine.ArgumentParsedEventArgs">
+            <summary>
+            Provides data for the <see cref="E:Ookii.CommandLine.CommandLineParser.ArgumentParsed"/> event.
+            </summary>
+            <remarks>
+            <para>
+              If the event handler sets the <see cref="P:System.ComponentModel.CancelEventArgs.Cancel"/> property to <see langword="true"/>, command line processing will stop immediately,
+              and the <see cref="M:Ookii.CommandLine.CommandLineParser.Parse(System.String[],System.Int32)"/> method will return <see langword="null"/>, even if all the required positional parameters have already
+              been parsed. You can use this for instance to implement a "/?" argument that will display usage and quit regardless of the other command line arguments.
+            </para>
+            </remarks>
+            <threadsafety static="true" instance="false"/>
+        </member>
+        <member name="M:Ookii.CommandLine.ArgumentParsedEventArgs.#ctor(Ookii.CommandLine.CommandLineArgument,System.Object)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Ookii.CommandLine.ArgumentParsedEventArgs"/> class.
+            </summary>
+            <param name="argument">The information about the argument that has been parsed.</param>
+            <param name="value">The parsed value of the argument. May be <see langword="null"/>.</param>
+            <exception cref="T:System.ArgumentNullException"><paramref name="argument"/> is <see langword="null"/>.</exception>
+        </member>
+        <member name="P:Ookii.CommandLine.ArgumentParsedEventArgs.Argument">
+            <summary>
+            Gets the information about the argument that was parsed.
+            </summary>
+            <value>
+            The <see cref="T:Ookii.CommandLine.CommandLineArgument"/> instance describing the argument.
+            </value>
+        </member>
+        <member name="P:Ookii.CommandLine.ArgumentParsedEventArgs.Value">
+            <summary>
+            Gets the value of the argument.
+            </summary>
+            <value>
+            The value of the argument.
+            </value>
+        </member>
+        <member name="T:Ookii.CommandLine.NamedCommandLineArgumentAttribute">
+            <summary>
+            Indicates a property of a class can be set via a named command line argument.
+            </summary>
+            <threadsafety static="true" instance="false"/>
+        </member>
+        <member name="M:Ookii.CommandLine.NamedCommandLineArgumentAttribute.#ctor(System.String)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Ookii.CommandLine.NamedCommandLineArgumentAttribute"/> class.
+            </summary>
+            <param name="argumentName">the name of the argument's command switch.</param>
+            <exception cref="T:System.ArgumentNullException"><paramref name="argumentName"/> is <see langword="null"/>.</exception>
+        </member>
+        <member name="P:Ookii.CommandLine.NamedCommandLineArgumentAttribute.ArgumentName">
+            <summary>
+            Gets the name of the argument's command switch.
+            </summary>
+            <value>
+            The name of the command switch used to set the argument.
+            </value>
+        </member>
+        <member name="P:Ookii.CommandLine.NamedCommandLineArgumentAttribute.DefaultValue">
+            <summary>
+            Gets or sets the default value to be assigned to the property if the argument is not specified on the command line.
+            </summary>
+            <value>
+            The default value of the argument.
+            </value>
+        </member>
+        <member name="T:Ookii.CommandLine.NamedCommandLineArgument">
+            <summary>
+            Provides information about a named command line argument.
+            </summary>
+            <remarks>
+            <para>
+              Named command line arguments are identified by the name of the command line switch. If
+              an application is invoked with "ExecutableName.exe /arg1:1 /arg2 arg3 arg4", then arg1 and arg2
+              are named arguments.
+            </para>
+            <para>
+              The value of a named argument is specified after the argument name on the command line, separated by
+              a colon. In the example above, the value of arg1 is 1.
+            </para>
+            <para>
+              For <see cref="T:System.Boolean"/> properties, the value is determined simply by the presence of the argument.
+              If the argument is not present on the command line, the value will be <see langword="false"/>. If the
+              argument is present, the value will be <see langword="true"/>.
+            </para>
+            <para>
+              Named command line arguments correspond to properties of the class containing the command line arguments
+              that have the <see cref="T:Ookii.CommandLine.NamedCommandLineArgumentAttribute"/> attribute.
+            </para>
+            </remarks>
+            <threadsafety static="true" instance="false"/>
+        </member>
+        <member name="T:Ookii.CommandLine.CommandLineArgument">
+            <summary>
+            Base class for information about named and positional command line arguments.
+            </summary>
+            <threadsafety static="true" instance="false"/>
+        </member>
+        <member name="M:Ookii.CommandLine.CommandLineArgument.ConvertToArgumentType(System.String)">
+            <summary>
+            Converts the specified string to the argument type, as specified in the <see cref="P:Ookii.CommandLine.CommandLineArgument.ArgumentType"/> property.
+            </summary>
+            <param name="argument">The string to convert.</param>
+            <returns>The argument, converted to the type specified by the <see cref="P:Ookii.CommandLine.CommandLineArgument.ArgumentType"/> property.</returns>
+            <remarks>
+            <para>
+              The <see cref="T:System.ComponentModel.TypeConverter"/> for the type specified by <see cref="P:Ookii.CommandLine.CommandLineArgument.ArgumentType"/> is used to do the conversion.
+            </para>
+            </remarks>
+            <exception cref="T:Ookii.CommandLine.CommandLineArgumentException">One of the arguments did not have the proper format for the type of the argument.</exception>
+        </member>
+        <member name="M:Ookii.CommandLine.CommandLineArgument.ToString">
+            <summary>
+            Returns a <see cref="T:System.String"/> that represents the current <see cref="T:Ookii.CommandLine.CommandLineArgument"/>.
+            </summary>
+            <returns>A <see cref="T:System.String"/> that represents the current <see cref="T:Ookii.CommandLine.CommandLineArgument"/>.</returns>
+        </member>
+        <member name="P:Ookii.CommandLine.CommandLineArgument.Name">
+            <summary>
+            Gets the name of the argument.
+            </summary>
+            <value>
+            The name of the argument.
+            </value>
+            <remarks>
+            <para>
+              For a positional argument, this property is used only when generating usage information using <see cref="M:Ookii.CommandLine.CommandLineParser.WriteUsage(System.IO.TextWriter,System.Int32,System.String)"/>.
+            </para>
+            <para>
+              For a named argument, this is the name of the switch used on the command line to set the argument. To get the name of the property that will receive
+              the argument's value, use the <see cref="P:Ookii.CommandLine.NamedCommandLineArgument.PropertyName"/> property.
+            </para>
+            </remarks>
+        </member>
+        <member name="P:Ookii.CommandLine.CommandLineArgument.ArgumentType">
+            <summary>
+            Gets the type of the argument.
+            </summary>
+            <value>
+            The <see cref="T:System.Type"/> of the argument.
+            </value>
+        </member>
+        <member name="P:Ookii.CommandLine.CommandLineArgument.Description">
+            <summary>
+            Gets the description of the argument.
+            </summary>
+            <value>
+            A short description of the argument.
+            </value>
+            <remarks>
+            <para>
+              This property is used only when generating usage information using <see cref="M:Ookii.CommandLine.CommandLineParser.WriteUsage(System.IO.TextWriter,System.Int32,System.String)"/>.
+            </para>
+            <para>
+              To set the description of an argument, apply the <see cref="T:System.ComponentModel.DescriptionAttribute"/> attribute to the constructor parameter of the argument (for
+              positional arguments), or the property of the argument (for named arguments).
+            </para>
+            </remarks>
+        </member>
+        <member name="P:Ookii.CommandLine.CommandLineArgument.DefaultValue">
+            <summary>
+            Gets the default value for an argument.
+            </summary>
+            <value>
+            The default value of the argument.
+            </value>
+            <remarks>
+            <para>
+              For a positional argument, this value is only used if <see cref="P:Ookii.CommandLine.PositionalCommandLineArgument.IsOptional"/> is <see langword="true"/>.
+            </para>
+            </remarks>
+        </member>
+        <member name="P:Ookii.CommandLine.CommandLineArgument.Value">
+            <summary>
+            Gets the value of the argument in the last call to <see cref="M:Ookii.CommandLine.CommandLineParser.Parse(System.String[],System.Int32)"/>.
+            </summary>
+        </member>
+        <member name="P:Ookii.CommandLine.NamedCommandLineArgument.PropertyName">
+            <summary>
+            Gets the name of the property that declares the argument.
+            </summary>
+            <value>
+            The name of the property that declares the argument.
+            </value>
+        </member>
+        <member name="T:Ookii.CommandLine.CommandLineParser">
+            <summary>
+            Parses command line arguments into a class of the specified type.
+            </summary>
+            <remarks>
+            <para>
+              The command line arguments that are accepted by the parser are determined by the type passed to the constructor.
+            </para>
+            <para>
+              The <see cref="T:Ookii.CommandLine.CommandLineParser"/> class distinguishes two types of command line arguments: positional and named arguments.
+            </para>
+            <para>
+              Positional arguments are identified by the order in which they appear on the command line. For instance, if you invoke the Windows
+              copy command with "copy file.ext c:\", both parameters are positional arguments, and their meaning is determined by the order.
+              "file.ext" is the source, because it is the first positional argument, while "c:\" is the destination, because it is the
+              second positional argument.
+            </para>
+            <para>
+              Positional arguments can be optional. An optional argument can be omitted from the command line, in which case it will have
+              its default value. Note that you cannot have any required positional arguments following an optional argument, because in that case
+              it is not possible to determine if the argument has been omitted.
+            </para>
+            <para>
+              Named arguments are identified by name, and are preceded by a special character to distinguish them from the positional arguments.
+              On Windows, this character is typically a forward slash "/", while on Unix it's typically a dash "-". You can specify which
+              character to use by setting the <see cref="P:Ookii.CommandLine.CommandLineParser.NamedArgumentSwitch"/> property. This property will default to "/" on Windows and
+              to "-" on Unix operating systems (Unix is supported via <a href="http://www.mono-project.com">Mono</a>).
+            </para>
+            <para>
+              Named arguments can appear in any order, and are never required. A named argument can have a value which is specified
+              after a colon following the attribute name, e.g. "/argument:value". Alternatively, a named attribute can simply have
+              a meaning defined by its presence or absence. For example, many applications use /v to indicate you want verbose output,
+              while the absence of that argument means you don't want verbose output. These kinds of arguments are created by the
+              <see cref="T:Ookii.CommandLine.CommandLineParser"/> by using the <see cref="T:System.Boolean"/> type for the argument.
+            </para>
+            <para>
+              The parameters of the type's constructor will be used as the positional arguments. If the
+              type has more than one constructor, the constructor that has the <see cref="T:Ookii.CommandLine.CommandLineConstructorAttribute"/> attribute
+              applied will be used (to have multiple constructors but none marked with this attribute or multiple constructors with this
+              attribute is an error).
+            </para>
+            <para>
+              To create an optional positional argument, apply the <see cref="T:System.Runtime.InteropServices.OptionalAttribute"/> attribute to the constructor parameter.
+              To set the default value, apply the <see cref="T:System.Runtime.InteropServices.DefaultParameterValueAttribute"/> to the constructor parameter.
+              In Visual Basic, you can use the <see langword="Optional"/> keyword and built-in syntax to specify the default value.
+            </para>
+            <para>
+              Properties of the type that have the <see cref="T:Ookii.CommandLine.NamedCommandLineArgumentAttribute"/> attribute applied will be used as named
+              command line arguments for the type.
+            </para>
+            <para>
+              Arrays are supported for both named and positional arguments. For positional arguments, only the last argument may be an array, in which case all remaining positional
+              arguments specified on the command line will be elements of this array. For named arguments with an array type, you can repeat the argument multiple times, e.g. "Program.exe /val:foo /val:bar"
+              will set the "val" argument to an array containing { "foo", "bar" } if it's an array argument.
+            </para>
+            </remarks>
+            <threadsafety static="true" instance="false"/>
+        </member>
+        <member name="M:Ookii.CommandLine.CommandLineParser.#ctor(System.Type)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Ookii.CommandLine.CommandLineParser"/> class.
+            </summary>
+            <param name="argumentsType">The type of the class holding the command line arguments.</param>
+            <exception cref="T:System.NotSupportedException">The <see cref="T:Ookii.CommandLine.CommandLineParser"/> cannot use <paramref name="argumentsType"/> as the command line arguments type.</exception>
+        </member>
+        <member name="M:Ookii.CommandLine.CommandLineParser.WriteUsageToConsole">
+            <summary>
+            Writes the command line usage description to the standard output stream using the default prefix.
+            </summary>
+            <remarks>
+              <para>
+                This method uses the default usage prefix, which is "Usage: " followed by the file name of the entry point assembly.
+              </para>
+              <para>
+                You can add descriptions to the usage text by applying the <see cref="T:System.ComponentModel.DescriptionAttribute"/> attribute to your command line arguments class,
+                the constructor parameters for positional arguments, and the properties for named arguments.
+              </para>
+              <para>
+                When the console output is redirected to a file, Microsoft .Net will still report the console's actual window width, but on Mono
+                the value of <see cref="P:System.Console.WindowWidth"/> will be 0. In that case, the <see cref="T:Ookii.CommandLine.LineWrappingTextWriter"/> will use no
+                line limit.
+              </para>
+              <para>
+                This method disables indenting the usage and argument descriptions if the <see cref="P:System.Console.WindowWidth"/> is less than 30.
+              </para>
+            </remarks>
+        </member>
+        <member name="M:Ookii.CommandLine.CommandLineParser.WriteUsageToConsole(System.String)">
+            <summary>
+            Writes the command line usage description to the standard output stream using the specified prefix.
+            </summary>
+            <param name="usagePrefix">A prefix to use on the first line of the usage text; typically this contains the executable name.</param>
+            <exception cref="T:System.ArgumentNullException">
+              <paramref name="usagePrefix"/> is <see langword="null"/>.
+            </exception>
+            <remarks>
+              <para>
+                You can add descriptions to the usage text by applying the <see cref="T:System.ComponentModel.DescriptionAttribute"/> attribute to your command line arguments class,
+                the constructor parameters for positional arguments, and the properties for named arguments.
+              </para>
+              <para>
+                When the console output is redirected to a file, Microsoft .Net will still report the console's actual window width, but on Mono
+                the value of <see cref="P:System.Console.WindowWidth"/> will be 0. In that case, the <see cref="T:Ookii.CommandLine.LineWrappingTextWriter"/> will use no
+                line limit.
+              </para>
+              <para>
+                This method disables indenting the usage and argument descriptions if the <see cref="P:System.Console.WindowWidth"/> is less than 30.
+              </para>
+            </remarks>
+        </member>
+        <member name="M:Ookii.CommandLine.CommandLineParser.WriteUsage(System.IO.TextWriter,System.Int32)">
+            <summary>
+            Writes the command line usage description to the specified <see cref="T:System.IO.TextWriter"/> using the default prefix.
+            </summary>
+            <param name="writer">The <see cref="T:System.IO.TextWriter"/> to write the usage to.</param>
+            <param name="maximumLineLength">The maximum line length of lines in the usage text; if <paramref name="writer"/> is an instance of <see cref="T:Ookii.CommandLine.LineWrappingTextWriter"/>, this parameter is ignored. A value less than 1 is interpreted as infinite line length.</param>
+            <exception cref="T:System.ArgumentNullException">
+              <paramref name="writer"/> is <see langword="null"/>.
+            </exception>
+            <remarks>
+              <para>
+                This method uses the default usage prefix, which is "Usage: " followed by the file name of the entry point assembly.
+              </para>
+              <para>
+                You can add descriptions to the usage text by applying the <see cref="T:System.ComponentModel.DescriptionAttribute"/> attribute to your command line arguments class,
+                the constructor parameters for positional arguments, and the properties for named arguments.
+              </para>
+              <para>
+                If you want to write to the console, use <see cref="P:System.Console.Out"/> or <see cref="P:System.Console.Error"/> as the <paramref name="writer"/> and
+                specify <see cref="P:System.Console.WindowWidth"/> - 1 as the <paramref name="maximumLineLength"/>. If you don't
+                subtract one, additional empty lines can be printed if a line is exactly the width of the console.
+              </para>
+              <para>
+                When the console output is redirected to a file, Microsoft .Net will still report the console's actual window width, but on Mono
+                the value of <see cref="P:System.Console.WindowWidth"/> will be 0. In that case, the <see cref="T:Ookii.CommandLine.LineWrappingTextWriter"/> will use no
+                line limit.
+              </para>
+              <para>
+                This method disables indenting the usage and argument descriptions if the <paramref name="maximumLineLength"/> is less than 30.
+              </para>
+            </remarks>
+        </member>
+        <member name="M:Ookii.CommandLine.CommandLineParser.WriteUsage(System.IO.TextWriter,System.Int32,System.String)">
+            <summary>
+            Writes the command line usage description to the specified <see cref="T:System.IO.TextWriter"/> using the specified prefix.
+            </summary>
+            <param name="writer">The <see cref="T:System.IO.TextWriter"/> to write the usage to.</param>
+            <param name="maximumLineLength">The maximum line length of lines in the usage text; if <paramref name="writer"/> is an instance of <see cref="T:Ookii.CommandLine.LineWrappingTextWriter"/>, this parameter is ignored. A value less than 1 is interpreted as infinite line length.</param>
+            <param name="usagePrefix">A prefix to use on the first line of the usage text; typically this contains the executable name.</param>
+            <exception cref="T:System.ArgumentNullException">
+              <paramref name="writer"/> or <paramref name="usagePrefix"/> is <see langword="null"/>.
+            </exception>
+            <remarks>
+              <para>
+                You can add descriptions to the usage text by applying the <see cref="T:System.ComponentModel.DescriptionAttribute"/> attribute to your command line arguments class,
+                the constructor parameters for positional arguments, and the properties for named arguments.
+              </para>
+              <para>
+                If you want to write to the console, use <see cref="P:System.Console.Out"/> or <see cref="P:System.Console.Error"/> as the <paramref name="writer"/> and
+                specify <see cref="P:System.Console.WindowWidth"/> - 1 as the <paramref name="maximumLineLength"/>. If you don't
+                subtract one, additional empty lines can be printed if a line is exactly the width of the console.
+              </para>
+              <para>
+                When the console output is redirected to a file, Microsoft .Net will still report the console's actual window width, but on Mono
+                the value of <see cref="P:System.Console.WindowWidth"/> will be 0. In that case, the <see cref="T:Ookii.CommandLine.LineWrappingTextWriter"/> will use no
+                line limit.
+              </para>
+              <para>
+                This method disables indenting the usage and argument descriptions if the <paramref name="maximumLineLength"/> is less than 30.
+              </para>
+            </remarks>
+        </member>
+        <member name="M:Ookii.CommandLine.CommandLineParser.WriteUsage(System.IO.TextWriter,System.Int32,System.String,System.String,System.Int32,System.String,System.String,System.String,System.String,System.Int32)">
+            <summary>
+            Writes the command line usage description to the specified <see cref="T:System.IO.TextWriter"/> using the specified prefix and formatting options.
+            </summary>
+            <param name="writer">The <see cref="T:System.IO.TextWriter"/> to write the usage to.</param>
+            <param name="maximumLineLength">The maximum line length of lines in the usage text; if <paramref name="writer"/> is an instance of <see cref="T:Ookii.CommandLine.LineWrappingTextWriter"/>, this parameter is ignored. A value less than 1 is interpreted as infinite line length.</param>
+            <param name="usagePrefix">A prefix to use on the first line of the usage text; typically this contains the executable name.</param>
+            <param name="requiredArgumentFormat">The format string to use for required positional arguments, for example "&lt;{0}&gt;".</param>
+            <param name="usageIndent">The number of characters by which to indent all except the first line of the command line usage.</param>
+            <param name="optionalArgumentFormat">The format string to use for arguments and optional positional arguments, for example "[{0}]".</param>
+            <param name="optionalArgumentWithDefaultValueFormat">The format string to use for optional positional arguments that have a default value, e.g. "[{0}={1}]"; the default value for named arguments is not included in the usage.</param>
+            <param name="arraySuffix">The suffix to append to the name of an array argument, for example "...".</param>
+            <param name="argumentDescriptionFormat">The format string to use for the description of an argument, e.g. "{0,13} : {1}".</param>
+            <param name="argumentDescriptionIndent">The number of characters by which to indent the all but the first line of argument descriptions.</param>
+            <exception cref="T:System.ArgumentNullException">
+              <paramref name="writer"/>, <paramref name="usagePrefix"/>, <paramref name="requiredArgumentFormat"/>, <paramref name="optionalArgumentFormat"/>,
+              <paramref name="optionalArgumentWithDefaultValueFormat"/>, <paramref name="arraySuffix"/> or <paramref name="argumentDescriptionFormat"/> is <see langword="null"/>.
+            </exception>
+            <exception cref="T:System.ArgumentOutOfRangeException">
+              <paramref name="usageIndent"/> is less than zero or greater than or equal to <paramref name="maximumLineLength"/>, or 
+              <paramref name="argumentDescriptionIndent"/> is less than zero or greater than or equal to <paramref name="maximumLineLength"/>.</exception>
+            <remarks>
+              <para>
+                You can add descriptions to the usage text by applying the <see cref="T:System.ComponentModel.DescriptionAttribute"/> attribute to your command line arguments class,
+                the constructor parameters for positional arguments, and the properties for named arguments.
+              </para>
+              <para>
+                If you want to write to the console, use <see cref="P:System.Console.Out"/> or <see cref="P:System.Console.Error"/> as the <paramref name="writer"/> and
+                specify <see cref="P:System.Console.WindowWidth"/> - 1 as the <paramref name="maximumLineLength"/>. If you don't
+                subtract one, additional empty lines can be printed if a line is exactly the width of the console.
+              </para>
+              <para>
+                When the console output is redirected to a file, Microsoft .Net will still report the console's actual window width, but on Mono
+                the value of <see cref="P:System.Console.WindowWidth"/> will be 0. In that case, the <see cref="T:Ookii.CommandLine.LineWrappingTextWriter"/> will use no
+                line limit.
+              </para>
+            </remarks>
+        </member>
+        <member name="M:Ookii.CommandLine.CommandLineParser.Parse(System.String[])">
+            <summary>
+            Parses the specified command line arguments and creates an instance of the command line arguments type containing the arguments.
+            </summary>
+            <param name="args">The command line arguments.</param>
+            <returns>An instance of the command line arguments type, or <see langword="null"/> if there are too many or too few positional arguments.</returns>
+            <exception cref="T:Ookii.CommandLine.CommandLineArgumentException">An unknown named argument was used, or a named argument was missing a value,
+            or one of the argument values could not be converted to the argument type.</exception>
+            <exception cref="T:System.ArgumentNullException"><paramref name="args"/> is <see langword="null"/>.</exception>
+        </member>
+        <member name="M:Ookii.CommandLine.CommandLineParser.Parse(System.String[],System.Int32)">
+            <summary>
+            Parses the specified command line arguments and creates an instance of the command line arguments type containing the arguments.
+            </summary>
+            <param name="args">The command line arguments.</param>
+            <param name="index">The index of the first argument to parse.</param>
+            <returns>An instance of the command line arguments type, or <see langword="null"/> if processing was cancelled by the <see cref="E:Ookii.CommandLine.CommandLineParser.ArgumentParsed"/> event handler.</returns>
+            <exception cref="T:Ookii.CommandLine.CommandLineArgumentException">Too few or too many positional arguments were used, an unknown named argument was used, or a named argument was missing a value,
+            or one of the argument values could not be converted to the argument type.</exception>
+            <exception cref="T:System.ArgumentNullException"><paramref name="args"/> is <see langword="null"/>.</exception>
+            <exception cref="T:System.ArgumentOutOfRangeException"><paramref name="index"/> is less than zero or greater than the length of <paramref name="args"/>.</exception>
+        </member>
+        <member name="M:Ookii.CommandLine.CommandLineParser.OnArgumentParsed(Ookii.CommandLine.ArgumentParsedEventArgs)">
+            <summary>
+            Raises the <see cref="E:Ookii.CommandLine.CommandLineParser.ArgumentParsed"/> event.
+            </summary>
+            <param name="e">The data for the event.</param>
+        </member>
+        <member name="E:Ookii.CommandLine.CommandLineParser.ArgumentParsed">
+            <summary>
+            Event raised when an argument is parsed from the command line.
+            </summary>
+            <remarks>
+            <para>
+              If the event handler sets the <see cref="P:System.ComponentModel.CancelEventArgs.Cancel"/> property to <see langword="true"/>, command line processing will stop immediately,
+              and the <see cref="M:Ookii.CommandLine.CommandLineParser.Parse(System.String[],System.Int32)"/> method will return <see langword="null"/>, even if all the required positional parameters have already
+              been parsed. You can use this for instance to implement a "/?" argument that will display usage and quit regardless of the other command line arguments.
+            </para>
+            </remarks>        
+        </member>
+        <member name="P:Ookii.CommandLine.CommandLineParser.DefaultUsagePrefix">
+            <summary>
+            Gets the default prefix for the command line usage information.
+            </summary>
+            <value>
+            A string consistint of the text "Usage: " followed by the file name of the application's entry point assembly.
+            </value>
+        </member>
+        <member name="P:Ookii.CommandLine.CommandLineParser.NamedArgumentSwitch">
+            <summary>
+            Gets or sets the switch character for named arguments.
+            </summary>
+            <value>The switch character for named arguments. The default value is '/' on Windows, and '-' on Unix.</value>
+            <remarks>
+            <para>
+              The named argument switch may not contain a colon, because that is the separator for argument names and values for named arguments.
+            </para>
+            </remarks>
+            <exception cref="T:System.ArgumentException">The new property value is empty or contains a colon (:).</exception>
+        </member>
+        <member name="P:Ookii.CommandLine.CommandLineParser.Description">
+            <summary>
+            Gets a description of the command line application.
+            </summary>
+            <value>
+            The description of the command line application. The default value is an empty string ("").
+            </value>
+            <remarks>
+            <para>
+              This description will be added to the usage returned by the <see cref="M:Ookii.CommandLine.CommandLineParser.WriteUsage(System.IO.TextWriter,System.Int32,System.String)"/> property. This description can be set by applying
+              the <see cref="T:System.ComponentModel.DescriptionAttribute"/> to the command line arguments type.
+            </para>
+            </remarks>
+        </member>
+        <member name="P:Ookii.CommandLine.CommandLineParser.PositionalArguments">
+            <summary>
+            Gets the positional arguments supported by this <see cref="T:Ookii.CommandLine.CommandLineParser"/> instance.
+            </summary>
+            <value>
+            A list of the positional arguments.
+            </value>
+            <remarks>
+            <para>
+              The value of this property can be used for informational purposes, but it cannot be used to retrieve the values of the arguments after a parse operation.
+            </para>
+            </remarks>
+        </member>
+        <member name="P:Ookii.CommandLine.CommandLineParser.NamedArguments">
+            <summary>
+            Gets the named arguments supported by this <see cref="T:Ookii.CommandLine.CommandLineParser"/> instance.
+            </summary>
+            <value>
+            A list of the named arguments.
+            </value>
+            <remarks>
+            <para>
+              The value of this property can be used for informational purposes, but it cannot be used to retrieve the values of the arguments after a parse operation.
+            </para>
+            </remarks>
+        </member>
+        <member name="T:Ookii.CommandLine.Properties.Resources">
+            <summary>
+              A strongly-typed resource class, for looking up localized strings, etc.
+            </summary>
+        </member>
+        <member name="P:Ookii.CommandLine.Properties.Resources.ResourceManager">
+            <summary>
+              Returns the cached ResourceManager instance used by this class.
+            </summary>
+        </member>
+        <member name="P:Ookii.CommandLine.Properties.Resources.Culture">
+            <summary>
+              Overrides the current thread's CurrentUICulture property for all
+              resource lookups using this strongly typed resource class.
+            </summary>
+        </member>
+        <member name="P:Ookii.CommandLine.Properties.Resources.ArgumentConversionErrorFormat">
+            <summary>
+              Looks up a localized string similar to The value &apos;{0}&apos; provided for argument &apos;{1}&apos; could not be interpreted as a {2}..
+            </summary>
+        </member>
+        <member name="P:Ookii.CommandLine.Properties.Resources.ArrayNotLastArgument">
+            <summary>
+              Looks up a localized string similar to A positional array argument must be the last positional argument..
+            </summary>
+        </member>
+        <member name="P:Ookii.CommandLine.Properties.Resources.AvailableCommandsHeader">
+            <summary>
+              Looks up a localized string similar to The following commands are available:.
+            </summary>
+        </member>
+        <member name="P:Ookii.CommandLine.Properties.Resources.CommandUsageFormat">
+            <summary>
+              Looks up a localized string similar to {0} &lt;command&gt; [args...].
+            </summary>
+        </member>
+        <member name="P:Ookii.CommandLine.Properties.Resources.DefaultArgumentDescriptionFormat">
+             <summary>
+               Looks up a localized string similar to {0,13} : {1}
+            .
+             </summary>
+        </member>
+        <member name="P:Ookii.CommandLine.Properties.Resources.DefaultArraySuffix">
+            <summary>
+              Looks up a localized string similar to ....
+            </summary>
+        </member>
+        <member name="P:Ookii.CommandLine.Properties.Resources.DefaultCommandFormat">
+             <summary>
+               Looks up a localized string similar to {0,13} : {1}
+            .
+             </summary>
+        </member>
+        <member name="P:Ookii.CommandLine.Properties.Resources.DefaultOptionalArgumentFormat">
+            <summary>
+              Looks up a localized string similar to [{0}].
+            </summary>
+        </member>
+        <member name="P:Ookii.CommandLine.Properties.Resources.DefaultOptionalArgumentWithDefaultValueFormat">
+            <summary>
+              Looks up a localized string similar to [{0}={1}].
+            </summary>
+        </member>
+        <member name="P:Ookii.CommandLine.Properties.Resources.DefaultRequiredArgumentFormat">
+            <summary>
+              Looks up a localized string similar to &lt;{0}&gt;.
+            </summary>
+        </member>
+        <member name="P:Ookii.CommandLine.Properties.Resources.DefaultUsagePrefixFormat">
+            <summary>
+              Looks up a localized string similar to Usage: {0}.
+            </summary>
+        </member>
+        <member name="P:Ookii.CommandLine.Properties.Resources.EmptyArgumentName">
+            <summary>
+              Looks up a localized string similar to The argument name cannot be empty..
+            </summary>
+        </member>
+        <member name="P:Ookii.CommandLine.Properties.Resources.EmptyNamedArgumentSwitch">
+            <summary>
+              Looks up a localized string similar to NamedArgumentSwitch may not be null or an empty string..
+            </summary>
+        </member>
+        <member name="P:Ookii.CommandLine.Properties.Resources.IncorrectDefaultValueTypeFormat">
+            <summary>
+              Looks up a localized string similar to The default value for argument &apos;{0}&apos; does not have the same type as the argument..
+            </summary>
+        </member>
+        <member name="P:Ookii.CommandLine.Properties.Resources.IndentOutOfRange">
+            <summary>
+              Looks up a localized string similar to The indent must be greater than or equal to zero, and less than the maximum line length..
+            </summary>
+        </member>
+        <member name="P:Ookii.CommandLine.Properties.Resources.IndexCountOutOfRange">
+            <summary>
+              Looks up a localized string similar to Offset and length were out of bounds for the array or count is greater than the number of elements from index to the end of the source collection..
+            </summary>
+        </member>
+        <member name="P:Ookii.CommandLine.Properties.Resources.InvalidArrayRank">
+            <summary>
+              Looks up a localized string similar to Multi-dimensional arrays are not supported for command line arguments..
+            </summary>
+        </member>
+        <member name="P:Ookii.CommandLine.Properties.Resources.InvalidOptionalArgumentOrder">
+            <summary>
+              Looks up a localized string similar to The command line constructor cannot have non-optional arguments after an optional argument..
+            </summary>
+        </member>
+        <member name="P:Ookii.CommandLine.Properties.Resources.MissingNamedArgumentAttribute">
+            <summary>
+              Looks up a localized string similar to The specified property is not a named argument..
+            </summary>
+        </member>
+        <member name="P:Ookii.CommandLine.Properties.Resources.MissingValueForArgumentFormat">
+            <summary>
+              Looks up a localized string similar to No value was supplied for the required argument &apos;{0}&apos;..
+            </summary>
+        </member>
+        <member name="P:Ookii.CommandLine.Properties.Resources.MissingValueForNamedArgumentFormat">
+            <summary>
+              Looks up a localized string similar to No value was supplied for the argument &apos;{0}{1}&apos;..
+            </summary>
+        </member>
+        <member name="P:Ookii.CommandLine.Properties.Resources.MultipleMarkedConstructors">
+            <summary>
+              Looks up a localized string similar to The command line arguments type has more than one constructor with the CommandLineConstructorAttribute attribute..
+            </summary>
+        </member>
+        <member name="P:Ookii.CommandLine.Properties.Resources.NamedArgumentContainsSeparatorFormat">
+            <summary>
+              Looks up a localized string similar to The name for argument &apos;{0}&apos; contains a colon (:), which is not allowed..
+            </summary>
+        </member>
+        <member name="P:Ookii.CommandLine.Properties.Resources.NamedArgumentSwitchContainsSeparator">
+            <summary>
+              Looks up a localized string similar to The NamedArgumentSwitch may not contain a colon (&apos;:&apos;)..
+            </summary>
+        </member>
+        <member name="P:Ookii.CommandLine.Properties.Resources.NoConstructor">
+            <summary>
+              Looks up a localized string similar to The command line arguments type does not have any public constructors..
+            </summary>
+        </member>
+        <member name="P:Ookii.CommandLine.Properties.Resources.NoMarkedConstructor">
+            <summary>
+              Looks up a localized string similar to The command line arguments type has more than one constructor, none of which has the CommandLineConstructorAttribute attribute..
+            </summary>
+        </member>
+        <member name="P:Ookii.CommandLine.Properties.Resources.NoTypeConverterFormat">
+            <summary>
+              Looks up a localized string similar to The argument &apos;{0}&apos; has type &apos;{1}&apos; that for which no type converter exists that can convert from a string..
+            </summary>
+        </member>
+        <member name="P:Ookii.CommandLine.Properties.Resources.TooManyArguments">
+            <summary>
+              Looks up a localized string similar to Too many arguments were supplied..
+            </summary>
+        </member>
+        <member name="P:Ookii.CommandLine.Properties.Resources.TypeIsNotShellCommandFormat">
+            <summary>
+              Looks up a localized string similar to The type &apos;{0}&apos; does not derive from the ShellCommand class or does not define the ShellCommandAttribute attribute..
+            </summary>
+        </member>
+        <member name="P:Ookii.CommandLine.Properties.Resources.UnknownArgumentFormat">
+            <summary>
+              Looks up a localized string similar to Unknown argument &apos;{0}{1}&apos;..
+            </summary>
+        </member>
+        <member name="P:Ookii.CommandLine.Properties.Resources.ValueMustBeNonNegative">
+            <summary>
+              Looks up a localized string similar to The value must be zero or larger..
+            </summary>
+        </member>
+        <member name="T:Ookii.CommandLine.ShellCommand">
+            <summary>
+            Represents a command that can be invoked through a command line application that supports more than one operation.
+            </summary>
+            <remarks>
+            <para>
+              The <see cref="T:Ookii.CommandLine.ShellCommand"/> class aids in creating shell utilities that perform more than one operation. Each operation will
+              have its own class derived from the <see cref="T:Ookii.CommandLine.ShellCommand"/> class, and specifies the operation name using the <see cref="T:Ookii.CommandLine.ShellCommandAttribute"/>
+              attribute.
+            </para>
+            <para>
+              Typically, the operation will be the first command line argument. An application can instantiate an instance of the <see cref="T:Ookii.CommandLine.ShellCommand"/>
+              class by using the <see cref="M:Ookii.CommandLine.ShellCommand.GetShellCommand(System.Reflection.Assembly,System.String)"/> method, creating a <see cref="T:Ookii.CommandLine.CommandLineParser"/> for the returned <see cref="T:System.Type"/>, and
+              invoking <see cref="M:Ookii.CommandLine.CommandLineParser.Parse(System.String[],System.Int32)"/>. To run the command, the application should invoke its <see cref="M:Ookii.CommandLine.ShellCommand.Run"/> method. The application should then terminate the process
+              by returning the value of the <see cref="P:Ookii.CommandLine.ShellCommand.ExitStatus"/> property.
+            </para>
+            <para>
+              Types that inherit from this class should specify the <see cref="T:Ookii.CommandLine.ShellCommandAttribute"/> attribyte, and will be used
+              as an arguments class for <see cref="T:Ookii.CommandLine.CommandLineParser"/>.
+            </para>
+            </remarks>
+        </member>
+        <member name="M:Ookii.CommandLine.ShellCommand.#ctor">
+            <summary>
+            Initializes a new instance of the <see cref="T:Ookii.CommandLine.ShellCommand"/> class.
+            </summary>
+        </member>
+        <member name="M:Ookii.CommandLine.ShellCommand.Run">
+            <summary>
+            When implemented in a derived class, executes the command.
+            </summary>
+        </member>
+        <member name="M:Ookii.CommandLine.ShellCommand.GetShellCommands(System.Reflection.Assembly)">
+            <summary>
+            Gets the <see cref="T:System.Type"/> instance for shell commands defined in the specified assembly.
+            </summary>
+            <param name="assembly">The assembly whose types to search.</param>
+            <returns>A list of types that inherit from <see cref="T:Ookii.CommandLine.ShellCommand"/> and specify the <see cref="T:Ookii.CommandLine.ShellCommandAttribute"/> attribute.</returns>
+            <exception cref="T:System.ArgumentNullException">
+              <paramref name="assembly"/> is <see langword="null"/>.
+            </exception>
+        </member>
+        <member name="M:Ookii.CommandLine.ShellCommand.WriteAssemblyCommandListToConsole(System.Reflection.Assembly)">
+            <summary>
+            Writes a list of all the shell commands in the specified assembly to the standard output stream.
+            </summary>
+            <param name="assembly">The assembly that contains the shell commands.</param>
+            <exception cref="T:System.ArgumentNullException">
+              <paramref name="assembly"/> is <see langword="null"/>.
+            </exception>
+            <remarks>
+            <para>
+              This method writes a list of all shell command names and their descriptions to the standard output stream, wrapping
+              the lines to fit on the console automatically.
+            </para>
+            <para>
+              A command's name is retrieved from its <see cref="T:Ookii.CommandLine.ShellCommandAttribute"/> attribute, and the description is retrieved
+              from its <see cref="T:System.ComponentModel.DescriptionAttribute"/> attribute.
+            </para>
+            <para>
+              Each command's description will be indented if it requires more than one line. Indenting
+              will not be used if the <see cref="P:System.Console.WindowWidth"/> is less than 30.
+            </para>
+            </remarks>
+        </member>
+        <member name="M:Ookii.CommandLine.ShellCommand.WriteAssemblyCommandList(System.IO.TextWriter,System.Reflection.Assembly)">
+            <summary>
+            Writes a list of all the shell commands in the specified assembly to the specified <see cref="T:System.IO.TextWriter"/>.
+            </summary>
+            <param name="writer">The <see cref="T:System.IO.TextWriter"/> to write the commands to.</param>
+            <param name="assembly">The assembly that contains the shell commands.</param>
+            <exception cref="T:System.ArgumentNullException">
+              <paramref name="writer"/> or <paramref name="assembly"/> is <see langword="null"/>.
+            </exception>
+            <remarks>
+            <para>
+              This method writes a list of all shell command names and their descriptions to <paramref name="writer"/>.
+            </para>
+            <para>
+              A command's name is retrieved from its <see cref="T:Ookii.CommandLine.ShellCommandAttribute"/> attribute, and the description is retrieved
+              from its <see cref="T:System.ComponentModel.DescriptionAttribute"/> attribute.
+            </para>
+            <para>
+              If <paramref name="writer"/> is a <see cref="T:Ookii.CommandLine.LineWrappingTextWriter"/>, the <see cref="P:Ookii.CommandLine.LineWrappingTextWriter.Indent"/>
+              property will be set to a value appropriate for the formatting of the command list, and indenting will be reset before each command. Indenting
+              will not be used if the <see cref="P:Ookii.CommandLine.LineWrappingTextWriter.MaximumLineLength"/> is less than 30.
+            </para>
+            </remarks>
+        </member>
+        <member name="M:Ookii.CommandLine.ShellCommand.WriteAssemblyCommandList(System.IO.TextWriter,System.Reflection.Assembly,System.String)">
+            <summary>
+            Writes a list of all the shell commands in the specified assembly to the specified <see cref="T:System.IO.TextWriter"/> using the specified formatting options.
+            </summary>
+            <param name="writer">The <see cref="T:System.IO.TextWriter"/> to write the commands to.</param>
+            <param name="assembly">The assembly that contains the shell commands.</param>
+            <param name="commandFormat">The format string used to format a command's name and description, for example "{0,13} : {1}".</param>
+            <exception cref="T:System.ArgumentNullException">
+              <paramref name="writer"/>, <paramref name="assembly"/> or <paramref name="commandFormat"/> is <see langword="null"/>.
+            </exception>
+            <remarks>
+            <para>
+              This method writes a list of all shell command names and their descriptions to <paramref name="writer"/>.
+            </para>
+            <para>
+              A command's name is retrieved from its <see cref="T:Ookii.CommandLine.ShellCommandAttribute"/> attribute, and the description is retrieved
+              from its <see cref="T:System.ComponentModel.DescriptionAttribute"/> attribute.
+            </para>
+            <para>
+              If <paramref name="writer"/> is a <see cref="T:Ookii.CommandLine.LineWrappingTextWriter"/>, the writer's indent will be reset before every
+              command.
+            </para>
+            </remarks>
+        </member>
+        <member name="M:Ookii.CommandLine.ShellCommand.GetShellCommandName(System.Type)">
+            <summary>
+            Gets the name of the specified shell command.
+            </summary>
+            <param name="commandType">The <see cref="T:System.Type"/> of the shell command.</param>
+            <returns>The shell command's name.</returns>
+            <exception cref="T:System.ArgumentNullException"><paramref name="commandType"/> is <see langword="null"/>.</exception>
+            <exception cref="T:System.ArgumentException"><paramref name="commandType"/> is not a shell command type.</exception>
+            <remarks>
+            <para>
+              The shell command's name is determined by the name specified in its <see cref="T:Ookii.CommandLine.ShellCommandAttribute"/> attribute.
+            </para>
+            </remarks>
+        </member>
+        <member name="M:Ookii.CommandLine.ShellCommand.GetShellCommandDescription(System.Type)">
+            <summary>
+            Gets the description of the specified shell command.
+            </summary>
+            <param name="commandType">The <see cref="T:System.Type"/> of the shell command.</param>
+            <returns>The shell command's description, or <see langword="null"/> if it doesn't specify one.</returns>
+            <exception cref="T:System.ArgumentNullException"><paramref name="commandType"/> is <see langword="null"/>.</exception>
+            <exception cref="T:System.ArgumentException"><paramref name="commandType"/> is not a shell command type.</exception>
+            <remarks>
+            <para>
+              A shell command's description is specified using the <see cref="T:System.ComponentModel.DescriptionAttribute"/> attribute.
+            </para>
+            </remarks>
+        </member>
+        <member name="M:Ookii.CommandLine.ShellCommand.GetShellCommand(System.Reflection.Assembly,System.String)">
+            <summary>
+            Gets the shell command with the specified command name.
+            </summary>
+            <param name="assembly">The assembly whose types to search.</param>
+            <param name="commandName">The command name of the shell command.</param>
+            <returns>The <see cref="T:System.Type"/> of the specified shell command, or <see langword="null"/> if none could be found.</returns>
+            <exception cref="T:System.ArgumentNullException">
+              <paramref name="assembly"/> or <paramref name="commandName"/> is <see langword="null"/>.
+            </exception>
+        </member>
+        <member name="M:Ookii.CommandLine.ShellCommand.CreateShellCommand(System.Reflection.Assembly,System.String,System.String[],System.Int32)">
+            <summary>
+            Finds and instantiates the shell command with the specified name, or if that fails, writes error and usage information to the standard error and output streams.
+            </summary>
+            <param name="assembly">The assembly to search for the shell command.</param>
+            <param name="commandName">The name of the command.</param>
+            <param name="args">The arguments to the shell command.</param>
+            <param name="index">The index in <paramref name="args"/> at which to start parsing the arguments.</param>
+            <returns>An instance a class deriving from <see cref="T:Ookii.CommandLine.ShellCommand"/>, or <see langword="null"/> if the command was not found or an error occurred parsing the arguments.</returns>
+            <exception cref="T:System.ArgumentNullException">
+              <paramref name="assembly"/>, <paramref name="commandName"/> or <paramref name="args"/> is <see langword="null"/>
+            </exception>
+            <exception cref="T:System.ArgumentOutOfRangeException"><paramref name="index"/> does not fall inside the bounds of <paramref name="args"/>.</exception>
+            <remarks>
+            <para>
+              If the command could not be found, a list of possible commands is written to the standard output stream. If an error occurs parsing the command's arguments, the error
+              message is written to the standard error stream, and the shell command's usage information is written to the standard output stream.
+            </para>
+            </remarks>
+        </member>
+        <member name="M:Ookii.CommandLine.ShellCommand.CreateShellCommand(System.Reflection.Assembly,System.String[],System.Int32)">
+            <summary>
+            Finds and instantiates the shell command from the specified arguments, or if that fails, writes error and usage information to the standard error and output streams.
+            </summary>
+            <param name="assembly">The assembly to search for the shell command.</param>
+            <param name="args">The arguments to the shell command, with the shell command name at the position specified by <paramref name="index"/>.</param>
+            <param name="index">The index in <paramref name="args"/> at which to start parsing the arguments.</param>
+            <returns>An instance a class deriving from <see cref="T:Ookii.CommandLine.ShellCommand"/>, or <see langword="null"/> if the command was not found or an error occurred parsing the arguments.</returns>
+            <exception cref="T:System.ArgumentNullException">
+              <paramref name="assembly"/>, <paramref name="args"/>
+              is <see langword="null"/>
+            </exception>
+            <exception cref="T:System.ArgumentOutOfRangeException"><paramref name="index"/> does not fall inside the bounds of <paramref name="args"/>.</exception>
+            <remarks>
+            <para>
+              If the command could not be found, a list of possible commands is written to the standard output stream. If an error occurs parsing the command's arguments, the error
+              message is written to the standard error stream, and the shell command's usage information is written to the standard output stream.
+            </para>
+            </remarks>
+        </member>
+        <member name="M:Ookii.CommandLine.ShellCommand.CreateShellCommand(System.String,System.Reflection.Assembly,System.String,System.String[],System.Int32)">
+            <summary>
+            Finds and instantiates the shell command with the specified name, or if that fails, writes error and usage information to the standard error and output streams.
+            </summary>
+            <param name="usagePrefix">The prefix to use for the usage information if creating the shell command fails.</param>
+            <param name="assembly">The assembly to search for the shell command.</param>
+            <param name="commandName">The name of the command.</param>
+            <param name="args">The arguments to the shell command.</param>
+            <param name="index">The index in <paramref name="args"/> at which to start parsing the arguments.</param>
+            <returns>An instance a class deriving from <see cref="T:Ookii.CommandLine.ShellCommand"/>, or <see langword="null"/> if the command was not found or an error occurred parsing the arguments.</returns>
+            <exception cref="T:System.ArgumentNullException">
+              <paramref name="usagePrefix"/>, <paramref name="assembly"/>, <paramref name="commandName"/> or <paramref name="args"/>
+              is <see langword="null"/>
+            </exception>
+            <exception cref="T:System.ArgumentOutOfRangeException"><paramref name="index"/> does not fall inside the bounds of <paramref name="args"/>.</exception>
+            <remarks>
+            <para>
+              If the command could not be found, a list of possible commands is written to the standard output stream. If an error occurs parsing the command's arguments, the error
+              message is written to the standard error stream, and the shell command's usage information is written to the standard output stream.
+            </para>
+            </remarks>
+        </member>
+        <member name="M:Ookii.CommandLine.ShellCommand.CreateShellCommand(System.String,System.Reflection.Assembly,System.String[],System.Int32)">
+            <summary>
+            Finds and instantiates the shell command from the specified arguments, or if that fails, writes error and usage information to the standard error and output streams.
+            </summary>
+            <param name="usagePrefix">The prefix to use for the usage information if creating the shell command fails.</param>
+            <param name="assembly">The assembly to search for the shell command.</param>
+            <param name="args">The arguments to the shell command, with the shell command name at the position specified by <paramref name="index"/>.</param>
+            <param name="index">The index in <paramref name="args"/> at which to start parsing the arguments.</param>
+            <returns>An instance a class deriving from <see cref="T:Ookii.CommandLine.ShellCommand"/>, or <see langword="null"/> if the command was not found or an error occurred parsing the arguments.</returns>
+            <exception cref="T:System.ArgumentNullException">
+              <paramref name="usagePrefix"/>, <paramref name="assembly"/>, <paramref name="args"/>
+              is <see langword="null"/>
+            </exception>
+            <exception cref="T:System.ArgumentOutOfRangeException"><paramref name="index"/> does not fall inside the bounds of <paramref name="args"/>.</exception>
+            <remarks>
+            <para>
+              If the command could not be found, a list of possible commands is written to the standard output stream. If an error occurs parsing the command's arguments, the error
+              message is written to the standard error stream, and the shell command's usage information is written to the standard output stream.
+            </para>
+            </remarks>
+        </member>
+        <member name="M:Ookii.CommandLine.ShellCommand.CreateShellCommand(System.IO.TextWriter,System.IO.TextWriter,System.String,System.Reflection.Assembly,System.String,System.String[],System.Int32)">
+            <summary>
+            Finds and instantiates the shell command with the specified name, or if that fails, writes error and usage information to the specified writers.
+            </summary>
+            <param name="output">The <see cref="T:System.IO.TextWriter"/> to write usage information to if creating the shell command fails.</param>
+            <param name="error">The <see cref="T:System.IO.TextWriter"/> to write error information to if creating the shell command fails.</param>
+            <param name="usagePrefix">The prefix to use for the usage information if creating the shell command fails.</param>
+            <param name="assembly">The assembly to search for the shell command.</param>
+            <param name="commandName">The name of the command.</param>
+            <param name="args">The arguments to the shell command.</param>
+            <param name="index">The index in <paramref name="args"/> at which to start parsing the arguments.</param>
+            <returns>An instance a class deriving from <see cref="T:Ookii.CommandLine.ShellCommand"/>, or <see langword="null"/> if the command was not found or an error occurred parsing the arguments.</returns>
+            <exception cref="T:System.ArgumentNullException">
+              <paramref name="output"/>, <paramref name="error"/>, <paramref name="usagePrefix"/>, <paramref name="assembly"/>, <paramref name="commandName"/> or <paramref name="args"/>
+              is <see langword="null"/>
+            </exception>
+            <exception cref="T:System.ArgumentOutOfRangeException"><paramref name="index"/> does not fall inside the bounds of <paramref name="args"/>.</exception>
+            <remarks>
+            <para>
+              If the command could not be found, a list of possible commands is written to <paramref name="output"/>. If an error occurs parsing the command's arguments, the error
+              message is written to <paramref name="error"/>, and the shell command's usage information is written to <paramref name="output"/>.
+            </para>
+            </remarks>
+        </member>
+        <member name="M:Ookii.CommandLine.ShellCommand.CreateShellCommand(System.IO.TextWriter,System.IO.TextWriter,System.String,System.Reflection.Assembly,System.String[],System.Int32)">
+            <summary>
+            Finds and instantiates the shell command from the specified arguments, or if that fails, writes error and usage information to the specified writers.
+            </summary>
+            <param name="output">The <see cref="T:System.IO.TextWriter"/> to write usage information to if creating the shell command fails.</param>
+            <param name="error">The <see cref="T:System.IO.TextWriter"/> to write error information to if creating the shell command fails.</param>
+            <param name="usagePrefix">The prefix to use for the usage information if creating the shell command fails.</param>
+            <param name="assembly">The assembly to search for the shell command.</param>
+            <param name="args">The arguments to the shell command, with the shell command name at the position specified by <paramref name="index"/>.</param>
+            <param name="index">The index in <paramref name="args"/> at which to start parsing the arguments.</param>
+            <returns>An instance a class deriving from <see cref="T:Ookii.CommandLine.ShellCommand"/>, or <see langword="null"/> if the command was not found or an error occurred parsing the arguments.</returns>
+            <exception cref="T:System.ArgumentNullException">
+              <paramref name="output"/>, <paramref name="error"/>, <paramref name="usagePrefix"/>, <paramref name="assembly"/>, <paramref name="args"/>
+              is <see langword="null"/>
+            </exception>
+            <exception cref="T:System.ArgumentOutOfRangeException"><paramref name="index"/> does not fall inside the bounds of <paramref name="args"/>.</exception>
+            <remarks>
+            <para>
+              If the command could not be found, a list of possible commands is written to <paramref name="output"/>. If an error occurs parsing the command's arguments, the error
+              message is written to <paramref name="error"/>, and the shell command's usage information is written to <paramref name="output"/>.
+            </para>
+            </remarks>
+        </member>
+        <member name="P:Ookii.CommandLine.ShellCommand.ExitStatus">
+            <summary>
+            Gets or sets the exit status for the process.
+            </summary>
+            <value>
+            The exit status that the process will return after running the command.
+            </value>
+        </member>
+        <member name="T:Ookii.CommandLine.LineWrappingTextWriter">
+            <summary>
+            Implements a <see cref="T:System.IO.TextWriter"/> that writes text to the specified
+            </summary>
+        </member>
+        <member name="M:Ookii.CommandLine.LineWrappingTextWriter.#ctor(System.IO.TextWriter,System.Int32,System.Boolean)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Ookii.CommandLine.LineWrappingTextWriter"/> class.
+            </summary>
+            <param name="baseWriter">The <see cref="T:System.IO.TextWriter"/> to which to write the wrapped output.</param>
+            <param name="maximumLineLength">The maximum length of a line, in characters; a value of less than 1 means there is no maximum line length.</param>
+            <param name="disposeBaseWriter">If set to <see langword="true"/> the <paramref name="baseWriter"/> will be disposed when the <see cref="T:Ookii.CommandLine.LineWrappingTextWriter"/> is disposed.</param>
+            <exception cref="T:System.ArgumentNullException"><paramref name="baseWriter"/> is <see langword="null"/>.</exception>
+            <remarks>
+            <para>
+              The largest <paramref name="maximumLineLength"/> value supported is 65535. Above that, line length is considered to be unbounded. This is done
+              to avoid having to allocate very large buffers to support these long line lengths.
+            </para>
+            <para>
+              If you want to write to the console, use <see cref="P:System.Console.Out"/> or <see cref="P:System.Console.Error"/> as the <paramref name="baseWriter"/> and
+              specify <see cref="P:System.Console.WindowWidth"/> - 1 as the <paramref name="maximumLineLength"/>. If you don't
+              subtract one, additional empty lines can be printed if a line is exactly the width of the console. You can create a <see cref="T:Ookii.CommandLine.LineWrappingTextWriter"/>
+              that writes to the console by using the <see cref="M:Ookii.CommandLine.LineWrappingTextWriter.ForConsoleOut"/> and <see cref="M:Ookii.CommandLine.LineWrappingTextWriter.ForConsoleError"/> methods.
+            </para>
+            <para>
+              When the console output is redirected to a file, Microsoft .Net will still report the console's actual window width, but on Mono
+              the value of <see cref="P:System.Console.WindowWidth"/> will be 0. In that case, the <see cref="T:Ookii.CommandLine.LineWrappingTextWriter"/> will use no
+              line limit.
+            </para>
+            </remarks>
+        </member>
+        <member name="M:Ookii.CommandLine.LineWrappingTextWriter.ForConsoleOut">
+            <summary>
+            Gets a <see cref="T:Ookii.CommandLine.LineWrappingTextWriter"/> that writes to the standard output stream.
+            </summary>
+            <returns>A <see cref="T:Ookii.CommandLine.LineWrappingTextWriter"/> that writes to the standard output stream.</returns>
+        </member>
+        <member name="M:Ookii.CommandLine.LineWrappingTextWriter.ForConsoleError">
+            <summary>
+            Gets a <see cref="T:Ookii.CommandLine.LineWrappingTextWriter"/> that writes to the standard error stream.
+            </summary>
+            <returns>A <see cref="T:Ookii.CommandLine.LineWrappingTextWriter"/> that writes to the standard error stream.</returns>
+        </member>
+        <member name="M:Ookii.CommandLine.LineWrappingTextWriter.ForStringWriter(System.Int32,System.IFormatProvider)">
+            <summary>
+            Gets a <see cref="T:Ookii.CommandLine.LineWrappingTextWriter"/> that writes to a <see cref="T:System.IO.StringWriter"/> using the specified format provider.
+            </summary>
+            <param name="maximumLineLength">The maximum length of a line, in characters.</param>
+            <param name="formatProvider">An <see cref="T:System.IFormatProvider"/> that controls formatting.</param>
+            <returns>A <see cref="T:Ookii.CommandLine.LineWrappingTextWriter"/> that writes to a <see cref="T:System.IO.StringWriter"/>.</returns>
+            <remarks>
+              To retrieve the resulting string, first call <see cref="M:Ookii.CommandLine.LineWrappingTextWriter.Flush"/>, then use the <see cref="M:System.IO.StringWriter.ToString"/> method
+              of the <see cref="P:Ookii.CommandLine.LineWrappingTextWriter.BaseWriter"/>.
+            </remarks>
+        </member>
+        <member name="M:Ookii.CommandLine.LineWrappingTextWriter.ForStringWriter(System.Int32)">
+            <summary>
+            Gets a <see cref="T:Ookii.CommandLine.LineWrappingTextWriter"/> that writes to a <see cref="T:System.IO.StringWriter"/>.
+            </summary>
+            <param name="maximumLineLength">The maximum length of a line, in characters.</param>
+            <returns>A <see cref="T:Ookii.CommandLine.LineWrappingTextWriter"/> that writes to a <see cref="T:System.IO.StringWriter"/>.</returns>
+            <remarks>
+              To retrieve the resulting string, first call <see cref="M:Ookii.CommandLine.LineWrappingTextWriter.Flush"/>, then use the <see cref="M:System.IO.StringWriter.ToString"/> method
+              of the <see cref="P:Ookii.CommandLine.LineWrappingTextWriter.BaseWriter"/>.
+            </remarks>
+        </member>
+        <member name="M:Ookii.CommandLine.LineWrappingTextWriter.Write(System.Char)">
+            <summary>
+            Writes a character to the text stream.
+            </summary>
+            <param name="value">The character to write to the text stream.</param>
+            <exception cref="T:System.ObjectDisposedException">
+              The <see cref="T:Ookii.CommandLine.LineWrappingTextWriter"/> is closed.
+            </exception>
+            <exception cref="T:System.IO.IOException">
+              An I/O error occurs.
+            </exception>
+        </member>
+        <member name="M:Ookii.CommandLine.LineWrappingTextWriter.Write(System.String)">
+            <summary>
+            Writes a string to the text stream.
+            </summary>
+            <param name="value">The string to write.</param>
+            <exception cref="T:System.ObjectDisposedException">
+              The <see cref="T:Ookii.CommandLine.LineWrappingTextWriter"/> is closed.
+            </exception>
+            <exception cref="T:System.IO.IOException">
+              An I/O error occurs.
+            </exception>
+        </member>
+        <member name="M:Ookii.CommandLine.LineWrappingTextWriter.Write(System.Char[],System.Int32,System.Int32)">
+            <summary>
+            Writes a subarray of characters to the text stream.
+            </summary>
+            <param name="buffer">The character array to write data from.</param>
+            <param name="index">Starting index in the buffer.</param>
+            <param name="count">The number of characters to write.</param>
+            <exception cref="T:System.ArgumentException">
+              The buffer length minus <paramref name="index"/> is less than <paramref name="count"/>.
+            </exception>
+            <exception cref="T:System.ArgumentNullException">
+              The <paramref name="buffer"/> parameter is null.
+            </exception>
+            <exception cref="T:System.ArgumentOutOfRangeException">
+              <paramref name="index"/> or <paramref name="count"/> is negative.
+            </exception>
+            <exception cref="T:System.ObjectDisposedException">
+              The <see cref="T:Ookii.CommandLine.LineWrappingTextWriter"/> is closed.
+            </exception>
+            <exception cref="T:System.IO.IOException">
+              An I/O error occurs.
+            </exception>
+        </member>
+        <member name="M:Ookii.CommandLine.LineWrappingTextWriter.Flush">
+            <summary>
+            Clears all buffers for the current writer and causes any buffered data to be written to the underlying device.
+            </summary>
+        </member>
+        <member name="M:Ookii.CommandLine.LineWrappingTextWriter.ResetIndent">
+            <summary>
+            Restarts writing on the beginning of a new line, without indenting that line.
+            </summary>
+            <remarks>
+            If the last text written to the <see cref="T:Ookii.CommandLine.LineWrappingTextWriter"/> did not end in a new line, a new line
+            will be written to the base writer now. Otherwise, 
+            </remarks>
+        </member>
+        <member name="M:Ookii.CommandLine.LineWrappingTextWriter.Dispose(System.Boolean)">
+            <summary>
+            Releases the unmanaged resources used by the <see cref="T:Ookii.CommandLine.LineWrappingTextWriter"/> and optionally releases the managed resources.
+            </summary>
+            <param name="disposing">true to release both managed and unmanaged resources; false to release only unmanaged resources.</param>
+        </member>
+        <member name="P:Ookii.CommandLine.LineWrappingTextWriter.BaseWriter">
+            <summary>
+            Gets the <see cref="T:System.IO.TextWriter"/> that this <see cref="T:Ookii.CommandLine.LineWrappingTextWriter"/> is writing to.
+            </summary>
+            <value>
+            The <see cref="T:System.IO.TextWriter"/> that this <see cref="T:Ookii.CommandLine.LineWrappingTextWriter"/> is writing to.
+            </value>
+        </member>
+        <member name="P:Ookii.CommandLine.LineWrappingTextWriter.Encoding">
+            <summary>
+            Returns the <see cref="T:System.Text.Encoding"/> in which the output is written.
+            </summary>
+            <value>
+              The <see cref="T:System.Text.Encoding"/> in which the output is written.
+            </value>
+        </member>
+        <member name="P:Ookii.CommandLine.LineWrappingTextWriter.MaximumLineLength">
+            <summary>
+            Gets the maximum length of a line in the output.
+            </summary>
+            <value>
+            The maximum length of a line, or zero if the line length is not limited.
+            </value>
+        </member>
+        <member name="P:Ookii.CommandLine.LineWrappingTextWriter.Indent">
+            <summary>
+            Gets or sets the amount of characters to indent all but the first line.
+            </summary>
+            <value>
+            The amount of characters to indent all but the first line of text.
+            </value>
+        </member>
+        <member name="T:Ookii.CommandLine.CommandLineConstructorAttribute">
+            <summary>
+            Indicates the constructor that should be used by the <see cref="T:Ookii.CommandLine.CommandLineParser"/> class, if a class has multiple public constructors.
+            </summary>
+            <remarks>
+            <para>
+              If a class has only one public constructor, it is not necessary to use this attribute.
+            </para>
+            </remarks>
+            <threadsafety static="true" instance="false"/>
+        </member>
+        <member name="M:Ookii.CommandLine.CommandLineConstructorAttribute.#ctor">
+            <summary>
+            Initializes a new instance of the <see cref="T:Ookii.CommandLine.CommandLineConstructorAttribute"/> class.
+            </summary>
+        </member>
+        <member name="T:Ookii.CommandLine.PositionalCommandLineArgument">
+            <summary>
+            Provides information about a positional command line argument.
+            </summary>
+            <remarks>
+            <para>
+              Positional command line arguments are identified by the order in which they appear on the command line. If
+              an application is invoked with "ExecutableName.exe /arg1:1 /arg2 arg3 arg4", then arg3 and arg4
+              are positional arguments.
+            </para>
+            <para>
+              Positional arguments can be optional, in which case they may be omitted. Once one of the arguments is optional,
+              all arguments following that argument's position must also be optional.
+            </para>
+            <para>
+              Positional command line arguments correspond to the parameters of the constructor of the class containing the command line
+              arguments. If the class has more than one constructor, the constructor that has the <see cref="T:Ookii.CommandLine.CommandLineConstructorAttribute"/>
+              attribute will be used.
+            </para>
+            <para>
+              To create a optional argument, apply the <see cref="T:System.Runtime.InteropServices.OptionalAttribute"/> attribute to the constructor parameter.
+              To set the default value, apply the <see cref="T:System.Runtime.InteropServices.DefaultParameterValueAttribute"/> to the constructor parameter.
+              In Visual Basic, you can use the <see langword="Optional"/> keyword and built-in syntax to specify the default value.
+            </para>
+            </remarks>
+            <threadsafety static="true" instance="false"/>
+        </member>
+        <member name="P:Ookii.CommandLine.PositionalCommandLineArgument.IsOptional">
+            <summary>
+            Gets a value that indicates whether the argument is optional.
+            </summary>
+            <value>
+            <see langword="true"/> if the argument's value may be omitted from the command line; <see langword="false"/> if the argument must be included.
+            </value>
+        </member>
+        <member name="T:Ookii.CommandLine.ShellCommandAttribute">
+            <summary>
+            Attribute that specifies the name of a <see cref="T:Ookii.CommandLine.ShellCommand"/>.
+            </summary>
+        </member>
+        <member name="M:Ookii.CommandLine.ShellCommandAttribute.#ctor(System.String)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Ookii.CommandLine.ShellCommandAttribute"/> class.
+            </summary>
+            <param name="commandName">The name of the command, which can be used to locate it using the <see cref="M:Ookii.CommandLine.ShellCommand.GetShellCommand(System.Reflection.Assembly,System.String)"/> method.</param>
+        </member>
+        <member name="P:Ookii.CommandLine.ShellCommandAttribute.CommandName">
+            <summary>
+            Gets the name of the command, which can be used to locate it using the <see cref="M:Ookii.CommandLine.ShellCommand.GetShellCommand(System.Reflection.Assembly,System.String)"/> method.
+            </summary>
+            <value>
+            The name of the command.
+            </value>
+        </member>
+        <member name="T:Ookii.CommandLine.CommandLineArgumentException">
+            <summary>
+            The exception that is thrown when one of the command line arguments is not valid.
+            </summary>
+            <threadsafety static="true" instance="false"/>
+        </member>
+        <member name="M:Ookii.CommandLine.CommandLineArgumentException.#ctor">
+            <summary>
+            Initializes a new instance of the <see cref="T:Ookii.CommandLine.CommandLineArgumentException"/> class. 
+            </summary>
+        </member>
+        <member name="M:Ookii.CommandLine.CommandLineArgumentException.#ctor(System.String)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Ookii.CommandLine.CommandLineArgumentException"/> class with a specified error message.
+            </summary>
+            <param name="message">The message that describes the error.</param>
+        </member>
+        <member name="M:Ookii.CommandLine.CommandLineArgumentException.#ctor(System.String,System.String)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Ookii.CommandLine.CommandLineArgumentException"/> class with a specified error message.
+            </summary>
+            <param name="message">The message that describes the error.</param>
+            <param name="argumentName">The name of the argument that was invalid.</param>
+        </member>
+        <member name="M:Ookii.CommandLine.CommandLineArgumentException.#ctor(System.String,System.Exception)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Ookii.CommandLine.CommandLineArgumentException"/> class with a specified error message and a reference to the inner <see cref="T:System.Exception"/> that is the cause of this <see cref="T:Ookii.CommandLine.CommandLineArgumentException"/>. 
+            </summary>
+            <param name="message">The error message that explains the reason for the <see cref="T:Ookii.CommandLine.CommandLineArgumentException"/>.</param>
+            <param name="inner">The <see cref="T:System.Exception"/> that is the cause of the current <see cref="T:Ookii.CommandLine.CommandLineArgumentException"/>, or a <see langword="null"/> if no inner <see cref="T:System.Exception"/> is specified.</param>
+        </member>
+        <member name="M:Ookii.CommandLine.CommandLineArgumentException.#ctor(System.String,System.String,System.Exception)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Ookii.CommandLine.CommandLineArgumentException"/> class with a specified error message and a reference to the inner <see cref="T:System.Exception"/> that is the cause of this <see cref="T:Ookii.CommandLine.CommandLineArgumentException"/>. 
+            </summary>
+            <param name="message">The error message that explains the reason for the <see cref="T:Ookii.CommandLine.CommandLineArgumentException"/>.</param>
+            <param name="argumentName">The name of the argument that was invalid.</param>
+            <param name="inner">The <see cref="T:System.Exception"/> that is the cause of the current <see cref="T:Ookii.CommandLine.CommandLineArgumentException"/>, or a <see langword="null"/> if no inner <see cref="T:System.Exception"/> is specified.</param>
+        </member>
+        <member name="M:Ookii.CommandLine.CommandLineArgumentException.#ctor(System.Runtime.Serialization.SerializationInfo,System.Runtime.Serialization.StreamingContext)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Ookii.CommandLine.CommandLineArgumentException"/> class with serialized data. 
+            </summary>
+            <param name="info">The <see cref="T:System.Runtime.Serialization.SerializationInfo"/> that holds the serialized object data about the <see cref="T:Ookii.CommandLine.CommandLineArgumentException"/> being thrown.</param>
+            <param name="context">The <see cref="T:System.Runtime.Serialization.StreamingContext"/> that contains contextual information about the source or destination.</param>
+        </member>
+        <member name="M:Ookii.CommandLine.CommandLineArgumentException.GetObjectData(System.Runtime.Serialization.SerializationInfo,System.Runtime.Serialization.StreamingContext)">
+            <summary>
+            Sets the <see cref="T:System.Runtime.Serialization.SerializationInfo"/> object with the parameter name and additional exception information.
+            </summary>
+            <param name="info">The object that holds the serialized object data.</param>
+            <param name="context">The contextual information about the source or destination.</param>
+            <exception cref="T:System.ArgumentNullException"><paramref name="info"/> is <see langword="null"/>.</exception>
+        </member>
+        <member name="P:Ookii.CommandLine.CommandLineArgumentException.ArgumentName">
+            <summary>
+            Gets the name of the argument that was invalid.
+            </summary>
+            <value>
+            The name of the invalid argument.
+            </value>
+        </member>
+    </members>
+</doc>

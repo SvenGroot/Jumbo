@@ -10,7 +10,7 @@ using Tkl.Jumbo.Jet.Jobs;
 using Tkl.Jumbo.Jet;
 using System.Threading;
 using System.IO;
-using Tkl.Jumbo.CommandLine;
+using Ookii.CommandLine;
 
 namespace JetShell.Commands
 {
@@ -40,9 +40,12 @@ namespace JetShell.Commands
                 Assembly assembly = Assembly.LoadFrom(assemblyFileName);
                 if( _args.Length - _argIndex == 1 )
                 {
-                    Console.WriteLine("Usage: JetShell.exe job <assemblyName> <jobName> [job arguments...]");
-                    Console.WriteLine();
-                    PrintAssemblyJobList(assembly);
+                    using( LineWrappingTextWriter writer = LineWrappingTextWriter.ForConsoleOut() )
+                    {
+                        writer.WriteLine("Usage: JetShell.exe job <assemblyName> <jobName> [job arguments...]");
+                        writer.WriteLine();
+                        PrintAssemblyJobList(writer, assembly);
+                    }
                 }
                 else
                 {
@@ -50,8 +53,11 @@ namespace JetShell.Commands
                     JobRunnerInfo jobRunnerInfo = JobRunnerInfo.GetJobRunner(assembly, jobName);
                     if( jobRunnerInfo == null )
                     {
-                        Console.WriteLine(string.Format("Job {0} does not exist in the assembly {1}.", jobName, Path.GetFileName(assemblyFileName)).SplitLines(Console.WindowWidth - 1, 0));
-                        PrintAssemblyJobList(assembly);
+                        using( LineWrappingTextWriter writer = LineWrappingTextWriter.ForConsoleOut() )
+                        {
+                            writer.WriteLine("Job {0} does not exist in the assembly {1}.", jobName, Path.GetFileName(assemblyFileName));
+                            PrintAssemblyJobList(writer, assembly);
+                        }
                     }
                     else
                     {
@@ -59,7 +65,7 @@ namespace JetShell.Commands
                         if( jobRunner == null )
                         {
                             string baseUsage = string.Format("Usage: JetShell.exe job {0} {1} ", Path.GetFileName(assemblyFileName), jobRunnerInfo.Name);
-                            Console.WriteLine(jobRunnerInfo.CommandLineParser.GetCustomUsage(baseUsage, Console.WindowWidth - 1));
+                            jobRunnerInfo.CommandLineParser.WriteUsageToConsole(baseUsage);
                         }
                         else
                         {
@@ -102,15 +108,20 @@ namespace JetShell.Commands
             return status.IsSuccessful;
         }
 
-        private static void PrintAssemblyJobList(Assembly assembly)
+        private static void PrintAssemblyJobList(TextWriter writer, Assembly assembly)
         {
+            LineWrappingTextWriter lineWriter = writer as LineWrappingTextWriter;
             JobRunnerInfo[] jobs = JobRunnerInfo.GetJobRunners(assembly);
-            Console.Write(string.Format("The assembly {0} defines the following jobs:", assembly.GetName().Name).SplitLines(Console.WindowWidth - 1, 0));
-            Console.WriteLine();
+            writer.Write("The assembly {0} defines the following jobs:", assembly.GetName().Name);
+            writer.WriteLine();
+            if( lineWriter != null )
+                lineWriter.Indent = 16;
             foreach( JobRunnerInfo job in jobs )
             {
-                Console.Write(string.Format("{0,13} : {1}", job.Name, job.Description).SplitLines(Console.WindowWidth - 1, 16));
-                Console.WriteLine();
+                if( lineWriter != null )
+                    lineWriter.ResetIndent();
+                writer.Write("{0,13} : {1}", job.Name, job.Description);
+                writer.WriteLine();
             }
         }
     }

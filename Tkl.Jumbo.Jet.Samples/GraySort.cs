@@ -10,7 +10,7 @@ using Tkl.Jumbo.Jet.Samples.IO;
 using Tkl.Jumbo.Jet.Tasks;
 using Tkl.Jumbo.Dfs;
 using System.Runtime.InteropServices;
-using Tkl.Jumbo.CommandLine;
+using Ookii.CommandLine;
 
 namespace Tkl.Jumbo.Jet.Samples
 {

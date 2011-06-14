@@ -85,17 +85,6 @@
     <Compile Include="ClientChannelSink.cs" />
     <Compile Include="ClientChannelSinkProvider.cs" />
     <Compile Include="CollectionExtensions.cs" />
-    <Compile Include="CommandLine\ArgumentParsedEventArgs.cs" />
-    <Compile Include="CommandLine\CommandLineArgument.cs" />
-    <Compile Include="CommandLine\CommandLineArgumentException.cs" />
-    <Compile Include="CommandLine\CommandLineConstructorAttribute.cs" />
-    <Compile Include="CommandLine\CommandLineParser.cs" />
-    <Compile Include="CommandLine\ShellCommand.cs" />
-    <Compile Include="CommandLine\NamedCommandLineArgument.cs" />
-    <Compile Include="CommandLine\NamedCommandLineArgumentAttribute.cs" />
-    <Compile Include="CommandLine\PositionalCommandLineArgument.cs" />
-    <Compile Include="CommandLine\ShellCommandAttribute.cs" />
-    <Compile Include="CommandLine\StringExtensions.cs" />
     <Compile Include="CountdownEvent.cs" />
     <Compile Include="ExtendedCollection.cs" />
     <Compile Include="CompressionUtility.cs" />

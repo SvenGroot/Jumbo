@@ -9,7 +9,7 @@ using System.Net.Sockets;
 using IO = System.IO;
 using System.Threading;
 using Tkl.Jumbo;
-using Tkl.Jumbo.CommandLine;
+using Ookii.CommandLine;
 using System.Reflection;
 using DfsShell.Commands;
 
@@ -45,7 +45,7 @@ namespace DfsShell
                     }
 
                     if( command == null )
-                        Console.WriteLine(parser.GetCustomUsage("Usage: DfsShell.exe " + commandName.ToLowerInvariant(), Console.WindowWidth - 1));
+                        parser.WriteUsageToConsole("Usage: DfsShell.exe " + commandName.ToLowerInvariant());
                     else
                     {
                         try
@@ -91,11 +91,14 @@ namespace DfsShell
 
         private static void PrintUsage()
         {
-            Console.WriteLine("Usage: DfsShell <command> [args...]");
-            Console.WriteLine();
-            Console.WriteLine("The following commands are available:");
-            Console.WriteLine();
-            ShellCommand.PrintAssemblyCommandList(Assembly.GetExecutingAssembly());
+            using( LineWrappingTextWriter writer = LineWrappingTextWriter.ForConsoleOut() )
+            {
+                writer.WriteLine("Usage: DfsShell <command> [args...]");
+                writer.WriteLine();
+                writer.WriteLine("The following commands are available:");
+                writer.WriteLine();
+                ShellCommand.WriteAssemblyCommandList(writer, Assembly.GetExecutingAssembly());
+            }
         }
     }
 }

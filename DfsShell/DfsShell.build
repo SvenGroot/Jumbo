@@ -18,6 +18,7 @@
         <include name="../Tkl.Jumbo.Dfs/nantbin/Tkl.Jumbo.Dfs.dll"/>
         <include name="../Tkl.Jumbo/nantbin/Tkl.Jumbo.dll"/>
         <include name="../lib/log4net.dll"/>
+        <include name="../lib/Ookii.CommandLine.dll"/>
       </references>
       <sources>
         <include name="Properties/AssemblyInfo.cs"/>
@@ -29,6 +30,7 @@
     <copy file="App.config" tofile="nantbin/DfsShell.exe.config"/>
     <copy todir="nantbin">
       <fileset>
+        <include name="../lib/Ookii.CommandLine.dll"/>
         <include name="../Tkl.Jumbo.Dfs/nantbin/*.*"/>
         <include name="../Tkl.Jumbo/nantbin/*.*"/>
         <include name="../dfs.config"/>

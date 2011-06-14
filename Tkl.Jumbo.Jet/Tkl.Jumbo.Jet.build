@@ -18,6 +18,7 @@
         <include name="System.Runtime.Remoting.dll"/>
         <include name="System.Xml.Linq.dll"/>
         <include name="../lib/log4net.dll"/>
+        <include name="../lib/Ookii.CommandLine.dll"/>
         <include name="../Tkl.Jumbo/nantbin/Tkl.Jumbo.dll"/>
         <include name="../Tkl.Jumbo.Dfs/nantbin/Tkl.Jumbo.Dfs.dll"/>
       </references>
@@ -39,6 +40,7 @@
     <copy todir="nantbin">
       <fileset>
         <include name="../lib/log4net.dll"/>
+        <include name="../lib/Ookii.CommandLine.dll"/>
         <include name="../Tkl.Jumbo/nantbin/*.*"/>
         <include name="../Tkl.Jumbo.Dfs/nantbin/*.*"/>
       </fileset>

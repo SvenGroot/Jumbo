@@ -25,7 +25,6 @@
         <include name="*.cs"/>
         <include name="IO/*.cs"/>
         <include name="Topology/*.cs" />
-        <include name="CommandLine/*.cs"/>
         <include name="../Version.cs"/>
       </sources>
       <resources dynamicprefix="true" prefix="Tkl.Jumbo">

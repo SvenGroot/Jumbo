@@ -11,7 +11,7 @@ using Tkl.Jumbo;
 using Tkl.Jumbo.Jet;
 using Tkl.Jumbo.Jet.Jobs;
 using System.Threading;
-using Tkl.Jumbo.CommandLine;
+using Ookii.CommandLine;
 using JetShell.Commands;
 
 namespace JetShell
@@ -56,7 +56,7 @@ namespace JetShell
                     }
 
                     if( command == null )
-                        Console.WriteLine(parser.GetCustomUsage("Usage: DfsShell.exe " + commandName.ToLowerInvariant(), Console.WindowWidth - 1));
+                        parser.WriteUsageToConsole("Usage: DfsShell.exe " + commandName.ToLowerInvariant());
                     else
                     {
                         try
@@ -97,11 +97,14 @@ namespace JetShell
 
         private static void PrintUsage()
         {
-            Console.WriteLine("Usage: JetShell <command> [args...]");
-            Console.WriteLine();
-            Console.WriteLine("The following commands are available:");
-            Console.WriteLine();
-            ShellCommand.PrintAssemblyCommandList(Assembly.GetExecutingAssembly());
+            using( LineWrappingTextWriter writer = LineWrappingTextWriter.ForConsoleOut() )
+            {
+                writer.WriteLine("Usage: JetShell <command> [args...]");
+                writer.WriteLine();
+                writer.WriteLine("The following commands are available:");
+                writer.WriteLine();
+                ShellCommand.WriteAssemblyCommandList(writer, Assembly.GetExecutingAssembly());
+            }
         }  
     }
 }

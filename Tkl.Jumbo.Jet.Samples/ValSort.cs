@@ -12,7 +12,7 @@ using Tkl.Jumbo.Jet.Samples.IO;
 using Tkl.Jumbo.Jet.Tasks;
 using Tkl.Jumbo.Jet.Channels;
 using Tkl.Jumbo.IO;
-using Tkl.Jumbo.CommandLine;
+using Ookii.CommandLine;
 
 namespace Tkl.Jumbo.Jet.Samples
 {

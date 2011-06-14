@@ -9,7 +9,7 @@ using System.Reflection;
 using Tkl.Jumbo.IO;
 using Tkl.Jumbo.Jet.Tasks;
 using Tkl.Jumbo.Jet.Channels;
-using Tkl.Jumbo.CommandLine;
+using Ookii.CommandLine;
 using System.ComponentModel;
 
 namespace Tkl.Jumbo.Jet.Jobs
