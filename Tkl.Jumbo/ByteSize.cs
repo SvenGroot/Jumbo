@@ -51,13 +51,53 @@ namespace Tkl.Jumbo
         }
 
         /// <summary>
-        /// Gets or sets the value of this instance, in bytes.
+        /// Gets the value of this instance, in bytes.
         /// </summary>
         public long Value
         {
             get { return _value; }
         }
 
+        /// <summary>
+        /// Gets the value of this instance in kilobytes.
+        /// </summary>
+        public double InKilobytes
+        {
+            get { return _value / (double)Kilobyte; }
+        }
+
+        /// <summary>
+        /// Gets the value of this instance in megabytes.
+        /// </summary>
+        public double InMegabytes
+        {
+            get { return _value / (double)Kilobyte; }
+        }
+
+        /// <summary>
+        /// Gets the value of this instance in gigabytes.
+        /// </summary>
+        public double InGigabytes
+        {
+            get { return _value / (double)Kilobyte; }
+        }
+
+        /// <summary>
+        /// Gets the value of this instance in terabytes.
+        /// </summary>
+        public double InTerabytes
+        {
+            get { return _value / (double)Kilobyte; }
+        }
+
+        /// <summary>
+        /// Gets the value of this instance in petabytes.
+        /// </summary>
+        public double InPetabytes
+        {
+            get { return _value / (double)Kilobyte; }
+        }
+        
         /// <summary>
         /// Gets a zero-valued <see cref="ByteSize"/> instance.
         /// </summary>
