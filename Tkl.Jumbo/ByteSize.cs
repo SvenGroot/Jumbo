@@ -71,7 +71,7 @@ namespace Tkl.Jumbo
         /// </summary>
         public double InMegabytes
         {
-            get { return _value / (double)Kilobyte; }
+            get { return _value / (double)Megabyte; }
         }
 
         /// <summary>
@@ -79,7 +79,7 @@ namespace Tkl.Jumbo
         /// </summary>
         public double InGigabytes
         {
-            get { return _value / (double)Kilobyte; }
+            get { return _value / (double)Gigabyte; }
         }
 
         /// <summary>
@@ -87,7 +87,7 @@ namespace Tkl.Jumbo
         /// </summary>
         public double InTerabytes
         {
-            get { return _value / (double)Kilobyte; }
+            get { return _value / (double)Terabyte; }
         }
 
         /// <summary>
@@ -95,7 +95,7 @@ namespace Tkl.Jumbo
         /// </summary>
         public double InPetabytes
         {
-            get { return _value / (double)Kilobyte; }
+            get { return _value / (double)Petabyte; }
         }
         
         /// <summary>

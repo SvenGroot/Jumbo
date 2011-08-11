@@ -20,7 +20,7 @@ namespace Tkl.Jumbo
     public sealed class CountdownEvent : IDisposable
     {
         private readonly ManualResetEvent _reachedZeroEvent = new ManualResetEvent(false);
-        private volatile int _count;
+        private int _count;
         private volatile bool _disposed;
 
         /// <summary>
@@ -45,7 +45,7 @@ namespace Tkl.Jumbo
 
             // This is not meant to prevent _count from dropping below zero (that can still happen due to race conditions),
             // it's just a simple way to prevent the function from doing unnecessary work if the count has already reached zero.
-            if( _count <= 0 )
+            if( Thread.VolatileRead(ref _count) <= 0 )
                 return true;
 
             if( Interlocked.Decrement(ref _count) <= 0 )
