@@ -28,7 +28,7 @@
         <include name="Channels/*.cs"/>
 	<include name="Tasks/*.cs"/>
 	<include name="Jobs/*.cs"/>
-        <include name="../Version.cs"/>
+        <include name="../AssemblyInfoCommon.cs"/>
       </sources>
       <nowarn>
         <!-- XML comment warnings; this is somewhat broken in Mono. -->

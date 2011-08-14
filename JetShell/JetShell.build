@@ -25,7 +25,7 @@
         <include name="Properties/AssemblyInfo.cs"/>
         <include name="Commands/*.cs"/>
         <include name="*.cs"/>
-        <include name="../Version.cs"/>
+        <include name="../AssemblyInfoCommon.cs"/>
       </sources>
     </csc>
     <copy file="App.config" tofile="nantbin/JetShell.exe.config"/>

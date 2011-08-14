@@ -14,6 +14,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Libraries", "Libraries", "{
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{7F2D342B-860E-4940-BBAB-9B7325C3F47D}"
 	ProjectSection(SolutionItems) = preProject
+		AssemblyInfoCommon.cs = AssemblyInfoCommon.cs
+		AssemblyInfoCommon.cs.template = AssemblyInfoCommon.cs.template
 		build.sh = build.sh
 		CodeAnalysisDictionary.xml = CodeAnalysisDictionary.xml
 		common.config = common.config
@@ -30,7 +32,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		run-jet.sh = run-jet.sh
 		run-server.sh = run-server.sh
 		test.sh = test.sh
-		VersionTemplate.cs = VersionTemplate.cs
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Jumbo.Dfs", "Jumbo.Dfs", "{0703556B-46C0-4EBA-8178-2A03BEE80BBA}"

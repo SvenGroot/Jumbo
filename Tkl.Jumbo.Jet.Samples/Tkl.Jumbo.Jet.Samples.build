@@ -29,7 +29,7 @@
         <include name="FPGrowth/*.cs" />
         <include name="FPGrowth/MapReduce/*.cs" />
         <include name="*.cs"/>
-        <include name="../Version.cs"/>
+        <include name="../AssemblyInfoCommon.cs"/>
       </sources>
       <nowarn>
         <!-- XML comment warnings; this is somewhat broken in Mono. -->

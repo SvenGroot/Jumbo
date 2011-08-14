@@ -1,0 +1,10 @@
+// $Id: VersionTemplate.cs 502 2010-04-21 09:03:12Z sgroot $
+//
+using System.Reflection;
+
+[assembly: AssemblyCompany("Kitsuregawa Lab")]
+[assembly: AssemblyProduct("Jumbo")]
+[assembly: AssemblyCopyright("Copyright © Sven Groot 2011")]
+[assembly: AssemblyVersion("1.0.0.0")]
+[assembly: AssemblyFileVersion("1.0.$BUILD.$REVISION")]
+[assembly: AssemblyConfiguration("$BRANCH")]

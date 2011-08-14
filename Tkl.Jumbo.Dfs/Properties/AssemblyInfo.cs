@@ -10,9 +10,6 @@ using System;
 // associated with an assembly.
 [assembly: AssemblyTitle("Tkl.Jumbo.Dfs")]
 [assembly: AssemblyDescription("")]
-[assembly: AssemblyCompany("Kitsuregawa Lab")]
-[assembly: AssemblyProduct("Jumbo")]
-[assembly: AssemblyCopyright("Copyright © Sven Groot 2010")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 [assembly: CLSCompliant(true)]
