@@ -32,28 +32,28 @@ namespace DfsShell.Commands
             _dfsPath = dfsPath;
         }
 
-        [NamedCommandLineArgument("b"), Description("The block size of the DFS file.")]
+        [CommandLineArgument("b"), Description("The block size of the DFS file.")]
         public ByteSize BlockSize { get; set; }
 
-        [NamedCommandLineArgument("r"), Description("The replication factor of the DFS file.")]
+        [CommandLineArgument("r"), Description("The replication factor of the DFS file.")]
         public int ReplicationFactor { get; set; }
 
-        [NamedCommandLineArgument("q"), Description("Suppress progress information output.")]
+        [CommandLineArgument("q"), Description("Suppress progress information output.")]
         public bool Quiet { get; set; }
 
-        [NamedCommandLineArgument("rr"), Description("The record reader used to read the file(s). This must be the assembly-qualified name of the type. If this argument is specified, you must also specify a record writer using the same record type.")]
+        [CommandLineArgument("rr"), Description("The record reader used to read the file(s). This must be the assembly-qualified name of the type. If this argument is specified, you must also specify a record writer using the same record type.")]
         public string RecordReaderTypeName { get; set; }
 
-        [NamedCommandLineArgument("rw"), Description("The record writer used to write the file(s) to the DFS. This must be the assembly-qualified name of the type. If this argument is specified, you must also specify a record writer using the same record type.")]
+        [CommandLineArgument("rw"), Description("The record writer used to write the file(s) to the DFS. This must be the assembly-qualified name of the type. If this argument is specified, you must also specify a record writer using the same record type.")]
         public string RecordWriterTypeName { get; set; }
 
-        [NamedCommandLineArgument("ro"), Description("The record options for the file. Must be a comma-separated list of the values of the RecordStreamOptions enumeration. If this option is anything other than None, you must specify a record reader and record writer.")]
+        [CommandLineArgument("ro"), Description("The record options for the file. Must be a comma-separated list of the values of the RecordStreamOptions enumeration. If this option is anything other than None, you must specify a record reader and record writer.")]
         public RecordStreamOptions RecordOptions { get; set; }
 
-        [NamedCommandLineArgument("text"), Description("Treat the file as line-separated text. This is equivalent to specifying LineRecordReader as the record reader and TextRecordReader<Utf8String> as the record writer.")]
+        [CommandLineArgument("text"), Description("Treat the file as line-separated text. This is equivalent to specifying LineRecordReader as the record reader and TextRecordReader<Utf8String> as the record writer.")]
         public bool TextFile { get; set; }
 
-        [NamedCommandLineArgument("nl"), Description("The first replica should not be put on the local node if that node is part of the DFS. Note that the first replica might still be placed on the local node; it is just no longer guaranteed.")]
+        [CommandLineArgument("nl"), Description("The first replica should not be put on the local node if that node is part of the DFS. Note that the first replica might still be placed on the local node; it is just no longer guaranteed.")]
         public bool NoLocalReplica { get; set; }
 
         public override void Run()

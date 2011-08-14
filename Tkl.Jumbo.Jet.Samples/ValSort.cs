@@ -60,7 +60,7 @@ namespace Tkl.Jumbo.Jet.Samples
         /// <value>
         /// 	<see langword="true"/> if verbose logging is enabled in the combiner task; otherwise, <see langword="false"/>. The default value is <see langword="false"/>.
         /// </value>
-        [NamedCommandLineArgument("v"), JobSetting, Description("Enables verbose logging of where unsorted records occured in the combiner task.")]
+        [CommandLineArgument("v"), JobSetting, Description("Enables verbose logging of where unsorted records occured in the combiner task.")]
         public bool VerboseLogging { get; set; }
 
         /// <summary>
