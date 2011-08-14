@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text;
 using Ookii.CommandLine;
 using System.ComponentModel;
+using Tkl.Jumbo;
 
 namespace JetShell.Commands
 {
@@ -18,9 +19,9 @@ namespace JetShell.Commands
         public override void Run()
         {
             if( RevisionOnly )
-                Console.WriteLine(typeof(Tkl.Jumbo.ServerAddress).Assembly.GetName().Version.Revision);
+                Console.WriteLine(RuntimeEnvironment.JumboVersion.Revision);
             else
-                Console.WriteLine("Jumbo {0}", typeof(Tkl.Jumbo.ServerAddress).Assembly.GetName().Version);
+                Console.WriteLine("Jumbo {0}", RuntimeEnvironment.JumboVersion.Revision);
         }
     }
 }
