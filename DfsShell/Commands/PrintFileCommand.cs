@@ -108,16 +108,16 @@ namespace DfsShell.Commands
             _path = path;
         }
 
-        [NamedCommandLineArgument("encoding", DefaultValue="utf-8"), Description("The text encoding to use. The default value is utf-8.")]
+        [CommandLineArgument("encoding", DefaultValue="utf-8"), Description("The text encoding to use. The default value is utf-8.")]
         public string Encoding { get; set; }
 
-        [NamedCommandLineArgument("size", DefaultValue=long.MaxValue), Description("The maximum number of bytes to read from the file. If not specified, the entire file will be read.")]
+        [CommandLineArgument("size", DefaultValue=long.MaxValue), Description("The maximum number of bytes to read from the file. If not specified, the entire file will be read.")]
         public long Size { get; set; }
 
-        [NamedCommandLineArgument("tail"), Description("Prints the end rather than the start of the file up to the specified size.")]
+        [CommandLineArgument("tail"), Description("Prints the end rather than the start of the file up to the specified size.")]
         public bool Tail { get; set; }
 
-        [NamedCommandLineArgument("rr"), Description("Specified the type of record reader to use to read the contents of the file. This must be the assembly-qualified mangled name.")]
+        [CommandLineArgument("rr"), Description("Specified the type of record reader to use to read the contents of the file. This must be the assembly-qualified mangled name.")]
         public string RecordReaderType { get; set; }
 
         public override void Run()

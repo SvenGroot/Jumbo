@@ -63,7 +63,7 @@ namespace Tkl.Jumbo.Jet.Jobs
             get
             {
                 // DFS paths can start with / so we always use - as the argument switch.
-                return _parser ?? (_parser = new CommandLineParser(_jobRunnerType) { NamedArgumentSwitch = "-" });
+                return _parser ?? (_parser = new CommandLineParser(_jobRunnerType, new[] { "-" }));
             }
         }
 
@@ -134,34 +134,24 @@ namespace Tkl.Jumbo.Jet.Jobs
                 StringBuilder logMessage = new StringBuilder("Created job runner for job ");
                 logMessage.Append(Name);
 
-                foreach( NamedCommandLineArgument argument in CommandLineParser.NamedArguments )
+                if( _log.IsInfoEnabled )
                 {
-                    if( argument.Value != null )
+                    foreach( CommandLineArgument argument in CommandLineParser.Arguments )
                     {
-                        logMessage.Append(", ");
-                        logMessage.Append(argument.PropertyName);
-                        logMessage.Append(" = ");
-                        if( argument.ArgumentType.IsArray )
-                            AppendMultiValueArgument(logMessage, (Array)argument.Value);
-                        else
-                            logMessage.Append(argument.Value);
+                        if( argument.HasValue )
+                        {
+                            logMessage.Append(", ");
+                            logMessage.Append(argument.ArgumentName);
+                            logMessage.Append(" = ");
+                            if( argument.ArgumentType.IsArray )
+                                AppendMultiValueArgument(logMessage, (Array)argument.Value);
+                            else
+                                logMessage.Append(argument.Value);
+                        }
                     }
-                }
-                foreach( PositionalCommandLineArgument argument in CommandLineParser.PositionalArguments )
-                {
-                    if( argument.Value != null )
-                    {
-                        logMessage.Append(", ");
-                        logMessage.Append(argument.Name);
-                        logMessage.Append(" = ");
-                        if( argument.ArgumentType.IsArray )
-                            AppendMultiValueArgument(logMessage, (Array)argument.Value);
-                        else
-                            logMessage.Append(argument.Value);
-                    }
-                }
 
-                _log.Info(logMessage.ToString());
+                    _log.Info(logMessage.ToString());
+                }
 
                 JetActivator.ApplyConfiguration(jobRunner, dfsConfiguration, jetConfiguration, null);
             }

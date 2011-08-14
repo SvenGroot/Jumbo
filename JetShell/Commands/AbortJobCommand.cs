@@ -28,7 +28,7 @@ namespace JetShell.Commands
             else
             {
                 Console.WriteLine("Job {{{0}}} was not found or not running.", _jobId);
-                ExitStatus = 1;
+                ExitCode = 1;
             }
         }
     }

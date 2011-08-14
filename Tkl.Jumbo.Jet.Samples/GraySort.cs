@@ -49,21 +49,21 @@ namespace Tkl.Jumbo.Jet.Samples
         /// <summary>
         /// Gets or sets the sample size used to determine the partitioner's split points.
         /// </summary>
-        [NamedCommandLineArgument("s"), Description("The number of records to sample in order to determine the partitioner's split points. The default is 10000.")]
+        [CommandLineArgument("s"), Description("The number of records to sample in order to determine the partitioner's split points. The default is 10000.")]
         public int SampleSize { get; set; }
 
         /// <summary>
         /// Gets or sets the maximum number of merge inputs for a single merge pass.
         /// </summary>
         /// <value>The maxiximum number of file merge inputs.</value>
-        [NamedCommandLineArgument("m"), Description("The maximum number of inputs for a single merge pass. If unspecified, Jumbo Jet's default value will be used.")]
+        [CommandLineArgument("m"), Description("The maximum number of inputs for a single merge pass. If unspecified, Jumbo Jet's default value will be used.")]
         public int MaxMergeInputs { get; set; }
 
         /// <summary>
         /// Gets or sets the number of partitions per merge task.
         /// </summary>
         /// <value>The number of partitions per task.</value>
-        [NamedCommandLineArgument("ppt"), Description("The number of partitions per merge task. The default is 1.")]
+        [CommandLineArgument("ppt"), Description("The number of partitions per merge task. The default is 1.")]
         public int PartitionsPerTask { get; set; }
 
         /// <summary>
@@ -72,7 +72,7 @@ namespace Tkl.Jumbo.Jet.Samples
         /// <value>
         /// 	<see langword="true"/> if the single-file partition file format is used; otherwise, <see langword="false"/>.
         /// </value>
-        [NamedCommandLineArgument("pf"), Description("When set, the job will use the single-file partition file format for the intermediate data.")]
+        [CommandLineArgument("pf"), Description("When set, the job will use the single-file partition file format for the intermediate data.")]
         public bool UsePartitionFile { get; set; }
 
         /// <summary>

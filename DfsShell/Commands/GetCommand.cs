@@ -30,7 +30,7 @@ namespace DfsShell.Commands
             _localPath = localPath;
         }
 
-        [NamedCommandLineArgument("q"), Description("Suppress progress information output.")]
+        [CommandLineArgument("q"), Description("Suppress progress information output.")]
         public bool Quiet { get; set; }
 
         public override void Run()

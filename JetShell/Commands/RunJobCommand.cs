@@ -31,7 +31,7 @@ namespace JetShell.Commands
 
         public override void Run()
         {
-            ExitStatus = 1; // Assume failure unless we can successfully run a job.
+            ExitCode = 1; // Assume failure unless we can successfully run a job.
             if( _args.Length - _argIndex == 0 )
                 Console.WriteLine("Usage: JetShell.exe job <assemblyName> [jobName] [job arguments...]");
             else
@@ -64,15 +64,15 @@ namespace JetShell.Commands
                         IJobRunner jobRunner = jobRunnerInfo.CreateInstance(_args, _argIndex + 2);
                         if( jobRunner == null )
                         {
-                            string baseUsage = string.Format("Usage: JetShell.exe job {0} {1} ", Path.GetFileName(assemblyFileName), jobRunnerInfo.Name);
-                            jobRunnerInfo.CommandLineParser.WriteUsageToConsole(baseUsage);
+                            WriteUsageOptions options = new WriteUsageOptions() { UsagePrefix = string.Format("{0} job {1} {2} ", CommandLineParser.DefaultUsagePrefix, Path.GetFileName(assemblyFileName), jobRunnerInfo.Name) };
+                            jobRunnerInfo.CommandLineParser.WriteUsageToConsole(options);
                         }
                         else
                         {
                             Guid jobId = jobRunner.RunJob();
                             bool success = WaitForJobCompletion(JetClient, jobId);
                             jobRunner.FinishJob(success);
-                            ExitStatus = success ? 0 : 1;
+                            ExitCode = success ? 0 : 1;
                         }
                     }
                 }

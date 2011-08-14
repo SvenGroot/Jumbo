@@ -12,7 +12,7 @@ namespace JetShell.Commands
     [ShellCommand("version"), Description("Shows version information.")]
     class PrintVersionCommand : JetShellCommand
     {
-        [NamedCommandLineArgument("r"), Description("Display only the revision number rather than the full version.")]
+        [CommandLineArgument("r"), Description("Display only the revision number rather than the full version.")]
         public bool RevisionOnly { get; set; }
 
         public override void Run()

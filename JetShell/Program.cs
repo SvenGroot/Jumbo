@@ -42,8 +42,8 @@ namespace JetShell
                     }
                     else
                     {
-                        parser = new CommandLineParser(commandType);
-                        parser.NamedArgumentSwitch = "-"; // DFS paths use / as the directory separator, so use - even on Windows.
+                        // DFS paths use / as the directory separator, so use - even on Windows.
+                        parser = new CommandLineParser(commandType, new[] { "-" });
                         try
                         {
                             command = (JetShellCommand)parser.Parse(args, 1);
@@ -56,14 +56,14 @@ namespace JetShell
                     }
 
                     if( command == null )
-                        parser.WriteUsageToConsole("Usage: DfsShell.exe " + commandName.ToLowerInvariant());
+                        parser.WriteUsageToConsole(new WriteUsageOptions() { UsagePrefix = CommandLineParser.DefaultUsagePrefix + " " + commandName.ToLowerInvariant() });
                     else
                     {
                         try
                         {
                             command.JetClient = new JetClient();
                             command.Run();
-                            return command.ExitStatus;
+                            return command.ExitCode;
                         }
                         catch( SocketException ex )
                         {

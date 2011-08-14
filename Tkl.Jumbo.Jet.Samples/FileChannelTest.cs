@@ -44,7 +44,7 @@ namespace Tkl.Jumbo.Jet.Samples
         /// <summary>
         /// Gets or sets the sample size used to determine the partitioner's split points.
         /// </summary>
-        [NamedCommandLineArgument("s"), Description("The number of records to sample in order to determine the partitioner's split points. The default is 10000.")]
+        [CommandLineArgument("s"), Description("The number of records to sample in order to determine the partitioner's split points. The default is 10000.")]
         public int SampleSize { get; set; }
 
         /// <summary>

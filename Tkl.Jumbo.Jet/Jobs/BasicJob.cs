@@ -70,13 +70,13 @@ namespace Tkl.Jumbo.Jet.Jobs
         /// <summary>
         /// Gets or sets the channel type to use.
         /// </summary>
-        [NamedCommandLineArgument("channel"), Description("The channel type to use (File or Tcp).")]
+        [CommandLineArgument("channel"), Description("The channel type to use (File or Tcp).")]
         public ChannelType ChannelType { get; set; }
 
         /// <summary>
         /// Gets or sets the number of partitions per merge task.
         /// </summary>
-        [NamedCommandLineArgument("ppt"), Description("The number of partitions per merge task. The default is 1.")]
+        [CommandLineArgument("ppt"), Description("The number of partitions per merge task. The default is 1.")]
         public int PartitionsPerTask { get; set; }
 
         /// <summary>

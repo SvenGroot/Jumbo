@@ -20,13 +20,13 @@ namespace Tkl.Jumbo.Jet.Jobs
         /// <summary>
         /// Gets or sets a value that indicates whether the output directory should be deleted, if it exists, before the job is executed.
         /// </summary>
-        [NamedCommandLineArgument("d"), Description("Delete the output directory before running the job, if it exists.")]
+        [CommandLineArgument("d"), Description("Delete the output directory before running the job, if it exists.")]
         public bool DeleteOutputBeforeRun { get; set; }
 
         /// <summary>
         /// Gets or sets a value that indicates whether the job runner should wait for user input before starting the job and before exitting.
         /// </summary>
-        [NamedCommandLineArgument("i"), Description("Wait for user confirmation before starting the job and before exitting.")]
+        [CommandLineArgument("i"), Description("Wait for user confirmation before starting the job and before exitting.")]
         public bool IsInteractive { get; set; }
 
         /// <summary>
@@ -35,7 +35,7 @@ namespace Tkl.Jumbo.Jet.Jobs
         /// <remarks>
         /// Derived classes should use this value with the <see cref="TaskDfsOutput"/> items of the job configuration.
         /// </remarks>
-        [NamedCommandLineArgument("replication"), Description("Replication factor of the job's output files.")]
+        [CommandLineArgument("replication"), Description("Replication factor of the job's output files.")]
         public int ReplicationFactor { get; set; }
 
         /// <summary>
@@ -44,7 +44,7 @@ namespace Tkl.Jumbo.Jet.Jobs
         /// <remarks>
         /// Derived classes should use this value with the <see cref="TaskDfsOutput"/> items of the job configuration.
         /// </remarks>
-        [NamedCommandLineArgument("blockSize"), Description("Block size of the job's output files.")]
+        [CommandLineArgument("blockSize"), Description("Block size of the job's output files.")]
         public ByteSize BlockSize { get; set; }
 
         /// <summary>
@@ -77,7 +77,7 @@ namespace Tkl.Jumbo.Jet.Jobs
         ///   in a derived class after creating your job configuration.
         /// </para>
         /// </remarks>
-        [NamedCommandLineArgument("P"), Description("Modifies the value of one of the properties in the job configuration after the job has been created. Uses the format \"PropertyName=value\" or \"CompoundStageId:PropertyName=value\". You can access properties more than one level deep, e.g. \"MyStage:OutputChannel.PartitionsPerTask=2\". Can be specified more than once.")]
+        [CommandLineArgument("P"), Description("Modifies the value of one of the properties in the job configuration after the job has been created. Uses the format \"PropertyName=value\" or \"CompoundStageId:PropertyName=value\". You can access properties more than one level deep, e.g. \"MyStage:OutputChannel.PartitionsPerTask=2\". Can be specified more than once.")]
         public string[] JobOrStageProperties { get; set; }
 
         /// <summary>
@@ -102,7 +102,7 @@ namespace Tkl.Jumbo.Jet.Jobs
         ///   in a derived class after creating your job configuration.
         /// </para>
         /// </remarks>
-        [NamedCommandLineArgument("D"), Description("Defines or overrides a job or stage setting in the job configuration. Uses the format \"SettingName=value\" or \"CompoundStageId:SettingName=value\". Can be specified more than once.")]
+        [CommandLineArgument("D"), Description("Defines or overrides a job or stage setting in the job configuration. Uses the format \"SettingName=value\" or \"CompoundStageId:SettingName=value\". Can be specified more than once.")]
         public string[] JobOrStageSettings { get; set; }
 
         #region IJobRunner Members

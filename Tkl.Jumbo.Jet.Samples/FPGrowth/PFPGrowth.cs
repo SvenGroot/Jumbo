@@ -43,63 +43,63 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
         /// Gets or sets the min support.
         /// </summary>
         /// <value>The min support.</value>
-        [NamedCommandLineArgument("m", DefaultValue = 2), JobSetting, Description("The minimum support of the patterns to mine.")]
+        [CommandLineArgument("m", DefaultValue = 2), JobSetting, Description("The minimum support of the patterns to mine.")]
         public int MinSupport { get; set; }
 
         /// <summary>
         /// Gets or sets the number of groups.
         /// </summary>
         /// <value>The number of groups.</value>
-        [NamedCommandLineArgument("g", DefaultValue = 50), JobSetting, Description("The number of groups to create.")]
+        [CommandLineArgument("g", DefaultValue = 50), JobSetting, Description("The number of groups to create.")]
         public int Groups { get; set; }
 
         /// <summary>
         /// Gets or sets the number of feature count accumulator tasks.
         /// </summary>
         /// <value>The number of accumulator tasks.</value>
-        [NamedCommandLineArgument("c", DefaultValue = 0), Description("The number of feature accumulator tasks to use. Defaults to the capacity of the cluster.")]
+        [CommandLineArgument("c", DefaultValue = 0), Description("The number of feature accumulator tasks to use. Defaults to the capacity of the cluster.")]
         public int AccumulatorTaskCount { get; set; }
 
         /// <summary>
         /// Gets or sets the FP growth task count.
         /// </summary>
         /// <value>The FP growth task count.</value>
-        [NamedCommandLineArgument("f"), Description("The number of FP-growth tasks to use. The default is the capacity of the cluster.")]
+        [CommandLineArgument("f"), Description("The number of FP-growth tasks to use. The default is the capacity of the cluster.")]
         public int FPGrowthTaskCount { get; set; }
 
         /// <summary>
         /// Gets or sets a value indicating whether [use transaction tree].
         /// </summary>
         /// <value><c>true</c> if [use transaction tree]; otherwise, <c>false</c>.</value>
-        [NamedCommandLineArgument("tt"), Description("Use a transaction tree for the intermediate data.")]
+        [CommandLineArgument("tt"), Description("Use a transaction tree for the intermediate data.")]
         public bool UseTransactionTree { get; set; }
 
         /// <summary>
         /// Gets or sets the pattern count.
         /// </summary>
         /// <value>The pattern count.</value>
-        [NamedCommandLineArgument("k", DefaultValue = 50), JobSetting, Description("The number of patterns to return for each item.")]
+        [CommandLineArgument("k", DefaultValue = 50), JobSetting, Description("The number of patterns to return for each item.")]
         public int PatternCount { get; set; }
 
         /// <summary>
         /// Gets or sets the aggregate task count.
         /// </summary>
         /// <value>The aggregate task count.</value>
-        [NamedCommandLineArgument("a"), Description("The number of aggregation tasks to use. The default is the number of nodes in the cluster.")]
+        [CommandLineArgument("a"), Description("The number of aggregation tasks to use. The default is the number of nodes in the cluster.")]
         public int AggregateTaskCount { get; set; }
 
         /// <summary>
         /// Gets or sets the size of the write buffer.
         /// </summary>
         /// <value>The size of the write buffer.</value>
-        [NamedCommandLineArgument("buffer"), Description("The size of the write buffer for the output channel of the GenerateGroupTransactions stage.")]
+        [CommandLineArgument("buffer"), Description("The size of the write buffer for the output channel of the GenerateGroupTransactions stage.")]
         public ByteSize WriteBufferSize { get; set; }
 
         /// <summary>
         /// Gets or sets the type of the compression.
         /// </summary>
         /// <value>The type of the compression.</value>
-        [NamedCommandLineArgument("compression"), Description("The type of compression to use for the output of the GenerateGroupTransactions stage.")]
+        [CommandLineArgument("compression"), Description("The type of compression to use for the output of the GenerateGroupTransactions stage.")]
         public CompressionType CompressionType { get; set; }
 
         /// <summary>
@@ -108,14 +108,14 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
         /// <value>
         /// 	<see langword="true"/> if the intermediate data should be stored in partition file format; otherwise, <see langword="false"/>.
         /// </value>
-        [NamedCommandLineArgument("pf"), Description("When set, the job will use the single-file partition file format for the intermediate data.")]
+        [CommandLineArgument("pf"), Description("When set, the job will use the single-file partition file format for the intermediate data.")]
         public bool UsePartitionFile { get; set; }
 
         /// <summary>
         /// Gets or sets a value indicating the number of partitions per task for the MineTransactions stage.
         /// </summary>
         /// <value>The partitions per task.</value>
-        [NamedCommandLineArgument("ppt"), Description("The number of partitions per task for the MineTransactions stage.")]
+        [CommandLineArgument("ppt"), Description("The number of partitions per task for the MineTransactions stage.")]
         public int PartitionsPerTask { get; set; }
 
         /// <summary>
@@ -124,7 +124,7 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
         /// <value>
         /// 	<see langword="true"/> if the output format is binary; otherwise, <see langword="false"/>.
         /// </value>
-        [NamedCommandLineArgument("binaryOutput"), Description("When set, the output will written using a BinaryRecordWriter rather than as text.")]
+        [CommandLineArgument("binaryOutput"), Description("When set, the output will written using a BinaryRecordWriter rather than as text.")]
         public bool BinaryOutput { get; set; }
 
         /// <summary>

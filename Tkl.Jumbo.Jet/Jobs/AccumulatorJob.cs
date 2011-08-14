@@ -64,7 +64,7 @@ namespace Tkl.Jumbo.Jet.Jobs
         /// <summary>
         /// Gets or sets the channel type to use.
         /// </summary>
-        [NamedCommandLineArgument("channel"), Description("The channel type to use (File or Tcp).")]
+        [CommandLineArgument("channel"), Description("The channel type to use (File or Tcp).")]
         public ChannelType ChannelType { get; set; }
 
         /// <summary>

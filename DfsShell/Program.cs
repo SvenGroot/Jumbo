@@ -32,8 +32,8 @@ namespace DfsShell
                 if( commandType != null )
                 {
                     DfsShellCommand command = null;
-                    CommandLineParser parser = new CommandLineParser(commandType);
-                    parser.NamedArgumentSwitch = "-"; // DFS paths use / as the directory separator, so use - even on Windows.
+                    // DFS paths use / as the directory separator, so use - even on Windows.
+                    CommandLineParser parser = new CommandLineParser(commandType, new[] { "-" });
                     try
                     {
                         command = (DfsShellCommand)parser.Parse(args, 1);
@@ -45,7 +45,7 @@ namespace DfsShell
                     }
 
                     if( command == null )
-                        parser.WriteUsageToConsole("Usage: DfsShell.exe " + commandName.ToLowerInvariant());
+                        parser.WriteUsageToConsole(new WriteUsageOptions() { UsagePrefix = CommandLineParser.DefaultUsagePrefix + " " + commandName.ToLowerInvariant() });
                     else
                     {
                         try

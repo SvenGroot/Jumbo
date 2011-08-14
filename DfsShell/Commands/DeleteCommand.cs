@@ -22,7 +22,7 @@ namespace DfsShell.Commands
             _path = path;
         }
 
-        [NamedCommandLineArgument("r"), Description("Recursively delete all children of a directory.")]
+        [CommandLineArgument("r"), Description("Recursively delete all children of a directory.")]
         public bool Recursive { get; set; }
 
         public override void Run()

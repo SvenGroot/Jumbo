@@ -33,28 +33,28 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth.MapReduce
         /// Gets or sets the min support.
         /// </summary>
         /// <value>The min support.</value>
-        [NamedCommandLineArgument("m", DefaultValue = 2), JobSetting, Description("The minimum support of the patterns to mine.")]
+        [CommandLineArgument("m", DefaultValue = 2), JobSetting, Description("The minimum support of the patterns to mine.")]
         public int MinSupport { get; set; }
 
         /// <summary>
         /// Gets or sets the pattern count.
         /// </summary>
         /// <value>The pattern count.</value>
-        [NamedCommandLineArgument("k", DefaultValue = 50), JobSetting, Description("The number of patterns to return for each item.")]
+        [CommandLineArgument("k", DefaultValue = 50), JobSetting, Description("The number of patterns to return for each item.")]
         public int PatternCount { get; set; }
 
         /// <summary>
         /// Gets or sets the number of reduce tasks.
         /// </summary>
         /// <value>The number of accumulator tasks.</value>
-        [NamedCommandLineArgument("r", DefaultValue = 0), Description("The number of reduce tasks to use. Defaults to the capacity of the cluster.")]
+        [CommandLineArgument("r", DefaultValue = 0), Description("The number of reduce tasks to use. Defaults to the capacity of the cluster.")]
         public int ReduceTaskCount { get; set; }
 
         /// <summary>
         /// Gets or sets a value indicating the number of partitions per task.
         /// </summary>
         /// <value>The partitions per task.</value>
-        [NamedCommandLineArgument("ppt"), Description("The number of partitions per task for the MineTransactions stage.")]
+        [CommandLineArgument("ppt"), Description("The number of partitions per task for the MineTransactions stage.")]
         public int PartitionsPerTask { get; set; }
 
         /// <summary>

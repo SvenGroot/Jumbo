@@ -21,7 +21,7 @@ namespace DfsShell.Commands
             _kind = kind;
         }
 
-        [NamedCommandLineArgument("f"), Description("Include the path of the file that each block belongs to.")]
+        [CommandLineArgument("f"), Description("Include the path of the file that each block belongs to.")]
         public bool IncludeFiles { get; set; }
 
         public override void Run()
