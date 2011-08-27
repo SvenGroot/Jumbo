@@ -54,10 +54,10 @@ public partial class _Default : System.Web.UI.Page
 
     private string FormatSize(long bytes)
     {
-        if( bytes < ByteSize.Kilobyte )
+        if( bytes < BinaryValue.Kilobyte )
         {
             return string.Format("{0:#,0} bytes", bytes);
         }
-        return string.Format("<abbr title=\"{1:#,0} bytes\">{0:#,0.# SB}</abbr>", (ByteSize)bytes, bytes);
+        return string.Format("<abbr title=\"{1:#,0} bytes\">{0:#,0.# SB}</abbr>", (BinaryValue)bytes, bytes);
     }
 }

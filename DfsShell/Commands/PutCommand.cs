@@ -33,7 +33,7 @@ namespace DfsShell.Commands
         }
 
         [CommandLineArgument("b"), Description("The block size of the DFS file.")]
-        public ByteSize BlockSize { get; set; }
+        public BinaryValue BlockSize { get; set; }
 
         [CommandLineArgument("r"), Description("The replication factor of the DFS file.")]
         public int ReplicationFactor { get; set; }

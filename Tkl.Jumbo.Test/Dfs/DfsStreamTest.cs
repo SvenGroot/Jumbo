@@ -187,7 +187,7 @@ namespace Tkl.Jumbo.Test.Dfs
             const int size = 100000000;
             const string fileName = "/RecordBoundary";
             const int recordSize = 1000;
-            const int blockSize = 16 * (int)ByteSize.Megabyte;
+            const int blockSize = 16 * (int)BinaryValue.Megabyte;
 
             // This test exercises both DfsOutputStream and DfsInputStream by writing a file to the DFS and reading it back
             using( MemoryStream stream = new MemoryStream() )

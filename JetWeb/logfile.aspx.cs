@@ -20,7 +20,7 @@ public partial class logfile : System.Web.UI.Page
         string maxSizeString = Request.QueryString["maxSize"];
         int maxSize = 102400;
         if( maxSizeString != null )
-            maxSize = (int)ByteSize.Parse(maxSizeString);
+            maxSize = (int)BinaryValue.Parse(maxSizeString);
         if( maxSize <= 0 )
             maxSize = Int32.MaxValue;
 

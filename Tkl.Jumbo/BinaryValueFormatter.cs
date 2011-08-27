@@ -8,11 +8,11 @@ using System.Text.RegularExpressions;
 
 namespace Tkl.Jumbo
 {
-    static class ByteSizeFormatter
+    static class BinaryValueFormatter
     {
         private static Regex _formatRegex = new Regex(@"(?<before>\s*)(?<prefix>[ASKMGTP])?(?<iec>i?)(?<after>B?\s*)$", RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
-        public static string Format(ByteSize value, string format, IFormatProvider provider)
+        public static string Format(BinaryValue value, string format, IFormatProvider provider)
         {
             string before = null;
             string realPrefix;
@@ -40,7 +40,7 @@ namespace Tkl.Jumbo
                 if( prefix == null )
                 {
                     realPrefix = null;
-                    factor = ByteSize.Byte;
+                    factor = BinaryValue.Byte;
                 }
                 else if( prefix == "A" || prefix == "a" )
                     factor = DetermineAutomaticScalingFactor(value, false, out realPrefix);
@@ -49,7 +49,7 @@ namespace Tkl.Jumbo
                 else
                 {
                     realPrefix = prefix;
-                    factor = ByteSize.GetUnitScalingFactor(prefix);
+                    factor = BinaryValue.GetUnitScalingFactor(prefix);
                 }
 
                 if( prefix != null && char.IsLower(prefix, 0) )
@@ -62,37 +62,37 @@ namespace Tkl.Jumbo
             return (value.Value / (decimal)factor).ToString(numberFormat, provider) + before + realPrefix + after;
         }
 
-        private static long DetermineAutomaticScalingFactor(ByteSize value, bool allowRounding, out string prefix)
+        private static long DetermineAutomaticScalingFactor(BinaryValue value, bool allowRounding, out string prefix)
         {
-            if( value >= ByteSize.Petabyte && (allowRounding || value.Value % ByteSize.Petabyte == 0) )
+            if( value >= BinaryValue.Petabyte && (allowRounding || value.Value % BinaryValue.Petabyte == 0) )
             {
                 prefix = "P";
-                return ByteSize.Petabyte;
+                return BinaryValue.Petabyte;
             }
-            else if( value >= ByteSize.Terabyte && (allowRounding || value.Value % ByteSize.Terabyte == 0) )
+            else if( value >= BinaryValue.Terabyte && (allowRounding || value.Value % BinaryValue.Terabyte == 0) )
             {
                 prefix = "T";
-                return ByteSize.Terabyte;
+                return BinaryValue.Terabyte;
             }
-            else if( value >= ByteSize.Gigabyte && (allowRounding || value.Value % ByteSize.Gigabyte == 0) )
+            else if( value >= BinaryValue.Gigabyte && (allowRounding || value.Value % BinaryValue.Gigabyte == 0) )
             {
                 prefix = "G";
-                return ByteSize.Gigabyte;
+                return BinaryValue.Gigabyte;
             }
-            else if( value >= ByteSize.Megabyte && (allowRounding || value.Value % ByteSize.Megabyte == 0) )
+            else if( value >= BinaryValue.Megabyte && (allowRounding || value.Value % BinaryValue.Megabyte == 0) )
             {
                 prefix = "M";
-                return ByteSize.Megabyte;
+                return BinaryValue.Megabyte;
             }
-            else if( value >= ByteSize.Kilobyte && (allowRounding || value.Value % ByteSize.Kilobyte == 0) )
+            else if( value >= BinaryValue.Kilobyte && (allowRounding || value.Value % BinaryValue.Kilobyte == 0) )
             {
                 prefix = "K";
-                return ByteSize.Kilobyte;
+                return BinaryValue.Kilobyte;
             }
             else
             {
                 prefix = "";
-                return ByteSize.Byte;
+                return BinaryValue.Byte;
             }
         }
     }

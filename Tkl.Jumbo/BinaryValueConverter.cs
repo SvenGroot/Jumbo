@@ -9,9 +9,9 @@ using System.ComponentModel;
 namespace Tkl.Jumbo
 {
     /// <summary>
-    /// Converts a <see cref="ByteSize"/> object from one data type to another. Access this class through the <see cref="TypeDescriptor"/> object.
+    /// Converts a <see cref="BinaryValue"/> object from one data type to another. Access this class through the <see cref="TypeDescriptor"/> object.
     /// </summary>
-    public class ByteSizeConverter : TypeConverter
+    public class BinaryValueConverter : TypeConverter
     {
         /// <summary>
         /// Determines if this converter can convert an object in the given source type to the native type of the converter.
@@ -46,7 +46,7 @@ namespace Tkl.Jumbo
         }
 
         /// <summary>
-        /// Converts the specified object to a <see cref="ByteSize"/> object.
+        /// Converts the specified object to a <see cref="BinaryValue"/> object.
         /// </summary>
         /// <param name="context">A formatter context. This object can be used to get additional information about the environment this converter is being called from. This may be <see langword="null"/>, so you should always check. Also, properties on the context object may also return <see langword="null"/>. </param>
         /// <param name="culture">An object that contains culture specific information, such as the language, calendar, and cultural conventions associated with a specific culture. It is based on the RFC 1766 standard.</param>
@@ -56,29 +56,29 @@ namespace Tkl.Jumbo
         {
             string stringValue = value as string;
             if( stringValue != null )
-                return ByteSize.Parse(stringValue, culture);
+                return BinaryValue.Parse(stringValue, culture);
             else if( value is byte )
-                return new ByteSize((byte)value);
+                return new BinaryValue((byte)value);
             else if( value is sbyte )
-                return new ByteSize((sbyte)value);
+                return new BinaryValue((sbyte)value);
             else if( value is short )
-                return new ByteSize((short)value);
+                return new BinaryValue((short)value);
             else if( value is ushort )
-                return new ByteSize((ushort)value);
+                return new BinaryValue((ushort)value);
             else if( value is int )
-                return new ByteSize((int)value);
+                return new BinaryValue((int)value);
             else if( value is uint )
-                return new ByteSize((uint)value);
+                return new BinaryValue((uint)value);
             else if( value is long )
-                return new ByteSize((long)value);
+                return new BinaryValue((long)value);
             else if( value is ulong )
-                return new ByteSize((ulong)value);
+                return new BinaryValue((ulong)value);
             else if( value is decimal )
-                return (ByteSize)(decimal)value;
+                return (BinaryValue)(decimal)value;
             else if( value is float )
-                return (ByteSize)(float)value;
+                return (BinaryValue)(float)value;
             else if( value is double )
-                return (ByteSize)(double)value;
+                return (BinaryValue)(double)value;
             else
                 return base.ConvertFrom(context, culture, value);
         }
@@ -93,10 +93,10 @@ namespace Tkl.Jumbo
         /// <returns>The converted object.</returns>
         public override object ConvertTo(ITypeDescriptorContext context, System.Globalization.CultureInfo culture, object value, Type destinationType)
         {
-            if( !(value is ByteSize) )
+            if( !(value is BinaryValue) )
                 throw new ArgumentException("Cannot convert argument: incorrect type.", "value");
 
-            ByteSize realValue = (ByteSize)value;
+            BinaryValue realValue = (BinaryValue)value;
             if( destinationType == typeof(string) )
                 return realValue.ToString(culture);
             else if( destinationType == typeof(byte) )

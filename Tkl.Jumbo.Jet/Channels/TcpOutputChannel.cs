@@ -19,7 +19,7 @@ namespace Tkl.Jumbo.Jet.Channels
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(TcpOutputChannel));
 
         /// <summary>
-        /// The key in the stage or job settings that can be used to specify the size of the spill buffer. The setting should have the type <see cref="ByteSize"/>,
+        /// The key in the stage or job settings that can be used to specify the size of the spill buffer. The setting should have the type <see cref="BinaryValue"/>,
         /// and the default value is the value of <see cref="TcpChannelConfigurationElement.SpillBufferSize"/>.
         /// </summary>
         public const string SpillBufferSizeSettingKey = "TcpOutputChannel.SpillBufferSize";
@@ -59,7 +59,7 @@ namespace Tkl.Jumbo.Jet.Channels
                 throw new InvalidOperationException("Channel record writer was already created.");
 
             bool reuseConnections = TaskExecution.Context.GetTypedSetting(ReuseConnectionsSettingKey, TaskExecution.JetClient.Configuration.TcpChannel.ReuseConnections);
-            ByteSize spillBufferSize = TaskExecution.Context.GetTypedSetting(SpillBufferSizeSettingKey, TaskExecution.JetClient.Configuration.TcpChannel.SpillBufferSize);
+            BinaryValue spillBufferSize = TaskExecution.Context.GetTypedSetting(SpillBufferSizeSettingKey, TaskExecution.JetClient.Configuration.TcpChannel.SpillBufferSize);
             float spillBufferLimit = TaskExecution.Context.GetTypedSetting(SpillBufferLimitSettingKey, TaskExecution.JetClient.Configuration.TcpChannel.SpillBufferLimit);
             if( spillBufferSize.Value < 0 || spillBufferSize.Value > Int32.MaxValue )
                 throw new ConfigurationErrorsException("Invalid output buffer size: " + spillBufferSize.Value);

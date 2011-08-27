@@ -18,9 +18,9 @@ namespace Tkl.Jumbo.Jet
         /// </summary>
         /// <value>The size of the spill buffer. The default value is 20MB.</value>
         [ConfigurationProperty("spillBufferSize", DefaultValue = "20MB", IsRequired = false, IsKey = false)]
-        public ByteSize SpillBufferSize
+        public BinaryValue SpillBufferSize
         {
-            get { return (ByteSize)this["spillBufferSize"]; }
+            get { return (BinaryValue)this["spillBufferSize"]; }
             set { this["spillBufferSize"] = value; }
         }
 

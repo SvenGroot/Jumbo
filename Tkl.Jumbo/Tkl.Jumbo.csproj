@@ -78,9 +78,9 @@
     <Compile Include="..\AssemblyInfoCommon.cs">
       <Link>Properties\AssemblyInfoCommon.cs</Link>
     </Compile>
-    <Compile Include="ByteSize.cs" />
-    <Compile Include="ByteSizeConverter.cs" />
-    <Compile Include="ByteSizeFormatter.cs" />
+    <Compile Include="BinaryValue.cs" />
+    <Compile Include="BinaryValueConverter.cs" />
+    <Compile Include="BinaryValueFormatter.cs" />
     <Compile Include="ChildCollection.cs" />
     <Compile Include="ClientChannelSink.cs" />
     <Compile Include="ClientChannelSinkProvider.cs" />

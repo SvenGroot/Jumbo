@@ -17,9 +17,9 @@ namespace Tkl.Jumbo.Jet
         /// Gets or sets the buffer size to use for input to push and pull tasks.
         /// </summary>
         [ConfigurationProperty("readBufferSize", DefaultValue = "64KB", IsRequired = false, IsKey = false)]
-        public ByteSize ReadBufferSize
+        public BinaryValue ReadBufferSize
         {
-            get { return (ByteSize)this["readBufferSize"]; }
+            get { return (BinaryValue)this["readBufferSize"]; }
             set { this["readBufferSize"] = value; }
         }
 
@@ -27,9 +27,9 @@ namespace Tkl.Jumbo.Jet
         /// Gets or sets the buffer size used by the file output channel to write to intermediate files.
         /// </summary>
         [ConfigurationProperty("writeBufferSize", DefaultValue = "64KB", IsRequired = false, IsKey = false)]
-        public ByteSize WriteBufferSize
+        public BinaryValue WriteBufferSize
         {
-            get { return (ByteSize)this["writeBufferSize"]; }
+            get { return (BinaryValue)this["writeBufferSize"]; }
             set { this["writeBufferSize"] = value; }
         }
 
@@ -47,9 +47,9 @@ namespace Tkl.Jumbo.Jet
         /// Gets or sets the maximum size of the the in-memory input storage.
         /// </summary>
         [ConfigurationProperty("memoryStorageSize", DefaultValue = "100MB", IsRequired = false, IsKey = false)]
-        public ByteSize MemoryStorageSize
+        public BinaryValue MemoryStorageSize
         {
-            get { return (ByteSize)this["memoryStorageSize"]; }
+            get { return (BinaryValue)this["memoryStorageSize"]; }
             set { this["memoryStorageSize"] = value; }
         }
 
@@ -88,9 +88,9 @@ namespace Tkl.Jumbo.Jet
         /// </summary>
         /// <value>The size of the single file output buffer.</value>
         [ConfigurationProperty("singleFileOutputBufferSize", DefaultValue = "100MB", IsRequired = false, IsKey = false)]
-        public ByteSize SingleFileOutputBufferSize
+        public BinaryValue SingleFileOutputBufferSize
         {
-            get { return (ByteSize)this["singleFileOutputBufferSize"]; }
+            get { return (BinaryValue)this["singleFileOutputBufferSize"]; }
             set { this["singleFileOutputBufferSize"] = value; }
         }
 

@@ -72,7 +72,7 @@
     <Compile Include="..\AssemblyInfoCommon.cs">
       <Link>Properties\AssemblyInfoCommon.cs</Link>
     </Compile>
-    <Compile Include="ByteSizeTests.cs" />
+    <Compile Include="BinaryValueTests.cs" />
     <Compile Include="Dfs\BlockAssignmentTests.cs" />
     <Compile Include="Dfs\BlockReportHeartbeatDataTests.cs" />
     <Compile Include="Dfs\BlockSenderTests.cs" />
