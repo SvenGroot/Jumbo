@@ -144,6 +144,55 @@ namespace Tkl.Jumbo
         }
 
         /// <summary>
+        /// Returns a new <see cref="BinarySize"/> object whose value is the sum of the specified <see cref="BinarySize"/> object and this instance.
+        /// </summary>
+        /// <param name="value">The value to add.</param>
+        /// <returns>A new object that represents the value of this instance plus <paramref name="value"/>.</returns>
+        public BinarySize Add(BinarySize value)
+        {
+            return Value + value.Value;
+        }
+
+        /// <summary>
+        /// Returns a new <see cref="BinarySize"/> object whose value is the difference of the specified <see cref="BinarySize"/> object and this instance.
+        /// </summary>
+        /// <param name="value">The value to subtract.</param>
+        /// <returns>A new object that represents the value of this instance minus <paramref name="value"/>.</returns>
+        public BinarySize Subtract(BinarySize value)
+        {
+            return Value - value.Value;
+        }
+
+        /// <summary>
+        /// Returns a new <see cref="BinarySize"/> object whose value is the product of the specified <see cref="Int64"/> object and this instance.
+        /// </summary>
+        /// <param name="value">The value to multiply by.</param>
+        /// <returns>A new object that represents the value of this instance times <paramref name="value"/>.</returns>
+        public BinarySize Multiply(long value)
+        {
+            return Value * value;
+        }
+
+        /// <summary>
+        /// Returns a new <see cref="BinarySize"/> object whose value is the division of the specified <see cref="Int64"/> object and this instance.
+        /// </summary>
+        /// <param name="value">The value to divide by.</param>
+        /// <returns>A new object that represents the value of this instance divided by <paramref name="value"/>.</returns>
+        public BinarySize Divide(long value)
+        {
+            return Value / value;
+        }
+
+        /// <summary>
+        /// Returns a new <see cref="BinarySize"/> object whose value is the negation of this instance.
+        /// </summary>
+        /// <returns>A new object that represents the negated value of this instance.</returns>
+        public BinarySize Negate()
+        {
+            return -Value;
+        }
+
+        /// <summary>
         /// Converts the string representation of a byte size in a specified culture-specific format into a <see cref="BinarySize"/> structure.
         /// </summary>
         /// <param name="value">A string containing a number to convert. This string may use a suffix indicating a binary multiple (B, KB, KiB, K, MB, MiB, M, GB, GiB, G, TB, TiB, T, PB, PiB, or P).</param>
@@ -347,6 +396,70 @@ namespace Tkl.Jumbo
         public static bool operator >=(BinarySize left, BinarySize right)
         {
             return left.Value >= right.Value;
+        }
+
+        /// <summary>
+        /// Implements the operator +.
+        /// </summary>
+        /// <param name="left">The left operand.</param>
+        /// <param name="right">The right operand.</param>
+        /// <returns>
+        /// The result of the operator.
+        /// </returns>
+        public static BinarySize operator +(BinarySize left, BinarySize right)
+        {
+            return left.Value + right.Value;
+        }
+
+        /// <summary>
+        /// Implements the operator -.
+        /// </summary>
+        /// <param name="left">The left operand.</param>
+        /// <param name="right">The right operand.</param>
+        /// <returns>
+        /// The result of the operator.
+        /// </returns>
+        public static BinarySize operator -(BinarySize left, BinarySize right)
+        {
+            return left.Value - right.Value;
+        }
+
+        /// <summary>
+        /// Implements the operator *.
+        /// </summary>
+        /// <param name="left">The left operand.</param>
+        /// <param name="right">The right operand.</param>
+        /// <returns>
+        /// The result of the operator.
+        /// </returns>
+        public static BinarySize operator *(BinarySize left, long right)
+        {
+            return left.Value * right;
+        }
+
+        /// <summary>
+        /// Implements the operator /.
+        /// </summary>
+        /// <param name="left">The left operand.</param>
+        /// <param name="right">The right operand.</param>
+        /// <returns>
+        /// The result of the operator.
+        /// </returns>
+        public static BinarySize operator /(BinarySize left, long right)
+        {
+            return left.Value / right;
+        }
+
+        /// <summary>
+        /// Implements the unary operator -.
+        /// </summary>
+        /// <param name="value">The operand.</param>
+        /// <returns>
+        /// The result of the operator.
+        /// </returns>
+        public static BinarySize operator -(BinarySize value)
+        {
+            return -value.Value;
         }
 
         #region Conversion operators
