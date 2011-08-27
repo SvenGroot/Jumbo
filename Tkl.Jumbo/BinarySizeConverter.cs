@@ -9,9 +9,9 @@ using System.ComponentModel;
 namespace Tkl.Jumbo
 {
     /// <summary>
-    /// Converts a <see cref="BinaryValue"/> object from one data type to another. Access this class through the <see cref="TypeDescriptor"/> object.
+    /// Converts a <see cref="BinarySize"/> object from one data type to another. Access this class through the <see cref="TypeDescriptor"/> object.
     /// </summary>
-    public class BinaryValueConverter : TypeConverter
+    public class BinarySizeConverter : TypeConverter
     {
         /// <summary>
         /// Determines if this converter can convert an object in the given source type to the native type of the converter.
@@ -46,7 +46,7 @@ namespace Tkl.Jumbo
         }
 
         /// <summary>
-        /// Converts the specified object to a <see cref="BinaryValue"/> object.
+        /// Converts the specified object to a <see cref="BinarySize"/> object.
         /// </summary>
         /// <param name="context">A formatter context. This object can be used to get additional information about the environment this converter is being called from. This may be <see langword="null"/>, so you should always check. Also, properties on the context object may also return <see langword="null"/>. </param>
         /// <param name="culture">An object that contains culture specific information, such as the language, calendar, and cultural conventions associated with a specific culture. It is based on the RFC 1766 standard.</param>
@@ -56,29 +56,29 @@ namespace Tkl.Jumbo
         {
             string stringValue = value as string;
             if( stringValue != null )
-                return BinaryValue.Parse(stringValue, culture);
+                return BinarySize.Parse(stringValue, culture);
             else if( value is byte )
-                return new BinaryValue((byte)value);
+                return new BinarySize((byte)value);
             else if( value is sbyte )
-                return new BinaryValue((sbyte)value);
+                return new BinarySize((sbyte)value);
             else if( value is short )
-                return new BinaryValue((short)value);
+                return new BinarySize((short)value);
             else if( value is ushort )
-                return new BinaryValue((ushort)value);
+                return new BinarySize((ushort)value);
             else if( value is int )
-                return new BinaryValue((int)value);
+                return new BinarySize((int)value);
             else if( value is uint )
-                return new BinaryValue((uint)value);
+                return new BinarySize((uint)value);
             else if( value is long )
-                return new BinaryValue((long)value);
+                return new BinarySize((long)value);
             else if( value is ulong )
-                return new BinaryValue((ulong)value);
+                return new BinarySize((ulong)value);
             else if( value is decimal )
-                return (BinaryValue)(decimal)value;
+                return (BinarySize)(decimal)value;
             else if( value is float )
-                return (BinaryValue)(float)value;
+                return (BinarySize)(float)value;
             else if( value is double )
-                return (BinaryValue)(double)value;
+                return (BinarySize)(double)value;
             else
                 return base.ConvertFrom(context, culture, value);
         }
@@ -93,10 +93,10 @@ namespace Tkl.Jumbo
         /// <returns>The converted object.</returns>
         public override object ConvertTo(ITypeDescriptorContext context, System.Globalization.CultureInfo culture, object value, Type destinationType)
         {
-            if( !(value is BinaryValue) )
+            if( !(value is BinarySize) )
                 throw new ArgumentException("Cannot convert argument: incorrect type.", "value");
 
-            BinaryValue realValue = (BinaryValue)value;
+            BinarySize realValue = (BinarySize)value;
             if( destinationType == typeof(string) )
                 return realValue.ToString(culture);
             else if( destinationType == typeof(byte) )

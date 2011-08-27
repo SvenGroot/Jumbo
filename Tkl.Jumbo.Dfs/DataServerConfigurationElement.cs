@@ -67,9 +67,9 @@ namespace Tkl.Jumbo.Dfs
         /// </summary>
         /// <value>The size of the write buffer for block files.</value>
         [ConfigurationProperty("writeBufferSize", DefaultValue = "128KB", IsRequired = false, IsKey = false)]
-        public BinaryValue WriteBufferSize
+        public BinarySize WriteBufferSize
         {
-            get { return (BinaryValue)this["writeBufferSize"]; }
+            get { return (BinarySize)this["writeBufferSize"]; }
             set { this["writeBufferSize"] = value; }
         }
 
@@ -78,9 +78,9 @@ namespace Tkl.Jumbo.Dfs
         /// </summary>
         /// <value>The size of the read buffer for block files.</value>
         [ConfigurationProperty("readBufferSize", DefaultValue = "128KB", IsRequired = false, IsKey = false)]
-        public BinaryValue ReadBufferSize
+        public BinarySize ReadBufferSize
         {
-            get { return (BinaryValue)this["readBufferSize"]; }
+            get { return (BinarySize)this["readBufferSize"]; }
             set { this["readBufferSize"] = value; }
         }
     }

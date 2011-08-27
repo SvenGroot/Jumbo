@@ -45,7 +45,7 @@ namespace Tkl.Jumbo.Jet.Jobs
         /// Derived classes should use this value with the <see cref="TaskDfsOutput"/> items of the job configuration.
         /// </remarks>
         [CommandLineArgument("blockSize"), Description("Block size of the job's output files.")]
-        public BinaryValue BlockSize { get; set; }
+        public BinarySize BlockSize { get; set; }
 
         /// <summary>
         /// Gets or sets the property values that will override predefined values in the job configuration.

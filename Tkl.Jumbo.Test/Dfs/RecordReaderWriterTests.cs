@@ -19,7 +19,7 @@ namespace Tkl.Jumbo.Test.Dfs
         private TestDfsCluster _cluster;
         private DfsClient _dfsClient;
         private List<Utf8String> _records;
-        private const int _blockSize = 16 * (int)BinaryValue.Megabyte;
+        private const int _blockSize = 16 * (int)BinarySize.Megabyte;
 
         [TestFixtureSetUp]
         public void Setup()

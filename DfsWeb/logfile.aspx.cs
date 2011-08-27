@@ -35,7 +35,7 @@ public partial class logfile : System.Web.UI.Page
 
         int maxSize = 102400;
         if( maxSizeString != null )
-            maxSize = (int)BinaryValue.Parse(maxSizeString);
+            maxSize = (int)BinarySize.Parse(maxSizeString);
         if( maxSize <= 0 )
             maxSize = Int32.MaxValue;
         if( dataServer == null )

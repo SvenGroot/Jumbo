@@ -23,7 +23,7 @@ namespace Tkl.Jumbo.Jet.Channels
         private readonly bool _singleFileOutput;
 
         /// <summary>
-        /// The key to use in the stage or job settings to override the default write buffer size. Stage settings take precedence over job settings. The setting should have type <see cref="BinaryValue"/>.
+        /// The key to use in the stage or job settings to override the default write buffer size. Stage settings take precedence over job settings. The setting should have type <see cref="BinarySize"/>.
         /// </summary>
         public const string WriteBufferSizeSettingKey = "FileOutputChannel.WriteBufferSize";
         /// <summary>
@@ -33,7 +33,7 @@ namespace Tkl.Jumbo.Jet.Channels
         public const string SingleFileOutputSettingKey = "FileOutputChannel.SingleFileOutput";
         /// <summary>
         /// The key to use in the job or stage settings to override the default single file output buffer size specified in <see cref="FileChannelConfigurationElement.SingleFileOutputBufferSize"/>.
-        /// Stage settings take precedence over job settings. The setting should have type <see cref="BinaryValue"/>.
+        /// Stage settings take precedence over job settings. The setting should have type <see cref="BinarySize"/>.
         /// </summary>
         public const string SingleFileOutputBufferSizeSettingKey = "FileOutputChannel.SingleFileOutputBufferSize";
         /// <summary>
@@ -126,13 +126,13 @@ namespace Tkl.Jumbo.Jet.Channels
             if( _writers != null )
                 throw new InvalidOperationException("The channel record writer has already been created.");
 
-            BinaryValue writeBufferSize = TaskExecution.Context.GetTypedSetting(WriteBufferSizeSettingKey, TaskExecution.JetClient.Configuration.FileChannel.WriteBufferSize);
+            BinarySize writeBufferSize = TaskExecution.Context.GetTypedSetting(WriteBufferSizeSettingKey, TaskExecution.JetClient.Configuration.FileChannel.WriteBufferSize);
 
             if( _singleFileOutput )
             {
                 // We're using single file output
 
-                BinaryValue outputBufferSize = TaskExecution.Context.GetTypedSetting(SingleFileOutputBufferSizeSettingKey, TaskExecution.JetClient.Configuration.FileChannel.SingleFileOutputBufferSize);
+                BinarySize outputBufferSize = TaskExecution.Context.GetTypedSetting(SingleFileOutputBufferSizeSettingKey, TaskExecution.JetClient.Configuration.FileChannel.SingleFileOutputBufferSize);
                 float outputBufferLimit = TaskExecution.Context.GetTypedSetting(SingleFileOutputBufferLimitSettingKey, TaskExecution.JetClient.Configuration.FileChannel.SingleFileOutputBufferLimit);
                 if( outputBufferSize.Value < 0 || outputBufferSize.Value > Int32.MaxValue )
                     throw new ConfigurationErrorsException("Invalid output buffer size: " + outputBufferSize.Value);

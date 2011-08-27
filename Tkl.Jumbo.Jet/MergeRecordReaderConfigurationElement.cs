@@ -41,9 +41,9 @@ namespace Tkl.Jumbo.Jet
         /// </summary>
         /// <value>The size of the read buffer for each merge stream.</value>
         [ConfigurationProperty("mergeStreamReadBufferSize", DefaultValue = "1MB", IsRequired = false, IsKey = false)]
-        public BinaryValue MergeStreamReadBufferSize
+        public BinarySize MergeStreamReadBufferSize
         {
-            get { return (BinaryValue)this["mergeStreamReadBufferSize"]; }
+            get { return (BinarySize)this["mergeStreamReadBufferSize"]; }
             set { this["mergeStreamReadBufferSize"] = value; }
         }
 

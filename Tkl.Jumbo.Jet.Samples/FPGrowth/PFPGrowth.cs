@@ -93,7 +93,7 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
         /// </summary>
         /// <value>The size of the write buffer.</value>
         [CommandLineArgument("buffer"), Description("The size of the write buffer for the output channel of the GenerateGroupTransactions stage.")]
-        public BinaryValue WriteBufferSize { get; set; }
+        public BinarySize WriteBufferSize { get; set; }
 
         /// <summary>
         /// Gets or sets the type of the compression.
