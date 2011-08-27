@@ -58,6 +58,6 @@ public partial class _Default : System.Web.UI.Page
         {
             return string.Format("{0:#,0} bytes", bytes);
         }
-        return string.Format("<abbr title=\"{1:#,0} bytes\">{0:#,0.0}</abbr>", new ByteSize(bytes).ToShortString("#,0.#", ByteSizeSuffixOptions.LeadingSpace), bytes);
+        return string.Format("<abbr title=\"{1:#,0} bytes\">{0:#,0.# SB}</abbr>", (ByteSize)bytes, bytes);
     }
 }

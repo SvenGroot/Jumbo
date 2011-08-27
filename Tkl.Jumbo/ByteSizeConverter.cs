@@ -21,7 +21,9 @@ namespace Tkl.Jumbo
         /// <returns><see langword="true"/> if this object can perform the conversion; otherwise, <see langword="false"/>.</returns>
         public override bool CanConvertFrom(ITypeDescriptorContext context, Type sourceType)
         {
-            if( sourceType == typeof(string) || sourceType == typeof(int) || sourceType == typeof(long) )
+            if( sourceType == typeof(string) || sourceType == typeof(long) || sourceType == typeof(ulong) || sourceType == typeof(int) || sourceType == typeof(uint) ||
+                sourceType == typeof(short) || sourceType == typeof(ushort) || sourceType == typeof(byte) || sourceType == typeof(sbyte) ||
+                sourceType == typeof(decimal) || sourceType == typeof(float) || sourceType == typeof(int) || sourceType == typeof(double) )
                 return true;
             else
                 return base.CanConvertFrom(context, sourceType);
@@ -35,7 +37,9 @@ namespace Tkl.Jumbo
         /// <returns><see langword="true"/> if this object can perform the conversion; otherwise, <see langword="false"/>.</returns>
         public override bool CanConvertTo(ITypeDescriptorContext context, Type destinationType)
         {
-            if( destinationType == typeof(string) || destinationType == typeof(int) || destinationType == typeof(long) )
+            if( destinationType == typeof(string) || destinationType == typeof(long) || destinationType == typeof(ulong) || destinationType == typeof(int) || destinationType == typeof(uint) ||
+                destinationType == typeof(short) || destinationType == typeof(ushort) || destinationType == typeof(byte) || destinationType == typeof(sbyte) ||
+                destinationType == typeof(decimal) || destinationType == typeof(float) || destinationType == typeof(int) || destinationType == typeof(double) )
                 return true;
             else
                 return base.CanConvertTo(context, destinationType);
@@ -52,18 +56,31 @@ namespace Tkl.Jumbo
         {
             string stringValue = value as string;
             if( stringValue != null )
-            {
                 return ByteSize.Parse(stringValue, culture);
-            }
+            else if( value is byte )
+                return new ByteSize((byte)value);
+            else if( value is sbyte )
+                return new ByteSize((sbyte)value);
+            else if( value is short )
+                return new ByteSize((short)value);
+            else if( value is ushort )
+                return new ByteSize((ushort)value);
             else if( value is int )
-            {
                 return new ByteSize((int)value);
-            }
+            else if( value is uint )
+                return new ByteSize((uint)value);
             else if( value is long )
-            {
                 return new ByteSize((long)value);
-            }
-            return base.ConvertFrom(context, culture, value);
+            else if( value is ulong )
+                return new ByteSize((ulong)value);
+            else if( value is decimal )
+                return (ByteSize)(decimal)value;
+            else if( value is float )
+                return (ByteSize)(float)value;
+            else if( value is double )
+                return (ByteSize)(double)value;
+            else
+                return base.ConvertFrom(context, culture, value);
         }
 
         /// <summary>
@@ -79,13 +96,33 @@ namespace Tkl.Jumbo
             if( !(value is ByteSize) )
                 throw new ArgumentException("Cannot convert argument: incorrect type.", "value");
 
+            ByteSize realValue = (ByteSize)value;
             if( destinationType == typeof(string) )
-                return ((ByteSize)value).ToString(culture);
+                return realValue.ToString(culture);
+            else if( destinationType == typeof(byte) )
+                return (byte)realValue;
+            else if( destinationType == typeof(sbyte) )
+                return (sbyte)realValue;
+            else if( destinationType == typeof(short) )
+                return (short)realValue;
+            else if( destinationType == typeof(ushort) )
+                return (ushort)realValue;
             else if( destinationType == typeof(int) )
-                return (int)((ByteSize)value).Value;
+                return (int)realValue;
+            else if( destinationType == typeof(uint) )
+                return (uint)realValue;
             else if( destinationType == typeof(long) )
-                return ((ByteSize)value).Value;
-            return base.ConvertTo(context, culture, value, destinationType);
+                return (long)realValue;
+            else if( destinationType == typeof(ulong) )
+                return (ulong)realValue;
+            else if( destinationType == typeof(decimal) )
+                return (decimal)realValue;
+            else if( destinationType == typeof(float) )
+                return (float)realValue;
+            else if( destinationType == typeof(double) )
+                return (double)realValue;
+            else
+                return base.ConvertTo(context, culture, value, destinationType);
         }
     }
 }

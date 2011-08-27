@@ -47,7 +47,7 @@ namespace Tkl.Jumbo.Test
         public void TestToString()
         {
             ByteSize target = new ByteSize(123456789012345678);
-            Assert.AreEqual("123456789012345678", target.ToString(CultureInfo.InvariantCulture));
+            Assert.AreEqual("123456789012345678B", target.ToString(CultureInfo.InvariantCulture));
             Assert.AreEqual("120563270519868.826171875KB", target.ToString("KB", CultureInfo.InvariantCulture));
             Assert.AreEqual("120563270519868.826171875KiB", target.ToString("KiB", CultureInfo.InvariantCulture));
             Assert.AreEqual("120563270519868.826171875K", target.ToString("K", CultureInfo.InvariantCulture));
@@ -67,40 +67,50 @@ namespace Tkl.Jumbo.Test
             Assert.AreEqual("109.65165576623696885860681505 PB", target.ToString(" PB", CultureInfo.InvariantCulture)); // Rounded due to fommatting, with a space
 
             // Explicit format test:
-            Assert.AreEqual("109.7PB", target.ToString("0.#", "PB", CultureInfo.InvariantCulture));
+            Assert.AreEqual("109.7 PB", target.ToString("0.# PB", CultureInfo.InvariantCulture));
 
             // Explicit culture test:
-            Assert.AreEqual("109,7PB", target.ToString("0.#", "PB", new CultureInfo("nl-NL")));
-            Assert.AreEqual("109,65165576623696885860681505PB", target.ToString("PB", new CultureInfo("nl-NL"))); // Rounded due to fommatting
+            Assert.AreEqual("109,7PB", target.ToString("0.#PB", new CultureInfo("nl-NL")));
+            Assert.AreEqual("109,65165576623696885860681505PB", target.ToString("PB", new CultureInfo("nl-NL"))); // Rounded due to formatting
 
             // Current culture test:
             Assert.AreEqual(target.ToString("PB", CultureInfo.CurrentCulture), target.ToString("PB"));
-        }
 
-        [Test]
-        public void TestToShortString()
-        {
-            Assert.AreEqual("123B", new ByteSize(123).ToShortString(null, ByteSizeSuffixOptions.None, CultureInfo.InvariantCulture));
-            Assert.AreEqual("123KB", new ByteSize(125952).ToShortString(null, ByteSizeSuffixOptions.None, CultureInfo.InvariantCulture));
-            Assert.AreEqual("123MB", new ByteSize(128974848).ToShortString(null, ByteSizeSuffixOptions.None, CultureInfo.InvariantCulture));
-            Assert.AreEqual("123GB", new ByteSize(132070244352).ToShortString(null, ByteSizeSuffixOptions.None, CultureInfo.InvariantCulture));
-            Assert.AreEqual("123TB", new ByteSize(135239930216448).ToShortString(null, ByteSizeSuffixOptions.None, CultureInfo.InvariantCulture));
-            Assert.AreEqual("123PB", new ByteSize(138485688541642752).ToShortString(null, ByteSizeSuffixOptions.None, CultureInfo.InvariantCulture));
-            Assert.AreEqual("109.65165576623696885860681505PB", new ByteSize(123456789012345678).ToShortString(null, ByteSizeSuffixOptions.None, CultureInfo.InvariantCulture));
+            // Automatic units test:
+            Assert.AreEqual("123B", ((ByteSize)123).ToString("AB", CultureInfo.InvariantCulture));
+            Assert.AreEqual("123B", ((ByteSize)123).ToString("SB", CultureInfo.InvariantCulture));
+            Assert.AreEqual("126464B", ((ByteSize)126464).ToString("AB", CultureInfo.InvariantCulture));
+            Assert.AreEqual("123.5KB", ((ByteSize)126464).ToString("SB", CultureInfo.InvariantCulture));
+            Assert.AreEqual("126464KB", ((ByteSize)129499136).ToString("AB", CultureInfo.InvariantCulture));
+            Assert.AreEqual("123.5MB", ((ByteSize)129499136).ToString("SB", CultureInfo.InvariantCulture));
+            Assert.AreEqual("126464MB", ((ByteSize)132607115264).ToString("AB", CultureInfo.InvariantCulture));
+            Assert.AreEqual("123.5GB", ((ByteSize)132607115264).ToString("SB", CultureInfo.InvariantCulture));
+            Assert.AreEqual("126464GB", ((ByteSize)135789686030336).ToString("AB", CultureInfo.InvariantCulture));
+            Assert.AreEqual("123.5TB", ((ByteSize)135789686030336).ToString("SB", CultureInfo.InvariantCulture));
+            Assert.AreEqual("126464TB", ((ByteSize)139048638495064064).ToString("AB", CultureInfo.InvariantCulture));
+            Assert.AreEqual("123.5PB", ((ByteSize)139048638495064064).ToString("SB", CultureInfo.InvariantCulture));
+            Assert.AreEqual("123456789012345678B", ((ByteSize)123456789012345678).ToString("AB", CultureInfo.InvariantCulture));
+            Assert.AreEqual("109.7PB", ((ByteSize)123456789012345678).ToString("0.#SB", CultureInfo.InvariantCulture));
 
             // Test with different options:
-            Assert.AreEqual("123K", new ByteSize(125952).ToShortString(null, ByteSizeSuffixOptions.ExcludeBytes, CultureInfo.InvariantCulture));
-            Assert.AreEqual("123 KiB", new ByteSize(125952).ToShortString(null, ByteSizeSuffixOptions.LeadingSpace | ByteSizeSuffixOptions.UseIecSymbols, CultureInfo.InvariantCulture));
+            Assert.AreEqual("126464", ((ByteSize)126464).ToString("A", CultureInfo.InvariantCulture));
+            Assert.AreEqual("123.5K", ((ByteSize)126464).ToString("S", CultureInfo.InvariantCulture));
+            Assert.AreEqual("126464 B", ((ByteSize)126464).ToString(" AiB", CultureInfo.InvariantCulture));
+            Assert.AreEqual("123.5 KiB", ((ByteSize)126464).ToString(" SiB", CultureInfo.InvariantCulture));
 
-            // Test with explicit format:
-            Assert.AreEqual("109.7PB", new ByteSize(123456789012345678).ToShortString("0.#", ByteSizeSuffixOptions.None, CultureInfo.InvariantCulture));
+            // Test defaults, should have same effect as AB.
+            string expected = 126464.ToString() + "KB";
+            Assert.AreEqual(expected, ((ByteSize)129499136).ToString());
+            Assert.AreEqual(expected, ((ByteSize)129499136).ToString((IFormatProvider)null));
+            Assert.AreEqual(expected, ((ByteSize)129499136).ToString(CultureInfo.CurrentCulture));
+            Assert.AreEqual(expected, ((ByteSize)129499136).ToString(null, null));
+            Assert.AreEqual(expected, ((ByteSize)129499136).ToString(""));
+            Assert.AreEqual(expected, ((ByteSize)129499136).ToString("", null));
 
-            // Test with explicit culture:
-            Assert.AreEqual("109,7PB", new ByteSize(123456789012345678).ToShortString("0.#", ByteSizeSuffixOptions.None, new CultureInfo("nl-NL")));
-
-            // Test defaults:
-            Assert.AreEqual(new ByteSize(123456789012345678).ToShortString(null, ByteSizeSuffixOptions.None, CultureInfo.CurrentCulture), new ByteSize(123456789012345678).ToShortString());
+            // Test IFormattable
+            Assert.AreEqual("test 109.7 PB test2", string.Format(CultureInfo.InvariantCulture, "test {0:0.# SB} test2", ((ByteSize)123456789012345678)));
         }
+
 
         [Test]
         public void TestEquality()
@@ -119,7 +129,10 @@ namespace Tkl.Jumbo.Test
             TypeConverter converter = TypeDescriptor.GetConverter(typeof(ByteSize));
             ByteSize target = new ByteSize(125952);
             Assert.AreEqual(target, converter.ConvertFrom(null, CultureInfo.InvariantCulture, "123KB"));
-            Assert.AreEqual("125952", converter.ConvertTo(null, CultureInfo.InvariantCulture, target, typeof(string)));
+            Assert.AreEqual("123KB", converter.ConvertTo(null, CultureInfo.InvariantCulture, target, typeof(string)));
+            target = new ByteSize(129499136);
+            Assert.AreEqual(target, converter.ConvertFrom(null, CultureInfo.InvariantCulture, "123.5MB"));
+            Assert.AreEqual("126464KB", converter.ConvertTo(null, CultureInfo.InvariantCulture, target, typeof(string)));
         }
     }
 }

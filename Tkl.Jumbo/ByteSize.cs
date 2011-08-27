@@ -10,11 +10,15 @@ using System.ComponentModel;
 namespace Tkl.Jumbo
 {
     /// <summary>
-    /// Represents a size, expressed in bytes, that can be converted to and from a <see cref="String"/> using binary multiples (e.g. MB).
+    /// Provides formatting, parsing and scaling for a value using binary units (e.g. MB).
     /// </summary>
     [TypeConverter(typeof(ByteSizeConverter))]
-    public struct ByteSize : IEquatable<ByteSize>, IComparable<ByteSize>, IComparable
+    public struct ByteSize : IEquatable<ByteSize>, IComparable<ByteSize>, IComparable, IFormattable, IConvertible
     {
+        /// <summary>
+        /// The size of a byte, 1 byte.
+        /// </summary>
+        public const long Byte = 1L;
         /// <summary>
         /// The size of a kilobyte, 1024 bytes.
         /// </summary>
@@ -45,9 +49,41 @@ namespace Tkl.Jumbo
         /// Initializes a new instance of the <see cref="ByteSize"/> structure with the specified value.
         /// </summary>
         /// <param name="value">The size, in bytes.</param>
+        public ByteSize(int value)
+        {
+            _value = value;
+        }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="ByteSize"/> structure with the specified value.
+        /// </summary>
+        /// <param name="value">The size, in bytes.</param>
+        [CLSCompliant(false)]
+        public ByteSize(uint value)
+        {
+            _value = value;
+        }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="ByteSize"/> structure with the specified value.
+        /// </summary>
+        /// <param name="value">The size, in bytes.</param>
         public ByteSize(long value)
         {
             _value = value;
+        }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="ByteSize"/> structure with the specified value.
+        /// </summary>
+        /// <param name="value">The size, in bytes.</param>
+        [CLSCompliant(false)]
+        public ByteSize(ulong value)
+        {
+            checked
+            {
+                _value = (long)value;
+            }
         }
 
         /// <summary>
@@ -97,7 +133,7 @@ namespace Tkl.Jumbo
         {
             get { return _value / (double)Petabyte; }
         }
-        
+
         /// <summary>
         /// Gets a zero-valued <see cref="ByteSize"/> instance.
         /// </summary>
@@ -105,26 +141,6 @@ namespace Tkl.Jumbo
         public static ByteSize Zero
         {
             get { return _zero; }
-        }
-
-        /// <summary>
-        /// Converts the specified <see cref="ByteSize"/> to an <see cref="Int64"/>.
-        /// </summary>
-        /// <param name="value">The <see cref="ByteSize"/> to convert.</param>
-        /// <returns>The value of the <see cref="ByteSize"/> in bytes.</returns>
-        public static implicit operator long(ByteSize value)
-        {
-            return value.Value;
-        }
-
-        /// <summary>
-        /// Converts a <see cref="Int64"/> to a <see cref="ByteSize"/>.
-        /// </summary>
-        /// <param name="value">The <see cref="Int64"/> to convert.</param>
-        /// <returns>A <see cref="ByteSize"/> with <see cref="Value"/> set to <paramref name="value"/></returns>
-        public static implicit operator ByteSize(long value)
-        {
-            return new ByteSize(value);
         }
 
         /// <summary>
@@ -143,9 +159,12 @@ namespace Tkl.Jumbo
             string suffix = GetAndRemoveSuffix(ref value);
             Decimal size = Decimal.Parse(value, provider);
             if( suffix != null )
-                size *= GetSuffixMultiplicationFactor(suffix);
+                size *= GetUnitScalingFactor(suffix);
 
-            return new ByteSize((long)size);
+            checked
+            {
+                return new ByteSize((long)size);
+            }
         }
 
         /// <summary>
@@ -159,187 +178,87 @@ namespace Tkl.Jumbo
         }
 
         /// <summary>
-        /// Converts the numeric value of this instance to its equivalent string representation.
+        /// Returns a <see cref="System.String"/> that represents this instance.
         /// </summary>
-        /// <returns>The string representation of the value of this instance.</returns>
+        /// <param name="format">The format.</param>
+        /// <param name="formatProvider">The format provider.</param>
+        /// <returns>
+        /// A <see cref="System.String"/> that represents this instance.
+        /// </returns>
+        /// <remarks>
+        /// <para>
+        ///   The value of <paramref name="format"/> must be a string containing a numeric format string followed by a binary unit, or either one of both. If no numeric
+        ///   format is present, the default is used. If no binary unit is specified, the raw value in bytes is used.
+        /// </para>
+        /// <para>
+        ///   The first character of the binary suffix indicates the scaling factor. This can be one of the normal binary prefixes K, M, G, T, or P. The value A (auto) indicates that
+        ///   the scaling factor should be automatically determined as the largest factor in which this value can be precisely represented with no decimals. The value S (short)
+        ///   indicates that the scaling factor should be automatically determined as the largest possible scaling factor in which this value can be represented with the scaled
+        ///   value being at least 1. Using S may lead to rounding so while this is appropriate for some display scenarios, it is not appropriate if the precise value must be preserved.
+        /// </para>
+        /// <para>
+        ///   The binary prefix can be followed by either B or iB, which will be included in the unit of the output.
+        /// </para>
+        /// <para>
+        ///   The casing of the binary unit will be preserved as in the format string. Any whitespace that surrounding the binary unit will be preserved.
+        /// </para>
+        /// </remarks>
+        public string ToString(string format, IFormatProvider formatProvider)
+        {
+            return ByteSizeFormatter.Format(this, format, formatProvider);
+        }
+
+        /// <summary>
+        /// Returns a <see cref="System.String"/> that represents this instance.
+        /// </summary>
+        /// <param name="format">The format.</param>
+        /// <returns>
+        /// A <see cref="System.String"/> that represents this instance.
+        /// </returns>
+        /// <remarks>
+        /// <para>
+        ///   The value of <paramref name="format"/> must be a string containing a numeric format string followed by a binary unit, or either one of both. If no numeric
+        ///   format is present, the default is used. If no binary unit is specified, the raw value in bytes is used.
+        /// </para>
+        /// <para>
+        ///   The first character of the binary suffix indicates the scaling factor. This can be one of the normal binary prefixes K, M, G, T, or P. The value A (auto) indicates that
+        ///   the scaling factor should be automatically determined as the largest factor in which this value can be precisely represented with no decimals. The value S (short)
+        ///   indicates that the scaling factor should be automatically determined as the largest possible scaling factor in which this value can be represented with the scaled
+        ///   value being at least 1. Using S may lead to rounding so while this is appropriate for some display scenarios, it is not appropriate if the precise value must be preserved.
+        /// </para>
+        /// <para>
+        ///   The binary prefix can be followed by either B or iB to indicate the the unit formatting.
+        /// </para>
+        /// <para>
+        ///   The casing of the binary unit will be preserved as in the format string. Any whitespace that surrounding the binary unit will be preserved.
+        /// </para>
+        /// </remarks>
+        public string ToString(string format)
+        {
+            return ByteSizeFormatter.Format(this, format, null);
+        }
+
+        /// <summary>
+        /// Returns a <see cref="System.String"/> that represents this instance.
+        /// </summary>
+        /// <param name="formatProvider">The format provider.</param>
+        /// <returns>
+        /// A <see cref="System.String"/> that represents this instance.
+        /// </returns>
+        public string ToString(IFormatProvider formatProvider)
+        {
+            return ByteSizeFormatter.Format(this, null, formatProvider);
+        }
+
+        /// <summary>
+        /// Returns a <see cref="System.String"/> that represents this instance.
+        /// </summary>
+        /// <returns>
+        /// A <see cref="System.String"/> that represents this instance.
+        /// </returns>
         public override string ToString()
         {
-            return Value.ToString(CultureInfo.CurrentCulture);
-        }
-
-        /// <summary>
-        /// Converts the numeric value of this instance to its equivalent string representation using the specified culture-specific formatting options.
-        /// </summary>
-        /// <param name="provider">An <see cref="IFormatProvider"/> that supplies culture-specific formatting information. May be <see langword="null"/> to use the current culture.</param>
-        /// <returns>The string representation of the value of this instance as specified by <paramref name="provider"/>.</returns>
-        public string ToString(IFormatProvider provider)
-        {
-            return Value.ToString(provider);
-        }
-
-        /// <summary>
-        /// Converts the numeric value of this instance to its equivalent string representation, scaled according to the specified suffix and using the specified format and culture-specific formatting information.
-        /// </summary>
-        /// <param name="format">A numeric format string. May be <see langword="null"/>.</param>
-        /// <param name="suffix">The binary multiple suffix indicating the scale of the number (B, KB, KiB, K, MB, MiB, M, GB, GiB, G, TB, TiB, T, PB, PiB, or P). May be <see langword="null"/>.</param>
-        /// <param name="provider">An <see cref="IFormatProvider"/> that supplies culture-specific formatting information. May be <see langword="null"/> to use the current culture.</param>
-        /// <returns>The string representation of the value of this instance as specified by <paramref name="format"/> and <paramref name="provider"/>, with <paramref name="suffix"/> appended.</returns>
-        /// <remarks>
-        /// <para>
-        ///   The resulting string may contain a rounded number, depending on the scale and the formatting options used.
-        /// </para>
-        /// </remarks>
-        public string ToString(string format, string suffix, IFormatProvider provider)
-        {
-            Decimal value = Value;
-            if( !string.IsNullOrEmpty(suffix) )
-                value /= GetSuffixMultiplicationFactor(suffix.Trim());
-
-            return value.ToString(format, provider) + suffix;
-        }
-
-        /// <summary>
-        /// Converts the numeric value of this instance to its equivalent string representation, scaled according to the specified suffix and using the specified format.
-        /// </summary>
-        /// <param name="format">A numeric format string. May be <see langword="null"/>.</param>
-        /// <param name="suffix">The binary multiple suffix indicating the scale of the number (B, KB, KiB, K, MB, MiB, M, GB, GiB, G, TB, TiB, T, PB, PiB, or P). May be <see langword="null"/>.</param>
-        /// <returns>The string representation of the value of this instance as specified by <paramref name="format"/>, with <paramref name="suffix"/> appended.</returns>
-        /// <remarks>
-        /// <para>
-        ///   The resulting string may contain a rounded number, depending on the scale and the formatting options used.
-        /// </para>
-        /// </remarks>
-        public string ToString(string format, string suffix)
-        {
-            return ToString(format, suffix, CultureInfo.CurrentCulture);
-        }
-
-        /// <summary>
-        /// Converts the numeric value of this instance to its equivalent string representation, scaled according to the specified suffix and using the specified culture-specific formatting information.
-        /// </summary>
-        /// <param name="suffix">The binary multiple suffix indicating the scale of the number (B, KB, KiB, K, MB, MiB, M, GB, GiB, G, TB, TiB, T, PB, PiB, or P). May be <see langword="null"/>.</param>
-        /// <param name="provider">An <see cref="IFormatProvider"/> that supplies culture-specific formatting information. May be <see langword="null"/> to use the current culture.</param>
-        /// <returns>The string representation of the value of this instance as specified by <paramref name="provider"/>, with <paramref name="suffix"/> appended.</returns>
-        /// <remarks>
-        /// <para>
-        ///   The resulting string may contain a rounded number, depending on the scale and the formatting options used.
-        /// </para>
-        /// </remarks>
-        public string ToString(string suffix, IFormatProvider provider)
-        {
-            return ToString(null, suffix, provider);
-        }
-
-        /// <summary>
-        /// Converts the numeric value of this instance to its equivalent string representation, scaled according to the specified suffix.
-        /// </summary>
-        /// <param name="suffix">The binary multiple suffix indicating the scale of the number (B, KB, KiB, K, MB, MiB, M, GB, GiB, G, TB, TiB, T, PB, PiB, or P). May be <see langword="null"/>.</param>
-        /// <returns>The string representation of the value of this instance, with <paramref name="suffix"/> appended.</returns>
-        /// <remarks>
-        /// <para>
-        ///   The resulting string may contain a rounded number, depending on the scale and the formatting options used.
-        /// </para>
-        /// </remarks>
-        public string ToString(string suffix)
-        {
-            return ToString(null, suffix, CultureInfo.CurrentCulture);
-        }
-
-        /// <summary>
-        /// Converts the numeric value of this instance to its equivalent string representation using the largest binary multiple possible, using the specified format and culture-specific formatting options.
-        /// </summary>
-        /// <param name="format">A numeric format string. May be <see langword="null"/>.</param>
-        /// <param name="suffixOptions">A combination of <see cref="ByteSizeSuffixOptions"/> values indicating how to format the scale suffix.</param>
-        /// <param name="provider">An <see cref="IFormatProvider"/> that supplies culture-specific formatting information. May be <see langword="null"/> to use the current culture.</param>
-        /// <returns>The string representation of the value of this instance as specified by <paramref name="format"/> and <paramref name="provider"/>, with the appropriate suffix appended as specified by <paramref name="suffixOptions"/>.</returns>
-        /// <remarks>
-        /// <para>
-        ///   The resulting string may contain a rounded number, depending on the scale and the formatting options used.
-        /// </para>
-        /// </remarks>
-        public string ToShortString(string format, ByteSizeSuffixOptions suffixOptions, IFormatProvider provider)
-        {
-            Decimal size = Value;
-            string suffix = "";
-            if( Value > Petabyte )
-            {
-                size = Value / (Decimal)Petabyte;
-                suffix = "P";
-            }
-            else if( Value > Terabyte )
-            {
-                size = Value / (Decimal)Terabyte;
-                suffix = "T";
-            }
-            else if( Value > Gigabyte )
-            {
-                size = Value / (Decimal)Gigabyte;
-                suffix = "G";
-            }
-            else if( Value > Megabyte )
-            {
-                size = Value / (Decimal)Megabyte;
-                suffix = "M";
-            }
-            else if( Value > Kilobyte )
-            {
-                size = Value / (Decimal)Kilobyte;
-                suffix = "K";
-            }
-
-            if( (suffixOptions & ByteSizeSuffixOptions.UseIecSymbols) == ByteSizeSuffixOptions.UseIecSymbols )
-                suffix += "i";
-            if( (suffixOptions & ByteSizeSuffixOptions.ExcludeBytes) != ByteSizeSuffixOptions.ExcludeBytes )
-                suffix += "B";
-            if( (suffixOptions & ByteSizeSuffixOptions.LeadingSpace) == ByteSizeSuffixOptions.LeadingSpace && suffix.Length > 0 )
-                suffix = " " + suffix;
-
-            return size.ToString(format, provider) + suffix;
-        }
-
-        /// <summary>
-        /// Converts the numeric value of this instance to its equivalent string representation using the largest binary multiple possible, using the specified format.
-        /// </summary>
-        /// <param name="format">A numeric format string. May be <see langword="null"/>.</param>
-        /// <param name="suffixOptions">A combination of <see cref="ByteSizeSuffixOptions"/> values indicating how to format the scale suffix.</param>
-        /// <returns>The string representation of the value of this instance as specified by <paramref name="format"/>, with the appropriate suffix appended as specified by <paramref name="suffixOptions"/>.</returns>
-        /// <remarks>
-        /// <para>
-        ///   The resulting string may contain a rounded number, depending on the scale and the formatting options used.
-        /// </para>
-        /// </remarks>
-        public string ToShortString(string format, ByteSizeSuffixOptions suffixOptions)
-        {
-            return ToShortString(format, suffixOptions, CultureInfo.CurrentCulture);
-        }
-
-        /// <summary>
-        /// Converts the numeric value of this instance to its equivalent string representation using the largest binary multiple possible.
-        /// </summary>
-        /// <param name="suffixOptions">A combination of <see cref="ByteSizeSuffixOptions"/> values indicating how to format the scale suffix.</param>
-        /// <returns>The string representation of the value of this instance with the appropriate suffix appended as specified by <paramref name="suffixOptions"/>.</returns>
-        /// <remarks>
-        /// <para>
-        ///   The resulting string may contain a rounded number, depending on the scale and the formatting options used.
-        /// </para>
-        /// </remarks>
-        public string ToShortString(ByteSizeSuffixOptions suffixOptions)
-        {
-            return ToShortString(null, suffixOptions, CultureInfo.CurrentCulture);
-        }
-
-        /// <summary>
-        /// Converts the numeric value of this instance to its equivalent string representation using the largest binary multiple possible.
-        /// </summary>
-        /// <returns>The string representation of the value of this instance, with the appropriate suffix appended.</returns>
-        /// <remarks>
-        /// <para>
-        ///   The resulting string may contain a rounded number, depending on the scale and the formatting options used.
-        /// </para>
-        /// </remarks>
-        public string ToShortString()
-        {
-            return ToShortString(null, ByteSizeSuffixOptions.None, CultureInfo.CurrentCulture);
+            return ByteSizeFormatter.Format(this, null, null);
         }
 
         /// <summary>
@@ -430,6 +349,320 @@ namespace Tkl.Jumbo
             return left.Value >= right.Value;
         }
 
+        #region Conversion operators
+
+        /// <summary>
+        /// Performs an explicit conversion from <see cref="Tkl.Jumbo.ByteSize"/> to <see cref="System.Byte"/>.
+        /// </summary>
+        /// <param name="value">The value.</param>
+        /// <returns>
+        /// The result of the conversion.
+        /// </returns>
+        public static explicit operator byte(ByteSize value)
+        {
+            checked
+            {
+                return (byte)value.Value;
+            }
+        }
+
+        /// <summary>
+        /// Performs an explicit conversion from <see cref="Tkl.Jumbo.ByteSize"/> to <see cref="System.SByte"/>.
+        /// </summary>
+        /// <param name="value">The value.</param>
+        /// <returns>
+        /// The result of the conversion.
+        /// </returns>
+        [CLSCompliant(false)]
+        public static explicit operator sbyte(ByteSize value)
+        {
+            checked
+            {
+                return (sbyte)value.Value;
+            }
+        }
+
+        /// <summary>
+        /// Performs an explicit conversion from <see cref="Tkl.Jumbo.ByteSize"/> to <see cref="System.Int16"/>.
+        /// </summary>
+        /// <param name="value">The value.</param>
+        /// <returns>
+        /// The result of the conversion.
+        /// </returns>
+        public static explicit operator short(ByteSize value)
+        {
+            checked
+            {
+                return (short)value.Value;
+            }
+        }
+
+        /// <summary>
+        /// Performs an explicit conversion from <see cref="Tkl.Jumbo.ByteSize"/> to <see cref="System.UInt16"/>.
+        /// </summary>
+        /// <param name="value">The value.</param>
+        /// <returns>
+        /// The result of the conversion.
+        /// </returns>
+        [CLSCompliant(false)]
+        public static explicit operator ushort(ByteSize value)
+        {
+            checked
+            {
+                return (ushort)value.Value;
+            }
+        }
+
+        /// <summary>
+        /// Performs an explicit conversion from <see cref="Tkl.Jumbo.ByteSize"/> to <see cref="System.Int32"/>.
+        /// </summary>
+        /// <param name="value">The value.</param>
+        /// <returns>
+        /// The result of the conversion.
+        /// </returns>
+        public static explicit operator int(ByteSize value)
+        {
+            checked
+            {
+                return (int)value.Value;
+            }
+        }
+
+        /// <summary>
+        /// Performs an explicit conversion from <see cref="Tkl.Jumbo.ByteSize"/> to <see cref="System.UInt32"/>.
+        /// </summary>
+        /// <param name="value">The value.</param>
+        /// <returns>
+        /// The result of the conversion.
+        /// </returns>
+        [CLSCompliant(false)]
+        public static explicit operator uint(ByteSize value)
+        {
+            checked
+            {
+                return (uint)value.Value;
+            }
+        }
+
+        /// <summary>
+        /// Converts the specified <see cref="ByteSize"/> to an <see cref="Int64"/>.
+        /// </summary>
+        /// <param name="value">The <see cref="ByteSize"/> to convert.</param>
+        /// <returns>The value of the <see cref="ByteSize"/> in bytes.</returns>
+        public static explicit operator long(ByteSize value)
+        {
+            return value.Value;
+        }
+
+        /// <summary>
+        /// Converts the specified <see cref="ByteSize"/> to an <see cref="UInt64"/>.
+        /// </summary>
+        /// <param name="value">The <see cref="ByteSize"/> to convert.</param>
+        /// <returns>The value of the <see cref="ByteSize"/> in bytes.</returns>
+        [CLSCompliant(false)]
+        public static explicit operator ulong(ByteSize value)
+        {
+            checked
+            {
+                return (ulong)value.Value;
+            }
+        }
+
+        /// <summary>
+        /// Performs an explicit conversion from <see cref="Tkl.Jumbo.ByteSize"/> to <see cref="System.Decimal"/>.
+        /// </summary>
+        /// <param name="value">The value.</param>
+        /// <returns>
+        /// The result of the conversion.
+        /// </returns>
+        public static explicit operator decimal(ByteSize value)
+        {
+            checked
+            {
+                return (decimal)value.Value;
+            }
+        }
+
+        /// <summary>
+        /// Performs an explicit conversion from <see cref="Tkl.Jumbo.ByteSize"/> to <see cref="System.Single"/>.
+        /// </summary>
+        /// <param name="value">The value.</param>
+        /// <returns>
+        /// The result of the conversion.
+        /// </returns>
+        public static explicit operator float(ByteSize value)
+        {
+            checked
+            {
+                return (float)value.Value;
+            }
+        }
+
+        /// <summary>
+        /// Performs an explicit conversion from <see cref="Tkl.Jumbo.ByteSize"/> to <see cref="System.Double"/>.
+        /// </summary>
+        /// <param name="value">The value.</param>
+        /// <returns>
+        /// The result of the conversion.
+        /// </returns>
+        public static explicit operator double(ByteSize value)
+        {
+            checked
+            {
+                return (double)value.Value;
+            }
+        }
+
+        /// <summary>
+        /// Performs an implicit conversion from <see cref="System.Byte"/> to <see cref="Tkl.Jumbo.ByteSize"/>.
+        /// </summary>
+        /// <param name="value">The value.</param>
+        /// <returns>
+        /// The result of the conversion.
+        /// </returns>
+        public static implicit operator ByteSize(byte value)
+        {
+            return new ByteSize(value);
+        }
+
+        /// <summary>
+        /// Performs an implicit conversion from <see cref="System.SByte"/> to <see cref="Tkl.Jumbo.ByteSize"/>.
+        /// </summary>
+        /// <param name="value">The value.</param>
+        /// <returns>
+        /// The result of the conversion.
+        /// </returns>
+        [CLSCompliant(false)]
+        public static implicit operator ByteSize(sbyte value)
+        {
+            return new ByteSize(value);
+        }
+
+        /// <summary>
+        /// Performs an implicit conversion from <see cref="System.Int16"/> to <see cref="Tkl.Jumbo.ByteSize"/>.
+        /// </summary>
+        /// <param name="value">The value.</param>
+        /// <returns>
+        /// The result of the conversion.
+        /// </returns>
+        public static implicit operator ByteSize(short value)
+        {
+            return new ByteSize(value);
+        }
+
+        /// <summary>
+        /// Performs an implicit conversion from <see cref="System.UInt16"/> to <see cref="Tkl.Jumbo.ByteSize"/>.
+        /// </summary>
+        /// <param name="value">The value.</param>
+        /// <returns>
+        /// The result of the conversion.
+        /// </returns>
+        [CLSCompliant(false)]
+        public static implicit operator ByteSize(ushort value)
+        {
+            return new ByteSize(value);
+        }
+
+        /// <summary>
+        /// Performs an implicit conversion from <see cref="System.Int32"/> to <see cref="Tkl.Jumbo.ByteSize"/>.
+        /// </summary>
+        /// <param name="value">The value.</param>
+        /// <returns>
+        /// The result of the conversion.
+        /// </returns>
+        public static implicit operator ByteSize(int value)
+        {
+            return new ByteSize(value);
+        }
+
+        /// <summary>
+        /// Performs an implicit conversion from <see cref="System.UInt32"/> to <see cref="Tkl.Jumbo.ByteSize"/>.
+        /// </summary>
+        /// <param name="value">The value.</param>
+        /// <returns>
+        /// The result of the conversion.
+        /// </returns>
+        [CLSCompliant(false)]
+        public static implicit operator ByteSize(uint value)
+        {
+            return new ByteSize(value);
+        }
+
+        /// <summary>
+        /// Performs an implicit conversion from <see cref="System.Int64"/> to <see cref="Tkl.Jumbo.ByteSize"/>.
+        /// </summary>
+        /// <param name="value">The value.</param>
+        /// <returns>
+        /// The result of the conversion.
+        /// </returns>
+        public static implicit operator ByteSize(long value)
+        {
+            return new ByteSize(value);
+        }
+
+        /// <summary>
+        /// Performs an implicit conversion from <see cref="System.UInt64"/> to <see cref="Tkl.Jumbo.ByteSize"/>.
+        /// </summary>
+        /// <param name="value">The value.</param>
+        /// <returns>
+        /// The result of the conversion.
+        /// </returns>
+        [CLSCompliant(false)]
+        public static implicit operator ByteSize(ulong value)
+        {
+            checked
+            {
+                return new ByteSize((long)value);
+            }
+        }
+
+        /// <summary>
+        /// Performs an implicit conversion from <see cref="System.Decimal"/> to <see cref="Tkl.Jumbo.ByteSize"/>.
+        /// </summary>
+        /// <param name="value">The value.</param>
+        /// <returns>
+        /// The result of the conversion.
+        /// </returns>
+        public static implicit operator ByteSize(decimal value)
+        {
+            checked
+            {
+                return new ByteSize((long)value);
+            }
+        }
+
+        /// <summary>
+        /// Performs an implicit conversion from <see cref="System.Single"/> to <see cref="Tkl.Jumbo.ByteSize"/>.
+        /// </summary>
+        /// <param name="value">The value.</param>
+        /// <returns>
+        /// The result of the conversion.
+        /// </returns>
+        public static implicit operator ByteSize(float value)
+        {
+            checked
+            {
+                return new ByteSize((long)value);
+            }
+        }
+
+        /// <summary>
+        /// Performs an implicit conversion from <see cref="System.Double"/> to <see cref="Tkl.Jumbo.ByteSize"/>.
+        /// </summary>
+        /// <param name="value">The value.</param>
+        /// <returns>
+        /// The result of the conversion.
+        /// </returns>
+        public static implicit operator ByteSize(double value)
+        {
+            checked
+            {
+                return new ByteSize((long)value);
+            }
+        }
+
+        #endregion
+
 
         #region IEquatable<ByteSize> Members
 
@@ -478,22 +711,96 @@ namespace Tkl.Jumbo
 
         #endregion
 
-        private static string GetAndRemoveSuffix(ref string value)
+        #region IConvertable members
+
+        TypeCode IConvertible.GetTypeCode()
         {
-            int lastNumber = value.LastIndexOfAny(_numbers);
-            if( lastNumber == value.Length - 1 )
-                return null;
-            else
-            {
-                string suffix = value.Substring(lastNumber + 1);
-                value = value.Substring(0, lastNumber + 1);
-                return suffix.Trim();
-            }
+            return TypeCode.Object;
         }
 
-        private static long GetSuffixMultiplicationFactor(string suffix)
+        bool IConvertible.ToBoolean(IFormatProvider provider)
         {
-            switch( suffix.ToUpperInvariant() )
+            return Convert.ToBoolean(Value, provider);
+        }
+
+        byte IConvertible.ToByte(IFormatProvider provider)
+        {
+            return Convert.ToByte(Value, provider);
+        }
+
+        char IConvertible.ToChar(IFormatProvider provider)
+        {
+            return Convert.ToChar(Value, provider);
+        }
+
+        DateTime IConvertible.ToDateTime(IFormatProvider provider)
+        {
+            return Convert.ToDateTime(Value, provider);
+        }
+
+        decimal IConvertible.ToDecimal(IFormatProvider provider)
+        {
+            return Convert.ToDecimal(Value, provider);
+        }
+
+        double IConvertible.ToDouble(IFormatProvider provider)
+        {
+            return Convert.ToDouble(Value, provider);
+        }
+
+        short IConvertible.ToInt16(IFormatProvider provider)
+        {
+            return Convert.ToInt16(Value, provider);
+        }
+
+        int IConvertible.ToInt32(IFormatProvider provider)
+        {
+            return Convert.ToInt32(Value, provider);
+        }
+
+        long IConvertible.ToInt64(IFormatProvider provider)
+        {
+            return Convert.ToInt64(Value, provider);
+        }
+
+        sbyte IConvertible.ToSByte(IFormatProvider provider)
+        {
+            return Convert.ToSByte(Value, provider);
+        }
+
+        float IConvertible.ToSingle(IFormatProvider provider)
+        {
+            return Convert.ToSingle(Value, provider);
+        }
+
+        object IConvertible.ToType(Type conversionType, IFormatProvider provider)
+        {
+            if( conversionType == typeof(string) )
+                return ToString(provider);
+            else
+                return Convert.ChangeType(Value, conversionType, provider);
+        }
+
+        ushort IConvertible.ToUInt16(IFormatProvider provider)
+        {
+            return Convert.ToUInt16(Value, provider);
+        }
+
+        uint IConvertible.ToUInt32(IFormatProvider provider)
+        {
+            return Convert.ToUInt32(Value, provider);
+        }
+
+        ulong IConvertible.ToUInt64(IFormatProvider provider)
+        {
+            return Convert.ToUInt64(Value, provider);
+        }
+
+        #endregion
+
+        internal static long GetUnitScalingFactor(string unit)
+        {
+            switch( unit.ToUpperInvariant() )
             {
             case "B":
                 return 1;
@@ -518,7 +825,20 @@ namespace Tkl.Jumbo
             case "P":
                 return Petabyte;
             default:
-                throw new ArgumentException(string.Format(System.Globalization.CultureInfo.CurrentCulture, "Unrecognized suffix {0}.", suffix), "suffix");
+                throw new ArgumentException(string.Format(System.Globalization.CultureInfo.CurrentCulture, "Unrecognized suffix {0}.", unit), "suffix");
+            }
+        }
+
+        private static string GetAndRemoveSuffix(ref string value)
+        {
+            int lastNumber = value.LastIndexOfAny(_numbers);
+            if( lastNumber == value.Length - 1 )
+                return null;
+            else
+            {
+                string suffix = value.Substring(lastNumber + 1);
+                value = value.Substring(0, lastNumber + 1);
+                return suffix.Trim();
             }
         }
     }
