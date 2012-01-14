@@ -38,7 +38,7 @@ namespace Tkl.Jumbo.Test.Dfs
             INameServerClientProtocol client = DfsClient.CreateNameServerClient(config);
             Assert.IsNotNull(client);
             // Just checking if we can communicate, the value doesn't really matter all that much.
-            Assert.AreEqual(config.NameServer.BlockSize, client.BlockSize);
+            Assert.AreEqual((int)config.NameServer.BlockSize, client.BlockSize);
         }
 
         [Test]

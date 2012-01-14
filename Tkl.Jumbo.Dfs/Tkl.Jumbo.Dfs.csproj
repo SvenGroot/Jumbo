@@ -78,7 +78,6 @@
     <Compile Include="BlockAssignment.cs" />
     <Compile Include="BlockKind.cs" />
     <Compile Include="BlockReportHeartbeatData.cs" />
-    <Compile Include="BlockSender.cs" />
     <Compile Include="ChecksumConfigurationElement.cs" />
     <Compile Include="CRC32.cs" />
     <Compile Include="DataServerClientProtocolGetLogFileContentsHeader.cs" />
@@ -109,6 +108,7 @@
     <Compile Include="InvalidPacketException.cs" />
     <Compile Include="NameServerConfigurationElement.cs" />
     <Compile Include="NewBlockHeartbeatData.cs" />
+    <Compile Include="BlockSender.cs" />
     <Compile Include="Packet.cs" />
     <Compile Include="PacketBuffer.cs" />
     <Compile Include="ProgressCallback.cs" />

@@ -497,7 +497,7 @@ namespace Tkl.Jumbo.Dfs
                     formatter.Serialize(bufferedStream, header);
                     bufferedStream.Flush();
 
-                    DataServerClientProtocolResult status = (DataServerClientProtocolResult)reader.ReadInt32();
+                    DataServerClientProtocolResult status = (DataServerClientProtocolResult)reader.ReadInt16();
                     if( status == DataServerClientProtocolResult.OutOfRange && blockOffset > 0 && blockIndex < _file.Blocks.Count - 1 && _file.RecordOptions == IO.RecordStreamOptions.DoNotCrossBoundary )
                     {
                         // We tried to seek into padding, so go to the next block.
@@ -518,7 +518,7 @@ namespace Tkl.Jumbo.Dfs
                         packet = _packetBuffer.WriteItem;
                         if( packet == null )
                             return false; // cancelled
-                        status = (DataServerClientProtocolResult)reader.ReadInt32();
+                        status = (DataServerClientProtocolResult)reader.ReadInt16();
                         if( status != DataServerClientProtocolResult.Ok )
                         {
                             throw new DfsException("The server encountered an error while sending data.");

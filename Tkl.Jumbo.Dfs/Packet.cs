@@ -40,10 +40,11 @@ namespace Tkl.Jumbo.Dfs
         /// </summary>
         /// <param name="data">The data to store in the packet.</param>
         /// <param name="size">The size of the data to store in the packet.</param>
+        /// <param name="sequenceNumber">The sequence number.</param>
         /// <param name="isLastPacket"><see langword="true"/> if this is the last packet being sent; otherwise <see langword="false"/>.</param>
-        public Packet(byte[] data, int size, bool isLastPacket)
+        public Packet(byte[] data, int size, long sequenceNumber, bool isLastPacket)
         {
-            CopyFrom(data, size, isLastPacket);
+            CopyFrom(data, size, sequenceNumber, isLastPacket);
         }
 
         /// <summary>
@@ -62,6 +63,14 @@ namespace Tkl.Jumbo.Dfs
         public int Size { get; private set; }
 
         /// <summary>
+        /// Gets or sets the sequence number.
+        /// </summary>
+        /// <value>
+        /// The sequence number.
+        /// </value>
+        public long SequenceNumber { get; set; }
+
+        /// <summary>
         /// Gets or sets the checksum for the data in this packet.
         /// </summary>
         public long Checksum
@@ -77,8 +86,9 @@ namespace Tkl.Jumbo.Dfs
         /// </summary>
         /// <param name="data">The data to store in the packet.</param>
         /// <param name="size">The size of the data to store in the packet.</param>
+        /// <param name="sequenceNumber">The sequence number.</param>
         /// <param name="isLastPacket"><see langword="true"/> if this is the last packet being sent; otherwise <see langword="false"/>.</param>
-        public void CopyFrom(byte[] data, int size, bool isLastPacket)
+        public void CopyFrom(byte[] data, int size, long sequenceNumber, bool isLastPacket)
         {
             if( data == null )
                 throw new ArgumentNullException("data");
@@ -90,6 +100,7 @@ namespace Tkl.Jumbo.Dfs
             Array.Copy(data, _data, size);
             Size = size;
             IsLastPacket = isLastPacket;
+            SequenceNumber = sequenceNumber;
             RecomputeChecksum();
         }
 
@@ -97,8 +108,9 @@ namespace Tkl.Jumbo.Dfs
         /// Resets the data in the packet using the specified stream.
         /// </summary>
         /// <param name="stream">The stream containing the data..</param>
+        /// <param name="sequenceNumber">The sequence number.</param>
         /// <param name="isLastPacket"><see langword="true"/> if this is the last packet being sent; otherwise <see langword="false"/>.</param>
-        public void CopyFrom(Stream stream, bool isLastPacket)
+        public void CopyFrom(Stream stream, long sequenceNumber, bool isLastPacket)
         {
             if( stream == null )
                 throw new ArgumentNullException("stream");
@@ -110,6 +122,7 @@ namespace Tkl.Jumbo.Dfs
             stream.Read(_data, 0, size);
             Size = size;
             IsLastPacket = isLastPacket;
+            SequenceNumber = sequenceNumber;
             RecomputeChecksum();
         }
 
@@ -125,6 +138,7 @@ namespace Tkl.Jumbo.Dfs
             Array.Copy(packet._data, _data, packet.Size);
             Size = packet.Size;
             IsLastPacket = packet.IsLastPacket;
+            SequenceNumber = packet.SequenceNumber;
             _checksumValue = packet.Checksum;
         }
 
@@ -177,7 +191,8 @@ namespace Tkl.Jumbo.Dfs
             else
             {
                 Size = reader.ReadInt32();
-                IsLastPacket = reader.ReadInt32() == 0 ? false : true;
+                IsLastPacket = reader.ReadBoolean();
+                SequenceNumber = reader.ReadInt64();
                 if( Size > PacketSize || (!IsLastPacket && Size != PacketSize) )
                     throw new InvalidPacketException("The packet has an invalid size.");
             }
@@ -215,7 +230,8 @@ namespace Tkl.Jumbo.Dfs
             if( !checksumOnly )
             {
                 writer.Write(Size);
-                writer.Write(IsLastPacket ? 1 : 0); // Writing an int, not a boolean, to keep it word-aligned.
+                writer.Write(IsLastPacket);
+                writer.Write(SequenceNumber);
             }
             writer.Write(_data, 0, Size);
         }
@@ -242,7 +258,7 @@ namespace Tkl.Jumbo.Dfs
             Packet other = obj as Packet;
             if( other != null )
             {
-                if( IsLastPacket == other.IsLastPacket && Size == other.Size && Checksum == other.Checksum )
+                if( IsLastPacket == other.IsLastPacket && Size == other.Size && Checksum == other.Checksum && SequenceNumber == other.SequenceNumber )
                 {
                     for( int x = 0; x < Size; ++x )
                     {

@@ -18,7 +18,7 @@ namespace Tkl.Jumbo.Test.Dfs
             NameServerConfigurationElement target = new NameServerConfigurationElement();
             Assert.AreEqual("localhost", target.HostName);
             Assert.AreEqual(9000, target.Port);
-            Assert.AreEqual(67108864, target.BlockSize);
+            Assert.AreEqual(67108864, (int)target.BlockSize);
             Assert.AreEqual(1, target.ReplicationFactor);
             Assert.IsTrue(target.ListenIPv4AndIPv6);
             Assert.AreEqual(string.Empty, target.EditLogDirectory);
@@ -46,7 +46,7 @@ namespace Tkl.Jumbo.Test.Dfs
         public void TestBlockSize()
         {
             NameServerConfigurationElement target = new NameServerConfigurationElement();
-            int expected = 20 * Packet.PacketSize;
+            BinarySize expected = 20 * Packet.PacketSize;
             target.BlockSize = expected;
             Assert.AreEqual(expected, target.BlockSize);
         }

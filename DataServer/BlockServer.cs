@@ -82,10 +82,10 @@ namespace DataServerApplication
             int blockSize = 0;
             //DataServerClientProtocolResult forwardResult;
 
+            bool acceptedHeader = false;
+            using( BinaryReader clientReader = new BinaryReader(stream) )
             using( BinaryWriter clientWriter = new BinaryWriter(stream) )
-            using( BinaryReader reader = new BinaryReader(stream) )
             {
-                BlockSender forwarder = null;
                 try
                 {
                     if( header.DataServers.Count == 0 || !header.DataServers[0].Equals(_dataServer.LocalAddress) )
@@ -96,48 +96,28 @@ namespace DataServerApplication
                     }
                     using( FileStream blockFile = _dataServer.AddNewBlock(header.BlockId) )
                     using( BinaryWriter fileWriter = new BinaryWriter(blockFile) )
+                    using( BlockSender forwarder = new BlockSender(header.BlockId, header.DataServers.Skip(1), clientWriter) )
                     {
-                        if( header.DataServers.Count > 1 )
-                        {
-                            var forwardServers = header.DataServers.Skip(1);
-                                                 
-                            forwarder = new BlockSender(header.BlockId, forwardServers);
-                            _log.InfoFormat("Connected to {0} to forward block {1}.", header.DataServers[1], header.BlockId);
-                        }
-                        else
-                        {
-                            _log.DebugFormat("This is the last server in the list for block {0}.", header.BlockId);
-                        }
+                        // Accept the header
                         clientWriter.WriteResult(DataServerClientProtocolResult.Ok);
+                        acceptedHeader = true;
 
-                        if( !ReceivePackets(header, ref blockSize, clientWriter, reader, forwarder, fileWriter) )
+                        if( !ReceivePackets(header, ref blockSize, clientWriter, clientReader, forwarder, fileWriter) )
                             return;
 
-                        if( forwarder != null )
-                        {
-                            _log.Debug("Waiting for confirmations.");
-                            forwarder.WaitUntilSendFinished();
-                            _log.Debug("Waiting for confirmations complete.");
-                        }
-                        if( forwarder != null )
-                        {
-                            if( !CheckForwarderError(header, forwarder) )
-                            {
-                                SendErrorResultAndWaitForConnectionClosed(clientWriter, reader);
-                                return;
-                            }
-                        }
+                        forwarder.WaitForAcknowledgements();
                     }
 
                     _dataServer.CompleteBlock(header.BlockId, blockSize);
                     clientWriter.WriteResult(DataServerClientProtocolResult.Ok);
                     _log.InfoFormat("Writing block {0} complete.", header.BlockId);
                 }
-                catch( Exception )
+                catch( Exception ex )
                 {
+                    _log.Error("Error occurred receiving block.", ex);
                     try
                     {
-                        SendErrorResultAndWaitForConnectionClosed(clientWriter, reader);
+                        SendErrorResultAndWaitForConnectionClosed(clientWriter, clientReader, acceptedHeader);
                     }
                     catch( Exception )
                     {
@@ -146,34 +126,36 @@ namespace DataServerApplication
                 }
                 finally
                 {
-                    if( forwarder != null )
-                        forwarder.Dispose();
-
                     _dataServer.RemoveBlockIfPending(header.BlockId);
                 }
             }
+
         }
 
-        private static void SendErrorResultAndWaitForConnectionClosed(BinaryWriter clientWriter, BinaryReader reader)
+        private static void SendErrorResultAndWaitForConnectionClosed(BinaryWriter clientWriter, BinaryReader reader, bool useSequenceError)
         {
-            clientWriter.WriteResult(DataServerClientProtocolResult.Error);
+            if( useSequenceError )
+                clientWriter.Write(-1L);
+            else
+                clientWriter.WriteResult(DataServerClientProtocolResult.Error);
             Thread.Sleep(5000); // Wait some time so the client can catch the error before the socket is closed; this is only necessary
                                 // on Win32 it seems, but it doesn't harm anything.
         }
 
-        private static bool ReceivePackets(DataServerClientProtocolWriteHeader header, ref int blockSize, BinaryWriter clientWriter, BinaryReader reader, BlockSender forwarder, BinaryWriter fileWriter)
+        private static bool ReceivePackets(DataServerClientProtocolWriteHeader header, ref int blockSize, BinaryWriter clientWriter, BinaryReader clientReader, BlockSender forwarder, BinaryWriter fileWriter)
         {
             Packet packet = new Packet();
             do
             {
                 try
                 {
-                    packet.Read(reader, false, true);
+                    packet.Read(clientReader, false, forwarder.IsReponseOnly); // Only the last server in the chain needs to verify checksums
                 }
                 catch( InvalidPacketException ex )
                 {
                     _log.Error(ex.Message);
-                    SendErrorResultAndWaitForConnectionClosed(clientWriter, reader);
+                    forwarder.Cancel();
+                    SendErrorResultAndWaitForConnectionClosed(clientWriter, clientReader, true);
                     return false;
                 }
 
@@ -183,10 +165,10 @@ namespace DataServerApplication
                 {
                     if( !CheckForwarderError(header, forwarder) )
                     {
-                        SendErrorResultAndWaitForConnectionClosed(clientWriter, reader);
+                        SendErrorResultAndWaitForConnectionClosed(clientWriter, clientReader, true);
                         return false;
                     }
-                    forwarder.AddPacket(packet);
+                    forwarder.SendPacket(packet);
                 }
 
                 packet.Write(fileWriter, true);
@@ -196,12 +178,12 @@ namespace DataServerApplication
 
         private static bool CheckForwarderError(DataServerClientProtocolWriteHeader header, BlockSender forwarder)
         {
-            if( forwarder.LastResult == DataServerClientProtocolResult.Error )
+            if( forwarder.ServerStatus == DataServerClientProtocolResult.Error )
             {
-                if( forwarder.LastException != null )
-                    _log.Error(string.Format("An error occurred forwarding block to server {0}.", header.DataServers[1]), forwarder.LastException);
-                else
-                    _log.ErrorFormat("The next data server {0} encountered an error writing a packet of block {1}.", header.DataServers[1], header.BlockId);
+                //if( forwarder.LastException != null )
+                //    _log.Error(string.Format("An error occurred forwarding block to server {0}.", header.DataServers[1]), forwarder.LastException);
+                //else
+                _log.ErrorFormat("The next data server {0} encountered an error writing a packet of block {1}.", header.DataServers[1], header.BlockId);
                 return false;
             }
             return true;
@@ -271,7 +253,7 @@ namespace DataServerApplication
                             if( sizeRemaining == 0 )
                                 packet.IsLastPacket = true;
 
-                            writer.Write((int)DataServerClientProtocolResult.Ok);
+                            writer.WriteResult(DataServerClientProtocolResult.Ok);
                             packet.Write(writer, false);
 
                             // assertion to check if we don't jump over zero.
