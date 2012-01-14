@@ -53,11 +53,35 @@ namespace Tkl.Jumbo.Test.Dfs
                 writer.Write(data, 0, 5000);
 
                 stream.Position = 0;
-                packet.Read(reader, false, true);
+                packet.Read(reader, PacketFormatOptions.Default, true);
             }
             Assert.AreEqual(checksum, packet.Checksum);
             Assert.AreEqual(5000, packet.Size);
             Assert.AreEqual(2L, packet.SequenceNumber);
+            Assert.IsTrue(packet.IsLastPacket);
+        }
+
+        [Test]
+        public void TestReadNoSequenceNumber()
+        {
+            long checksum;
+            byte[] data = GenerateData(5000, out checksum);
+            Packet packet = new Packet();
+            using( MemoryStream stream = new MemoryStream() )
+            using( BinaryWriter writer = new BinaryWriter(stream) )
+            using( BinaryReader reader = new BinaryReader(stream) )
+            {
+                writer.Write((uint)checksum);
+                writer.Write(5000);
+                writer.Write(true);
+                writer.Write(data, 0, 5000);
+
+                stream.Position = 0;
+                packet.Read(reader, PacketFormatOptions.NoSequenceNumber, true);
+            }
+            Assert.AreEqual(checksum, packet.Checksum);
+            Assert.AreEqual(5000, packet.Size);
+            Assert.AreEqual(0L, packet.SequenceNumber);
             Assert.IsTrue(packet.IsLastPacket);
         }
 
@@ -80,11 +104,11 @@ namespace Tkl.Jumbo.Test.Dfs
                 writer.Write(data, 0, 5000);
 
                 stream.Position = 0;
-                packet.Read(reader, true, true);
+                packet.Read(reader, PacketFormatOptions.ChecksumOnly, true);
                 Assert.AreEqual(checksum, packet.Checksum);
                 Assert.AreEqual(Packet.PacketSize, packet.Size);
                 Assert.IsFalse(packet.IsLastPacket);
-                packet.Read(reader, true, true);
+                packet.Read(reader, PacketFormatOptions.ChecksumOnly, true);
                 Assert.AreEqual(checksum2, packet.Checksum);
                 Assert.AreEqual(5000, packet.Size);
                 Assert.IsTrue(packet.IsLastPacket);
@@ -101,7 +125,7 @@ namespace Tkl.Jumbo.Test.Dfs
             using( BinaryReader reader = new BinaryReader(stream) )
             {
                 Packet packet = new Packet(data, 5000, 2, true);
-                packet.Write(writer, false);
+                packet.Write(writer, PacketFormatOptions.Default);
 
                 stream.Position = 0;
                 Assert.AreEqual(checksum, reader.ReadUInt32());
@@ -125,7 +149,7 @@ namespace Tkl.Jumbo.Test.Dfs
             using( BinaryReader reader = new BinaryReader(stream) )
             {
                 Packet packet = new Packet(data, 5000, 1, true);
-                packet.Write(writer, true);
+                packet.Write(writer, PacketFormatOptions.ChecksumOnly);
 
                 stream.Position = 0;
                 Assert.AreEqual(checksum, reader.ReadUInt32());
@@ -136,6 +160,28 @@ namespace Tkl.Jumbo.Test.Dfs
             }
         }
 
+        [Test]
+        public void TestWriteNoSequenceNumber()
+        {
+            long checksum;
+            byte[] data = GenerateData(5000, out checksum);
+            using( MemoryStream stream = new MemoryStream() )
+            using( BinaryWriter writer = new BinaryWriter(stream) )
+            using( BinaryReader reader = new BinaryReader(stream) )
+            {
+                Packet packet = new Packet(data, 5000, 2, true);
+                packet.Write(writer, PacketFormatOptions.NoSequenceNumber);
+
+                stream.Position = 0;
+                Assert.AreEqual(checksum, reader.ReadUInt32());
+                Assert.AreEqual(5000, reader.ReadInt32());
+                Assert.AreEqual(true, reader.ReadBoolean());
+                byte[] readData = new byte[5000];
+                Assert.AreEqual(5000, reader.Read(readData, 0, 5000));
+                Assert.IsTrue(Utilities.CompareArray(data, 0, readData, 0, 5000));
+                Assert.AreEqual(stream.Length, stream.Position);
+            }
+        }
 
         [Test]
         public void TestWriteDataOnly()

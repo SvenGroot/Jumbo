@@ -149,7 +149,7 @@ namespace DataServerApplication
             {
                 try
                 {
-                    packet.Read(clientReader, false, forwarder.IsReponseOnly); // Only the last server in the chain needs to verify checksums
+                    packet.Read(clientReader, PacketFormatOptions.Default, forwarder.IsReponseOnly); // Only the last server in the chain needs to verify checksums
                 }
                 catch( InvalidPacketException ex )
                 {
@@ -171,7 +171,7 @@ namespace DataServerApplication
                     forwarder.SendPacket(packet);
                 }
 
-                packet.Write(fileWriter, true);
+                packet.Write(fileWriter, PacketFormatOptions.ChecksumOnly);
             } while( !packet.IsLastPacket );
             return true;
         }
@@ -189,7 +189,7 @@ namespace DataServerApplication
             return true;
         }
 
-        private void SendBlock(NetworkStream stream, DataServerClientProtocolReadHeader header)
+        private void SendBlock(NetworkStream clientStream, DataServerClientProtocolReadHeader header)
         {
             _log.InfoFormat("Block read command received: block {0}, offset {1}, size {2}.", header.BlockId, header.Offset, header.Size);
             int packetOffset = header.Offset / Packet.PacketSize;
@@ -203,22 +203,21 @@ namespace DataServerApplication
 
             try
             {
-                _log.Debug("Open block file.");
                 using( FileStream blockFile = _dataServer.OpenBlock(header.BlockId) )
-                using( BinaryReader reader = new BinaryReader(blockFile) )
-                using( Tkl.Jumbo.IO.WriteBufferedStream bufferedStream = new Tkl.Jumbo.IO.WriteBufferedStream(stream) )
-                using( BinaryWriter writer = new BinaryWriter(bufferedStream) )
+                using( BinaryReader blockReader = new BinaryReader(blockFile) )
+                using( Tkl.Jumbo.IO.WriteBufferedStream bufferedStream = new Tkl.Jumbo.IO.WriteBufferedStream(clientStream) )
+                using( BinaryWriter clientWriter = new BinaryWriter(bufferedStream) )
                 {
                     // Check if the requested offset is in range. To do this, we take the computed offset of the 
                     // first packet to send (fileOffset) and add the offset into that first packet (header.Offset - offset) to it.
                     if( fileOffset + header.Offset - offset > blockFile.Length )
                     {
                         _log.ErrorFormat("Client requested offset {0} (after correction) larger than block file length {1}.", fileOffset + header.Offset - offset, blockFile.Length);
-                        writer.WriteResult(DataServerClientProtocolResult.OutOfRange);
+                        clientWriter.WriteResult(DataServerClientProtocolResult.OutOfRange);
                         return;
                     }
 
-                    _log.DebugFormat("Block file opened, beginning send.");
+                    //_log.DebugFormat("Block file opened, beginning send.");
                     if( header.Size >= 0 )
                     {
                         endPacketOffset = (header.Offset + header.Size) / Packet.PacketSize;
@@ -230,31 +229,31 @@ namespace DataServerApplication
                     endOffset = endPacketOffset * Packet.PacketSize;
                     endFileOffset = endPacketOffset * (Packet.PacketSize + sizeof(uint));
 
-					_log.DebugFormat("Block file length: {0}, offset: {1}, end offset = {2}", blockFile.Length, fileOffset, endFileOffset);
+					//_log.DebugFormat("Block file length: {0}, offset: {1}, end offset = {2}", blockFile.Length, fileOffset, endFileOffset);
 
                     if( fileOffset > blockFile.Length || endFileOffset > blockFile.Length )
                     {
                         _log.Error("Requested offsets are out of range.");
-                        writer.WriteResult(DataServerClientProtocolResult.OutOfRange);
+                        clientWriter.WriteResult(DataServerClientProtocolResult.OutOfRange);
                         return;
                     }
 
                     blockFile.Seek(fileOffset, SeekOrigin.Begin);
                     int sizeRemaining = endOffset - offset;
                     Packet packet = new Packet();
-                    writer.WriteResult(DataServerClientProtocolResult.Ok);
-                    writer.Write(offset);
+                    clientWriter.WriteResult(DataServerClientProtocolResult.Ok);
+                    clientWriter.Write(offset);
                     try
                     {
                         do
                         {
-                            packet.Read(reader, true, false);
+                            packet.Read(blockReader, PacketFormatOptions.ChecksumOnly, false);
 
                             if( sizeRemaining == 0 )
                                 packet.IsLastPacket = true;
 
-                            writer.WriteResult(DataServerClientProtocolResult.Ok);
-                            packet.Write(writer, false);
+                            clientWriter.WriteResult(DataServerClientProtocolResult.Ok);
+                            packet.Write(clientWriter, PacketFormatOptions.NoSequenceNumber);
 
                             // assertion to check if we don't jump over zero.
                             System.Diagnostics.Debug.Assert(sizeRemaining > 0 ? sizeRemaining - packet.Size >= 0 : true);
@@ -263,7 +262,7 @@ namespace DataServerApplication
                     }
                     catch( InvalidPacketException )
                     {
-                        writer.WriteResult(DataServerClientProtocolResult.Error);
+                        clientWriter.WriteResult(DataServerClientProtocolResult.Error);
                         return;
                     }
                 }

@@ -98,7 +98,7 @@ namespace Tkl.Jumbo.Test.Dfs
                 {
                     result = (DataServerClientProtocolResult)reader.ReadInt16();
                     Assert.AreEqual(DataServerClientProtocolResult.Ok, result);
-                    packet.Read(reader, false, true);
+                    packet.Read(reader, PacketFormatOptions.NoSequenceNumber, true);
                     packet.CopyTo(0, buffer1, 0, buffer1.Length);
                     dataStream.Read(buffer2, 0, packet.Size);
                     Assert.IsTrue(Utilities.CompareArray(buffer1, 0, buffer2, 0, packet.Size));

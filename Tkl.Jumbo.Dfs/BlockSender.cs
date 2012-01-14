@@ -107,7 +107,7 @@ namespace Tkl.Jumbo.Dfs
                 throw new InvalidOperationException("The last packet has been sent.");
 
             if( _serverWriter != null )
-                packet.Write(_serverWriter, false);
+                packet.Write(_serverWriter, PacketFormatOptions.Default);
 
             _pendingAcknowledgements.Add(packet.SequenceNumber, _cancellation.Token);
             if( packet.IsLastPacket )

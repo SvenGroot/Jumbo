@@ -172,17 +172,16 @@ namespace Tkl.Jumbo.Dfs
         /// Reads packet data from a <see cref="BinaryReader"/>.
         /// </summary>
         /// <param name="reader">The <see cref="BinaryReader"/> to read the packe data from.</param>
-        /// <param name="checksumOnly"><see langword="true"/> if the data source contains only the checksum before the
-        /// packet data; <see langword="false"/> if it contains the checksum, packet size and last packet flag.</param>
+        /// <param name="format">The format.</param>
         /// <param name="verifyChecksum"><see langword="true"/> to verify the checksum read from the data source against
         /// the actual checksum of the data; <see langword="false"/> to skip verifying the checksum.</param>
-        public void Read(BinaryReader reader, bool checksumOnly, bool verifyChecksum)
+        public void Read(BinaryReader reader, PacketFormatOptions format, bool verifyChecksum)
         {
             if( reader == null )
                 throw new ArgumentNullException("reader");
 
             uint expectedChecksum = reader.ReadUInt32();
-            if( checksumOnly )
+            if( format == PacketFormatOptions.ChecksumOnly )
             {
                 // Determine the size from the stream length.
                 Size = (int)Math.Min(reader.BaseStream.Length - reader.BaseStream.Position, PacketSize);
@@ -192,7 +191,8 @@ namespace Tkl.Jumbo.Dfs
             {
                 Size = reader.ReadInt32();
                 IsLastPacket = reader.ReadBoolean();
-                SequenceNumber = reader.ReadInt64();
+                if( format != PacketFormatOptions.NoSequenceNumber )
+                    SequenceNumber = reader.ReadInt64();
                 if( Size > PacketSize || (!IsLastPacket && Size != PacketSize) )
                     throw new InvalidPacketException("The packet has an invalid size.");
             }
@@ -219,19 +219,19 @@ namespace Tkl.Jumbo.Dfs
         /// Writes the packet to the specified <see cref="BinaryWriter"/>.
         /// </summary>
         /// <param name="writer">The <see cref="BinaryWriter"/> to write the packet to.</param>
-        /// <param name="checksumOnly"><see langword="true"/> to write only the checksum before the
-        /// packet data; <see langword="false"/> to write the checksum, packet size and last packet flag.</param>
-        public void Write(BinaryWriter writer, bool checksumOnly)
+        /// <param name="format">The format.</param>
+        public void Write(BinaryWriter writer, PacketFormatOptions format)
         {
             if( writer == null )
                 throw new ArgumentNullException("writer");
 
             writer.Write((uint)Checksum);
-            if( !checksumOnly )
+            if( format != PacketFormatOptions.ChecksumOnly )
             {
                 writer.Write(Size);
                 writer.Write(IsLastPacket);
-                writer.Write(SequenceNumber);
+                if( format != PacketFormatOptions.NoSequenceNumber )
+                    writer.Write(SequenceNumber);
             }
             writer.Write(_data, 0, Size);
         }
@@ -292,6 +292,16 @@ namespace Tkl.Jumbo.Dfs
                 _checksum.Update(_data, 0, Size);
                 _checksumValue = _checksum.Value;
             }
+        }
+
+        /// <summary>
+        /// Clears this instance.
+        /// </summary>
+        public void Clear()
+        {
+            Size = 0;
+            _checksum.Reset();
+            _checksumValue = 0;
         }
     }
 }
