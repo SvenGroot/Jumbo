@@ -37,6 +37,12 @@
         <warning number="0419" />
       </nowarn>
     </csc>
-    <copy file="../lib/log4net.dll" todir="nantbin"/>
+    <copy file="App.config" tofile="nantbin/Tkl.Jumbo.dll.config"/>
+    <copy todir="nantbin">
+      <fileset>
+        <include name="../lib/log4net.dll"/>
+        <include name="../Tkl.Jumbo.Native/nantbin/*.*"/>
+      </fileset>
+    </copy>
   </target>
 </project>

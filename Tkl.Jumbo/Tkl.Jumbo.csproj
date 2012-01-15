@@ -59,6 +59,7 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <CodeAnalysisRuleSet>AllRules.ruleset</CodeAnalysisRuleSet>
   </PropertyGroup>
+  <PropertyGroup />
   <ItemGroup>
     <Reference Include="log4net, Version=1.2.10.0, Culture=neutral, PublicKeyToken=1b44e1d426115821, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
@@ -86,6 +87,8 @@
     <Compile Include="ClientChannelSinkProvider.cs" />
     <Compile Include="CollectionExtensions.cs" />
     <Compile Include="CountdownEvent.cs" />
+    <Compile Include="Crc32.cs" />
+    <Compile Include="Crc32Managed.cs" />
     <Compile Include="ExtendedCollection.cs" />
     <Compile Include="CompressionUtility.cs" />
     <Compile Include="CompressionType.cs" />
@@ -185,6 +188,7 @@
     <Compile Include="UnmanagedBufferMemoryStream.cs" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="App.config" />
     <None Include="jumbo.snk" />
     <None Include="Tkl.Jumbo.build" />
   </ItemGroup>

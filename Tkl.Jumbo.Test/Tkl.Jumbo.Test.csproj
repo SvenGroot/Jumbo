@@ -73,6 +73,7 @@
       <Link>Properties\AssemblyInfoCommon.cs</Link>
     </Compile>
     <Compile Include="BinarySizeTests.cs" />
+    <Compile Include="Crc32Tests.cs" />
     <Compile Include="Dfs\BlockAssignmentTests.cs" />
     <Compile Include="Dfs\BlockReportHeartbeatDataTests.cs" />
     <Compile Include="Dfs\DataBaseClientProtocolHeaderTests.cs" />
