@@ -114,7 +114,7 @@ namespace Tkl.Jumbo.Test
             Random rnd = new Random();
             byte[] data = new byte[size];
             rnd.NextBytes(data);
-            return new Packet(data, size, isLastPacket);
+            return new Packet(data, size, 0, isLastPacket);
         }
 
         public static void CopyStream(Stream src, Stream dest)

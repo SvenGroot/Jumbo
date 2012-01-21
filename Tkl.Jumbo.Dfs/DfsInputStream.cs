@@ -25,17 +25,20 @@ namespace Tkl.Jumbo.Dfs
         private readonly INameServerClientProtocol _nameServer;
         private readonly DfsFile _file;
         private long _position;
-        private const int _bufferSize = 10;
-        private readonly PacketBuffer _packetBuffer = new PacketBuffer(_bufferSize);
-        private DataServerClientProtocolResult _lastResult = DataServerClientProtocolResult.Ok;
-        private Exception _lastException;
-        private volatile Thread _readBufferThread;
         private bool _disposed;
-        private Packet _currentPacket;
-        private volatile int _lastBlockToDownload = -1;
+        private Packet _currentPacket = new Packet();
+        private int _currentPacketOffset = 0;
         private long _endOffset;
-        private readonly object _endOffsetLock = new object();
+        private int _lastBlockToDownload;
         private long _paddingSkipped;
+
+        private TcpClient _serverClient;
+        private NetworkStream _serverStream;
+        private BinaryReader _serverReader;
+        private List<ServerAddress> _dataServers;
+        private int _currentServerIndex = 0;
+        private Guid _currentBlockId;
+
 
         /// <summary>
         /// Initializes a new instance of the <see cref="DfsInputStream"/> with the specified name server and file.
@@ -199,17 +202,11 @@ namespace Tkl.Jumbo.Dfs
                 if( value < _position || value > Length )
                     throw new ArgumentOutOfRangeException("value");
 
-                // The lock here ensure that if you're increasing this value, if the ReadBufferThread hasn't
-                // stopped already it isn't going to stop, and if it has already stopped _feadBufferThread will
-                // already be null so Read will restart it.
-                lock( _endOffsetLock )
-                {
-                    _endOffset = value;
-                    if( value > 0 )
-                        _lastBlockToDownload = (int)((value - 1) / _file.BlockSize);
-                    else
-                        _lastBlockToDownload = 0;
-                }
+                _endOffset = value;
+                if( value > 0 )
+                    _lastBlockToDownload = (int)((value - 1) / _file.BlockSize);
+                else
+                    _lastBlockToDownload = 0;
             }
         }
 
@@ -263,42 +260,32 @@ namespace Tkl.Jumbo.Dfs
             int sizeRemaining = count;
             if( count > 0 )
             {
-                while( _position < _endOffset && _lastResult == DataServerClientProtocolResult.Ok && sizeRemaining > 0 )
+                while( _position < _endOffset && sizeRemaining > 0 )
                 {
-                    //Debug.WriteLine(string.Format("Read: {0}", _bufferReadPos));
-                    if( _currentPacket == null )
+                    if( _currentPacketOffset >= _currentPacket.Size )
                     {
-                        EnsureReadBufferThreadStarted();
-                        _currentPacket = _packetBuffer.ReadItem;
+                        _currentPacketOffset = 0;
+                        // ReadPacket returns false if the end of the file or StopReadingAtPosition has been reached.
+                        if( !ReadPacket() )
+                            break;
                     }
 
-                    ThrowIfErrorOccurred();
+                    int packetCount = Math.Min(_currentPacket.Size - _currentPacketOffset, sizeRemaining);
 
-                    // Where in the current packet do we need to read?
-                    int packetOffset = (int)(_position % Packet.PacketSize);
-                    int packetCount = Math.Min(_currentPacket.Size - packetOffset, sizeRemaining);
-
-                    int copied = _currentPacket.CopyTo(packetOffset, buffer, offset, packetCount);
+                    int copied = _currentPacket.CopyTo(_currentPacketOffset, buffer, offset, packetCount);
                     Debug.Assert(copied == packetCount);
                     offset += copied;
                     sizeRemaining -= copied;
                     _position += copied;
-                    packetOffset += copied;
+                    _currentPacketOffset += copied;
 
-                    if( packetOffset == _currentPacket.Size )
+                    if( _currentPacket.IsLastPacket && _position < Length && _currentPacketOffset == _currentPacket.Size && _currentPacket.Size < Packet.PacketSize )
                     {
-                        // If this is the last packet in the block but not the last packet in the file, and the size is less than the max packet size,
-                        // it means this packet is padded so we should adjust the position.
-                        if( _currentPacket.IsLastPacket && _position < Length )
-                        {
-                            int padding = Packet.PacketSize - _currentPacket.Size;
-                            _position += padding;
-                            _paddingSkipped += padding;
-                        }
-                        _currentPacket = null;
+                        int padding = Packet.PacketSize - _currentPacket.Size;
+                        _position += padding;
+                        _paddingSkipped += padding;
                     }
                 }
-                ThrowIfErrorOccurred();
             }
             return count - sizeRemaining;
         }
@@ -328,17 +315,10 @@ namespace Tkl.Jumbo.Dfs
                 throw new ArgumentOutOfRangeException("offset");
             if( newPosition != _position )
             {
-                if( _readBufferThread != null )
-                {
-                    _packetBuffer.Cancel();
-                    _readBufferThread.Join();
-                    _readBufferThread = null;
-                }
-                _lastResult = DataServerClientProtocolResult.Ok;
+                CloseDataServerConnection();
                 _position = newPosition;
-                // We'll restart the thread when Read is called.
-                _packetBuffer.Reset();
-                _currentPacket = null;
+                _currentPacketOffset = (int)(_position % Packet.PacketSize);
+                _currentPacket.Clear();
             }
             return _position;
         }
@@ -406,156 +386,127 @@ namespace Tkl.Jumbo.Dfs
             base.Dispose(disposing);
             if( !_disposed )
             {
-			  //if( _readTime != null )
-			  //    _log.DebugFormat("Total: {0}, count: {1}, average: {2}", _readTime.ElapsedMilliseconds, _totalReads, _readTime.ElapsedMilliseconds / (float)_totalReads);
                 _disposed = true;
-                if( _readBufferThread != null )
+                if( disposing )
                 {
-                    _packetBuffer.Cancel();
-                    _readBufferThread.Join();
-                    _readBufferThread = null;
+                    CloseDataServerConnection();
                 }
-                if( _packetBuffer != null )
-                    _packetBuffer.Dispose();
+                //if( _readTime != null )
+                //    _log.DebugFormat("Total: {0}, count: {1}, average: {2}", _readTime.ElapsedMilliseconds, _totalReads, _readTime.ElapsedMilliseconds / (float)_totalReads);
             }
         }
 
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1031:DoNotCatchGeneralExceptionTypes")]
-        private void ReadBufferThread()
+        private bool ReadPacket()
         {
-            try
+            bool success = false;
+            do
             {
-                int blockOffset = (int)(_position % BlockSize);
-                for( int blockIndex = (int)(_position / BlockSize); !_disposed && blockIndex < _file.Blocks.Count && _lastResult == DataServerClientProtocolResult.Ok; ++blockIndex )
+                try
                 {
-                    Guid block = _file.Blocks[blockIndex];
-                    List<ServerAddress> servers = _nameServer.GetDataServersForBlock(block).ToList();
-
-                    bool retry;
-                    do
+                    if( _serverClient == null )
                     {
-                        retry = false;
-                        ServerAddress server = servers[0];
-                        _log.DebugFormat("Connecting to server {0} to read block {1}.", server, block);
-                        try
-                        {
-                            if( !DownloadBlock(ref blockOffset, block, server, blockIndex) )
-                                return; // cancelled
-
-                            lock( _endOffsetLock )
-                            {
-                                if( blockIndex == _lastBlockToDownload )
-                                {
-                                    _readBufferThread = null;
-                                    return;
-                                }
-                            }
-
-                            blockOffset = 0;
-                        }
-                        catch( Exception ex )
-                        {
-                            _log.Error(string.Format(System.Globalization.CultureInfo.CurrentCulture, "Error reading block {0} from server {1}", block, server), ex);
-                            if( servers.Count > 1 )
-                            {
-                                // We can retry with a different server.
-                                _lastResult = DataServerClientProtocolResult.Ok;
-                                _lastException = null;
-                                servers.Remove(server);
-                                retry = true;
-                                ++DataServerErrors;
-                            }
-                            else
-                                throw;
-                        }
-                    } while( retry );
-                }
-            }
-            catch( Exception ex )
-            {
-                _lastException = ex;
-                _lastResult = DataServerClientProtocolResult.Error;
-                _packetBuffer.Cancel();
-            }
-        }
-
-        private bool DownloadBlock(ref int blockOffset, Guid block, ServerAddress server, int blockIndex)
-        {
-            ++BlocksRead;
-            using( TcpClient client = new TcpClient(server.HostName, server.Port) )
-            {
-                DataServerClientProtocolReadHeader header = new DataServerClientProtocolReadHeader();
-                header.BlockId = block;
-                header.Offset = blockOffset;
-                header.Size = -1;
-
-                using( NetworkStream stream = client.GetStream() )
-                using( BinaryReader reader = new BinaryReader(stream) )
-                using( Tkl.Jumbo.IO.WriteBufferedStream bufferedStream = new Tkl.Jumbo.IO.WriteBufferedStream(stream) )
-                {
-                    BinaryFormatter formatter = new BinaryFormatter();
-                    formatter.Serialize(bufferedStream, header);
-                    bufferedStream.Flush();
-
-                    DataServerClientProtocolResult status = (DataServerClientProtocolResult)reader.ReadInt32();
-                    if( status == DataServerClientProtocolResult.OutOfRange && blockOffset > 0 && blockIndex < _file.Blocks.Count - 1 && _file.RecordOptions == IO.RecordStreamOptions.DoNotCrossBoundary )
-                    {
-                        // We tried to seek into padding, so go to the next block.
-                        // Because this can only happen after a seek operation the packet buffer is empty, which means no other threads can access _position so we can update it.
-                        long oldPosition = _position;
-                        _position = (blockIndex + 1) * BlockSize;
-                        _paddingSkipped += _position - oldPosition;
-                        return true;
+                        if( !ConnectToDataServer() )
+                            return false;
                     }
+
+                    DataServerClientProtocolResult status = (DataServerClientProtocolResult)_serverReader.ReadInt16();
                     if( status != DataServerClientProtocolResult.Ok )
-                        throw new DfsException("The server encountered an error while sending data.");
-                    blockOffset = reader.ReadInt32();
-
-                    Packet packet = null;
-                    while( !_disposed && _lastResult == DataServerClientProtocolResult.Ok && (packet == null || !packet.IsLastPacket) )
                     {
-                        //Debug.WriteLine(string.Format("Write: {0}", _bufferWritePos));
-                        packet = _packetBuffer.WriteItem;
-                        if( packet == null )
-                            return false; // cancelled
-                        status = (DataServerClientProtocolResult)reader.ReadInt32();
-                        if( status != DataServerClientProtocolResult.Ok )
-                        {
-                            throw new DfsException("The server encountered an error while sending data.");
-                        }
-                        else
-                        {
-                            packet.Read(reader, false, true);
-
-                            blockOffset += packet.Size;
-
-                            // There is no need to lock this write because no other threads will update this value.
-                            _packetBuffer.NotifyWrite();
-                        }
+                        throw new DfsException("The data server reported an error.");
                     }
+                    _currentPacket.Read(_serverReader, PacketFormatOptions.NoSequenceNumber, true);
+                    if( _currentPacket.IsLastPacket )
+                    {
+                        CloseDataServerConnection();
+                        _currentServerIndex = 0;
+                    }
+                    success = true;
                 }
-            }
+                catch( Exception ex )
+                {
+                    _log.Error(string.Format(System.Globalization.CultureInfo.CurrentCulture, "Error reading block {0} from server {1}", _currentBlockId, _dataServers[_currentServerIndex]), ex);
+                    CloseDataServerConnection();
+                    ++_currentServerIndex;
+                    DataServerErrors++;
+                    if( _currentServerIndex == _dataServers.Count )
+                        throw;
+                }
+            } while( !success );
             return true;
         }
 
-        private void ThrowIfErrorOccurred()
+        private bool ConnectToDataServer()
         {
-            if( _lastException != null )
-                throw new DfsException("Couldn't read data from the server.", _lastException);
-            if( _lastResult != DataServerClientProtocolResult.Ok )
-                throw new DfsException(string.Format(CultureInfo.CurrentCulture, "Couldn't read data from the server: {0}", _lastResult));
+            if( _position == _file.Size )
+                return false;
+
+            bool success = false;
+            ++BlocksRead;
+            do
+            {
+                CloseDataServerConnection();
+                int blockIndex = (int)(_position / _file.BlockSize);
+                if( _lastBlockToDownload > 0 && blockIndex > _lastBlockToDownload )
+                    return false;
+                int blockOffset = (int)(_position % _file.BlockSize);
+                Guid blockId = _file.Blocks[blockIndex];
+                _currentBlockId = blockId;
+                _dataServers = _nameServer.GetDataServersForBlock(blockId).ToList();
+                ServerAddress server = _dataServers[_currentServerIndex];
+                _serverClient = new TcpClient(server.HostName, server.Port);
+                _serverStream = _serverClient.GetStream();
+                _serverReader = new BinaryReader(_serverStream);
+                DataServerClientProtocolReadHeader header = new DataServerClientProtocolReadHeader()
+                {
+                    BlockId = blockId,
+                    Offset = blockOffset,
+                    Size = -1
+                };
+
+                BinaryFormatter formatter = new BinaryFormatter();
+                formatter.Serialize(_serverStream, header);
+                _serverStream.Flush();
+
+                DataServerClientProtocolResult status = (DataServerClientProtocolResult)_serverReader.ReadInt16();
+                if( status == DataServerClientProtocolResult.OutOfRange && blockOffset > 0 && blockIndex < _file.Blocks.Count - 1 && _file.RecordOptions == IO.RecordStreamOptions.DoNotCrossBoundary )
+                {
+                    long oldPosition = _position;
+                    _position = (blockIndex + 1) * _file.BlockSize;
+                    _paddingSkipped += _position - oldPosition;
+                }
+                else if( status != DataServerClientProtocolResult.Ok )
+                {
+                    ++_currentServerIndex;
+                    if( _currentServerIndex == _dataServers.Count )
+                        throw new DfsException("The server encountered an error while sending data.");
+                }
+                else
+                {
+                    blockOffset = _serverReader.ReadInt32();
+                    _currentPacketOffset = (int)(_position % Packet.PacketSize);
+                    success = true;
+                }
+            } while( !success );
+            return true;
         }
 
-        private void EnsureReadBufferThreadStarted()
+        private void CloseDataServerConnection()
         {
-            if( _readBufferThread == null && _packetBuffer.ReadItemWillBlock )
+            if( _serverReader != null )
             {
-                // We don't start the thread in the constructor because that'd be a waste if you immediately seek after that.
-                _readBufferThread = new Thread(ReadBufferThread);
-                _readBufferThread.IsBackground = true;
-                _readBufferThread.Name = "FillBuffer";
-                _readBufferThread.Start();
+                _serverReader.Dispose();
+                _serverReader = null;
             }
-        }    
+            if( _serverStream != null )
+            {
+                _serverStream.Dispose();
+                _serverStream = null;
+            }
+            if( _serverClient != null )
+            {
+                _serverClient.Close();
+                _serverClient = null;
+            }
+        }
     }
 }

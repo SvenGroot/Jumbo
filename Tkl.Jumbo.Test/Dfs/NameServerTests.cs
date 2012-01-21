@@ -424,14 +424,16 @@ namespace Tkl.Jumbo.Test.Dfs
             }
             Assert.IsTrue(hasException);
 
+            Packet p = new Packet();
+            long sequenceNumber = 0;
             using( BlockSender sender = new BlockSender(block) )
             {
                 for( int sizeRemaining = target.BlockSize; sizeRemaining > 0; sizeRemaining -= Packet.PacketSize )
                 {
-                    sender.AddPacket(Utilities.GenerateData(Packet.PacketSize), Packet.PacketSize, sizeRemaining - Packet.PacketSize == 0);
+                    p.CopyFrom(Utilities.GenerateData(Packet.PacketSize), Packet.PacketSize, sequenceNumber++, sizeRemaining - Packet.PacketSize == 0);
+                    sender.SendPacket(p);
                 }
-                sender.WaitUntilSendFinished();
-                sender.ThrowIfErrorOccurred();
+                sender.WaitForAcknowledgements();
             }
 
             BlockAssignment block2 = target.AppendBlock(path, true);
@@ -440,11 +442,12 @@ namespace Tkl.Jumbo.Test.Dfs
             Assert.AreEqual(Dns.GetHostName(), block2.DataServers[0].HostName);
             Assert.IsTrue(block2.DataServers[0].Port == 10001 || block2.DataServers[0].Port == 10002);
 
+            sequenceNumber = 0;
             using( BlockSender sender = new BlockSender(block2) )
             {
-                sender.AddPacket(Utilities.GenerateData(10000), 10000, true);
-                sender.WaitUntilSendFinished();
-                sender.ThrowIfErrorOccurred();
+                p.CopyFrom(Utilities.GenerateData(10000), 10000, sequenceNumber++, true);
+                sender.SendPacket(p);
+                sender.WaitForAcknowledgements();
             }
 
             target.CloseFile(path);
@@ -477,18 +480,21 @@ namespace Tkl.Jumbo.Test.Dfs
                 // these should never be equal.
                 Assert.AreNotEqual(block1.DataServers[0], block2.DataServers[0]);
 
+                Packet p = new Packet();
+                long sequenceNumber = 0;
                 using( BlockSender sender = new BlockSender(block1) )
                 {
-                    sender.AddPacket(Utilities.GenerateData(10000), 10000, true);
-                    sender.WaitUntilSendFinished();
-                    sender.ThrowIfErrorOccurred();
+                    p.CopyFrom(Utilities.GenerateData(10000), 10000, sequenceNumber++, true);
+                    sender.SendPacket(p);
+                    sender.WaitForAcknowledgements();
                 }
 
+                sequenceNumber = 0;
                 using( BlockSender sender = new BlockSender(block2) )
                 {
-                    sender.AddPacket(Utilities.GenerateData(10000), 10000, true);
-                    sender.WaitUntilSendFinished();
-                    sender.ThrowIfErrorOccurred();
+                    p.CopyFrom(Utilities.GenerateData(10000), 10000, sequenceNumber++, true);
+                    sender.SendPacket(p);
+                    sender.WaitForAcknowledgements();
                 }
 
                 target.CloseFile(path1);
@@ -634,9 +640,8 @@ namespace Tkl.Jumbo.Test.Dfs
 
             using( BlockSender sender = new BlockSender(block) )
             {
-                sender.AddPacket(Utilities.GenerateData(10000), 10000, true);
-                sender.WaitUntilSendFinished();
-                sender.ThrowIfErrorOccurred();
+                sender.SendPacket(new Packet(Utilities.GenerateData(10000), 10000, 1, true));
+                sender.WaitForAcknowledgements();
             }
 
             result = target.GetFileInfo(path);

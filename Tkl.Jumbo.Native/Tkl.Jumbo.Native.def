@@ -1,0 +1,3 @@
+LIBRARY Tkl.Jumbo.Native.dll
+	EXPORTS
+		JumboCrc32

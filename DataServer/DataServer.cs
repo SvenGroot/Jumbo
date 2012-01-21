@@ -346,11 +346,11 @@ namespace DataServerApplication
                     {
                         do
                         {
-                            packet.Read(reader, true, true);
-                            sender.AddPacket(packet);
+                            packet.Read(reader, PacketFormatOptions.ChecksumOnly, true);
+                            packet.SequenceNumber++;
+                            sender.SendPacket(packet);
                         } while( !packet.IsLastPacket );
-                        sender.WaitUntilSendFinished();
-                        sender.ThrowIfErrorOccurred();
+                        sender.WaitForAcknowledgements();
                     }
                     _log.InfoFormat("Finished replicating block {0}.", response.BlockAssignment.BlockId);
                 }

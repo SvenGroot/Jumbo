@@ -87,7 +87,7 @@ namespace Tkl.Jumbo.Test.Dfs
                 header.Size = (int)dataStream.Length;
                 BinaryFormatter formatter = new BinaryFormatter();
                 formatter.Serialize(stream, header);
-                DataServerClientProtocolResult result = (DataServerClientProtocolResult)reader.ReadInt32();
+                DataServerClientProtocolResult result = (DataServerClientProtocolResult)reader.ReadInt16();
                 Assert.AreEqual(DataServerClientProtocolResult.Ok, result);
                 int offset = reader.ReadInt32();
                 Assert.AreEqual(0, offset);
@@ -96,9 +96,9 @@ namespace Tkl.Jumbo.Test.Dfs
                 byte[] buffer2 = new byte[Packet.PacketSize];
                 while( !packet.IsLastPacket )
                 {
-                    result = (DataServerClientProtocolResult)reader.ReadInt32();
+                    result = (DataServerClientProtocolResult)reader.ReadInt16();
                     Assert.AreEqual(DataServerClientProtocolResult.Ok, result);
-                    packet.Read(reader, false, true);
+                    packet.Read(reader, PacketFormatOptions.NoSequenceNumber, true);
                     packet.CopyTo(0, buffer1, 0, buffer1.Length);
                     dataStream.Read(buffer2, 0, packet.Size);
                     Assert.IsTrue(Utilities.CompareArray(buffer1, 0, buffer2, 0, packet.Size));
