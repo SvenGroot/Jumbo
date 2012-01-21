@@ -10,55 +10,69 @@ namespace Tkl.Jumbo.IO
     /// <summary>
     /// Represents an input to the <see cref="MultiInputRecordReader{T}"/> class.
     /// </summary>
-    public sealed class RecordInput : IDisposable
+    public abstract class RecordInput : IDisposable
     {
         private IRecordReader _reader;
-        private readonly string _sourceName;
-        private readonly long _uncompressedSize;
-        private readonly Type _inputRecordReaderType;
-        private readonly bool _deleteFile;
         private bool _disposed;
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="RecordInput"/> class with the specified record reader.
+        /// Initializes a new instance of the <see cref="RecordInput"/> class.
         /// </summary>
-        /// <param name="reader">The record reader to read from.</param>
-        /// <param name="memoryBased"><see langword="true"/> if the reader reads data from memory rather than from disk; otherwise, <see langword="false"/>.</param>
-        public RecordInput(IRecordReader reader, bool memoryBased)
-            : this(reader, null, null, null, -1L, false, memoryBased)
+        protected RecordInput()
         {
-            if( reader == null )
-                throw new ArgumentNullException("reader");
         }
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="RecordInput"/> class with the specified input file.
+        /// Initializes a new instance of the <see cref="RecordInput"/> class.
         /// </summary>
-        /// <param name="recordReaderType">The type of the record reader to be created to read the input file. This type must be derived from <see cref="RecordReader{T}"/> and have a constructor with the same 
-        /// parameters as <see cref="BinaryRecordReader{T}(string,bool,bool,int,Tkl.Jumbo.CompressionType,long)"/>.</param>
-        /// <param name="fileName">The file to read.</param>
-        /// <param name="sourceName">A name used to identify the source of this input. Can be <see langword="null"/>.</param>
-        /// <param name="uncompressedSize">The size of the file's data after decompression; only needed if <see cref="CompressionType"/> is not <see cref="Tkl.Jumbo.CompressionType.None"/>.</param>
-        /// <param name="deleteFile"><see langword="true"/> to delete the file after reading finishes; otherwise, <see langword="false"/>.</param>
-        public RecordInput(Type recordReaderType, string fileName, string sourceName, long uncompressedSize, bool deleteFile)
-            : this(null, recordReaderType, fileName, sourceName, uncompressedSize, deleteFile, false)
+        /// <param name="reader">The reader for this input.</param>
+        protected RecordInput(IRecordReader reader)
         {
-            if( recordReaderType == null )
-                throw new ArgumentNullException("recordReaderType");
-            if( fileName == null )
-                throw new ArgumentNullException("fileName");
+            if( reader == null )
+                throw new ArgumentNullException("reader");
+            _reader = reader;
         }
 
-        private RecordInput(IRecordReader reader, Type inputRecordReaderType, string fileName, string sourceName, long uncompressedSize, bool deleteFile, bool memoryBased)
-        {
-            _reader = reader;
-            FileName = fileName;
-            _sourceName = sourceName;
-            _uncompressedSize = uncompressedSize;
-            _inputRecordReaderType = inputRecordReaderType;
-            _deleteFile = deleteFile;
-            IsMemoryBased = memoryBased;
-        }
+        ///// <summary>
+        ///// Initializes a new instance of the <see cref="RecordInput"/> class with the specified record reader.
+        ///// </summary>
+        ///// <param name="reader">The record reader to read from.</param>
+        ///// <param name="memoryBased"><see langword="true"/> if the reader reads data from memory rather than from disk; otherwise, <see langword="false"/>.</param>
+        //public RecordInput(IRecordReader reader, bool memoryBased)
+        //    : this(reader, null, null, null, -1L, false, memoryBased)
+        //{
+        //    if( reader == null )
+        //        throw new ArgumentNullException("reader");
+        //}
+
+        ///// <summary>
+        ///// Initializes a new instance of the <see cref="RecordInput"/> class with the specified input file.
+        ///// </summary>
+        ///// <param name="recordReaderType">The type of the record reader to be created to read the input file. This type must be derived from <see cref="RecordReader{T}"/> and have a constructor with the same 
+        ///// parameters as <see cref="BinaryRecordReader{T}(string,bool,bool,int,Tkl.Jumbo.CompressionType,long)"/>.</param>
+        ///// <param name="fileName">The file to read.</param>
+        ///// <param name="sourceName">A name used to identify the source of this input. Can be <see langword="null"/>.</param>
+        ///// <param name="uncompressedSize">The size of the file's data after decompression; only needed if <see cref="CompressionType"/> is not <see cref="Tkl.Jumbo.CompressionType.None"/>.</param>
+        ///// <param name="deleteFile"><see langword="true"/> to delete the file after reading finishes; otherwise, <see langword="false"/>.</param>
+        //public RecordInput(Type recordReaderType, string fileName, string sourceName, long uncompressedSize, bool deleteFile)
+        //    : this(null, recordReaderType, fileName, sourceName, uncompressedSize, deleteFile, false)
+        //{
+        //    if( recordReaderType == null )
+        //        throw new ArgumentNullException("recordReaderType");
+        //    if( fileName == null )
+        //        throw new ArgumentNullException("fileName");
+        //}
+
+        //private RecordInput(IRecordReader reader, Type inputRecordReaderType, string fileName, string sourceName, long uncompressedSize, bool deleteFile, bool memoryBased)
+        //{
+        //    _reader = reader;
+        //    FileName = fileName;
+        //    _sourceName = sourceName;
+        //    _uncompressedSize = uncompressedSize;
+        //    _inputRecordReaderType = inputRecordReaderType;
+        //    _deleteFile = deleteFile;
+        //    IsMemoryBased = memoryBased;
+        //}
 
         /// <summary>
         /// Gets a value indicating whether this input is read from memory.
@@ -66,7 +80,7 @@ namespace Tkl.Jumbo.IO
         /// <value>
         /// 	<see langword="true"/> if this input is read from memory; <see langword="false"/> if it is read from a file.
         /// </value>
-        public bool IsMemoryBased { get; private set; }
+        public abstract bool IsMemoryBased { get; }
 
         /// <summary>
         /// Gets the record reader for this input.
@@ -83,10 +97,11 @@ namespace Tkl.Jumbo.IO
             {
                 CheckDisposed();
                 if( _reader == null )
-                {
-                    _reader = (IRecordReader)Activator.CreateInstance(_inputRecordReaderType, FileName, Input.AllowRecordReuse, _deleteFile, Input.BufferSize, Input.CompressionType, _uncompressedSize);
-                    _reader.SourceName = _sourceName;
-                }
+                    _reader = CreateReader(Input);
+                //{
+                //    _reader = (IRecordReader)Activator.CreateInstance(_inputRecordReaderType, FileName, Input.AllowRecordReuse, _deleteFile, Input.BufferSize, Input.CompressionType, _uncompressedSize);
+                //    _reader.SourceName = _sourceName;
+                //}
                 return _reader;
             }
         }
@@ -99,35 +114,18 @@ namespace Tkl.Jumbo.IO
         /// </value>
         /// <remarks>
         /// <para>
-        ///   This property can be accessed without creatig the record reader if it had not yet been created.
+        ///   This property can be accessed without creating the record reader if it had not yet been created.
         /// </para>
         /// </remarks>
-        public bool HasRecords
+        public virtual bool HasRecords
         {
             get
             {
-                // We treat inputs whose reader hasn't yet been created as if RecordsAvailable is true, as they are read from a file
+                // We treat inputs whose reader hasn't yet been created as if RecordsAvailable is true, as they are normally read from a file
                 // so their readers would always return true anyway.
                 return _reader == null || _reader.HasRecords;
             }
         }
-
-        internal float Progress
-        {
-            get
-            {
-                if( _disposed )
-                    return 1.0f;
-                else if( IsReaderCreated )
-                    return _reader.Progress;
-                else
-                    return 0.0f;
-            }
-        }
-
-        internal string FileName { get; private set; }
-
-        internal IMultiInputRecordReader Input { get; set; }
 
         /// <summary>
         /// Gets a value indicating whether the record reader has been created.
@@ -150,12 +148,44 @@ namespace Tkl.Jumbo.IO
             }
         }
 
-        #region IDisposable Members
+        internal float Progress
+        {
+            get
+            {
+                if( _disposed )
+                    return 1.0f;
+                else if( IsReaderCreated )
+                    return _reader.Progress;
+                else
+                    return 0.0f;
+            }
+        }
+
+        internal IMultiInputRecordReader Input { get; set; }
 
         /// <summary>
         /// Releases all resources used by this RecordInput.
         /// </summary>
         public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        /// <summary>
+        /// Creates the record reader for this input.
+        /// </summary>
+        /// <param name="multiInputReader">The multi input record reader that this <see cref="RecordInput"/> instance belongs to.</param>
+        /// <returns>
+        /// The record reader for this input.
+        /// </returns>
+        protected abstract IRecordReader CreateReader(IMultiInputRecordReader multiInputReader);
+
+        /// <summary>
+        /// Releases unmanaged and - optionally - managed resources
+        /// </summary>
+        /// <param name="disposing"><see langword="true"/> to release both managed and unmanaged resources; <see langword="false"/> to release only unmanaged resources.</param>
+        protected virtual void Dispose(bool disposing)
         {
             if( !_disposed )
             {
@@ -166,10 +196,7 @@ namespace Tkl.Jumbo.IO
                     _reader = null;
                 }
             }
-            GC.SuppressFinalize(this);
         }
-
-        #endregion
 
         private void CheckDisposed()
         {

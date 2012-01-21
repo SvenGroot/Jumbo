@@ -599,7 +599,7 @@ namespace Tkl.Jumbo.Jet
                     {
                         IRecordReader channelReader = inputChannel.CreateRecordReader();
                         AddAdditionalProgressSource(channelReader);
-                        reader.AddInput(new[] { new RecordInput(channelReader, false) });
+                        reader.AddInput(new[] { new ReaderRecordInput(channelReader, false) });
                     }
                     result = reader;
                 }

@@ -156,7 +156,7 @@ namespace Tkl.Jumbo.Test.Jet
                 sortedLists[firstPartition + partition].Add(value);
             }
             records.Sort();
-            partitionInputs[partition] = new RecordInput(new EnumerableRecordReader<int>(records), memoryInputs); // pretend these are disk-based inputs.
+            partitionInputs[partition] = new ReaderRecordInput(new EnumerableRecordReader<int>(records), memoryInputs);
         }
     }
 }

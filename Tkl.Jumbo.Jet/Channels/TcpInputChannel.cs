@@ -294,7 +294,7 @@ namespace Tkl.Jumbo.Jet.Channels
                     {
                         ITcpChannelRecordReader reader = (ITcpChannelRecordReader)JetActivator.CreateInstance(_inputReaderType, TaskExecution, TaskExecution.AllowRecordReuse);
                         readers[x] = reader;
-                        inputs[x] = new RecordInput((IRecordReader)reader, true);
+                        inputs[x] = new ReaderRecordInput((IRecordReader)reader, true);
                     }
                     _inputReaders[taskNumber - 1] = readers;
                     _reader.AddInput(inputs);

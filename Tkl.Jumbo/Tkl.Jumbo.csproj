@@ -100,6 +100,7 @@
     <Compile Include="IO\IMultiRecordWriter.cs" />
     <Compile Include="IO\IRecordInputStream.cs" />
     <Compile Include="IO\IRecordOutputStream.cs" />
+    <Compile Include="IO\ReaderRecordInput.cs" />
     <Compile Include="IO\RecordStreamOptions.cs" />
     <Compile Include="IO\ValueWriter.cs" />
     <Compile Include="IO\IMultiInputRecordReader.cs" />
