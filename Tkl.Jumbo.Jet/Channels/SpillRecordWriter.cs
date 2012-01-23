@@ -315,12 +315,11 @@ namespace Tkl.Jumbo.Jet.Channels
             return _spillIndices[partition] == null ? 0 : _spillIndices[partition].Sum(i => i.Size);
         }
 
-        protected void WritePartition(int partition, Stream outputStream, BinaryRecordWriter<PartitionFileIndexEntry> indexWriter)
+        protected void WritePartition(int partition, Stream outputStream)
         {
             PartitionIndexEntry[] index = _spillIndices[partition];
             if( index != null )
             {
-                long startOffset = indexWriter == null ? 0 : outputStream.Position;
                 for( int x = 0; x < index.Length; ++x )
                 {
                     if( index[x].Offset + index[x].Size > _buffer.Size )
@@ -331,13 +330,6 @@ namespace Tkl.Jumbo.Jet.Channels
                     }
                     else
                         outputStream.Write(_buffer.Buffer, index[x].Offset, index[x].Size);
-                }
-
-                if( indexWriter != null )
-                {
-                    PartitionFileIndexEntry indexEntry = new PartitionFileIndexEntry(partition, startOffset, outputStream.Position - startOffset);
-
-                    indexWriter.WriteRecord(indexEntry);
                 }
             }
         }

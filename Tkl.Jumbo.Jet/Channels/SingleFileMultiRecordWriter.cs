@@ -17,13 +17,15 @@ namespace Tkl.Jumbo.Jet.Channels
         private int _writeBufferSize;
         private int _partitions;
         private long _indexBytesWritten;
+        private readonly bool _enableChecksum;
 
-        public SingleFileMultiRecordWriter(string outputPath, IPartitioner<T> partitioner, int bufferSize, int limit, int writeBufferSize)
+        public SingleFileMultiRecordWriter(string outputPath, IPartitioner<T> partitioner, int bufferSize, int limit, int writeBufferSize, bool enableChecksum)
             : base(partitioner, bufferSize, limit)
         {
             _outputPath = outputPath;
             _partitions = partitioner.Partitions;
             _writeBufferSize = writeBufferSize;
+            _enableChecksum = enableChecksum;
             //_debugWriter = new StreamWriter(outputPath + ".debug.txt");
         }
 
@@ -37,7 +39,7 @@ namespace Tkl.Jumbo.Jet.Channels
 
         protected override void SpillOutput(bool finalSpill)
         {
-            using( FileStream stream = new FileStream(_outputPath, FileMode.Append, FileAccess.Write, FileShare.None, _writeBufferSize) )
+            using( FileStream fileStream = new FileStream(_outputPath, FileMode.Append, FileAccess.Write, FileShare.None, _writeBufferSize) )
             using( FileStream indexStream = new FileStream(_outputPath + ".index", FileMode.Append, FileAccess.Write, FileShare.None, _writeBufferSize) )
             using( BinaryRecordWriter<PartitionFileIndexEntry> indexWriter = new BinaryRecordWriter<PartitionFileIndexEntry>(indexStream) )
             {
@@ -49,7 +51,17 @@ namespace Tkl.Jumbo.Jet.Channels
 
                 for( int partition = 0; partition < _partitions; ++partition )
                 {
-                    WritePartition(partition, stream, indexWriter);
+                    long startOffset = fileStream.Position;
+                    using( ChecksumOutputStream stream = new ChecksumOutputStream(fileStream, false, _enableChecksum) )
+                    {
+                        WritePartition(partition, stream);
+                    }
+                    if( indexWriter != null )
+                    {
+                        PartitionFileIndexEntry indexEntry = new PartitionFileIndexEntry(partition, startOffset, fileStream.Position - startOffset);
+                        if( indexEntry.Count > 0 )
+                            indexWriter.WriteRecord(indexEntry);
+                    }
                 }
                 _indexBytesWritten = indexStream.Length;
             }

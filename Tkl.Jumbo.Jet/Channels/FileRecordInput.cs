@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using Tkl.Jumbo.IO;
+using System.IO;
 
 namespace Tkl.Jumbo.Jet.Channels
 {
@@ -15,8 +16,9 @@ namespace Tkl.Jumbo.Jet.Channels
         private readonly string _sourceName;
         private readonly long _uncompressedSize;
         private readonly bool _deleteFile;
+        private readonly int _segmentCount;
 
-        public FileRecordInput(Type recordReaderType, string fileName, string sourceName, long uncompressedSize, bool deleteFile)
+        public FileRecordInput(Type recordReaderType, string fileName, string sourceName, long uncompressedSize, bool deleteFile, int segmentCount)
         {
             if( recordReaderType == null )
                 throw new ArgumentNullException("recordReaderType");
@@ -28,6 +30,7 @@ namespace Tkl.Jumbo.Jet.Channels
             _sourceName = sourceName;
             _uncompressedSize = uncompressedSize;
             _deleteFile = deleteFile;
+            _segmentCount = segmentCount;
         }
 
         public override bool IsMemoryBased
@@ -37,7 +40,12 @@ namespace Tkl.Jumbo.Jet.Channels
 
         protected override IRecordReader CreateReader(IMultiInputRecordReader multiInputReader)
         {
-            IRecordReader reader = (IRecordReader)Activator.CreateInstance(_recordReaderType, _fileName, multiInputReader.AllowRecordReuse, _deleteFile, multiInputReader.BufferSize, multiInputReader.CompressionType, _uncompressedSize);
+            Stream stream;
+            if( _segmentCount == 0 )
+                stream = new ChecksumInputStream(_fileName, multiInputReader.BufferSize, _deleteFile).CreateDecompressor(multiInputReader.CompressionType, _uncompressedSize);
+            else
+                stream = new SegmentedChecksumInputStream(_fileName, multiInputReader.BufferSize, _deleteFile, _segmentCount);
+            IRecordReader reader = (IRecordReader)Activator.CreateInstance(_recordReaderType, stream, multiInputReader.AllowRecordReuse);
             reader.SourceName = _sourceName;
             return reader;
         }

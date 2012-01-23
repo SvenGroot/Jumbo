@@ -161,7 +161,7 @@ namespace Tkl.Jumbo.Jet.Channels
                         Interlocked.Add(ref _headerBytesWritten, TcpInputChannel.PartitionHeaderSize);
                     }
                     if( sendData && size > 0 )
-                        WritePartition(partition - 1, stream, null);
+                        WritePartition(partition - 1, stream);
 
                 }
                 stream.Flush();

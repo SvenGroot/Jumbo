@@ -104,5 +104,18 @@ namespace Tkl.Jumbo.Jet
             get { return (float)this["singleFileOutputBufferLimit"]; }
             set { this["singleFileOutputBufferLimit"] = value; }
         }
+
+        /// <summary>
+        /// Gets or sets a value indicating whether checksums are calculated and verified for the intermediate data.
+        /// </summary>
+        /// <value>
+        /// 	<see langword="true"/> if checksums are enabled; otherwise, <see langword="false"/>. The default value is <see langword="true"/>.
+        /// </value>
+        [ConfigurationProperty("enableChecksum", DefaultValue = true, IsRequired = false, IsKey = false)]
+        public bool EnableChecksum
+        {
+            get { return (bool)this["enableChecksum"]; }
+            set { this["enableChecksum"] = value; }
+        }
     }
 }

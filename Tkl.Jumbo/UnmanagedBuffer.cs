@@ -58,6 +58,17 @@ namespace Tkl.Jumbo
         }
 
         /// <summary>
+        /// Gets the data.
+        /// </summary>
+        /// <returns></returns>
+        public byte[] GetData()
+        {
+            byte[] buffer = new byte[Size];
+            Copy(this, 0, buffer, 0, Size);
+            return buffer;
+        }
+
+        /// <summary>
         /// Copies data from a managed array to the buffer.
         /// </summary>
         /// <param name="source">The managed byte array containing the data to copy.</param>

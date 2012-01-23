@@ -144,20 +144,24 @@ namespace Tkl.Jumbo.Jet.Channels
 
                 IPartitioner<T> partitioner = CreatePartitioner<T>();
                 partitioner.Partitions = OutputPartitionIds.Count;
-                RecordWriter<T> result = new SingleFileMultiRecordWriter<T>(Path.Combine(_localJobDirectory, _fileNames[0]), partitioner, (int)outputBufferSize.Value, outputBufferLimitSize, (int)writeBufferSize.Value);
+                RecordWriter<T> result = new SingleFileMultiRecordWriter<T>(Path.Combine(_localJobDirectory, _fileNames[0]), partitioner, (int)outputBufferSize.Value, outputBufferLimitSize, (int)writeBufferSize.Value, TaskExecution.JetClient.Configuration.FileChannel.EnableChecksum);
                 _writers = new[] { result };
                 return result;
             }
             else if( _fileNames.Count == 1 )
             {
-                RecordWriter<T> result = new BinaryRecordWriter<T>(File.Create(Path.Combine(_localJobDirectory, _fileNames[0]), (int)writeBufferSize.Value).CreateCompressor(CompressionType));
+                Stream stream = File.Create(Path.Combine(_localJobDirectory, _fileNames[0]), (int)writeBufferSize.Value);
+                Stream checksumStream = new ChecksumOutputStream(stream, true, TaskExecution.JetClient.Configuration.FileChannel.EnableChecksum).CreateCompressor(CompressionType);
+                RecordWriter<T> result = new BinaryRecordWriter<T>(checksumStream);
                 _writers = new[] { result };
                 return result;
             }
             else
             {
                 var writers = (from file in _fileNames
-                               select (RecordWriter<T>)new BinaryRecordWriter<T>(File.Create(Path.Combine(_localJobDirectory, file), (int)writeBufferSize.Value).CreateCompressor(CompressionType))).ToArray();
+                               let stream = File.Create(Path.Combine(_localJobDirectory, file), (int)writeBufferSize.Value)
+                               let checksumStream = new ChecksumOutputStream(stream, true, TaskExecution.JetClient.Configuration.FileChannel.EnableChecksum).CreateCompressor(CompressionType)
+                               select (RecordWriter<T>)new BinaryRecordWriter<T>(checksumStream)).ToArray();
                 _writers = writers.Cast<IRecordWriter>();
                 return CreateMultiRecordWriter<T>(writers);
             }

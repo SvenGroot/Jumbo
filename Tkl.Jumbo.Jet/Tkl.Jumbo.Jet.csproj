@@ -95,6 +95,8 @@
     <Compile Include="Channels\ChannelConnectivity.cs" />
     <Compile Include="Channels\ChannelInputConfiguration.cs" />
     <Compile Include="Channels\ChannelType.cs" />
+    <Compile Include="Channels\ChecksumInputStream.cs" />
+    <Compile Include="Channels\ChecksumOutputStream.cs" />
     <Compile Include="Channels\FileRecordInput.cs" />
     <Compile Include="Channels\InputChannel.cs" />
     <Compile Include="Channels\FileChannelMemoryStorageManager.cs" />
@@ -114,6 +116,7 @@
     <Compile Include="Channels\PipelineOutputChannel.cs" />
     <Compile Include="Channels\PipelinePrepartitionedPushTaskRecordWriter.cs" />
     <Compile Include="Channels\PipelinePushTaskRecordWriter.cs" />
+    <Compile Include="Channels\SegmentedChecksumInputStream.cs" />
     <Compile Include="Channels\SingleFileMultiRecordWriter.cs" />
     <Compile Include="Channels\SizeRecordingStream.cs" />
     <Compile Include="Channels\SpillRecordWriter.cs" />

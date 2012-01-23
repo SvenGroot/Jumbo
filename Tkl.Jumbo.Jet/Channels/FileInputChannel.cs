@@ -674,7 +674,7 @@ namespace Tkl.Jumbo.Jet.Channels
                             uncompressedSize = TaskExecution.Umbilical.GetUncompressedTemporaryFileSize(task.JobId, outputFileName);
                             LocalBytesRead += size;
                             // We don't delete output files; if this task fails they might still be needed
-                            inputs.Add(new FileRecordInput(_inputReaderType, fileName, task.TaskAttemptId.TaskId.ToString(), uncompressedSize, false));
+                            inputs.Add(new FileRecordInput(_inputReaderType, fileName, task.TaskAttemptId.TaskId.ToString(), uncompressedSize, false, 0));
                         }
                     }
                 }
@@ -786,7 +786,10 @@ namespace Tkl.Jumbo.Jet.Channels
             if( size > 0 )
             {
                 long uncompressedSize = size;
-                if( !_inputUsesSingleFileFormat )
+                int segmentCount = 0;
+                if( _inputUsesSingleFileFormat )
+                    segmentCount = reader.ReadInt32();
+                else
                     uncompressedSize = reader.ReadInt64();
                 string targetFile = null;
                 Stream memoryStream = null;
@@ -799,7 +802,7 @@ namespace Tkl.Jumbo.Jet.Channels
                     {
                         stream.CopySize(fileStream, size, _writeBufferSize);
                     }
-                    downloadedFiles.Add(new FileRecordInput(_inputReaderType, targetFile, task.TaskAttemptId.TaskId.ToString(), uncompressedSize, TaskExecution.JetClient.Configuration.FileChannel.DeleteIntermediateFiles));
+                    downloadedFiles.Add(new FileRecordInput(_inputReaderType, targetFile, task.TaskAttemptId.TaskId.ToString(), uncompressedSize, TaskExecution.JetClient.Configuration.FileChannel.DeleteIntermediateFiles, segmentCount));
                     _log.DebugFormat("Input stored in local file {0}.", targetFile);
                     // We are writing this file to disk and reading it back again, so we need to update this.
                     LocalBytesRead += size;
@@ -809,7 +812,12 @@ namespace Tkl.Jumbo.Jet.Channels
                 {
                     stream.CopySize(memoryStream, size);
                     memoryStream.Position = 0;
-                    IRecordReader taskReader = (IRecordReader)JetActivator.CreateInstance(_inputReaderType, TaskExecution, memoryStream.CreateDecompressor(CompressionType, uncompressedSize), TaskExecution.AllowRecordReuse);
+                    Stream checksumStream;
+                    if( _inputUsesSingleFileFormat )
+                        checksumStream = new SegmentedChecksumInputStream(memoryStream, segmentCount);
+                    else
+                        checksumStream = new ChecksumInputStream(memoryStream, true).CreateDecompressor(CompressionType, uncompressedSize);
+                    IRecordReader taskReader = (IRecordReader)JetActivator.CreateInstance(_inputReaderType, TaskExecution, checksumStream, TaskExecution.AllowRecordReuse);
                     taskReader.SourceName = task.TaskAttemptId.TaskId.ToString();
                     downloadedFiles.Add(new ReaderRecordInput(taskReader, true));
                 }
