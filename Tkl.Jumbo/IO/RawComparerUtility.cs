@@ -21,11 +21,11 @@ namespace Tkl.Jumbo.IO
         /// Reads a 32-bit signed integer from the specified position in a byte array.
         /// </summary>
         /// <param name="buffer">An array of bytes.</param>
-        /// <param name="offset">The starting position within <paramref name="value"/>.</param>
-        /// <returns>A 32-bit signed integer formed by four bytes beginning at <paramref name="startIndex"/>.</returns>
+        /// <param name="offset">The starting position within <paramref name="buffer"/>.</param>
+        /// <returns>A 32-bit signed integer formed by four bytes beginning at <paramref name="offset"/>.</returns>
         /// <remarks>
         /// <para>
-        ///     Unlike the <see cref="BitConverter"/> class, this method always uses little endian formatting. It can be used to read data written by the <see cref="BinaryWriter"/> class.
+        ///     Unlike the <see cref="BitConverter"/> class, this method always uses little endian formatting. It can be used to read data written by the <see cref="System.IO.BinaryWriter"/> class.
         /// </para>
         /// </remarks>
         public static int ReadInt32(byte[] buffer, int offset)

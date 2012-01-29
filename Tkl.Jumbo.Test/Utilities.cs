@@ -101,6 +101,19 @@ namespace Tkl.Jumbo.Test
             return result;
         }
 
+        public static List<int> GenerateNumberData(int count)
+        {
+            return GenerateNumberData(count, new Random());
+        }
+
+        public static List<int> GenerateNumberData(int count, Random rnd)
+        {
+            List<int> result = new List<int>();
+            for( int x = 0; x < count; ++x )
+                result.Add(rnd.Next());
+            return result;
+        }
+
         public static byte[] GenerateData(int size)
         {
             Random rnd = new Random();

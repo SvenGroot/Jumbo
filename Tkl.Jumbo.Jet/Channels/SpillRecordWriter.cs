@@ -20,6 +20,7 @@ namespace Tkl.Jumbo.Jet.Channels
             private readonly byte[] _buffer;
             private int _bufferPos;
             private int _bufferUsed;
+            private int _bufferMark;
             private readonly AutoResetEvent _freeBufferEvent = new AutoResetEvent(false);
             private readonly SpillRecordWriter<T> _writer;
             private readonly WaitHandle[] _bufferEvents;
@@ -34,6 +35,11 @@ namespace Tkl.Jumbo.Jet.Channels
             public int BufferPos
             {
                 get { return _bufferPos; }
+            }
+
+            public int BufferMark
+            {
+                get { return _bufferMark; }
             }
 
             public int Size
@@ -130,9 +136,39 @@ namespace Tkl.Jumbo.Jet.Channels
 
             public void FreeBuffer(int size)
             {
-                Debug.Assert(size <= _bufferUsed);
                 int newSize = Interlocked.Add(ref _bufferUsed, -size);
+                Debug.Assert(newSize >= 0);
                 _freeBufferEvent.Set();
+            }
+
+            public void SetMark()
+            {
+                _bufferMark = _bufferPos;
+            }
+
+            public void UnwrapRecord()
+            {
+                // Thread safety note: only one thread is writing into this buffer, to _bufferUsed can only ever becomes less (because of the spill thread).
+                // If that happens, we'll take an overly cautious approach but it's basically fine.
+                int extraBytes = _buffer.Length - _bufferMark;
+                if( _bufferUsed + extraBytes < _buffer.Length )
+                {
+                    System.Buffer.BlockCopy(_buffer, 0, _buffer, extraBytes, _bufferPos); // Move bytes at start of buffer forward
+                    System.Buffer.BlockCopy(_buffer, _bufferMark, _buffer, 0, extraBytes); // Move bytes at the end of buffer to the start
+                    _bufferPos += extraBytes;
+                    int newBufferUsed = Interlocked.Add(ref _bufferUsed, extraBytes);
+                    Debug.Assert(newBufferUsed < _buffer.Length);
+                }
+                else
+                {
+                    // Not enough space, so we'll use write to take care of the waiting.
+                    byte[] temp = new byte[_bufferPos];
+                    System.Buffer.BlockCopy(_buffer, 0, temp, 0, _bufferPos);
+                    FreeBuffer(_bufferPos);
+                    _bufferPos = 0;
+                    Write(_buffer, _bufferMark, extraBytes);
+                    Write(temp, 0, temp.Length);
+                }
             }
 
             private static int CopyCircular(byte[] source, int sourceIndex, byte[] destination, int destinationIndex, int count)
@@ -172,18 +208,6 @@ namespace Tkl.Jumbo.Jet.Channels
             }
         }
 
-        private struct PartitionIndexEntry
-        {
-            public PartitionIndexEntry(int offset, int size)
-            {
-                Offset = offset;
-                Size = size;
-            }
-
-            public int Offset;
-            public int Size;
-        }
-
         #endregion
 
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(SpillRecordWriter<T>));
@@ -192,14 +216,15 @@ namespace Tkl.Jumbo.Jet.Channels
         private readonly IPartitioner<T> _partitioner;
         private readonly CircularBufferStream _buffer;
         private readonly BinaryWriter _bufferWriter;
-        private readonly List<PartitionIndexEntry>[] _indices;
+        private readonly List<RecordIndexEntry>[] _indices;
+        private readonly SpillBufferFlags _flags;
         private int _lastPartition = -1;
         private int _bufferRemaining;
         private int _lastRecordEnd;
         private long _bytesWritten;
         private readonly int _bufferLimit;
 
-        private readonly PartitionIndexEntry[][] _spillIndices;
+        private readonly RecordIndexEntry[][] _spillIndices;
         private readonly object _spillLock = new object();
         private int _spillStart;
         private int _spillEnd;
@@ -214,15 +239,16 @@ namespace Tkl.Jumbo.Jet.Channels
 
         //private StreamWriter _debugWriter;
 
-        public SpillRecordWriter(IPartitioner<T> partitioner, int bufferSize, int limit)
+        public SpillRecordWriter(IPartitioner<T> partitioner, int bufferSize, int limit, SpillBufferFlags flags)
         {
             _partitioner = partitioner;
             _buffer = new CircularBufferStream(this, bufferSize);
             _bufferWriter = new BinaryWriter(_buffer);
-            _indices = new List<PartitionIndexEntry>[partitioner.Partitions];
+            _indices = new List<RecordIndexEntry>[partitioner.Partitions];
             _bufferRemaining = limit;
             _bufferLimit = limit;
-            _spillIndices = new PartitionIndexEntry[partitioner.Partitions][];
+            _spillIndices = new RecordIndexEntry[partitioner.Partitions][];
+            _flags = flags;
             //_debugWriter = new StreamWriter(outputPath + ".debug.txt");
         }
 
@@ -237,44 +263,52 @@ namespace Tkl.Jumbo.Jet.Channels
             if( _bufferRemaining <= 0 )
                 RequestOutputSpill();
 
-            int oldBufferPos = _buffer.BufferPos;
+            _buffer.SetMark();
 
             // TODO: Make sure the entire record fits in the buffer.
             ValueWriter<T>.WriteValue(record, _bufferWriter);
 
-            int newBufferPos = _buffer.BufferPos;
-            _lastRecordEnd = newBufferPos;
+            int recordStart = _buffer.BufferMark;
+            int recordEnd = _buffer.BufferPos;
+            _lastRecordEnd = recordEnd;
 
-            int bytesWritten;
-            if( newBufferPos >= oldBufferPos )
-                bytesWritten = newBufferPos - oldBufferPos;
+            int recordLength;
+            if( recordEnd >= recordStart )
+                recordLength = recordEnd - recordStart;
+            else if( _flags.HasFlag(SpillBufferFlags.AllowRecordWrapping) )
+                recordLength = (_buffer.Size - recordStart) + recordEnd;
             else
-                bytesWritten = (_buffer.Size - oldBufferPos) + newBufferPos;
+            {
+                // The record wrapped the end of the buffer, and that is not allowed by the flags
+                _buffer.UnwrapRecord();
+                recordStart = 0;
+                recordLength = _buffer.BufferPos;
+            }
 
             int partition = _partitioner.GetPartition(record);
 
-            List<PartitionIndexEntry> index = _indices[partition];
-            if( partition == _lastPartition )
+            List<RecordIndexEntry> index = _indices[partition];
+            if( _flags.HasFlag(SpillBufferFlags.AllowMultiRecordIndexEntries) && partition == _lastPartition )
             {
                 // If the new record was the same partition as the last record, we just update that one.
                 int lastEntry = index.Count - 1;
-                PartitionIndexEntry entry = index[lastEntry];
-                index[lastEntry] = new PartitionIndexEntry(entry.Offset, entry.Size + bytesWritten);
+                RecordIndexEntry entry = index[lastEntry];
+                index[lastEntry] = new RecordIndexEntry(entry.Offset, entry.Count + recordLength);
             }
             else
             {
                 // Add the new record to the relevant index.
                 if( index == null )
                 {
-                    index = new List<PartitionIndexEntry>(100);
+                    index = new List<RecordIndexEntry>(100);
                     _indices[partition] = index;
                 }
-                index.Add(new PartitionIndexEntry(oldBufferPos, bytesWritten));
+                index.Add(new RecordIndexEntry(recordStart, recordLength));
                 _lastPartition = partition;
             }
 
-            _bufferRemaining -= bytesWritten;
-            _bytesWritten += bytesWritten;
+            _bufferRemaining -= recordLength;
+            _bytesWritten += recordLength;
         }
 
         public override long OutputBytes
@@ -312,24 +346,24 @@ namespace Tkl.Jumbo.Jet.Channels
 
         protected int SpillDataSizeForPartition(int partition)
         {
-            return _spillIndices[partition] == null ? 0 : _spillIndices[partition].Sum(i => i.Size);
+            return _spillIndices[partition] == null ? 0 : _spillIndices[partition].Sum(i => i.Count);
         }
 
         protected void WritePartition(int partition, Stream outputStream)
         {
-            PartitionIndexEntry[] index = _spillIndices[partition];
+            RecordIndexEntry[] index = _spillIndices[partition];
             if( index != null )
             {
                 for( int x = 0; x < index.Length; ++x )
                 {
-                    if( index[x].Offset + index[x].Size > _buffer.Size )
+                    if( index[x].Offset + index[x].Count > _buffer.Size )
                     {
                         int firstCount = _buffer.Size - index[x].Offset;
                         outputStream.Write(_buffer.Buffer, index[x].Offset, firstCount);
-                        outputStream.Write(_buffer.Buffer, 0, index[x].Size - firstCount);
+                        outputStream.Write(_buffer.Buffer, 0, index[x].Count - firstCount);
                     }
                     else
-                        outputStream.Write(_buffer.Buffer, index[x].Offset, index[x].Size);
+                        outputStream.Write(_buffer.Buffer, index[x].Offset, index[x].Count);
                 }
             }
         }
@@ -398,7 +432,7 @@ namespace Tkl.Jumbo.Jet.Channels
             bool hasRecords = false;
             for( int x = 0; x < _indices.Length; ++x )
             {
-                List<PartitionIndexEntry> index = _indices[x];
+                List<RecordIndexEntry> index = _indices[x];
                 if( index != null && index.Count > 0 )
                 {
                     hasRecords = true;

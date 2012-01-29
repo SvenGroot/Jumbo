@@ -37,16 +37,37 @@ namespace Tkl.Jumbo.IO
         }
 
         /// <summary>
-        /// Creates the record reader for this input. This function is not used by the <see cref="ReaderRecordInput"/>
+        /// Gets a value indicating whether this instance supports the raw record reader.
         /// </summary>
-        /// <param name="multiInputReader">The multi input record reader that this <see cref="RecordInput"/> instance belongs to.</param>
+        /// <value>
+        /// 	<see langword="true"/> if this instance supports the raw record reader; otherwise, <see langword="false"/>.
+        /// </value>
+        public override bool IsRawReaderSupported
+        {
+            get { return false; }
+        }
+
+        /// <summary>
+        /// Creates the record reader for this input. This function is not used by the <see cref="ReaderRecordInput"/> class.
+        /// </summary>
         /// <returns>
         /// The record reader for this input.
         /// </returns>
-        protected override IRecordReader CreateReader(IMultiInputRecordReader multiInputReader)
+        protected override IRecordReader CreateReader()
         {
             // Not called if the RecordInput.RecordInput(IRecordReader) constructor is used.
             throw new NotSupportedException();
+        }
+
+        /// <summary>
+        /// Creates the raw record reader for this input. This function is not supported by the <see cref="ReaderRecordInput"/> class.
+        /// </summary>
+        /// <returns>
+        /// The record reader for this input.
+        /// </returns>
+        protected override RecordReader<RawRecord> CreateRawReader()
+        {
+            throw new NotSupportedException("This input doesn't support raw record readers.");
         }
     }
 }

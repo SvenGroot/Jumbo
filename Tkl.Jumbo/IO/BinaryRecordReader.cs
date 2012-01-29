@@ -32,6 +32,7 @@ namespace Tkl.Jumbo.IO
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(BinaryRecordReader<>));
 
         private BinaryReader _reader;
+        private readonly bool _inputContainsRecordSizes;
         private T _record;
         private bool _allowRecordReuse;
         private string _fileName;
@@ -72,7 +73,7 @@ namespace Tkl.Jumbo.IO
         /// <param name="allowRecordReuse"><see langword="true"/> if the reader can reuse the same instance of <typeparamref name="T"/> every time; <see langword="false"/>
         /// if a new instance must be created for every record.</param>
         public BinaryRecordReader(Stream stream, bool allowRecordReuse)
-            : this(stream, 0, stream.Length, allowRecordReuse)
+            : this(stream, 0, stream.Length, allowRecordReuse, false)
         {
         }
 
@@ -84,6 +85,19 @@ namespace Tkl.Jumbo.IO
         /// <param name="size">The size.</param>
         /// <param name="allowRecordReuse"><see langword="true"/> to [allow record reuse]; otherwise, <see langword="false"/>.</param>
         public BinaryRecordReader(Stream stream, long offset, long size, bool allowRecordReuse)
+            : this(stream, 0, stream.Length, allowRecordReuse, false)
+        {
+        }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="BinaryRecordReader&lt;T&gt;"/> class.
+        /// </summary>
+        /// <param name="stream">The stream.</param>
+        /// <param name="offset">The offset.</param>
+        /// <param name="size">The size.</param>
+        /// <param name="allowRecordReuse"><see langword="true"/> to [allow record reuse]; otherwise, <see langword="false"/>.</param>
+        /// <param name="inputContainsRecordSizes">If set to <see langword="true"/> the input data contains the sizes of the records in between the record data.</param>
+        public BinaryRecordReader(Stream stream, long offset, long size, bool allowRecordReuse, bool inputContainsRecordSizes)
             : base(stream, offset, size, true)
         {
             if( offset != 0 )
@@ -105,6 +119,7 @@ namespace Tkl.Jumbo.IO
                 _allowRecordReuse = allowRecordReuse;
             }
             _end = offset + size;
+            _inputContainsRecordSizes = inputContainsRecordSizes;
         }
 
         /// <summary>
@@ -120,6 +135,13 @@ namespace Tkl.Jumbo.IO
                 CurrentRecord = default(T);
                 Dispose(); // This will delete the file if necessary.
                 return false;
+            }
+
+            if( _inputContainsRecordSizes )
+            {
+                // We don't use the record size, as BinaryRecordReader depends on the records being able to figure out their own size.
+                // However, we need to skip the size.
+                WritableUtility.Read7BitEncodedInt32(_reader);
             }
 
             if( _allowRecordReuse )

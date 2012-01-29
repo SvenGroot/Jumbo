@@ -94,6 +94,7 @@
     <Compile Include="CompressionType.cs" />
     <Compile Include="DriveSpaceInfo.cs" />
     <Compile Include="IndividualProcessorStatus.cs" />
+    <Compile Include="IO\MemoryBufferStream.cs" />
     <Compile Include="IO\ChildReaderException.cs" />
     <Compile Include="IO\CurrentPartitionChangingEventArgs.cs" />
     <Compile Include="IO\DefaultRawComparer.cs" />
@@ -106,9 +107,11 @@
     <Compile Include="IO\RawComparer.cs" />
     <Compile Include="IO\RawComparerAttribute.cs" />
     <Compile Include="IO\RawComparerUtility.cs" />
+    <Compile Include="IO\RawRecord.cs" />
     <Compile Include="IO\ReaderRecordInput.cs" />
     <Compile Include="IO\RecordIndexEntry.cs" />
     <Compile Include="IO\RecordStreamOptions.cs" />
+    <Compile Include="IO\StreamRecordInput.cs" />
     <Compile Include="IO\ValueWriter.cs" />
     <Compile Include="IO\IMultiInputRecordReader.cs" />
     <Compile Include="IO\InnerJoinRecordReader.cs" />

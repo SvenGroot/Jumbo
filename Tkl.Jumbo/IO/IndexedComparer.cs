@@ -20,103 +20,8 @@ namespace Tkl.Jumbo.IO
     /// </remarks>
     public sealed class IndexedComparer<T> : IComparer<RecordIndexEntry>
     {
-        #region Nested types
-
-        private class BufferStream : Stream
-        {
-            private readonly byte[] _buffer;
-            private int _offset;
-            private int _end;
-            private int _position;
-
-            public BufferStream(byte[] buffer)
-            {
-                _buffer = buffer;
-            }
-
-            public override bool CanRead
-            {
-                get { return true; }
-            }
-
-            public override bool CanSeek
-            {
-                get { return false; }
-            }
-
-            public override bool CanWrite
-            {
-                get { return false; }
-            }
-
-            public override void Flush()
-            {
-            }
-
-            public override long Length
-            {
-                get { return _end - _offset; }
-            }
-
-            public override long Position
-            {
-                get
-                {
-                    return _position - _offset;
-                }
-                set
-                {
-                    throw new NotSupportedException();
-                }
-            }
-
-            public void Reset(int offset, int count)
-            {
-                _offset = _position = offset;
-                _end = _offset + count;
-            }
-
-            public override int Read(byte[] buffer, int offset, int count)
-            {
-                if( _position + count >= _end )
-                    count = _end - _position;
-                Buffer.BlockCopy(_buffer, _position, buffer, offset, count);
-                _position += count;
-                return count;
-            }
-
-            public override int ReadByte()
-            {
-                if( _position < _end )
-                    return _buffer[_position++];
-                else
-                    return -1;
-            }
-
-            public override long Seek(long offset, SeekOrigin origin)
-            {
-                throw new NotSupportedException();
-            }
-
-            public override void SetLength(long value)
-            {
-                throw new NotSupportedException();
-            }
-
-            public override void Write(byte[] buffer, int offset, int count)
-            {
-                throw new NotSupportedException();
-            }
-        }
-
-        #endregion
-
         private readonly byte[] _buffer;
-        private readonly IRawComparer<T> _comparer = RawComparer<T>.Instance;
-        private readonly BufferStream _stream1;
-        private readonly BufferStream _stream2;
-        private readonly BinaryReader _reader1;
-        private readonly BinaryReader _reader2;
+        private readonly RawComparer<T> _comparer = new RawComparer<T>();
 
         /// <summary>
         /// Initializes a new instance of the <see cref="IndexedComparer&lt;T&gt;"/> class.
@@ -128,13 +33,6 @@ namespace Tkl.Jumbo.IO
                 throw new ArgumentNullException("buffer");
 
             _buffer = buffer;
-            if( _comparer == null )
-            {
-                _stream1 = new BufferStream(buffer);
-                _stream2 = new BufferStream(buffer);
-                _reader1 = new BinaryReader(_stream1);
-                _reader2 = new BinaryReader(_stream2);
-            }
         }
 
         /// <summary>
@@ -145,18 +43,7 @@ namespace Tkl.Jumbo.IO
         /// <returns>A signed integer that indicates the relative values of the first and second record.</returns>
         public int Compare(RecordIndexEntry x, RecordIndexEntry y)
         {
-            if( _comparer == null )
-            {
-                _stream1.Reset(x.Offset, x.Count);
-                _stream2.Reset(y.Offset, y.Count);
-                T value1 = ValueWriter<T>.ReadValue(_reader1);
-                T value2 = ValueWriter<T>.ReadValue(_reader2);
-                return Comparer<T>.Default.Compare(value1, value2);
-            }
-            else
-            {
-                return _comparer.Compare(_buffer, x.Offset, x.Count, _buffer, y.Offset, y.Count);
-            }
+            return _comparer.Compare(_buffer, x.Offset, x.Count, _buffer, y.Offset, y.Count);
         }
     }
 }

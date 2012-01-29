@@ -103,6 +103,7 @@
     <Compile Include="Jet\JobAndTaskServerTests.cs" />
     <Compile Include="Jet\JobBuilderTests.cs" />
     <Compile Include="Jet\JobConfigurationTests.cs" />
+    <Compile Include="Jet\MergeHelperTests.cs" />
     <Compile Include="Jet\MergeRecordReaderTests.cs" />
     <Compile Include="Jet\TaskIdTests.cs" />
     <Compile Include="Jet\TaskTests.cs" />

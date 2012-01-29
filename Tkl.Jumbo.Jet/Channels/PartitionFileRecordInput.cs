@@ -13,9 +13,12 @@ namespace Tkl.Jumbo.Jet.Channels
         private readonly Type _recordReaderType;
         private readonly string _fileName;
         private readonly string _sourceName;
+        private readonly bool _inputContainsRecordSizes;
+        private readonly int _bufferSize;
+        private readonly bool _allowRecordReuse;
         private readonly IEnumerable<PartitionFileIndexEntry> _indexEntries;
 
-        public PartitionFileRecordInput(Type recordReaderType, string fileName, IEnumerable<PartitionFileIndexEntry> indexEntries, string sourceName)
+        public PartitionFileRecordInput(Type recordReaderType, string fileName, IEnumerable<PartitionFileIndexEntry> indexEntries, string sourceName, bool inputContainsRecordSizes, bool allowRecordReuse, int bufferSize)
         {
             if( recordReaderType == null )
                 throw new ArgumentNullException("recordReaderType");
@@ -28,6 +31,9 @@ namespace Tkl.Jumbo.Jet.Channels
             _fileName = fileName;
             _indexEntries = indexEntries;
             _sourceName = sourceName;
+            _inputContainsRecordSizes = inputContainsRecordSizes;
+            _bufferSize = bufferSize;
+            _allowRecordReuse = allowRecordReuse;
         }
 
         public override bool IsMemoryBased
@@ -35,12 +41,27 @@ namespace Tkl.Jumbo.Jet.Channels
             get { return false; }
         }
 
-        protected override IRecordReader CreateReader(IMultiInputRecordReader multiInputReader)
+        public override bool IsRawReaderSupported
         {
-            PartitionFileStream stream = new PartitionFileStream(_fileName, multiInputReader.BufferSize, _indexEntries);
-            IRecordReader reader = (IRecordReader)Activator.CreateInstance(_recordReaderType, stream, multiInputReader.AllowRecordReuse);
+            get { return !IsReaderCreated && _inputContainsRecordSizes; }
+        }
+
+        protected override IRecordReader CreateReader()
+        {
+            PartitionFileStream stream = new PartitionFileStream(_fileName, _bufferSize, _indexEntries);
+            IRecordReader reader = (IRecordReader)Activator.CreateInstance(_recordReaderType, stream, _allowRecordReuse);
             reader.SourceName = _sourceName;
             return reader;
+        }
+
+        protected override RecordReader<RawRecord> CreateRawReader()
+        {
+            if( !_inputContainsRecordSizes )
+                throw new NotSupportedException("Cannot create a raw record reader for input without record size markers.");
+
+            PartitionFileStream stream = new PartitionFileStream(_fileName, _bufferSize, _indexEntries);
+            // We always allow record reuse for raw record readers. Don't specify that the input contains record sizes, because those are used by the records themselves here.
+            return new BinaryRecordReader<RawRecord>(stream, true) { SourceName = _sourceName };
         }
     }
 }

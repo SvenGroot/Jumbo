@@ -16,9 +16,13 @@ namespace Tkl.Jumbo.Jet.Channels
         private readonly string _sourceName;
         private readonly long _uncompressedSize;
         private readonly bool _deleteFile;
+        private readonly bool _inputContainsRecordSizes;
         private readonly int _segmentCount;
+        private readonly bool _allowRecordReuse;
+        private readonly int _bufferSize;
+        private readonly CompressionType _compressionType;
 
-        public FileRecordInput(Type recordReaderType, string fileName, string sourceName, long uncompressedSize, bool deleteFile, int segmentCount)
+        public FileRecordInput(Type recordReaderType, string fileName, string sourceName, long uncompressedSize, bool deleteFile, bool inputContainsRecordSizes, int segmentCount, bool allowRecordReuse, int bufferSize, CompressionType compressionType)
         {
             if( recordReaderType == null )
                 throw new ArgumentNullException("recordReaderType");
@@ -30,7 +34,11 @@ namespace Tkl.Jumbo.Jet.Channels
             _sourceName = sourceName;
             _uncompressedSize = uncompressedSize;
             _deleteFile = deleteFile;
+            _inputContainsRecordSizes = inputContainsRecordSizes;
             _segmentCount = segmentCount;
+            _bufferSize = bufferSize;
+            _compressionType = compressionType;
+            _allowRecordReuse = allowRecordReuse;
         }
 
         public override bool IsMemoryBased
@@ -38,16 +46,38 @@ namespace Tkl.Jumbo.Jet.Channels
             get { return false; }
         }
 
-        protected override IRecordReader CreateReader(IMultiInputRecordReader multiInputReader)
+        public override bool IsRawReaderSupported
         {
-            Stream stream;
-            if( _segmentCount == 0 )
-                stream = new ChecksumInputStream(_fileName, multiInputReader.BufferSize, _deleteFile).CreateDecompressor(multiInputReader.CompressionType, _uncompressedSize);
-            else
-                stream = new SegmentedChecksumInputStream(_fileName, multiInputReader.BufferSize, _deleteFile, _segmentCount);
-            IRecordReader reader = (IRecordReader)Activator.CreateInstance(_recordReaderType, stream, multiInputReader.AllowRecordReuse);
+            get { return !IsReaderCreated && _inputContainsRecordSizes; }
+        }
+
+        protected override IRecordReader CreateReader()
+        {
+            Stream stream = CreateStream();
+            IRecordReader reader = (IRecordReader)Activator.CreateInstance(_recordReaderType, stream, _allowRecordReuse);
             reader.SourceName = _sourceName;
             return reader;
         }
+
+        protected override RecordReader<RawRecord> CreateRawReader()
+        {
+            if( !_inputContainsRecordSizes )
+                throw new NotSupportedException("Cannot create a raw record reader for input without record size markers.");
+
+            Stream stream = CreateStream();
+            // We always allow record reuse for raw record readers. Don't specify that the input contains record sizes, because those are used by the records themselves here.
+            return new BinaryRecordReader<RawRecord>(stream, true) { SourceName = _sourceName };
+        }
+
+        private Stream CreateStream()
+        {
+            Stream stream;
+            if( _segmentCount == 0 )
+                stream = new ChecksumInputStream(_fileName,_bufferSize, _deleteFile).CreateDecompressor(_compressionType, _uncompressedSize);
+            else
+                stream = new SegmentedChecksumInputStream(_fileName, _bufferSize, _deleteFile, _segmentCount);
+            return stream;
+        }
+
     }
 }

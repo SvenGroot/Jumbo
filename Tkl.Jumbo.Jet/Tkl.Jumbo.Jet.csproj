@@ -119,6 +119,7 @@
     <Compile Include="Channels\SegmentedChecksumInputStream.cs" />
     <Compile Include="Channels\SingleFileMultiRecordWriter.cs" />
     <Compile Include="Channels\SizeRecordingStream.cs" />
+    <Compile Include="Channels\SpillBufferFlags.cs" />
     <Compile Include="Channels\SpillRecordWriter.cs" />
     <Compile Include="Channels\TcpChannelConnectionFlags.cs" />
     <Compile Include="Channels\ChannelException.cs" />
@@ -149,8 +150,10 @@
     <Compile Include="Jobs\StageBuilder.cs" />
     <Compile Include="Jobs\StageSettingCategory.cs" />
     <Compile Include="KillTaskJetHeartbeatResponse.cs" />
+    <Compile Include="MergeHelper.cs" />
     <Compile Include="MergePassHelper.cs" />
     <Compile Include="MergeRecordReaderConfigurationElement.cs" />
+    <Compile Include="MergeResultRecord.cs" />
     <Compile Include="MultiPartitionRecordReader.cs" />
     <Compile Include="PartitionerConstants.cs" />
     <Compile Include="IConfigurable.cs" />

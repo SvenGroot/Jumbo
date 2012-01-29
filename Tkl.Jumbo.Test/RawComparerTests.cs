@@ -56,7 +56,7 @@ namespace Tkl.Jumbo.Test
 
         private void TestComparer<T>(T small, T large)
         {
-            Assert.IsNotNull(RawComparer<T>.Instance);
+            Assert.IsNotNull(RawComparer<T>.Comparer);
             byte[] buffer;
             int largeOffset;
             using( MemoryStream stream = new MemoryStream() )
@@ -69,10 +69,10 @@ namespace Tkl.Jumbo.Test
                 buffer = stream.ToArray();
             }
 
-            Assert.Greater(0, RawComparer<T>.Instance.Compare(buffer, 0, largeOffset, buffer, largeOffset, buffer.Length - largeOffset));
-            Assert.Greater(RawComparer<T>.Instance.Compare(buffer, largeOffset, buffer.Length - largeOffset, buffer, 0, largeOffset), 0);
-            Assert.AreEqual(0, RawComparer<T>.Instance.Compare(buffer, 0, largeOffset, buffer, 0, largeOffset));
-            Assert.AreEqual(0, RawComparer<T>.Instance.Compare(buffer, largeOffset, buffer.Length - largeOffset, buffer, largeOffset, buffer.Length - largeOffset));
+            Assert.Greater(0, RawComparer<T>.Comparer.Compare(buffer, 0, largeOffset, buffer, largeOffset, buffer.Length - largeOffset));
+            Assert.Greater(RawComparer<T>.Comparer.Compare(buffer, largeOffset, buffer.Length - largeOffset, buffer, 0, largeOffset), 0);
+            Assert.AreEqual(0, RawComparer<T>.Comparer.Compare(buffer, 0, largeOffset, buffer, 0, largeOffset));
+            Assert.AreEqual(0, RawComparer<T>.Comparer.Compare(buffer, largeOffset, buffer.Length - largeOffset, buffer, largeOffset, buffer.Length - largeOffset));
         }
     }
 }

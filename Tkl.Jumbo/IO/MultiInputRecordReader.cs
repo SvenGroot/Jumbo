@@ -412,7 +412,6 @@ namespace Tkl.Jumbo.IO
                 for( int x = 0; x < partitions.Count; ++x )
                 {
                     RecordInput input = partitions[x];
-                    input.Input = this;
                     _partitions[_firstActivePartitionIndex + x].AddInput(input);
                 }
 

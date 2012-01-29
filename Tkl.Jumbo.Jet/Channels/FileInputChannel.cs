@@ -674,7 +674,7 @@ namespace Tkl.Jumbo.Jet.Channels
                             uncompressedSize = TaskExecution.Umbilical.GetUncompressedTemporaryFileSize(task.JobId, outputFileName);
                             LocalBytesRead += size;
                             // We don't delete output files; if this task fails they might still be needed
-                            inputs.Add(new FileRecordInput(_inputReaderType, fileName, task.TaskAttemptId.TaskId.ToString(), uncompressedSize, false, 0));
+                            inputs.Add(new FileRecordInput(_inputReaderType, fileName, task.TaskAttemptId.TaskId.ToString(), uncompressedSize, false, false, 0, _reader.AllowRecordReuse, _reader.BufferSize, _reader.CompressionType));
                         }
                     }
                 }
@@ -703,7 +703,7 @@ namespace Tkl.Jumbo.Jet.Channels
                     else
                     {
                         LocalBytesRead += indexEntries.Sum(e => e.Count);
-                        inputs.Add(new PartitionFileRecordInput(_inputReaderType, fileName, indexEntries, task.TaskAttemptId.TaskId.ToString()));
+                        inputs.Add(new PartitionFileRecordInput(_inputReaderType, fileName, indexEntries, task.TaskAttemptId.TaskId.ToString(), false, _reader.AllowRecordReuse, _reader.BufferSize));
                     }
                 }
             }
@@ -802,7 +802,7 @@ namespace Tkl.Jumbo.Jet.Channels
                     {
                         stream.CopySize(fileStream, size, _writeBufferSize);
                     }
-                    downloadedFiles.Add(new FileRecordInput(_inputReaderType, targetFile, task.TaskAttemptId.TaskId.ToString(), uncompressedSize, TaskExecution.JetClient.Configuration.FileChannel.DeleteIntermediateFiles, segmentCount));
+                    downloadedFiles.Add(new FileRecordInput(_inputReaderType, targetFile, task.TaskAttemptId.TaskId.ToString(), uncompressedSize, TaskExecution.JetClient.Configuration.FileChannel.DeleteIntermediateFiles, false, segmentCount, _reader.AllowRecordReuse, _reader.BufferSize, _reader.CompressionType));
                     _log.DebugFormat("Input stored in local file {0}.", targetFile);
                     // We are writing this file to disk and reading it back again, so we need to update this.
                     LocalBytesRead += size;

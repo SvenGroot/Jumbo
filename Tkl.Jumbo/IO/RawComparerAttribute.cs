@@ -8,7 +8,7 @@ using System.Text;
 namespace Tkl.Jumbo.IO
 {
     /// <summary>
-    /// Specifies the <paramref name="IRawComparer{T}"/> implementation for a type.
+    /// Specifies the <see cref="IRawComparer{T}"/> implementation for a type.
     /// </summary>
     [AttributeUsage(AttributeTargets.Class | AttributeTargets.Struct, Inherited = false, AllowMultiple = false)]
     public sealed class RawComparerAttribute : Attribute
