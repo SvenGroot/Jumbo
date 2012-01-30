@@ -48,5 +48,24 @@ namespace Tkl.Jumbo.IO
         /// </summary>
         /// <param name="record">The record to write.</param>
         void WriteRecord(object record);
+
+        /// <summary>
+        /// Informs the record writer that no further records will be written.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        ///   This method is intended for record writers that need to perform additional writing to finalize their output. In Jumbo Jet, this
+        ///   method will be called before the writer's metrics are collected so they can include these additional writes.
+        /// </para>
+        /// <para>
+        ///   It is allowed to dispose any output streams or other objects related to the output when this method is called, as no more
+        ///   writes will occur after that point. However, the <see cref="RecordsWritten"/> <see cref="BytesWritten"/> and <see cref="OutputBytes"/>
+        ///   properties must still return the correct values after <see cref="FinishWriting"/> has been called.
+        /// </para>
+        /// <para>
+        ///   The <see cref="IDisposable.Dispose"/> implementation for <see cref="RecordWriter{T}"/> will call this method.
+        /// </para>
+        /// </remarks>
+        void FinishWriting();
     }
 }

@@ -106,7 +106,8 @@
     <Compile Include="IO\IRecordOutputStream.cs" />
     <Compile Include="IO\RawComparer.cs" />
     <Compile Include="IO\RawComparerAttribute.cs" />
-    <Compile Include="IO\RawComparerUtility.cs" />
+    <Compile Include="IO\RawComparerHelper.cs" />
+    <Compile Include="LittleEndianBitConverter.cs" />
     <Compile Include="IO\RawRecord.cs" />
     <Compile Include="IO\ReaderRecordInput.cs" />
     <Compile Include="IO\RecordIndexEntry.cs" />

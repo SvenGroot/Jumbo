@@ -15,15 +15,32 @@ namespace Tkl.Jumbo.Jet
     /// Provides methods to merge multiple segments of sorted input into one sorted output.
     /// </summary>
     /// <typeparam name="T">The type of the records in the segments.</typeparam>
-    public static class MergeHelper<T>
+    public class MergeHelper<T>
     {
         #region Nested types
 
-        private class MergeInput
+        private sealed class MergeInput : IDisposable
         {
+            public MergeInput(RecordReader<RawRecord> reader, bool isMemoryBased)
+            {
+                RawRecordReader = reader;
+                IsMemoryBased = isMemoryBased;
+            }
 
-            public RecordReader<RawRecord> RawRecordReader { get; set; }
-            public RecordReader<T> RecordReader { get; set; }
+            public MergeInput(RecordReader<T> reader, bool isMemoryBased)
+            {
+                RecordReader = reader;
+                IsMemoryBased = isMemoryBased;
+            }
+
+            public RecordReader<RawRecord> RawRecordReader { get; private set; }
+            public RecordReader<T> RecordReader { get; private set; }
+            public bool IsMemoryBased { get; private set; }
+
+            public long BytesRead
+            {
+                get { return IsMemoryBased ? 0 : (RawRecordReader == null ? RecordReader.BytesRead : RawRecordReader.BytesRead); }
+            }
 
             public bool ReadRecord()
             {
@@ -40,9 +57,17 @@ namespace Tkl.Jumbo.Jet
                 else
                     record.Reset(RecordReader.CurrentRecord);
             }
+
+            public void Dispose()
+            {
+                if( RawRecordReader != null )
+                    RawRecordReader.Dispose();
+                if( RecordReader != null )
+                    RecordReader.Dispose();
+            }
         }
 
-        private class MergeInputComparer : IComparer<MergeInput>
+        private sealed class MergeInputComparer : IComparer<MergeInput>
         {
             private readonly RawComparer<T> _rawComparer;
             private readonly IComparer<T> _comparer;
@@ -68,6 +93,23 @@ namespace Tkl.Jumbo.Jet
 
         #endregion
 
+        private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(MergeHelper<>));
+
+        /// <summary>
+        /// Gets the number of bytes written by the merger.
+        /// </summary>
+        public long BytesWritten { get; private set; }
+
+        /// <summary>
+        /// Gets the number of bytes read by the merger.
+        /// </summary>
+        public long BytesRead { get; private set; }
+
+        /// <summary>
+        /// Gets the number of merge passes performed, including the final pass.
+        /// </summary>
+        public int MergePassCount { get; private set; }
+
         /// <summary>
         /// Merges the specified inputs.
         /// </summary>
@@ -81,7 +123,7 @@ namespace Tkl.Jumbo.Jet
         /// <param name="bufferSize">The buffer size to use when writing output passes.</param>
         /// <param name="enableChecksum">if set to <see langword="true"/>, checksums will be enabled for intermediate passes.</param>
         /// <returns></returns>
-        public static IEnumerable<MergeResultRecord<T>> Merge(IList<RecordInput> diskInputs, IList<RecordInput> memoryInputs, int maxDiskInputsPerPass, IComparer<T> comparer, bool allowRecordReuse, string intermediateOutputPath, CompressionType compressionType, int bufferSize, bool enableChecksum)
+        public IEnumerable<MergeResultRecord<T>> Merge(IList<RecordInput> diskInputs, IList<RecordInput> memoryInputs, int maxDiskInputsPerPass, IComparer<T> comparer, bool allowRecordReuse, string intermediateOutputPath, CompressionType compressionType, int bufferSize, bool enableChecksum)
         {
             if( diskInputs == null && memoryInputs == null )
                 throw new ArgumentException("diskInputs and memoryInputs cannot both be null.");
@@ -100,7 +142,8 @@ namespace Tkl.Jumbo.Jet
                 while( actualDiskInputs.Count - diskInputsProcessed > maxDiskInputsPerPass )
                 {
                     string outputFileName = Path.Combine(intermediateOutputPath, string.Format(CultureInfo.InvariantCulture, "merge_pass{0}.tmp", pass));
-                    int numDiskInputsForPass = GetNumDiskInputsForPass(actualDiskInputs.Count - diskInputsProcessed, maxDiskInputsPerPass);
+                    int numDiskInputsForPass = GetNumDiskInputsForPass(pass, actualDiskInputs.Count - diskInputsProcessed, maxDiskInputsPerPass);
+                    _log.InfoFormat("Merging {0} intermediate segments out of a total of {1} disk segments.", numDiskInputsForPass, actualDiskInputs.Count - diskInputsProcessed);
                     long uncompressedSize;
                     using( Stream outputStream = new ChecksumOutputStream(File.Create(outputFileName, bufferSize).CreateCompressor(compressionType), true, enableChecksum) )
                     using( BinaryRecordWriter<RawRecord> rawWriter = rawReaderSupported ? new BinaryRecordWriter<RawRecord>(outputStream) : null )
@@ -113,7 +156,8 @@ namespace Tkl.Jumbo.Jet
                             else
                                 record.WriteRawRecord(rawWriter);
                         }
-                        uncompressedSize = writer == null ? rawWriter.BytesWritten : writer.BytesWritten;
+                        uncompressedSize = writer == null ? rawWriter.OutputBytes : writer.OutputBytes;
+                        BytesWritten += (writer == null ? rawWriter.BytesWritten : writer.BytesWritten);
                     }
                     actualDiskInputs.Add(new FileRecordInput(typeof(BinaryRecordReader<T>), outputFileName, null, uncompressedSize, true, rawReaderSupported, 0, allowRecordReuse, bufferSize, compressionType));
                     diskInputsProcessed += numDiskInputsForPass;
@@ -123,14 +167,22 @@ namespace Tkl.Jumbo.Jet
             }
 
             IEnumerable<RecordInput> inputs = memoryInputs ?? Enumerable.Empty<RecordInput>();
+            int memoryInputCount = inputs.Count();
+            int diskInputCount = 0;
             if( diskInputs != null )
+            {
                 inputs = inputs.Concat(diskInputs.Skip(diskInputsProcessed));
+                diskInputCount = diskInputs.Count - diskInputsProcessed;
+            }
+
+            _log.InfoFormat("Last merge pass with {0} disk and {1} memory segments.", diskInputCount, memoryInputCount);
 
             return RunMergePass(inputs, comparer, allowRecordReuse, rawReaderSupported);
         }
 
-        private static IEnumerable<MergeResultRecord<T>> RunMergePass(IEnumerable<RecordInput> inputs, IComparer<T> comparer, bool allowRecordReuse, bool rawReaderSupported)
+        private IEnumerable<MergeResultRecord<T>> RunMergePass(IEnumerable<RecordInput> inputs, IComparer<T> comparer, bool allowRecordReuse, bool rawReaderSupported)
         {
+            MergePassCount++;
             PriorityQueue<MergeInput> mergeQueue = CreateMergeQueue(inputs, comparer, rawReaderSupported);
             MergeResultRecord<T> record = new MergeResultRecord<T>(allowRecordReuse);
 
@@ -142,7 +194,11 @@ namespace Tkl.Jumbo.Jet
                 if( front.ReadRecord() )
                     mergeQueue.AdjustFirstItem();
                 else
+                {
+                    BytesRead += front.BytesRead;
+                    front.Dispose();
                     mergeQueue.Dequeue();
+                }
             }
         }
 
@@ -153,20 +209,32 @@ namespace Tkl.Jumbo.Jet
             if( rawReaderSupported )
             {
                 mergeComparer = new MergeInputComparer();
-                mergeInputs = inputs.Select(i => new MergeInput() { RawRecordReader = i.GetRawReader() }).Where(i => i.RawRecordReader.ReadRecord());
+                mergeInputs = inputs.Select(i => new MergeInput(i.GetRawReader(), i.IsMemoryBased)).Where(i => i.RawRecordReader.ReadRecord());
             }
             else
             {
                 mergeComparer = new MergeInputComparer(comparer ?? Comparer<T>.Default);
-                mergeInputs = inputs.Select(i => new MergeInput() { RecordReader = (RecordReader<T>)i.Reader }).Where(i => i.RecordReader.ReadRecord());
+                mergeInputs = inputs.Select(i => new MergeInput((RecordReader<T>)i.Reader, i.IsMemoryBased)).Where(i => i.RecordReader.ReadRecord());
             }
 
             return new PriorityQueue<MergeInput>(mergeInputs, mergeComparer);
         }
 
-        private static int GetNumDiskInputsForPass(int diskInputsRemaining, int maxDiskInputsPerPass)
+        private static int GetNumDiskInputsForPass(int pass, int diskInputsRemaining, int maxDiskInputsPerPass)
         {
-            return Math.Min(diskInputsRemaining, maxDiskInputsPerPass); // TODO: Improve selection.
+            /**
+             * Taken from Hadoop.
+             * Determine the number of segments to merge in a given pass. Assuming more
+             * than factor segments, the first pass should attempt to bring the total
+             * number of segments - 1 to be divisible by the factor - 1 (each pass
+             * takes X segments and produces 1) to minimize the number of merges.
+             */
+            if( pass > 0 || diskInputsRemaining <= maxDiskInputsPerPass || maxDiskInputsPerPass == 1 )
+                return Math.Min(diskInputsRemaining, maxDiskInputsPerPass);
+            int mod = (diskInputsRemaining - 1) % (maxDiskInputsPerPass - 1);
+            if( mod == 0 )
+                return Math.Min(diskInputsRemaining, maxDiskInputsPerPass); ;
+            return mod + 1;
         }
     }
 }

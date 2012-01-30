@@ -11,7 +11,11 @@ using System.Threading;
 
 namespace Tkl.Jumbo.Jet.Channels
 {
-    abstract class SpillRecordWriter<T> : RecordWriter<T>, IMultiRecordWriter<T>
+    /// <summary>
+    /// Multi record writer that collects records in an in-memory buffer, and periodically spills the record to the output when the buffer is full.
+    /// </summary>
+    /// <typeparam name="T">The type of the records.</typeparam>
+    public abstract class SpillRecordWriter<T> : RecordWriter<T>, IMultiRecordWriter<T>
     {
         #region Nested types
 
@@ -210,14 +214,14 @@ namespace Tkl.Jumbo.Jet.Channels
 
         #endregion
 
-        private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(SpillRecordWriter<T>));
+        private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(SpillRecordWriter<>));
 
         private static readonly IValueWriter<T> _valueWriter = ValueWriter<T>.Writer;
         private readonly IPartitioner<T> _partitioner;
         private readonly CircularBufferStream _buffer;
         private readonly BinaryWriter _bufferWriter;
         private readonly List<RecordIndexEntry>[] _indices;
-        private readonly SpillBufferFlags _flags;
+        private readonly SpillRecordWriterFlags _flags;
         private int _lastPartition = -1;
         private int _bufferRemaining;
         private int _lastRecordEnd;
@@ -236,11 +240,25 @@ namespace Tkl.Jumbo.Jet.Channels
         private Exception _spillException;
         private bool _spillExceptionThrown;
         private bool _disposed;
+        private RawRecord _record;
 
         //private StreamWriter _debugWriter;
 
-        public SpillRecordWriter(IPartitioner<T> partitioner, int bufferSize, int limit, SpillBufferFlags flags)
+        /// <summary>
+        /// Initializes a new instance of the <see cref="SpillRecordWriter&lt;T&gt;"/> class.
+        /// </summary>
+        /// <param name="partitioner">The partitioner for the records.</param>
+        /// <param name="bufferSize">The size of the in-memory buffer.</param>
+        /// <param name="limit">The amount of data in the buffer when a spill is triggered.</param>
+        /// <param name="flags">A combination of <see cref="SpillRecordWriterFlags"/> values.</param>
+        protected SpillRecordWriter(IPartitioner<T> partitioner, int bufferSize, int limit, SpillRecordWriterFlags flags)
         {
+            if( partitioner == null )
+                throw new ArgumentNullException("partitioner");
+            if( bufferSize < 0 )
+                throw new ArgumentOutOfRangeException("bufferSize");
+            if( limit < 1 || limit > bufferSize )
+                throw new ArgumentOutOfRangeException("limit");
             _partitioner = partitioner;
             _buffer = new CircularBufferStream(this, bufferSize);
             _bufferWriter = new BinaryWriter(_buffer);
@@ -252,6 +270,99 @@ namespace Tkl.Jumbo.Jet.Channels
             //_debugWriter = new StreamWriter(outputPath + ".debug.txt");
         }
 
+        /// <summary>
+        /// Gets the size of the written records after serialization.
+        /// </summary>
+        /// <value>
+        /// The size of the written records after serialization.
+        /// </value>
+        public override long OutputBytes
+        {
+            get
+            {
+                return _bytesWritten;
+            }
+        }
+
+        /// <summary>
+        /// Gets the number of bytes that were actually written to the output.
+        /// </summary>
+        /// <value>The number of bytes written to the output.</value>
+        public override long BytesWritten
+        {
+            get
+            {
+                return _bytesWritten;
+            }
+        }
+
+        /// <summary>
+        /// Gets the partitioner.
+        /// </summary>
+        /// <value>The partitioner.</value>
+        public IPartitioner<T> Partitioner
+        {
+            get { return _partitioner; }
+        }
+
+        /// <summary>
+        /// Gets the number of spills performed.
+        /// </summary>
+        public int SpillCount
+        {
+            get { return _spillCount; }
+        }
+
+        /// <summary>
+        /// Gets a value indicating whether an error occurred during a background spill.
+        /// </summary>
+        /// <value>
+        /// 	<see langword="true"/> if an error occurred; otherwise, <see langword="false"/>.
+        /// </value>
+        protected bool ErrorOccurred
+        {
+            get { return _spillException != null; }
+        }
+
+        /// <summary>
+        /// Informs the record writer that no further records will be written.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        ///   Performs the final spill, if one is needed.
+        /// </para>
+        /// </remarks>
+        public override void FinishWriting()
+        {
+            if( !HasFinishedWriting )
+            {
+                base.FinishWriting();
+                lock( _spillLock )
+                {
+                    while( _spillInProgress )
+                        Monitor.Wait(_spillLock);
+
+                    _cancelEvent.Set();
+                }
+                if( _spillThread != null )
+                    _spillThread.Join();
+
+                if( _spillException != null && !_spillExceptionThrown )
+                    throw new ChannelException("An exception occurred spilling the output records.", _spillException);
+
+                if( !_spillExceptionThrown && _buffer.BufferUsed > 0 || _spillCount == 0 )
+                {
+                    PrepareForSpill(true);
+                    PerformSpill(true);
+                }
+                Debug.Assert(_spillExceptionThrown || _buffer.BufferUsed == 0);
+            }
+        }
+
+        /// <summary>
+        /// Writes a record.
+        /// </summary>
+        /// <param name="record">The record to write.</param>
         protected override void WriteRecordInternal(T record)
         {
             if( _spillException != null )
@@ -275,7 +386,7 @@ namespace Tkl.Jumbo.Jet.Channels
             int recordLength;
             if( recordEnd >= recordStart )
                 recordLength = recordEnd - recordStart;
-            else if( _flags.HasFlag(SpillBufferFlags.AllowRecordWrapping) )
+            else if( _flags.HasFlag(SpillRecordWriterFlags.AllowRecordWrapping) )
                 recordLength = (_buffer.Size - recordStart) + recordEnd;
             else
             {
@@ -288,7 +399,7 @@ namespace Tkl.Jumbo.Jet.Channels
             int partition = _partitioner.GetPartition(record);
 
             List<RecordIndexEntry> index = _indices[partition];
-            if( _flags.HasFlag(SpillBufferFlags.AllowMultiRecordIndexEntries) && partition == _lastPartition )
+            if( _flags.HasFlag(SpillRecordWriterFlags.AllowMultiRecordIndexEntries) && partition == _lastPartition )
             {
                 // If the new record was the same partition as the last record, we just update that one.
                 int lastEntry = index.Count - 1;
@@ -311,49 +422,49 @@ namespace Tkl.Jumbo.Jet.Channels
             _bytesWritten += recordLength;
         }
 
-        public override long OutputBytes
-        {
-            get
-            {
-                return _bytesWritten;
-            }
-        }
-
-        public override long BytesWritten
-        {
-            get
-            {
-                return _bytesWritten;
-            }
-        }
-
-        public IPartitioner<T> Partitioner
-        {
-            get { return _partitioner; }
-        }
-
-        protected int SpillCount
-        {
-            get { return _spillCount; }
-        }
-
-        protected bool ErrorOccurred
-        {
-            get { return _spillException != null; }
-        }
-
+        /// <summary>
+        /// When overridden by a derived class, writes the spill data to the output.
+        /// </summary>
+        /// <param name="finalSpill">If set to <see langword="true"/>, this is the final spill.</param>
+        /// <remarks>
+        /// <para>
+        ///   Implementers should call the <see cref="WritePartition"/> method to write each spill partition to their output.
+        /// </para>
+        /// <para>
+        ///   It is not guaranteed that the <paramref name="finalSpill"/> parameter will ever be <see langword="true"/>. If data was flushed by a background
+        ///   spill and no further data was written into the buffer before <see cref="FinishWriting"/> is called, then this method is never called with
+        ///   <paramref name="finalSpill"/> set to <see langword="true"/>. If you need to perform extra work after the final spill, override the
+        ///   <see cref="FinishWriting"/> method instead.
+        /// </para>
+        /// </remarks>
         protected abstract void SpillOutput(bool finalSpill);
 
+        /// <summary>
+        /// Gets the spill data size for the specified partition.
+        /// </summary>
+        /// <param name="partition">The partition number.</param>
+        /// <returns>The size of the partition's data for this spill.</returns>
+        /// <remarks>
+        /// <para>
+        ///   Only call this method from the <see cref="SpillOutput"/> method.
+        /// </para>
+        /// </remarks>
         protected int SpillDataSizeForPartition(int partition)
         {
             return _spillIndices[partition] == null ? 0 : _spillIndices[partition].Sum(i => i.Count);
         }
 
+        /// <summary>
+        /// Writes the specified partition to the output.
+        /// </summary>
+        /// <param name="partition">The partition number.</param>
+        /// <param name="outputStream">The output stream to write the partition to.</param>
         protected void WritePartition(int partition, Stream outputStream)
         {
             RecordIndexEntry[] index = _spillIndices[partition];
             if( index != null )
             {
+                PreparePartition(partition, index, _buffer.Buffer);
                 for( int x = 0; x < index.Length; ++x )
                 {
                     if( index[x].Offset + index[x].Count > _buffer.Size )
@@ -368,39 +479,55 @@ namespace Tkl.Jumbo.Jet.Channels
             }
         }
 
+        /// <summary>
+        /// Writes the specified partition to the output using the <see cref="RawRecord"/> format, which includes record sizes.
+        /// </summary>
+        /// <param name="partition">The partition number.</param>
+        /// <param name="output">The raw record writer to write the partition to.</param>
+        protected void WritePartition(int partition, RecordWriter<RawRecord> output)
+        {
+            if( _record == null )
+                _record = new RawRecord();
+
+            RawRecord record = _record;
+            RecordIndexEntry[] index = _spillIndices[partition];
+            if( index != null )
+            {
+                PreparePartition(partition, index, _buffer.Buffer);
+                for( int x = 0; x < index.Length; ++x )
+                {
+                    record.Reset(_buffer.Buffer, index[x].Offset, index[x].Count);
+                    output.WriteRecord(record);
+                }
+            }
+        }
+
+        /// <summary>
+        /// When overridden in a derived class, prepares the partition for the spill.
+        /// </summary>
+        /// <param name="partition">The partition number.</param>
+        /// <param name="index">The index entries for this partition.</param>
+        /// <param name="buffer">The buffer containing the spill data.</param>
+        /// <remarks>
+        /// <note>
+        ///   Do not access any part of the array other than the regions indicated in the index!
+        /// </note>
+        /// </remarks>
+        protected virtual void PreparePartition(int partition, RecordIndexEntry[] index, byte[] buffer)
+        {
+        }
+
+        /// <summary>
+        /// Releases unmanaged and - optionally - managed resources
+        /// </summary>
+        /// <param name="disposing"><see langword="true"/> to release both managed and unmanaged resources; <see langword="false"/> to release only unmanaged resources.</param>
         protected override void Dispose(bool disposing)
         {
+            base.Dispose(disposing);
             if( !_disposed )
             {
                 _disposed = true;
-                lock( _spillLock )
-                {
-                    while( _spillInProgress )
-                        Monitor.Wait(_spillLock);
 
-                    _cancelEvent.Set();
-                }
-
-                if( _spillException != null && !_spillExceptionThrown )
-                    throw new ChannelException("An exception occurred spilling the output records.", _spillException);
-
-                if( !_spillExceptionThrown && _buffer.BufferUsed > 0 || _spillCount == 0 )
-                {
-                    try
-                    {
-                        PrepareForSpill(true);
-                    }
-                    catch( InvalidOperationException ex )
-                    {
-                        // Thrown if there was actually nothing to spill. This can really only happen if the record writer gets disposed after an exception
-                        // so we don't want to mask that exception
-                        _log.Error("Failed to spill during dispose.", ex);
-                    }
-                    PerformSpill(true);
-                }
-                Debug.Assert(_spillExceptionThrown || _buffer.BufferUsed == 0);
-
-                base.Dispose(disposing);
                 if( disposing )
                 {
                     ((IDisposable)_bufferWriter).Dispose();

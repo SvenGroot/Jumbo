@@ -49,7 +49,7 @@ namespace Tkl.Jumbo.Jet.Channels
         private long _headerBytesWritten;
 
         public TcpChannelRecordWriter(TaskExecutionUtility taskExecution, bool reuseConnections, IPartitioner<T> partitioner, int bufferSize, int limit)
-            : base(partitioner, bufferSize, limit, SpillBufferFlags.AllowRecordWrapping | SpillBufferFlags.AllowMultiRecordIndexEntries)
+            : base(partitioner, bufferSize, limit, SpillRecordWriterFlags.AllowRecordWrapping | SpillRecordWriterFlags.AllowMultiRecordIndexEntries)
         {
             StageConfiguration outputStage = taskExecution.Context.JobConfiguration.GetStage(taskExecution.Context.StageConfiguration.OutputChannel.OutputStage);
             _outputIds = new TaskId[outputStage.TaskCount]; // We need this to be task based, not partition based.

@@ -119,7 +119,8 @@
     <Compile Include="Channels\SegmentedChecksumInputStream.cs" />
     <Compile Include="Channels\SingleFileMultiRecordWriter.cs" />
     <Compile Include="Channels\SizeRecordingStream.cs" />
-    <Compile Include="Channels\SpillBufferFlags.cs" />
+    <Compile Include="Channels\SortSpillRecordWriter.cs" />
+    <Compile Include="Channels\SpillRecordWriterFlags.cs" />
     <Compile Include="Channels\SpillRecordWriter.cs" />
     <Compile Include="Channels\TcpChannelConnectionFlags.cs" />
     <Compile Include="Channels\ChannelException.cs" />

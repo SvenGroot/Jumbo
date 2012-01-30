@@ -14,32 +14,38 @@ namespace Tkl.Jumbo.Test.Jet
     [TestFixture]
     public class MergeHelperTests
     {
+        [TestFixtureSetUp]
+        public void SetUp()
+        {
+            log4net.LogManager.ResetConfiguration();
+            log4net.Config.BasicConfigurator.Configure();
+        }
 
         [Test]
         public void TestMerge()
         {
-            TestMergeCore(5, 5, 100, 50, false);
+            TestMergeCore(5, 5, 100, 50, false, 1);
         }
 
         [Test]
         public void TestMergeMultiplePasses()
         {
-            TestMergeCore(12, 5, 100, 50, false);
+            TestMergeCore(12, 5, 100, 50, false, 3);
         }
 
         [Test]
         public void TestMergeRaw()
         {
-            TestMergeCore(5, 5, 100, 50, true);
+            TestMergeCore(5, 5, 100, 50, true, 1);
         }
 
         [Test]
         public void TestMergeRawMultiplePasses()
         {
-            TestMergeCore(12, 5, 100, 50, true);
+            TestMergeCore(12, 5, 100, 50, true, 3);
         }
 
-        private void TestMergeCore(int diskSegmentCount, int memorySegmentCount, int segmentItemCount, int segmentItemCountRandomization, bool rawComparer)
+        private void TestMergeCore(int diskSegmentCount, int memorySegmentCount, int segmentItemCount, int segmentItemCountRandomization, bool rawComparer, int expectedPasses)
         {
             var diskSegmentData = GenerateSegmentData(diskSegmentCount, segmentItemCount, segmentItemCountRandomization);
             var diskSegments = GenerateSegments(diskSegmentData, false, rawComparer);
@@ -48,9 +54,30 @@ namespace Tkl.Jumbo.Test.Jet
 
             var expected = diskSegmentData.SelectMany(s => s).Concat(memorySegmentData.SelectMany(s => s)).OrderBy(s => s).ToList();
 
-            var actual = MergeHelper<int>.Merge(diskSegments, memorySegments, 5, null, false, Utilities.TestOutputPath, CompressionType.None, 4096, true).Select(r => r.GetValue()).ToList();
+            var target = new MergeHelper<int>();
+            var actual = target.Merge(diskSegments, memorySegments, 5, null, false, Utilities.TestOutputPath, CompressionType.None, 4096, true).Select(r => r.GetValue()).ToList();
 
             CollectionAssert.AreEqual(expected, actual);
+            Assert.AreEqual(expectedPasses, target.MergePassCount);
+            if( rawComparer )
+            {
+                if( expectedPasses == 1 )
+                    Assert.AreEqual(0, target.BytesWritten);
+                else
+                {
+                    Assert.AreNotEqual(0, target.BytesWritten);
+                    Assert.Greater(target.BytesRead, target.BytesWritten);
+                }
+                Assert.AreNotEqual(0, target.BytesRead); // Bytes read by MemoryStream
+            }
+            else
+            {
+                if( expectedPasses == 1 )
+                    Assert.AreEqual(0, target.BytesRead); // No bytes read by EnumerableComparer.
+                else
+                    Assert.AreNotEqual(0, target.BytesRead);
+                Assert.AreEqual(target.BytesRead, target.BytesWritten);
+            }
         }
 
         private List<List<int>> GenerateSegmentData(int segmentCount, int itemCount, int itemCountRandomization)

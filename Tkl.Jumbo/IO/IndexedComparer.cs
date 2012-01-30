@@ -20,18 +20,24 @@ namespace Tkl.Jumbo.IO
     /// </remarks>
     public sealed class IndexedComparer<T> : IComparer<RecordIndexEntry>
     {
-        private readonly byte[] _buffer;
+        private byte[] _buffer;
         private readonly RawComparer<T> _comparer = new RawComparer<T>();
 
         /// <summary>
         /// Initializes a new instance of the <see cref="IndexedComparer&lt;T&gt;"/> class.
         /// </summary>
         /// <param name="buffer">An array of bytes containing the records.</param>
-        public IndexedComparer(byte[] buffer)
+        public IndexedComparer(byte[] buffer = null)
         {
-            if( buffer == null )
-                throw new ArgumentNullException("buffer");
+            Reset(buffer);
+        }
 
+        /// <summary>
+        /// Assigns a new buffer for the comparer to use.
+        /// </summary>
+        /// <param name="buffer">An array of bytes containing the records.</param>
+        public void Reset(byte[] buffer)
+        {
             _buffer = buffer;
         }
 

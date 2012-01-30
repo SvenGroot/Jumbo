@@ -1003,6 +1003,7 @@ namespace Tkl.Jumbo.Jet
                 // This is the final stage of a compound stage (or it's not a compound stage), so we need to calculate output metrics.
                 if( _outputWriter != null )
                 {
+                    _outputWriter.FinishWriting();
                     metrics.OutputRecords += _outputWriter.RecordsWritten;
                     metrics.OutputBytes += _outputWriter.OutputBytes;
                 }

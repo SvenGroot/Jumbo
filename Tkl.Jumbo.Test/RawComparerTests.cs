@@ -43,7 +43,7 @@ namespace Tkl.Jumbo.Test
             values.Sort();
             index.Sort(target);
 
-            var result = index.Select(e => RawComparerUtility.ReadInt32(buffer, e.Offset));
+            var result = index.Select(e => LittleEndianBitConverter.ToInt32(buffer, e.Offset));
             CollectionAssert.AreEqual(values, result);
             
         }

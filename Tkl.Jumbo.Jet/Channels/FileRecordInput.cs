@@ -69,6 +69,16 @@ namespace Tkl.Jumbo.Jet.Channels
             return new BinaryRecordReader<RawRecord>(stream, true) { SourceName = _sourceName };
         }
 
+        protected override void Dispose(bool disposing)
+        {
+            base.Dispose(disposing);
+            if( disposing )
+            {
+                if( _deleteFile && File.Exists(_fileName) )
+                    File.Delete(_fileName);
+            }
+        }
+
         private Stream CreateStream()
         {
             Stream stream;

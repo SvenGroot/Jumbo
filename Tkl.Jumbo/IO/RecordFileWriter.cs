@@ -79,20 +79,14 @@ namespace Tkl.Jumbo.IO
         /// to clean up unmanaged resources only.</param>
         protected override void Dispose(bool disposing)
         {
-            try
+            base.Dispose(disposing);
+            if( disposing )
             {
-                if( disposing )
+                if( _writer != null )
                 {
-                    if( _writer != null )
-                    {
-                        ((IDisposable)_writer).Dispose();
-                        _writer = null;
-                    }
+                    ((IDisposable)_writer).Dispose();
+                    _writer = null;
                 }
-            }
-            finally
-            {
-                base.Dispose(disposing);
             }
         }
 

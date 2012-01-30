@@ -105,6 +105,7 @@
     <Compile Include="Jet\JobConfigurationTests.cs" />
     <Compile Include="Jet\MergeHelperTests.cs" />
     <Compile Include="Jet\MergeRecordReaderTests.cs" />
+    <Compile Include="Jet\SortSpillRecordWriterTests.cs" />
     <Compile Include="Jet\TaskIdTests.cs" />
     <Compile Include="Jet\TaskTests.cs" />
     <Compile Include="Jet\TestJetCluster.cs" />

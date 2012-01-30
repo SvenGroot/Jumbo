@@ -78,6 +78,15 @@ namespace Tkl.Jumbo.Jet
             GC.SuppressFinalize(this);
         }
 
+        /// <summary>
+        /// Informs the record writer that no further records will be written.
+        /// </summary>
+        public void FinishWriting()
+        {
+            _baseWriter.FinishWriting();
+        }
+
+
         private void Dispose(bool disposing)
         {
             if( !_disposed )
