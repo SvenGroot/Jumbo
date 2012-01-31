@@ -222,7 +222,7 @@ namespace Tkl.Jumbo.Jet
 
         private static int GetNumDiskInputsForPass(int pass, int diskInputsRemaining, int maxDiskInputsPerPass)
         {
-            /**
+            /*
              * Taken from Hadoop.
              * Determine the number of segments to merge in a given pass. Assuming more
              * than factor segments, the first pass should attempt to bring the total

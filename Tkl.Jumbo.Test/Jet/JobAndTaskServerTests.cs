@@ -488,8 +488,8 @@ namespace Tkl.Jumbo.Test.Jet
             StageConfiguration sortStage = config.AddStage("SortStage", typeof(SortTask<int>), taskCount, new InputStageInfo(conversionStage) { ChannelType = ChannelType.Pipeline }, null, null);
             if( singleFileOutput )
             {
-                sortStage.AddTypedSetting(FileOutputChannel.SingleFileOutputSettingKey, true);
-                sortStage.AddTypedSetting(FileOutputChannel.SingleFileOutputBufferSizeSettingKey, "1MB");
+                sortStage.AddTypedSetting(FileOutputChannel.OutputTypeSettingKey, FileChannelOutputType.Spill);
+                sortStage.AddTypedSetting(FileOutputChannel.SpillBufferSizeSettingKey, "1MB");
             }
             else if( channelType == ChannelType.Tcp )
                 sortStage.AddTypedSetting(TcpOutputChannel.SpillBufferSizeSettingKey, "1MB");

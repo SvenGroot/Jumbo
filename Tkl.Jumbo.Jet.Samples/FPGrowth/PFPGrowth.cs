@@ -509,7 +509,7 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
             groupStage.AddSetting(OutputChannel.CompressionTypeSetting, CompressionType, StageSettingCategory.OutputChannel);
             if( WriteBufferSize.Value > 0 )
                 groupStage.AddSetting(FileOutputChannel.WriteBufferSizeSettingKey, WriteBufferSize, StageSettingCategory.OutputChannel);
-            groupStage.AddSetting(FileOutputChannel.SingleFileOutputSettingKey, UsePartitionFile, StageSettingCategory.OutputChannel);
+            groupStage.AddSetting(FileOutputChannel.OutputTypeSettingKey, UsePartitionFile ? FileChannelOutputType.Spill : FileChannelOutputType.MultiFile, StageSettingCategory.OutputChannel);
             groupStage.AddSchedulingDependency(groupListStage);
 
             // Interesting observation: if the number of groups equals or is smaller than the number of partitions, we don't need to sort, because each

@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Configuration;
+using Tkl.Jumbo.Jet.Channels;
 
 namespace Tkl.Jumbo.Jet
 {
@@ -73,36 +74,41 @@ namespace Tkl.Jumbo.Jet
             set { this["downloadThreads"] = value; }
         }
 
+
         /// <summary>
-        /// Gets or sets a value that indicates whether the output of the file channel should be stored in a single file for all partitions.
+        /// Gets or sets the output type for the intermediate dta..
         /// </summary>
-        [ConfigurationProperty("singleFileOutput", DefaultValue = false, IsRequired = false, IsKey = false)]
-        public bool SingleFileOutput
+        /// <value>
+        /// One of the values of the <see cref="FileChannelOutputType"/> enumeration.
+        /// </value>
+        [ConfigurationProperty("outputType", DefaultValue = FileChannelOutputType.MultiFile, IsRequired = false, IsKey = false)]
+        public FileChannelOutputType OutputType
         {
-            get { return (bool)this["singleFileOutput"]; }
-            set { this["singleFileOutput"] = value; }
+            get { return (FileChannelOutputType)this["outputType"]; }
+            set { this["outputType"] = value; }
         }
 
         /// <summary>
-        /// Gets or sets the size of the single file output buffer.
+        /// Gets or sets the size of the spill buffer used for <see cref="FileChannelOutputType.Spill"/> and <see cref="FileChannelOutputType.SortSpill"/>.
         /// </summary>
         /// <value>The size of the single file output buffer.</value>
-        [ConfigurationProperty("singleFileOutputBufferSize", DefaultValue = "100MB", IsRequired = false, IsKey = false)]
-        public BinarySize SingleFileOutputBufferSize
+        [ConfigurationProperty("spillBufferSize", DefaultValue = "100MB", IsRequired = false, IsKey = false)]
+        public BinarySize SpillBufferSize
         {
-            get { return (BinarySize)this["singleFileOutputBufferSize"]; }
-            set { this["singleFileOutputBufferSize"] = value; }
+            get { return (BinarySize)this["spillBufferSize"]; }
+            set { this["spillBufferSize"] = value; }
         }
 
         /// <summary>
-        /// Gets or sets the percentage of single file output buffer usage at which the file output channel should start writing the buffer to disk.
+        /// Gets or sets the percentage of spill buffer usage at which the <see cref="SpillRecordWriter{T}"/> for the file output channel using 
+        /// <see cref="FileChannelOutputType.Spill"/> and <see cref="FileChannelOutputType.SortSpill"/> should start writing the buffer to disk.
         /// </summary>
         /// <value>The single file output buffer limit.</value>
-        [ConfigurationProperty("singleFileOutputBufferLimit", DefaultValue = 0.6f, IsRequired = false, IsKey = false)]
-        public float SingleFileOutputBufferLimit
+        [ConfigurationProperty("spillBufferLimit", DefaultValue = 0.8f, IsRequired = false, IsKey = false)]
+        public float SpillBufferLimit
         {
-            get { return (float)this["singleFileOutputBufferLimit"]; }
-            set { this["singleFileOutputBufferLimit"] = value; }
+            get { return (float)this["spillBufferLimit"]; }
+            set { this["spillBufferLimit"] = value; }
         }
 
         /// <summary>

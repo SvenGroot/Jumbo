@@ -11,6 +11,7 @@ using Tkl.Jumbo.Jet.Tasks;
 using Tkl.Jumbo.Dfs;
 using System.Runtime.InteropServices;
 using Ookii.CommandLine;
+using Tkl.Jumbo.Jet.Channels;
 
 namespace Tkl.Jumbo.Jet.Samples
 {
@@ -92,7 +93,7 @@ namespace Tkl.Jumbo.Jet.Samples
                 builder.AddTypedSetting(MergeRecordReaderConstants.MaxFileInputsSetting, MaxMergeInputs);
 
             StageBuilder partitionStage = builder.PartitionRecords(input, channel);
-            partitionStage.AddSetting(Channels.FileOutputChannel.SingleFileOutputSettingKey, UsePartitionFile, StageSettingCategory.OutputChannel);
+            partitionStage.AddSetting(Channels.FileOutputChannel.OutputTypeSettingKey, UsePartitionFile ? FileChannelOutputType.Spill : FileChannelOutputType.MultiFile, StageSettingCategory.OutputChannel);
 
             var output = CreateDfsOutput(_outputPath, typeof(GenSortRecordWriter));
             builder.SortRecords(channel, output);

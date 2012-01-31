@@ -428,7 +428,7 @@ namespace Tkl.Jumbo.Jet.Channels
         /// <param name="finalSpill">If set to <see langword="true"/>, this is the final spill.</param>
         /// <remarks>
         /// <para>
-        ///   Implementers should call the <see cref="WritePartition"/> method to write each spill partition to their output.
+        ///   Implementers should call the <see cref="WritePartition(int,Stream)"/> method to write each spill partition to their output.
         /// </para>
         /// <para>
         ///   It is not guaranteed that the <paramref name="finalSpill"/> parameter will ever be <see langword="true"/>. If data was flushed by a background
