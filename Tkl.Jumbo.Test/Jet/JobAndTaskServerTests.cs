@@ -172,13 +172,13 @@ namespace Tkl.Jumbo.Test.Jet
         [Test]
         public void TestJobExecutionSpillSort()
         {
-            TestJobExecutionSort("/sortoutput5", 2, 1, false, FileChannelOutputType.SortSpill);
+            TestJobExecutionSort("/spillsortoutput1", 2, 1, false, FileChannelOutputType.SortSpill);
         }
 
         [Test]
         public void TestJobExecutionSpillSortTcpFileDownload()
         {
-            TestJobExecutionSort("/sortoutput5", 2, 1, true, FileChannelOutputType.SortSpill);
+            TestJobExecutionSort("/spillsortoutput2", 2, 1, true, FileChannelOutputType.SortSpill);
         }
 
         [Test]

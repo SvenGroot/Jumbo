@@ -154,8 +154,8 @@
     <Compile Include="Jobs\StageSettingCategory.cs" />
     <Compile Include="KillTaskJetHeartbeatResponse.cs" />
     <Compile Include="MergeHelper.cs" />
-    <Compile Include="MergePassHelper.cs" />
     <Compile Include="MergeRecordReaderConfigurationElement.cs" />
+    <Compile Include="MergeResult.cs" />
     <Compile Include="MergeResultRecord.cs" />
     <Compile Include="MultiPartitionRecordReader.cs" />
     <Compile Include="PartitionerConstants.cs" />
@@ -186,6 +186,7 @@
     <Compile Include="Jobs\JobRunnerInfo.cs" />
     <Compile Include="MergeRecordReader.cs" />
     <Compile Include="Channels\PipelinePullTaskRecordWriter.cs" />
+    <Compile Include="PartitionMerger.cs" />
     <Compile Include="PrepartitionedPartitioner.cs" />
     <Compile Include="PrepartitionedRecordWriter.cs" />
     <Compile Include="ProcessAllInputPartitionsAttribute.cs" />

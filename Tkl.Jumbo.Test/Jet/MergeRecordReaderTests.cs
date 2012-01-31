@@ -113,7 +113,7 @@ namespace Tkl.Jumbo.Test.Jet
 
                 List<int> result = new List<int>(reader.EnumerateRecords());
 
-                Assert.IsTrue(Utilities.CompareList(expected, result));
+                CollectionAssert.AreEqual(expected, result);
             }
 
             partitionInputs = new RecordInput[partitionGroupSize];
@@ -138,7 +138,7 @@ namespace Tkl.Jumbo.Test.Jet
 
                     List<int> result = new List<int>(reader.EnumerateRecords());
 
-                    Assert.IsTrue(Utilities.CompareList(expected, result));
+                    CollectionAssert.AreEqual(expected, result);
                 }
             }
         }
