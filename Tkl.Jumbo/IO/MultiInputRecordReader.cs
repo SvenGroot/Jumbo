@@ -44,6 +44,8 @@ namespace Tkl.Jumbo.IO
             private readonly int _partitionNumber;
             private readonly List<RecordInput> _inputs;
             private volatile int _firstNonMemoryIndex;
+            private long _inputBytes = -1;
+            private long _bytesRead = -1;
 
             public Partition(int partitionNumber, int totalInputCount)
             {
@@ -69,6 +71,9 @@ namespace Tkl.Jumbo.IO
             {
                 get
                 {
+                    if( _inputBytes >= 0 )
+                        return _inputBytes;
+
                     return (from input in _inputs
                             where input.IsReaderCreated
                             select input.Reader.InputBytes).Sum();
@@ -79,6 +84,9 @@ namespace Tkl.Jumbo.IO
             {
                 get
                 {
+                    if( _bytesRead >= 0 )
+                        return _bytesRead;
+
                     return (from input in _inputs
                             where input.IsReaderCreated
                             select input.Reader.BytesRead).Sum();
@@ -124,6 +132,10 @@ namespace Tkl.Jumbo.IO
 
             public void Dispose()
             {
+                if( _inputBytes == -1 )
+                    _inputBytes = InputBytesSum;
+                if( _bytesRead == -1 )
+                    _bytesRead = BytesReadSum;
                 foreach( RecordInput input in _inputs )
                     input.Dispose();
             }
