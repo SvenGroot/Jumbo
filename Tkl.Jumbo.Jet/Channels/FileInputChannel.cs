@@ -689,7 +689,7 @@ namespace Tkl.Jumbo.Jet.Channels
                     else
                     {
                         LocalBytesRead += indexEntries.Sum(e => e.Count);
-                        inputs.Add(new PartitionFileRecordInput(_inputReaderType, fileName, indexEntries, task.TaskAttemptId.TaskId.ToString(), false, _reader.AllowRecordReuse, _reader.BufferSize));
+                        inputs.Add(new PartitionFileRecordInput(_inputReaderType, fileName, indexEntries, task.TaskAttemptId.TaskId.ToString(), _channelInputType == FileChannelOutputType.SortSpill, _reader.AllowRecordReuse, _reader.BufferSize));
                     }
                 }
             }

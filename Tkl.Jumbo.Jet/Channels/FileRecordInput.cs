@@ -54,7 +54,7 @@ namespace Tkl.Jumbo.Jet.Channels
         protected override IRecordReader CreateReader()
         {
             Stream stream = CreateStream();
-            IRecordReader reader = (IRecordReader)Activator.CreateInstance(_recordReaderType, stream, _allowRecordReuse);
+            IRecordReader reader = (IRecordReader)Activator.CreateInstance(_recordReaderType, stream, 0, stream.Length, _allowRecordReuse, _inputContainsRecordSizes);
             reader.SourceName = _sourceName;
             return reader;
         }
