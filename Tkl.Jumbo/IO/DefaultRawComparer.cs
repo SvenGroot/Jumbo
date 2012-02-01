@@ -14,7 +14,7 @@ namespace Tkl.Jumbo.IO
     {
         #region Nested types
 
-        private sealed class SByteComparer : IRawComparer<SByte>
+        private sealed class SByteComparer : IRawComparer
         {
             public int Compare(byte[] x, int xOffset, int xCount, byte[] y, int yOffset, int yCount)
             {
@@ -24,7 +24,7 @@ namespace Tkl.Jumbo.IO
             }
         }
 
-        private sealed class ByteComparer : IRawComparer<Byte>
+        private sealed class ByteComparer : IRawComparer
         {
             public int Compare(byte[] x, int xOffset, int xCount, byte[] y, int yOffset, int yCount)
             {
@@ -34,7 +34,7 @@ namespace Tkl.Jumbo.IO
             }
         }
 
-        private sealed class Int16Comparer : IRawComparer<Int16>
+        private sealed class Int16Comparer : IRawComparer
         {
             public int Compare(byte[] x, int xOffset, int xCount, byte[] y, int yOffset, int yCount)
             {
@@ -44,7 +44,7 @@ namespace Tkl.Jumbo.IO
             }
         }
 
-        private sealed class UInt16Comparer : IRawComparer<UInt16>
+        private sealed class UInt16Comparer : IRawComparer
         {
             public int Compare(byte[] x, int xOffset, int xCount, byte[] y, int yOffset, int yCount)
             {
@@ -54,7 +54,7 @@ namespace Tkl.Jumbo.IO
             }
         }
 
-        private sealed class Int32Comparer : IRawComparer<Int32>
+        private sealed class Int32Comparer : IRawComparer
         {
             public int Compare(byte[] x, int xOffset, int xCount, byte[] y, int yOffset, int yCount)
             {
@@ -64,7 +64,7 @@ namespace Tkl.Jumbo.IO
             }
         }
 
-        private sealed class UInt32Comparer : IRawComparer<UInt32>
+        private sealed class UInt32Comparer : IRawComparer
         {
             public int Compare(byte[] x, int xOffset, int xCount, byte[] y, int yOffset, int yCount)
             {
@@ -74,7 +74,7 @@ namespace Tkl.Jumbo.IO
             }
         }
 
-        private sealed class Int64Comparer : IRawComparer<Int64>
+        private sealed class Int64Comparer : IRawComparer
         {
             public int Compare(byte[] x, int xOffset, int xCount, byte[] y, int yOffset, int yCount)
             {
@@ -84,7 +84,7 @@ namespace Tkl.Jumbo.IO
             }
         }
 
-        private sealed class UInt64Comparer : IRawComparer<UInt64>
+        private sealed class UInt64Comparer : IRawComparer
         {
             public int Compare(byte[] x, int xOffset, int xCount, byte[] y, int yOffset, int yCount)
             {
@@ -94,7 +94,7 @@ namespace Tkl.Jumbo.IO
             }
         }
 
-        private sealed class DecimalComparer : IRawComparer<Decimal>
+        private sealed class DecimalComparer : IRawComparer
         {
             public int Compare(byte[] x, int xOffset, int xCount, byte[] y, int yOffset, int yCount)
             {
@@ -104,7 +104,7 @@ namespace Tkl.Jumbo.IO
             }
         }
 
-        private sealed class SingleComparer : IRawComparer<Single>
+        private sealed class SingleComparer : IRawComparer
         {
             public int Compare(byte[] x, int xOffset, int xCount, byte[] y, int yOffset, int yCount)
             {
@@ -114,7 +114,7 @@ namespace Tkl.Jumbo.IO
             }
         }
 
-        private sealed class DoubleComparer : IRawComparer<Double>
+        private sealed class DoubleComparer : IRawComparer
         {
             public int Compare(byte[] x, int xOffset, int xCount, byte[] y, int yOffset, int yCount)
             {
@@ -124,7 +124,7 @@ namespace Tkl.Jumbo.IO
             }
         }
 
-        private sealed class DateTimeComparer : IRawComparer<DateTime>
+        private sealed class DateTimeComparer : IRawComparer
         {
             public int Compare(byte[] x, int xOffset, int xCount, byte[] y, int yOffset, int yCount)
             {
@@ -134,7 +134,7 @@ namespace Tkl.Jumbo.IO
             }
         }
 
-        private sealed class StringComparer : IRawComparer<string>
+        private sealed class StringComparer : IRawComparer
         {
             public int Compare(byte[] x, int xOffset, int xCount, byte[] y, int yOffset, int yCount)
             {

@@ -1,6 +1,4 @@
-﻿// $Id$
-//
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -8,10 +6,9 @@ using System.Text;
 namespace Tkl.Jumbo.IO
 {
     /// <summary>
-    /// Defines a method that a type implements to compare the raw binary representation of two objects.
+    /// A raw comparer for <see cref="Utf8String"/> records.
     /// </summary>
-    /// <typeparam name="T">The type of objects to compare.</typeparam>
-    public interface IRawComparer
+    public sealed class Utf8StringRawComparer : IRawComparer
     {
         /// <summary>
         /// Compares the binary representation of two objects and returns a value indicating whether one is less than, equal to, or greater than the other.
@@ -31,6 +28,9 @@ namespace Tkl.Jumbo.IO
         ///   never read more bytes from the buffer than the specified count.
         /// </para>
         /// </remarks>
-        int Compare(byte[] x, int xOffset, int xCount, byte[] y, int yOffset, int yCount);
+        public int Compare(byte[] x, int xOffset, int xCount, byte[] y, int yOffset, int yCount)
+        {
+            return RawComparerHelper.CompareBytesWith7BitEncodedLength(x, xOffset, xCount, y, yOffset, yCount);
+        }
     }
 }

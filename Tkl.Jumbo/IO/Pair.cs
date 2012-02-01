@@ -49,6 +49,7 @@ namespace Tkl.Jumbo.IO
     ///   both the key and value.
     /// </para>
     /// </remarks>
+    [RawComparer(typeof(PairRawComparer<,>))]
     public sealed class Pair<TKey, TValue> : IWritable, IComparable<Pair<TKey, TValue>>, IEquatable<Pair<TKey, TValue>>, ICloneable
         where TKey : IComparable<TKey>
     {

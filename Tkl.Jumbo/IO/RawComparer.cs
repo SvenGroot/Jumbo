@@ -14,13 +14,13 @@ namespace Tkl.Jumbo.IO
     /// <typeparam name="T">The type of the objects being compared.</typeparam>
     /// <remarks>
     /// <para>
-    ///   If the type specified by <typeparamref name="T"/> has its own custom <see cref="IRawComparer{T}"/>, that will be used for the comparison.
+    ///   If the type specified by <typeparamref name="T"/> has its own custom <see cref="IRawComparer"/>, that will be used for the comparison.
     ///   Otherwise, the records will be deserialized and comparer using <see cref="IComparer{T}"/>.
     /// </para>
     /// </remarks>
-    public sealed class RawComparer<T> : IRawComparer<T>
+    public sealed class RawComparer<T> : IRawComparer
     {
-        private static readonly IRawComparer<T> _comparer = GetComparer();
+        private static readonly IRawComparer _comparer = GetComparer();
 
         private readonly MemoryBufferStream _stream1;
         private readonly MemoryBufferStream _stream2;
@@ -45,7 +45,7 @@ namespace Tkl.Jumbo.IO
         /// Gets the <see cref="IRawComparer{T}"/> instance, or <see langword="null"/> if the <typeparamref name="T"/> doesn't have
         /// a raw comparer.
         /// </summary>
-        public static IRawComparer<T> Comparer
+        public static IRawComparer Comparer
         {
             get { return _comparer; }
         }
@@ -97,17 +97,19 @@ namespace Tkl.Jumbo.IO
             return Compare(x.Buffer, x.Offset, x.Count, y.Buffer, y.Offset, y.Count);
         }
 
-        private static IRawComparer<T> GetComparer()
+        private static IRawComparer GetComparer()
         {
             Type type = typeof(T);
             RawComparerAttribute attribute = (RawComparerAttribute)Attribute.GetCustomAttribute(type, typeof(RawComparerAttribute));
             if( attribute != null && !string.IsNullOrEmpty(attribute.RawComparerTypeName) )
             {
                 Type comparerType = Type.GetType(attribute.RawComparerTypeName);
-                return (IRawComparer<T>)Activator.CreateInstance(comparerType);
+                if( comparerType.IsGenericTypeDefinition && type.IsGenericType )
+                    comparerType = comparerType.MakeGenericType(type.GetGenericArguments());
+                return (IRawComparer)Activator.CreateInstance(comparerType);
             }
 
-            return (IRawComparer<T>)DefaultRawComparer.GetComparer(type);
+            return (IRawComparer)DefaultRawComparer.GetComparer(type);
         }
     }
 }

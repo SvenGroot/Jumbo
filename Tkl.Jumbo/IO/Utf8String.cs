@@ -16,6 +16,7 @@ namespace Tkl.Jumbo.IO
     /// Because this object is mutable you must take care when using it scenarios where immutability is expected, e.g. as a key
     /// in a <see cref="Dictionary{TKey,TValue}"/>.
     /// </remarks>
+    [RawComparer(typeof(Utf8StringRawComparer))]
     public sealed class Utf8String : IWritable, IEquatable<Utf8String>, IComparable<Utf8String>, IComparable, ICloneable
     {
         private static readonly Encoding _encoding = Encoding.UTF8;

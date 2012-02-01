@@ -104,9 +104,11 @@
     <Compile Include="IO\IRawComparer.cs" />
     <Compile Include="IO\IRecordInputStream.cs" />
     <Compile Include="IO\IRecordOutputStream.cs" />
+    <Compile Include="IO\PairRawComparer.cs" />
     <Compile Include="IO\RawComparer.cs" />
     <Compile Include="IO\RawComparerAttribute.cs" />
     <Compile Include="IO\RawComparerHelper.cs" />
+    <Compile Include="IO\Utf8StringRawComparer.cs" />
     <Compile Include="LittleEndianBitConverter.cs" />
     <Compile Include="IO\RawRecord.cs" />
     <Compile Include="IO\ReaderRecordInput.cs" />

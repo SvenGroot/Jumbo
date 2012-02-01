@@ -54,6 +54,32 @@ namespace Tkl.Jumbo.Test
             TestComparer(10, 100);
         }
 
+        [Test]
+        public void TestPairComparer()
+        {
+            TestComparer(Pair.MakePair(5, 10), Pair.MakePair(10, 5));
+
+            // Make sure the value isn't used by checking that two pairs with identical keys but different values compare equal.
+            byte[] buffer;
+            int secondOffset;
+            using( MemoryStream stream = new MemoryStream() )
+            using( BinaryWriter writer = new BinaryWriter(stream) )
+            {
+                ValueWriter<Pair<int, int>>.WriteValue(Pair.MakePair(10, 5), writer);
+                secondOffset = (int)stream.Length;
+                ValueWriter<Pair<int, int>>.WriteValue(Pair.MakePair(10, 10), writer);
+                buffer = stream.ToArray();
+            }
+
+            Assert.AreEqual(0, RawComparer<Pair<int, int>>.Comparer.Compare(buffer, 0, secondOffset, buffer, secondOffset, secondOffset));
+        }
+
+        [Test]
+        public void TestUtf8StringComparer()
+        {
+            TestComparer(new Utf8String("aardvark"), new Utf8String("zebra"));
+        }
+
         private void TestComparer<T>(T small, T large)
         {
             Assert.IsNotNull(RawComparer<T>.Comparer);
@@ -62,10 +88,9 @@ namespace Tkl.Jumbo.Test
             using( MemoryStream stream = new MemoryStream() )
             using( BinaryWriter writer = new BinaryWriter(stream) )
             {
-                MethodInfo writeMethod = typeof(BinaryWriter).GetMethod("Write", new[] { typeof(T) });
-                writeMethod.Invoke(writer, new object[] { small });
+                ValueWriter<T>.WriteValue(small, writer);
                 largeOffset = (int)stream.Length;
-                writeMethod.Invoke(writer, new object[] { large });
+                ValueWriter<T>.WriteValue(large, writer);
                 buffer = stream.ToArray();
             }
 
