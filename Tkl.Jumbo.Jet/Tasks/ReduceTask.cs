@@ -92,10 +92,12 @@ namespace Tkl.Jumbo.Jet.Tasks
 
         private IEnumerable<TValue> EnumerateGroupRecords(TKey key, RecordReader<Pair<TKey, TValue>> input)
         {
-            do
+            // Checking HasFinished and comparing the first key may seem pointless, but it guards against a reducer trying to use the iterator twice.
+            while( !input.HasFinished && _keyComparer.Equals(key, input.CurrentRecord.Key) )
             {
                 yield return input.CurrentRecord.Value;
-            } while( input.ReadRecord() && _keyComparer.Equals(key, input.CurrentRecord.Key) );
+                input.ReadRecord();
+            }
         }
     }
 }

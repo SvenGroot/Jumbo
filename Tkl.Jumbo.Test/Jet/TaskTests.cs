@@ -40,6 +40,8 @@ namespace Tkl.Jumbo.Test.Jet
             {
                 int sum = values.Sum();
                 output.WriteRecord(Pair.MakePair(key, sum));
+                // Test that the values collection is properly guarded against repeated iteration (we can't consume any more records beyond our key).
+                CollectionAssert.IsEmpty(values);
             }
         }
 
