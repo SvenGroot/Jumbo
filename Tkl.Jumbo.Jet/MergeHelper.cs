@@ -144,7 +144,7 @@ namespace Tkl.Jumbo.Jet
         /// <returns>
         /// An <see cref="IEnumerable{T}"/> that can be used to get the merge results.
         /// </returns>
-        public IEnumerable<MergeResultRecord<T>> Merge(IList<RecordInput> diskInputs, IList<RecordInput> memoryInputs, int maxDiskInputsPerPass, IComparer<T> comparer, bool allowRecordReuse, string intermediateOutputPath, CompressionType compressionType, int bufferSize, bool enableChecksum)
+        public MergeResult<T> Merge(IList<RecordInput> diskInputs, IList<RecordInput> memoryInputs, int maxDiskInputsPerPass, IComparer<T> comparer, bool allowRecordReuse, string intermediateOutputPath, CompressionType compressionType, int bufferSize, bool enableChecksum)
         {
             return Merge(diskInputs, memoryInputs, maxDiskInputsPerPass, comparer, allowRecordReuse, false, intermediateOutputPath, "", compressionType, bufferSize, enableChecksum);
         }
@@ -300,19 +300,27 @@ namespace Tkl.Jumbo.Jet
         {
             MergeResultRecord<T> record = new MergeResultRecord<T>(allowRecordReuse);
 
-            while( mergeQueue.Count > 0 )
+            try
             {
-                MergeInput front = mergeQueue.Peek();
-                front.GetCurrentRecord(record);
-                yield return record;
-                if( front.ReadRecord() )
-                    mergeQueue.AdjustFirstItem();
-                else
+                while( mergeQueue.Count > 0 )
                 {
-                    Interlocked.Add(ref _bytesRead, front.BytesRead);
-                    front.Dispose();
-                    mergeQueue.Dequeue();
+                    MergeInput front = mergeQueue.Peek();
+                    front.GetCurrentRecord(record);
+                    yield return record;
+                    if( front.ReadRecord() )
+                        mergeQueue.AdjustFirstItem();
+                    else
+                    {
+                        Interlocked.Add(ref _bytesRead, front.BytesRead);
+                        front.Dispose();
+                        mergeQueue.Dequeue();
+                    }
                 }
+            }
+            finally
+            {
+                while( mergeQueue.Count > 0 )
+                    mergeQueue.Dequeue().Dispose();
             }
         }
 

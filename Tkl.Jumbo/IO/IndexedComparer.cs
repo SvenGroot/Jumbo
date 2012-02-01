@@ -14,7 +14,7 @@ namespace Tkl.Jumbo.IO
     /// <typeparam name="T">The type of the records to compare.</typeparam>
     /// <remarks>
     /// <para>
-    ///   If <typeparamref name="T"/> doesn't have an <see cref="IRawComparer{T}"/> implementation, the records will be deserialized
+    ///   If <typeparamref name="T"/> doesn't have an <see cref="IRawComparer"/> implementation, the records will be deserialized
     ///   for every comparison operation, which will be considerably slower.
     /// </para>
     /// </remarks>

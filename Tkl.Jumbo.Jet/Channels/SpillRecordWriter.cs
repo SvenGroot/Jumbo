@@ -325,6 +325,29 @@ namespace Tkl.Jumbo.Jet.Channels
         }
 
         /// <summary>
+        /// Gets the spill buffer for the current spill.
+        /// </summary>
+        /// <remarks>
+        /// <note>
+        ///   Only access this property from the <see cref="SpillOutput"/> method, and only access
+        ///   those parts of the array indicates by the regions returned by <see cref="GetSpillIndex"/>
+        ///   for that spill.
+        /// </note>
+        /// <para>
+        ///   Use this if you want to to custom writing of the partitions.
+        /// </para>
+        /// </remarks>
+        protected byte[] SpillBuffer
+        {
+            get
+            {
+                if( !_spillInProgress )
+                    throw new InvalidOperationException("No spill is in progress.");
+                return _buffer.Buffer;
+            }
+        }
+
+        /// <summary>
         /// Informs the record writer that no further records will be written.
         /// </summary>
         /// <remarks>
@@ -438,6 +461,23 @@ namespace Tkl.Jumbo.Jet.Channels
         /// </para>
         /// </remarks>
         protected abstract void SpillOutput(bool finalSpill);
+
+        /// <summary>
+        /// Gets the index for the specified partition for the current spill.
+        /// </summary>
+        /// <param name="partition">The partition number.</param>
+        /// <returns>The index entries.</returns>
+        /// <remarks>
+        /// <note>
+        ///   Only call this method from the <see cref="SpillOutput"/> method.
+        /// </note>
+        /// </remarks>
+        protected RecordIndexEntry[] GetSpillIndex(int partition)
+        {
+            if( !_spillInProgress )
+                throw new InvalidOperationException("No spill is currently in progress.");
+            return _spillIndices[partition];
+        }
 
         /// <summary>
         /// Gets the spill data size for the specified partition.

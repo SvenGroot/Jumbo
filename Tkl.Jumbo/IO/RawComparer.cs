@@ -42,7 +42,7 @@ namespace Tkl.Jumbo.IO
         }
 
         /// <summary>
-        /// Gets the <see cref="IRawComparer{T}"/> instance, or <see langword="null"/> if the <typeparamref name="T"/> doesn't have
+        /// Gets the <see cref="IRawComparer"/> instance, or <see langword="null"/> if the <typeparamref name="T"/> doesn't have
         /// a raw comparer.
         /// </summary>
         public static IRawComparer Comparer

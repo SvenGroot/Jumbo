@@ -182,6 +182,49 @@ namespace Tkl.Jumbo.Test.Jet
         }
 
         [Test]
+        public void TestJobExecutionSpillSortCombiner()
+        {
+            const string inputPath = "/wordcountinput";
+            const string outputPath = "/wordcountoutput";
+            DfsClient dfsClient = new DfsClient(Dfs.TestDfsCluster.CreateClientConfig());
+            List<string> words;
+            using( StreamWriter writer = new StreamWriter(dfsClient.CreateFile(inputPath)) )
+            {
+                words = Utilities.GenerateDataWords(writer, 200000, 10);
+            }
+            dfsClient.NameServer.CreateDirectory(outputPath);
+
+            JobConfiguration job = new JobConfiguration(typeof(WordCountTask).Assembly);
+            StageConfiguration stage = job.AddInputStage("WordCountStage", dfsClient.NameServer.GetFileInfo(inputPath), typeof(WordCountTask), typeof(LineRecordReader));
+            stage.AddTypedSetting(FileOutputChannel.OutputTypeSettingKey, FileChannelOutputType.SortSpill);
+            stage.AddSetting(FileOutputChannel.SpillSortCombinerTypeSettingKey, typeof(WordCountReduceTask).AssemblyQualifiedName);
+            stage.AddSetting(FileOutputChannel.SpillBufferSizeSettingKey, "5MB");
+
+            StageConfiguration reduceStage = job.AddStage("WordCountReduceStage", typeof(WordCountReduceTask), 1, new InputStageInfo(stage) { MultiInputRecordReaderType = typeof(MergeRecordReader<Pair<Utf8String, int>>) }, outputPath, typeof(BinaryRecordWriter<Pair<Utf8String, int>>));
+
+            JobStatus status = RunJob(dfsClient, job);
+
+            string outputFileName = DfsPath.Combine(outputPath, "WordCountReduceStage-00001");
+            List<KeyValuePair<string, int>> actual;
+            using( BinaryRecordReader<Pair<string, int>> reader = new BinaryRecordReader<Pair<string, int>>(dfsClient.OpenFile(outputFileName)) )
+            {
+                actual = reader.EnumerateRecords().Select(r => new KeyValuePair<string, int>(r.Key, r.Value)).ToList();
+            }
+
+            List<KeyValuePair<string, int>> expected = (from word in words
+                                                        group word by word into g
+                                                        select new KeyValuePair<string, int>(g.Key, g.Count())).OrderBy(r => r.Key, StringComparer.Ordinal).ToList();
+
+            CollectionAssert.AreEqual(expected, actual);
+            // The tests below verify whether the combiner was actually executed.
+            // This might fails if either of the input blocks doesn't contain all the words. Pretty unlikely, though.
+            // It's 3x and not 2x because one of the tasks should've had only 2 spills and therefore didn't re-run the combiner.
+            Assert.AreEqual(3 * expected.Count, status.Stages[1].Metrics.InputRecords);
+            Assert.AreEqual(words.Count, status.Stages[0].Metrics.OutputRecords);
+            Assert.Less(status.Stages[0].Metrics.LocalBytesWritten, status.Stages[0].Metrics.OutputBytes);
+        }
+
+        [Test]
         public void TestJobSettings()
         {
             string outputPath = "/settingsoutput";
@@ -482,6 +525,7 @@ namespace Tkl.Jumbo.Test.Jet
             ValidateLineCountOutput(outputPath2, dfsClient, _lines);
         }
 
+
         private void TestJobExecutionSort(string outputPath, int mergeTasks, int partitionsPerTask, bool forceFileDownload, FileChannelOutputType outputType, ChannelType channelType = ChannelType.File)
         {
             const int recordCount = 2500000;
@@ -583,7 +627,7 @@ namespace Tkl.Jumbo.Test.Jet
 
         }
 
-        private static void RunJob(DfsClient dfsClient, JobConfiguration config)
+        private static JobStatus RunJob(DfsClient dfsClient, JobConfiguration config)
         {
             JetClient target = new JetClient(TestJetCluster.CreateClientConfig());
             Job job = target.RunJob(config, dfsClient, typeof(StringConversionTask).Assembly.Location);
@@ -593,6 +637,8 @@ namespace Tkl.Jumbo.Test.Jet
             JobStatus status = target.JobServer.GetJobStatus(job.JobId);
             Assert.IsTrue(status.IsSuccessful);
             Assert.AreEqual(0, status.ErrorTaskCount);
+
+            return status;
         }
 
         private static List<int> CreateNumberListInputFile(int recordCount, string inputFileName, DfsClient dfsClient)

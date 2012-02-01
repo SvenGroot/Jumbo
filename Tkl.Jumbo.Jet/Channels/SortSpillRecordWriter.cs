@@ -7,6 +7,7 @@ using System.Text;
 using Tkl.Jumbo.IO;
 using System.IO;
 using System.Globalization;
+using System.Runtime.Serialization;
 
 namespace Tkl.Jumbo.Jet.Channels
 {
@@ -19,9 +20,114 @@ namespace Tkl.Jumbo.Jet.Channels
     ///   Each spill is written to its own file, and each partition is sorted using <see cref="IndexedComparer{T}"/> before being spilled. When <see cref="FinishWriting"/>
     ///   is called, the individual spills are merged using <see cref="MergeHelper{T}"/> into the final output file.
     /// </para>
+    /// <para>
+    ///   It is possible to specify a combiner task that will be run on the records of each spill after sorting. Use this to reduce the size of the output records after sorting.
+    ///   The combiner must be a <see cref="IPushTask{TInput,TOutput}"/> where both the input and output record type are <typeparamref name="T"/>. The <see cref="IPullTask{TInput,TOutput}.Run"/>
+    ///   method will be called multiple times (once for each spill), so the task must be prepared for. You can use a <see cref="Tkl.Jumbo.Jet.Tasks.ReduceTask{TKey,TValue,TOutput}"/> for Map-Reduce style
+    ///   combining.
+    /// </para>
     /// </remarks>
     public sealed class SortSpillRecordWriter<T> : SpillRecordWriter<T>
     {
+        #region Nested types
+
+        private class IndexedRecordReader : RecordReader<T>
+        {
+            private readonly RecordIndexEntry[] _index;
+            private readonly MemoryStream _bufferStream;
+            private readonly BinaryReader _reader;
+            private readonly long _totalBytes;
+            private readonly bool _allowRecordReuse;
+            private T _record;
+            private long _bytesRead;
+            private int _indexPosition;
+
+            public IndexedRecordReader(byte[] buffer, RecordIndexEntry[] index, bool allowRecordReuse)
+            {
+                _bufferStream = new MemoryStream(buffer, false);
+                _reader = new BinaryReader(_bufferStream);
+                _index = index;
+                _totalBytes = index.Sum(e => e.Count);
+                _allowRecordReuse = allowRecordReuse && ValueWriter<T>.Writer == null;
+                if( _allowRecordReuse )
+                    _record = (T)FormatterServices.GetUninitializedObject(typeof(T));
+            }
+
+            public override long InputBytes
+            {
+                get { return _bytesRead; }
+            }
+
+            public override float Progress
+            {
+                get { return (float)_bytesRead / (float)_totalBytes; }
+            }
+
+            protected override bool ReadRecordInternal()
+            {
+                if( _indexPosition < _index.Length )
+                {
+                    _bytesRead += _index[_indexPosition].Count;
+                    _bufferStream.Position = _index[_indexPosition++].Offset;
+
+                    if( _allowRecordReuse )
+                    {
+                        ((IWritable)_record).Read(_reader);
+                        CurrentRecord = _record;
+                    }
+                    else
+                        CurrentRecord = ValueWriter<T>.ReadValue(_reader);
+
+                    return true;
+                }
+                else
+                {
+                    CurrentRecord = default(T);
+                    return false;
+                }
+            }
+
+            protected override void Dispose(bool disposing)
+            {
+                base.Dispose(disposing);
+                _reader.Dispose();
+                _bufferStream.Dispose();
+            }
+        }
+
+        private sealed class CombineRecordWriter : RecordWriter<T>
+        {
+            private readonly RecordWriter<RawRecord> _output;
+            private readonly MemoryStream _serializationBuffer = new MemoryStream();
+            private readonly BinaryWriter _serializationWriter;
+            private readonly RawRecord _record = new RawRecord();
+
+            public CombineRecordWriter(RecordWriter<RawRecord> output)
+            {
+                _output = output;
+                _serializationWriter = new BinaryWriter(_serializationBuffer);
+            }
+
+            protected override void WriteRecordInternal(T record)
+            {
+                _serializationBuffer.Position = 0;
+                _serializationBuffer.SetLength(0);
+                ValueWriter<T>.WriteValue(record, _serializationWriter);
+
+                _record.Reset(_serializationBuffer.GetBuffer(), 0, (int)_serializationBuffer.Length);
+                _output.WriteRecord(_record);
+            }
+
+            protected override void Dispose(bool disposing)
+            {
+                base.Dispose(disposing);
+                _serializationWriter.Dispose();
+                _serializationBuffer.Dispose();
+            }
+        }
+
+        #endregion
+
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(SortSpillRecordWriter<>));
 
         private readonly string _outputPath;
@@ -33,7 +139,10 @@ namespace Tkl.Jumbo.Jet.Channels
         private readonly List<PartitionFileIndexEntry>[] _spillPartitionIndices;
         private readonly IndexedComparer<T> _comparer = new IndexedComparer<T>();
         private readonly int _maxDiskInputsPerMergePass;
-        private long _extraBytesWritten;
+        private readonly IPullTask<T, T> _combiner;
+        private readonly bool _combinerAllowsRecordReuse;
+        private readonly int _minSpillsForCombineDuringMerge;
+        private long _bytesWritten;
         private long _bytesRead;
 
         /// <summary>
@@ -46,22 +155,34 @@ namespace Tkl.Jumbo.Jet.Channels
         /// <param name="writeBufferSize">Size of the buffer to use for writing to disk.</param>
         /// <param name="enableChecksum">if set to <see langword="true"/> checksum calculation is enabled on all files.</param>
         /// <param name="maxDiskInputsPerMergePass">The maximum number of disk inputs per merge pass.</param>
-        public SortSpillRecordWriter(string outputPath, IPartitioner<T> partitioner, int bufferSize, int limit, int writeBufferSize, bool enableChecksum, int maxDiskInputsPerMergePass)
+        /// <param name="combiner">The combiner to use during spills. May be <see langword="null"/>.</param>
+        /// <param name="minSpillsForCombineDuringMerge">The minimum number of spills needed for the combiner to rerun during merge. If this value is 0, the combiner will never be run during the merge. Ignored when <paramref name="combiner"/> is <see langword="null"/>.</param>
+        public SortSpillRecordWriter(string outputPath, IPartitioner<T> partitioner, int bufferSize, int limit, int writeBufferSize, bool enableChecksum, int maxDiskInputsPerMergePass, IPullTask<T, T> combiner = null, int minSpillsForCombineDuringMerge = 0)
             : base(partitioner, bufferSize, limit, SpillRecordWriterFlags.None)
         {
             if( outputPath == null )
                 throw new ArgumentNullException("outputPath");
             if( writeBufferSize < 0 )
                 throw new ArgumentOutOfRangeException("writeBufferSize");
+            if( minSpillsForCombineDuringMerge < 0 )
+                throw new ArgumentOutOfRangeException("minSpillsForCombineDuringMerge");
             _outputPath = outputPath;
             _partitions = partitioner.Partitions;
             _outputPathBase = Path.Combine(Path.GetDirectoryName(_outputPath), Path.GetFileNameWithoutExtension(_outputPath));
             _writeBufferSize = writeBufferSize;
             _enableChecksum = enableChecksum;
             _maxDiskInputsPerMergePass = maxDiskInputsPerMergePass;
+            _combiner = combiner;
+            _minSpillsForCombineDuringMerge = minSpillsForCombineDuringMerge;
             _spillPartitionIndices = new List<PartitionFileIndexEntry>[_partitions];
             for( int x = 0; x < _spillPartitionIndices.Length; ++x )
                 _spillPartitionIndices[x] = new List<PartitionFileIndexEntry>();
+
+            if( _combiner != null )
+            {
+                AllowRecordReuseAttribute attribute = (AllowRecordReuseAttribute)Attribute.GetCustomAttribute(combiner.GetType(), typeof(AllowRecordReuseAttribute));
+                _combinerAllowsRecordReuse = (attribute != null); // PassThrough doesn't matter, since the combiner's output always allows record reuse.
+            }
         }
 
         /// <summary>
@@ -70,7 +191,7 @@ namespace Tkl.Jumbo.Jet.Channels
         /// <value>The number of bytes written to the output.</value>
         public override long BytesWritten
         {
-            get { return base.BytesWritten + _extraBytesWritten; }
+            get { return _bytesWritten; }
         }
 
         /// <summary>
@@ -113,11 +234,15 @@ namespace Tkl.Jumbo.Jet.Channels
                     using( ChecksumOutputStream stream = new ChecksumOutputStream(fileStream, false, _enableChecksum) )
                     using( BinaryRecordWriter<RawRecord> writer = new BinaryRecordWriter<RawRecord>(stream) )
                     {
-                        WritePartition(partition, writer);
+                        if( _combiner == null )
+                            WritePartition(partition, writer);
+                        else
+                            CombinePartition(partition, writer);
                     }
                     PartitionFileIndexEntry indexEntry = new PartitionFileIndexEntry(partition, startOffset, fileStream.Position - startOffset);
                     _spillPartitionIndices[partition].Add(indexEntry);
                 }
+                _bytesWritten += fileStream.Length;
             }
             _spillFiles.Add(spillFile);
         }
@@ -147,6 +272,21 @@ namespace Tkl.Jumbo.Jet.Channels
             DeleteTempFiles();
         }
 
+        private void CombinePartition(int partition, BinaryRecordWriter<RawRecord> output)
+        {
+            RecordIndexEntry[] index = GetSpillIndex(partition);
+            if( index != null )
+            {
+                byte[] buffer = SpillBuffer;
+                PreparePartition(partition, index, buffer);
+                using( IndexedRecordReader input = new IndexedRecordReader(buffer, index, _combinerAllowsRecordReuse) )
+                using( CombineRecordWriter combineOutput = new CombineRecordWriter(output) )
+                {
+                    _combiner.Run(input, combineOutput);
+                }
+            }
+        }
+
         private void MergeSpills()
         {
             if( _spillFiles.Count == 1 )
@@ -160,7 +300,10 @@ namespace Tkl.Jumbo.Jet.Channels
 
                     for( int partition = 0; partition < _partitions; ++partition )
                         indexWriter.WriteRecord(_spillPartitionIndices[partition][0]);
+
+                    _bytesWritten += indexStream.Length;
                 }
+                
             }
             else
             {
@@ -185,16 +328,30 @@ namespace Tkl.Jumbo.Jet.Channels
                             for( int x = 0; x < _spillFiles.Count; ++x )
                                 diskInputs.Add(new PartitionFileRecordInput(typeof(BinaryRecordReader<T>), _spillFiles[x], new[] { _spillPartitionIndices[partition][x] }, null, true, true, _writeBufferSize));
 
-                            foreach( MergeResultRecord<T> record in merger.Merge(diskInputs, null, _maxDiskInputsPerMergePass, null, true, intermediateOutputPath, CompressionType.None, _writeBufferSize, _enableChecksum) )
+                            bool runCombiner = !(_combiner == null || _minSpillsForCombineDuringMerge == 0 || SpillCount < _minSpillsForCombineDuringMerge);
+                            bool allowRecordReuse = !runCombiner || _combinerAllowsRecordReuse;
+                            MergeResult<T> mergeResult = merger.Merge(diskInputs, null, _maxDiskInputsPerMergePass, null, allowRecordReuse, runCombiner, intermediateOutputPath, "", CompressionType.None, _writeBufferSize, _enableChecksum);
+                            if( runCombiner )
                             {
-                                record.WriteRawRecord(writer);
+                                using( EnumerableRecordReader<T> combineInput = new EnumerableRecordReader<T>(mergeResult.Select(r => r.GetValue()), 0) )
+                                using( CombineRecordWriter combineOutput = new CombineRecordWriter(writer) )
+                                {
+                                    _combiner.Run(combineInput, combineOutput);
+                                }
+                            }
+                            else
+                            {
+                                foreach( MergeResultRecord<T> record in mergeResult )
+                                {
+                                    record.WriteRawRecord(writer);
+                                }
                             }
                         }
                         PartitionFileIndexEntry indexEntry = new PartitionFileIndexEntry(partition, startOffset, fileStream.Position - startOffset);
                         if( indexEntry.Count > 0 )
                             indexWriter.WriteRecord(indexEntry);
                     }
-                    _extraBytesWritten = indexStream.Length + merger.BytesWritten;
+                    _bytesWritten += fileStream.Length + indexStream.Length + merger.BytesWritten;
                     _bytesRead = merger.BytesRead;
                 }
 

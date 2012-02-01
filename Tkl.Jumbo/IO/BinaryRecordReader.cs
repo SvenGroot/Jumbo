@@ -85,7 +85,7 @@ namespace Tkl.Jumbo.IO
         /// <param name="size">The size.</param>
         /// <param name="allowRecordReuse"><see langword="true"/> to [allow record reuse]; otherwise, <see langword="false"/>.</param>
         public BinaryRecordReader(Stream stream, long offset, long size, bool allowRecordReuse)
-            : this(stream, 0, stream.Length, allowRecordReuse, false)
+            : this(stream, offset, size, allowRecordReuse, false)
         {
         }
 

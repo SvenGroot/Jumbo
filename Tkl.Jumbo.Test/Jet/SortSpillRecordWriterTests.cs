@@ -13,6 +13,26 @@ namespace Tkl.Jumbo.Test.Jet
     [TestFixture]
     public class SortSpillRecordWriterTests
     {
+        #region Nested types
+
+        private class DuplicateEliminationCombiner : IPullTask<int, int>
+        {
+            public void Run(RecordReader<int> input, RecordWriter<int> output)
+            {
+                int? prev = null;
+                foreach( int record in input.EnumerateRecords() )
+                {
+                    // Eliminates duplicates. This was chosen because its correct operation depends on the
+                    // input being sorted.
+                    if( prev == null || prev.Value != record )
+                        output.WriteRecord(record);
+                    prev = record;
+                }
+            }
+        }
+
+        #endregion
+
         [TestFixtureSetUp]
         public void SetUp()
         {
@@ -32,9 +52,28 @@ namespace Tkl.Jumbo.Test.Jet
             TestSpillRecordWriter(5, 110000, 100 * 1024, 6);
         }
 
-        private void TestSpillRecordWriter(int partitionCount, int records, int bufferSize, int expectedSpillCount)
+        [Test]
+        public void TestCombinerSingleSpill()
         {
-            List<int> values = Utilities.GenerateNumberData(records);
+            TestSpillRecordWriter(5, 10000, 100 * 1024, 1, true);
+        }
+
+        [Test]
+        public void TestCombinerMultipleSpills()
+        {
+            TestSpillRecordWriter(5, 110000, 100 * 1024, 6, true);
+        }
+
+        private void TestSpillRecordWriter(int partitionCount, int records, int bufferSize, int expectedSpillCount, bool useCombiner = false)
+        {
+            List<int> values;
+            if( useCombiner )
+            {
+                List<int> temp = Utilities.GenerateNumberData(records / 2);
+                values = new List<int>(temp.Concat(temp)); // Make sure there are duplicates
+            }
+            else
+                values = Utilities.GenerateNumberData(records);
             HashPartitioner<int> partitioner = new HashPartitioner<int>();
             partitioner.Partitions = partitionCount;
             List<int>[] expectedPartitions = new List<int>[partitionCount];
@@ -47,7 +86,10 @@ namespace Tkl.Jumbo.Test.Jet
 
             try
             {
-                using( SortSpillRecordWriter<int> target = new SortSpillRecordWriter<int>(outputPath, partitioner, bufferSize, (int)(0.8 * bufferSize), 4096, true, 5) )
+                IPullTask<int, int> combiner = null;
+                if( useCombiner )
+                    combiner = new DuplicateEliminationCombiner();
+                using( SortSpillRecordWriter<int> target = new SortSpillRecordWriter<int>(outputPath, partitioner, bufferSize, (int)(0.8 * bufferSize), 4096, true, 5, combiner, 1) )
                 {
                     foreach( int value in values )
                     {
@@ -69,7 +111,10 @@ namespace Tkl.Jumbo.Test.Jet
                     {
                         List<int> actualPartition = reader.EnumerateRecords().ToList();
                         expectedPartitions[partition].Sort();
-                        CollectionAssert.AreEqual(expectedPartitions[partition], actualPartition);
+                        if( useCombiner )
+                            CollectionAssert.AreEqual(expectedPartitions[partition].Distinct().ToList(), actualPartition);
+                        else
+                            CollectionAssert.AreEqual(expectedPartitions[partition], actualPartition);
                     }
                 }
             }

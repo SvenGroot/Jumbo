@@ -10,7 +10,6 @@ namespace Tkl.Jumbo.IO
     /// <summary>
     /// Defines a method that a type implements to compare the raw binary representation of two objects.
     /// </summary>
-    /// <typeparam name="T">The type of objects to compare.</typeparam>
     public interface IRawComparer
     {
         /// <summary>

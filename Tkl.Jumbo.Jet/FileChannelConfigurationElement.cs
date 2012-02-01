@@ -100,7 +100,7 @@ namespace Tkl.Jumbo.Jet
         }
 
         /// <summary>
-        /// Gets or sets the percentage of spill buffer usage at which the <see cref="SpillRecordWriter{T}"/> for the file output channel using 
+        /// Gets or sets the percentage of spill buffer usage at which the <see cref="SpillRecordWriter{T}"/> for a file output channel using 
         /// <see cref="FileChannelOutputType.Spill"/> and <see cref="FileChannelOutputType.SortSpill"/> should start writing the buffer to disk.
         /// </summary>
         /// <value>The single file output buffer limit.</value>
@@ -109,6 +109,20 @@ namespace Tkl.Jumbo.Jet
         {
             get { return (float)this["spillBufferLimit"]; }
             set { this["spillBufferLimit"] = value; }
+        }
+
+        /// <summary>
+        /// Gets or sets the minimum number of spills needed for the <see cref="SortSpillRecordWriter{T}"/> for the a file output channel using
+        /// <see cref="FileChannelOutputType.SortSpill"/> to run the combiner (if there is one) during the merge phase.
+        /// </summary>
+        /// <value>
+        /// The minimum number of spills needed for the combiner to run during the merge phase. The default value is 3.
+        /// </value>
+        [ConfigurationProperty("spillSortMinSpillsForCombineDuringMerge", DefaultValue = 3, IsRequired = false, IsKey = false)]
+        public int SpillSortMinSpillsForCombineDuringMerge
+        {
+            get { return (int)this["spillSortMinSpillsForCombineDuringMerge"]; }
+            set { this["spillSortMinSpillsForCombineDuringMerge"] = value; }
         }
 
         /// <summary>
