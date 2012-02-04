@@ -8,6 +8,7 @@ using System.Xml.Serialization;
 using System.Collections.ObjectModel;
 using Tkl.Jumbo.Jet.Channels;
 using Tkl.Jumbo.Dfs;
+using System.Globalization;
 
 namespace Tkl.Jumbo.Jet
 {
@@ -441,6 +442,33 @@ namespace Tkl.Jumbo.Jet
             if( StageSettings == null )
                 StageSettings = new SettingsDictionary();
             StageSettings.AddTypedSetting(key, value);
+        }
+
+        /// <summary>
+        /// Adds the specified settings.
+        /// </summary>
+        /// <param name="settings">The settings. May be <see langword="null"/>.</param>
+        public void AddSettings(IEnumerable<KeyValuePair<string, string>> settings)
+        {
+            if( settings != null )
+            {
+                if( StageSettings == null )
+                    StageSettings = new SettingsDictionary();
+
+                foreach( KeyValuePair<string, string> setting in settings )
+                    StageSettings.Add(setting.Key, setting.Value);
+            }
+        }
+
+        /// <summary>
+        /// Returns a <see cref="System.String"/> that represents this instance.
+        /// </summary>
+        /// <returns>
+        /// A <see cref="System.String"/> that represents this instance.
+        /// </returns>
+        public override string ToString()
+        {
+            return string.Format(CultureInfo.InvariantCulture, "StageConfiguration {{ StageId = \"{0}\" }}", StageId);
         }
     }
 }

@@ -139,6 +139,18 @@
     <Compile Include="IHasMetrics.cs" />
     <Compile Include="IJobServerTaskProtocol.cs" />
     <Compile Include="IPrepartitionedPushTask.cs" />
+    <Compile Include="Jobs\Builder\Channel.cs" />
+    <Compile Include="Jobs\Builder\DfsInput.cs" />
+    <Compile Include="Jobs\Builder\DfsOutput.cs" />
+    <Compile Include="Jobs\Builder\DynamicTaskBuilder.cs" />
+    <Compile Include="Jobs\Builder\IJobBuilderOperation.cs" />
+    <Compile Include="Jobs\Builder\IOperationInput.cs" />
+    <Compile Include="Jobs\Builder\IOperationOutput.cs" />
+    <Compile Include="Jobs\Builder\JobBuilder.cs" />
+    <Compile Include="Jobs\Builder\JobBuilderCompiler.cs" />
+    <Compile Include="Jobs\Builder\SortOperation.cs" />
+    <Compile Include="Jobs\Builder\StageOperation.cs" />
+    <Compile Include="Jobs\Builder\TwoStepOperation.cs" />
     <Compile Include="Jobs\Channel.cs" />
     <Compile Include="Jobs\DfsInput.cs" />
     <Compile Include="Jobs\DfsOutput.cs" />
@@ -226,6 +238,7 @@
     <Compile Include="Tasks\SortTask.cs" />
     <Compile Include="Tasks\TaskConstants.cs" />
     <Compile Include="Channels\TcpChannelRecordReader.cs" />
+    <Compile Include="TaskTypeInfo.cs" />
     <Compile Include="TcpChannelConfigurationElement.cs" />
   </ItemGroup>
   <ItemGroup>

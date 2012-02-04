@@ -98,6 +98,7 @@
     <Compile Include="Dfs\RecordReaderWriterTests.cs" />
     <Compile Include="Dfs\ReplicaPlacementTests.cs" />
     <Compile Include="InnerJoinRecordReaderTests.cs" />
+    <Compile Include="Jet\DynamicTaskBuilderTests.cs" />
     <Compile Include="Jet\FileChannelCompressionTests.cs" />
     <Compile Include="Jet\JetClientTests.cs" />
     <Compile Include="Jet\JobAndTaskServerTests.cs" />
@@ -105,6 +106,7 @@
     <Compile Include="Jet\JobConfigurationTests.cs" />
     <Compile Include="Jet\MergeHelperTests.cs" />
     <Compile Include="Jet\MergeRecordReaderTests.cs" />
+    <Compile Include="Jet\NewJobBuilderTests.cs" />
     <Compile Include="Jet\SortSpillRecordWriterTests.cs" />
     <Compile Include="Jet\TaskIdTests.cs" />
     <Compile Include="Jet\TaskTests.cs" />
