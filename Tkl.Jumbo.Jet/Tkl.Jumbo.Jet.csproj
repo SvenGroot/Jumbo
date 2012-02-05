@@ -147,6 +147,8 @@
     <Compile Include="Jobs\Builder\IOperationOutput.cs" />
     <Compile Include="Jobs\Builder\JobBuilder.cs" />
     <Compile Include="Jobs\Builder\JobBuilderCompiler.cs" />
+    <Compile Include="Jobs\Builder\JobBuilder_GroupAggregate.cs" />
+    <Compile Include="Jobs\Builder\JobBuilder_Sort.cs" />
     <Compile Include="Jobs\Builder\SortOperation.cs" />
     <Compile Include="Jobs\Builder\StageOperation.cs" />
     <Compile Include="Jobs\Builder\TwoStepOperation.cs" />
