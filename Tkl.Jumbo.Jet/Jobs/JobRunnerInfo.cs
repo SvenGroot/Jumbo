@@ -80,6 +80,7 @@ namespace Tkl.Jumbo.Jet.Jobs
             Type[] types = assembly.GetTypes();
             return (from type in types
                     where type.IsPublic && type.IsClass && !type.IsAbstract && type.GetInterfaces().Contains(typeof(IJobRunner))
+                    orderby type.Name
                     select new JobRunnerInfo(type)).ToArray();
         }
 

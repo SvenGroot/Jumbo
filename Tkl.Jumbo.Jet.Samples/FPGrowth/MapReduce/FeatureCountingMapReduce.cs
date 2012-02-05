@@ -132,7 +132,7 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth.MapReduce
                 int groupSize = 0;
                 int groupId = 0;
                 string fgListPath = DfsPath.Combine(_outputPath, "fglist");
-                if( DeleteOutputBeforeRun )
+                if( OverwriteOutput )
                     new DfsClient().NameServer.Delete(fgListPath, false);
                 using( DfsOutputStream stream = client.CreateFile(fgListPath) )
                 using( BinaryRecordWriter<FGListItem> output = new BinaryRecordWriter<FGListItem>(stream) )

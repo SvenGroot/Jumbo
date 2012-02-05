@@ -20,13 +20,13 @@ namespace Tkl.Jumbo.Jet.Jobs
         /// <summary>
         /// Gets or sets a value that indicates whether the output directory should be deleted, if it exists, before the job is executed.
         /// </summary>
-        [CommandLineArgument("d"), Description("Delete the output directory before running the job, if it exists.")]
-        public bool DeleteOutputBeforeRun { get; set; }
+        [CommandLineArgument(), Description("Delete the output directory before running the job, if it exists.")]
+        public bool OverwriteOutput { get; set; }
 
         /// <summary>
         /// Gets or sets a value that indicates whether the job runner should wait for user input before starting the job and before exitting.
         /// </summary>
-        [CommandLineArgument("i"), Description("Wait for user confirmation before starting the job and before exitting.")]
+        [CommandLineArgument("Interactive"), Description("Wait for user confirmation before starting the job and before exitting.")]
         public bool IsInteractive { get; set; }
 
         /// <summary>
@@ -35,7 +35,7 @@ namespace Tkl.Jumbo.Jet.Jobs
         /// <remarks>
         /// Derived classes should use this value with the <see cref="TaskDfsOutput"/> items of the job configuration.
         /// </remarks>
-        [CommandLineArgument("replication"), Description("Replication factor of the job's output files.")]
+        [CommandLineArgument(), Description("Replication factor of the job's output files.")]
         public int ReplicationFactor { get; set; }
 
         /// <summary>
@@ -44,7 +44,7 @@ namespace Tkl.Jumbo.Jet.Jobs
         /// <remarks>
         /// Derived classes should use this value with the <see cref="TaskDfsOutput"/> items of the job configuration.
         /// </remarks>
-        [CommandLineArgument("blockSize"), Description("Block size of the job's output files.")]
+        [CommandLineArgument(), Description("Block size of the job's output files.")]
         public BinarySize BlockSize { get; set; }
 
         /// <summary>
@@ -77,7 +77,7 @@ namespace Tkl.Jumbo.Jet.Jobs
         ///   in a derived class after creating your job configuration.
         /// </para>
         /// </remarks>
-        [CommandLineArgument("P"), Description("Modifies the value of one of the properties in the job configuration after the job has been created. Uses the format \"PropertyName=value\" or \"CompoundStageId:PropertyName=value\". You can access properties more than one level deep, e.g. \"MyStage:OutputChannel.PartitionsPerTask=2\". Can be specified more than once.")]
+        [CommandLineArgument("P", ValueDescription="[Stage:]Property=Value"), Description("Modifies the value of one of the properties in the job configuration after the job has been created. Uses the format \"PropertyName=value\" or \"CompoundStageId:PropertyName=value\". You can access properties more than one level deep, e.g. \"MyStage:OutputChannel.PartitionsPerTask=2\". Can be specified more than once.")]
         public string[] JobOrStageProperties { get; set; }
 
         /// <summary>
@@ -102,8 +102,24 @@ namespace Tkl.Jumbo.Jet.Jobs
         ///   in a derived class after creating your job configuration.
         /// </para>
         /// </remarks>
-        [CommandLineArgument("D"), Description("Defines or overrides a job or stage setting in the job configuration. Uses the format \"SettingName=value\" or \"CompoundStageId:SettingName=value\". Can be specified more than once.")]
+        [CommandLineArgument("D", ValueDescription="[Stage:]Setting=Value"), Description("Defines or overrides a job or stage setting in the job configuration. Uses the format \"SettingName=value\" or \"CompoundStageId:SettingName=value\". Can be specified more than once.")]
         public string[] JobOrStageSettings { get; set; }
+
+        /// <summary>
+        /// Gets the DFS client.
+        /// </summary>
+        /// <value>
+        /// The DFS client.
+        /// </value>
+        protected DfsClient DfsClient { get; private set; }
+
+        /// <summary>
+        /// Gets the jet client.
+        /// </summary>
+        /// <value>
+        /// The jet client.
+        /// </value>
+        protected JetClient JetClient { get; private set; }
 
         #region IJobRunner Members
 
@@ -142,18 +158,18 @@ namespace Tkl.Jumbo.Jet.Jobs
         }
 
         /// <summary>
-        /// If <see cref="DeleteOutputBeforeRun"/> is <see langword="true"/>, deletes the output path and then re-creates it; otherwise,
+        /// If <see cref="OverwriteOutput"/> is <see langword="true"/>, deletes the output path and then re-creates it; otherwise,
         /// checks if the output path exists and creates it if it doesn't exist and fails if it does. Uses the value of the <see cref="Configurable.DfsConfiguration"/>
         /// property to access the DFS.
         /// </summary>
         /// <param name="outputPath">The directory where the job's output will be stored.</param>
         protected void CheckAndCreateOutputPath(string outputPath)
         {
-            CheckAndCreateOutputPath(new DfsClient(DfsConfiguration), outputPath);
+            CheckAndCreateOutputPath(DfsClient, outputPath);
         }
 
         /// <summary>
-        /// If <see cref="DeleteOutputBeforeRun"/> is <see langword="true"/>, deletes the output path and then re-creates it; otherwise,
+        /// If <see cref="OverwriteOutput"/> is <see langword="true"/>, deletes the output path and then re-creates it; otherwise,
         /// checks if the output path exists and creates it if it doesn't exist and fails if it does.
         /// </summary>
         /// <param name="dfsClient">The <see cref="DfsClient"/> used to access the Distributed File System.</param>
@@ -165,7 +181,7 @@ namespace Tkl.Jumbo.Jet.Jobs
             if( outputPath == null )
                 throw new ArgumentNullException("outputPath");
 
-            if( DeleteOutputBeforeRun )
+            if( OverwriteOutput )
             {
                 dfsClient.NameServer.Delete(outputPath, true);
             }
@@ -232,6 +248,17 @@ namespace Tkl.Jumbo.Jet.Jobs
             ApplyJobProperties(jobConfiguration);
 
             ApplyJobOrStageSettings(jobConfiguration);
+        }
+
+        /// <summary>
+        /// Indicates the configuration has been changed. <see cref="JetActivator.ApplyConfiguration"/> calls this method
+        /// after setting the configuration.
+        /// </summary>
+        public override void NotifyConfigurationChanged()
+        {
+            base.NotifyConfigurationChanged();
+            DfsClient = new DfsClient(DfsConfiguration);
+            JetClient = new JetClient(JetConfiguration);
         }
 
         private void ApplySettingProperties(JobConfiguration jobConfiguration)

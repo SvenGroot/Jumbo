@@ -31,6 +31,9 @@
         <include name="*.cs"/>
         <include name="../AssemblyInfoCommon.cs"/>
       </sources>
+      <resources dynamicprefix="true" prefix="Tkl.Jumbo.Jet.Samples">
+        <include name="Properties/Resources.resx"/>
+      </resources>
       <nowarn>
         <!-- XML comment warnings; this is somewhat broken in Mono. -->
         <warning number="1584" />

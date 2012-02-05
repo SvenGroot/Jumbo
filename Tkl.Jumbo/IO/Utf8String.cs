@@ -173,6 +173,17 @@ namespace Tkl.Jumbo.IO
         }
 
         /// <summary>
+        /// Appends the specified <see cref="Utf8String"/> to this instance..
+        /// </summary>
+        /// <param name="value">The <see cref="Utf8String"/> to append.</param>
+        public void Append(Utf8String value)
+        {
+            if( value == null )
+                throw new ArgumentNullException("value");
+            Append(value._utf8Bytes, 0, value.ByteLength);
+        }
+
+        /// <summary>
         /// Appends a byte array containing utf-8 encoded data to this string.
         /// </summary>
         /// <param name="value">A byte array containing the utf-8 encoded string to append.</param>

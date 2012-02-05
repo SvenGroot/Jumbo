@@ -41,6 +41,14 @@
             </para>
             </remarks>
         </member>
+        <member name="P:Ookii.CommandLine.CommandLineArgument.MemberName">
+            <summary>
+            Gets the name of the property or constructor parameter that defined this command line argument.
+            </summary>
+            <value>
+            The name of the property or constructor parameter that defined this command line argument.
+            </value>
+        </member>
         <member name="P:Ookii.CommandLine.CommandLineArgument.ArgumentName">
             <summary>
             Gets the name of this argument.
@@ -61,6 +69,14 @@
             </summary>
             <value>
             The <see cref="T:System.Type"/> of the argument.
+            </value>
+        </member>
+        <member name="P:Ookii.CommandLine.CommandLineArgument.ElementType">
+            <summary>
+            Gets the element type of the argument.
+            </summary>
+            <value>
+            If the <see cref="P:Ookii.CommandLine.CommandLineArgument.IsMultiValue"/> property is <see langword="true"/>, the <see cref="T:System.Type"/> of each individual value; otherwise, the same value as <see cref="P:Ookii.CommandLine.CommandLineArgument.ArgumentType"/>.
             </value>
         </member>
         <member name="P:Ookii.CommandLine.CommandLineArgument.Position">
@@ -156,7 +172,41 @@
               <see langword="false"/> depending on whether the argument is present on the command line.
             </para>
             <para>
-              A argument is a switch argument when it is not positional, and its <see cref="P:Ookii.CommandLine.CommandLineArgument.ArgumentType"/> is either <see cref="T:System.Boolean"/>, a nullable <see cref="T:System.Boolean"/> or an array of <see cref="T:System.Boolean"/>.
+              A argument is a switch argument when it is not positional, and its <see cref="P:Ookii.CommandLine.CommandLineArgument.ElementType"/> is either <see cref="T:System.Boolean"/> or a nullable <see cref="T:System.Boolean"/>.
+            </para>
+            </remarks>
+        </member>
+        <member name="P:Ookii.CommandLine.CommandLineArgument.IsMultiValue">
+            <summary>
+            Gets a value indicating whether this argument is a multi-value argument.
+            </summary>
+            <value>
+            	<see langword="true"/> if the argument is a multi-value argument; otherwise, <see langword="false"/>.
+            </value>
+            <remarks>
+            <para>
+              A multi-value argument can accept multiple values by having the argument supplied more than once.
+            </para>
+            <para>
+              An argument is a multi-value argument if its <see cref="P:Ookii.CommandLine.CommandLineArgument.ArgumentType"/> is an array or the argument was defined by a read-only property whose type
+              implements the <see cref="T:System.Collections.Generic.ICollection`1"/> generic interface, or when the <see cref="P:Ookii.CommandLine.CommandLineArgument.IsDictionary"/> property is <see langword="true"/>.
+            </para>
+            </remarks>
+        </member>
+        <member name="P:Ookii.CommandLine.CommandLineArgument.IsDictionary">
+            <summary>
+            Gets a value indicating whether this argument is a dictionary argument.
+            </summary>
+            <value>
+            	<see langword="true"/> if this argument is a dictionary argument.; otherwise, <see langword="false"/>.
+            </value>
+            <remarks>
+            <para>
+              A dictionary argument is an argument whose values have the form "key=value", which get added to a dictionary based on the key.
+            </para>
+            <para>
+              An argument is a dictionary argument when its <see cref="P:Ookii.CommandLine.CommandLineArgument.ArgumentType"/> is <see cref="T:System.Collections.Generic.Dictionary`2"/>, or it was defined by
+              a read-only property whose type implements the <see cref="T:System.Collections.Generic.IDictionary`2"/> property.
             </para>
             </remarks>
         </member>
@@ -180,6 +230,15 @@
             <para>
               If an optional argument was not supplied, the <see cref="P:Ookii.CommandLine.CommandLineArgument.Value"/> property will equal
               the <see cref="P:Ookii.CommandLine.CommandLineArgument.DefaultValue"/> property, and <see cref="P:Ookii.CommandLine.CommandLineArgument.HasValue"/> will be <see langword="false"/>.
+            </para>
+            <para>
+              If the <see cref="P:Ookii.CommandLine.CommandLineArgument.IsMultiValue"/> property is <see langword="true"/>, the <see cref="P:Ookii.CommandLine.CommandLineArgument.Value"/> property will
+              return an array with all the values, even if the argument type is a collection type rather than
+              an array.
+            </para>
+            <para>
+              If the <see cref="P:Ookii.CommandLine.CommandLineArgument.IsDictionary"/> property is <see langword="true"/>, the <see cref="P:Ookii.CommandLine.CommandLineArgument.Value"/> property will
+              return a <see cref="T:System.Collections.Generic.Dictionary`2"/> with all the values, even if the argument type is a different type.
             </para>
             </remarks>
         </member>
@@ -730,6 +789,11 @@
             Not all required arguments were supplied.
             </summary>
         </member>
+        <member name="F:Ookii.CommandLine.CommandLineArgumentErrorCategory.InvalidDictionaryValue">
+            <summary>
+            Invalid value for a dictionary argument; typically the result of a duplicate key.
+            </summary>
+        </member>
         <member name="T:Ookii.CommandLine.ArgumentParsedEventArgs">
             <summary>
             Provides data for the <see cref="E:Ookii.CommandLine.CommandLineParser.ArgumentParsed"/> event.
@@ -950,6 +1014,70 @@
             </para>
             </remarks>
         </member>
+        <member name="T:Ookii.CommandLine.KeyValuePairConverter`2">
+            <summary>
+            Converts key-value pairs to and from strings using key=value notation.
+            </summary>
+            <typeparam name="TKey">The type of the key.</typeparam>
+            <typeparam name="TValue">The type of the value.</typeparam>
+            <remarks>
+            <para>
+              This <see cref="T:System.ComponentModel.TypeConverter"/> is used for dictionary command line arguments.
+            </para>
+            </remarks>
+        </member>
+        <member name="M:Ookii.CommandLine.KeyValuePairConverter`2.CanConvertFrom(System.ComponentModel.ITypeDescriptorContext,System.Type)">
+            <summary>
+            Returns whether this converter can convert an object of the given type to the type of this converter, using the specified context.
+            </summary>
+            <param name="context">An <see cref="T:System.ComponentModel.ITypeDescriptorContext"/> that provides a format context.</param>
+            <param name="sourceType">A <see cref="T:System.Type"/> that represents the type you want to convert from.</param>
+            <returns>
+            <see langword="true"/> if this converter can perform the conversion; otherwise, <see langword="false"/>.
+            </returns>
+        </member>
+        <member name="M:Ookii.CommandLine.KeyValuePairConverter`2.CanConvertTo(System.ComponentModel.ITypeDescriptorContext,System.Type)">
+            <summary>
+            Returns whether this converter can convert the object to the specified type, using the specified context.
+            </summary>
+            <param name="context">An <see cref="T:System.ComponentModel.ITypeDescriptorContext"/> that provides a format context.</param>
+            <param name="destinationType">A <see cref="T:System.Type"/> that represents the type you want to convert to.</param>
+            <returns>
+            <see langword="true"/> if this converter can perform the conversion; otherwise, <see langword="false"/>.
+            </returns>
+        </member>
+        <member name="M:Ookii.CommandLine.KeyValuePairConverter`2.ConvertFrom(System.ComponentModel.ITypeDescriptorContext,System.Globalization.CultureInfo,System.Object)">
+            <summary>
+            Converts the given object to the type of this converter, using the specified context and culture information.
+            </summary>
+            <param name="context">An <see cref="T:System.ComponentModel.ITypeDescriptorContext"/> that provides a format context.</param>
+            <param name="culture">The <see cref="T:System.Globalization.CultureInfo"/> to use as the current culture.</param>
+            <param name="value">The <see cref="T:System.Object"/> to convert.</param>
+            <returns>
+            An <see cref="T:System.Object"/> that represents the converted value.
+            </returns>
+            <exception cref="T:System.NotSupportedException">
+            The conversion cannot be performed.
+            </exception>
+        </member>
+        <member name="M:Ookii.CommandLine.KeyValuePairConverter`2.ConvertTo(System.ComponentModel.ITypeDescriptorContext,System.Globalization.CultureInfo,System.Object,System.Type)">
+            <summary>
+            Converts the given value object to the specified type, using the specified context and culture information.
+            </summary>
+            <param name="context">An <see cref="T:System.ComponentModel.ITypeDescriptorContext"/> that provides a format context.</param>
+            <param name="culture">A <see cref="T:System.Globalization.CultureInfo"/>. If null is passed, the current culture is assumed.</param>
+            <param name="value">The <see cref="T:System.Object"/> to convert.</param>
+            <param name="destinationType">The <see cref="T:System.Type"/> to convert the <paramref name="value"/> parameter to.</param>
+            <returns>
+            An <see cref="T:System.Object"/> that represents the converted value.
+            </returns>
+            <exception cref="T:System.ArgumentNullException">
+            The <paramref name="destinationType"/> parameter is null.
+            </exception>
+            <exception cref="T:System.NotSupportedException">
+            The conversion cannot be performed.
+              </exception>
+        </member>
         <member name="T:Ookii.CommandLine.Properties.Resources">
             <summary>
               A strongly-typed resource class, for looking up localized strings, etc.
@@ -1050,7 +1178,7 @@
         </member>
         <member name="P:Ookii.CommandLine.Properties.Resources.IncorrectDefaultValueTypeFormat">
             <summary>
-              Looks up a localized string similar to The default value for argument &apos;{0}&apos; does not have the same type as the argument..
+              Looks up a localized string similar to The type of the default value for argument &apos;{0}&apos; is not compatible with the type of the argument..
             </summary>
         </member>
         <member name="P:Ookii.CommandLine.Properties.Resources.IndentOutOfRange">
@@ -1066,6 +1194,11 @@
         <member name="P:Ookii.CommandLine.Properties.Resources.InvalidArrayRank">
             <summary>
               Looks up a localized string similar to Multi-dimensional arrays are not supported for command line arguments..
+            </summary>
+        </member>
+        <member name="P:Ookii.CommandLine.Properties.Resources.InvalidDictionaryValueFormat">
+            <summary>
+              Looks up a localized string similar to The value &apos;{0}&apos; provided for argument &apos;{1}&apos; was invalid: {2}.
             </summary>
         </member>
         <member name="P:Ookii.CommandLine.Properties.Resources.InvalidOptionalArgumentOrder">
@@ -1098,14 +1231,29 @@
               Looks up a localized string similar to The command line arguments type does not have any public constructors..
             </summary>
         </member>
+        <member name="P:Ookii.CommandLine.Properties.Resources.NoKeyValuePairSeparator">
+            <summary>
+              Looks up a localized string similar to An key/value pair must contain a &apos;=&apos; character..
+            </summary>
+        </member>
         <member name="P:Ookii.CommandLine.Properties.Resources.NoMarkedConstructor">
             <summary>
               Looks up a localized string similar to The command line arguments type has more than one constructor, none of which has the CommandLineConstructorAttribute attribute..
             </summary>
         </member>
-        <member name="P:Ookii.CommandLine.Properties.Resources.NoTypeConverterFormat">
+        <member name="P:Ookii.CommandLine.Properties.Resources.NoTypeConverterForArgumentFormat">
             <summary>
               Looks up a localized string similar to The argument &apos;{0}&apos; has type &apos;{1}&apos; that for which no type converter exists that can convert from a string..
+            </summary>
+        </member>
+        <member name="P:Ookii.CommandLine.Properties.Resources.NoTypeConverterFormat">
+            <summary>
+              Looks up a localized string similar to No type converter that can convert to and from a string exists for type &apos;{0}&apos;..
+            </summary>
+        </member>
+        <member name="P:Ookii.CommandLine.Properties.Resources.PropertyIsReadOnlyFormat">
+            <summary>
+              Looks up a localized string similar to The property defining the argument &apos;{0}&apos; doesn&apos;t have a public set accessor..
             </summary>
         </member>
         <member name="P:Ookii.CommandLine.Properties.Resources.TooManyArguments">
@@ -1116,6 +1264,11 @@
         <member name="P:Ookii.CommandLine.Properties.Resources.TypeIsNotShellCommandFormat">
             <summary>
               Looks up a localized string similar to The type &apos;{0}&apos; does not derive from the ShellCommand class or does not define the ShellCommandAttribute attribute..
+            </summary>
+        </member>
+        <member name="P:Ookii.CommandLine.Properties.Resources.TypeNotGenericDefinition">
+            <summary>
+              Looks up a localized string similar to The type must be a generic type definition..
             </summary>
         </member>
         <member name="P:Ookii.CommandLine.Properties.Resources.UnknownArgumentFormat">
@@ -2197,7 +2350,10 @@
             </value>
             <remarks>
             <para>
-              The <see cref="P:Ookii.CommandLine.CommandLineArgumentAttribute.DefaultValue"/> property will not be used if the <see cref="P:Ookii.CommandLine.CommandLineArgumentAttribute.IsRequired"/> propety is <see langword="true"/>.
+              The <see cref="P:Ookii.CommandLine.CommandLineArgumentAttribute.DefaultValue"/> property will not be used if the <see cref="P:Ookii.CommandLine.CommandLineArgumentAttribute.IsRequired"/> property is <see langword="true"/>.
+            </para>
+            <para>
+              The <see cref="P:Ookii.CommandLine.CommandLineArgumentAttribute.DefaultValue"/> is ignored for multi-value and dictionary arguments.
             </para>
             </remarks>
         </member>

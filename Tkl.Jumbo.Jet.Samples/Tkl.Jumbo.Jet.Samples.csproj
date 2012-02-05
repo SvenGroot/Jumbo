@@ -108,10 +108,17 @@
     <Compile Include="FPGrowth\TransactionMiningTask.cs" />
     <Compile Include="FPGrowth\TransactionTree.cs" />
     <Compile Include="FPGrowth\WeightedTransaction.cs" />
+    <Compile Include="GenerateText.cs" />
     <Compile Include="GenSort2.cs" />
     <Compile Include="GraySort.cs" />
     <Compile Include="IO\StringPairComparer.cs" />
     <Compile Include="IO\UInt128Writer.cs" />
+    <Compile Include="NewWordCount.cs" />
+    <Compile Include="Properties\Resources.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>Resources.resx</DependentUpon>
+    </Compile>
     <Compile Include="Tasks\WordCountCombinerTask.cs" />
     <Compile Include="ValSort.cs" />
     <Compile Include="WordCount.cs" />
@@ -179,7 +186,15 @@
       <Install>true</Install>
     </BootstrapperPackage>
   </ItemGroup>
-  <ItemGroup />
+  <ItemGroup>
+    <EmbeddedResource Include="Properties\Resources.resx">
+      <Generator>ResXFileCodeGenerator</Generator>
+      <LastGenOutput>Resources.Designer.cs</LastGenOutput>
+    </EmbeddedResource>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\Words.txt" />
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

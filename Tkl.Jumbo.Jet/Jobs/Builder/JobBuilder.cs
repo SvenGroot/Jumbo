@@ -16,7 +16,7 @@ namespace Tkl.Jumbo.Jet.Jobs.Builder
     /// </summary>
     public sealed partial class JobBuilder
     {
-        private static readonly Assembly[] _jumboAssemblies = { typeof(IWritable).Assembly, typeof(JetClient).Assembly, typeof(DfsClient).Assembly, typeof(log4net.ILog).Assembly };
+        private static readonly Assembly[] _jumboAssemblies = { typeof(IWritable).Assembly, typeof(JetClient).Assembly, typeof(DfsClient).Assembly, typeof(log4net.ILog).Assembly, typeof(Ookii.CommandLine.CommandLineParser).Assembly };
 
         private readonly List<IJobBuilderOperation> _operations = new List<IJobBuilderOperation>();
         private readonly HashSet<Assembly> _assemblies = new HashSet<Assembly>();
@@ -47,6 +47,26 @@ namespace Tkl.Jumbo.Jet.Jobs.Builder
         public DynamicTaskBuilder TaskBuilder
         {
             get { return _taskBuilder; }
+        }
+
+        /// <summary>
+        /// Gets the full paths of all the non-GAC and non-Jumbo assemblies used by this job.
+        /// </summary>
+        /// <value>
+        /// The assembly paths.
+        /// </value>
+        public IEnumerable<string> AssemblyLocations
+        {
+            get
+            {
+                var files = from a in _assemblies
+                            select a.Location;
+                if( _taskBuilder.IsDynamicAssemblyCreated )
+                {
+                    files = files.Concat(new[] { _taskBuilder.DynamicAssemblyPath });
+                }
+                return files;
+            }
         }
 
         /// <summary>

@@ -56,7 +56,7 @@ namespace Tkl.Jumbo.Jet.Jobs.Builder
         /// </value>
         public int DefaultChannelInputTaskCount
         {
-            get { return _jetClient.JobServer.GetMetrics().Capacity; }
+            get { return _jetClient.JobServer.GetMetrics().NonInputTaskCapacity; }
         }
 
         /// <summary>

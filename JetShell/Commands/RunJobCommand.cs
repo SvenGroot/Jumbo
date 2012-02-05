@@ -120,7 +120,7 @@ namespace JetShell.Commands
             {
                 if( lineWriter != null )
                     lineWriter.ResetIndent();
-                writer.Write("{0,13} : {1}", job.Name, job.Description);
+                writer.WriteLine("{0,13} : {1}", job.Name, job.Description);
                 writer.WriteLine();
             }
         }
