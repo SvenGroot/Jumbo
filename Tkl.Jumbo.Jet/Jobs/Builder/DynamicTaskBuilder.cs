@@ -17,9 +17,43 @@ namespace Tkl.Jumbo.Jet.Jobs.Builder
     /// </summary>
     public sealed class DynamicTaskBuilder
     {
+        private readonly Dictionary<MethodInfo, Type> _taskTypeCache = new Dictionary<MethodInfo,Type>();
         private AssemblyBuilder _assembly;
         private ModuleBuilder _module;
         private string _dynamicAssemblyDirectory;
+
+        /// <summary>
+        /// Gets a value indicating whether a dynamic assembly has been created.
+        /// </summary>
+        /// <value>
+        /// 	<see langword="true"/> if a dynamic assembly has been created.; otherwise, <see langword="false"/>.
+        /// </value>
+        public bool IsDynamicAssemblyCreated
+        {
+            get { return _assembly != null; }
+        }
+
+        /// <summary>
+        /// Gets the name of the dynamic assembly file.
+        /// </summary>
+        /// <value>
+        /// The name of the dynamic assembly file, or <see langword="null"/> if no assembly has been generated.
+        /// </value>
+        public string DynamicAssemblyFileName
+        {
+            get { return IsDynamicAssemblyCreated ? _assembly.GetName().Name + ".dll" : null; }
+        }
+
+        /// <summary>
+        /// Gets the full path of the dynamic assembly file.
+        /// </summary>
+        /// <value>
+        /// The full path of the dynamic assembly file, or <see langword="null"/> if no assembly has been generated.
+        /// </value>
+        public string DynamicAssemblyPath
+        {
+            get { return IsDynamicAssemblyCreated ? Path.Combine(_dynamicAssemblyDirectory, DynamicAssemblyFileName) : null; }
+        }
 
         /// <summary>
         /// Creates a dynamically generated task class by overriding the specified method.
@@ -43,6 +77,11 @@ namespace Tkl.Jumbo.Jet.Jobs.Builder
         ///   If the target method for <paramref name="taskMethodDelegate"/> is not public, you must add the delegate to the setting's for the
         ///   stage in which this task is used by using the <see cref="SerializeDelegate"/> method.
         /// </para>
+        /// <para>
+        ///   If <paramref name="recordReuseMode"/> is <see cref="RecordReuseMode.Default"/> and the target method has the <see cref="AllowRecordReuseAttribute"/> attribute applied to it,
+        ///   that attribute will be copied to the task class. If the target method has the <see cref="ProcessAllInputPartitionsAttribute"/> attribute applied to it,
+        ///   that attribute will be copied to the task class.
+        /// </para>
         /// </remarks>
         public Type CreateDynamicTask(MethodInfo methodToOverride, Delegate taskMethodDelegate, int skipParameters, RecordReuseMode recordReuseMode)
         {
@@ -52,8 +91,7 @@ namespace Tkl.Jumbo.Jet.Jobs.Builder
                 throw new ArgumentException("The method that declares the method to override is not a task.", "methodToOverride");
             if( taskMethodDelegate == null )
                 throw new ArgumentNullException("taskMethodDelegate");
-            if( !taskMethodDelegate.Method.IsStatic )
-                throw new ArgumentException("The delegate method must be static.", "taskMethodDelegate");
+
             ParameterInfo[] parameters = methodToOverride.GetParameters();
             ParameterInfo[] delegateParameters = taskMethodDelegate.Method.GetParameters();
             ValidateParameters(skipParameters, parameters, delegateParameters);
@@ -63,7 +101,7 @@ namespace Tkl.Jumbo.Jet.Jobs.Builder
             MethodBuilder overriddenMethod = OverrideMethod(taskType, methodToOverride);
 
             ILGenerator generator = overriddenMethod.GetILGenerator();
-            if( !taskMethodDelegate.Method.IsPublic )
+            if( !CanCallTargetMethodDirectly(taskMethodDelegate) )
             {
                 generator.Emit(OpCodes.Ldarg_0); // Put "this" on the stack
                 generator.Emit(OpCodes.Ldfld, delegateField); // Put the delegate on the stack.
@@ -77,13 +115,50 @@ namespace Tkl.Jumbo.Jet.Jobs.Builder
                 generator.Emit(OpCodes.Ldarg_0);
                 generator.Emit(OpCodes.Call, typeof(Configurable).GetProperty("TaskContext").GetGetMethod());
             }
-            if( taskMethodDelegate.Method.IsPublic )
+            if( CanCallTargetMethodDirectly(taskMethodDelegate) )
                 generator.Emit(OpCodes.Call, taskMethodDelegate.Method);
             else
                 generator.Emit(OpCodes.Callvirt, taskMethodDelegate.GetType().GetMethod("Invoke"));
             generator.Emit(OpCodes.Ret);
 
             return taskType.CreateType();
+        }
+
+        /// <summary>
+        /// Determines whether the target method of a delegate can be called directly by a generated task class, or if the
+        /// delegate needs to be serialized.
+        /// </summary>
+        /// <param name="target">The delegate.</param>
+        /// <returns>
+        ///   <see langword="true"/> if the target method of a delegate can be called directly; <see langword="false"/> if
+        ///   the delegate needs to be serialized using <see cref="SerializeDelegate"/>.
+        /// </returns>
+        public static bool CanCallTargetMethodDirectly(Delegate target)
+        {
+            if( target == null )
+                throw new ArgumentNullException("target");
+
+            return target.Method.IsPublic && target.Method.IsStatic;
+        }
+
+        /// <summary>
+        /// Saves the dynamic assembly, if one was created.
+        /// </summary>
+        public void SaveAssembly()
+        {
+            if( _assembly != null )
+            {
+                _assembly.Save(_assembly.GetName().Name + ".dll");
+            }
+        }
+
+        /// <summary>
+        /// Deletes the dynamic assembly, if it was saved.
+        /// </summary>
+        public void DeleteAssembly()
+        {
+            if( IsDynamicAssemblyCreated && File.Exists(DynamicAssemblyPath) )
+                File.Delete(DynamicAssemblyPath);
         }
 
         /// <summary>
@@ -202,11 +277,11 @@ namespace Tkl.Jumbo.Jet.Jobs.Builder
                 baseOrInterfaceType = typeof(Configurable);
             }
 
-            TypeBuilder taskTypeBuilder = _module.DefineType(_assembly.GetName().Name + "." + taskDelegate.Method.Name, TypeAttributes.Class | TypeAttributes.Public | TypeAttributes.Sealed, baseOrInterfaceType, interfaces);
+            TypeBuilder taskTypeBuilder = _module.DefineType(_assembly.GetName().Name + "." + taskDelegate.Method.Name + "Task", TypeAttributes.Class | TypeAttributes.Public | TypeAttributes.Sealed, baseOrInterfaceType, interfaces);
 
             SetTaskAttributes(taskDelegate.Method, recordReuseMode, taskTypeBuilder);
 
-            if( !taskDelegate.Method.IsPublic )
+            if( !CanCallTargetMethodDirectly(taskDelegate) )
                 delegateField = CreateDelegateField(taskDelegate, taskTypeBuilder);
             else
                 delegateField = null;
@@ -238,7 +313,7 @@ namespace Tkl.Jumbo.Jet.Jobs.Builder
             MethodBuilder method = taskTypeBuilder.DefineMethod(interfaceMethod.Name, MethodAttributes.Public | MethodAttributes.Virtual, interfaceMethod.ReturnType, parameters.Select(p => p.ParameterType).ToArray());
             foreach( ParameterInfo parameter in parameters )
             {
-                method.DefineParameter(parameter.Position, parameter.Attributes, parameter.Name);
+                method.DefineParameter(parameter.Position + 1, parameter.Attributes, parameter.Name);
             }
 
             return method;

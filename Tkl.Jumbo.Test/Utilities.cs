@@ -92,13 +92,15 @@ namespace Tkl.Jumbo.Test
             {
                 for( int word = 0; word < wordsPerLine; ++word )
                 {
-                    if( word != 0 )
+                    if( writer != null && word != 0 )
                         writer.Write(" ");
                     string wordToWrite = _words[rnd.Next(_words.Length)];
                     result.Add(wordToWrite);
-                    writer.Write(wordToWrite);
+                    if( writer != null )
+                        writer.Write(wordToWrite);
                 }
-                writer.WriteLine();
+                if( writer != null )
+                    writer.WriteLine();
             }
             return result;
         }

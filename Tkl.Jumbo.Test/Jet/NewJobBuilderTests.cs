@@ -129,6 +129,50 @@ namespace Tkl.Jumbo.Test.Jet
         }
 
         [Test]
+        public void TestProcessDelegate()
+        {
+            JobBuilder builder = new JobBuilder(_dfsClient, _jetClient);
+
+            var input = builder.Read(_inputPath, typeof(LineRecordReader));
+            var operation = builder.Process<Utf8String, int>(input, ProcessRecords);
+            builder.Write(operation, _outputPath, typeof(TextRecordWriter<>));
+
+            JobConfiguration config = builder.CreateJob();
+            Assert.AreEqual(9, config.AssemblyFileNames.Count); // Includes generated assembly and the one from the method and all its references.
+            StringAssert.StartsWith("Tkl.Jumbo.Jet.Generated.", config.AssemblyFileNames.Last());
+            Assert.AreEqual("ProcessRecordsTask", operation.TaskType.TaskType.Name);
+
+            Assert.AreEqual(1, config.Stages.Count);
+            StageConfiguration stage = config.Stages[0];
+            VerifyStage(stage, 3, "ProcessRecordsTaskStage", operation.TaskType.TaskType);
+            VerifyDfsInput(config, stage, typeof(LineRecordReader));
+            VerifyDfsOutput(stage, typeof(TextRecordWriter<int>));
+            //builder.TaskBuilder.DeleteAssembly();
+        }
+
+        [Test]
+        public void TestProcessDelegateNoContext()
+        {
+            JobBuilder builder = new JobBuilder(_dfsClient, _jetClient);
+
+            var input = builder.Read(_inputPath, typeof(LineRecordReader));
+            var operation = builder.Process<Utf8String, int>(input, ProcessRecordsNoContext);
+            builder.Write(operation, _outputPath, typeof(TextRecordWriter<>));
+
+            JobConfiguration config = builder.CreateJob();
+            Assert.AreEqual(9, config.AssemblyFileNames.Count); // Includes generated assembly and the one from the method and all its references.
+            StringAssert.StartsWith("Tkl.Jumbo.Jet.Generated.", config.AssemblyFileNames.Last());
+            Assert.AreEqual("ProcessRecordsNoContextTask", operation.TaskType.TaskType.Name);
+
+            Assert.AreEqual(1, config.Stages.Count);
+            StageConfiguration stage = config.Stages[0];
+            VerifyStage(stage, 3, "ProcessRecordsNoContextTaskStage", operation.TaskType.TaskType);
+            VerifyDfsInput(config, stage, typeof(LineRecordReader));
+            VerifyDfsOutput(stage, typeof(TextRecordWriter<int>));
+            builder.TaskBuilder.DeleteAssembly();
+        }
+
+        [Test]
         public void TestCustomDfsOutput()
         {
             JobBuilder builder = new JobBuilder(_dfsClient, _jetClient);
@@ -329,6 +373,70 @@ namespace Tkl.Jumbo.Test.Jet
             VerifyChannel(config.Stages[0].ChildStage, config.Stages[1], ChannelType.File);
             VerifyStage(config.Stages[1], 2, typeof(SumTask<Utf8String>).Name + "Stage", typeof(SumTask<Utf8String>));
             VerifyDfsOutput(config.Stages[1], typeof(TextRecordWriter<Pair<Utf8String, int>>));
+        }
+
+        [Test]
+        public void TestGroupAggregateDelegate()
+        {
+            JobBuilder builder = new JobBuilder(_dfsClient, _jetClient);
+
+            var input = builder.Read(_inputPath, typeof(RecordFileReader<Pair<Utf8String, int>>));
+            var aggregated = builder.GroupAggregate<Utf8String, int>(input, AccumulateRecords);
+            builder.Write(aggregated, _outputPath, typeof(TextRecordWriter<>));
+
+            JobConfiguration config = builder.CreateJob();
+            Assert.AreEqual(9, config.AssemblyFileNames.Count);
+            StringAssert.StartsWith("Tkl.Jumbo.Jet.Generated.", config.AssemblyFileNames.Last());
+            Assert.AreEqual("AccumulateRecordsTask", aggregated.TaskType.TaskType.Name);
+
+            Assert.AreEqual(2, config.Stages.Count);
+
+            VerifyDfsInput(config, config.Stages[0], typeof(RecordFileReader<Pair<Utf8String, int>>));
+            VerifyStage(config.Stages[0], 3, "LocalAccumulateRecordsTaskStage", aggregated.TaskType.TaskType);
+            VerifyChannel(config.Stages[0], config.Stages[1], ChannelType.File);
+            VerifyStage(config.Stages[1], 2, "AccumulateRecordsTaskStage", aggregated.TaskType.TaskType);
+            VerifyDfsOutput(config.Stages[1], typeof(TextRecordWriter<Pair<Utf8String, int>>));
+        }
+
+        [Test]
+        public void TestGroupAggregateDelegateNoContext()
+        {
+            JobBuilder builder = new JobBuilder(_dfsClient, _jetClient);
+
+            var input = builder.Read(_inputPath, typeof(RecordFileReader<Pair<Utf8String, int>>));
+            var aggregated = builder.GroupAggregate<Utf8String, int>(input, AccumulateRecordsNoContext);
+            builder.Write(aggregated, _outputPath, typeof(TextRecordWriter<>));
+
+            JobConfiguration config = builder.CreateJob();
+            Assert.AreEqual(9, config.AssemblyFileNames.Count);
+            StringAssert.StartsWith("Tkl.Jumbo.Jet.Generated.", config.AssemblyFileNames.Last());
+            Assert.AreEqual("AccumulateRecordsNoContextTask", aggregated.TaskType.TaskType.Name);
+
+            Assert.AreEqual(2, config.Stages.Count);
+
+            VerifyDfsInput(config, config.Stages[0], typeof(RecordFileReader<Pair<Utf8String, int>>));
+            VerifyStage(config.Stages[0], 3, "LocalAccumulateRecordsNoContextTaskStage", aggregated.TaskType.TaskType);
+            VerifyChannel(config.Stages[0], config.Stages[1], ChannelType.File);
+            VerifyStage(config.Stages[1], 2, "AccumulateRecordsNoContextTaskStage", aggregated.TaskType.TaskType);
+            VerifyDfsOutput(config.Stages[1], typeof(TextRecordWriter<Pair<Utf8String, int>>));
+        }
+
+        public static void ProcessRecords(RecordReader<Utf8String> input, RecordWriter<int> output, TaskContext context)
+        {
+        }
+
+        public static void ProcessRecordsNoContext(RecordReader<Utf8String> input, RecordWriter<int> output)
+        {
+        }
+
+        public static int AccumulateRecords(Utf8String key, int value, int newValue, TaskContext context)
+        {
+            return value + newValue;
+        }
+
+        public static int AccumulateRecordsNoContext(Utf8String key, int value, int newValue)
+        {
+            return value + newValue;
         }
 
         private static void VerifyStage(StageConfiguration stage, int taskCount, string stageId, Type taskType, Type stageMultiInputRecordReader = null)

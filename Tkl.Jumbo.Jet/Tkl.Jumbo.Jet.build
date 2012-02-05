@@ -26,8 +26,9 @@
         <include name="Properties/AssemblyInfo.cs"/>
         <include name="*.cs"/>
         <include name="Channels/*.cs"/>
-	<include name="Tasks/*.cs"/>
-	<include name="Jobs/*.cs"/>
+	      <include name="Tasks/*.cs"/>
+	      <include name="Jobs/*.cs"/>
+        <include name="Jobs/Builder/*,cs" />
         <include name="../AssemblyInfoCommon.cs"/>
       </sources>
       <nowarn>
