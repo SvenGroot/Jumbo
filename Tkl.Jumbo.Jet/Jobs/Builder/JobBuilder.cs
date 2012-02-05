@@ -269,11 +269,11 @@ namespace Tkl.Jumbo.Jet.Jobs.Builder
             CheckIfInputBelongsToJobBuilder(input);
             Type taskType = _taskBuilder.CreateDynamicTask(typeof(ITask<TInput, TOutput>).GetMethod("Run"), processor, 0, recordReuse);
             StageOperation result = new StageOperation(this, input, taskType);
-            SerializeDelegateIfNeeded(processor, result);
+            AddAssemblyAndSerializeDelegateIfNeeded(processor, result);
             return result;
         }
 
-        private void SerializeDelegateIfNeeded(Delegate processor, StageOperation operation)
+        private void AddAssemblyAndSerializeDelegateIfNeeded(Delegate processor, StageOperation operation)
         {
             if( !DynamicTaskBuilder.CanCallTargetMethodDirectly(processor) )
                 DynamicTaskBuilder.SerializeDelegate(operation.Settings, processor);

@@ -94,6 +94,8 @@ namespace Tkl.Jumbo.Jet.Jobs.Builder
 
             ParameterInfo[] parameters = methodToOverride.GetParameters();
             ParameterInfo[] delegateParameters = taskMethodDelegate.Method.GetParameters();
+            if( methodToOverride.ReturnType != taskMethodDelegate.Method.ReturnType )
+                throw new ArgumentException("The delegate method doesn't have the correct return type.");
             ValidateParameters(skipParameters, parameters, delegateParameters);
 
             FieldBuilder delegateField;

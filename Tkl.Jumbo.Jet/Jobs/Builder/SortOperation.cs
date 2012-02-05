@@ -13,16 +13,10 @@ namespace Tkl.Jumbo.Jet.Jobs.Builder
     public class SortOperation : TwoStepOperation
     {
         private readonly Type _comparerType;
+        private readonly Type _combinerType;
         private readonly bool _useSpillSort;
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="SortOperation"/> class.
-        /// </summary>
-        /// <param name="builder">The job builder.</param>
-        /// <param name="input">The input for this operation.</param>
-        /// <param name="comparerType">The type of <see cref="IComparer{T}"/> to use for this operation, or <see langword="null"/> to use the default comparer. May be a generic type definition with a single type parameter.</param>
-        /// <param name="useSpillSort">If set to <see langword="true"/> use a channel with output type <see cref="FileChannelOutputType.SortSpill"/> instead of a <see cref="SortTask{T}"/>.</param>
-        public SortOperation(JobBuilder builder, IOperationInput input, Type comparerType, bool useSpillSort)
+        private SortOperation(JobBuilder builder, IOperationInput input, Type comparerType, Type combinerType, bool useSpillSort)
             : base(builder, input, typeof(SortTask<>), typeof(EmptyTask<>), true)
         {
             if( comparerType != null )
@@ -41,11 +35,78 @@ namespace Tkl.Jumbo.Jet.Jobs.Builder
                 builder.AddAssembly(comparerType.Assembly);
             }
 
+            if( combinerType != null )
+            {
+                if( !useSpillSort )
+                    throw new NotSupportedException("Combiners can only be used with spill sort.");
+
+                if( combinerType.IsGenericTypeDefinition )
+                    combinerType = combinerType.MakeGenericType(input.RecordType);
+                TaskTypeInfo info = new TaskTypeInfo(combinerType);
+                if( !(info.InputRecordType == input.RecordType && info.OutputRecordType == input.RecordType) )
+                    throw new ArgumentException("The combiner's input or output record type doesn't match the sort operation's input record type.");
+
+                builder.AddAssembly(combinerType.Assembly);
+            }
+
             _comparerType = comparerType;
+            _combinerType = combinerType;
             InputChannel.MultiInputRecordReaderType = typeof(MergeRecordReader<>);
             StageId = "SortStage";
             SecondStepStageId = "MergeStage";
             _useSpillSort = useSpillSort;
+        }
+
+        /// <summary>
+        /// Gets the type of the combiner.
+        /// </summary>
+        /// <value>
+        /// The type of the combiner.
+        /// </value>
+        public Type CombinerType
+        {
+            get { return _combinerType; }
+        }
+
+        /// <summary>
+        /// Gets the type of the comparer.
+        /// </summary>
+        /// <value>
+        /// The type of the comparer.
+        /// </value>
+        public Type ComparerType
+        {
+            get { return _comparerType; }
+        }
+
+        /// <summary>
+        /// Creates a new instance of the <see cref="SortOperation"/> class for regular sorting.
+        /// </summary>
+        /// <param name="builder">The job builder.</param>
+        /// <param name="input">The input for this operation.</param>
+        /// <param name="comparerType">The type of <see cref="IComparer{T}"/> to use for this operation, or <see langword="null"/> to use the default comparer. May be a generic type definition with a single type parameter.</param>
+        /// <returns>A <see cref="SortOperation"/> instance.</returns>
+        /// <remarks>
+        /// If <paramref name="comparerType"/> is a generic type definition with a singe type parameter, it will be constructed using the input's record type.
+        /// </remarks>
+        public static SortOperation CreateSortOperation(JobBuilder builder, IOperationInput input, Type comparerType)
+        {
+            return new SortOperation(builder, input, comparerType, null, false);
+        }
+
+        /// <summary>
+        /// Creates a new instance of the <see cref="SortOperation"/> class for regular sorting.
+        /// </summary>
+        /// <param name="builder">The job builder.</param>
+        /// <param name="input">The input for this operation.</param>
+        /// <param name="combinerType">The type of the combiner task to use, or <see langword="null"/> to use no combiner. May be a generic type definition with a single type parameter.</param>
+        /// <returns>A <see cref="SortOperation"/> instance.</returns>
+        /// <remarks>
+        /// If <paramref name="combinerType"/> is a generic type definition with a singe type parameter, it will be constructed using the input's record type.
+        /// </remarks>
+        public static SortOperation CreateSpillSortOperation(JobBuilder builder, IOperationInput input, Type combinerType)
+        {
+            return new SortOperation(builder, input, null, combinerType, true);
         }
 
         /// <summary>
@@ -67,6 +128,8 @@ namespace Tkl.Jumbo.Jet.Jobs.Builder
                     throw new NotSupportedException("Spill sort can only be used on file channels.");
 
                 input.InputStage.AddTypedSetting(FileOutputChannel.OutputTypeSettingKey, FileChannelOutputType.SortSpill);
+                if( _combinerType != null )
+                    input.InputStage.AddTypedSetting(FileOutputChannel.SpillSortCombinerTypeSettingKey, _combinerType.AssemblyQualifiedName);
                 return compiler.CreateStage("MergeStage", SecondStepTaskType.TaskType, InputChannel.TaskCount, input, Output, true);
             }
             else

@@ -17,6 +17,7 @@ namespace Tkl.Jumbo.Jet.Jobs.Builder
         private readonly TaskTypeInfo _taskTypeInfo;
         private readonly Channel _inputChannel;
         private readonly DfsInput _dfsInput;
+        private readonly int _noInputTaskCount;
         private SettingsDictionary _settings;
 
         private StageConfiguration _stage;
@@ -28,7 +29,7 @@ namespace Tkl.Jumbo.Jet.Jobs.Builder
         /// Initializes a new instance of the <see cref="StageOperation"/> class.
         /// </summary>
         /// <param name="builder">The job builder.</param>
-        /// <param name="input">The input for the operation. May be <see langword="null"/>.</param>
+        /// <param name="input">The input for the operation.</param>
         /// <param name="taskType">Type of the task. May be a generic type definition with a single type parameter.</param>
         /// <remarks>
         /// If <paramref name="taskType"/> is a generic type definition with a singe type parameter, it will be constructed using the input's record type.
@@ -36,11 +37,37 @@ namespace Tkl.Jumbo.Jet.Jobs.Builder
         /// specifying the record type.
         /// </remarks>
         public StageOperation(JobBuilder builder, IOperationInput input, Type taskType)
+            : this(builder, input, 0, taskType)
+        {
+        }
+
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="StageOperation"/> class for a stage without input.
+        /// </summary>
+        /// <param name="builder">The job builder.</param>
+        /// <param name="taskCount">The number of tasks in the stage.</param>
+        /// <param name="taskType">Type of the task. May be a generic type definition with a single type parameter.</param>
+        /// <remarks>
+        /// If <paramref name="taskType"/> is a generic type definition with a singe type parameter, it will be constructed using the input's record type.
+        /// You can use this with types such as <see cref="Tasks.EmptyTask{T}"/>, in which case you can specify them as <c>typeof(EmptyTask&lt;&gt;)</c> without
+        /// specifying the record type.
+        /// </remarks>
+        public StageOperation(JobBuilder builder, int taskCount, Type taskType)
+            : this(builder, null, taskCount, taskType)
+        {
+        }
+
+        private StageOperation(JobBuilder builder, IOperationInput input, int noInputTaskCount, Type taskType)
         {
             if( builder == null )
                 throw new ArgumentNullException("builder");
             if( taskType == null )
                 throw new ArgumentNullException("taskType");
+            if( noInputTaskCount < 0 )
+                throw new ArgumentOutOfRangeException("noInputTaskCount");
+            if( noInputTaskCount == 0 && input == null )
+                throw new ArgumentException("You must specify either an input or a task count larger than zero.");
 
             // This only works for tasks with a single type argument (like EmptyTask<T>).
             if( taskType.IsGenericTypeDefinition && input != null )
@@ -60,6 +87,8 @@ namespace Tkl.Jumbo.Jet.Jobs.Builder
             _builder = builder;
             builder.AddOperation(this);
             builder.AddAssembly(taskType.Assembly);
+
+            _noInputTaskCount = noInputTaskCount;
         }
 
         /// <summary>
@@ -129,7 +158,7 @@ namespace Tkl.Jumbo.Jet.Jobs.Builder
             if( _dfsInput != null )
                 return compiler.CreateStage(StageId, _taskTypeInfo.TaskType, _dfsInput, _output);
             else
-                return compiler.CreateStage(StageId, _taskTypeInfo.TaskType, _inputChannel.TaskCount, _inputChannel.CreateInput(), _output, true);
+                return compiler.CreateStage(StageId, _taskTypeInfo.TaskType, _inputChannel == null ? _noInputTaskCount : _inputChannel.TaskCount, _inputChannel == null ? null : _inputChannel.CreateInput(), _output, true);
         }
 
         Type IOperationInput.RecordType

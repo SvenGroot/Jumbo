@@ -105,7 +105,7 @@ namespace Tkl.Jumbo.Jet.Jobs.Builder
         public StageConfiguration CreateStage(string stageId, Type taskType, int taskCount, InputStageInfo input, IOperationOutput output, bool allowEmptyTaskReplacement)
         {
             StageConfiguration stage;
-            if( allowEmptyTaskReplacement && taskCount <= 1 && input.ChannelType == Channels.ChannelType.Pipeline && IsEmptyTask(input.InputStage.TaskType.ReferencedType) )
+            if( input != null && allowEmptyTaskReplacement && taskCount <= 1 && input.ChannelType == Channels.ChannelType.Pipeline && IsEmptyTask(input.InputStage.TaskType.ReferencedType) )
             {
                 if( stageId != input.InputStage.StageId )
                 {
@@ -123,10 +123,10 @@ namespace Tkl.Jumbo.Jet.Jobs.Builder
             else
             {
                 // Must ensure a unique name if not a child stage.
-                if( input.ChannelType != Channels.ChannelType.Pipeline )
+                if( input == null || input.ChannelType != Channels.ChannelType.Pipeline )
                     stageId = CreateUniqueStageId(stageId);
 
-                stage = _job.AddStage(stageId, taskType, DetermineTaskCount(taskCount, input.ChannelType), input, null, null);
+                stage = _job.AddStage(stageId, taskType, DetermineTaskCount(taskCount, input), input, null, null);
             }
 
             if( output != null )
@@ -152,11 +152,11 @@ namespace Tkl.Jumbo.Jet.Jobs.Builder
             return result;
         }
 
-        private int DetermineTaskCount(int taskCount, ChannelType channelType)
+        private int DetermineTaskCount(int taskCount, InputStageInfo input)
         {
             if( taskCount != 0 )
                 return taskCount;
-            else if( channelType == ChannelType.Pipeline )
+            else if( input == null || input.ChannelType == ChannelType.Pipeline )
                 return 1;
             else
                 return DefaultChannelInputTaskCount;

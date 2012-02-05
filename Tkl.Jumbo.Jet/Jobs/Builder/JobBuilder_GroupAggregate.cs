@@ -119,7 +119,7 @@ namespace Tkl.Jumbo.Jet.Jobs.Builder
             Type taskType = _taskBuilder.CreateDynamicTask(typeof(AccumulatorTask<TKey, TValue>).GetMethod("Accumulate", BindingFlags.NonPublic | BindingFlags.Instance), accumulator, 0, recordReuse);
 
             TwoStepOperation result = GroupAggregate(input, taskType);
-            SerializeDelegateIfNeeded(accumulator, result);
+            AddAssemblyAndSerializeDelegateIfNeeded(accumulator, result);
             return result;
         }
 

@@ -51,6 +51,14 @@ namespace Tkl.Jumbo.Test.Jet
             }
         }
 
+        private class FakeCombiner<T> : ITask<T, T>
+        {
+            public void Run(RecordReader<T> input, RecordWriter<T> output)
+            {
+                throw new NotImplementedException();
+            }
+        }
+
 
         #endregion
 
@@ -147,7 +155,7 @@ namespace Tkl.Jumbo.Test.Jet
             VerifyStage(stage, 3, "ProcessRecordsTaskStage", operation.TaskType.TaskType);
             VerifyDfsInput(config, stage, typeof(LineRecordReader));
             VerifyDfsOutput(stage, typeof(TextRecordWriter<int>));
-            //builder.TaskBuilder.DeleteAssembly();
+            builder.TaskBuilder.DeleteAssembly();
         }
 
         [Test]
@@ -331,6 +339,91 @@ namespace Tkl.Jumbo.Test.Jet
         }
 
         [Test]
+        public void TestSpillSortCombiner()
+        {
+            JobBuilder builder = new JobBuilder(_dfsClient, _jetClient);
+
+            var input = builder.Read(_inputPath, typeof(LineRecordReader));
+            var sort = builder.SpillSort(input, typeof(FakeCombiner<>));
+            builder.Write(sort, _outputPath, typeof(TextRecordWriter<>));
+
+            JobConfiguration config = builder.CreateJob();
+            Assert.AreEqual(8, config.AssemblyFileNames.Count);
+
+            Assert.AreEqual(2, config.Stages.Count);
+
+            VerifyDfsInput(config, config.Stages[0], typeof(LineRecordReader));
+            VerifyStage(config.Stages[0], 3, "ReadStage", typeof(EmptyTask<Utf8String>));
+            VerifyChannel(config.Stages[0], config.Stages[1], ChannelType.File, multiInputRecordReaderType: typeof(MergeRecordReader<Utf8String>));
+            VerifyStage(config.Stages[1], 2, "MergeStage", typeof(EmptyTask<Utf8String>));
+            VerifyDfsOutput(config.Stages[1], typeof(TextRecordWriter<Utf8String>));
+            VerifyStageSetting(config.Stages[0], FileOutputChannel.OutputTypeSettingKey, FileChannelOutputType.SortSpill.ToString());
+            VerifyStageSetting(config.Stages[1], FileOutputChannel.OutputTypeSettingKey, null);
+            VerifyStageSetting(config.Stages[0], TaskConstants.ComparerSettingKey, null);
+            VerifyStageSetting(config.Stages[1], TaskConstants.ComparerSettingKey, null);
+            VerifyStageSetting(config.Stages[0], FileOutputChannel.SpillSortCombinerTypeSettingKey, typeof(FakeCombiner<Utf8String>).AssemblyQualifiedName);
+            VerifyStageSetting(config.Stages[1], FileOutputChannel.SpillSortCombinerTypeSettingKey, null);
+        }
+
+        [Test]
+        public void TestSpillSortCombinerDelegate()
+        {
+            JobBuilder builder = new JobBuilder(_dfsClient, _jetClient);
+
+            var input = builder.Read(_inputPath, typeof(RecordFileReader<Pair<Utf8String, int>>));
+            var sort = builder.SpillSort<Utf8String, int>(input, CombineRecords);
+            builder.Write(sort, _outputPath, typeof(TextRecordWriter<>));
+
+            JobConfiguration config = builder.CreateJob();
+            Assert.AreEqual(9, config.AssemblyFileNames.Count);
+            StringAssert.StartsWith("Tkl.Jumbo.Jet.Generated.", config.AssemblyFileNames.Last());
+            Assert.AreEqual("CombineRecordsTask", sort.CombinerType.Name);
+
+            Assert.AreEqual(2, config.Stages.Count);
+
+            VerifyDfsInput(config, config.Stages[0], typeof(RecordFileReader<Pair<Utf8String, int>>));
+            VerifyStage(config.Stages[0], 3, "ReadStage", typeof(EmptyTask<Pair<Utf8String, int>>));
+            VerifyChannel(config.Stages[0], config.Stages[1], ChannelType.File, multiInputRecordReaderType: typeof(MergeRecordReader<Pair<Utf8String, int>>));
+            VerifyStage(config.Stages[1], 2, "MergeStage", typeof(EmptyTask<Pair<Utf8String, int>>));
+            VerifyDfsOutput(config.Stages[1], typeof(TextRecordWriter<Pair<Utf8String, int>>));
+            VerifyStageSetting(config.Stages[0], FileOutputChannel.OutputTypeSettingKey, FileChannelOutputType.SortSpill.ToString());
+            VerifyStageSetting(config.Stages[1], FileOutputChannel.OutputTypeSettingKey, null);
+            VerifyStageSetting(config.Stages[0], TaskConstants.ComparerSettingKey, null);
+            VerifyStageSetting(config.Stages[1], TaskConstants.ComparerSettingKey, null);
+            VerifyStageSetting(config.Stages[0], FileOutputChannel.SpillSortCombinerTypeSettingKey, sort.CombinerType.AssemblyQualifiedName);
+            VerifyStageSetting(config.Stages[1], FileOutputChannel.SpillSortCombinerTypeSettingKey, null);
+        }
+
+        [Test]
+        public void TestSpillSortCombinerDelegateNoContext()
+        {
+            JobBuilder builder = new JobBuilder(_dfsClient, _jetClient);
+
+            var input = builder.Read(_inputPath, typeof(RecordFileReader<Pair<Utf8String, int>>));
+            var sort = builder.SpillSort<Utf8String, int>(input, CombineRecordsNoContext);
+            builder.Write(sort, _outputPath, typeof(TextRecordWriter<>));
+
+            JobConfiguration config = builder.CreateJob();
+            Assert.AreEqual(9, config.AssemblyFileNames.Count);
+            StringAssert.StartsWith("Tkl.Jumbo.Jet.Generated.", config.AssemblyFileNames.Last());
+            Assert.AreEqual("CombineRecordsNoContextTask", sort.CombinerType.Name);
+
+            Assert.AreEqual(2, config.Stages.Count);
+
+            VerifyDfsInput(config, config.Stages[0], typeof(RecordFileReader<Pair<Utf8String, int>>));
+            VerifyStage(config.Stages[0], 3, "ReadStage", typeof(EmptyTask<Pair<Utf8String, int>>));
+            VerifyChannel(config.Stages[0], config.Stages[1], ChannelType.File, multiInputRecordReaderType: typeof(MergeRecordReader<Pair<Utf8String, int>>));
+            VerifyStage(config.Stages[1], 2, "MergeStage", typeof(EmptyTask<Pair<Utf8String, int>>));
+            VerifyDfsOutput(config.Stages[1], typeof(TextRecordWriter<Pair<Utf8String, int>>));
+            VerifyStageSetting(config.Stages[0], FileOutputChannel.OutputTypeSettingKey, FileChannelOutputType.SortSpill.ToString());
+            VerifyStageSetting(config.Stages[1], FileOutputChannel.OutputTypeSettingKey, null);
+            VerifyStageSetting(config.Stages[0], TaskConstants.ComparerSettingKey, null);
+            VerifyStageSetting(config.Stages[1], TaskConstants.ComparerSettingKey, null);
+            VerifyStageSetting(config.Stages[0], FileOutputChannel.SpillSortCombinerTypeSettingKey, sort.CombinerType.AssemblyQualifiedName);
+            VerifyStageSetting(config.Stages[1], FileOutputChannel.SpillSortCombinerTypeSettingKey, null);
+        }
+
+        [Test]
         public void TestGroupAggregateDfsInputOutput()
         {
             JobBuilder builder = new JobBuilder(_dfsClient, _jetClient);
@@ -396,6 +489,7 @@ namespace Tkl.Jumbo.Test.Jet
             VerifyChannel(config.Stages[0], config.Stages[1], ChannelType.File);
             VerifyStage(config.Stages[1], 2, "AccumulateRecordsTaskStage", aggregated.TaskType.TaskType);
             VerifyDfsOutput(config.Stages[1], typeof(TextRecordWriter<Pair<Utf8String, int>>));
+            builder.TaskBuilder.DeleteAssembly();
         }
 
         [Test]
@@ -419,8 +513,130 @@ namespace Tkl.Jumbo.Test.Jet
             VerifyChannel(config.Stages[0], config.Stages[1], ChannelType.File);
             VerifyStage(config.Stages[1], 2, "AccumulateRecordsNoContextTaskStage", aggregated.TaskType.TaskType);
             VerifyDfsOutput(config.Stages[1], typeof(TextRecordWriter<Pair<Utf8String, int>>));
+            builder.TaskBuilder.DeleteAssembly();
         }
 
+        [Test]
+        public void TestMapReduce()
+        {
+            JobBuilder builder = new JobBuilder(_dfsClient, _jetClient);
+
+            // This is it: the official way to write a "behaves like Hadoop" MapReduce job.
+            var input = builder.Read(_inputPath, typeof(LineRecordReader));
+            var mapped = builder.Map<Utf8String, Pair<Utf8String, int>>(input, MapRecords);
+            var sorted = builder.SpillSort(mapped);
+            var reduced = builder.Reduce<Utf8String, int, int>(sorted, ReduceRecords);
+            builder.Write(reduced, _outputPath, typeof(TextRecordWriter<>));
+
+            JobConfiguration config = builder.CreateJob();
+            Assert.AreEqual(9, config.AssemblyFileNames.Count); // Includes generated assembly and the one from the method and all its references.
+            StringAssert.StartsWith("Tkl.Jumbo.Jet.Generated.", config.AssemblyFileNames.Last());
+            Assert.AreEqual("MapRecordsTask", mapped.TaskType.TaskType.Name);
+            Assert.AreEqual("ReduceRecordsTask", reduced.TaskType.TaskType.Name);
+
+            Assert.AreEqual(2, config.Stages.Count);
+            VerifyDfsInput(config, config.Stages[0], typeof(LineRecordReader));
+            VerifyStage(config.Stages[0], 3, "MapRecordsTaskStage", mapped.TaskType.TaskType);
+            VerifyChannel(config.Stages[0], config.Stages[1], ChannelType.File, multiInputRecordReaderType: typeof(MergeRecordReader<Pair<Utf8String, int>>));
+            VerifyStageSetting(config.Stages[0], FileOutputChannel.OutputTypeSettingKey, FileChannelOutputType.SortSpill.ToString());
+            VerifyStage(config.Stages[1], 2, "ReduceRecordsTaskStage", reduced.TaskType.TaskType);
+            VerifyDfsOutput(config.Stages[1], typeof(TextRecordWriter<int>));
+            builder.TaskBuilder.DeleteAssembly();
+        }
+
+        [Test]
+        public void TestMapReduceNoContext()
+        {
+            JobBuilder builder = new JobBuilder(_dfsClient, _jetClient);
+
+            var input = builder.Read(_inputPath, typeof(LineRecordReader));
+            var mapped = builder.Map<Utf8String, Pair<Utf8String, int>>(input, MapRecordsNoContext);
+            var sorted = builder.SpillSort(mapped);
+            var reduced = builder.Reduce<Utf8String, int, int>(sorted, ReduceRecordsNoContext);
+            builder.Write(reduced, _outputPath, typeof(TextRecordWriter<>));
+
+            JobConfiguration config = builder.CreateJob();
+            Assert.AreEqual(9, config.AssemblyFileNames.Count); // Includes generated assembly and the one from the method and all its references.
+            StringAssert.StartsWith("Tkl.Jumbo.Jet.Generated.", config.AssemblyFileNames.Last());
+            Assert.AreEqual("MapRecordsNoContextTask", mapped.TaskType.TaskType.Name);
+            Assert.AreEqual("ReduceRecordsNoContextTask", reduced.TaskType.TaskType.Name);
+
+            Assert.AreEqual(2, config.Stages.Count);
+            VerifyDfsInput(config, config.Stages[0], typeof(LineRecordReader));
+            VerifyStage(config.Stages[0], 3, "MapRecordsNoContextTaskStage", mapped.TaskType.TaskType);
+            VerifyChannel(config.Stages[0], config.Stages[1], ChannelType.File, multiInputRecordReaderType: typeof(MergeRecordReader<Pair<Utf8String, int>>));
+            VerifyStageSetting(config.Stages[0], FileOutputChannel.OutputTypeSettingKey, FileChannelOutputType.SortSpill.ToString());
+            VerifyStage(config.Stages[1], 2, "ReduceRecordsNoContextTaskStage", reduced.TaskType.TaskType);
+            VerifyDfsOutput(config.Stages[1], typeof(TextRecordWriter<int>));
+            builder.TaskBuilder.DeleteAssembly();
+        }
+
+        [Test]
+        public void TestGenerate()
+        {
+            JobBuilder builder = new JobBuilder(_dfsClient, _jetClient);
+
+            var operation = builder.Generate(5, typeof(LineCounterTask)); // This task actually requires input but since no one's running it, we don't care.
+            builder.Write(operation, _outputPath, typeof(TextRecordWriter<>));
+
+            JobConfiguration config = builder.CreateJob();
+            Assert.AreEqual(1, config.AssemblyFileNames.Count);
+            Assert.AreEqual(Path.GetFileName(typeof(LineCounterTask).Assembly.Location), config.AssemblyFileNames[0]);
+
+            Assert.AreEqual(1, config.Stages.Count);
+            StageConfiguration stage = config.Stages[0];
+            Assert.IsNull(stage.DfsInput);
+            CollectionAssert.IsEmpty(config.GetInputStagesForStage(stage.StageId));
+            VerifyStage(stage, 5, typeof(LineCounterTask).Name + "Stage", typeof(LineCounterTask));
+            VerifyDfsOutput(stage, typeof(TextRecordWriter<int>));
+        }
+        
+        [Test]
+        public void TestGenerateDelegate()
+        {
+            JobBuilder builder = new JobBuilder(_dfsClient, _jetClient);
+
+            var input = builder.Read(_inputPath, typeof(LineRecordReader));
+            var operation = builder.Generate<int>(5, GenerateRecords);
+            builder.Write(operation, _outputPath, typeof(TextRecordWriter<>));
+
+            JobConfiguration config = builder.CreateJob();
+            Assert.AreEqual(9, config.AssemblyFileNames.Count); // Includes generated assembly and the one from the method and all its references.
+            StringAssert.StartsWith("Tkl.Jumbo.Jet.Generated.", config.AssemblyFileNames.Last());
+            Assert.AreEqual("GenerateRecordsTask", operation.TaskType.TaskType.Name);
+
+            Assert.AreEqual(1, config.Stages.Count);
+            StageConfiguration stage = config.Stages[0];
+            Assert.IsNull(stage.DfsInput);
+            CollectionAssert.IsEmpty(config.GetInputStagesForStage(stage.StageId));
+            VerifyStage(stage, 5, "GenerateRecordsTaskStage", operation.TaskType.TaskType);
+            VerifyDfsOutput(stage, typeof(TextRecordWriter<int>));
+            builder.TaskBuilder.DeleteAssembly();
+        }
+
+        [Test]
+        public void TestGenerateDelegateNoContext()
+        {
+            JobBuilder builder = new JobBuilder(_dfsClient, _jetClient);
+
+            var input = builder.Read(_inputPath, typeof(LineRecordReader));
+            var operation = builder.Generate<int>(5, GenerateRecordsNoContext);
+            builder.Write(operation, _outputPath, typeof(TextRecordWriter<>));
+
+            JobConfiguration config = builder.CreateJob();
+            Assert.AreEqual(9, config.AssemblyFileNames.Count); // Includes generated assembly and the one from the method and all its references.
+            StringAssert.StartsWith("Tkl.Jumbo.Jet.Generated.", config.AssemblyFileNames.Last());
+            Assert.AreEqual("GenerateRecordsNoContextTask", operation.TaskType.TaskType.Name);
+
+            Assert.AreEqual(1, config.Stages.Count);
+            StageConfiguration stage = config.Stages[0];
+            Assert.IsNull(stage.DfsInput);
+            CollectionAssert.IsEmpty(config.GetInputStagesForStage(stage.StageId));
+            VerifyStage(stage, 5, "GenerateRecordsNoContextTaskStage", operation.TaskType.TaskType);
+            VerifyDfsOutput(stage, typeof(TextRecordWriter<int>));
+            builder.TaskBuilder.DeleteAssembly();
+        }
+        
         public static void ProcessRecords(RecordReader<Utf8String> input, RecordWriter<int> output, TaskContext context)
         {
         }
@@ -437,6 +653,38 @@ namespace Tkl.Jumbo.Test.Jet
         public static int AccumulateRecordsNoContext(Utf8String key, int value, int newValue)
         {
             return value + newValue;
+        }
+
+        public static void MapRecords(Utf8String record, RecordWriter<Pair<Utf8String,int>> output, TaskContext context)
+        {
+        }
+
+        public static void MapRecordsNoContext(Utf8String record, RecordWriter<Pair<Utf8String, int>> output)
+        {
+        }
+
+        public static void ReduceRecords(Utf8String key, IEnumerable<int> values, RecordWriter<int> output, TaskContext context)
+        {
+        }
+
+        public static void ReduceRecordsNoContext(Utf8String key, IEnumerable<int> values, RecordWriter<int> output)
+        {
+        }
+
+        public static void GenerateRecords(RecordWriter<int> output, TaskContext context)
+        {
+        }
+
+        public static void GenerateRecordsNoContext(RecordWriter<int> output)
+        {
+        }
+
+        public static void CombineRecords(Utf8String key, IEnumerable<int> values, RecordWriter<Pair<Utf8String, int>> output, TaskContext context)
+        {
+        }
+
+        public static void CombineRecordsNoContext(Utf8String key, IEnumerable<int> values, RecordWriter<Pair<Utf8String, int>> output)
+        {
         }
 
         private static void VerifyStage(StageConfiguration stage, int taskCount, string stageId, Type taskType, Type stageMultiInputRecordReader = null)
