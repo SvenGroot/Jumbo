@@ -14,13 +14,13 @@ namespace Tkl.Jumbo.Jet.Samples.Tasks
     /// <summary>
     /// Task that validates the sort order in its input.
     /// </summary>
-    public class ValSortTask : Configurable, IPullTask<GenSortRecord, ValSortRecord>
+    public class ValSortTask : Configurable, ITask<GenSortRecord, ValSortRecord>
     {
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(ValSortTask));
 
         private Crc32 _crc = new Crc32();
 
-        #region IPullTask<GenSortRecord,ValSortRecord> Members
+        #region ITask<GenSortRecord,ValSortRecord> Members
 
         /// <summary>
         /// Runs the task.

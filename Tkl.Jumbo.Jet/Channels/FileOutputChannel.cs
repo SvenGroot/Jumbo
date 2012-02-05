@@ -38,7 +38,7 @@ namespace Tkl.Jumbo.Jet.Channels
         public const string SpillBufferLimitSettingKey = "FileOutputChannel.SpillBufferLimit";
         /// <summary>
         /// The key to use in the stage settings to specify the type of a combiner to use when the output type is <see cref="FileChannelOutputType.SortSpill"/>. It's ignored
-        /// for other output types. The setting should be an assembly-qualified type name of a type implementing <see cref="IPullTask{TInput,TOutput}"/>.
+        /// for other output types. The setting should be an assembly-qualified type name of a type implementing <see cref="ITask{TInput,TOutput}"/>.
         /// </summary>
         public const string SpillSortCombinerTypeSettingKey = "FileOutputChannel.SpillSortCombiner";
         /// <summary>
@@ -241,7 +241,7 @@ namespace Tkl.Jumbo.Jet.Channels
             if( _outputType == FileChannelOutputType.SortSpill )
             {
                 int maxDiskInputsPerMergePass = TaskExecution.Context.GetTypedSetting(MergeRecordReaderConstants.MaxFileInputsSetting, TaskExecution.JetClient.Configuration.MergeRecordReader.MaxFileInputs);
-                IPullTask<T, T> combiner = (IPullTask<T, T>)CreateCombiner();
+                ITask<T, T> combiner = (ITask<T, T>)CreateCombiner();
                 int minSpillCountForCombineDuringMerge = TaskExecution.Context.GetTypedSetting(SpillSortMinSpillsForCombineDuringMergeSettingKey, TaskExecution.JetClient.Configuration.FileChannel.SpillSortMinSpillsForCombineDuringMerge);
                 result = new SortSpillRecordWriter<T>(Path.Combine(_localJobDirectory, _fileNames[0]), partitioner, (int)outputBufferSize.Value, outputBufferLimitSize, (int)writeBufferSize.Value, TaskExecution.JetClient.Configuration.FileChannel.EnableChecksum, maxDiskInputsPerMergePass, combiner, minSpillCountForCombineDuringMerge);
             }

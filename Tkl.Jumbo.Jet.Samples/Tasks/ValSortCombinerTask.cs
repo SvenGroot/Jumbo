@@ -17,7 +17,7 @@ namespace Tkl.Jumbo.Jet.Samples.Tasks
     /// <remarks>
     /// The input <see cref="ValSortRecord"/> records need to be sorted.
     /// </remarks>
-    public class ValSortCombinerTask : Configurable, IPushTask<ValSortRecord, string>
+    public class ValSortCombinerTask : PushTask<ValSortRecord, string>
     {
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(ValSortCombinerTask));
 
@@ -28,14 +28,12 @@ namespace Tkl.Jumbo.Jet.Samples.Tasks
         private UInt128 _records = UInt128.Zero;
         private UInt128? _firstUnsorted;
 
-        #region IPushTask<ValSortRecord,string> Members
-
         /// <summary>
         /// Method called for each record in the task's input.
         /// </summary>
         /// <param name="record">The record to process.</param>
         /// <param name="output">The <see cref="RecordWriter{T}"/> to which the task's output should be written.</param>
-        public void ProcessRecord(ValSortRecord record, RecordWriter<string> output)
+        public override void ProcessRecord(ValSortRecord record, RecordWriter<string> output)
         {
             bool verbose = TaskContext.GetTypedSetting("ValSort.VerboseLogging", false);
 
@@ -77,7 +75,7 @@ namespace Tkl.Jumbo.Jet.Samples.Tasks
         /// <remarks>
         /// This enables the task to finish up its processing and write any further records it may have collected during processing.
         /// </remarks>
-        public void Finish(RecordWriter<string> output)
+        public override void Finish(RecordWriter<string> output)
         {
             if( _unsortedRecords != UInt128.Zero )
             {
@@ -95,7 +93,5 @@ namespace Tkl.Jumbo.Jet.Samples.Tasks
                 output.WriteRecord(string.Format("ERROR - there are {0} unordered records", _unsortedRecords));
             }
         }
-
-        #endregion
     }
 }

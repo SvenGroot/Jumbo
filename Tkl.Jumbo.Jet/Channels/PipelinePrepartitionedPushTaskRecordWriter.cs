@@ -10,7 +10,7 @@ namespace Tkl.Jumbo.Jet.Channels
     sealed class PipelinePrepartitionedPushTaskRecordWriter<TRecord, TPipelinedTaskOutput> : RecordWriter<TRecord>
     {
         private readonly TaskExecutionUtility _taskExecution;
-        private IPrepartitionedPushTask<TRecord, TPipelinedTaskOutput> _task;
+        private PrepartitionedPushTask<TRecord, TPipelinedTaskOutput> _task;
         private readonly IPartitioner<TRecord> _partitioner;
         private PrepartitionedRecordWriter<TPipelinedTaskOutput> _output;
 
@@ -22,9 +22,9 @@ namespace Tkl.Jumbo.Jet.Channels
                 throw new ArgumentNullException("partitioner");
 
             _taskExecution = taskExecution;
-            _task = (IPrepartitionedPushTask<TRecord, TPipelinedTaskOutput>)_taskExecution.Task;
+            _task = (PrepartitionedPushTask<TRecord, TPipelinedTaskOutput>)_taskExecution.Task;
             _taskExecution.TaskInstanceCreated += new EventHandler(_taskExecution_TaskInstanceCreated);
-            _output = new PrepartitionedRecordWriter<TPipelinedTaskOutput>(output);
+            _output = new PrepartitionedRecordWriter<TPipelinedTaskOutput>(output, true);
             _partitioner = partitioner;
         }
 
@@ -59,7 +59,7 @@ namespace Tkl.Jumbo.Jet.Channels
 
         private void _taskExecution_TaskInstanceCreated(object sender, EventArgs e)
         {
-            _task = (IPrepartitionedPushTask<TRecord, TPipelinedTaskOutput>)_taskExecution.Task;
+            _task = (PrepartitionedPushTask<TRecord, TPipelinedTaskOutput>)_taskExecution.Task;
         }    
     }
 

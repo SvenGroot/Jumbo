@@ -11,7 +11,7 @@ namespace Tkl.Jumbo.Jet.Channels
     sealed class PipelinePushTaskRecordWriter<TRecord, TPipelinedTaskOutput> : RecordWriter<TRecord>
     {
         private readonly TaskExecutionUtility _taskExecution;
-        private IPushTask<TRecord, TPipelinedTaskOutput> _task;
+        private PushTask<TRecord, TPipelinedTaskOutput> _task;
         private RecordWriter<TPipelinedTaskOutput> _output;
 
         public PipelinePushTaskRecordWriter(TaskExecutionUtility taskExecution, RecordWriter<TPipelinedTaskOutput> output)
@@ -22,7 +22,7 @@ namespace Tkl.Jumbo.Jet.Channels
                 throw new ArgumentNullException("output");
 
             _taskExecution = taskExecution;
-            _task = (IPushTask<TRecord, TPipelinedTaskOutput>)taskExecution.Task;
+            _task = (PushTask<TRecord, TPipelinedTaskOutput>)taskExecution.Task;
             _taskExecution.TaskInstanceCreated += new EventHandler(_taskExecution_TaskInstanceCreated);
             _output = output;
         }
@@ -55,7 +55,7 @@ namespace Tkl.Jumbo.Jet.Channels
 
         void _taskExecution_TaskInstanceCreated(object sender, EventArgs e)
         {
-            _task = (IPushTask<TRecord, TPipelinedTaskOutput>)_taskExecution.Task;
+            _task = (PushTask<TRecord, TPipelinedTaskOutput>)_taskExecution.Task;
         }
 
     }

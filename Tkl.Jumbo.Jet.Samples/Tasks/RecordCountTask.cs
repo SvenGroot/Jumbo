@@ -13,11 +13,11 @@ namespace Tkl.Jumbo.Jet.Samples.Tasks
     /// </summary>
     /// <typeparam name="TInput">The type of input record.</typeparam>
     [AllowRecordReuse]
-    public class RecordCountTask<TInput> : IPullTask<TInput, int>
+    public class RecordCountTask<TInput> : ITask<TInput, int>
     {
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(RecordCountTask<TInput>));
 
-        #region IPullTask<TInput, int> Members
+        #region ITask<TInput, int> Members
 
         /// <summary>
         /// Runs the task.

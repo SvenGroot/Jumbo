@@ -9,22 +9,18 @@ using Tkl.Jumbo.Jet;
 
 namespace Tkl.Jumbo.Test.Tasks
 {
-    public class LineAdderPushTask : IPushTask<int, int>
+    public class LineAdderPushTask : PushTask<int, int>
     {
         private int _lines;
 
-        #region IPushTask<int,int> Members
-
-        public void ProcessRecord(int record, RecordWriter<int> output)
+        public override void ProcessRecord(int record, RecordWriter<int> output)
         {
             _lines += record;
         }
 
-        public void Finish(RecordWriter<int> output)
+        public override void Finish(RecordWriter<int> output)
         {
             output.WriteRecord(_lines);
         }
-
-        #endregion
     }
 }

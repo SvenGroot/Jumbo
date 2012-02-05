@@ -666,9 +666,9 @@ namespace Tkl.Jumbo.Jet.Jobs
             CheckJobCreated();
 
             FieldBuilder delegateField;
-            TypeBuilder taskTypeBuilder = CreateTaskType<TInput, TOutput>(taskDelegate, recordReuseMode, typeof(IPullTask<TInput, TOutput>), out delegateField);
+            TypeBuilder taskTypeBuilder = CreateTaskType<TInput, TOutput>(taskDelegate, recordReuseMode, typeof(ITask<TInput, TOutput>), out delegateField);
 
-            MethodBuilder runMethod = OverrideMethod(taskTypeBuilder, typeof(IPullTask<TInput, TOutput>).GetMethod("Run"));
+            MethodBuilder runMethod = OverrideMethod(taskTypeBuilder, typeof(ITask<TInput, TOutput>).GetMethod("Run"));
 
             ILGenerator generator = runMethod.GetILGenerator();
             if( !taskMethod.IsPublic )
@@ -760,9 +760,9 @@ namespace Tkl.Jumbo.Jet.Jobs
             CheckJobCreated();
 
             FieldBuilder delegateField;
-            TypeBuilder taskTypeBuilder = CreateTaskType<TInput, TOutput>(taskDelegate, recordReuseMode, typeof(IPushTask<TInput, TOutput>), out delegateField);
+            TypeBuilder taskTypeBuilder = CreateTaskType<TInput, TOutput>(taskDelegate, recordReuseMode, typeof(PushTask<TInput, TOutput>), out delegateField);
 
-            MethodBuilder processMethod = OverrideMethod(taskTypeBuilder, typeof(IPushTask<TInput, TOutput>).GetMethod("ProcessRecord"));
+            MethodBuilder processMethod = OverrideMethod(taskTypeBuilder, typeof(PushTask<TInput, TOutput>).GetMethod("ProcessRecord"));
 
             MethodInfo taskMethod = taskDelegate.Method;
             ILGenerator generator = processMethod.GetILGenerator();
@@ -780,10 +780,6 @@ namespace Tkl.Jumbo.Jet.Jobs
                 generator.Emit(OpCodes.Call, taskMethod);
             else
                 generator.Emit(OpCodes.Callvirt, taskDelegate.GetType().GetMethod("Invoke"));
-            generator.Emit(OpCodes.Ret);
-
-            MethodBuilder finishMethod = OverrideMethod(taskTypeBuilder, typeof(IPushTask<TInput, TOutput>).GetMethod("Finish"));
-            generator = finishMethod.GetILGenerator();
             generator.Emit(OpCodes.Ret);
 
             Type taskType = taskTypeBuilder.CreateType();

@@ -137,7 +137,7 @@ namespace Tkl.Jumbo.Jet.Channels
 
         private readonly TaskExecutionUtility _taskExecution;
         private readonly RecordWriter<TPipelinedTaskOutput> _output;
-        private IPullTask<TRecord, TPipelinedTaskOutput> _task;
+        private ITask<TRecord, TPipelinedTaskOutput> _task;
         private readonly TaskId _taskId;
         private Thread _taskThread;
         private ProducerConsumerBuffer _buffer;
@@ -152,7 +152,7 @@ namespace Tkl.Jumbo.Jet.Channels
                 throw new ArgumentNullException("taskId");
 
             _taskExecution = taskExecution;
-            _task = (IPullTask<TRecord, TPipelinedTaskOutput>)taskExecution.Task; // just to ensure the task instance gets added to additional progress sources up front.
+            _task = (ITask<TRecord, TPipelinedTaskOutput>)taskExecution.Task; // just to ensure the task instance gets added to additional progress sources up front.
             _output = output;
             _taskId = taskId;
         }
@@ -180,7 +180,7 @@ namespace Tkl.Jumbo.Jet.Channels
 
         private void TaskThread()
         {
-            _task = (IPullTask<TRecord, TPipelinedTaskOutput>)_taskExecution.Task;
+            _task = (ITask<TRecord, TPipelinedTaskOutput>)_taskExecution.Task;
             using( BufferRecordReader reader = new BufferRecordReader(_buffer) )
             {
                 _task.Run(reader, _output);

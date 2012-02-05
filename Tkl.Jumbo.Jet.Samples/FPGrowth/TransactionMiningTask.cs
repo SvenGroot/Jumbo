@@ -12,7 +12,7 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
     /// Task for PFP growth transaction mining.
     /// </summary>
     [AllowRecordReuse, ProcessAllInputPartitions, AdditionalProgressCounter("FP growth")]
-    public class TransactionMiningTask : Configurable, IPullTask<Pair<int, Transaction>, Pair<int, WritableCollection<MappedFrequentPattern>>>, IHasAdditionalProgress
+    public class TransactionMiningTask : Configurable, ITask<Pair<int, Transaction>, Pair<int, WritableCollection<MappedFrequentPattern>>>, IHasAdditionalProgress
     {
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(TransactionMiningTask));
         private int _groupsProcessed;

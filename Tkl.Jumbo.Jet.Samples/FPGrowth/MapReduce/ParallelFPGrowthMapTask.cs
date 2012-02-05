@@ -11,7 +11,7 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth.MapReduce
     /// <summary>
     /// Map task for PFP Growth
     /// </summary>
-    public sealed class ParallelFPGrowthMapTask : Configurable, IPushTask<Utf8String, Pair<int, Transaction>>
+    public sealed class ParallelFPGrowthMapTask : PushTask<Utf8String, Pair<int, Transaction>>
     {
         private static readonly char[] _separator = new[] { ' ' };
         private Dictionary<string, int> _itemMapping = new Dictionary<string,int>();
@@ -22,7 +22,7 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth.MapReduce
         /// </summary>
         /// <param name="record">The record.</param>
         /// <param name="output">The output.</param>
-        public void ProcessRecord(Utf8String record, RecordWriter<Pair<int, Transaction>> output)
+        public override void ProcessRecord(Utf8String record, RecordWriter<Pair<int, Transaction>> output)
         {
             // Extract the items for the transaction
             string[] items = record.ToString().Split(_separator, StringSplitOptions.RemoveEmptyEntries);
@@ -68,14 +68,6 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth.MapReduce
             int[] groupItems = new int[x];
             Array.Copy(mappedItems, groupItems, x);
             transactionOutput.WriteRecord(Pair.MakePair(currentGroupId, new Transaction() { Items = groupItems, Length = groupItems.Length }));
-        }
-
-        /// <summary>
-        /// Finishes the task.
-        /// </summary>
-        /// <param name="output">The output.</param>
-        public void Finish(RecordWriter<Pair<int, Transaction>> output)
-        {
         }
 
         /// <summary>

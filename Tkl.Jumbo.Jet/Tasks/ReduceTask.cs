@@ -20,7 +20,7 @@ namespace Tkl.Jumbo.Jet.Tasks
     /// </note>
     /// <para>
     ///   Because the <see cref="ReduceTask{TKey,TValue,TOutput}"/> class is a pull task, it is not recommended to use
-    ///   it as the receiving stage of an in-process channel (e.g. as a combiner).
+    ///   it as the receiving stage of an in-process channel.
     /// </para>
     /// <para>
     ///   If the reduce function could be calculated incrementally, <see cref="AccumulatorTask{TKey,TValue}"/> often offers
@@ -31,7 +31,7 @@ namespace Tkl.Jumbo.Jet.Tasks
     ///   only if <typeparamref name="TKey"/> is a value type or implements <see cref="ICloneable"/>.
     /// </para>
     /// </remarks>
-    public abstract class ReduceTask<TKey, TValue, TOutput> : Configurable, IPullTask<Pair<TKey, TValue>, TOutput>
+    public abstract class ReduceTask<TKey, TValue, TOutput> : Configurable, ITask<Pair<TKey, TValue>, TOutput>
         where TKey : IComparable<TKey>
     {
         private IEqualityComparer<TKey> _keyComparer;

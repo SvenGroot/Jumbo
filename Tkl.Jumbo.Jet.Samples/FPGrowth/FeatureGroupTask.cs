@@ -14,7 +14,7 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
     /// <remarks>
     /// Does not support record reuse.
     /// </remarks>
-    public class FeatureGroupTask : Configurable, IPushTask<Pair<Utf8String, int>, FGListItem>
+    public class FeatureGroupTask : PushTask<Pair<Utf8String, int>, FGListItem>
     {
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(FeatureGroupTask));
 
@@ -25,7 +25,7 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
         /// </summary>
         /// <param name="record">The record.</param>
         /// <param name="output">The output.</param>
-        public void ProcessRecord(Pair<Utf8String, int> record, RecordWriter<FGListItem> output)
+        public override void ProcessRecord(Pair<Utf8String, int> record, RecordWriter<FGListItem> output)
         {
             _fgList.Add(new FGListItem() { Feature = record.Key, Support = record.Value });
         }
@@ -34,7 +34,7 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
         /// Finishes the task.
         /// </summary>
         /// <param name="output">The output.</param>
-        public void Finish(RecordWriter<FGListItem> output)
+        public override void Finish(RecordWriter<FGListItem> output)
         {
             _log.InfoFormat("Sorting feature list with {0} items...", _fgList.Count);
 

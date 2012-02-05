@@ -22,7 +22,7 @@ namespace Tkl.Jumbo.Jet.Channels
     /// </para>
     /// <para>
     ///   It is possible to specify a combiner task that will be run on the records of each spill after sorting. Use this to reduce the size of the output records after sorting.
-    ///   The combiner must be a <see cref="IPushTask{TInput,TOutput}"/> where both the input and output record type are <typeparamref name="T"/>. The <see cref="IPullTask{TInput,TOutput}.Run"/>
+    ///   The combiner must be a <see cref="ITask{TInput,TOutput}"/> where both the input and output record type are <typeparamref name="T"/>. The <see cref="ITask{TInput,TOutput}.Run"/>
     ///   method will be called multiple times (once for each spill), so the task must be prepared for. You can use a <see cref="Tkl.Jumbo.Jet.Tasks.ReduceTask{TKey,TValue,TOutput}"/> for Map-Reduce style
     ///   combining.
     /// </para>
@@ -139,7 +139,7 @@ namespace Tkl.Jumbo.Jet.Channels
         private readonly List<PartitionFileIndexEntry>[] _spillPartitionIndices;
         private readonly IndexedComparer<T> _comparer = new IndexedComparer<T>();
         private readonly int _maxDiskInputsPerMergePass;
-        private readonly IPullTask<T, T> _combiner;
+        private readonly ITask<T, T> _combiner;
         private readonly bool _combinerAllowsRecordReuse;
         private readonly int _minSpillsForCombineDuringMerge;
         private long _bytesWritten;
@@ -157,7 +157,7 @@ namespace Tkl.Jumbo.Jet.Channels
         /// <param name="maxDiskInputsPerMergePass">The maximum number of disk inputs per merge pass.</param>
         /// <param name="combiner">The combiner to use during spills. May be <see langword="null"/>.</param>
         /// <param name="minSpillsForCombineDuringMerge">The minimum number of spills needed for the combiner to rerun during merge. If this value is 0, the combiner will never be run during the merge. Ignored when <paramref name="combiner"/> is <see langword="null"/>.</param>
-        public SortSpillRecordWriter(string outputPath, IPartitioner<T> partitioner, int bufferSize, int limit, int writeBufferSize, bool enableChecksum, int maxDiskInputsPerMergePass, IPullTask<T, T> combiner = null, int minSpillsForCombineDuringMerge = 0)
+        public SortSpillRecordWriter(string outputPath, IPartitioner<T> partitioner, int bufferSize, int limit, int writeBufferSize, bool enableChecksum, int maxDiskInputsPerMergePass, ITask<T, T> combiner = null, int minSpillsForCombineDuringMerge = 0)
             : base(partitioner, bufferSize, limit, SpillRecordWriterFlags.None)
         {
             if( outputPath == null )

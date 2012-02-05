@@ -73,7 +73,7 @@ namespace Tkl.Jumbo.Test.Jet
             }
             ListRecordWriter<int> output = new ListRecordWriter<int>();
             MultiRecordWriter<int> multiOutput = new MultiRecordWriter<int>(new[] { output }, new PrepartitionedPartitioner<int>());
-            PrepartitionedRecordWriter<int> prepartitionedOutput = new PrepartitionedRecordWriter<int>(multiOutput);
+            PrepartitionedRecordWriter<int> prepartitionedOutput = new PrepartitionedRecordWriter<int>(multiOutput, false);
 
             SortTask<int> target = new SortTask<int>();
             target.NotifyConfigurationChanged();
@@ -93,7 +93,7 @@ namespace Tkl.Jumbo.Test.Jet
             StageConfiguration stageConfig = jobConfig.AddStage("Accumulate", typeof(TestAccumulator), 1, null, null, null);
             TaskContext config = new TaskContext(Guid.NewGuid(), jobConfig, new TaskAttemptId(new TaskId("Accumulate", 1), 1), stageConfig, Utilities.TestOutputPath, "/JumboJet/fake");
 
-            IPushTask<Pair<Utf8String, int>, Pair<Utf8String, int>> task = new TestAccumulator();
+            PushTask<Pair<Utf8String, int>, Pair<Utf8String, int>> task = new TestAccumulator();
             JetActivator.ApplyConfiguration(task, null, null, config);
             ListRecordWriter<Pair<Utf8String, int>> output = new ListRecordWriter<Pair<Utf8String, int>>(true);
 
@@ -125,7 +125,7 @@ namespace Tkl.Jumbo.Test.Jet
             StageConfiguration stageConfig = jobConfig.AddStage("Accumulate", typeof(TestAccumulator), 1, null, null, null);
             TaskContext config = new TaskContext(Guid.NewGuid(), jobConfig, new TaskAttemptId(new TaskId("Accumulate", 1), 1), stageConfig, Utilities.TestOutputPath, "/JumboJet/fake");
 
-            IPushTask<Pair<Utf8String, int>, Pair<Utf8String, int>> task = new TestRecordReuseAccumulator();
+            PushTask<Pair<Utf8String, int>, Pair<Utf8String, int>> task = new TestRecordReuseAccumulator();
             JetActivator.ApplyConfiguration(task, null, null, config);
             ListRecordWriter<Pair<Utf8String, int>> output = new ListRecordWriter<Pair<Utf8String, int>>(true);
 

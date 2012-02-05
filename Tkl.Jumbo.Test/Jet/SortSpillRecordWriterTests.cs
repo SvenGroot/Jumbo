@@ -15,7 +15,7 @@ namespace Tkl.Jumbo.Test.Jet
     {
         #region Nested types
 
-        private class DuplicateEliminationCombiner : IPullTask<int, int>
+        private class DuplicateEliminationCombiner : ITask<int, int>
         {
             public void Run(RecordReader<int> input, RecordWriter<int> output)
             {
@@ -86,7 +86,7 @@ namespace Tkl.Jumbo.Test.Jet
 
             try
             {
-                IPullTask<int, int> combiner = null;
+                ITask<int, int> combiner = null;
                 if( useCombiner )
                     combiner = new DuplicateEliminationCombiner();
                 using( SortSpillRecordWriter<int> target = new SortSpillRecordWriter<int>(outputPath, partitioner, bufferSize, (int)(0.8 * bufferSize), 4096, true, 5, combiner, 1) )

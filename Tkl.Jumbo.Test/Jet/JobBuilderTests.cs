@@ -56,9 +56,9 @@ namespace Tkl.Jumbo.Test.Jet
             }
         }
 
-        public class FakeKvpProducingTask : IPullTask<Utf8String, Pair<Utf8String, int>>
+        public class FakeKvpProducingTask : ITask<Utf8String, Pair<Utf8String, int>>
         {
-            #region IPullTask<Utf8StringWritable,KeyValuePair<Utf8StringWritable,int>> Members
+            #region ITask<Utf8StringWritable,KeyValuePair<Utf8StringWritable,int>> Members
 
             public void Run(RecordReader<Utf8String> input, RecordWriter<Pair<Utf8String, int>> output)
             {
@@ -718,7 +718,7 @@ namespace Tkl.Jumbo.Test.Jet
 
             Assert.IsTrue(Attribute.IsDefined(stage.TaskType, typeof(AllowRecordReuseAttribute)));
             TaskContext context = new TaskContext(Guid.Empty, config, new TaskAttemptId(new TaskId("CharCountStage", 1), 1), config.Stages[0], Path.GetTempPath(), "/foo");
-            IPullTask<Utf8String, int> task = (IPullTask<Utf8String, int>)JetActivator.CreateInstance(stage.TaskType, _dfsClient.Configuration, _jetClient.Configuration, context);
+            ITask<Utf8String, int> task = (ITask<Utf8String, int>)JetActivator.CreateInstance(stage.TaskType, _dfsClient.Configuration, _jetClient.Configuration, context);
             using( EnumerableRecordReader<Utf8String> reader = new EnumerableRecordReader<Utf8String>(new[] { new Utf8String("foo"), new Utf8String("hello") }) )
             using( ListRecordWriter<int> writer = new ListRecordWriter<int>() )
             {
@@ -745,7 +745,7 @@ namespace Tkl.Jumbo.Test.Jet
 
             Assert.IsTrue(Attribute.IsDefined(stage.TaskType, typeof(AllowRecordReuseAttribute)));
             TaskContext context = new TaskContext(Guid.Empty, config, new TaskAttemptId(new TaskId("CharCountStage", 1), 1), config.Stages[0], Path.GetTempPath(), "/foo");
-            IPushTask<Utf8String, int> task = (IPushTask<Utf8String, int>)JetActivator.CreateInstance(stage.TaskType, _dfsClient.Configuration, _jetClient.Configuration, context);
+            PushTask<Utf8String, int> task = (PushTask<Utf8String, int>)JetActivator.CreateInstance(stage.TaskType, _dfsClient.Configuration, _jetClient.Configuration, context);
             using( ListRecordWriter<int> writer = new ListRecordWriter<int>() )
             {
                 task.ProcessRecord(new Utf8String("foo"), writer);

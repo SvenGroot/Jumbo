@@ -15,12 +15,12 @@ namespace Tkl.Jumbo.Jet.Samples.Tasks
     /// A task that generates a specific range of GenSort records.
     /// </summary>
     [AdditionalProgressCounter("GenSort")]
-    public class GenSortTask : Configurable, IPullTask<int, GenSortRecord>, IHasAdditionalProgress
+    public class GenSortTask : Configurable, ITask<int, GenSortRecord>, IHasAdditionalProgress
     {
         private long _count;
         private long _generated;
 
-        #region IPullTask<int,GenSortRecord> Members
+        #region ITask<int,GenSortRecord> Members
 
         /// <summary>
         /// Runs the task.

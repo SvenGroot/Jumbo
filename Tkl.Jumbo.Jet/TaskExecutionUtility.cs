@@ -544,7 +544,7 @@ namespace Tkl.Jumbo.Jet
         /// <summary>
         /// Creates the record writer that writes data to this child task.
         /// </summary>
-        /// <param name="partitioner">The partitioner to use for the <see cref="PrepartitionedRecordWriter{T}"/> if the child stage uses the <see cref="IPrepartitionedPushTask{TInput,TOutput}"/> interface. Otherwise, ignored.</param>
+        /// <param name="partitioner">The partitioner to use for the <see cref="PrepartitionedRecordWriter{T}"/> if the child stage uses the <see cref="PrepartitionedPushTask{TInput,TOutput}"/> interface. Otherwise, ignored.</param>
         /// <returns>A record writer.</returns>
         internal abstract IRecordWriter CreatePipelineRecordWriter(object partitioner);
 
@@ -621,7 +621,7 @@ namespace Tkl.Jumbo.Jet
         /// </summary>
         protected void FinishTask()
         {
-            RunTaskFinishMethod(false);
+            RunTaskFinishMethod();
 
             if( _associatedTasks != null )
             {
@@ -637,8 +637,6 @@ namespace Tkl.Jumbo.Jet
         /// </summary>
         protected void FinalizeTask(TaskMetrics metrics)
         {
-            RunTaskFinishMethod(true);
-
             if( _associatedTasks != null )
             {
                 foreach( TaskExecutionUtility associatedTask in _associatedTasks )
@@ -672,8 +670,7 @@ namespace Tkl.Jumbo.Jet
         /// <summary>
         /// Runs the task finish method if this task is a push task.
         /// </summary>
-        /// <param name="isFinalizing"><see langword="true"/> if the task is being finalized; otherwise, <see langword="false"/>.</param>
-        protected abstract void RunTaskFinishMethod(bool isFinalizing);
+        protected abstract void RunTaskFinishMethod();
 
         /// <summary>
         /// Throws an exception if this object was disposed.

@@ -12,7 +12,7 @@ namespace Tkl.Jumbo.Jet.Samples.Tasks
     /// <summary>
     /// Task that generates input data for word count.
     /// </summary>
-    public class GenWordsTask : Configurable, IPullTask<string, Utf8String>
+    public class GenWordsTask : Configurable, ITask<string, Utf8String>
     {
         #region Nested types
 
@@ -43,7 +43,7 @@ namespace Tkl.Jumbo.Jet.Samples.Tasks
         /// </summary>
         public const string SizePerTaskSetting = "SizePerTask";
 
-        #region IPullTask<string,Utf8StringWritable> Members
+        #region ITask<string,Utf8StringWritable> Members
 
         /// <summary>
         /// Runs the task.

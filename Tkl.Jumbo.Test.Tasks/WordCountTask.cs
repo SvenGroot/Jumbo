@@ -8,7 +8,7 @@ using Tkl.Jumbo.Jet;
 namespace Tkl.Jumbo.Test.Tasks
 {
     [AllowRecordReuse]
-    public class WordCountTask : Configurable, IPullTask<Utf8String, Pair<Utf8String, int>>
+    public class WordCountTask : Configurable, ITask<Utf8String, Pair<Utf8String, int>>
     {
         public void Run(RecordReader<Utf8String> input, RecordWriter<Pair<Utf8String, int>> output)
         {

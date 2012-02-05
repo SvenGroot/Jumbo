@@ -12,7 +12,7 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
     /// Task that filters out features with too low support.
     /// </summary>
     [AllowRecordReuse(PassThrough=true)]
-    public class FeatureFilterTask : Configurable, IPushTask<Pair<Utf8String, int>, Pair<Utf8String, int>>
+    public class FeatureFilterTask : PushTask<Pair<Utf8String, int>, Pair<Utf8String, int>>
     {
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(FeatureFilterTask));
 
@@ -24,7 +24,7 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
         /// </summary>
         /// <param name="record">The record.</param>
         /// <param name="output">The output.</param>
-        public void ProcessRecord(Pair<Utf8String, int> record, RecordWriter<Pair<Utf8String, int>> output)
+        public override void ProcessRecord(Pair<Utf8String, int> record, RecordWriter<Pair<Utf8String, int>> output)
         {
             ++_records;
             if( record.Value >= _minSupport )
@@ -35,7 +35,7 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
         /// Finishes processing. Does nothing on this task.
         /// </summary>
         /// <param name="output">The output.</param>
-        public void Finish(RecordWriter<Pair<Utf8String, int>> output)
+        public override void Finish(RecordWriter<Pair<Utf8String, int>> output)
         {
             _log.InfoFormat("{0} unique items; {1} frequent items.", _records, output.RecordsWritten);
         }

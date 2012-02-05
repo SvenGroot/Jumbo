@@ -218,7 +218,7 @@ namespace Tkl.Jumbo.Jet
                 if( _allowRecordReuse == null )
                 {
                     // If this is a child stage and the task is a pull task then record reuse is not allowed, because the PipelinePullTaskRecordWriter doesn't support it.
-                    if( Parent != null && TaskType.ReferencedType.FindGenericInterfaceType(typeof(IPullTask<,>), false) != null )
+                    if( Parent != null && TaskType.ReferencedType.FindGenericInterfaceType(typeof(ITask<,>), false) != null )
                         _allowRecordReuse = false;
                     else
                     {
@@ -326,7 +326,7 @@ namespace Tkl.Jumbo.Jet
         {
             get
             {
-                return TaskType.ReferencedType.FindGenericInterfaceType(typeof(IPrepartitionedPushTask<,>), false) != null;
+                return TaskType.ReferencedType.FindGenericBaseType(typeof(PrepartitionedPushTask<,>), false) != null;
             }
         }
 

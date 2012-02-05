@@ -21,10 +21,10 @@ namespace Tkl.Jumbo.Test.Jet
         {
             DynamicTaskBuilder target = new DynamicTaskBuilder();
             Action<RecordReader<int>, RecordWriter<int>, TaskContext> taskDelegate = TaskMethod;
-            Type taskType = target.CreateDynamicTask(typeof(IPullTask<int, int>).GetMethod("Run"), taskDelegate, 0, RecordReuseMode.Allow);
+            Type taskType = target.CreateDynamicTask(typeof(ITask<int, int>).GetMethod("Run"), taskDelegate, 0, RecordReuseMode.Allow);
             TaskContext context = CreateConfiguration(taskType);
             context.StageConfiguration.AddTypedSetting("Factor", 2);
-            IPullTask<int, int> task = (IPullTask<int, int>)JetActivator.CreateInstance(taskType, null, null, context);
+            ITask<int, int> task = (ITask<int, int>)JetActivator.CreateInstance(taskType, null, null, context);
             List<int> data = Utilities.GenerateNumberData(10);
             List<int> result;
             using( EnumerableRecordReader<int> input = new EnumerableRecordReader<int>(data) )
@@ -42,9 +42,9 @@ namespace Tkl.Jumbo.Test.Jet
         {
             DynamicTaskBuilder target = new DynamicTaskBuilder();
             Action<RecordReader<int>, RecordWriter<int>> taskDelegate = TaskMethodNoContext;
-            Type taskType = target.CreateDynamicTask(typeof(IPullTask<int, int>).GetMethod("Run"), taskDelegate, 0, RecordReuseMode.Allow);
+            Type taskType = target.CreateDynamicTask(typeof(ITask<int, int>).GetMethod("Run"), taskDelegate, 0, RecordReuseMode.Allow);
             TaskContext context = CreateConfiguration(taskType);
-            IPullTask<int, int> task = (IPullTask<int, int>)JetActivator.CreateInstance(taskType, null, null, context);
+            ITask<int, int> task = (ITask<int, int>)JetActivator.CreateInstance(taskType, null, null, context);
             List<int> data = Utilities.GenerateNumberData(10);
             List<int> result;
             using( EnumerableRecordReader<int> input = new EnumerableRecordReader<int>(data) )
@@ -62,11 +62,11 @@ namespace Tkl.Jumbo.Test.Jet
         {
             DynamicTaskBuilder target = new DynamicTaskBuilder();
             Action<RecordReader<int>, RecordWriter<int>> taskDelegate = TaskMethodNonPublic;
-            Type taskType = target.CreateDynamicTask(typeof(IPullTask<int, int>).GetMethod("Run"), taskDelegate, 0, RecordReuseMode.Allow);
+            Type taskType = target.CreateDynamicTask(typeof(ITask<int, int>).GetMethod("Run"), taskDelegate, 0, RecordReuseMode.Allow);
             TaskContext context = CreateConfiguration(taskType);
             context.StageConfiguration.StageSettings = new SettingsDictionary();
             DynamicTaskBuilder.SerializeDelegate(context.StageConfiguration.StageSettings, taskDelegate);
-            IPullTask<int, int> task = (IPullTask<int, int>)JetActivator.CreateInstance(taskType, null, null, context);
+            ITask<int, int> task = (ITask<int, int>)JetActivator.CreateInstance(taskType, null, null, context);
             List<int> data = Utilities.GenerateNumberData(10);
             List<int> result;
             using( EnumerableRecordReader<int> input = new EnumerableRecordReader<int>(data) )
@@ -84,10 +84,10 @@ namespace Tkl.Jumbo.Test.Jet
         {
             DynamicTaskBuilder target = new DynamicTaskBuilder();
             Action<RecordWriter<int>, TaskContext> taskDelegate = TaskMethodNoInput;
-            Type taskType = target.CreateDynamicTask(typeof(IPullTask<int, int>).GetMethod("Run"), taskDelegate, 1, RecordReuseMode.Allow);
+            Type taskType = target.CreateDynamicTask(typeof(ITask<int, int>).GetMethod("Run"), taskDelegate, 1, RecordReuseMode.Allow);
             TaskContext context = CreateConfiguration(taskType);
             context.StageConfiguration.AddTypedSetting("Count", 6);
-            IPullTask<int, int> task = (IPullTask<int, int>)JetActivator.CreateInstance(taskType, null, null, context);
+            ITask<int, int> task = (ITask<int, int>)JetActivator.CreateInstance(taskType, null, null, context);
             List<int> result;
             using( ListRecordWriter<int> output = new ListRecordWriter<int>() )
             {

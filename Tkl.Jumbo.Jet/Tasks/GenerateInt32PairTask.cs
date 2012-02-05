@@ -19,7 +19,7 @@ namespace Tkl.Jumbo.Jet.Tasks
     /// </para>
     /// </remarks>
     [AllowRecordReuse(PassThrough=true)]
-    public sealed class GenerateInt32PairTask<T> : Configurable, IPullTask<T, Pair<T, int>>
+    public sealed class GenerateInt32PairTask<T> : Configurable, ITask<T, Pair<T, int>>
         where T : IComparable<T>
     {
         private int _value = 1;

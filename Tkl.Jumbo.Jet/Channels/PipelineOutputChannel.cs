@@ -17,7 +17,7 @@ namespace Tkl.Jumbo.Jet.Channels
     /// <remarks>
     /// <para>
     ///   Pipelined tasks are run in the same process, and each call to <see cref="RecordWriter{T}.WriteRecord"/> will invoke
-    ///   the associated task's <see cref="IPushTask{TInput,TOutput}.ProcessRecord"/> method. Because of this, there is no
+    ///   the associated task's <see cref="PushTask{TInput,TOutput}.ProcessRecord"/> method. Because of this, there is no
     ///   associated input channel for this channel type.
     /// </para>
     /// </remarks>
