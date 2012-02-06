@@ -104,7 +104,6 @@
     <Compile Include="IO\IRawComparer.cs" />
     <Compile Include="IO\IRecordInputStream.cs" />
     <Compile Include="IO\IRecordOutputStream.cs" />
-    <Compile Include="IO\PairRawComparer.cs" />
     <Compile Include="IO\RawComparer.cs" />
     <Compile Include="IO\RawComparerAttribute.cs" />
     <Compile Include="IO\RawComparerHelper.cs" />

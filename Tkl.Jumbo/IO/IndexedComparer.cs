@@ -21,7 +21,7 @@ namespace Tkl.Jumbo.IO
     public sealed class IndexedComparer<T> : IComparer<RecordIndexEntry>
     {
         private byte[] _buffer;
-        private readonly RawComparer<T> _comparer = new RawComparer<T>();
+        private readonly IRawComparer _comparer = RawComparer<T>.CreateComparer();
 
         /// <summary>
         /// Initializes a new instance of the <see cref="IndexedComparer&lt;T&gt;"/> class.

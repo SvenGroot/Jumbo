@@ -70,12 +70,12 @@ namespace Tkl.Jumbo.Jet
 
         private sealed class MergeInputComparer : IComparer<MergeInput>
         {
-            private readonly RawComparer<T> _rawComparer;
+            private readonly IRawComparer _rawComparer;
             private readonly IComparer<T> _comparer;
 
             public MergeInputComparer()
             {
-                _rawComparer = new RawComparer<T>();
+                _rawComparer = RawComparer<T>.CreateComparer();
             }
 
             public MergeInputComparer(IComparer<T> comparer)
