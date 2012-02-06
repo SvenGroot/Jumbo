@@ -180,6 +180,41 @@ namespace Tkl.Jumbo.Jet
             RunJob(job, config, files);
             return job;
         }
+
+        /// <summary>
+        /// Waits until the specified job is complete, printing progress updates to the console.
+        /// </summary>
+        /// <param name="jobId">The job ID.</param>
+        /// <param name="pollIntervalMilliseconds">The poll interval in milliseconds.</param>
+        /// <returns><see langword="true"/> if the job completed successfully; otherwise, <see langword="false"/>.</returns>
+        public bool WaitForJobCompletion(Guid jobId, int pollIntervalMilliseconds = 1000)
+        {
+            JobStatus status = null;
+            string previousStatus = null;
+            do
+            {
+                Thread.Sleep(pollIntervalMilliseconds);
+                status = JobServer.GetJobStatus(jobId);
+                string statusString = status.ToString();
+                if( statusString != previousStatus )
+                {
+                    Console.WriteLine(statusString);
+                    previousStatus = statusString;
+                }
+            } while( !status.IsFinished );
+
+            Console.WriteLine();
+            if( status.IsSuccessful )
+                Console.WriteLine("Job completed.");
+            else
+                Console.WriteLine("Job failed.");
+            Console.WriteLine("Start time: {0:yyyy'-'MM'-'dd' 'HH':'mm':'ss'.'fff}", status.StartTime.ToLocalTime());
+            Console.WriteLine("End time:   {0:yyyy'-'MM'-'dd' 'HH':'mm':'ss'.'fff}", status.EndTime.ToLocalTime());
+            TimeSpan duration = status.EndTime - status.StartTime;
+            Console.WriteLine("Duration:   {0} ({1}s)", duration, duration.TotalSeconds);
+
+            return status.IsSuccessful;
+        }
         
         /// <summary>
         /// Stores the job configuration and the specified files on the DFS, and runs the job.

@@ -44,6 +44,14 @@ namespace Tkl.Jumbo.IO
         long BytesWritten { get; }
 
         /// <summary>
+        /// Gets the time spent writing.
+        /// </summary>
+        /// <value>
+        /// The time spent writing.
+        /// </value>
+        TimeSpan WriteTime { get; }
+
+        /// <summary>
         /// Writes a record.
         /// </summary>
         /// <param name="record">The record to write.</param>

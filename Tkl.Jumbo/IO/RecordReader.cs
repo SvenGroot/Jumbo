@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using Tkl.Jumbo.IO;
+using System.Diagnostics;
 
 namespace Tkl.Jumbo.IO
 {
@@ -14,6 +15,7 @@ namespace Tkl.Jumbo.IO
     /// <typeparam name="T">The type of the record</typeparam>
     public abstract class RecordReader<T> : IRecordReader, IDisposable
     {
+        private readonly Stopwatch _readTime = new Stopwatch();
         private int _recordsRead;
         private bool _hasRecords;
         private bool _hasFinished;
@@ -159,29 +161,48 @@ namespace Tkl.Jumbo.IO
         }
 
         /// <summary>
+        /// Gets the time spent reading.
+        /// </summary>
+        /// <value>
+        /// The time spent reading.
+        /// </value>
+        public TimeSpan ReadTime
+        {
+            get { return _readTime.Elapsed; }
+        }
+
+        /// <summary>
         /// Reads a record.
         /// </summary>
         /// <returns><see langword="true"/> if an object was successfully read; <see langword="false"/> if there are no more records.</returns>
         public bool ReadRecord()
         {
-            if( ReadRecordInternal() )
+            _readTime.Start();
+            try
             {
-                if( _hasFinished ) // Can happen with record readers that process multiple partitions.
+                if( ReadRecordInternal() )
                 {
-                    _hasFinished = false;
-                    OnHasRecordsChanged(EventArgs.Empty);
+                    if( _hasFinished ) // Can happen with record readers that process multiple partitions.
+                    {
+                        _hasFinished = false;
+                        OnHasRecordsChanged(EventArgs.Empty);
+                    }
+                    ++_recordsRead;
+                    return true;
                 }
-                ++_recordsRead;
-                return true;
+                else
+                {
+                    if( !_hasFinished )
+                    {
+                        _hasFinished = true;
+                        OnHasRecordsChanged(EventArgs.Empty);
+                    }
+                    return false;
+                }
             }
-            else
+            finally
             {
-                if( !_hasFinished )
-                {
-                    _hasFinished = true;
-                    OnHasRecordsChanged(EventArgs.Empty);
-                }
-                return false;
+                _readTime.Stop();
             }
         }
 

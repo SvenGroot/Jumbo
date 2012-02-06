@@ -166,7 +166,7 @@ namespace Tkl.Jumbo.Jet
         }
 
         /// <summary>
-        /// Gets a string representatino of this <see cref="JobStatus"/>.
+        /// Gets a string representation of this <see cref="JobStatus"/>.
         /// </summary>
         /// <returns>A string representation of this <see cref="JobStatus"/>.</returns>
         public override string ToString()

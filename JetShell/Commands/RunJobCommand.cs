@@ -18,8 +18,6 @@ namespace JetShell.Commands
     [ShellCommand("job"), Description("Runs a job on the Jumbo Jet cluster.")]
     class RunJobCommand : JetShellCommand
     {
-        private const int _jobStatusPollInterval = 1000;
-
         private readonly string[] _args;
         private readonly int _argIndex;
 
@@ -70,42 +68,13 @@ namespace JetShell.Commands
                         else
                         {
                             Guid jobId = jobRunner.RunJob();
-                            bool success = WaitForJobCompletion(JetClient, jobId);
+                            bool success = JetClient.WaitForJobCompletion(jobId);
                             jobRunner.FinishJob(success);
                             ExitCode = success ? 0 : 1;
                         }
                     }
                 }
             }
-        }
-
-        private static bool WaitForJobCompletion(JetClient jetClient, Guid jobId)
-        {
-            JobStatus status = null;
-            string previousStatus = null;
-            do
-            {
-                Thread.Sleep(_jobStatusPollInterval);
-                status = jetClient.JobServer.GetJobStatus(jobId);
-                string statusString = status.ToString();
-                if( statusString != previousStatus )
-                {
-                    Console.WriteLine(statusString);
-                    previousStatus = statusString;
-                }
-            } while( !status.IsFinished );
-
-            Console.WriteLine();
-            if( status.IsSuccessful )
-                Console.WriteLine("Job completed.");
-            else
-                Console.WriteLine("Job failed.");
-            Console.WriteLine("Start time: {0:yyyy'-'MM'-'dd' 'HH':'mm':'ss'.'fff}", status.StartTime.ToLocalTime());
-            Console.WriteLine("End time:   {0:yyyy'-'MM'-'dd' 'HH':'mm':'ss'.'fff}", status.EndTime.ToLocalTime());
-            TimeSpan duration = status.EndTime - status.StartTime;
-            Console.WriteLine("Duration:   {0} ({1}s)", duration, duration.TotalSeconds);
-
-            return status.IsSuccessful;
         }
 
         private static void PrintAssemblyJobList(TextWriter writer, Assembly assembly)

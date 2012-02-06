@@ -652,6 +652,11 @@ namespace Tkl.Jumbo.Jet
             if( fileOutputChannel != null )
                 fileOutputChannel.ReportFileSizesToTaskServer();
 
+            if( _inputReader != null )
+                _log.InfoFormat("{0} read time: {1}", Context.TaskAttemptId, _inputReader.ReadTime.TotalSeconds);
+            if( _outputWriter != null )
+                _log.InfoFormat("{0} write time: {1}", Context.TaskAttemptId, _outputWriter.WriteTime.TotalSeconds);
+
             CalculateMetrics(metrics);
 
             if( Context.StageConfiguration.DfsOutput != null )

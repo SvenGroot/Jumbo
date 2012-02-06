@@ -7,6 +7,7 @@ using System.Text;
 using System.IO;
 using Tkl.Jumbo.IO;
 using System.Globalization;
+using System.Diagnostics;
 
 namespace Tkl.Jumbo.IO
 {
@@ -25,6 +26,7 @@ namespace Tkl.Jumbo.IO
         private int _recordsWritten;
         private bool _finishedWriting;
         private readonly bool _recordTypeIsSealed = typeof(T).IsSealed;
+        private readonly Stopwatch _writeTime = new Stopwatch();
 
         /// <summary>
         /// Gets the total number of records written by this record writer.
@@ -70,22 +72,41 @@ namespace Tkl.Jumbo.IO
         }
 
         /// <summary>
+        /// Gets the time spent writing.
+        /// </summary>
+        /// <value>
+        /// The time spent writing.
+        /// </value>
+        public TimeSpan WriteTime
+        {
+            get { return _writeTime.Elapsed; }
+        }
+
+        /// <summary>
         /// Writes a record.
         /// </summary>
         /// <param name="record">The record to write.</param>
         public void WriteRecord(T record)
         {
-            if( record == null )
-                throw new ArgumentNullException("record");
-            // Skip the type check if the record type is sealed.
-            if( !_recordTypeIsSealed && record.GetType() != typeof(T) )
-                throw new ArgumentException(string.Format(CultureInfo.CurrentCulture, "The record was type {0} rather than {1}.", record.GetType(), typeof(T)), "record");
-            if( _finishedWriting )
-                throw new InvalidOperationException("Cannot write additional records after the FinishWriting method has been called.");
-            WriteRecordInternal(record);
-            // Increment this after the write, so if the implementation of WriteRecordsInternal throws an exception the count
-            // is not incremented.
-            ++_recordsWritten;
+            _writeTime.Start();
+            try
+            {
+                if( record == null )
+                    throw new ArgumentNullException("record");
+                // Skip the type check if the record type is sealed.
+                if( !_recordTypeIsSealed && record.GetType() != typeof(T) )
+                    throw new ArgumentException(string.Format(CultureInfo.CurrentCulture, "The record was type {0} rather than {1}.", record.GetType(), typeof(T)), "record");
+                if( _finishedWriting )
+                    throw new InvalidOperationException("Cannot write additional records after the FinishWriting method has been called.");
+                WriteRecordInternal(record);
+                // Increment this after the write, so if the implementation of WriteRecordsInternal throws an exception the count
+                // is not incremented.
+                ++_recordsWritten;
+            }
+            finally
+            {
+                _writeTime.Stop();
+            }
         }
 
         /// <summary>

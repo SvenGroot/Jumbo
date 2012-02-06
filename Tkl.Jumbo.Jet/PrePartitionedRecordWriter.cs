@@ -73,6 +73,17 @@ namespace Tkl.Jumbo.Jet
         }
 
         /// <summary>
+        /// Gets the time spent writing.
+        /// </summary>
+        /// <value>
+        /// The time spent writing.
+        /// </value>
+        public TimeSpan WriteTime
+        {
+            get { return _baseWriter.WriteTime; }
+        }
+
+        /// <summary>
         /// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
         /// </summary>
         public void Dispose()

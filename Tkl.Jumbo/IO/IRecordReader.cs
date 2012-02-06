@@ -114,6 +114,14 @@ namespace Tkl.Jumbo.IO
         bool HasFinished { get; }
 
         /// <summary>
+        /// Gets the time spent reading.
+        /// </summary>
+        /// <value>
+        /// The time spent reading.
+        /// </value>
+        TimeSpan ReadTime { get; }
+
+        /// <summary>
         /// Reads a record.
         /// </summary>
         /// <returns><see langword="true"/> if an object was successfully read from the stream; <see langword="false"/> if the end of the stream or stream fragment was reached.</returns>
