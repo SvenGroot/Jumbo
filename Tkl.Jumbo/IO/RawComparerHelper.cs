@@ -48,20 +48,22 @@ namespace Tkl.Jumbo.IO
         /// <param name="yOffset">The offset into <paramref name="y"/> where the second object starts.</param>
         /// <param name="yCount">The number of bytes in <paramref name="y"/> used by the second object.</param>
         /// <returns>A signed integer that indicates the relative values of the first and second object.</returns>
-        public static int CompareBytes(byte[] x, int xOffset, int xCount, byte[] y, int yOffset, int yCount)
+        public static unsafe int CompareBytes(byte[] x, int xOffset, int xCount, byte[] y, int yOffset, int yCount)
         {
-            int end1 = xOffset + xCount;
-            int end2 = yOffset + yCount;
-            for( int i = xOffset, j = yOffset; i < end1 && j < end2; i++, j++ )
+            fixed( byte* str1ptr = x, str2ptr = y )
             {
-                int a = (x[i] & 0xff);
-                int b = (y[j] & 0xff);
-                if( a != b )
+                byte* left = str1ptr + xOffset;
+                byte* end = left + Math.Min(xCount, yCount);
+                byte* right = str2ptr + yOffset;
+                while( left < end )
                 {
-                    return a - b;
+                    if( *left != *right )
+                        return *left - *right;
+                    ++left;
+                    ++right;
                 }
+                return xCount - yCount;
             }
-            return xCount - yCount;
         }
 
         /// <summary>
@@ -74,15 +76,43 @@ namespace Tkl.Jumbo.IO
         /// <param name="yOffset">The offset into <paramref name="y"/> where the second object starts.</param>
         /// <param name="yCount">The number of bytes in <paramref name="y"/> used by the second object.</param>
         /// <returns>A signed integer that indicates the relative values of the first and second object.</returns>
-        public static int CompareBytesWith7BitEncodedLength(byte[] x, int xOffset, int xCount, byte[] y, int yOffset, int yCount)
+        public static unsafe int CompareBytesWith7BitEncodedLength(byte[] x, int xOffset, int xCount, byte[] y, int yOffset, int yCount)
         {
-            int newXOffset = xOffset;
-            int newYOffset = yOffset;
-            int length1 = LittleEndianBitConverter.ToInt32From7BitEncoding(x, ref newXOffset);
-            int length2 = LittleEndianBitConverter.ToInt32From7BitEncoding(y, ref newYOffset);
-            if( newXOffset + length1 > xOffset + xCount || newYOffset + length2 > yOffset + yCount )
-                throw new FormatException("Invalid length-encoded byte arrays.");
-            return CompareBytes(x, newXOffset, length1, y, newYOffset, length2);
+            fixed( byte* str1ptr = x, str2ptr = y )
+            {
+                byte* left = str1ptr + xOffset;
+                byte* right = str2ptr + yOffset;
+                int length1 = Decode7BitEncodedInt32(ref left);
+                int length2 = Decode7BitEncodedInt32(ref right);
+                byte* end = left + Math.Min(length1, length2);
+                while( left < end )
+                {
+                    if( *left != *right )
+                        return *left - *right;
+                    ++left;
+                    ++right;
+                }
+                return xCount - yCount;
+            }
+        }
+
+        private static unsafe int Decode7BitEncodedInt32(ref byte* buffer)
+        {
+            byte currentByte;
+            int result = 0;
+            int bits = 0;
+            do
+            {
+                if( bits == 35 )
+                {
+                    throw new FormatException("Invalid 7-bit encoded int.");
+                }
+                currentByte = *buffer++;
+                result |= (currentByte & 0x7f) << bits;
+                bits += 7;
+            }
+            while( (currentByte & 0x80) != 0 );
+            return result;
         }
 
         internal static IRawComparer GetComparer(Type type)
