@@ -16,7 +16,6 @@ namespace Tkl.Jumbo.Jet.Jobs.Builder
     /// </summary>
     public sealed partial class JobBuilder
     {
-        private static byte[] _frameworkPublicKey = typeof(object).Assembly.GetName().GetPublicKeyToken();
         private static readonly Assembly[] _jumboAssemblies = { typeof(IWritable).Assembly, typeof(JetClient).Assembly, typeof(DfsClient).Assembly, typeof(log4net.ILog).Assembly, typeof(Ookii.CommandLine.CommandLineParser).Assembly };
 
         private readonly List<IJobBuilderOperation> _operations = new List<IJobBuilderOperation>();
@@ -257,7 +256,8 @@ namespace Tkl.Jumbo.Jet.Jobs.Builder
             if( assembly == null )
                 throw new ArgumentNullException("assembly");
 
-            if( !(assembly.GlobalAssemblyCache || assembly.GetName().GetPublicKeyToken().SequenceEqual(_frameworkPublicKey) || _jumboAssemblies.Contains(assembly)) &&
+            // For some reason Mono claims mscorlib is not in the GAC, so I'm special casing that.
+            if( !(assembly.GlobalAssemblyCache || assembly.GetName().Name == "mscorlib" || _jumboAssemblies.Contains(assembly)) &&
                 (_taskBuilder.IsDynamicAssembly(assembly) || _assemblies.Add(assembly)) )
             {
                 foreach( AssemblyName reference in assembly.GetReferencedAssemblies() )
