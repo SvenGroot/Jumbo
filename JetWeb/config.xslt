@@ -67,7 +67,7 @@
         ]]>
         </style>
         <script type="text/javascript">
-          <xsl:text disable-output-escaping="yes">
+          <xsl:text>
           <![CDATA[
               window.onload = function () {
                   var spans = document.getElementsByTagName("span");

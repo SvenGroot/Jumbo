@@ -18,7 +18,7 @@ namespace Tkl.Jumbo.Jet
         /// </summary>
         /// <value>The maximum number of file inputs in a single merge pass. The default value is 100.</value>
         [ConfigurationProperty("maxFileInputs", DefaultValue = 100, IsRequired = false, IsKey = false)]
-        [IntegerValidator(MinValue=2)]
+        [IntegerValidator(MinValue=2, MaxValue=Int32.MaxValue)]
         public int MaxFileInputs
         {
             get { return (int)this["maxFileInputs"]; }
