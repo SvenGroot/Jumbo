@@ -109,7 +109,6 @@
     <Compile Include="NewBlockHeartbeatData.cs" />
     <Compile Include="BlockSender.cs" />
     <Compile Include="Packet.cs" />
-    <Compile Include="PacketBuffer.cs" />
     <Compile Include="PacketFormatOptions.cs" />
     <Compile Include="ProgressCallback.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
