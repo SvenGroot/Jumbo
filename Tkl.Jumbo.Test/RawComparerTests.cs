@@ -16,36 +16,36 @@ namespace Tkl.Jumbo.Test
     public class RawComparerTests
     {
         [Test]
-        public void TestIndexedComparer()
+        public void TestIndexedQuickSort()
         {
             const int count = 1000;
             List<int> values = new List<int>(count);
             Random rnd = new Random();
-            for( int x = 0; x < count; ++x )
-                values.Add(rnd.Next());
 
             byte[] buffer;
-            List<RecordIndexEntry> index = new List<RecordIndexEntry>();
+            RecordIndexEntry[] index = new RecordIndexEntry[count];
             using( MemoryStream stream = new MemoryStream(count * sizeof(int)) )
             using( BinaryWriter writer = new BinaryWriter(stream) )
             {
-                foreach( int value in values )
+                for( int x = 0; x < count; ++x )
                 {
-                    index.Add(new RecordIndexEntry((int)stream.Position, sizeof(int)));
+                    int value = rnd.Next();
+                    values.Add(value);
+                    index[x] = new RecordIndexEntry((int)stream.Position, sizeof(int));
                     writer.Write(value);
+                    writer.Flush();
                 }
                 writer.Flush();
                 buffer = stream.ToArray();
             }
 
-            IndexedComparer<int> target = new IndexedComparer<int>(buffer);
 
             values.Sort();
-            index.Sort(target);
+            index.Sort(buffer, RawComparer<int>.CreateComparer());
 
-            var result = index.Select(e => LittleEndianBitConverter.ToInt32(buffer, e.Offset));
+            var result = index.Select(e => LittleEndianBitConverter.ToInt32(buffer, e.Offset)).ToList();
             CollectionAssert.AreEqual(values, result);
-            
+
         }
 
         [Test]

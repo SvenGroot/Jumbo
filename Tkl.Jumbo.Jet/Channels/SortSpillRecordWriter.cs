@@ -17,7 +17,7 @@ namespace Tkl.Jumbo.Jet.Channels
     /// <typeparam name="T">The type of the records.</typeparam>
     /// <remarks>
     /// <para>
-    ///   Each spill is written to its own file, and each partition is sorted using <see cref="IndexedComparer{T}"/> before being spilled. When <see cref="FinishWriting"/>
+    ///   Each spill is written to its own file, and each partition is sorted using <see cref="IndexedQuickSort"/> before being spilled. When <see cref="FinishWriting"/>
     ///   is called, the individual spills are merged using <see cref="MergeHelper{T}"/> into the final output file.
     /// </para>
     /// <para>
@@ -137,11 +137,11 @@ namespace Tkl.Jumbo.Jet.Channels
         private readonly bool _enableChecksum;
         private readonly List<string> _spillFiles = new List<string>();
         private readonly List<PartitionFileIndexEntry>[] _spillPartitionIndices;
-        private readonly IndexedComparer<T> _comparer = new IndexedComparer<T>();
         private readonly int _maxDiskInputsPerMergePass;
         private readonly ITask<T, T> _combiner;
         private readonly bool _combinerAllowsRecordReuse;
         private readonly int _minSpillsForCombineDuringMerge;
+        private readonly IRawComparer _comparer = RawComparer<T>.CreateComparer();
         private long _bytesWritten;
         private long _bytesRead;
 
@@ -256,9 +256,8 @@ namespace Tkl.Jumbo.Jet.Channels
         protected override void PreparePartition(int partition, RecordIndexEntry[] index, byte[] buffer)
         {
             base.PreparePartition(partition, index, buffer);
-            _comparer.Reset(buffer);
             _log.DebugFormat("Sorting partition {0}.", partition);
-            Array.Sort(index, _comparer);
+            index.Sort(buffer, _comparer);
             _log.Debug("Sort complete.");
         }
 

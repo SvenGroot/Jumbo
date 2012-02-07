@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Globalization;
 
 namespace Tkl.Jumbo.IO
 {
@@ -43,6 +44,17 @@ namespace Tkl.Jumbo.IO
         public int Count
         {
             get { return _count; }
+        }
+
+        /// <summary>
+        /// Returns a <see cref="System.String"/> that represents this instance.
+        /// </summary>
+        /// <returns>
+        /// A <see cref="System.String"/> that represents this instance.
+        /// </returns>
+        public override string ToString()
+        {
+            return string.Format(CultureInfo.InvariantCulture, "Offset: {0}; Count: {1}", Offset, Count);
         }
     }
 }
