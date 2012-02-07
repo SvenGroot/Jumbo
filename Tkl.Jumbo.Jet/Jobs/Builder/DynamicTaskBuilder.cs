@@ -17,7 +17,6 @@ namespace Tkl.Jumbo.Jet.Jobs.Builder
     /// </summary>
     public sealed class DynamicTaskBuilder
     {
-        private readonly Dictionary<MethodInfo, Type> _taskTypeCache = new Dictionary<MethodInfo,Type>();
         private AssemblyBuilder _assembly;
         private ModuleBuilder _module;
         private string _dynamicAssemblyDirectory;

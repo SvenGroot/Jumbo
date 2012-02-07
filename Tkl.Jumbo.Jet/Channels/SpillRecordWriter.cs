@@ -216,7 +216,6 @@ namespace Tkl.Jumbo.Jet.Channels
 
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(SpillRecordWriter<>));
 
-        private static readonly IValueWriter<T> _valueWriter = ValueWriter<T>.Writer;
         private readonly IPartitioner<T> _partitioner;
         private readonly CircularBufferStream _buffer;
         private readonly BinaryWriter _bufferWriter;
@@ -226,7 +225,6 @@ namespace Tkl.Jumbo.Jet.Channels
         private int _bufferRemaining;
         private int _lastRecordEnd;
         private long _bytesWritten;
-        private readonly int _bufferLimit;
 
         private readonly RecordIndexEntry[][] _spillIndices;
         private readonly object _spillLock = new object();
@@ -264,7 +262,6 @@ namespace Tkl.Jumbo.Jet.Channels
             _bufferWriter = new BinaryWriter(_buffer);
             _indices = new List<RecordIndexEntry>[partitioner.Partitions];
             _bufferRemaining = limit;
-            _bufferLimit = limit;
             _spillIndices = new RecordIndexEntry[partitioner.Partitions][];
             _flags = flags;
             //_debugWriter = new StreamWriter(outputPath + ".debug.txt");

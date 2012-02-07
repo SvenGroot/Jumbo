@@ -39,7 +39,6 @@ namespace JobServerApplication
         private readonly CancellationTokenSource _cancellation = new CancellationTokenSource();
         private Thread _schedulerThread;
         private readonly object _schedulerThreadLock = new object();
-        private readonly ManualResetEvent _schedulerWaitingEvent = new ManualResetEvent(false);
         private readonly object _archiveLock = new object();
         private const int _schedulerTimeoutMilliseconds = 30000;
         private const string _archiveFileName = "archive";

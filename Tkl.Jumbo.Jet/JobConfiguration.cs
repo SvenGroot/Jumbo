@@ -432,7 +432,6 @@ namespace Tkl.Jumbo.Jet
                 throw new ArgumentNullException("compoundStageId");
 
             string[] stageIds = compoundStageId.Split(TaskId.ChildStageSeparator);
-            List<StageConfiguration> stages = new List<StageConfiguration>(stageIds.Length);
             StageConfiguration current = GetStage(stageIds[0]);
             for( int x = 0; x < stageIds.Length; ++x )
             {

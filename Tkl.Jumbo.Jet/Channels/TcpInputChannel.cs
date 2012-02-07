@@ -162,8 +162,6 @@ namespace Tkl.Jumbo.Jet.Channels
 
         #endregion
 
-        private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(TcpInputChannel));
-
         internal const int HeaderSize = 9; // task number + flags + segment number
         internal const int PartitionHeaderSize = 8; // partition number + size
 

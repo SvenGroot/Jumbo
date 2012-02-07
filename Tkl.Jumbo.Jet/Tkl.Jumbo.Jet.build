@@ -33,6 +33,7 @@
       </sources>
       <nowarn>
         <!-- XML comment warnings; this is somewhat broken in Mono. -->
+        <warning number="1580" />
         <warning number="1584" />
         <warning number="1574" />
         <warning number="0419" />

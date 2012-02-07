@@ -179,7 +179,6 @@ namespace Tkl.Jumbo.Jet.Samples.IO
             List<byte[]> splitPoints = new List<byte[]>();
             string partitionFilePath = Path.Combine(TaskContext.LocalJobDirectory, SplitFileName);
             _log.InfoFormat("Reading local partition split file {0}.", partitionFilePath);
-            DfsClient dfsClient = new DfsClient(DfsConfiguration);
             using( FileStream stream =  File.OpenRead(partitionFilePath) )
             {
                 int bytesRead;

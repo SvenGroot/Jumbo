@@ -596,7 +596,6 @@ namespace Tkl.Jumbo.Test.Jet
         {
             JobBuilder builder = new JobBuilder(_dfsClient, _jetClient);
 
-            var input = builder.Read(_inputPath, typeof(LineRecordReader));
             var operation = builder.Generate<int>(5, GenerateRecords);
             builder.Write(operation, _outputPath, typeof(TextRecordWriter<>));
 
@@ -619,7 +618,6 @@ namespace Tkl.Jumbo.Test.Jet
         {
             JobBuilder builder = new JobBuilder(_dfsClient, _jetClient);
 
-            var input = builder.Read(_inputPath, typeof(LineRecordReader));
             var operation = builder.Generate<int>(5, GenerateRecordsNoContext);
             builder.Write(operation, _outputPath, typeof(TextRecordWriter<>));
 

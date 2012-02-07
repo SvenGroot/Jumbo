@@ -426,7 +426,6 @@ namespace Tkl.Jumbo.Jet.Channels
         {
             try
             {
-                Random rnd = new Random();
                 bool hasTasksLeft;
                 lock( _tasksLeft )
                 {

@@ -39,7 +39,6 @@ namespace Tkl.Jumbo.Jet.Channels
         private const int _retryDelay = 2000;
 
         private readonly TaskId[] _outputIds;
-        private readonly int _partitions;
         private readonly bool _reuseConnections;
         private readonly byte[] _header = new byte[TcpInputChannel.HeaderSize + TcpInputChannel.PartitionHeaderSize];
         private readonly TaskConnectionInfo[] _taskConnections;
@@ -55,7 +54,6 @@ namespace Tkl.Jumbo.Jet.Channels
             _outputIds = new TaskId[outputStage.TaskCount]; // We need this to be task based, not partition based.
             for( int x = 0; x < _outputIds.Length; ++x )
                 _outputIds[x] = new TaskId(outputStage.StageId, x + 1);
-            _partitions = partitioner.Partitions;
             _taskConnections = new TaskConnectionInfo[_outputIds.Length];
             _taskExecution = taskExecution;
             _reuseConnections = reuseConnections;

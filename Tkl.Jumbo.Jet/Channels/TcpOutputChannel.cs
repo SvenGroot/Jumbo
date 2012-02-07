@@ -16,8 +16,6 @@ namespace Tkl.Jumbo.Jet.Channels
     /// </summary>
     public sealed class TcpOutputChannel : OutputChannel, IHasMetrics
     {
-        private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(TcpOutputChannel));
-
         /// <summary>
         /// The key in the stage or job settings that can be used to specify the size of the spill buffer. The setting should have the type <see cref="BinarySize"/>,
         /// and the default value is the value of <see cref="TcpChannelConfigurationElement.SpillBufferSize"/>.

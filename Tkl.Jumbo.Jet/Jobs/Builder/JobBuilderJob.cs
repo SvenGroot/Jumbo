@@ -13,8 +13,6 @@ namespace Tkl.Jumbo.Jet.Jobs.Builder
     /// </summary>
     public abstract class JobBuilderJob : BaseJobRunner
     {
-        private JobBuilder _builder;
-
         /// <summary>
         /// Starts the job.
         /// </summary>
@@ -29,7 +27,6 @@ namespace Tkl.Jumbo.Jet.Jobs.Builder
             JobBuilder builder = new JobBuilder(dfsClient, jetClient);
             try
             {
-                _builder = builder;
                 BuildJob(builder);
 
                 JobConfiguration config = builder.CreateJob();
@@ -50,7 +47,6 @@ namespace Tkl.Jumbo.Jet.Jobs.Builder
             finally
             {
                 builder.TaskBuilder.DeleteAssembly(); // This is safe to do after the assembly has been uploaded to the DFS.
-                _builder = null;
             }
         }
 

@@ -11,8 +11,6 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
 {
     sealed class FrequentPatternMaxHeap
     {
-        private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(FrequentPatternMaxHeap));
-
         private readonly PriorityQueue<MappedFrequentPattern> _queue;
         private readonly int _maxSize;
         private int _minSupport;

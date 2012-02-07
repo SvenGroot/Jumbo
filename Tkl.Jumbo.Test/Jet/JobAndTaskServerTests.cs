@@ -200,7 +200,7 @@ namespace Tkl.Jumbo.Test.Jet
             stage.AddSetting(FileOutputChannel.SpillSortCombinerTypeSettingKey, typeof(WordCountReduceTask).AssemblyQualifiedName);
             stage.AddSetting(FileOutputChannel.SpillBufferSizeSettingKey, "5MB");
 
-            StageConfiguration reduceStage = job.AddStage("WordCountReduceStage", typeof(WordCountReduceTask), 1, new InputStageInfo(stage) { MultiInputRecordReaderType = typeof(MergeRecordReader<Pair<Utf8String, int>>) }, outputPath, typeof(BinaryRecordWriter<Pair<Utf8String, int>>));
+            job.AddStage("WordCountReduceStage", typeof(WordCountReduceTask), 1, new InputStageInfo(stage) { MultiInputRecordReaderType = typeof(MergeRecordReader<Pair<Utf8String, int>>) }, outputPath, typeof(BinaryRecordWriter<Pair<Utf8String, int>>));
 
             JobStatus status = RunJob(dfsClient, job);
 
