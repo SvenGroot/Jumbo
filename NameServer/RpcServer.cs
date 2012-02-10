@@ -7,6 +7,7 @@ using System.Text;
 using Tkl.Jumbo.Dfs;
 using Tkl.Jumbo;
 using Tkl.Jumbo.IO;
+using Tkl.Jumbo.Dfs.FileSystem;
 
 namespace NameServerApplication
 {
@@ -20,7 +21,7 @@ namespace NameServerApplication
             NameServer.Instance.CreateDirectory(path);
         }
 
-        public DfsDirectory GetDirectoryInfo(string path)
+        public JumboDirectory GetDirectoryInfo(string path)
         {
             return NameServer.Instance.GetDirectoryInfo(path);
         }
@@ -40,12 +41,12 @@ namespace NameServerApplication
             NameServer.Instance.Move(from, to);
         }
 
-        public DfsFile GetFileInfo(string path)
+        public JumboFile GetFileInfo(string path)
         {
             return NameServer.Instance.GetFileInfo(path);
         }
 
-        public FileSystemEntry GetFileSystemEntryInfo(string path)
+        public JumboFileSystemEntry GetFileSystemEntryInfo(string path)
         {
             return NameServer.Instance.GetFileSystemEntryInfo(path);
         }

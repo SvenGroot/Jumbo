@@ -11,6 +11,7 @@ using System.IO;
 using Tkl.Jumbo.Dfs;
 using Tkl.Jumbo;
 using Tkl.Jumbo.IO;
+using Tkl.Jumbo.Dfs.FileSystem;
 
 namespace DfsShell.Commands
 {
@@ -81,7 +82,7 @@ namespace DfsShell.Commands
                     }
                     else
                     {
-                        DfsDirectory dir = Client.NameServer.GetDirectoryInfo(_dfsPath);
+                        JumboDirectory dir = Client.NameServer.GetDirectoryInfo(_dfsPath);
                         string dfsPath = _dfsPath;
                         if( dir != null )
                         {
@@ -139,7 +140,7 @@ namespace DfsShell.Commands
         {
             string[] files = System.IO.Directory.GetFiles(localPath);
 
-            DfsDirectory directory = Client.NameServer.GetDirectoryInfo(dfsPath);
+            JumboDirectory directory = Client.NameServer.GetDirectoryInfo(dfsPath);
             if( directory != null )
                 throw new ArgumentException(string.Format(System.Globalization.CultureInfo.CurrentCulture, "Directory {0} already exists on the DFS.", dfsPath), "dfsPath");
             Client.NameServer.CreateDirectory(dfsPath);

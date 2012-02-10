@@ -9,6 +9,7 @@ using Ookii.CommandLine;
 using System.ComponentModel;
 using System.Reflection;
 using System.Globalization;
+using Tkl.Jumbo.Dfs.FileSystem;
 
 namespace Tkl.Jumbo.Jet.Jobs
 {
@@ -187,7 +188,7 @@ namespace Tkl.Jumbo.Jet.Jobs
             }
             else
             {
-                DfsDirectory outputDir = dfsClient.NameServer.GetDirectoryInfo(outputPath);
+                JumboDirectory outputDir = dfsClient.NameServer.GetDirectoryInfo(outputPath);
                 if( outputDir != null )
                     throw new ArgumentException("The specified output path already exists on the DFS.", "outputPath");
             }
@@ -217,16 +218,16 @@ namespace Tkl.Jumbo.Jet.Jobs
         }
 
         /// <summary>
-        /// Gets a <see cref="FileSystemEntry"/> instance for the specified path, or throws an exception if the input doesn't exist.
+        /// Gets a <see cref="JumboFileSystemEntry"/> instance for the specified path, or throws an exception if the input doesn't exist.
         /// </summary>
         /// <param name="dfsClient">The <see cref="DfsClient"/> used to access the Distributed File System.</param>
         /// <param name="inputPath">The input file or directory.</param>
-        /// <returns>A <see cref="FileSystemEntry"/> instance for the specified path</returns>
-        protected static FileSystemEntry GetInputFileSystemEntry(DfsClient dfsClient, string inputPath)
+        /// <returns>A <see cref="JumboFileSystemEntry"/> instance for the specified path</returns>
+        protected static JumboFileSystemEntry GetInputFileSystemEntry(DfsClient dfsClient, string inputPath)
         {
             if( dfsClient == null )
                 throw new ArgumentNullException("dfsClient");
-            FileSystemEntry input = dfsClient.NameServer.GetFileSystemEntryInfo(inputPath);
+            JumboFileSystemEntry input = dfsClient.NameServer.GetFileSystemEntryInfo(inputPath);
             if( input == null )
                 throw new ArgumentException("The specified input path doesn't exist.", "inputPath");
             return input;

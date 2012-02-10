@@ -5,17 +5,16 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.IO;
+using Tkl.Jumbo.Dfs.FileSystem;
+using Tkl.Jumbo.Dfs;
 
-namespace Tkl.Jumbo.Dfs
+namespace NameServerApplication
 {
     /// <summary>
     /// Represents a file or directory in the distributed file system namespace.
     /// </summary>
-    [Serializable]
-    public abstract class FileSystemEntry
+    abstract class DfsFileSystemEntry
     {
-        private string _fullPath; // Used by cloned objects because they don't have parent set.
-
         /// <summary>
         /// The format string for printing entries in a directory listing.
         /// </summary>
@@ -26,14 +25,14 @@ namespace Tkl.Jumbo.Dfs
         protected const string ListingEntryFormat = "{0:yyyy-MM-dd HH:mm}  {1,15:#,0}  {2}";
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="FileSystemEntry"/> class.
+        /// Initializes a new instance of the <see cref="DfsFileSystemEntry"/> class.
         /// </summary>
         /// <param name="parent">The parent of the entry. May be <see langword="null" />.</param>
         /// <param name="name">The name of the new entry.</param>
         /// <param name="dateCreated">The date the new entry was created.</param>
         /// <exception cref="ArgumentNullException"><paramref name="name"/> is <see langword="null" />.</exception>
         /// <exception cref="ArgumentException"><paramref name="name"/> contains the / character.</exception>
-        protected FileSystemEntry(DfsDirectory parent, string name, DateTime dateCreated)
+        protected DfsFileSystemEntry(DfsDirectory parent, string name, DateTime dateCreated)
         {
             if( name == null )
                 throw new ArgumentNullException("name");
@@ -72,9 +71,7 @@ namespace Tkl.Jumbo.Dfs
         {
             get
             {
-                if( _fullPath != null )
-                    return _fullPath; // An object created by the Clone method will not have the parent set, but it will have this field set.
-                else if( Parent == null )
+                if( Parent == null )
                     return DfsPath.DirectorySeparator.ToString();
                 else
                 {
@@ -117,16 +114,7 @@ namespace Tkl.Jumbo.Dfs
         }
 
         /// <summary>
-        /// Creates a clone that contains the direct children of this entry (if it's a directory), but not their children.
-        /// </summary>
-        /// <returns>A clone of this object.</returns>
-        public FileSystemEntry ShallowClone()
-        {
-            return Clone(2);
-        }
-
-        /// <summary>
-        /// Saves this <see cref="FileSystemEntry"/> to a file system image.
+        /// Saves this <see cref="DfsFileSystemEntry"/> to a file system image.
         /// </summary>
         /// <param name="writer">A <see cref="BinaryWriter"/> used to write to the file system image.</param>
         public virtual void SaveToFileSystemImage(BinaryWriter writer)
@@ -139,20 +127,20 @@ namespace Tkl.Jumbo.Dfs
         }
 
         /// <summary>
-        /// Loads a <see cref="FileSystemEntry"/> from the file system image.
+        /// Loads a <see cref="DfsFileSystemEntry"/> from the file system image.
         /// </summary>
         /// <param name="reader">The <see cref="BinaryReader"/> used to read the file system image.</param>
-        /// <param name="parent">The parent directory of the new <see cref="FileSystemEntry"/>.</param>
+        /// <param name="parent">The parent directory of the new <see cref="DfsFileSystemEntry"/>.</param>
         /// <param name="notifyFileSizeCallback">A function that should be called to notify the caller of the size of deserialized files.</param>
         /// <returns>An instance of <see cref="DfsFile"/> or <see cref="DfsDirectory"/> representing the file system entry.</returns>
-        public static FileSystemEntry LoadFromFileSystemImage(BinaryReader reader, DfsDirectory parent, Action<long> notifyFileSizeCallback)
+        public static DfsFileSystemEntry LoadFromFileSystemImage(BinaryReader reader, DfsDirectory parent, Action<long> notifyFileSizeCallback)
         {
             if( reader == null )
                 throw new ArgumentNullException("reader");
             string className = reader.ReadString();
             string name = reader.ReadString();
             DateTime dateCreated = new DateTime(reader.ReadInt64(), DateTimeKind.Utc);
-            FileSystemEntry entry;
+            DfsFileSystemEntry entry;
             if( className == typeof(DfsFile).FullName )
                 entry = new DfsFile(parent, name, dateCreated);
             else if( className == typeof(DfsDirectory).FullName )
@@ -165,24 +153,20 @@ namespace Tkl.Jumbo.Dfs
         }
 
         /// <summary>
-        /// When implemented in a derived class, reads information about the <see cref="FileSystemEntry"/> from the file system image.
+        /// Creates a <see cref="JumboFileSystemEntry"/> from this <see cref="DfsFileSystemEntry"/>.
+        /// </summary>
+        /// <param name="includeChildren">if set to <see langword="true"/> include the children if this is a directory.</param>
+        /// <returns>
+        /// A <see cref="JumboFileSystemEntry"/>.
+        /// </returns>
+        public abstract JumboFileSystemEntry ToJumboFileSystemEntry(bool includeChildren = true);
+
+        /// <summary>
+        /// When implemented in a derived class, reads information about the <see cref="DfsFileSystemEntry"/> from the file system image.
         /// </summary>
         /// <param name="reader">The <see cref="BinaryReader"/> used to read the file system image.</param>
         /// <param name="notifyFileSizeCallback">A function that should be called to notify the caller of the size of deserialized files.</param>
         protected abstract void LoadFromFileSystemImage(BinaryReader reader, Action<long> notifyFileSizeCallback);
-
-        /// <summary>
-        /// Creates a clone of the current entry.
-        /// </summary>
-        /// <param name="levels">The number of levels in the file system hierarchy to clone.</param>
-        /// <returns>A clone of this object.</returns>
-        internal virtual FileSystemEntry Clone(int levels)
-        {
-            FileSystemEntry clone = (FileSystemEntry)MemberwiseClone();
-            clone.Parent = null;
-            clone._fullPath = FullPath;
-            return clone;
-        }
 
         private void BuildPath(StringBuilder path)
         {

@@ -6,8 +6,10 @@ using System.Linq;
 using System.Text;
 using System.Collections.ObjectModel;
 using Tkl.Jumbo.IO;
+using Tkl.Jumbo.Dfs.FileSystem;
+using Tkl.Jumbo.Dfs;
 
-namespace Tkl.Jumbo.Dfs
+namespace NameServerApplication
 {
     /// <summary>
     /// Represents a file in the distributed file system.
@@ -16,8 +18,7 @@ namespace Tkl.Jumbo.Dfs
     /// When a client retrieves an instance of this class from the name server it will be a copy of the actual file record,
     /// so modifying any of the properties will not have any effect on the actual file system.
     /// </remarks>
-    [Serializable]
-    public class DfsFile : FileSystemEntry 
+    class DfsFile : DfsFileSystemEntry 
     {
         private readonly List<Guid> _blocks = new List<Guid>();
 
@@ -109,7 +110,7 @@ namespace Tkl.Jumbo.Dfs
         public RecordStreamOptions RecordOptions { get; private set; }
 
         /// <summary>
-        /// Saves this <see cref="FileSystemEntry"/> to a file system image.
+        /// Saves this <see cref="DfsFileSystemEntry"/> to a file system image.
         /// </summary>
         /// <param name="writer">A <see cref="System.IO.BinaryWriter"/> used to write to the file system image.</param>
         public override void SaveToFileSystemImage(System.IO.BinaryWriter writer)
@@ -134,6 +135,27 @@ namespace Tkl.Jumbo.Dfs
         public override string ToString()
         {
             return string.Format(System.Globalization.CultureInfo.InvariantCulture, ListingEntryFormat, DateCreated.ToLocalTime(), Size, Name);
+        }
+
+        /// <summary>
+        /// Creates a <see cref="JumboFileSystemEntry"/> from this <see cref="DfsFileSystemEntry"/>.
+        /// </summary>
+        /// <param name="includeChildren">if set to <see langword="true"/> include the children if this is a directory.</param>
+        /// <returns>
+        /// A <see cref="JumboFileSystemEntry"/>.
+        /// </returns>
+        public override JumboFileSystemEntry ToJumboFileSystemEntry(bool includeChildren = true)
+        {
+            return ToJumboFile();
+        }
+
+        /// <summary>
+        /// Creates a <see cref="JumboFile"/> from this <see cref="DfsFile"/>.
+        /// </summary>
+        /// <returns>A <see cref="JumboFile"/>.</returns>
+        public JumboFile ToJumboFile()
+        {
+            return new JumboFile(FullPath, Name, DateCreated, Size, BlockSize, ReplicationFactor, RecordOptions, IsOpenForWriting, Blocks);
         }
 
         /// <summary>

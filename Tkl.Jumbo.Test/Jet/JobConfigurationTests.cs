@@ -10,6 +10,7 @@ using Tkl.Jumbo.Dfs;
 using Tkl.Jumbo.IO;
 using Tkl.Jumbo.Jet.Channels;
 using Tkl.Jumbo.Jet.Tasks;
+using Tkl.Jumbo.Dfs.FileSystem;
 
 namespace Tkl.Jumbo.Test.Jet
 {
@@ -56,7 +57,7 @@ namespace Tkl.Jumbo.Test.Jet
         public void TestAddInputStage()
         {
             JobConfiguration target = new JobConfiguration(typeof(Tasks.LineCounterTask).Assembly);
-            DfsFile file = CreateFakeTestFile("test");
+            JumboFile file = CreateFakeTestFile("test");
 
             StageConfiguration stage = target.AddInputStage("InputStage", file, typeof(Tasks.LineCounterTask), typeof(LineRecordReader));
 
@@ -109,7 +110,7 @@ namespace Tkl.Jumbo.Test.Jet
         public void TestGetStage()
         {
             JobConfiguration target = new JobConfiguration(typeof(Tasks.LineCounterTask).Assembly);
-            DfsFile file = CreateFakeTestFile("test1");
+            JumboFile file = CreateFakeTestFile("test1");
 
             StageConfiguration expected = target.AddInputStage("InputStage", file, typeof(Tasks.LineCounterTask), typeof(LineRecordReader));
 
@@ -125,8 +126,8 @@ namespace Tkl.Jumbo.Test.Jet
         public void TestGetInputStagesForStage()
         {
             JobConfiguration target = new JobConfiguration(typeof(Tasks.LineCounterTask).Assembly);
-            DfsFile file1 = CreateFakeTestFile("test1");
-            DfsFile file2 = CreateFakeTestFile("test2");
+            JumboFile file1 = CreateFakeTestFile("test1");
+            JumboFile file2 = CreateFakeTestFile("test2");
 
             StageConfiguration inputStage1 = target.AddInputStage("InputStage1", file1, typeof(Tasks.LineCounterTask), typeof(LineRecordReader));
             StageConfiguration inputStage2 = target.AddInputStage("InputStage2", file2, typeof(Tasks.LineCounterTask), typeof(LineRecordReader));
@@ -149,7 +150,7 @@ namespace Tkl.Jumbo.Test.Jet
         public void TestAddStageMultiplePartitionsPerTask()
         {
             JobConfiguration target = new JobConfiguration();
-            DfsFile file1 = CreateFakeTestFile("test1");
+            JumboFile file1 = CreateFakeTestFile("test1");
 
             StageConfiguration inputStage = target.AddInputStage("InputStage", file1, typeof(SortTask<Utf8String>), typeof(LineRecordReader));
 
@@ -174,7 +175,7 @@ namespace Tkl.Jumbo.Test.Jet
         public void TestAddStageMultiplePartitionsPerTaskInternalPartitioning()
         {
             JobConfiguration target = new JobConfiguration();
-            DfsFile file1 = CreateFakeTestFile("test1");
+            JumboFile file1 = CreateFakeTestFile("test1");
 
             const int taskCount = 3;
             const int partitionsPerTask = 5;
@@ -200,8 +201,8 @@ namespace Tkl.Jumbo.Test.Jet
         private void TestAddStage(bool useOutput)
         {
             JobConfiguration target = new JobConfiguration(typeof(Tasks.LineCounterTask).Assembly);
-            DfsFile file1 = CreateFakeTestFile("test1");
-            DfsFile file2 = CreateFakeTestFile("test2");
+            JumboFile file1 = CreateFakeTestFile("test1");
+            JumboFile file2 = CreateFakeTestFile("test2");
 
             StageConfiguration inputStage1 = target.AddInputStage("InputStage1", file1, typeof(Tasks.LineCounterTask), typeof(LineRecordReader));
             StageConfiguration inputStage2 = target.AddInputStage("InputStage2", file2, typeof(Tasks.LineCounterTask), typeof(LineRecordReader));
@@ -254,7 +255,7 @@ namespace Tkl.Jumbo.Test.Jet
         //private void TestAddPointToPointStage(bool useOutput)
         //{
         //    JobConfiguration target = new JobConfiguration(typeof(Tasks.LineCounterTask).Assembly);
-        //    DfsFile file = CreateFakeTestFile("test1");
+        //    JumboFile file = CreateFakeTestFile("test1");
 
         //    StageConfiguration inputStage = target.AddInputStage("InputStage", file, typeof(Tasks.LineCounterTask), typeof(LineRecordReader));
 
@@ -291,16 +292,9 @@ namespace Tkl.Jumbo.Test.Jet
         //    Assert.AreEqual(stage.StageId, channel.OutputStage);
         //}
 
-        private static DfsFile CreateFakeTestFile(string name)
+        private static JumboFile CreateFakeTestFile(string name)
         {
-            DfsDirectory dir = new DfsDirectory(null, "root", DateTime.UtcNow);
-            DfsFile file = new DfsFile(dir, name, DateTime.UtcNow, _blockSize, 1, IO.RecordStreamOptions.None);
-            file.Blocks.Add(Guid.NewGuid());
-            file.Blocks.Add(Guid.NewGuid());
-            file.Blocks.Add(Guid.NewGuid());
-            file.Blocks.Add(Guid.NewGuid());
-            file.Blocks.Add(Guid.NewGuid());
-            return file;
+            return new JumboFile("/" + name, name, DateTime.UtcNow, 1000, _blockSize, 1, RecordStreamOptions.None, false, new[] { Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid() });
         }
 
     }

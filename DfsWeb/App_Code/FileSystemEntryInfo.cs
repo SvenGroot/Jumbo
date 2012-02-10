@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Web;
 using Tkl.Jumbo.Dfs;
+using Tkl.Jumbo.Dfs.FileSystem;
 
 /// <summary>
 /// Summary description for FileSystemEntryInfo
@@ -15,24 +16,24 @@ public class FileSystemEntryInfo
     {
     }
 
-    public FileSystemEntryInfo(FileSystemEntry entry, bool includeChildren)
+    public FileSystemEntryInfo(JumboFileSystemEntry entry, bool includeChildren)
     {
         Name = entry.Name;
         DateCreated = entry.DateCreated;
         FullPath = entry.FullPath;
-        DfsFile file = entry as DfsFile;
+        JumboFile file = entry as JumboFile;
         if( file != null )
         {
             Size = file.Size;
         }
         else
         {
-            DfsDirectory dir = (DfsDirectory)entry;
+            JumboDirectory dir = (JumboDirectory)entry;
             IsDirectory = true;
             if( includeChildren )
             {
                 Children = (from child in dir.Children
-                            orderby child.GetType() != typeof(DfsDirectory), child.Name
+                            orderby !(child is JumboDirectory), child.Name
                             select new FileSystemEntryInfo(child, false)).ToArray();
             }
         }

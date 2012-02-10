@@ -17,6 +17,7 @@ using System.Threading;
 using Tkl.Jumbo.IO;
 using Tkl.Jumbo.Jet.Channels;
 using Tkl.Jumbo.Jet.Samples.IO;
+using Tkl.Jumbo.Dfs.FileSystem;
 
 namespace ClientSample
 {
@@ -75,9 +76,9 @@ namespace ClientSample
             DfsClient client = new DfsClient();
             LineItem referenceLineItem = new LineItem();
 
-            DfsDirectory directory = client.NameServer.GetDirectoryInfo(path);
+            JumboDirectory directory = client.NameServer.GetDirectoryInfo(path);
             var files = from child in directory.Children
-                        let file = child as DfsFile
+                        let file = child as JumboFile
                         where file != null && file.Name.StartsWith("LineItem")
                         orderby file.Name
                         select file;
@@ -85,7 +86,7 @@ namespace ClientSample
             int record = 0;
             using( StreamReader reader = File.OpenText(Path.Combine(referencePath, "lineitem.tbl")) )
             {
-                foreach( DfsFile file in files )
+                foreach( JumboFile file in files )
                 {
                     using( DfsInputStream dfsStream = client.OpenFile(file.FullPath) )
                     using( RecordFileReader<LineItem> recordReader = new RecordFileReader<LineItem>(dfsStream, 0, dfsStream.Length, true) )

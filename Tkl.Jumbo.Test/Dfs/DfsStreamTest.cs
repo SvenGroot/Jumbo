@@ -152,7 +152,7 @@ namespace Tkl.Jumbo.Test.Dfs
                 }
 
                 // Make a modification so it'll cause an InvalidChecksumException
-                Tkl.Jumbo.Dfs.DfsFile file = _nameServer.GetFileInfo("/DfsInputStreamErrorRecovery.dat");
+                Tkl.Jumbo.Dfs.FileSystem.JumboFile file = _nameServer.GetFileInfo("/DfsInputStreamErrorRecovery.dat");
                 ServerAddress[] servers = _nameServer.GetDataServersForBlock(file.Blocks[0]);
                 string blockFile = Path.Combine(Path.Combine(Utilities.TestOutputPath, "blocks" + (servers[0].Port - TestDfsCluster.FirstDataServerPort).ToString()), file.Blocks[0].ToString());
                 using( FileStream fileStream = new FileStream(blockFile, FileMode.Open, FileAccess.ReadWrite) )

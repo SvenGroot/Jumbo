@@ -7,6 +7,7 @@ using System.Text;
 using Tkl.Jumbo.Jet;
 using Tkl.Jumbo;
 using Tkl.Jumbo.Dfs;
+using Tkl.Jumbo.Dfs.FileSystem;
 
 namespace JobServerApplication
 {
@@ -74,7 +75,7 @@ namespace JobServerApplication
             if( _inputBlock == null )
             {
                 TaskDfsInput input = _task.Stage.Configuration.DfsInput.GetInput(_task.TaskId);
-                Tkl.Jumbo.Dfs.DfsFile file = _task.Job.SchedulerInfo.GetFileInfo(dfsClient, input.Path);
+                JumboFile file = _task.Job.SchedulerInfo.GetFileInfo(dfsClient, input.Path);
                 _inputBlock = file.Blocks[input.Block];
             }
             return _inputBlock.Value;

@@ -7,6 +7,7 @@ using System.Text;
 using NUnit.Framework;
 using System.Threading;
 using Tkl.Jumbo.Dfs;
+using Tkl.Jumbo.Dfs.FileSystem;
 
 namespace Tkl.Jumbo.Test.Dfs
 {
@@ -62,7 +63,7 @@ namespace Tkl.Jumbo.Test.Dfs
                 stream.Position = 0;
                 target.UploadStream(stream, "/uploadstream");
             }
-            DfsFile file = target.NameServer.GetFileInfo("/uploadstream");
+            JumboFile file = target.NameServer.GetFileInfo("/uploadstream");
             Assert.IsNotNull(file);
             Assert.AreEqual(size, file.Size);
             Assert.IsFalse(file.IsOpenForWriting);
@@ -78,7 +79,7 @@ namespace Tkl.Jumbo.Test.Dfs
                 Utilities.GenerateFile(tempFile, size);
                 DfsClient target = new DfsClient(TestDfsCluster.CreateClientConfig());
                 target.UploadFile(tempFile, "/uploadfile");
-                DfsFile file = target.NameServer.GetFileInfo("/uploadfile");
+                JumboFile file = target.NameServer.GetFileInfo("/uploadfile");
                 Assert.IsNotNull(file);
                 Assert.AreEqual(size, file.Size);
                 Assert.IsFalse(file.IsOpenForWriting);
@@ -102,7 +103,7 @@ namespace Tkl.Jumbo.Test.Dfs
                 target.NameServer.CreateDirectory("/uploadfiledir");
                 target.UploadFile(tempFile, "/uploadfiledir");
                 string fileName = System.IO.Path.GetFileName(tempFile);
-                DfsFile file = target.NameServer.GetFileInfo("/uploadfiledir/" + fileName);
+                JumboFile file = target.NameServer.GetFileInfo("/uploadfiledir/" + fileName);
                 Assert.IsNotNull(file);
                 Assert.AreEqual(size, file.Size);
                 Assert.IsFalse(file.IsOpenForWriting);

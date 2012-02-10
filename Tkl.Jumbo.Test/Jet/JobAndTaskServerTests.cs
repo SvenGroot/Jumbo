@@ -15,6 +15,7 @@ using System.Threading;
 using Tkl.Jumbo.Jet.Tasks;
 using Tkl.Jumbo.Jet.Jobs;
 using System.Globalization;
+using Tkl.Jumbo.Dfs.FileSystem;
 
 namespace Tkl.Jumbo.Test.Jet
 {
@@ -59,7 +60,7 @@ namespace Tkl.Jumbo.Test.Jet
         public void TestJobAbort()
         {
             DfsClient dfsClient = new DfsClient(Dfs.TestDfsCluster.CreateClientConfig());
-            DfsFile file = dfsClient.NameServer.GetFileInfo(_fileName);
+            JumboFile file = dfsClient.NameServer.GetFileInfo(_fileName);
             JobConfiguration config = CreateConfiguration(dfsClient, file, "/abort", false, typeof(LineCounterTask), typeof(LineAdderTask), ChannelType.File);
 
             JetClient target = new JetClient(TestJetCluster.CreateClientConfig());
@@ -502,7 +503,7 @@ namespace Tkl.Jumbo.Test.Jet
             DfsClient dfsClient = new DfsClient(Dfs.TestDfsCluster.CreateClientConfig());
             dfsClient.NameServer.CreateDirectory(outputPath1);
             dfsClient.NameServer.CreateDirectory(outputPath2);
-            Tkl.Jumbo.Dfs.DfsFile file = dfsClient.NameServer.GetFileInfo(_fileName);
+            JumboFile file = dfsClient.NameServer.GetFileInfo(_fileName);
             JobConfiguration config1 = CreateConfiguration(dfsClient, file, outputPath1, false, typeof(LineCounterTask), typeof(LineAdderTask), ChannelType.File);
             JobConfiguration config2 = CreateConfiguration(dfsClient, file, outputPath2, false, typeof(LineCounterTask), typeof(LineAdderTask), ChannelType.File);
 
@@ -566,15 +567,15 @@ namespace Tkl.Jumbo.Test.Jet
             IList<int>[] partitions;
 
             IEnumerable<string> fileNames;
-            FileSystemEntry entry = dfsClient.NameServer.GetFileSystemEntryInfo(outputPath);
-            if( entry is DfsFile )
+            JumboFileSystemEntry entry = dfsClient.NameServer.GetFileSystemEntryInfo(outputPath);
+            if( entry is JumboFile )
             {
                 fileNames = new[] { entry.FullPath };
             }
             else
             {
-                fileNames = from child in ((DfsDirectory)entry).Children
-                            where child is DfsFile
+                fileNames = from child in ((JumboDirectory)entry).Children
+                            where child is JumboFile
                             orderby child.FullPath
                             select child.FullPath;
 
@@ -684,7 +685,7 @@ namespace Tkl.Jumbo.Test.Jet
                 break;
             }
 
-            Tkl.Jumbo.Dfs.DfsFile file = dfsClient.NameServer.GetFileInfo(_fileName);
+            Tkl.Jumbo.Dfs.FileSystem.JumboFile file = dfsClient.NameServer.GetFileInfo(_fileName);
             JobConfiguration config = CreateConfiguration(dfsClient, file, outputPath, forceFileDownload, counterTask, adderTask, channelType, splitsPerBlock);
 
             JetClient target = new JetClient(TestJetCluster.CreateClientConfig());
@@ -711,7 +712,7 @@ namespace Tkl.Jumbo.Test.Jet
             }
         }
 
-        private static JobConfiguration CreateConfiguration(DfsClient dfsClient, Tkl.Jumbo.Dfs.DfsFile file, string outputPath, bool forceFileDownload, Type counterTask, Type adderTask, ChannelType channelType, int splitsPerBlock = 1)
+        private static JobConfiguration CreateConfiguration(DfsClient dfsClient, Tkl.Jumbo.Dfs.FileSystem.JumboFile file, string outputPath, bool forceFileDownload, Type counterTask, Type adderTask, ChannelType channelType, int splitsPerBlock = 1)
         {
 
             JobConfiguration config = new JobConfiguration(System.IO.Path.GetFileName(typeof(LineCounterTask).Assembly.Location));

@@ -7,6 +7,7 @@ using System.Text;
 using Tkl.Jumbo;
 using Tkl.Jumbo.Dfs;
 using Tkl.Jumbo.Jet;
+using Tkl.Jumbo.Dfs.FileSystem;
 
 namespace JobServerApplication
 {
@@ -22,7 +23,7 @@ namespace JobServerApplication
         private readonly Dictionary<string, List<TaskInfo>> _rackTasks = new Dictionary<string, List<TaskInfo>>();
         private Dictionary<Guid, List<TaskInfo>> _inputBlockMap;
         private readonly JobInfo _job;
-        private readonly Dictionary<string, DfsFile> _files = new Dictionary<string, DfsFile>();
+        private readonly Dictionary<string, JumboFile> _files = new Dictionary<string, JumboFile>();
 
         public JobSchedulerInfo(JobInfo job)
         {
@@ -125,9 +126,9 @@ namespace JobServerApplication
             }
         }
 
-        public DfsFile GetFileInfo(DfsClient dfsClient, string path)
+        public JumboFile GetFileInfo(DfsClient dfsClient, string path)
         {
-            DfsFile file;
+            JumboFile file;
             if( !_files.TryGetValue(path, out file) )
             {
                 file = dfsClient.NameServer.GetFileInfo(path);

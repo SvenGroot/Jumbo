@@ -11,6 +11,7 @@ using System.Net.Sockets;
 using System.Runtime.Serialization.Formatters.Binary;
 using System.Threading;
 using Tkl.Jumbo.IO;
+using Tkl.Jumbo.Dfs.FileSystem;
 
 namespace Tkl.Jumbo.Dfs
 {
@@ -23,7 +24,7 @@ namespace Tkl.Jumbo.Dfs
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(DfsInputStream));
 
         private readonly INameServerClientProtocol _nameServer;
-        private readonly DfsFile _file;
+        private readonly JumboFile _file;
         private long _position;
         private bool _disposed;
         private Packet _currentPacket = new Packet();
@@ -59,7 +60,7 @@ namespace Tkl.Jumbo.Dfs
             // GetFileInfo doesn't throw if the file doesn't exist; we do.
             if( _file == null )
                 throw new FileNotFoundException(string.Format(System.Globalization.CultureInfo.CurrentCulture, "The file '{0}' does not exist on the distributed file system.", path));
-            BlockSize = _file.BlockSize;
+            BlockSize = (int)_file.BlockSize;
             _endOffset = _file.Size;
         }
 

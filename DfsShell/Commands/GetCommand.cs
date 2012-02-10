@@ -9,6 +9,7 @@ using System.ComponentModel;
 using System.Runtime.InteropServices;
 using Tkl.Jumbo.Dfs;
 using System.IO;
+using Tkl.Jumbo.Dfs.FileSystem;
 
 namespace DfsShell.Commands
 {
@@ -35,7 +36,7 @@ namespace DfsShell.Commands
 
         public override void Run()
         {
-            FileSystemEntry entry = Client.NameServer.GetFileSystemEntryInfo(_dfsPath);
+            JumboFileSystemEntry entry = Client.NameServer.GetFileSystemEntryInfo(_dfsPath);
             if( entry == null )
             {
                 Console.Error.WriteLine("Path {0} does not exist on the DFS.", _dfsPath);
@@ -47,7 +48,7 @@ namespace DfsShell.Commands
 
             try
             {
-                if( entry is DfsFile )
+                if( entry is JumboFile )
                 {
                     if( Directory.Exists(localPath) )
                     {

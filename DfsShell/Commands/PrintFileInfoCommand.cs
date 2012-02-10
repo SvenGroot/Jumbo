@@ -7,6 +7,7 @@ using System.Text;
 using Ookii.CommandLine;
 using System.ComponentModel;
 using Tkl.Jumbo.Dfs;
+using Tkl.Jumbo.Dfs.FileSystem;
 
 namespace DfsShell.Commands
 {
@@ -25,7 +26,7 @@ namespace DfsShell.Commands
 
         public override void Run()
         {
-            DfsFile file = Client.NameServer.GetFileInfo(_path);
+            JumboFile file = Client.NameServer.GetFileInfo(_path);
             if( file == null )
                 Console.WriteLine("File not found.");
             else

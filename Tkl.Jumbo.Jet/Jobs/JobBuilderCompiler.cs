@@ -9,6 +9,7 @@ using Tkl.Jumbo.Dfs;
 using Tkl.Jumbo.Jet.Channels;
 using Tkl.Jumbo.Jet.Tasks;
 using Tkl.Jumbo.IO;
+using Tkl.Jumbo.Dfs.FileSystem;
 
 namespace Tkl.Jumbo.Jet.Jobs
 {
@@ -266,7 +267,7 @@ namespace Tkl.Jumbo.Jet.Jobs
 
         private StageConfiguration CreateDfsInputStage(StageBuilder stage, JobConfiguration job, string outputPath, Type outputWriterType, DfsInput dfsInput)
         {
-            FileSystemEntry dfsEntry = _dfsClient.NameServer.GetFileSystemEntryInfo(dfsInput.Path);
+            JumboFileSystemEntry dfsEntry = _dfsClient.NameServer.GetFileSystemEntryInfo(dfsInput.Path);
             if( dfsEntry == null )
                 throw new InvalidOperationException(string.Format(CultureInfo.CurrentCulture, "The input path {0} does not exist on the DFS.", dfsInput.Path));
             Type taskType = stage.TaskType;
@@ -319,19 +320,19 @@ namespace Tkl.Jumbo.Jet.Jobs
             return uniqueStageId;
         }
 
-        private int GetBlockCount(FileSystemEntry entry)
+        private int GetBlockCount(JumboFileSystemEntry entry)
         {
-            DfsDirectory directory = entry as DfsDirectory;
+            JumboDirectory directory = entry as JumboDirectory;
             if( directory != null )
             {
                 return (from child in directory.Children
-                        let file = child as DfsFile
+                        let file = child as JumboFile
                         where file != null
                         select file.Blocks.Count).Sum();
             }
             else
             {
-                DfsFile file = (DfsFile)entry;
+                JumboFile file = (JumboFile)entry;
                 return file.Blocks.Count;
             }
         }

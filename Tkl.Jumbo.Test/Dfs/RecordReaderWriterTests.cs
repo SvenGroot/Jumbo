@@ -9,6 +9,7 @@ using Tkl.Jumbo.Dfs;
 using System.Diagnostics;
 using System.Threading;
 using Tkl.Jumbo.IO;
+using Tkl.Jumbo.Dfs.FileSystem;
 
 namespace Tkl.Jumbo.Test.Dfs
 {
@@ -61,7 +62,7 @@ namespace Tkl.Jumbo.Test.Dfs
             }
 
             int recordIndex = 0;
-            DfsFile file = _dfsClient.NameServer.GetFileInfo(fileName);
+            JumboFile file = _dfsClient.NameServer.GetFileInfo(fileName);
             int blocks = file.Blocks.Count;
             int totalRecordsRead = 0;
             for( int block = 0; block < blocks; ++block )
@@ -115,7 +116,7 @@ namespace Tkl.Jumbo.Test.Dfs
             }
 
             int recordIndex = 0;
-            DfsFile file = _dfsClient.NameServer.GetFileInfo(fileName);
+            JumboFile file = _dfsClient.NameServer.GetFileInfo(fileName);
             int blocks = file.Blocks.Count;
             int totalRecordsRead = 0;
             for( int block = 0; block < blocks; ++block )
@@ -165,7 +166,7 @@ namespace Tkl.Jumbo.Test.Dfs
             }
 
             int recordIndex = 0;
-            DfsFile file = _dfsClient.NameServer.GetFileInfo(fileName);
+            JumboFile file = _dfsClient.NameServer.GetFileInfo(fileName);
             int blocks = file.Blocks.Count;
             int totalRecordsRead = 0;
             for( int block = 0; block < blocks; ++block )

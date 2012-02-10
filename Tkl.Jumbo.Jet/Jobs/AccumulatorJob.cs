@@ -11,6 +11,7 @@ using Tkl.Jumbo.Jet.Channels;
 using Tkl.Jumbo.Jet.Tasks;
 using Ookii.CommandLine;
 using System.ComponentModel;
+using Tkl.Jumbo.Dfs.FileSystem;
 
 namespace Tkl.Jumbo.Jet.Jobs
 {
@@ -154,7 +155,7 @@ namespace Tkl.Jumbo.Jet.Jobs
             config.JobName = GetType().Name; // Use the class name as the job's friendly name.
             if( InputPath != null )
             {
-                FileSystemEntry input = GetInputFileSystemEntry(dfsClient, InputPath);
+                JumboFileSystemEntry input = GetInputFileSystemEntry(dfsClient, InputPath);
 
                 // Add the input stage.
                 firstStage = config.AddInputStage(FirstStageName, input, FirstStageTaskType, InputReaderType);

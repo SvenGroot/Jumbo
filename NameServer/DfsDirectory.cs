@@ -5,16 +5,16 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.IO;
+using Tkl.Jumbo.Dfs.FileSystem;
 
-namespace Tkl.Jumbo.Dfs
+namespace NameServerApplication
 {
     /// <summary>
     /// Represents a directory in the distributed file system namespace.
     /// </summary>
-    [Serializable]
-    public class DfsDirectory : FileSystemEntry
+    class DfsDirectory : DfsFileSystemEntry
     {
-        private List<FileSystemEntry> _children = new List<FileSystemEntry>();
+        private List<DfsFileSystemEntry> _children = new List<DfsFileSystemEntry>();
 
         /// <summary>
         /// Initializes a new instance of the <see cref="DfsDirectory"/> class.
@@ -30,7 +30,7 @@ namespace Tkl.Jumbo.Dfs
         /// <summary>
         /// Gets the child directories and files of this directory.
         /// </summary>
-        public IList<FileSystemEntry> Children
+        public IList<DfsFileSystemEntry> Children
         {
             get { return _children; }
         }
@@ -65,7 +65,7 @@ namespace Tkl.Jumbo.Dfs
         }
 
         /// <summary>
-        /// Saves this <see cref="FileSystemEntry"/> to a file system image.
+        /// Saves this <see cref="DfsFileSystemEntry"/> to a file system image.
         /// </summary>
         /// <param name="writer">A <see cref="BinaryWriter"/> used to write to the file system image.</param>
         public override void SaveToFileSystemImage(BinaryWriter writer)
@@ -74,7 +74,7 @@ namespace Tkl.Jumbo.Dfs
                 throw new ArgumentNullException("writer");
             base.SaveToFileSystemImage(writer);
             writer.Write(Children.Count);
-            foreach( FileSystemEntry entry in Children )
+            foreach( DfsFileSystemEntry entry in Children )
                 entry.SaveToFileSystemImage(writer);
         }
 
@@ -93,28 +93,31 @@ namespace Tkl.Jumbo.Dfs
             for( int x = 0; x < childCount; ++x )
             {
                 // The FileSystemEntry constructor adds it to the Children collection, no need to do that here.
-                FileSystemEntry.LoadFromFileSystemImage(reader, this, notifyFileSizeCallback);
+                DfsFileSystemEntry.LoadFromFileSystemImage(reader, this, notifyFileSizeCallback);
             }
         }
 
         /// <summary>
-        /// Creates a clone of the current entry.
+        /// Creates a <see cref="JumboFileSystemEntry"/> from this <see cref="DfsFileSystemEntry"/>.
         /// </summary>
-        /// <param name="levels">The number of levels in the file system hierarchy to clone.</param>
-        /// <returns>A clone of this object.</returns>
-        internal override FileSystemEntry Clone(int levels)
+        /// <param name="includeChildren">If set to <see langword="true"/> include the children if this is a directory.</param>
+        /// <returns>
+        /// A <see cref="JumboFileSystemEntry"/>.
+        /// </returns>
+        public override JumboFileSystemEntry ToJumboFileSystemEntry(bool includeChildren = true)
         {
-            DfsDirectory clone = (DfsDirectory)base.Clone(levels);
-            clone._children = new List<FileSystemEntry>();
-            if( levels > 1 )
-            {
-                foreach( FileSystemEntry child in Children )
-                {
-                    FileSystemEntry childClone = child.Clone(levels - 1);
-                    clone.Children.Add(childClone);
-                }
-            }
-            return clone;
+            return ToJumboDirectory(includeChildren);
+        }
+
+        /// <summary>
+        /// Creates a <see cref="JumboDirectory"/> from this <see cref="DfsDirectory"/>.
+        /// </summary>
+        /// <param name="includeChildren">If set to <see langword="true"/> include the children of the directory.</param>
+        /// <returns>A <see cref="JumboDirectory"/>.</returns>
+        public JumboDirectory ToJumboDirectory(bool includeChildren = true)
+        {
+            // Create a shallow copy: don't include children of child directories.
+            return new JumboDirectory(FullPath, Name, DateCreated, includeChildren ? Children.Select(e => e.ToJumboFileSystemEntry(false)) : null);
         }
     }
 }

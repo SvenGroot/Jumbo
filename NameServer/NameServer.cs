@@ -18,6 +18,7 @@ using System.Collections.ObjectModel;
 using Tkl.Jumbo.Topology;
 using Tkl.Jumbo.IO;
 using System.IO;
+using Tkl.Jumbo.Dfs.FileSystem;
 
 namespace NameServerApplication
 {
@@ -226,7 +227,7 @@ namespace NameServerApplication
             _fileSystem.CreateDirectory(path);
         }
 
-        public DfsDirectory GetDirectoryInfo(string path)
+        public JumboDirectory GetDirectoryInfo(string path)
         {
             _log.Debug("GetDirectoryInfo called");
             return _fileSystem.GetDirectoryInfo(path);
@@ -268,13 +269,13 @@ namespace NameServerApplication
             _fileSystem.Move(from, to);
         }
 
-        public DfsFile GetFileInfo(string path)
+        public JumboFile GetFileInfo(string path)
         {
             _log.Debug("GetFileInfo called");
             return _fileSystem.GetFileInfo(path);
         }
 
-        public FileSystemEntry GetFileSystemEntryInfo(string path)
+        public JumboFileSystemEntry GetFileSystemEntryInfo(string path)
         {
             _log.Debug("GetFileSystemEntry called.");
             return _fileSystem.GetFileSystemEntryInfo(path);

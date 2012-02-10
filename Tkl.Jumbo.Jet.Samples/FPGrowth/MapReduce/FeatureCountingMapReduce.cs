@@ -12,6 +12,7 @@ using Tkl.Jumbo.IO;
 using Tkl.Jumbo.Jet.Channels;
 using Tkl.Jumbo.Jet.Samples.IO;
 using Tkl.Jumbo.Jet.Samples.Tasks;
+using Tkl.Jumbo.Dfs.FileSystem;
 
 namespace Tkl.Jumbo.Jet.Samples.FPGrowth.MapReduce
 {
@@ -106,8 +107,8 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth.MapReduce
             {
                 List<FGListItem> fgList = new List<FGListItem>();
                 DfsClient client = new DfsClient();
-                DfsDirectory directory = client.NameServer.GetDirectoryInfo(DfsPath.Combine(_outputPath, "featurecount"));
-                foreach( DfsFile file in directory.Children )
+                JumboDirectory directory = client.NameServer.GetDirectoryInfo(DfsPath.Combine(_outputPath, "featurecount"));
+                foreach( JumboFile file in directory.Children )
                 {
                     using( DfsInputStream stream = client.OpenFile(file.FullPath) )
                     using( BinaryRecordReader<Pair<string, int>> reader = new BinaryRecordReader<Pair<string,int>>(stream, true) )

@@ -6,6 +6,8 @@ using System.Linq;
 using System.Text;
 using NUnit.Framework;
 using Tkl.Jumbo.Dfs;
+using NameServerApplication;
+using Tkl.Jumbo.Dfs.FileSystem;
 
 namespace Tkl.Jumbo.Test.Dfs
 {
@@ -48,5 +50,24 @@ namespace Tkl.Jumbo.Test.Dfs
             target.Size = expected;
             Assert.AreEqual(expected, target.Size);
         }
+
+        [Test]
+        public void TestToJumboFile()
+        {
+            DfsDirectory parent = new DfsDirectory(null, string.Empty, DateTime.Now);
+            DfsFile target = new DfsFile(parent, "test", DateTime.UtcNow, 10 * Packet.PacketSize, 3, IO.RecordStreamOptions.DoNotCrossBoundary) { Size = 1000 };
+            target.Blocks.Add(Guid.NewGuid());
+            JumboFile clone = target.ToJumboFile();
+            Assert.AreNotSame(target, clone);
+            Assert.AreEqual(target.Name, clone.Name);
+            Assert.AreEqual(target.DateCreated, clone.DateCreated);
+            Assert.AreEqual(target.FullPath, clone.FullPath);
+            Assert.AreEqual(target.Size, clone.Size);
+            Assert.AreEqual(target.BlockSize, clone.BlockSize);
+            Assert.AreEqual(target.RecordOptions, clone.RecordOptions);
+            Assert.AreEqual(target.ReplicationFactor, clone.ReplicationFactor);
+            CollectionAssert.AreEqual(target.Blocks, clone.Blocks);
+        }
+
     }
 }

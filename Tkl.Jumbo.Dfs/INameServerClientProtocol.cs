@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using Tkl.Jumbo.IO;
+using Tkl.Jumbo.Dfs.FileSystem;
 
 namespace Tkl.Jumbo.Dfs
 {
@@ -25,10 +26,10 @@ namespace Tkl.Jumbo.Dfs
         /// Gets information about a directory in the file system.
         /// </summary>
         /// <param name="path">The full path of the directory.</param>
-        /// <returns>A <see cref="DfsDirectory"/> object representing the directory.</returns>
+        /// <returns>A <see cref="JumboDirectory"/> object representing the directory.</returns>
         /// <exception cref="ArgumentNullException"><paramref name="path"/> is <see langword="null" />.</exception>
         /// <exception cref="ArgumentException"><paramref name="path"/> is not an absolute path, contains an empty component, or contains a file name.</exception>
-        DfsDirectory GetDirectoryInfo(string path);
+        JumboDirectory GetDirectoryInfo(string path);
 
         /// <summary>
         /// Creates a new file in the specified directory.
@@ -65,21 +66,21 @@ namespace Tkl.Jumbo.Dfs
         /// Gets information about a file.
         /// </summary>
         /// <param name="path">The full path of the file.</param>
-        /// <returns>A <see cref="DfsFile"/> object referring to the file.</returns>
+        /// <returns>A <see cref="JumboFile"/> object referring to the file.</returns>
         /// <exception cref="ArgumentNullException"><paramref name="path"/> is <see langword="null" />.</exception>
         /// <exception cref="ArgumentException"><paramref name="path"/> is not an absolute path, contains an empty component, or contains a file name.</exception>
         /// <exception cref="System.IO.DirectoryNotFoundException">One of the parent directories in the path specified in <paramref name="path"/> does not exist.</exception>
-        DfsFile GetFileInfo(string path);
+        JumboFile GetFileInfo(string path);
 
         /// <summary>
         /// Gets information about a file or directory.
         /// </summary>
         /// <param name="path">The full path of the file or directory.</param>
-        /// <returns>A <see cref="FileSystemEntry"/> object referring to the file or directory, or <see langword="null" /> if the .</returns>
+        /// <returns>A <see cref="JumboFileSystemEntry"/> object referring to the file or directory, or <see langword="null" /> if the .</returns>
         /// <exception cref="ArgumentNullException"><paramref name="path"/> is <see langword="null" />.</exception>
         /// <exception cref="ArgumentException"><paramref name="path"/> is not an absolute path, contains an empty component, or contains a file name.</exception>
         /// <exception cref="System.IO.DirectoryNotFoundException">One of the parent directories in the path specified in <paramref name="path"/> does not exist.</exception>
-        FileSystemEntry GetFileSystemEntryInfo(string path);
+        JumboFileSystemEntry GetFileSystemEntryInfo(string path);
 
         /// <summary>
         /// Appends a new block to a file.

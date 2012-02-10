@@ -12,6 +12,7 @@ using Tkl.Jumbo.Jet.Channels;
 using System.Reflection;
 using System.Collections.ObjectModel;
 using System.Globalization;
+using Tkl.Jumbo.Dfs.FileSystem;
 
 namespace Tkl.Jumbo.Jet
 {
@@ -130,7 +131,7 @@ namespace Tkl.Jumbo.Jet
         ///   The new stage will contain as many tasks are there are blocks in the input file.
         /// </para>
         /// </remarks>
-        public StageConfiguration AddInputStage(string stageId, FileSystemEntry inputFileOrDirectory, Type taskType, Type recordReaderType)
+        public StageConfiguration AddInputStage(string stageId, JumboFileSystemEntry inputFileOrDirectory, Type taskType, Type recordReaderType)
         {
             return AddInputStage(stageId, inputFileOrDirectory, taskType, recordReaderType, null, null);
         }
@@ -154,19 +155,19 @@ namespace Tkl.Jumbo.Jet
         ///   The new stage will contain as many tasks are there are blocks in the input file.
         /// </para>
         /// </remarks>
-        public StageConfiguration AddInputStage(string stageId, FileSystemEntry inputFileOrDirectory, Type taskType, Type recordReaderType, string outputPath, Type recordWriterType)
+        public StageConfiguration AddInputStage(string stageId, JumboFileSystemEntry inputFileOrDirectory, Type taskType, Type recordReaderType, string outputPath, Type recordWriterType)
         {
             if( inputFileOrDirectory == null )
                 throw new ArgumentNullException("inputFileOrDirectory");
-            IEnumerable<DfsFile> files;
-            DfsFile file = inputFileOrDirectory as DfsFile;
+            IEnumerable<JumboFile> files;
+            JumboFile file = inputFileOrDirectory as JumboFile;
             if( file != null )
                 files = new[] { file };
             else
             {
-                DfsDirectory directory = (DfsDirectory)inputFileOrDirectory;
+                JumboDirectory directory = (JumboDirectory)inputFileOrDirectory;
                 files = (from item in directory.Children
-                         let f = item as DfsFile
+                         let f = item as JumboFile
                          where f != null
                          select f);
             }
@@ -348,7 +349,7 @@ namespace Tkl.Jumbo.Jet
             parentStage.ChildStagePartitionerType = partitionerType ?? typeof(HashPartitioner<>).MakeGenericType(inputType);
         }
 
-        private StageConfiguration CreateStage(string stageId, Type taskType, int taskCount, string outputPath, Type recordWriterType, IEnumerable<DfsFile> inputs, Type recordReaderType)
+        private StageConfiguration CreateStage(string stageId, Type taskType, int taskCount, string outputPath, Type recordWriterType, IEnumerable<JumboFile> inputs, Type recordReaderType)
         {
             StageConfiguration stage = new StageConfiguration()
             {
@@ -363,7 +364,7 @@ namespace Tkl.Jumbo.Jet
             if( inputs != null )
             {
                 StageDfsInput stageInput = new StageDfsInput() { RecordReaderType = recordReaderType };
-                foreach( DfsFile file in inputs )
+                foreach( JumboFile file in inputs )
                 {
                     for( int block = 0; block < file.Blocks.Count; ++block )
                     {
@@ -663,7 +664,7 @@ namespace Tkl.Jumbo.Jet
             return false;
         }
 
-        private StageConfiguration AddInputStage(string stageId, IEnumerable<DfsFile> inputFiles, Type taskType, Type recordReaderType, string outputPath, Type recordWriterType)
+        private StageConfiguration AddInputStage(string stageId, IEnumerable<JumboFile> inputFiles, Type taskType, Type recordReaderType, string outputPath, Type recordWriterType)
         {
             if( stageId == null )
                 throw new ArgumentNullException("stageId");

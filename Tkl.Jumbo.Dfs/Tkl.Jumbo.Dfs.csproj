@@ -96,9 +96,11 @@
     <Compile Include="DfsMetrics.cs" />
     <Compile Include="DfsOutputStream.cs" />
     <Compile Include="DfsPath.cs" />
-    <Compile Include="DfsDirectory.cs" />
-    <Compile Include="DfsFile.cs" />
-    <Compile Include="FileSystemEntry.cs" />
+    <Compile Include="FileSystem\FileSystemClient.cs" />
+    <Compile Include="FileSystem\IFileSystemPathUtility.cs" />
+    <Compile Include="FileSystem\JumboDirectory.cs" />
+    <Compile Include="FileSystem\JumboFile.cs" />
+    <Compile Include="FileSystem\JumboFileSystemEntry.cs" />
     <Compile Include="HeartbeatData.cs" />
     <Compile Include="HeartbeatResponse.cs" />
     <Compile Include="INameServerClientProtocol.cs" />
@@ -148,6 +150,7 @@
       <Install>true</Install>
     </BootstrapperPackage>
   </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

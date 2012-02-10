@@ -8,6 +8,7 @@ using Ookii.CommandLine;
 using System.ComponentModel;
 using System.Runtime.InteropServices;
 using Tkl.Jumbo.Dfs;
+using Tkl.Jumbo.Dfs.FileSystem;
 
 namespace DfsShell.Commands
 {
@@ -25,7 +26,7 @@ namespace DfsShell.Commands
 
         public override void Run()
         {
-            DfsDirectory dir = Client.NameServer.GetDirectoryInfo(_path);
+            JumboDirectory dir = Client.NameServer.GetDirectoryInfo(_path);
             if( dir == null )
                 Console.WriteLine("Directory not found.");
             else
