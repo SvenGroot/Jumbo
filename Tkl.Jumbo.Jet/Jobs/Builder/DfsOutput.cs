@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using Tkl.Jumbo.IO;
+using Tkl.Jumbo.Dfs.FileSystem;
 
 namespace Tkl.Jumbo.Jet.Jobs.Builder
 {
@@ -77,11 +78,11 @@ namespace Tkl.Jumbo.Jet.Jobs.Builder
         /// <value>A combination of values from the <see cref="RecordStreamOptions"/> enumeration. The default value is <see cref="RecordStreamOptions.None"/>.</value>
         public RecordStreamOptions RecordOptions { get; set; }
 
-        void IOperationOutput.ApplyOutput(StageConfiguration stage)
+        void IOperationOutput.ApplyOutput(FileSystemClient fileSystem, StageConfiguration stage)
         {
             if( stage == null )
                 throw new ArgumentNullException("stage");
-            stage.SetDfsOutput(Path, RecordWriterType);
+            stage.SetDfsOutput(fileSystem, Path, RecordWriterType);
             stage.DfsOutput.BlockSize = BlockSize;
             stage.DfsOutput.ReplicationFactor = ReplicationFactor;
             stage.DfsOutput.RecordOptions = RecordOptions;

@@ -16,6 +16,7 @@ using Tkl.Jumbo.Test.Tasks;
 using System.IO;
 using Tkl.Jumbo.Jet.Channels;
 using Tkl.Jumbo.Jet.Tasks;
+using Tkl.Jumbo.Dfs.FileSystem;
 
 namespace Tkl.Jumbo.Test.Jet
 {
@@ -71,7 +72,7 @@ namespace Tkl.Jumbo.Test.Jet
         #endregion
 
         private TestJetCluster _cluster;
-        private DfsClient _dfsClient;
+        private FileSystemClient _fileSystemClient;
         private JetClient _jetClient;
 
         private const string _inputPath = "/test.txt";
@@ -83,12 +84,12 @@ namespace Tkl.Jumbo.Test.Jet
         public void SetUp()
         {
             _cluster = new TestJetCluster(4194304, true, 1, CompressionType.None);
-            _dfsClient = new DfsClient(TestDfsCluster.CreateClientConfig());
+            _fileSystemClient = FileSystemClient.Create(TestDfsCluster.CreateClientConfig());
             _jetClient = new JetClient(TestJetCluster.CreateClientConfig());
             Trace.WriteLine("Cluster running.");
 
             // This file will purely be used so we have something to use as input when creating jobs, it won't be read so the contents don't matter.
-            using( DfsOutputStream stream = _dfsClient.CreateFile(_inputPath) )
+            using( Stream stream = _fileSystemClient.CreateFile(_inputPath) )
             {
                 Utilities.GenerateData(stream, 10000000);
             }
@@ -105,7 +106,7 @@ namespace Tkl.Jumbo.Test.Jet
         [Test]
         public void TestProcessRecordsSingleStage()
         {
-            JobBuilder builder = new JobBuilder(_dfsClient, _jetClient);
+            JobBuilder builder = new JobBuilder(_fileSystemClient, _jetClient);
 
             var input = new DfsInput(_inputPath, typeof(LineRecordReader));
             var output = new DfsOutput(_outputPath, typeof(TextRecordWriter<int>));
@@ -123,7 +124,7 @@ namespace Tkl.Jumbo.Test.Jet
         [Test]
         public void TestProcessRecordsMultiStage()
         {
-            JobBuilder builder = new JobBuilder(_dfsClient, _jetClient);
+            JobBuilder builder = new JobBuilder(_fileSystemClient, _jetClient);
 
             var input = new DfsInput(_inputPath, typeof(LineRecordReader));
             var output = new DfsOutput(_outputPath, typeof(TextRecordWriter<int>));
@@ -144,7 +145,7 @@ namespace Tkl.Jumbo.Test.Jet
         [Test]
         public void TestProcessRecordsPipelineChannel()
         {
-            JobBuilder builder = new JobBuilder(_dfsClient, _jetClient);
+            JobBuilder builder = new JobBuilder(_fileSystemClient, _jetClient);
 
             var input = new DfsInput(_inputPath, typeof(LineRecordReader));
             var output = new DfsOutput(_outputPath, typeof(TextRecordWriter<int>));
@@ -165,7 +166,7 @@ namespace Tkl.Jumbo.Test.Jet
         [Test]
         public void TestProcessRecordsCustomChannelSettings()
         {
-            JobBuilder builder = new JobBuilder(_dfsClient, _jetClient);
+            JobBuilder builder = new JobBuilder(_fileSystemClient, _jetClient);
 
             var input = new DfsInput(_inputPath, typeof(LineRecordReader));
             var output = new DfsOutput(_outputPath, typeof(TextRecordWriter<int>));
@@ -185,7 +186,7 @@ namespace Tkl.Jumbo.Test.Jet
         [Test]
         public void TestProcessRecordsEmptyTaskReplacementPipelinePossible()
         {
-            JobBuilder builder = new JobBuilder(_dfsClient, _jetClient);
+            JobBuilder builder = new JobBuilder(_fileSystemClient, _jetClient);
 
             var input = new DfsInput(_inputPath, typeof(LineRecordReader));
             var output = new DfsOutput(_outputPath, typeof(TextRecordWriter<int>));
@@ -205,7 +206,7 @@ namespace Tkl.Jumbo.Test.Jet
         [Test]
         public void TestProcessRecordsEmptyTaskReplacementPipelineImpossible()
         {
-            JobBuilder builder = new JobBuilder(_dfsClient, _jetClient);
+            JobBuilder builder = new JobBuilder(_fileSystemClient, _jetClient);
 
             var input = new DfsInput(_inputPath, typeof(LineRecordReader));
             var output = new DfsOutput(_outputPath, typeof(TextRecordWriter<int>));
@@ -227,7 +228,7 @@ namespace Tkl.Jumbo.Test.Jet
         [Test]
         public void TestProcessRecordsEmptyTaskReplacementPossible()
         {
-            JobBuilder builder = new JobBuilder(_dfsClient, _jetClient);
+            JobBuilder builder = new JobBuilder(_fileSystemClient, _jetClient);
 
             var input = new DfsInput(_inputPath, typeof(LineRecordReader));
             var output = new DfsOutput(_outputPath, typeof(TextRecordWriter<int>));
@@ -250,7 +251,7 @@ namespace Tkl.Jumbo.Test.Jet
         [Test]
         public void TestProcessRecordsEmptyTaskReplacementImpossible()
         {
-            JobBuilder builder = new JobBuilder(_dfsClient, _jetClient);
+            JobBuilder builder = new JobBuilder(_fileSystemClient, _jetClient);
 
             var input = new DfsInput(_inputPath, typeof(LineRecordReader));
             var output = new DfsOutput(_outputPath, typeof(TextRecordWriter<int>));
@@ -274,7 +275,7 @@ namespace Tkl.Jumbo.Test.Jet
         [Test]
         public void TestProcessRecordsEmptyTaskReplacementImpossible2()
         {
-            JobBuilder builder = new JobBuilder(_dfsClient, _jetClient);
+            JobBuilder builder = new JobBuilder(_fileSystemClient, _jetClient);
 
             var input = new DfsInput(_inputPath, typeof(LineRecordReader));
             var output = new DfsOutput(_outputPath, typeof(TextRecordWriter<int>));
@@ -298,7 +299,7 @@ namespace Tkl.Jumbo.Test.Jet
         [Test]
         public void TestProcessRecordsEmptyTaskReplacementImpossible3()
         {
-            JobBuilder builder = new JobBuilder(_dfsClient, _jetClient);
+            JobBuilder builder = new JobBuilder(_fileSystemClient, _jetClient);
 
             var input = new DfsInput(_inputPath, typeof(LineRecordReader));
             var output = new DfsOutput(_outputPath, typeof(TextRecordWriter<int>));
@@ -322,7 +323,7 @@ namespace Tkl.Jumbo.Test.Jet
         [Test]
         public void TestProcessRecordsPartitionMatching()
         {
-            JobBuilder builder = new JobBuilder(_dfsClient, _jetClient);
+            JobBuilder builder = new JobBuilder(_fileSystemClient, _jetClient);
 
             var input = new DfsInput(_inputPath, typeof(LineRecordReader));
             var output = new DfsOutput(_outputPath, typeof(TextRecordWriter<int>));
@@ -346,7 +347,7 @@ namespace Tkl.Jumbo.Test.Jet
         [Test]
         public void TestAccumulateRecordsDfsInput()
         {
-            JobBuilder builder = new JobBuilder(_dfsClient, _jetClient);
+            JobBuilder builder = new JobBuilder(_fileSystemClient, _jetClient);
 
             var input = new DfsInput(_inputPath, typeof(RecordFileReader<Pair<Utf8String, int>>));
             var output = new DfsOutput(_outputPath, typeof(TextRecordWriter<Pair<Utf8String, int>>));
@@ -366,7 +367,7 @@ namespace Tkl.Jumbo.Test.Jet
         [Test]
         public void TestAccumulateRecordsChannelInput()
         {
-            JobBuilder builder = new JobBuilder(_dfsClient, _jetClient);
+            JobBuilder builder = new JobBuilder(_fileSystemClient, _jetClient);
 
             var input = new DfsInput(_inputPath, typeof(LineRecordReader));
             var output = new DfsOutput(_outputPath, typeof(TextRecordWriter<Pair<Utf8String, int>>));
@@ -388,7 +389,7 @@ namespace Tkl.Jumbo.Test.Jet
         [Test]
         public void TestAccumulateRecordsSingleInputDfsOutput()
         {
-            JobBuilder builder = new JobBuilder(_dfsClient, _jetClient);
+            JobBuilder builder = new JobBuilder(_fileSystemClient, _jetClient);
 
             var input = new DfsInput(_inputPath, typeof(LineRecordReader));
             var output = new DfsOutput(_outputPath, typeof(TextRecordWriter<Pair<Utf8String, int>>));
@@ -414,7 +415,7 @@ namespace Tkl.Jumbo.Test.Jet
         [Test]
         public void TestAccumulateRecordsSingleInputChannelOutput()
         {
-            JobBuilder builder = new JobBuilder(_dfsClient, _jetClient);
+            JobBuilder builder = new JobBuilder(_fileSystemClient, _jetClient);
 
             var input = new DfsInput(_inputPath, typeof(LineRecordReader));
             var output = new DfsOutput(_outputPath, typeof(TextRecordWriter<Pair<Utf8String, int>>));
@@ -444,7 +445,7 @@ namespace Tkl.Jumbo.Test.Jet
         [Test]
         public void TestAccumulateRecordsEmptyTaskReplacement()
         {
-            JobBuilder builder = new JobBuilder(_dfsClient, _jetClient);
+            JobBuilder builder = new JobBuilder(_fileSystemClient, _jetClient);
 
             var input = new DfsInput(_inputPath, typeof(RecordFileReader<Pair<Utf8String, int>>));
             var output = new DfsOutput(_outputPath, typeof(TextRecordWriter<Pair<Utf8String, int>>));
@@ -464,7 +465,7 @@ namespace Tkl.Jumbo.Test.Jet
         [Test]
         public void TestSortRecordsDfsInput()
         {
-            JobBuilder builder = new JobBuilder(_dfsClient, _jetClient);
+            JobBuilder builder = new JobBuilder(_fileSystemClient, _jetClient);
 
             var input = new DfsInput(_inputPath, typeof(LineRecordReader));
             var output = new DfsOutput(_outputPath, typeof(TextRecordWriter<Utf8String>));
@@ -482,7 +483,7 @@ namespace Tkl.Jumbo.Test.Jet
         [Test]
         public void TestSortRecordsChannelInput()
         {
-            JobBuilder builder = new JobBuilder(_dfsClient, _jetClient);
+            JobBuilder builder = new JobBuilder(_fileSystemClient, _jetClient);
 
             var input = new DfsInput(_inputPath, typeof(LineRecordReader));
             var channel = new Channel() { PartitionCount = 2 };
@@ -503,7 +504,7 @@ namespace Tkl.Jumbo.Test.Jet
         [Test]
         public void TestSortRecordsSingleInput()
         {
-            JobBuilder builder = new JobBuilder(_dfsClient, _jetClient);
+            JobBuilder builder = new JobBuilder(_fileSystemClient, _jetClient);
 
             var input = new DfsInput(_inputPath, typeof(LineRecordReader));
             var channel = new Channel() { PartitionCount = 1 };
@@ -524,7 +525,7 @@ namespace Tkl.Jumbo.Test.Jet
         [Test]
         public void TestGenerateRecordsSingleStage()
         {
-            JobBuilder builder = new JobBuilder(_dfsClient, _jetClient);
+            JobBuilder builder = new JobBuilder(_fileSystemClient, _jetClient);
 
             var output = new DfsOutput(_outputPath, typeof(TextRecordWriter<int>));
             builder.GenerateRecords(output, typeof(LineCounterTask), 2);
@@ -540,7 +541,7 @@ namespace Tkl.Jumbo.Test.Jet
         [Test]
         public void TestGenerateRecordsMultiStage()
         {
-            JobBuilder builder = new JobBuilder(_dfsClient, _jetClient);
+            JobBuilder builder = new JobBuilder(_fileSystemClient, _jetClient);
 
             var output = new DfsOutput(_outputPath, typeof(TextRecordWriter<int>));
             var channel = new Channel();
@@ -559,7 +560,7 @@ namespace Tkl.Jumbo.Test.Jet
         [Test]
         public void TestSchedulingDependency()
         {
-            JobBuilder builder = new JobBuilder(_dfsClient, _jetClient);
+            JobBuilder builder = new JobBuilder(_fileSystemClient, _jetClient);
 
             var input = new DfsInput(_inputPath, typeof(LineRecordReader));
             var channel = new Channel() { PartitionCount = 1 };
@@ -587,7 +588,7 @@ namespace Tkl.Jumbo.Test.Jet
         [Test]
         public void TestJoinRecordsDfsInputOutput()
         {
-            JobBuilder builder = new JobBuilder(_dfsClient, _jetClient);
+            JobBuilder builder = new JobBuilder(_fileSystemClient, _jetClient);
 
             var customerInput = new DfsInput(_inputPath, typeof(RecordFileReader<Customer>));
             var orderInput = new DfsInput(_inputPath, typeof(RecordFileReader<Order>));
@@ -609,7 +610,7 @@ namespace Tkl.Jumbo.Test.Jet
         [Test]
         public void TestJoinRecordsChannelInputOutput()
         {
-            JobBuilder builder = new JobBuilder(_dfsClient, _jetClient);
+            JobBuilder builder = new JobBuilder(_fileSystemClient, _jetClient);
 
             var customerInput = new DfsInput(_inputPath, typeof(RecordFileReader<Customer>));
             var orderInput = new DfsInput(_inputPath, typeof(RecordFileReader<Order>));
@@ -639,7 +640,7 @@ namespace Tkl.Jumbo.Test.Jet
         [Test]
         public void TestSumValues()
         {
-            JobBuilder builder = new JobBuilder(_dfsClient, _jetClient);
+            JobBuilder builder = new JobBuilder(_fileSystemClient, _jetClient);
 
             var input = new DfsInput(_inputPath, typeof(LineRecordReader));
             var output = new DfsOutput(_outputPath, typeof(TextRecordWriter<Pair<Utf8String, int>>));
@@ -661,7 +662,7 @@ namespace Tkl.Jumbo.Test.Jet
         [Test]
         public void TestCountDfsOutput()
         {
-            JobBuilder builder = new JobBuilder(_dfsClient, _jetClient);
+            JobBuilder builder = new JobBuilder(_fileSystemClient, _jetClient);
 
             var input = new DfsInput(_inputPath, typeof(LineRecordReader));
             var output = new DfsOutput(_outputPath, typeof(TextRecordWriter<Pair<Utf8String, int>>));
@@ -681,7 +682,7 @@ namespace Tkl.Jumbo.Test.Jet
         [Test]
         public void TestCountChannelOutput()
         {
-            JobBuilder builder = new JobBuilder(_dfsClient, _jetClient);
+            JobBuilder builder = new JobBuilder(_fileSystemClient, _jetClient);
 
             var input = new DfsInput(_inputPath, typeof(LineRecordReader));
             var output = new DfsOutput(_outputPath, typeof(TextRecordWriter<Pair<Utf8String, int>>));
@@ -703,7 +704,7 @@ namespace Tkl.Jumbo.Test.Jet
         [Test]
         public void TestProcessRecordsDelegatePrivate()
         {
-            JobBuilder builder = new JobBuilder(_dfsClient, _jetClient);
+            JobBuilder builder = new JobBuilder(_fileSystemClient, _jetClient);
 
             var input = new DfsInput(_inputPath, typeof(LineRecordReader));
             var output = new DfsOutput(_outputPath, typeof(TextRecordWriter<int>));
@@ -718,7 +719,7 @@ namespace Tkl.Jumbo.Test.Jet
 
             Assert.IsTrue(Attribute.IsDefined(stage.TaskType, typeof(AllowRecordReuseAttribute)));
             TaskContext context = new TaskContext(Guid.Empty, config, new TaskAttemptId(new TaskId("CharCountStage", 1), 1), config.Stages[0], Path.GetTempPath(), "/foo");
-            ITask<Utf8String, int> task = (ITask<Utf8String, int>)JetActivator.CreateInstance(stage.TaskType, _dfsClient.Configuration, _jetClient.Configuration, context);
+            ITask<Utf8String, int> task = (ITask<Utf8String, int>)JetActivator.CreateInstance(stage.TaskType, _fileSystemClient.Configuration, _jetClient.Configuration, context);
             using( EnumerableRecordReader<Utf8String> reader = new EnumerableRecordReader<Utf8String>(new[] { new Utf8String("foo"), new Utf8String("hello") }) )
             using( ListRecordWriter<int> writer = new ListRecordWriter<int>() )
             {
@@ -730,7 +731,7 @@ namespace Tkl.Jumbo.Test.Jet
         [Test]
         public void TestProcessRecordsPushTaskDelegatePrivate()
         {
-            JobBuilder builder = new JobBuilder(_dfsClient, _jetClient);
+            JobBuilder builder = new JobBuilder(_fileSystemClient, _jetClient);
 
             var input = new DfsInput(_inputPath, typeof(LineRecordReader));
             var output = new DfsOutput(_outputPath, typeof(TextRecordWriter<int>));
@@ -745,7 +746,7 @@ namespace Tkl.Jumbo.Test.Jet
 
             Assert.IsTrue(Attribute.IsDefined(stage.TaskType, typeof(AllowRecordReuseAttribute)));
             TaskContext context = new TaskContext(Guid.Empty, config, new TaskAttemptId(new TaskId("CharCountStage", 1), 1), config.Stages[0], Path.GetTempPath(), "/foo");
-            PushTask<Utf8String, int> task = (PushTask<Utf8String, int>)JetActivator.CreateInstance(stage.TaskType, _dfsClient.Configuration, _jetClient.Configuration, context);
+            PushTask<Utf8String, int> task = (PushTask<Utf8String, int>)JetActivator.CreateInstance(stage.TaskType, _fileSystemClient.Configuration, _jetClient.Configuration, context);
             using( ListRecordWriter<int> writer = new ListRecordWriter<int>() )
             {
                 task.ProcessRecord(new Utf8String("foo"), writer);
@@ -758,7 +759,7 @@ namespace Tkl.Jumbo.Test.Jet
         [Test]
         public void TestAccumulateRecordsDelegatePrivate()
         {
-            JobBuilder builder = new JobBuilder(_dfsClient, _jetClient);
+            JobBuilder builder = new JobBuilder(_fileSystemClient, _jetClient);
 
             var input = new DfsInput(_inputPath, typeof(LineRecordReader));
             var output = new DfsOutput(_outputPath, typeof(TextRecordWriter<Pair<Utf8String, int>>));
@@ -775,7 +776,7 @@ namespace Tkl.Jumbo.Test.Jet
 
             Assert.IsTrue(Attribute.IsDefined(stage.TaskType, typeof(AllowRecordReuseAttribute)));
             TaskContext context = new TaskContext(Guid.Empty, config, new TaskAttemptId(new TaskId("AccumulatorStage", 1), 1), config.Stages[1], Path.GetTempPath(), "/foo");
-            AccumulatorTask<Utf8String, int> task = (AccumulatorTask<Utf8String, int>)JetActivator.CreateInstance(stage.TaskType, _dfsClient.Configuration, _jetClient.Configuration, context);
+            AccumulatorTask<Utf8String, int> task = (AccumulatorTask<Utf8String, int>)JetActivator.CreateInstance(stage.TaskType, _fileSystemClient.Configuration, _jetClient.Configuration, context);
             using( ListRecordWriter<Pair<Utf8String, int>> writer = new ListRecordWriter<Pair<Utf8String, int>>(true) )
             {
                 task.ProcessRecord(Pair.MakePair(new Utf8String("foo"), 3), writer);
@@ -786,12 +787,12 @@ namespace Tkl.Jumbo.Test.Jet
             }
         }
 
-        private static void VerifyStage(JobConfiguration config, StageConfiguration stage, int taskCount, string stageId, Type taskType, Type stageMultiInputRecordReader, Type recordReaderType, Type recordWriterType, ChannelType channelType, ChannelConnectivity channelConnectivity, Type partitionerType, Type multiInputRecordReader, string outputStageId)
+        private void VerifyStage(JobConfiguration config, StageConfiguration stage, int taskCount, string stageId, Type taskType, Type stageMultiInputRecordReader, Type recordReaderType, Type recordWriterType, ChannelType channelType, ChannelConnectivity channelConnectivity, Type partitionerType, Type multiInputRecordReader, string outputStageId)
         {
             VerifyStage(config, stage, taskCount, 1, stageId, taskType, stageMultiInputRecordReader, recordReaderType, recordWriterType, channelType, channelConnectivity, partitionerType, multiInputRecordReader, outputStageId);
         }
 
-        private static void VerifyStage(JobConfiguration config, StageConfiguration stage, int taskCount, int partitionsPerTask, string stageId, Type taskType, Type stageMultiInputRecordReader, Type recordReaderType, Type recordWriterType, ChannelType channelType, ChannelConnectivity channelConnectivity, Type partitionerType, Type multiInputRecordReader, string outputStageId)
+        private void VerifyStage(JobConfiguration config, StageConfiguration stage, int taskCount, int partitionsPerTask, string stageId, Type taskType, Type stageMultiInputRecordReader, Type recordReaderType, Type recordWriterType, ChannelType channelType, ChannelConnectivity channelConnectivity, Type partitionerType, Type multiInputRecordReader, string outputStageId)
         {
             Assert.AreEqual(stageId, stage.StageId);
             Assert.AreEqual(taskCount, stage.TaskCount);
@@ -824,7 +825,7 @@ namespace Tkl.Jumbo.Test.Jet
                 Assert.IsNull(stage.ChildStage);
                 Assert.IsNull(stage.OutputChannel);
                 Assert.IsNotNull(stage.DfsOutput);
-                Assert.AreEqual(DfsPath.Combine(_outputPath, stageId + "-{0:00000}"), stage.DfsOutput.PathFormat);
+                Assert.AreEqual(_fileSystemClient.Path.Combine(_outputPath, stageId + "-{0:00000}"), stage.DfsOutput.PathFormat);
                 Assert.AreEqual(0, stage.DfsOutput.ReplicationFactor);
                 Assert.AreEqual(0, stage.DfsOutput.BlockSize);
                 Assert.AreEqual(recordWriterType, stage.DfsOutput.RecordWriterType.ReferencedType);

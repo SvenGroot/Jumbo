@@ -14,6 +14,7 @@ using System.Globalization;
 using System.Collections.ObjectModel;
 using Tkl.Jumbo.Jet.Channels;
 using System.Runtime.Serialization.Formatters.Binary;
+using Tkl.Jumbo.Dfs.FileSystem;
 
 namespace Tkl.Jumbo.Jet.Jobs
 {
@@ -50,11 +51,11 @@ namespace Tkl.Jumbo.Jet.Jobs
         /// <summary>
         /// Initializes a new instance of the <see cref="JobBuilder"/> class with the specified DFS and Jet clients.
         /// </summary>
-        /// <param name="dfsClient">The DFS client to use, or <see langword="null"/> to create one using the default configuration.</param>
+        /// <param name="fileSystemClient">The DFS client to use, or <see langword="null"/> to create one using the default configuration.</param>
         /// <param name="jetClient">The Jet client to use, or <see langword="null"/> to create one using the default configuration.</param>
-        public JobBuilder(DfsClient dfsClient, JetClient jetClient)
+        public JobBuilder(FileSystemClient fileSystemClient, JetClient jetClient)
         {
-            _compiler = new JobBuilderCompiler(this, dfsClient, jetClient);
+            _compiler = new JobBuilderCompiler(this, fileSystemClient, jetClient);
         }
 
         internal ReadOnlyCollection<StageBuilder> Stages

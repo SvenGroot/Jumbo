@@ -8,6 +8,7 @@ using Tkl.Jumbo.Dfs;
 using System.IO;
 using System.Diagnostics;
 using System.Threading;
+using Tkl.Jumbo.Dfs.FileSystem;
 
 namespace Tkl.Jumbo.Jet
 {
@@ -168,7 +169,7 @@ namespace Tkl.Jumbo.Jet
         /// <param name="files">The local paths of the files to store in the job directory on the DFS. This should include the assembly containing the task classes.</param>
         /// <returns>An instance of the <see cref="Job"/> class describing the job that was started.</returns>
         /// <remarks>
-        /// This function uses the application's configuration to create a <see cref="DfsClient"/> to access the DFS.
+        /// This function uses the application's configuration to create a <see cref="FileSystemClient"/> to access the DFS.
         /// </remarks>
         public Job RunJob(JobConfiguration config, params string[] files)
         {
@@ -224,53 +225,54 @@ namespace Tkl.Jumbo.Jet
         /// <param name="files">The local paths of the files to store in the job directory on the DFS. This should include the assembly containing the task classes.</param>
         /// <returns>An instance of the <see cref="Job"/> class describing the job that was started.</returns>
         /// <remarks>
-        /// This function uses the application's configuration to create a <see cref="DfsClient"/> to access the DFS.
+        /// This function uses the application's configuration to create a <see cref="FileSystemClient"/> to access the DFS.
         /// </remarks>
         public void RunJob(Job job, JobConfiguration config, params string[] files)
         {
-            RunJob(job, config, new DfsClient(), files);
+            RunJob(job, config, FileSystemClient.Create(), files);
         }
 
         /// <summary>
-        /// Creates a new job, stores the job configuration and the specified files on the DFS using the specified <see cref="DfsClient"/>, and runs the job.
+        /// Creates a new job, stores the job configuration and the specified files on the DFS using the specified <see cref="FileSystemClient"/>, and runs the job.
         /// </summary>
         /// <param name="config">The <see cref="JobConfiguration"/> for the job.</param>
-        /// <param name="dfsClient">A <see cref="DfsClient"/> used to access the Jumbo DFS.</param>
+        /// <param name="fileSystemClient">A <see cref="FileSystemClient"/> used to access the Jumbo DFS.</param>
         /// <param name="files">The local paths of the files to store in the job directory on the DFS. This should include the assembly containing the task classes.</param>
         /// <returns>An instance of the <see cref="Job"/> class describing the job that was started.</returns>
-        public Job RunJob(JobConfiguration config, DfsClient dfsClient, params string[] files)
+        public Job RunJob(JobConfiguration config, FileSystemClient fileSystemClient, params string[] files)
         {
             if( config == null )
                 throw new ArgumentNullException("config");
-            if( dfsClient == null )
-                throw new ArgumentNullException("dfsClient");
+            if( fileSystemClient == null )
+                throw new ArgumentNullException("fileSystemClient");
 
             Job job = JobServer.CreateJob();
             _log.InfoFormat("Created job {{{0}}}", job.JobId);
-            RunJob(job, config, dfsClient, files);
+            RunJob(job, config, fileSystemClient, files);
             return job;
         }
         
         /// <summary>
-        /// Stores the job configuration and the specified files on the DFS using the specified <see cref="DfsClient"/>, and runs the job.
+        /// Stores the job configuration and the specified files on the DFS using the specified <see cref="FileSystemClient"/>, and runs the job.
         /// </summary>
         /// <param name="job">The job to run.</param>
         /// <param name="config">The <see cref="JobConfiguration"/> for the job.</param>
-        /// <param name="dfsClient">A <see cref="DfsClient"/> used to access the Jumbo DFS.</param>
+        /// <param name="fileSystemClient">A <see cref="FileSystemClient"/> used to access the Jumbo DFS.</param>
         /// <param name="files">The local paths of the files to store in the job directory on the DFS. This should include the assembly containing the task classes.</param>
         /// <returns>An instance of the <see cref="Job"/> class describing the job that was started.</returns>
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1031:DoNotCatchGeneralExceptionTypes")]
-        public void RunJob(Job job, JobConfiguration config, DfsClient dfsClient, params string[] files)
+        public void RunJob(Job job, JobConfiguration config, FileSystemClient fileSystemClient, params string[] files)
         {
             if( job == null )
                 throw new ArgumentNullException("job");
             if( config == null )
                 throw new ArgumentNullException("config");
-            if( dfsClient == null )
-                throw new ArgumentNullException("dfsClient");
+            if( fileSystemClient == null )
+                throw new ArgumentNullException("fileSystemClient");
 
-            _log.InfoFormat("Saving job configuration to DFS file {0}.", job.JobConfigurationFilePath);
-            using( DfsOutputStream stream = dfsClient.CreateFile(job.JobConfigurationFilePath) )
+            string configFilePath = job.GetJobConfigurationFilePath(fileSystemClient);
+            _log.InfoFormat("Saving job configuration to DFS file {0}.", configFilePath);
+            using( Stream stream = fileSystemClient.CreateFile(configFilePath) )
             {
                 config.SaveXml(stream);
             }
@@ -280,7 +282,7 @@ namespace Tkl.Jumbo.Jet
                 foreach( string file in files )
                 {
                     _log.InfoFormat("Uploading local file {0} to DFS directory {1}.", file, job.Path);
-                    dfsClient.UploadFile(file, job.Path);
+                    fileSystemClient.UploadFile(file, job.Path);
                 }
             }
 

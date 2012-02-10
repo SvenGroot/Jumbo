@@ -7,6 +7,7 @@ using System.Text;
 using Tkl.Jumbo.IO;
 using Tkl.Jumbo.Dfs;
 using Tkl.Jumbo.Dfs.FileSystem;
+using System.IO;
 
 namespace Tkl.Jumbo.Jet.Samples.Tasks
 {
@@ -97,9 +98,9 @@ namespace Tkl.Jumbo.Jet.Samples.Tasks
 
         private List<WordInfo> GetWordList()
         {
-            DfsClient client = new DfsClient(DfsConfiguration);
+            FileSystemClient client = FileSystemClient.Create();
             string dictionaryDirectoryName = TaskContext.JobConfiguration.GetSetting(DictionaryDirectorySetting, null);
-            JumboDirectory dictionaryDirectory = client.NameServer.GetDirectoryInfo(dictionaryDirectoryName);
+            JumboDirectory dictionaryDirectory = client.GetDirectoryInfo(dictionaryDirectoryName);
             List<WordInfo> words = new List<WordInfo>();
 
             Encoding encoding = Encoding.GetEncoding("iso-8859-1");
@@ -108,7 +109,7 @@ namespace Tkl.Jumbo.Jet.Samples.Tasks
                 JumboFile file = child as JumboFile;
                 if( file != null )
                 {
-                    using( DfsInputStream stream = client.OpenFile(file.FullPath) )
+                    using( Stream stream = client.OpenFile(file.FullPath) )
                     using( System.IO.StreamReader reader = new System.IO.StreamReader(stream, encoding) )
                     {
                         string word;

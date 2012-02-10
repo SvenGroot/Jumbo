@@ -89,13 +89,14 @@
     <Compile Include="DataServerHeartbeatCommand.cs" />
     <Compile Include="DataServerMetrics.cs" />
     <Compile Include="DeleteBlocksHeartbeatResponse.cs" />
-    <Compile Include="DfsClient.cs" />
     <Compile Include="DfsConfiguration.cs" />
     <Compile Include="DfsException.cs" />
     <Compile Include="DfsInputStream.cs" />
     <Compile Include="DfsMetrics.cs" />
     <Compile Include="DfsOutputStream.cs" />
     <Compile Include="DfsPath.cs" />
+    <Compile Include="FileSystem\DfsClient.cs" />
+    <Compile Include="FileSystem\DfsPathUtility.cs" />
     <Compile Include="FileSystem\FileSystemClient.cs" />
     <Compile Include="FileSystem\IFileSystemPathUtility.cs" />
     <Compile Include="FileSystem\JumboDirectory.cs" />

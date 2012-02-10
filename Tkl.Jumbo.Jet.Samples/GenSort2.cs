@@ -75,8 +75,7 @@ namespace Tkl.Jumbo.Jet.Samples
             ulong remainder = _recordCount % (ulong)_taskCount;
             _log.InfoFormat("Generating {0} records with {1} tasks, {2} records per task, remainder {3}.", _recordCount, _taskCount, countPerTask, remainder);
 
-            DfsClient dfsClient = new DfsClient(DfsConfiguration);
-            CheckAndCreateOutputPath(dfsClient, _outputPath);
+            CheckAndCreateOutputPath(_outputPath);
 
             var output = CreateDfsOutput(_outputPath, typeof(GenSortRecordWriter));
 

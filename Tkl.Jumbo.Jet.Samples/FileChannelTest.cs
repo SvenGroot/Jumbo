@@ -68,9 +68,7 @@ namespace Tkl.Jumbo.Jet.Samples
         /// <param name="builder">The job builder</param>
         protected override void BuildJob(JobBuilder builder)
         {
-            DfsClient dfsClient = new DfsClient(DfsConfiguration);
-
-            CheckAndCreateOutputPath(dfsClient, _outputPath);
+            CheckAndCreateOutputPath(_outputPath);
 
             var input = new DfsInput(_inputPath, typeof(GenSortRecordReader));
             var output = CreateDfsOutput(_outputPath, typeof(TextRecordWriter<long>));
@@ -90,15 +88,14 @@ namespace Tkl.Jumbo.Jet.Samples
         protected override void OnJobCreated(Job job, JobConfiguration jobConfiguration)
         {
             // The partition file is not placed directly in the job's directory because the task server doesn't need to download it.
-            string partitionFileDirectory = DfsPath.Combine(job.Path, "partitions");
-            string partitionFileName = DfsPath.Combine(partitionFileDirectory, "SplitPoints");
-            DfsClient dfsClient = new DfsClient(DfsConfiguration);
-            dfsClient.NameServer.CreateDirectory(partitionFileDirectory);
+            string partitionFileDirectory = FileSystemClient.Path.Combine(job.Path, "partitions");
+            string partitionFileName = FileSystemClient.Path.Combine(partitionFileDirectory, "SplitPoints");
+            FileSystemClient.CreateDirectory(partitionFileDirectory);
 
             var dfsInput = (from stage in jobConfiguration.Stages
                             where stage.DfsInput != null
                             select stage.DfsInput).SingleOrDefault();
-            RangePartitioner.CreatePartitionFile(dfsClient, partitionFileName, dfsInput, jobConfiguration.GetStage("MergeStage").TaskCount, SampleSize);
+            RangePartitioner.CreatePartitionFile(FileSystemClient, partitionFileName, dfsInput, jobConfiguration.GetStage("MergeStage").TaskCount, SampleSize);
 
             jobConfiguration.AddSetting("partitionFile", partitionFileName);
         }

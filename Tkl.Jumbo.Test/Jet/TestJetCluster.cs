@@ -11,6 +11,7 @@ using JobServerApplication;
 using System.IO;
 using Tkl.Jumbo.Dfs;
 using System.Diagnostics;
+using Tkl.Jumbo.Dfs.FileSystem;
 
 namespace Tkl.Jumbo.Test.Jet
 {

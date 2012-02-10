@@ -7,6 +7,7 @@ using System.Text;
 using System.Xml.Serialization;
 using Tkl.Jumbo.Dfs;
 using Tkl.Jumbo.IO;
+using System.IO;
 
 namespace Tkl.Jumbo.Jet
 {
@@ -77,7 +78,7 @@ namespace Tkl.Jumbo.Jet
             if( taskExecution == null )
                 throw new ArgumentNullException("taskExecution");
             // It's the record writer's job to dispose the stream.
-            DfsOutputStream outputStream = taskExecution.DfsClient.CreateFile(fileName, BlockSize, ReplicationFactor, RecordOptions);
+            Stream outputStream = taskExecution.FileSystemClient.CreateFile(fileName, BlockSize, ReplicationFactor, RecordOptions);
             //_log.DebugFormat("Creating record writer of type {0}", Configuration.StageConfiguration.DfsOutput.RecordWriterTypeName);
             return (IRecordWriter)JetActivator.CreateInstance(RecordWriterType.ReferencedType, taskExecution, outputStream);
         }

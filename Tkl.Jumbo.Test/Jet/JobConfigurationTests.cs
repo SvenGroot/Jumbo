@@ -134,7 +134,7 @@ namespace Tkl.Jumbo.Test.Jet
 
             const int taskCount = 3;
             const string outputPath = "/output";
-            target.AddStage("SecondStage", typeof(Tasks.LineAdderTask), taskCount, new[] { new InputStageInfo(inputStage1), new InputStageInfo(inputStage2) }, typeof(MultiRecordReader<int>), outputPath, typeof(TextRecordWriter<int>));
+            target.AddStage("SecondStage", typeof(Tasks.LineAdderTask), taskCount, new[] { new InputStageInfo(inputStage1), new InputStageInfo(inputStage2) }, typeof(MultiRecordReader<int>), FileSystemClient.Create(), outputPath, typeof(TextRecordWriter<int>));
 
             
             List<StageConfiguration> stages = target.GetInputStagesForStage("SecondStage").ToList();
@@ -157,7 +157,7 @@ namespace Tkl.Jumbo.Test.Jet
             const int taskCount = 3;
             const int partitionsPerTask = 5;
 
-            StageConfiguration stage = target.AddStage("SecondStage", typeof(EmptyTask<Utf8String>), taskCount, new InputStageInfo(inputStage) { PartitionsPerTask = partitionsPerTask }, "/output", typeof(TextRecordWriter<Utf8String>));
+            StageConfiguration stage = target.AddStage("SecondStage", typeof(EmptyTask<Utf8String>), taskCount, new InputStageInfo(inputStage) { PartitionsPerTask = partitionsPerTask }, FileSystemClient.Create(), "/output", typeof(TextRecordWriter<Utf8String>));
 
             ChannelConfiguration channel = inputStage.OutputChannel;
             Assert.AreEqual(ChannelType.File, channel.ChannelType);
@@ -181,9 +181,9 @@ namespace Tkl.Jumbo.Test.Jet
             const int partitionsPerTask = 5;
 
             StageConfiguration inputStage = target.AddInputStage("InputStage", file1, typeof(EmptyTask<Utf8String>), typeof(LineRecordReader));
-            StageConfiguration sortStage = target.AddStage("SortStage", typeof(SortTask<Utf8String>), taskCount * partitionsPerTask, new InputStageInfo(inputStage) { ChannelType = ChannelType.Pipeline }, null, null);
+            StageConfiguration sortStage = target.AddStage("SortStage", typeof(SortTask<Utf8String>), taskCount * partitionsPerTask, new InputStageInfo(inputStage) { ChannelType = ChannelType.Pipeline }, null, null, null);
 
-            StageConfiguration stage = target.AddStage("SecondStage", typeof(EmptyTask<Utf8String>), taskCount, new InputStageInfo(sortStage) { PartitionsPerTask = partitionsPerTask }, "/output", typeof(TextRecordWriter<Utf8String>));
+            StageConfiguration stage = target.AddStage("SecondStage", typeof(EmptyTask<Utf8String>), taskCount, new InputStageInfo(sortStage) { PartitionsPerTask = partitionsPerTask }, FileSystemClient.Create(), "/output", typeof(TextRecordWriter<Utf8String>));
 
             ChannelConfiguration channel = sortStage.OutputChannel;
             Assert.AreEqual(ChannelType.File, channel.ChannelType);
@@ -209,7 +209,7 @@ namespace Tkl.Jumbo.Test.Jet
 
             const int taskCount = 3;
             const string outputPath = "/output";
-            StageConfiguration stage = target.AddStage("SecondStage", typeof(Tasks.LineAdderTask), taskCount, new[] { new InputStageInfo(inputStage1), new InputStageInfo(inputStage2) }, typeof(MultiRecordReader<int>), useOutput ? outputPath : null, typeof(TextRecordWriter<int>));
+            StageConfiguration stage = target.AddStage("SecondStage", typeof(Tasks.LineAdderTask), taskCount, new[] { new InputStageInfo(inputStage1), new InputStageInfo(inputStage2) }, typeof(MultiRecordReader<int>), FileSystemClient.Create(), useOutput ? outputPath : null, typeof(TextRecordWriter<int>));
 
             Assert.AreEqual(taskCount, stage.TaskCount);
             Assert.AreEqual(3, target.Stages.Count);

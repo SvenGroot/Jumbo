@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text;
 using Tkl.Jumbo.IO;
 using Tkl.Jumbo.Jet.Channels;
+using Tkl.Jumbo.Dfs.FileSystem;
 
 namespace Tkl.Jumbo.Jet.Jobs.Builder
 {
@@ -230,7 +231,7 @@ namespace Tkl.Jumbo.Jet.Jobs.Builder
                 };
         }
         
-        void IOperationOutput.ApplyOutput(StageConfiguration stage)
+        void IOperationOutput.ApplyOutput(FileSystemClient client, StageConfiguration stage)
         {
             // Nothing.
         }

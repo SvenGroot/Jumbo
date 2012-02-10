@@ -10,7 +10,7 @@ using Tkl.Jumbo.IO;
 namespace Tkl.Jumbo.Jet
 {
     /// <summary>
-    /// Provides information about an input stage to the <see cref="JobConfiguration.AddStage(string, Type, int, InputStageInfo, string, Type)"/> method.
+    /// Provides information about an input stage to the <see cref="JobConfiguration.AddStage(string, Type, int, InputStageInfo, Tkl.Jumbo.Dfs.FileSystem.FileSystemClient, string, Type)"/> method.
     /// </summary>
     public class InputStageInfo
     {

@@ -26,7 +26,7 @@ namespace DfsShell.Commands
 
         public override void Run()
         {
-            JumboFile file = Client.NameServer.GetFileInfo(_path);
+            JumboFile file = Client.GetFileInfo(_path);
             if( file == null )
                 Console.WriteLine("File not found.");
             else

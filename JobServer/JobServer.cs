@@ -16,6 +16,7 @@ using System.Xml.Linq;
 using Tkl.Jumbo.Topology;
 using System.Collections.Concurrent;
 using System.Globalization;
+using Tkl.Jumbo.Dfs.FileSystem;
 
 namespace JobServerApplication
 {
@@ -31,7 +32,7 @@ namespace JobServerApplication
         private readonly List<JobInfo> _orderedJobs = new List<JobInfo>(); // Jobs in the order that they should be scheduled.
         private readonly Dictionary<Guid, JobInfo> _finishedJobs = new Dictionary<Guid, JobInfo>();
         private readonly List<JobInfo> _jobsNeedingCleanup = new List<JobInfo>();
-        private readonly DfsClient _dfsClient;
+        private readonly FileSystemClient _fileSystemClient;
         private readonly Scheduling.IScheduler _scheduler;
         private readonly object _schedulerLock = new object();
         private readonly ServerAddress _localAddress;
@@ -55,7 +56,7 @@ namespace JobServerApplication
 
             Configuration = jetConfiguration;
             _topology = new NetworkTopology(jumboConfiguration);
-            _dfsClient = new DfsClient(dfsConfiguration);
+            _fileSystemClient = FileSystemClient.Create(dfsConfiguration);
             _localAddress = new ServerAddress(ServerContext.LocalHostName, jetConfiguration.JobServer.Port);
 
             _scheduler = (Scheduling.IScheduler)Activator.CreateInstance(Type.GetType("JobServerApplication.Scheduling." + jetConfiguration.JobServer.Scheduler));
@@ -130,9 +131,9 @@ namespace JobServerApplication
         {
             _log.Debug("CreateJob");
             Guid jobID = Guid.NewGuid();
-            string path = DfsPath.Combine(Configuration.JobServer.JetDfsPath, string.Format("job_{{{0}}}", jobID));
-            _dfsClient.NameServer.CreateDirectory(path);
-            _dfsClient.NameServer.CreateDirectory(DfsPath.Combine(path, "temp"));
+            string path = _fileSystemClient.Path.Combine(Configuration.JobServer.JetDfsPath, string.Format("job_{{{0}}}", jobID));
+            _fileSystemClient.CreateDirectory(path);
+            _fileSystemClient.CreateDirectory(_fileSystemClient.Path.Combine(path, "temp"));
             Job job = new Job(jobID, path);
             lock( _pendingJobs )
             {
@@ -154,13 +155,13 @@ namespace JobServerApplication
                 _pendingJobs.Remove(jobId);
             }
 
-            string configFile = job.JobConfigurationFilePath;
+            string configFile = job.GetJobConfigurationFilePath(_fileSystemClient);
 
             _log.InfoFormat("Starting job {0}.", jobId);
             JobConfiguration config;
             try
             {
-                using( DfsInputStream stream = _dfsClient.OpenFile(configFile) )
+                using( Stream stream = _fileSystemClient.OpenFile(configFile) )
                 {
                     config = JobConfiguration.LoadXml(stream);
                 }
@@ -924,7 +925,7 @@ namespace JobServerApplication
                 
                 try
                 {
-                    _scheduler.ScheduleTasks(jobs, _dfsClient);
+                    _scheduler.ScheduleTasks(jobs, _fileSystemClient);
                 }
                 catch( Exception ex )
                 {
@@ -998,7 +999,7 @@ namespace JobServerApplication
                     }
                 }
 
-                _dfsClient.DownloadFile(job.Job.JobConfigurationFilePath, Path.Combine(archiveDir, jobStatus.JobId + "_config.xml"));
+                _fileSystemClient.DownloadFile(job.Job.GetJobConfigurationFilePath(_fileSystemClient), Path.Combine(archiveDir, jobStatus.JobId + "_config.xml"));
                 jobStatus.ToXml().Save(Path.Combine(archiveDir, jobStatus.JobId + "_summary.xml"));
             }
         }

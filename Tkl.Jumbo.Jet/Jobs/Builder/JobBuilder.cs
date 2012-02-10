@@ -8,6 +8,7 @@ using Tkl.Jumbo.IO;
 using System.Reflection;
 using Tkl.Jumbo.Dfs;
 using Tkl.Jumbo.Jet.Tasks;
+using Tkl.Jumbo.Dfs.FileSystem;
 
 namespace Tkl.Jumbo.Jet.Jobs.Builder
 {
@@ -16,22 +17,22 @@ namespace Tkl.Jumbo.Jet.Jobs.Builder
     /// </summary>
     public sealed partial class JobBuilder
     {
-        private static readonly Assembly[] _jumboAssemblies = { typeof(IWritable).Assembly, typeof(JetClient).Assembly, typeof(DfsClient).Assembly, typeof(log4net.ILog).Assembly, typeof(Ookii.CommandLine.CommandLineParser).Assembly };
+        private static readonly Assembly[] _jumboAssemblies = { typeof(IWritable).Assembly, typeof(JetClient).Assembly, typeof(FileSystemClient).Assembly, typeof(log4net.ILog).Assembly, typeof(Ookii.CommandLine.CommandLineParser).Assembly };
 
         private readonly List<IJobBuilderOperation> _operations = new List<IJobBuilderOperation>();
         private readonly HashSet<Assembly> _assemblies = new HashSet<Assembly>();
-        private readonly DfsClient _dfsClient;
+        private readonly FileSystemClient _fileSystemClient;
         private readonly JetClient _jetClient;
         private readonly DynamicTaskBuilder _taskBuilder = new DynamicTaskBuilder();
 
         /// <summary>
         /// Initializes a new instance of the <see cref="JobBuilder"/> class.
         /// </summary>
-        /// <param name="dfsClient">The DFS client. May be <see langword="null"/>.</param>
+        /// <param name="fileSystemClient">The DFS client. May be <see langword="null"/>.</param>
         /// <param name="jetClient">The Jet client. May be <see langword="null"/>.</param>
-        public JobBuilder(DfsClient dfsClient, JetClient jetClient)
+        public JobBuilder(FileSystemClient fileSystemClient, JetClient jetClient)
         {
-            _dfsClient = dfsClient ?? new DfsClient();
+            _fileSystemClient = fileSystemClient ?? FileSystemClient.Create();
             _jetClient = jetClient ?? new JetClient();
         }
 
@@ -210,7 +211,7 @@ namespace Tkl.Jumbo.Jet.Jobs.Builder
         /// <returns>The job configuration.</returns>
         public JobConfiguration CreateJob()
         {
-            JobBuilderCompiler compiler = new JobBuilderCompiler(_assemblies, _dfsClient, _jetClient);
+            JobBuilderCompiler compiler = new JobBuilderCompiler(_assemblies, _fileSystemClient, _jetClient);
             foreach( var operation in _operations )
                 operation.CreateConfiguration(compiler);
             compiler.Job.JobName = JobName;

@@ -51,9 +51,7 @@ namespace Tkl.Jumbo.Jet.Samples
         /// <param name="builder">The job builder</param>
         protected override void BuildJob(JobBuilder builder)
         {
-            DfsClient dfsClient = new DfsClient(DfsConfiguration);
-
-            CheckAndCreateOutputPath(dfsClient, _outputPath);
+            CheckAndCreateOutputPath(_outputPath);
 
             var input = new DfsInput(_inputPath, typeof(WordRecordReader));
             var output = CreateDfsOutput(_outputPath, typeof(TextRecordWriter<Pair<Utf8String, int>>));

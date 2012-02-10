@@ -58,12 +58,12 @@ namespace Tkl.Jumbo.Jet.Samples
         {
             base.OnJobCreated(job, jobConfiguration);
 
-            DfsClient client = new DfsClient(DfsConfiguration);
-            if( client.NameServer.GetDirectoryInfo(_dictionaryDirectory) == null )
+            if( FileSystemClient.GetDirectoryInfo(_dictionaryDirectory) == null )
                 throw new ArgumentException("The dictionary directory does not exist.", "dictionaryPath");
 
             if( _sizePerTask == 0 )
-                _sizePerTask = client.NameServer.BlockSize;
+                _sizePerTask = FileSystemClient.DefaultBlockSize ?? (int)(64 * BinarySize.Megabyte); // Use 64MB if blocks not supported
+
 
             _log.InfoFormat("Generating {0}MB per task with {1} tasks, total {2}MB.", _sizePerTask / 1024 / 1024, FirstStageTaskCount, (_sizePerTask * FirstStageTaskCount) / 1024 / 1024);
 

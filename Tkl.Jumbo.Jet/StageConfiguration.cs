@@ -9,6 +9,7 @@ using System.Collections.ObjectModel;
 using Tkl.Jumbo.Jet.Channels;
 using Tkl.Jumbo.Dfs;
 using System.Globalization;
+using Tkl.Jumbo.Dfs.FileSystem;
 
 namespace Tkl.Jumbo.Jet
 {
@@ -351,10 +352,13 @@ namespace Tkl.Jumbo.Jet
         /// <summary>
         /// Sets the DFS output of the stage.
         /// </summary>
+        /// <param name="fileSystem">The file system.</param>
         /// <param name="outputPath">The path of the directory on the DFS to write to.</param>
         /// <param name="recordWriterType">The type of the record writer to use.</param>
-        public void SetDfsOutput(string outputPath, Type recordWriterType)
+        public void SetDfsOutput(FileSystemClient fileSystem, string outputPath, Type recordWriterType)
         {
+            if( fileSystem == null )
+                throw new ArgumentNullException("fileSystem");
             if( outputPath == null )
                 throw new ArgumentNullException("outputPath");
             if( recordWriterType == null )
@@ -367,7 +371,7 @@ namespace Tkl.Jumbo.Jet
 
             DfsOutput = new TaskDfsOutput()
             {
-                PathFormat = DfsPath.Combine(outputPath, StageId + "-{0:00000}"),
+                PathFormat = fileSystem.Path.Combine(outputPath, StageId + "-{0:00000}"),
                 RecordWriterType = recordWriterType,
             };
         }

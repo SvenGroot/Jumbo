@@ -7,6 +7,7 @@ using System.Text;
 using Tkl.Jumbo;
 using JobServerApplication.Scheduling;
 using Tkl.Jumbo.Dfs;
+using Tkl.Jumbo.Dfs.FileSystem;
 
 namespace JobServerApplication
 {
@@ -37,36 +38,51 @@ namespace JobServerApplication
 
         public bool NeedsCleanup { get; set; }
 
-        public int GetSchedulableLocalTaskCount(DfsClient dfsClient)
+        public int GetSchedulableLocalTaskCount(FileSystemClient fileSystemClient)
         {
-            return (from task in GetLocalTasks(dfsClient)
+            return (from task in GetLocalTasksIfDfs(fileSystemClient)
                     where task.Stage.IsReadyForScheduling && task.Server == null && !task.SchedulerInfo.BadServers.Contains(_taskServer)
                     select task).Count();
         }
 
-        public TaskInfo FindTaskToSchedule(DfsClient dfsClient, int distance)
+        public TaskInfo FindTaskToSchedule(FileSystemClient fileSystemClient, int distance)
         {
+            DfsClient dfsClient = fileSystemClient as DfsClient;
             IEnumerable<TaskInfo> eligibleTasks;
-            switch( distance )
-            {
-            case 0:
-                eligibleTasks = GetLocalTasks(dfsClient);
-                break;
-                // TODO: case 1
-            case 1:
-                if( JobServer.Instance.RackCount > 1 )
-                    eligibleTasks = GetRackLocalTasks(dfsClient);
-                else
-                    eligibleTasks = _job.GetDfsInputTasks();
-                break;
-            default:
+            if( dfsClient == null )
                 eligibleTasks = _job.GetDfsInputTasks();
-                break;
+            else
+            {
+                switch( distance )
+                {
+                case 0:
+                    eligibleTasks = GetLocalTasks(dfsClient);
+                    break;
+                // TODO: case 1
+                case 1:
+                    if( JobServer.Instance.RackCount > 1 )
+                        eligibleTasks = GetRackLocalTasks(dfsClient);
+                    else
+                        eligibleTasks = _job.GetDfsInputTasks();
+                    break;
+                default:
+                    eligibleTasks = _job.GetDfsInputTasks();
+                    break;
+                }
             }
 
             return (from task in eligibleTasks
                     where task.Stage.IsReadyForScheduling && task.Server == null && !task.SchedulerInfo.BadServers.Contains(_taskServer)
                     select task).FirstOrDefault();
+        }
+
+        private IEnumerable<TaskInfo> GetLocalTasksIfDfs(FileSystemClient fileSystemClient)
+        {
+            DfsClient dfsClient = fileSystemClient as DfsClient;
+            if( dfsClient == null )
+                return _job.GetDfsInputTasks();
+            else
+                return GetLocalTasks(dfsClient);
         }
 
         private List<TaskInfo> GetLocalTasks(DfsClient dfsClient)

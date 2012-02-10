@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using Tkl.Jumbo.Dfs;
+using Tkl.Jumbo.Dfs.FileSystem;
 
 namespace Tkl.Jumbo.Jet.Jobs.Builder
 {
@@ -21,10 +22,10 @@ namespace Tkl.Jumbo.Jet.Jobs.Builder
         {
             PromptIfInteractive(true);
 
-            DfsClient dfsClient = new DfsClient(DfsConfiguration);
+            FileSystemClient fileSystemClient = FileSystemClient.Create(DfsConfiguration);
             JetClient jetClient = new JetClient(JetConfiguration);
 
-            JobBuilder builder = new JobBuilder(dfsClient, jetClient);
+            JobBuilder builder = new JobBuilder(fileSystemClient, jetClient);
             try
             {
                 BuildJob(builder);
@@ -40,7 +41,7 @@ namespace Tkl.Jumbo.Jet.Jobs.Builder
 
                 OnJobCreated(job, config);
 
-                jetClient.RunJob(job, config, dfsClient, builder.AssemblyLocations.ToArray());
+                jetClient.RunJob(job, config, fileSystemClient, builder.AssemblyLocations.ToArray());
 
                 return job.JobId;
             }

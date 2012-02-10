@@ -151,8 +151,7 @@ namespace Tkl.Jumbo.Jet.Jobs
 
             PromptIfInteractive(true);
 
-            DfsClient dfsClient = new DfsClient(DfsConfiguration);
-            CheckAndCreateOutputPath(dfsClient, OutputPath);
+            CheckAndCreateOutputPath(OutputPath);
 
             HashSet<Assembly> assemblies = new HashSet<Assembly>();
             assemblies.Add(FirstStageTaskType.Assembly);
@@ -173,12 +172,12 @@ namespace Tkl.Jumbo.Jet.Jobs
             config.JobName = GetType().Name; // Use the class name as the job's friendly name.
             if( InputPath != null )
             {
-                JumboFileSystemEntry input = GetInputFileSystemEntry(dfsClient, InputPath);
+                JumboFileSystemEntry input = GetInputFileSystemEntry(InputPath);
 
                 // Add the input stage; if it's a one stage job without sorting, also set output.
                 if( SecondStageTaskCount == 0 && !SortFirstStageOutput )
                 {
-                    firstStage = config.AddInputStage(FirstStageName, input, FirstStageTaskType, InputReaderType, OutputPath, OutputWriterType);
+                    firstStage = config.AddInputStage(FirstStageName, input, FirstStageTaskType, InputReaderType, FileSystemClient, OutputPath, OutputWriterType);
                     outputStage = firstStage;
                 }
                 else
@@ -191,11 +190,11 @@ namespace Tkl.Jumbo.Jet.Jobs
                 // Add the first stage, which doesn't have any input; if it's a one stage job without sorting, also set output.
                 if( SecondStageTaskCount == 0 && !SortFirstStageOutput )
                 {
-                    firstStage = config.AddStage(FirstStageName, FirstStageTaskType, FirstStageTaskCount, null, OutputPath, OutputWriterType);
+                    firstStage = config.AddStage(FirstStageName, FirstStageTaskType, FirstStageTaskCount, null, FileSystemClient, OutputPath, OutputWriterType);
                     outputStage = firstStage;
                 }
                 else
-                    firstStage = config.AddStage(FirstStageName, FirstStageTaskType, FirstStageTaskCount, null, null, null);
+                    firstStage = config.AddStage(FirstStageName, FirstStageTaskType, FirstStageTaskCount, null, null, null, null);
             }
 
             if( SortFirstStageOutput )
@@ -203,14 +202,14 @@ namespace Tkl.Jumbo.Jet.Jobs
                 Type interfaceType = FirstStageTaskType.FindGenericInterfaceType(typeof(ITask<,>));
                 Type outputType = interfaceType.GetGenericArguments()[1];
                 // Add sort stage, pipelined to first stage.
-                StageConfiguration sortStage = config.AddStage("SortStage", typeof(SortTask<>).MakeGenericType(outputType), SecondStageTaskCount * PartitionsPerTask, new InputStageInfo(firstStage) { ChannelType = ChannelType.Pipeline, PartitionerType = PartitionerType }, null, null);
+                StageConfiguration sortStage = config.AddStage("SortStage", typeof(SortTask<>).MakeGenericType(outputType), SecondStageTaskCount * PartitionsPerTask, new InputStageInfo(firstStage) { ChannelType = ChannelType.Pipeline, PartitionerType = PartitionerType }, null, null, null);
                 // Add merge stage; this stage outputs if there is no second stage.
-                outputStage = config.AddStage(SecondStageName ?? "MergeStage", SecondStageTaskType ?? typeof(EmptyTask<>).MakeGenericType(outputType), SecondStageTaskCount, new InputStageInfo(sortStage) { ChannelType = ChannelType, PartitionsPerTask = PartitionsPerTask, MultiInputRecordReaderType = typeof(MergeRecordReader<>).MakeGenericType(outputType) }, OutputPath, OutputWriterType);
+                outputStage = config.AddStage(SecondStageName ?? "MergeStage", SecondStageTaskType ?? typeof(EmptyTask<>).MakeGenericType(outputType), SecondStageTaskCount, new InputStageInfo(sortStage) { ChannelType = ChannelType, PartitionsPerTask = PartitionsPerTask, MultiInputRecordReaderType = typeof(MergeRecordReader<>).MakeGenericType(outputType) }, FileSystemClient, OutputPath, OutputWriterType);
             }
             else if( SecondStageTaskCount > 0 )
             {
                 // Add second stage.
-                outputStage = config.AddStage(SecondStageName, SecondStageTaskType, SecondStageTaskCount, new InputStageInfo(firstStage) { ChannelType = ChannelType, PartitionsPerTask = PartitionsPerTask, PartitionerType = PartitionerType }, OutputPath, OutputWriterType);
+                outputStage = config.AddStage(SecondStageName, SecondStageTaskType, SecondStageTaskCount, new InputStageInfo(firstStage) { ChannelType = ChannelType, PartitionsPerTask = PartitionsPerTask, PartitionerType = PartitionerType }, FileSystemClient, OutputPath, OutputWriterType);
             }
 
             ConfigureDfsOutput(outputStage);
@@ -223,7 +222,7 @@ namespace Tkl.Jumbo.Jet.Jobs
 
             OnJobCreated(job, config);
 
-            jetClient.RunJob(job, config, dfsClient, (from assembly in assemblies select assembly.Location).ToArray());
+            jetClient.RunJob(job, config, FileSystemClient, (from assembly in assemblies select assembly.Location).ToArray());
 
             return job.JobId;            
         }

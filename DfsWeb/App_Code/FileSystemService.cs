@@ -6,6 +6,7 @@ using System.Linq;
 using System.Web;
 using System.Web.Services;
 using Tkl.Jumbo.Dfs;
+using Tkl.Jumbo.Dfs.FileSystem;
 
 /// <summary>
 /// Summary description for FileSystemService
@@ -27,8 +28,8 @@ public class FileSystemService : System.Web.Services.WebService
     [WebMethod]
     public FileSystemEntryInfo GetDirectoryContents(string path)
     {
-        DfsClient client = new DfsClient();
-        return new FileSystemEntryInfo(client.NameServer.GetDirectoryInfo(path), true);
+        FileSystemClient client = FileSystemClient.Create();
+        return new FileSystemEntryInfo(client.GetDirectoryInfo(path), true);
     }
 
 }

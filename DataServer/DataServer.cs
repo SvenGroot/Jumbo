@@ -11,6 +11,7 @@ using System.IO;
 using Tkl.Jumbo;
 using System.Net.Sockets;
 using System.Net;
+using Tkl.Jumbo.Dfs.FileSystem;
 
 namespace DataServerApplication
 {

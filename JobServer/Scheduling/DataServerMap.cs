@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text;
 using Tkl.Jumbo;
 using Tkl.Jumbo.Dfs;
+using Tkl.Jumbo.Dfs.FileSystem;
 
 namespace JobServerApplication.Scheduling
 {
@@ -37,10 +38,9 @@ namespace JobServerApplication.Scheduling
 
         private static void BuildServerMap(IEnumerable<TaskServerInfo> taskServers, DfsClient dfsClient)
         {
-            DfsMetrics metrics = dfsClient.NameServer.GetMetrics();
-
             _serverMap.Clear();
 
+            DfsMetrics metrics = dfsClient.NameServer.GetMetrics();
             foreach( TaskServerInfo taskServer in taskServers )
             {
                 if( !_serverMap.ContainsKey(taskServer.Address.HostName) )

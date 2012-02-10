@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text;
 using Ookii.CommandLine;
 using System.ComponentModel;
+using Tkl.Jumbo.Dfs.FileSystem;
 
 namespace DfsShell.Commands
 {
@@ -14,7 +15,8 @@ namespace DfsShell.Commands
     {
         public override void Run()
         {
-            if( Client.NameServer.SafeMode )
+            DfsClient client = Client as DfsClient;
+            if( client != null && client.NameServer.SafeMode )
                 Console.WriteLine("Safe mode is ON.");
             else
                 Console.WriteLine("Safe mode is OFF.");

@@ -12,6 +12,7 @@ using Tkl.Jumbo;
 using Ookii.CommandLine;
 using System.Reflection;
 using DfsShell.Commands;
+using Tkl.Jumbo.Dfs.FileSystem;
 
 namespace DfsShell
 {
@@ -50,7 +51,7 @@ namespace DfsShell
                     {
                         try
                         {
-                            command.Client = new DfsClient();
+                            command.Client = FileSystemClient.Create();
                             command.Run();
                         }
                         catch( SocketException ex )
@@ -77,16 +78,6 @@ namespace DfsShell
                 else
                     PrintUsage();
             }
-        }
-
-        private static void PrintVersion(DfsClient client, string[] args)
-        {
-            Console.WriteLine("Jumbo {0}", typeof(Tkl.Jumbo.ServerAddress).Assembly.GetName().Version);
-        }
-
-        private static void PrintRevision(DfsClient client, string[] args)
-        {
-            Console.WriteLine(typeof(Tkl.Jumbo.ServerAddress).Assembly.GetName().Version.Revision);
         }
 
         private static void PrintUsage()

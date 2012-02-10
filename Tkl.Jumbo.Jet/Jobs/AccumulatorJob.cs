@@ -134,8 +134,7 @@ namespace Tkl.Jumbo.Jet.Jobs
 
             PromptIfInteractive(true);
 
-            DfsClient dfsClient = new DfsClient(DfsConfiguration);
-            CheckAndCreateOutputPath(dfsClient, OutputPath);
+            CheckAndCreateOutputPath(OutputPath);
 
             HashSet<Assembly> assemblies = new HashSet<Assembly>();
             assemblies.Add(FirstStageTaskType.Assembly);
@@ -155,7 +154,7 @@ namespace Tkl.Jumbo.Jet.Jobs
             config.JobName = GetType().Name; // Use the class name as the job's friendly name.
             if( InputPath != null )
             {
-                JumboFileSystemEntry input = GetInputFileSystemEntry(dfsClient, InputPath);
+                JumboFileSystemEntry input = GetInputFileSystemEntry(InputPath);
 
                 // Add the input stage.
                 firstStage = config.AddInputStage(FirstStageName, input, FirstStageTaskType, InputReaderType);
@@ -165,11 +164,11 @@ namespace Tkl.Jumbo.Jet.Jobs
                 if( FirstStageTaskCount <= 0 )
                     throw new InvalidOperationException("First stage has no tasks.");
                 // Add the first stage, which doesn't have any input.
-                firstStage = config.AddStage(FirstStageName, FirstStageTaskType, FirstStageTaskCount, null, null, null);
+                firstStage = config.AddStage(FirstStageName, FirstStageTaskType, FirstStageTaskCount, null, null, null, null);
             }
 
             // Add the accumulator child stage
-            StageConfiguration accumulatorChildStage = config.AddPointToPointStage("Accumulator", firstStage, AccumulatorTaskType, ChannelType.Pipeline, null, null);
+            StageConfiguration accumulatorChildStage = config.AddPointToPointStage("Accumulator", firstStage, AccumulatorTaskType, ChannelType.Pipeline, null, null, null);
 
             // Add second stage.
             InputStageInfo info = new InputStageInfo(accumulatorChildStage)
@@ -177,7 +176,7 @@ namespace Tkl.Jumbo.Jet.Jobs
                 ChannelType = ChannelType,
                 PartitionerType = PartitionerType
             };
-            StageConfiguration outputStage = config.AddStage(AccumulatorStageName, AccumulatorTaskType, AccumulatorTaskCount, info, OutputPath, OutputWriterType);
+            StageConfiguration outputStage = config.AddStage(AccumulatorStageName, AccumulatorTaskType, AccumulatorTaskCount, info, FileSystemClient, OutputPath, OutputWriterType);
             ConfigureDfsOutput(outputStage);
 
             ApplyJobPropertiesAndSettings(config);
@@ -188,7 +187,7 @@ namespace Tkl.Jumbo.Jet.Jobs
 
             OnJobCreated(job, config);
 
-            jetClient.RunJob(job, config, dfsClient, (from assembly in assemblies select assembly.Location).ToArray());
+            jetClient.RunJob(job, config, FileSystemClient, (from assembly in assemblies select assembly.Location).ToArray());
 
             return job.JobId;
         }

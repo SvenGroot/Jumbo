@@ -12,63 +12,59 @@ using System.IO;
 using Tkl.Jumbo.IO;
 using Tkl.Jumbo.Dfs.FileSystem;
 
-namespace Tkl.Jumbo.Dfs
+namespace Tkl.Jumbo.Dfs.FileSystem
 {
     /// <summary>
     /// Provides client access to the Distributed File System.
     /// </summary>
-    public class DfsClient
+    public class DfsClient : FileSystemClient
     {
         private const string _nameServerUrlFormat = "tcp://{0}:{1}/NameServer";
         private const int _bufferSize = 4096;
+
+        private readonly INameServerClientProtocol _nameServer;
+        private static readonly DfsPathUtility _path = new DfsPathUtility(); // Thread-safe, so static is okay
 
         static DfsClient()
         {
             RpcHelper.RegisterClientChannel();
         }
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="DfsClient"/> class.
-        /// </summary>
-        public DfsClient()
-            : this(DfsConfiguration.GetConfiguration())
+        internal DfsClient(DfsConfiguration config)
+            : base(config)
         {
-        }
-
-        /// <summary>
-        /// Initializes a new instance of the <see cref="DfsClient"/> class using the specified configuration.
-        /// </summary>
-        /// <param name="config">The configuration to use.</param>
-        public DfsClient(DfsConfiguration config)
-        {
-            NameServer = CreateNameServerClient(config);
-            Configuration = config;
-        }
-
-        /// <summary>
-        /// Initializes a new instance of the <see cref="DfsClient"/> class using the specified host name and port.
-        /// </summary>
-        /// <param name="hostName">The host name of the name server.</param>
-        /// <param name="port">The port at which the name server is listening.</param>
-        public DfsClient(string hostName, int port)
-        {
-            if( hostName == null )
-                throw new ArgumentNullException("hostName");
-            Configuration = new DfsConfiguration();
-            Configuration.NameServer.HostName = hostName;
-            Configuration.NameServer.Port = port;
-            NameServer = CreateNameServerClient(hostName, port);
+            _nameServer = CreateNameServerClient(config);
         }
 
         /// <summary>
         /// Gets the <see cref="INameServerClientProtocol"/> used by this instance to communicate with the name server.
         /// </summary>
-        public INameServerClientProtocol NameServer { get; private set; }
+        public INameServerClientProtocol NameServer
+        {
+            get { return _nameServer; }
+        }
 
         /// <summary>
-        /// Gets the <see cref="DfsConfiguration"/> used to create this instance.
+        /// Gets the path utility for this file system.
         /// </summary>
-        public DfsConfiguration Configuration { get; private set; }
+        /// <value>
+        /// The <see cref="IFileSystemPathUtility"/> implementation for this file system.
+        /// </value>
+        public override IFileSystemPathUtility Path
+        {
+            get { return _path; }
+        }
+
+        /// <summary>
+        /// Gets the default block size for the file system.
+        /// </summary>
+        /// <value>
+        /// The default block size, or 0 if the file system doesn't support blocks.
+        /// </value>
+        public override int? DefaultBlockSize
+        {
+            get { return _nameServer.BlockSize; }
+        }
 
         /// <summary>
         /// Creates a client object that can be used to communicate with a name server.
@@ -92,21 +88,6 @@ namespace Tkl.Jumbo.Dfs
                 throw new ArgumentNullException("config");
 
             return CreateNameServerClientInternal<INameServerClientProtocol>(config.NameServer.HostName, config.NameServer.Port);
-        }
-
-        /// <summary>
-        /// Creates a client object that can be used to communicate with a name server.
-        /// </summary>
-        /// <param name="hostName">The host name of the name server.</param>
-        /// <param name="port">The port at which the name server is listening.</param>
-        /// <returns>An object implementing <see cref="INameServerClientProtocol"/> that is a proxy class for
-        /// communicating with the name server via RPC.</returns>
-        public static INameServerClientProtocol CreateNameServerClient(string hostName, int port)
-        {
-            if( hostName == null )
-                throw new ArgumentNullException("hostName");
-
-            return CreateNameServerClientInternal<INameServerClientProtocol>(hostName, port);
         }
 
         /// <summary>
@@ -176,13 +157,48 @@ namespace Tkl.Jumbo.Dfs
         }
 
         /// <summary>
-        /// Uploads the contents of the specified stream to the Distributed File System.
+        /// Creates the specified directory in the file system.
         /// </summary>
-        /// <param name="stream">The stream with the data to upload.</param>
-        /// <param name="dfsPath">The path of the file on the DFS to write the data to.</param>
-        public void UploadStream(System.IO.Stream stream, string dfsPath)
+        /// <param name="path">The path of the directory to create.</param>
+        public override void CreateDirectory(string path)
         {
-            UploadStream(stream, dfsPath, 0, 0, true, null);
+            _nameServer.CreateDirectory(path);
+        }
+
+        /// <summary>
+        /// Gets information about a directory in the file system.
+        /// </summary>
+        /// <param name="path">The full path of the directory.</param>
+        /// <returns>
+        /// A <see cref="JumboDirectory"/> object representing the directory.
+        /// </returns>
+        public override JumboDirectory GetDirectoryInfo(string path)
+        {
+            return _nameServer.GetDirectoryInfo(path);
+        }
+
+        /// <summary>
+        /// Gets information about a file.
+        /// </summary>
+        /// <param name="path">The full path of the file.</param>
+        /// <returns>
+        /// A <see cref="JumboFile"/> object referring to the file.
+        /// </returns>
+        public override JumboFile GetFileInfo(string path)
+        {
+            return _nameServer.GetFileInfo(path);
+        }
+
+        /// <summary>
+        /// Gets information about a file or directory.
+        /// </summary>
+        /// <param name="path">The full path of the file or directory.</param>
+        /// <returns>
+        /// A <see cref="JumboFileSystemEntry"/> object referring to the file or directory, or <see langword="null"/> if the .
+        /// </returns>
+        public override JumboFileSystemEntry GetFileSystemEntryInfo(string path)
+        {
+            return _nameServer.GetFileSystemEntryInfo(path);
         }
 
         /// <summary>
@@ -194,7 +210,7 @@ namespace Tkl.Jumbo.Dfs
         /// <param name="replicationFactor">The number of replicas to create of the file's blocks, or zero to use the file system default replication factor.</param>
         /// <param name="useLocalReplica"><see langword="true"/> to put the first replica on the node that's creating the file if it's part of the DFS cluster; otherwise, <see langword="false"/>.</param>
         /// <param name="progressCallback">The <see cref="ProgressCallback"/> that will be called to report progress of the operation. May be <see langword="null"/>.</param>
-        public void UploadStream(System.IO.Stream stream, string dfsPath, int blockSize, int replicationFactor, bool useLocalReplica, ProgressCallback progressCallback)
+        public override void UploadStream(Stream stream, string dfsPath, int blockSize, int replicationFactor, bool useLocalReplica, ProgressCallback progressCallback)
         {
             if( dfsPath == null )
                 throw new ArgumentNullException("dfsPath");
@@ -213,22 +229,11 @@ namespace Tkl.Jumbo.Dfs
         /// <param name="localPath">The path of the file to upload.</param>
         /// <param name="dfsPath">The path on the DFS to store the file. If this is the name of an existing directory, the file
         /// will be stored in that directory.</param>
-        public void UploadFile(string localPath, string dfsPath)
-        {
-            UploadFile(localPath, dfsPath, 0, 0, true, null);
-        }
-
-        /// <summary>
-        /// Uploads a file to the Distributed File System.
-        /// </summary>
-        /// <param name="localPath">The path of the file to upload.</param>
-        /// <param name="dfsPath">The path on the DFS to store the file. If this is the name of an existing directory, the file
-        /// will be stored in that directory.</param>
         /// <param name="blockSize">The block size of the file, or zero to use the file system default block size.</param>
         /// <param name="replicationFactor">The number of replicas to create of the file's blocks, or zero to use the file system default replication factor.</param>
         /// <param name="useLocalReplica"><see langword="true"/> to put the first replica on the node that's creating the file if it's part of the DFS cluster; otherwise, <see langword="false"/>.</param>
         /// <param name="progressCallback">The <see cref="ProgressCallback"/> that will be called to report progress of the operation. May be <see langword="null"/>.</param>
-        public void UploadFile(string localPath, string dfsPath, int blockSize, int replicationFactor, bool useLocalReplica, ProgressCallback progressCallback)
+        public override void UploadFile(string localPath, string dfsPath, int blockSize, int replicationFactor, bool useLocalReplica, ProgressCallback progressCallback)
         {
             if( dfsPath == null )
                 throw new ArgumentNullException("dfsPath");
@@ -238,8 +243,8 @@ namespace Tkl.Jumbo.Dfs
             if( dir != null )
             {
                 string fileName = System.IO.Path.GetFileName(localPath);
-                if( !dfsPath.EndsWith(DfsPath.DirectorySeparator.ToString(), StringComparison.Ordinal) )
-                    dfsPath += DfsPath.DirectorySeparator;
+                if( !dfsPath.EndsWith(Path.DirectorySeparator.ToString(), StringComparison.Ordinal) )
+                    dfsPath += Path.DirectorySeparator;
                 dfsPath += fileName;
             }
             using( System.IO.FileStream inputStream = System.IO.File.OpenRead(localPath) )
@@ -249,64 +254,12 @@ namespace Tkl.Jumbo.Dfs
         }
 
         /// <summary>
-        /// Uploads the files in the specified directory to the DFS.
-        /// </summary>
-        /// <param name="localPath">The path of the directory on the local file system containing the files to upload.</param>
-        /// <param name="dfsPath">The path of the directory on the DFS where the files should be stored. This path must not
-        /// refer to an existing directory.</param>
-        public void UploadDirectory(string localPath, string dfsPath)
-        {
-            UploadDirectory(localPath, dfsPath, 0, 0, true, null);
-        }
-
-        /// <summary>
-        /// Uploads the files in the specified directory to the DFS.
-        /// </summary>
-        /// <param name="localPath">The path of the directory on the local file system containing the files to upload.</param>
-        /// <param name="dfsPath">The path of the directory on the DFS where the files should be stored. This path must not
-        /// refer to an existing directory.</param>
-        /// <param name="blockSize">The block size of the files in the directory, or zero to use the file system default block size.</param>
-        /// <param name="replicationFactor">The number of replicas to create of the file's blocks, or zero to use the file system default replication factor.</param>
-        /// <param name="useLocalReplica"><see langword="true"/> to put the first replica on the node that's creating the file if it's part of the DFS cluster; otherwise, <see langword="false"/>.</param>
-        /// <param name="progressCallback">The <see cref="ProgressCallback"/> that will be called to report progress of the operation. May be <see langword="null"/>.</param>
-        public void UploadDirectory(string localPath, string dfsPath, int blockSize, int replicationFactor, bool useLocalReplica, ProgressCallback progressCallback)
-        {
-            if( localPath == null )
-                throw new ArgumentNullException("localPath");
-            if( dfsPath == null )
-                throw new ArgumentNullException("dfsPath");
-
-            string[] files = System.IO.Directory.GetFiles(localPath);
-
-            JumboDirectory directory = NameServer.GetDirectoryInfo(dfsPath);
-            if( directory != null )
-                throw new ArgumentException(string.Format(System.Globalization.CultureInfo.CurrentCulture, "Directory {0} already exists on the DFS.", dfsPath), "dfsPath");
-            NameServer.CreateDirectory(dfsPath);
-
-            foreach( string file in files )
-            {
-                string targetFile = DfsPath.Combine(dfsPath, System.IO.Path.GetFileName(file));
-                UploadFile(file, targetFile, blockSize, replicationFactor, useLocalReplica, progressCallback);
-            }
-        }
-
-        /// <summary>
-        /// Downloads the specified file from the DFS, saving it to the specified stream.
-        /// </summary>
-        /// <param name="dfsPath">The path of the file on the DFS to download.</param>
-        /// <param name="stream">The stream to save the file to.</param>
-        public void DownloadStream(string dfsPath, System.IO.Stream stream)
-        {
-            DownloadStream(dfsPath, stream, null);
-        }
-
-        /// <summary>
         /// Downloads the specified file from the DFS, saving it to the specified stream.
         /// </summary>
         /// <param name="dfsPath">The path of the file on the DFS to download.</param>
         /// <param name="stream">The stream to save the file to.</param>
         /// <param name="progressCallback">The <see cref="ProgressCallback"/> that will be called to report progress of the operation. May be <see langword="null"/>.</param>
-        public void DownloadStream(string dfsPath, System.IO.Stream stream, ProgressCallback progressCallback)
+        public override void DownloadStream(string dfsPath, System.IO.Stream stream, ProgressCallback progressCallback)
         {
             if( dfsPath == null )
                 throw new ArgumentNullException("dfsPath");
@@ -324,19 +277,8 @@ namespace Tkl.Jumbo.Dfs
         /// <param name="dfsPath">The path of the file on the DFS to download.</param>
         /// <param name="localPath">The path of the file on the local file system to save the file to. If this is the
         /// name of an existing directory, the file will be downloaded to that directory.</param>
-        public void DownloadFile(string dfsPath, string localPath)
-        {
-            DownloadFile(dfsPath, localPath, null);
-        }
-
-        /// <summary>
-        /// Downloads the specified file from the DFS to the specified local file.
-        /// </summary>
-        /// <param name="dfsPath">The path of the file on the DFS to download.</param>
-        /// <param name="localPath">The path of the file on the local file system to save the file to. If this is the
-        /// name of an existing directory, the file will be downloaded to that directory.</param>
         /// <param name="progressCallback">The <see cref="ProgressCallback"/> that will be called to report progress of the operation. May be <see langword="null"/>.</param>
-        public void DownloadFile(string dfsPath, string localPath, ProgressCallback progressCallback)
+        public override void DownloadFile(string dfsPath, string localPath, ProgressCallback progressCallback)
         {
             if( dfsPath == null )
                 throw new ArgumentNullException("dfsPath");
@@ -345,7 +287,7 @@ namespace Tkl.Jumbo.Dfs
 
             if( System.IO.Directory.Exists(localPath) )
             {
-                int index = dfsPath.LastIndexOf(DfsPath.DirectorySeparator);
+                int index = dfsPath.LastIndexOf(Path.DirectorySeparator);
                 if( index < 0 || index + 1 >= dfsPath.Length )
                 {
                     throw new ArgumentException("Invalid DFS path.");
@@ -359,97 +301,13 @@ namespace Tkl.Jumbo.Dfs
         }
 
         /// <summary>
-        /// Downloads the files in the specified directory on the distributed file system.
-        /// </summary>
-        /// <param name="dfsPath">The directory on the distributed file system to download.</param>
-        /// <param name="localPath">The local directory to store the files.</param>
-        /// <remarks>
-        /// This function is not recursive; it will only download the files that are direct children of the
-        /// specified directory.
-        /// </remarks>
-        public void DownloadDirectory(string dfsPath, string localPath)
-        {
-            DownloadDirectory(dfsPath, localPath, null);
-        }
-        
-        /// <summary>
-        /// Downloads the files in the specified directory on the distributed file system.
-        /// </summary>
-        /// <param name="dfsPath">The directory on the distributed file system to download.</param>
-        /// <param name="localPath">The local directory to store the files.</param>
-        /// <remarks>
-        /// This function is not recursive; it will only download the files that are direct children of the
-        /// specified directory.
-        /// </remarks>
-        /// <param name="progressCallback">The <see cref="ProgressCallback"/> that will be called to report progress of the operation. May be <see langword="null"/>.</param>
-        public void DownloadDirectory(string dfsPath, string localPath, ProgressCallback progressCallback)
-        {
-            if( dfsPath == null )
-                throw new ArgumentNullException("dfsPath");
-            if( localPath == null )
-                throw new ArgumentNullException("localPath");
-
-            JumboDirectory dir = NameServer.GetDirectoryInfo(dfsPath);
-            if( dir == null )
-                throw new DfsException("The specified directory does not exist.");
-            foreach( JumboFileSystemEntry entry in dir.Children )
-            {
-                JumboFile file = entry as JumboFile;
-                if( file != null )
-                {
-                    string localFile = System.IO.Path.Combine(localPath, file.Name);
-                    DownloadFile(file.FullPath, localFile, progressCallback);
-                }
-            }
-        }
-
-        /// <summary>
         /// Opens the specified file on the distributed file system for reading.
         /// </summary>
         /// <param name="path">The path of the file.</param>
-        /// <returns>A <see cref="DfsInputStream"/> that can be used to read the contents of the file.</returns>
-        public DfsInputStream OpenFile(string path)
+        /// <returns>A <see cref="Stream"/> that can be used to read the contents of the file.</returns>
+        public override Stream OpenFile(string path)
         {
             return new DfsInputStream(NameServer, path);
-        }
-
-        /// <summary>
-        /// Creates a new file with the specified path on the distributed file system.
-        /// </summary>
-        /// <param name="path">The path containing the directory and name of the file to create.</param>
-        /// <returns>A <see cref="DfsOutputStream"/> that can be used to write data to the file.</returns>
-        public DfsOutputStream CreateFile(string path)
-        {
-            return new DfsOutputStream(NameServer, path);
-        }
-
-        /// <summary>
-        /// Creates a new file with the specified path on the distributed file system.
-        /// </summary>
-        /// <param name="path">The path containing the directory and name of the file to create.</param>
-        /// <param name="blockSize">The block size of the new file, or zero to use the file system default block size.</param>
-        /// <param name="replicationFactor">The number of replicas to create of the file's blocks, or zero to use the file system default replication factor.</param>
-        /// <returns>
-        /// A <see cref="DfsOutputStream"/> that can be used to write data to the file.
-        /// </returns>
-        public DfsOutputStream CreateFile(string path, int blockSize, int replicationFactor)
-        {
-            return CreateFile(path, blockSize, replicationFactor, true, RecordStreamOptions.None);
-        }
-
-        /// <summary>
-        /// Creates a new file with the specified path on the distributed file system.
-        /// </summary>
-        /// <param name="path">The path containing the directory and name of the file to create.</param>
-        /// <param name="blockSize">The block size of the new file, or zero to use the file system default block size.</param>
-        /// <param name="replicationFactor">The number of replicas to create of the file's blocks, or zero to use the file system default replication factor.</param>
-        /// <param name="recordOptions">The record options for the file.</param>
-        /// <returns>
-        /// A <see cref="DfsOutputStream"/> that can be used to write data to the file.
-        /// </returns>
-        public DfsOutputStream CreateFile(string path, int blockSize, int replicationFactor, RecordStreamOptions recordOptions)
-        {
-            return CreateFile(path, blockSize, replicationFactor, true, recordOptions);
         }
 
         /// <summary>
@@ -461,11 +319,32 @@ namespace Tkl.Jumbo.Dfs
         /// <param name="useLocalReplica"><see langword="true"/> to put the first replica on the node that's creating the file if it's part of the DFS cluster; otherwise, <see langword="false"/>.</param>
         /// <param name="recordOptions">The record options for the file.</param>
         /// <returns>
-        /// A <see cref="DfsOutputStream"/> that can be used to write data to the file.
+        /// A <see cref="Stream"/> that can be used to write data to the file.
         /// </returns>
-        public DfsOutputStream CreateFile(string path, int blockSize, int replicationFactor, bool useLocalReplica, RecordStreamOptions recordOptions)
+        public override Stream CreateFile(string path, int blockSize, int replicationFactor, bool useLocalReplica, RecordStreamOptions recordOptions)
         {
             return new DfsOutputStream(NameServer, path, blockSize, replicationFactor, useLocalReplica, recordOptions);
+        }
+
+        /// <summary>
+        /// Deletes the specified file or directory.
+        /// </summary>
+        /// <param name="path">The path of the file or directory to delete.</param>
+        /// <param name="recursive"><see langword="true"/> to delete all children if <paramref name="path"/> refers to a directory; otherwise <see langword="false"/>.</param>
+        /// <returns><see langword="true"/> if the file was deleted; <see langword="false"/> if it doesn't exist.</returns>
+        public override bool Delete(string path, bool recursive)
+        {
+            return _nameServer.Delete(path, recursive);
+        }
+
+        /// <summary>
+        /// Moves the specified file or directory.
+        /// </summary>
+        /// <param name="source">The path of the file or directory to move.</param>
+        /// <param name="destination">The path to move the entry to.</param>
+        public override void Move(string source, string destination)
+        {
+            _nameServer.Move(source, destination);
         }
 
         private static T CreateNameServerClientInternal<T>(string hostName, int port)

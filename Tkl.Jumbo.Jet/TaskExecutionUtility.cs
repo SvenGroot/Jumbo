@@ -14,6 +14,7 @@ using System.Net.Sockets;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.IO;
+using Tkl.Jumbo.Dfs.FileSystem;
 
 namespace Tkl.Jumbo.Jet
 {
@@ -65,7 +66,7 @@ namespace Tkl.Jumbo.Jet
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(TaskExecutionUtility));
         private readonly int _progressInterval = 5000;
 
-        private readonly DfsClient _dfsClient;
+        private readonly FileSystemClient _fileSystemClient;
         private readonly JetClient _jetClient;
         private readonly IJobServerTaskProtocol _jobServerTaskClient;
         private readonly TaskContext _configuration;
@@ -96,10 +97,10 @@ namespace Tkl.Jumbo.Jet
 
         internal event EventHandler TaskInstanceCreated;
 
-        internal TaskExecutionUtility(DfsClient dfsClient, JetClient jetClient, ITaskServerUmbilicalProtocol umbilical, TaskExecutionUtility parentTask, TaskContext configuration)
+        internal TaskExecutionUtility(FileSystemClient fileSystemClient, JetClient jetClient, ITaskServerUmbilicalProtocol umbilical, TaskExecutionUtility parentTask, TaskContext configuration)
         {
-            if( dfsClient == null )
-                throw new ArgumentNullException("dfsClient");
+            if( fileSystemClient == null )
+                throw new ArgumentNullException("fileSystemClient");
             if( jetClient == null )
                 throw new ArgumentNullException("jetClient");
             if( umbilical == null )
@@ -107,7 +108,7 @@ namespace Tkl.Jumbo.Jet
             if( configuration == null )
                 throw new ArgumentNullException("configuration");
 
-            _dfsClient = dfsClient;
+            _fileSystemClient = fileSystemClient;
             _jetClient = jetClient;
             _jobServerTaskClient = JetClient.CreateJobServerTaskClient(jetClient.Configuration);
             _configuration = configuration;
@@ -213,9 +214,9 @@ namespace Tkl.Jumbo.Jet
             get { return _jetClient; }
         }
 
-        internal DfsClient DfsClient
+        internal FileSystemClient FileSystemClient
         {
-            get { return _dfsClient; }
+            get { return _fileSystemClient; }
         }
 
         internal IJobServerTaskProtocol JobServerTaskClient
@@ -346,7 +347,7 @@ namespace Tkl.Jumbo.Jet
 
                 try
                 {
-                    DfsClient dfsClient = new DfsClient(dfsConfig);
+                    FileSystemClient fileSystemClient = FileSystemClient.Create(dfsConfig);
                     JetClient jetClient = new JetClient(jetConfig);
 
 
@@ -365,7 +366,7 @@ namespace Tkl.Jumbo.Jet
                     }
 
                     TaskMetrics metrics;
-                    using( TaskExecutionUtility taskExecution = TaskExecutionUtility.Create(dfsClient, jetClient, umbilical, jobId, config, taskAttemptId, dfsJobDirectory, jobDirectory) )
+                    using( TaskExecutionUtility taskExecution = TaskExecutionUtility.Create(fileSystemClient, jetClient, umbilical, jobId, config, taskAttemptId, dfsJobDirectory, jobDirectory) )
                     {
                         metrics = taskExecution.RunTask();
                     }
@@ -397,7 +398,7 @@ namespace Tkl.Jumbo.Jet
         /// <summary>
         /// Creates a <see cref="TaskExecutionUtility"/> instance for the specified task.
         /// </summary>
-        /// <param name="dfsClient">The DFS client.</param>
+        /// <param name="fileSystemClient">The DFS client.</param>
         /// <param name="jetClient">The jet client.</param>
         /// <param name="umbilical">The umbilical.</param>
         /// <param name="jobId">The job id.</param>
@@ -406,10 +407,10 @@ namespace Tkl.Jumbo.Jet
         /// <param name="dfsJobDirectory">The DFS job directory.</param>
         /// <param name="localJobDirectory">The local job directory.</param>
         /// <returns>A <see cref="TaskExecutionUtility"/>.</returns>
-        public static TaskExecutionUtility Create(DfsClient dfsClient, JetClient jetClient, ITaskServerUmbilicalProtocol umbilical, Guid jobId, JobConfiguration jobConfiguration, TaskAttemptId taskAttemptId, string dfsJobDirectory, string localJobDirectory)
+        public static TaskExecutionUtility Create(FileSystemClient fileSystemClient, JetClient jetClient, ITaskServerUmbilicalProtocol umbilical, Guid jobId, JobConfiguration jobConfiguration, TaskAttemptId taskAttemptId, string dfsJobDirectory, string localJobDirectory)
         {
-            if( dfsClient == null )
-                throw new ArgumentNullException("dfsClient");
+            if( fileSystemClient == null )
+                throw new ArgumentNullException("fileSystemClient");
             if( jetClient == null )
                 throw new ArgumentNullException("jetClient");
             if( umbilical == null )
@@ -425,8 +426,8 @@ namespace Tkl.Jumbo.Jet
 
             TaskContext configuration = new TaskContext(jobId, jobConfiguration, taskAttemptId, jobConfiguration.GetStage(taskAttemptId.TaskId.StageId), localJobDirectory, dfsJobDirectory);
             Type taskExecutionType = DetermineTaskExecutionType(configuration);
-            ConstructorInfo ctor = taskExecutionType.GetConstructor(new Type[] { typeof(DfsClient), typeof(JetClient), typeof(ITaskServerUmbilicalProtocol), typeof(TaskExecutionUtility), typeof(TaskContext) });
-            return (TaskExecutionUtility)ctor.Invoke(new object[] { dfsClient, jetClient, umbilical, null, configuration });
+            ConstructorInfo ctor = taskExecutionType.GetConstructor(new Type[] { typeof(FileSystemClient), typeof(JetClient), typeof(ITaskServerUmbilicalProtocol), typeof(TaskExecutionUtility), typeof(TaskContext) });
+            return (TaskExecutionUtility)ctor.Invoke(new object[] { fileSystemClient, jetClient, umbilical, null, configuration });
         }
 
         /// <summary>
@@ -537,8 +538,8 @@ namespace Tkl.Jumbo.Jet
 
             Type taskExecutionType = DetermineTaskExecutionType(configuration);
 
-            ConstructorInfo ctor = taskExecutionType.GetConstructor(new Type[] { typeof(DfsClient), typeof(JetClient), typeof(ITaskServerUmbilicalProtocol), typeof(TaskExecutionUtility), typeof(TaskContext) });
-            return (TaskExecutionUtility)ctor.Invoke(new object[] { DfsClient, JetClient, Umbilical, this, configuration });
+            ConstructorInfo ctor = taskExecutionType.GetConstructor(new Type[] { typeof(FileSystemClient), typeof(JetClient), typeof(ITaskServerUmbilicalProtocol), typeof(TaskExecutionUtility), typeof(TaskContext) });
+            return (TaskExecutionUtility)ctor.Invoke(new object[] { FileSystemClient, JetClient, Umbilical, this, configuration });
         }
 
         /// <summary>
@@ -668,7 +669,7 @@ namespace Tkl.Jumbo.Jet
                 }
 
                 foreach( DfsOutputInfo output in _dfsOutputs )
-                    DfsClient.NameServer.Move(output.DfsOutputTempPath, output.DfsOutputPath);
+                    FileSystemClient.Move(output.DfsOutputTempPath, output.DfsOutputPath);
             }
         }
 
@@ -842,7 +843,7 @@ namespace Tkl.Jumbo.Jet
 
         internal IRecordWriter CreateDfsOutputWriter(int partition)
         {
-            string file = DfsPath.Combine(DfsPath.Combine(Context.DfsJobDirectory, "temp"), Context.TaskAttemptId + "_part" + partition.ToString(System.Globalization.CultureInfo.InvariantCulture));
+            string file = FileSystemClient.Path.Combine(FileSystemClient.Path.Combine(Context.DfsJobDirectory, "temp"), Context.TaskAttemptId + "_part" + partition.ToString(System.Globalization.CultureInfo.InvariantCulture));
             _log.DebugFormat("Opening output file {0}", file);
 
             TaskDfsOutput output = Context.StageConfiguration.DfsOutput;

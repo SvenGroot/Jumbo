@@ -112,7 +112,7 @@ namespace Tkl.Jumbo.Jet.Jobs
         /// <value>
         /// The DFS client.
         /// </value>
-        protected DfsClient DfsClient { get; private set; }
+        protected FileSystemClient FileSystemClient { get; private set; }
 
         /// <summary>
         /// Gets the jet client.
@@ -160,39 +160,25 @@ namespace Tkl.Jumbo.Jet.Jobs
 
         /// <summary>
         /// If <see cref="OverwriteOutput"/> is <see langword="true"/>, deletes the output path and then re-creates it; otherwise,
-        /// checks if the output path exists and creates it if it doesn't exist and fails if it does. Uses the value of the <see cref="Configurable.DfsConfiguration"/>
-        /// property to access the DFS.
+        /// checks if the output path exists and creates it if it doesn't exist and fails if it does.
         /// </summary>
         /// <param name="outputPath">The directory where the job's output will be stored.</param>
         protected void CheckAndCreateOutputPath(string outputPath)
         {
-            CheckAndCreateOutputPath(DfsClient, outputPath);
-        }
-
-        /// <summary>
-        /// If <see cref="OverwriteOutput"/> is <see langword="true"/>, deletes the output path and then re-creates it; otherwise,
-        /// checks if the output path exists and creates it if it doesn't exist and fails if it does.
-        /// </summary>
-        /// <param name="dfsClient">The <see cref="DfsClient"/> used to access the Distributed File System.</param>
-        /// <param name="outputPath">The directory where the job's output will be stored.</param>
-        protected void CheckAndCreateOutputPath(DfsClient dfsClient, string outputPath)
-        {
-            if( dfsClient == null )
-                throw new ArgumentNullException("dfsClient");
             if( outputPath == null )
                 throw new ArgumentNullException("outputPath");
 
             if( OverwriteOutput )
             {
-                dfsClient.NameServer.Delete(outputPath, true);
+                FileSystemClient.Delete(outputPath, true);
             }
             else
             {
-                JumboDirectory outputDir = dfsClient.NameServer.GetDirectoryInfo(outputPath);
+                JumboDirectory outputDir = FileSystemClient.GetDirectoryInfo(outputPath);
                 if( outputDir != null )
                     throw new ArgumentException("The specified output path already exists on the DFS.", "outputPath");
             }
-            dfsClient.NameServer.CreateDirectory(outputPath);
+            FileSystemClient.CreateDirectory(outputPath);
         }
 
         /// <summary>
@@ -220,14 +206,11 @@ namespace Tkl.Jumbo.Jet.Jobs
         /// <summary>
         /// Gets a <see cref="JumboFileSystemEntry"/> instance for the specified path, or throws an exception if the input doesn't exist.
         /// </summary>
-        /// <param name="dfsClient">The <see cref="DfsClient"/> used to access the Distributed File System.</param>
         /// <param name="inputPath">The input file or directory.</param>
         /// <returns>A <see cref="JumboFileSystemEntry"/> instance for the specified path</returns>
-        protected static JumboFileSystemEntry GetInputFileSystemEntry(DfsClient dfsClient, string inputPath)
+        protected JumboFileSystemEntry GetInputFileSystemEntry(string inputPath)
         {
-            if( dfsClient == null )
-                throw new ArgumentNullException("dfsClient");
-            JumboFileSystemEntry input = dfsClient.NameServer.GetFileSystemEntryInfo(inputPath);
+            JumboFileSystemEntry input = FileSystemClient.GetFileSystemEntryInfo(inputPath);
             if( input == null )
                 throw new ArgumentException("The specified input path doesn't exist.", "inputPath");
             return input;
@@ -258,7 +241,7 @@ namespace Tkl.Jumbo.Jet.Jobs
         public override void NotifyConfigurationChanged()
         {
             base.NotifyConfigurationChanged();
-            DfsClient = new DfsClient(DfsConfiguration);
+            FileSystemClient = FileSystemClient.Create(DfsConfiguration);
             JetClient = new JetClient(JetConfiguration);
         }
 

@@ -480,13 +480,11 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
 
         private void BuildJob<T>(JobBuilder builder, TaskFunction<Utf8String, Pair<int, T>> generateFunction, TaskFunction<Pair<int, T>, Pair<int, WritableCollection<MappedFrequentPattern>>> mineFunction)
         {
-            DfsClient client = new DfsClient(DfsConfiguration);
+            string fglistDirectory = FileSystemClient.Path.Combine(_outputPath, "fglist");
+            string resultDirectory = FileSystemClient.Path.Combine(_outputPath, "output");
 
-            string fglistDirectory = DfsPath.Combine(_outputPath, "fglist");
-            string resultDirectory = DfsPath.Combine(_outputPath, "output");
-
-            client.NameServer.CreateDirectory(fglistDirectory);
-            client.NameServer.CreateDirectory(resultDirectory);
+            FileSystemClient.CreateDirectory(fglistDirectory);
+            FileSystemClient.CreateDirectory(resultDirectory);
 
             var input = new DfsInput(_inputPath, typeof(LineRecordReader));
 
@@ -530,7 +528,7 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
             var output = CreateDfsOutput(resultDirectory, BinaryOutput ? typeof(BinaryRecordWriter<>) : typeof(TextRecordWriter<>));
             builder.ProcessRecords<Pair<int, WritableCollection<MappedFrequentPattern>>, Pair<Utf8String, WritableCollection<FrequentPattern>>>(patternChannel, output, AggregatePatterns);
 
-            builder.AddSetting("PFPGrowth.FGListPath", DfsPath.Combine(fglistDirectory, "FeatureGroupTask-00001"));
+            builder.AddSetting("PFPGrowth.FGListPath", FileSystemClient.Path.Combine(fglistDirectory, "FeatureGroupTask-00001"));
         }
     }
 }

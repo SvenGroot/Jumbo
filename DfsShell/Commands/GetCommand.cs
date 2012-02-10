@@ -36,7 +36,7 @@ namespace DfsShell.Commands
 
         public override void Run()
         {
-            JumboFileSystemEntry entry = Client.NameServer.GetFileSystemEntryInfo(_dfsPath);
+            JumboFileSystemEntry entry = Client.GetFileSystemEntryInfo(_dfsPath);
             if( entry == null )
             {
                 Console.Error.WriteLine("Path {0} does not exist on the DFS.", _dfsPath);

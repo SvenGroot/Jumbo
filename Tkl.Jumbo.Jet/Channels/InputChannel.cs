@@ -196,7 +196,7 @@ namespace Tkl.Jumbo.Jet.Channels
             IChannelMultiInputRecordReader channelReader = reader as IChannelMultiInputRecordReader;
             if( channelReader != null )
                 channelReader.Channel = this;
-            JetActivator.ApplyConfiguration(reader, TaskExecution.DfsClient.Configuration, TaskExecution.JetClient.Configuration, TaskExecution.Context);
+            JetActivator.ApplyConfiguration(reader, TaskExecution.FileSystemClient.Configuration, TaskExecution.JetClient.Configuration, TaskExecution.Context);
             return reader;
         }
 

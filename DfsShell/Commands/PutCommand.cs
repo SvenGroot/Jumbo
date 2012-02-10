@@ -82,12 +82,12 @@ namespace DfsShell.Commands
                     }
                     else
                     {
-                        JumboDirectory dir = Client.NameServer.GetDirectoryInfo(_dfsPath);
+                        JumboDirectory dir = Client.GetDirectoryInfo(_dfsPath);
                         string dfsPath = _dfsPath;
                         if( dir != null )
                         {
                             string fileName = Path.GetFileName(_localPath);
-                            dfsPath = DfsPath.Combine(dfsPath, fileName);
+                            dfsPath = Client.Path.Combine(dfsPath, fileName);
                         }
                         if( !Quiet )
                             Console.WriteLine("Copying local file \"{0}\" to DFS file \"{1}\"...", _localPath, dfsPath);
@@ -117,7 +117,7 @@ namespace DfsShell.Commands
             int previousPercentage = -1;
             using( FileStream inputStream = File.OpenRead(localPath) )
             using( IRecordReader reader = (IRecordReader)Activator.CreateInstance(recordReaderType, inputStream) )
-            using( DfsOutputStream outputStream = Client.CreateFile(dfsPath, (int)BlockSize.Value, ReplicationFactor, !NoLocalReplica, RecordOptions) )
+            using( Stream outputStream = Client.CreateFile(dfsPath, (int)BlockSize.Value, ReplicationFactor, !NoLocalReplica, RecordOptions) )
             using( IRecordWriter writer = (IRecordWriter)Activator.CreateInstance(recordWriterType, outputStream) )
             {
                 while( reader.ReadRecord() )
@@ -140,14 +140,14 @@ namespace DfsShell.Commands
         {
             string[] files = System.IO.Directory.GetFiles(localPath);
 
-            JumboDirectory directory = Client.NameServer.GetDirectoryInfo(dfsPath);
+            JumboDirectory directory = Client.GetDirectoryInfo(dfsPath);
             if( directory != null )
                 throw new ArgumentException(string.Format(System.Globalization.CultureInfo.CurrentCulture, "Directory {0} already exists on the DFS.", dfsPath), "dfsPath");
-            Client.NameServer.CreateDirectory(dfsPath);
+            Client.CreateDirectory(dfsPath);
 
             foreach( string file in files )
             {
-                string targetFile = DfsPath.Combine(dfsPath, System.IO.Path.GetFileName(file));
+                string targetFile = Client.Path.Combine(dfsPath, System.IO.Path.GetFileName(file));
                 UploadFileRecords(file, targetFile, recordReaderType, recordWriterType);
             }
         }

@@ -8,6 +8,7 @@ using NUnit.Framework;
 using Tkl.Jumbo.Dfs;
 using System.Threading;
 using System.Diagnostics;
+using Tkl.Jumbo.Dfs.FileSystem;
 
 namespace Tkl.Jumbo.Test.Dfs
 {

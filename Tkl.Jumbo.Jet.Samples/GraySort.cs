@@ -82,9 +82,7 @@ namespace Tkl.Jumbo.Jet.Samples
         /// <param name="builder">The job builder</param>
         protected override void BuildJob(JobBuilder builder)
         {
-            DfsClient dfsClient = new DfsClient(DfsConfiguration);
-
-            CheckAndCreateOutputPath(dfsClient, _outputPath);
+            CheckAndCreateOutputPath(_outputPath);
 
             var input = new DfsInput(_inputPath, typeof(GenSortRecordReader));
             var channel = new Channel() { PartitionerType = typeof(RangePartitioner), PartitionCount = _mergePartitions, PartitionsPerTask = PartitionsPerTask };
@@ -107,13 +105,11 @@ namespace Tkl.Jumbo.Jet.Samples
         protected override void OnJobCreated(Job job, JobConfiguration jobConfiguration)
         {
             //
-            string partitionFileName = DfsPath.Combine(job.Path, RangePartitioner.SplitFileName);
-            DfsClient dfsClient = new DfsClient(DfsConfiguration);
-
+            string partitionFileName = FileSystemClient.Path.Combine(job.Path, RangePartitioner.SplitFileName);
             var dfsInput = (from stage in jobConfiguration.Stages
                             where stage.DfsInput != null
                             select stage.DfsInput).SingleOrDefault();
-            RangePartitioner.CreatePartitionFile(dfsClient, partitionFileName, dfsInput, _mergePartitions, SampleSize);
+            RangePartitioner.CreatePartitionFile(FileSystemClient, partitionFileName, dfsInput, _mergePartitions, SampleSize);
         }
     }
 }

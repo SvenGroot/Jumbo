@@ -11,6 +11,7 @@ using System.Diagnostics;
 using System.Net.Sockets;
 using System.Runtime.Serialization.Formatters.Binary;
 using Tkl.Jumbo.Dfs;
+using Tkl.Jumbo.Dfs.FileSystem;
 
 namespace Tkl.Jumbo.Test.Dfs
 {

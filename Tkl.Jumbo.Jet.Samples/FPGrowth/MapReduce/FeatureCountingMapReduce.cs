@@ -13,6 +13,7 @@ using Tkl.Jumbo.Jet.Channels;
 using Tkl.Jumbo.Jet.Samples.IO;
 using Tkl.Jumbo.Jet.Samples.Tasks;
 using Tkl.Jumbo.Dfs.FileSystem;
+using System.IO;
 
 namespace Tkl.Jumbo.Jet.Samples.FPGrowth.MapReduce
 {
@@ -74,7 +75,7 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth.MapReduce
         /// <param name="builder">The job builder.</param>
         protected override void BuildJob(JobBuilder builder)
         {
-            string fullOutputPath = DfsPath.Combine(_outputPath, "featurecount");
+            string fullOutputPath = FileSystemClient.Path.Combine(_outputPath, "featurecount");
             CheckAndCreateOutputPath(fullOutputPath);
             JetClient client = new JetClient(JetConfiguration);
             int numPartitions = ReduceTaskCount;
@@ -106,11 +107,10 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth.MapReduce
             if( success )
             {
                 List<FGListItem> fgList = new List<FGListItem>();
-                DfsClient client = new DfsClient();
-                JumboDirectory directory = client.NameServer.GetDirectoryInfo(DfsPath.Combine(_outputPath, "featurecount"));
+                JumboDirectory directory = FileSystemClient.GetDirectoryInfo(FileSystemClient.Path.Combine(_outputPath, "featurecount"));
                 foreach( JumboFile file in directory.Children )
                 {
-                    using( DfsInputStream stream = client.OpenFile(file.FullPath) )
+                    using( Stream stream = FileSystemClient.OpenFile(file.FullPath) )
                     using( BinaryRecordReader<Pair<string, int>> reader = new BinaryRecordReader<Pair<string,int>>(stream, true) )
                     {
                         foreach( var record in reader.EnumerateRecords() )
@@ -132,10 +132,10 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth.MapReduce
 
                 int groupSize = 0;
                 int groupId = 0;
-                string fgListPath = DfsPath.Combine(_outputPath, "fglist");
+                string fgListPath = FileSystemClient.Path.Combine(_outputPath, "fglist");
                 if( OverwriteOutput )
-                    new DfsClient().NameServer.Delete(fgListPath, false);
-                using( DfsOutputStream stream = client.CreateFile(fgListPath) )
+                    FileSystemClient.Delete(fgListPath, false);
+                using( Stream stream = FileSystemClient.CreateFile(fgListPath) )
                 using( BinaryRecordWriter<FGListItem> output = new BinaryRecordWriter<FGListItem>(stream) )
                 {
                     foreach( FGListItem item in fgList )

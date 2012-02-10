@@ -9,6 +9,7 @@ using System.Threading;
 using System.IO;
 using System.Diagnostics;
 using Tkl.Jumbo.Dfs;
+using Tkl.Jumbo.Dfs.FileSystem;
 
 namespace Tkl.Jumbo.Test.Dfs
 {

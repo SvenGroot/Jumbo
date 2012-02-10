@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using Tkl.Jumbo.Dfs.FileSystem;
 
 namespace Tkl.Jumbo.Jet.Jobs.Builder
 {
@@ -21,12 +22,11 @@ namespace Tkl.Jumbo.Jet.Jobs.Builder
         /// <summary>
         /// Applies the output settings to the specified stage.
         /// </summary>
+        /// <param name="fileSystem">The file system.</param>
         /// <param name="stage">The stage.</param>
         /// <remarks>
-        /// <para>
-        ///   This does nothing for channels; it is only relevant for DFS output.
-        /// </para>
+        /// This does nothing for channels; it is only relevant for DFS output.
         /// </remarks>
-        void ApplyOutput(StageConfiguration stage);
+        void ApplyOutput(FileSystemClient fileSystem, StageConfiguration stage);
     }
 }

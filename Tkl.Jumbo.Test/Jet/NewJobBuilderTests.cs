@@ -15,6 +15,7 @@ using Tkl.Jumbo.Test.Tasks;
 using System.IO;
 using Tkl.Jumbo.Jet.Channels;
 using Tkl.Jumbo.Jet.Tasks;
+using Tkl.Jumbo.Dfs.FileSystem;
 
 namespace Tkl.Jumbo.Test.Jet
 {
@@ -63,7 +64,7 @@ namespace Tkl.Jumbo.Test.Jet
         #endregion
 
         private TestJetCluster _cluster;
-        private DfsClient _dfsClient;
+        private FileSystemClient _fileSystemClient;
         private JetClient _jetClient;
 
         private const string _inputPath = "/test.txt";
@@ -74,16 +75,17 @@ namespace Tkl.Jumbo.Test.Jet
         public void SetUp()
         {
             _cluster = new TestJetCluster(4194304, true, 2, CompressionType.None);
-            _dfsClient = new DfsClient(TestDfsCluster.CreateClientConfig());
+            _fileSystemClient = FileSystemClient.Create(TestDfsCluster.CreateClientConfig());
             _jetClient = new JetClient(TestJetCluster.CreateClientConfig());
             Trace.WriteLine("Cluster running.");
 
             // This file will purely be used so we have something to use as input when creating jobs, it won't be read so the contents don't matter.
-            using( DfsOutputStream stream = _dfsClient.CreateFile(_inputPath) )
+            using( Stream stream = _fileSystemClient.CreateFile(_inputPath) )
             {
                 Utilities.GenerateData(stream, 10000000);
             }
         }
+
 
         [TestFixtureTearDown]
         public void Teardown()
@@ -96,7 +98,7 @@ namespace Tkl.Jumbo.Test.Jet
         [Test]
         public void TestProcessSingleStage()
         {
-            JobBuilder builder = new JobBuilder(_dfsClient, _jetClient);
+            JobBuilder builder = new JobBuilder(_fileSystemClient, _jetClient);
 
             var input = builder.Read(_inputPath, typeof(LineRecordReader));
             var operation = builder.Process(input, typeof(LineCounterTask));
@@ -116,7 +118,7 @@ namespace Tkl.Jumbo.Test.Jet
         [Test]
         public void TestProcessMultiStage()
         {
-            JobBuilder builder = new JobBuilder(_dfsClient, _jetClient);
+            JobBuilder builder = new JobBuilder(_fileSystemClient, _jetClient);
 
             var input = builder.Read(_inputPath, typeof(LineRecordReader));
             var op1 = builder.Process(input, typeof(LineCounterTask));
@@ -139,7 +141,7 @@ namespace Tkl.Jumbo.Test.Jet
         [Test]
         public void TestProcessDelegate()
         {
-            JobBuilder builder = new JobBuilder(_dfsClient, _jetClient);
+            JobBuilder builder = new JobBuilder(_fileSystemClient, _jetClient);
 
             var input = builder.Read(_inputPath, typeof(LineRecordReader));
             var operation = builder.Process<Utf8String, int>(input, ProcessRecords);
@@ -161,7 +163,7 @@ namespace Tkl.Jumbo.Test.Jet
         [Test]
         public void TestProcessDelegateNoContext()
         {
-            JobBuilder builder = new JobBuilder(_dfsClient, _jetClient);
+            JobBuilder builder = new JobBuilder(_fileSystemClient, _jetClient);
 
             var input = builder.Read(_inputPath, typeof(LineRecordReader));
             var operation = builder.Process<Utf8String, int>(input, ProcessRecordsNoContext);
@@ -183,7 +185,7 @@ namespace Tkl.Jumbo.Test.Jet
         [Test]
         public void TestCustomDfsOutput()
         {
-            JobBuilder builder = new JobBuilder(_dfsClient, _jetClient);
+            JobBuilder builder = new JobBuilder(_fileSystemClient, _jetClient);
 
             var input = builder.Read(_inputPath, typeof(LineRecordReader));
             var operation = builder.Process(input, typeof(LineCounterTask));
@@ -198,7 +200,7 @@ namespace Tkl.Jumbo.Test.Jet
         [Test]
         public void TestCustomChannel()
         {
-            JobBuilder builder = new JobBuilder(_dfsClient, _jetClient);
+            JobBuilder builder = new JobBuilder(_fileSystemClient, _jetClient);
 
             var input = builder.Read(_inputPath, typeof(LineRecordReader));
             var op1 = builder.Process(input, typeof(LineCounterTask));
@@ -219,7 +221,7 @@ namespace Tkl.Jumbo.Test.Jet
         [Test]
         public void TestSortDfsInputOutput()
         {
-            JobBuilder builder = new JobBuilder(_dfsClient, _jetClient);
+            JobBuilder builder = new JobBuilder(_fileSystemClient, _jetClient);
 
             var input = builder.Read(_inputPath, typeof(LineRecordReader));
             var sort = builder.Sort(input);
@@ -244,7 +246,7 @@ namespace Tkl.Jumbo.Test.Jet
         [Test]
         public void TestSortDfsInputOutputSinglePartition()
         {
-            JobBuilder builder = new JobBuilder(_dfsClient, _jetClient);
+            JobBuilder builder = new JobBuilder(_fileSystemClient, _jetClient);
 
             var input = builder.Read(_inputPath, typeof(LineRecordReader));
             var sort = builder.Sort(input);
@@ -269,7 +271,7 @@ namespace Tkl.Jumbo.Test.Jet
         [Test]
         public void TestSortChannelInputOutput()
         {
-            JobBuilder builder = new JobBuilder(_dfsClient, _jetClient);
+            JobBuilder builder = new JobBuilder(_fileSystemClient, _jetClient);
 
 
             var input = builder.Read(_inputPath, typeof(LineRecordReader));
@@ -299,7 +301,7 @@ namespace Tkl.Jumbo.Test.Jet
         [Test]
         public void TestSortCustomComparer()
         {
-            JobBuilder builder = new JobBuilder(_dfsClient, _jetClient);
+            JobBuilder builder = new JobBuilder(_fileSystemClient, _jetClient);
 
             var input = builder.Read(_inputPath, typeof(LineRecordReader));
             var sort = builder.Sort(input, typeof(FakeComparer<>));
@@ -316,7 +318,7 @@ namespace Tkl.Jumbo.Test.Jet
         [Test]
         public void TestSpillSort()
         {
-            JobBuilder builder = new JobBuilder(_dfsClient, _jetClient);
+            JobBuilder builder = new JobBuilder(_fileSystemClient, _jetClient);
 
             var input = builder.Read(_inputPath, typeof(LineRecordReader));
             var sort = builder.SpillSort(input);
@@ -341,7 +343,7 @@ namespace Tkl.Jumbo.Test.Jet
         [Test]
         public void TestSpillSortCombiner()
         {
-            JobBuilder builder = new JobBuilder(_dfsClient, _jetClient);
+            JobBuilder builder = new JobBuilder(_fileSystemClient, _jetClient);
 
             var input = builder.Read(_inputPath, typeof(LineRecordReader));
             var sort = builder.SpillSort(input, typeof(FakeCombiner<>));
@@ -368,7 +370,7 @@ namespace Tkl.Jumbo.Test.Jet
         [Test]
         public void TestSpillSortCombinerDelegate()
         {
-            JobBuilder builder = new JobBuilder(_dfsClient, _jetClient);
+            JobBuilder builder = new JobBuilder(_fileSystemClient, _jetClient);
 
             var input = builder.Read(_inputPath, typeof(RecordFileReader<Pair<Utf8String, int>>));
             var sort = builder.SpillSort<Utf8String, int>(input, CombineRecords);
@@ -397,7 +399,7 @@ namespace Tkl.Jumbo.Test.Jet
         [Test]
         public void TestSpillSortCombinerDelegateNoContext()
         {
-            JobBuilder builder = new JobBuilder(_dfsClient, _jetClient);
+            JobBuilder builder = new JobBuilder(_fileSystemClient, _jetClient);
 
             var input = builder.Read(_inputPath, typeof(RecordFileReader<Pair<Utf8String, int>>));
             var sort = builder.SpillSort<Utf8String, int>(input, CombineRecordsNoContext);
@@ -426,7 +428,7 @@ namespace Tkl.Jumbo.Test.Jet
         [Test]
         public void TestGroupAggregateDfsInputOutput()
         {
-            JobBuilder builder = new JobBuilder(_dfsClient, _jetClient);
+            JobBuilder builder = new JobBuilder(_fileSystemClient, _jetClient);
 
             var input = builder.Read(_inputPath, typeof(RecordFileReader<Pair<Utf8String, int>>));
             var aggregated = builder.GroupAggregate(input, typeof(SumTask<>));
@@ -447,7 +449,7 @@ namespace Tkl.Jumbo.Test.Jet
         [Test]
         public void TestGroupAggregateChannelInput()
         {
-            JobBuilder builder = new JobBuilder(_dfsClient, _jetClient);
+            JobBuilder builder = new JobBuilder(_fileSystemClient, _jetClient);
 
             var input = builder.Read(_inputPath, typeof(LineRecordReader));
             var paired = builder.Process(input, typeof(GenerateInt32PairTask<>));
@@ -471,7 +473,7 @@ namespace Tkl.Jumbo.Test.Jet
         [Test]
         public void TestGroupAggregateDelegate()
         {
-            JobBuilder builder = new JobBuilder(_dfsClient, _jetClient);
+            JobBuilder builder = new JobBuilder(_fileSystemClient, _jetClient);
 
             var input = builder.Read(_inputPath, typeof(RecordFileReader<Pair<Utf8String, int>>));
             var aggregated = builder.GroupAggregate<Utf8String, int>(input, AccumulateRecords);
@@ -495,7 +497,7 @@ namespace Tkl.Jumbo.Test.Jet
         [Test]
         public void TestGroupAggregateDelegateNoContext()
         {
-            JobBuilder builder = new JobBuilder(_dfsClient, _jetClient);
+            JobBuilder builder = new JobBuilder(_fileSystemClient, _jetClient);
 
             var input = builder.Read(_inputPath, typeof(RecordFileReader<Pair<Utf8String, int>>));
             var aggregated = builder.GroupAggregate<Utf8String, int>(input, AccumulateRecordsNoContext);
@@ -519,7 +521,7 @@ namespace Tkl.Jumbo.Test.Jet
         [Test]
         public void TestMapReduce()
         {
-            JobBuilder builder = new JobBuilder(_dfsClient, _jetClient);
+            JobBuilder builder = new JobBuilder(_fileSystemClient, _jetClient);
 
             // This is it: the official way to write a "behaves like Hadoop" MapReduce job.
             var input = builder.Read(_inputPath, typeof(LineRecordReader));
@@ -547,7 +549,7 @@ namespace Tkl.Jumbo.Test.Jet
         [Test]
         public void TestMapReduceNoContext()
         {
-            JobBuilder builder = new JobBuilder(_dfsClient, _jetClient);
+            JobBuilder builder = new JobBuilder(_fileSystemClient, _jetClient);
 
             var input = builder.Read(_inputPath, typeof(LineRecordReader));
             var mapped = builder.Map<Utf8String, Pair<Utf8String, int>>(input, MapRecordsNoContext);
@@ -574,7 +576,7 @@ namespace Tkl.Jumbo.Test.Jet
         [Test]
         public void TestGenerate()
         {
-            JobBuilder builder = new JobBuilder(_dfsClient, _jetClient);
+            JobBuilder builder = new JobBuilder(_fileSystemClient, _jetClient);
 
             var operation = builder.Generate(5, typeof(LineCounterTask)); // This task actually requires input but since no one's running it, we don't care.
             builder.Write(operation, _outputPath, typeof(TextRecordWriter<>));
@@ -594,7 +596,7 @@ namespace Tkl.Jumbo.Test.Jet
         [Test]
         public void TestGenerateDelegate()
         {
-            JobBuilder builder = new JobBuilder(_dfsClient, _jetClient);
+            JobBuilder builder = new JobBuilder(_fileSystemClient, _jetClient);
 
             var operation = builder.Generate<int>(5, GenerateRecords);
             builder.Write(operation, _outputPath, typeof(TextRecordWriter<>));
@@ -616,7 +618,7 @@ namespace Tkl.Jumbo.Test.Jet
         [Test]
         public void TestGenerateDelegateNoContext()
         {
-            JobBuilder builder = new JobBuilder(_dfsClient, _jetClient);
+            JobBuilder builder = new JobBuilder(_fileSystemClient, _jetClient);
 
             var operation = builder.Generate<int>(5, GenerateRecordsNoContext);
             builder.Write(operation, _outputPath, typeof(TextRecordWriter<>));
@@ -708,12 +710,12 @@ namespace Tkl.Jumbo.Test.Jet
             }
         }
 
-        private static void VerifyDfsOutput(StageConfiguration stage, Type recordWriterType, int blockSize = 0, int replicationFactor = 0)
+        private void VerifyDfsOutput(StageConfiguration stage, Type recordWriterType, int blockSize = 0, int replicationFactor = 0)
         {
             Assert.IsNull(stage.ChildStage);
             Assert.IsNull(stage.OutputChannel);
             Assert.IsNotNull(stage.DfsOutput);
-            Assert.AreEqual(DfsPath.Combine(_outputPath, stage.StageId + "-{0:00000}"), stage.DfsOutput.PathFormat);
+            Assert.AreEqual(_fileSystemClient.Path.Combine(_outputPath, stage.StageId + "-{0:00000}"), stage.DfsOutput.PathFormat);
             Assert.AreEqual(blockSize, stage.DfsOutput.BlockSize);
             Assert.AreEqual(replicationFactor, stage.DfsOutput.ReplicationFactor);
             Assert.AreEqual(recordWriterType, stage.DfsOutput.RecordWriterType.ReferencedType);

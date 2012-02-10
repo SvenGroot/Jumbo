@@ -9,6 +9,7 @@ using Tkl.Jumbo.Dfs;
 using System.Globalization;
 using Tkl.Jumbo.Jet.Tasks;
 using Tkl.Jumbo.Jet.Channels;
+using Tkl.Jumbo.Dfs.FileSystem;
 
 namespace Tkl.Jumbo.Jet.Jobs.Builder
 {
@@ -19,20 +20,20 @@ namespace Tkl.Jumbo.Jet.Jobs.Builder
     {
         private readonly JobConfiguration _job;
         private readonly HashSet<string> _stageIds = new HashSet<string>();
-        private readonly DfsClient _dfsClient;
+        private readonly FileSystemClient _fileSystemClient;
         private readonly JetClient _jetClient;
 
-        internal JobBuilderCompiler(IEnumerable<Assembly> assemblies, DfsClient dfsClient, JetClient jetClient)
+        internal JobBuilderCompiler(IEnumerable<Assembly> assemblies, FileSystemClient fileSystemClient, JetClient jetClient)
         {
             if( assemblies == null )
                 throw new ArgumentNullException("assemblies");
-            if( dfsClient == null )
-                throw new ArgumentNullException("dfsClient");
+            if( fileSystemClient == null )
+                throw new ArgumentNullException("fileSystemClient");
             if( jetClient == null )
                 throw new ArgumentNullException("jetClient");
 
             _job = new JobConfiguration(assemblies.ToArray());
-            _dfsClient = dfsClient;
+            _fileSystemClient = fileSystemClient;
             _jetClient = jetClient;
         }
 
@@ -77,9 +78,9 @@ namespace Tkl.Jumbo.Jet.Jobs.Builder
                 throw new ArgumentNullException("input");
 
             stageId = CreateUniqueStageId(stageId);
-            StageConfiguration stage = _job.AddInputStage(stageId, _dfsClient.NameServer.GetFileSystemEntryInfo(input.Path), taskType, input.RecordReaderType);
+            StageConfiguration stage = _job.AddInputStage(stageId, _fileSystemClient.GetFileSystemEntryInfo(input.Path), taskType, input.RecordReaderType);
             if( output != null )
-                output.ApplyOutput(stage);
+                output.ApplyOutput(_fileSystemClient, stage);
             return stage;
         }
 
@@ -126,11 +127,11 @@ namespace Tkl.Jumbo.Jet.Jobs.Builder
                 if( input == null || input.ChannelType != Channels.ChannelType.Pipeline )
                     stageId = CreateUniqueStageId(stageId);
 
-                stage = _job.AddStage(stageId, taskType, DetermineTaskCount(taskCount, input), input, null, null);
+                stage = _job.AddStage(stageId, taskType, DetermineTaskCount(taskCount, input), input, null, null, null);
             }
 
             if( output != null )
-                output.ApplyOutput(stage);
+                output.ApplyOutput(_fileSystemClient, stage);
 
             return stage;
         }

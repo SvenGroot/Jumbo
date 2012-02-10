@@ -13,6 +13,7 @@ using Tkl.Jumbo.Jet.Tasks;
 using Tkl.Jumbo.Jet.Channels;
 using Tkl.Jumbo.IO;
 using Ookii.CommandLine;
+using System.IO;
 
 namespace Tkl.Jumbo.Jet.Samples
 {
@@ -101,11 +102,10 @@ namespace Tkl.Jumbo.Jet.Samples
             if( success )
             {
                 Console.WriteLine();
-                DfsClient client = new DfsClient(DfsConfiguration);
                 try
                 {
-                    using( DfsInputStream stream = client.OpenFile(_outputFile) )
-                    using( System.IO.StreamReader reader = new System.IO.StreamReader(stream) )
+                    using( Stream stream = FileSystemClient.OpenFile(_outputFile) )
+                    using( StreamReader reader = new StreamReader(stream) )
                     {
                         Console.WriteLine(reader.ReadToEnd());
                     }

@@ -26,7 +26,7 @@ namespace DfsShell.Commands
 
         public override void Run()
         {
-            JumboDirectory dir = Client.NameServer.GetDirectoryInfo(_path);
+            JumboDirectory dir = Client.GetDirectoryInfo(_path);
             if( dir == null )
                 Console.WriteLine("Directory not found.");
             else

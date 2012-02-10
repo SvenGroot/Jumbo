@@ -11,6 +11,7 @@ using Tkl.Jumbo.Dfs;
 using System.Net.Sockets;
 using System.Runtime.Serialization.Formatters.Binary;
 using System.IO;
+using Tkl.Jumbo.Dfs.FileSystem;
 
 public partial class logfile : System.Web.UI.Page
 {
@@ -40,7 +41,7 @@ public partial class logfile : System.Web.UI.Page
             maxSize = Int32.MaxValue;
         if( dataServer == null )
         {
-            DfsClient client = new DfsClient();
+            DfsClient client = (DfsClient)FileSystemClient.Create();
             DfsMetrics metrics = client.NameServer.GetMetrics();
             Title = string.Format("Name server {0} log file - Jumbo DFS", metrics.NameServer);
             HeaderText.InnerText = string.Format("Name server {0} log file", metrics.NameServer);

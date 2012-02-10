@@ -27,7 +27,7 @@ namespace DfsShell.Commands
 
         public override void Run()
         {
-            if( !Client.NameServer.Delete(_path, Recursive) )
+            if( !Client.Delete(_path, Recursive) )
                 Console.Error.WriteLine("Path did not exist.");
         }
     }

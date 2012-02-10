@@ -8,6 +8,7 @@ using Ookii.CommandLine;
 using System.ComponentModel;
 using System.Runtime.InteropServices;
 using System.Threading;
+using Tkl.Jumbo.Dfs.FileSystem;
 
 namespace DfsShell.Commands
 {
@@ -23,7 +24,8 @@ namespace DfsShell.Commands
 
         public override void Run()
         {
-            if( Client.NameServer.WaitForSafeModeOff(_timeout) )
+            DfsClient dfsClient = Client as DfsClient;
+            if( dfsClient == null || dfsClient.NameServer.WaitForSafeModeOff(_timeout) )
                 Console.WriteLine("Safe mode is OFF.");
             else
                 Console.WriteLine("Safe mode is ON.");            

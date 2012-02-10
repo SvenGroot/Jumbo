@@ -8,6 +8,7 @@ using Ookii.CommandLine;
 using System.ComponentModel;
 using Tkl.Jumbo.Dfs;
 using System.Runtime.InteropServices;
+using Tkl.Jumbo.Dfs.FileSystem;
 
 namespace DfsShell.Commands
 {
@@ -26,13 +27,19 @@ namespace DfsShell.Commands
 
         public override void Run()
         {
-            Guid[] blocks = Client.NameServer.GetBlocks(_kind);
-            foreach( Guid blockId in blocks )
+            DfsClient dfsClient = Client as DfsClient;
+            if( dfsClient == null )
+                Console.WriteLine("The configured file system doesn't support blocks.");
+            else
             {
-                if( IncludeFiles )
-                    Console.WriteLine("{0:B}: {1}", blockId, Client.NameServer.GetFileForBlock(blockId));
-                else
-                    Console.WriteLine(blockId.ToString("B"));
+                Guid[] blocks = dfsClient.NameServer.GetBlocks(_kind);
+                foreach( Guid blockId in blocks )
+                {
+                    if( IncludeFiles )
+                        Console.WriteLine("{0:B}: {1}", blockId, dfsClient.NameServer.GetFileForBlock(blockId));
+                    else
+                        Console.WriteLine(blockId.ToString("B"));
+                }
             }
         }
     }

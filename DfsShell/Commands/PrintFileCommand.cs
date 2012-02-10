@@ -128,7 +128,7 @@ namespace DfsShell.Commands
             {
                 Encoding encoding = System.Text.Encoding.GetEncoding(Encoding);
 
-                using( DfsInputStream stream = Client.OpenFile(_path) )
+                using( Stream stream = Client.OpenFile(_path) )
                 {
                     if( Tail )
                     {
@@ -163,7 +163,7 @@ namespace DfsShell.Commands
                 return;
             }
 
-            using( DfsInputStream stream = Client.OpenFile(_path) )
+            using( Stream stream = Client.OpenFile(_path) )
             {
                 IRecordReader reader = null;
                 if( Size < stream.Length )

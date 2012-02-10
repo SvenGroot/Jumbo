@@ -41,9 +41,9 @@ namespace Tkl.Jumbo.Test.Jet
         public void Setup()
         {
             _cluster = new TestJetCluster(16777216, true, _maxTasks, CompressionType.None);
-            DfsClient dfsClient = new DfsClient(Dfs.TestDfsCluster.CreateClientConfig());
+            FileSystemClient fileSystemClient = FileSystemClient.Create(Dfs.TestDfsCluster.CreateClientConfig());
             const int size = 50000000;
-            using( DfsOutputStream stream = dfsClient.CreateFile(_fileName) )
+            using( Stream stream = fileSystemClient.CreateFile(_fileName) )
             {
                 _lines = Utilities.GenerateDataLines(stream, size);
             }
@@ -59,12 +59,12 @@ namespace Tkl.Jumbo.Test.Jet
         [Test]
         public void TestJobAbort()
         {
-            DfsClient dfsClient = new DfsClient(Dfs.TestDfsCluster.CreateClientConfig());
-            JumboFile file = dfsClient.NameServer.GetFileInfo(_fileName);
-            JobConfiguration config = CreateConfiguration(dfsClient, file, "/abort", false, typeof(LineCounterTask), typeof(LineAdderTask), ChannelType.File);
+            FileSystemClient fileSystemClient = FileSystemClient.Create(Dfs.TestDfsCluster.CreateClientConfig());
+            JumboFile file = fileSystemClient.GetFileInfo(_fileName);
+            JobConfiguration config = CreateConfiguration(fileSystemClient, file, "/abort", false, typeof(LineCounterTask), typeof(LineAdderTask), ChannelType.File);
 
             JetClient target = new JetClient(TestJetCluster.CreateClientConfig());
-            Job job = target.RunJob(config, dfsClient, typeof(LineCounterTask).Assembly.Location);
+            Job job = target.RunJob(config, fileSystemClient, typeof(LineCounterTask).Assembly.Location);
 
             JobStatus status;
             do
@@ -187,27 +187,27 @@ namespace Tkl.Jumbo.Test.Jet
         {
             const string inputPath = "/wordcountinput";
             const string outputPath = "/wordcountoutput";
-            DfsClient dfsClient = new DfsClient(Dfs.TestDfsCluster.CreateClientConfig());
+            FileSystemClient fileSystemClient = FileSystemClient.Create(Dfs.TestDfsCluster.CreateClientConfig());
             List<string> words;
-            using( StreamWriter writer = new StreamWriter(dfsClient.CreateFile(inputPath)) )
+            using( StreamWriter writer = new StreamWriter(fileSystemClient.CreateFile(inputPath)) )
             {
                 words = Utilities.GenerateDataWords(writer, 200000, 10);
             }
-            dfsClient.NameServer.CreateDirectory(outputPath);
+            fileSystemClient.CreateDirectory(outputPath);
 
             JobConfiguration job = new JobConfiguration(typeof(WordCountTask).Assembly);
-            StageConfiguration stage = job.AddInputStage("WordCountStage", dfsClient.NameServer.GetFileInfo(inputPath), typeof(WordCountTask), typeof(LineRecordReader));
+            StageConfiguration stage = job.AddInputStage("WordCountStage", fileSystemClient.GetFileInfo(inputPath), typeof(WordCountTask), typeof(LineRecordReader));
             stage.AddTypedSetting(FileOutputChannel.OutputTypeSettingKey, FileChannelOutputType.SortSpill);
             stage.AddSetting(FileOutputChannel.SpillSortCombinerTypeSettingKey, typeof(WordCountReduceTask).AssemblyQualifiedName);
             stage.AddSetting(FileOutputChannel.SpillBufferSizeSettingKey, "5MB");
 
-            job.AddStage("WordCountReduceStage", typeof(WordCountReduceTask), 1, new InputStageInfo(stage) { MultiInputRecordReaderType = typeof(MergeRecordReader<Pair<Utf8String, int>>) }, outputPath, typeof(BinaryRecordWriter<Pair<Utf8String, int>>));
+            job.AddStage("WordCountReduceStage", typeof(WordCountReduceTask), 1, new InputStageInfo(stage) { MultiInputRecordReaderType = typeof(MergeRecordReader<Pair<Utf8String, int>>) }, fileSystemClient, outputPath, typeof(BinaryRecordWriter<Pair<Utf8String, int>>));
 
-            JobStatus status = RunJob(dfsClient, job);
+            JobStatus status = RunJob(fileSystemClient, job);
 
-            string outputFileName = DfsPath.Combine(outputPath, "WordCountReduceStage-00001");
+            string outputFileName = fileSystemClient.Path.Combine(outputPath, "WordCountReduceStage-00001");
             List<KeyValuePair<string, int>> actual;
-            using( BinaryRecordReader<Pair<string, int>> reader = new BinaryRecordReader<Pair<string, int>>(dfsClient.OpenFile(outputFileName)) )
+            using( BinaryRecordReader<Pair<string, int>> reader = new BinaryRecordReader<Pair<string, int>>(fileSystemClient.OpenFile(outputFileName)) )
             {
                 actual = reader.EnumerateRecords().Select(r => new KeyValuePair<string, int>(r.Key, r.Value)).ToList();
             }
@@ -229,21 +229,21 @@ namespace Tkl.Jumbo.Test.Jet
         public void TestJobSettings()
         {
             string outputPath = "/settingsoutput";
-            DfsClient dfsClient = new DfsClient(Dfs.TestDfsCluster.CreateClientConfig());
-            dfsClient.NameServer.CreateDirectory(outputPath);
+            FileSystemClient fileSystemClient = FileSystemClient.Create(Dfs.TestDfsCluster.CreateClientConfig());
+            fileSystemClient.CreateDirectory(outputPath);
 
-            List<int> expected = CreateNumberListInputFile(10000, "/settingsinput", dfsClient);
+            List<int> expected = CreateNumberListInputFile(10000, "/settingsinput", fileSystemClient);
 
             JobConfiguration config = new JobConfiguration(typeof(MultiplierTask).Assembly);
-            config.AddInputStage("MultiplyStage", dfsClient.NameServer.GetFileInfo("/settingsinput"), typeof(MultiplierTask), typeof(LineRecordReader), outputPath, typeof(BinaryRecordWriter<int>));
+            config.AddInputStage("MultiplyStage", fileSystemClient.GetFileInfo("/settingsinput"), typeof(MultiplierTask), typeof(LineRecordReader), fileSystemClient, outputPath, typeof(BinaryRecordWriter<int>));
             int factor = new Random().Next(2, 100);
             config.AddTypedSetting("factor", factor);
 
-            RunJob(dfsClient, config);
+            RunJob(fileSystemClient, config);
 
             var multiplied = (from item in expected
                              select item * factor).ToList();
-            CheckOutput(dfsClient, multiplied, DfsPath.Combine(outputPath, "MultiplyStage-00001"));
+            CheckOutput(fileSystemClient, multiplied, fileSystemClient.Path.Combine(outputPath, "MultiplyStage-00001"));
         }
 
         [Test]
@@ -256,16 +256,16 @@ namespace Tkl.Jumbo.Test.Jet
             customers.Randomize();
             orders.Randomize();
 
-            DfsClient dfsClient = new DfsClient(Dfs.TestDfsCluster.CreateClientConfig());
-            dfsClient.NameServer.CreateDirectory("/testjoin");
-            using( DfsOutputStream stream = dfsClient.CreateFile("/testjoin/customers") )
+            FileSystemClient fileSystemClient = FileSystemClient.Create(Dfs.TestDfsCluster.CreateClientConfig());
+            fileSystemClient.CreateDirectory("/testjoin");
+            using( Stream stream = fileSystemClient.CreateFile("/testjoin/customers") )
             using( RecordFileWriter<Customer> recordFile = new RecordFileWriter<Customer>(stream) )
             {
                 foreach( Customer customer in customers )
                     recordFile.WriteRecord(customer);
             }
 
-            using( DfsOutputStream stream = dfsClient.CreateFile("/testjoin/orders") )
+            using( Stream stream = fileSystemClient.CreateFile("/testjoin/orders") )
             using( RecordFileWriter<Order> recordFile = new RecordFileWriter<Order>(stream) )
             {
                 foreach( Order order in orders )
@@ -274,16 +274,16 @@ namespace Tkl.Jumbo.Test.Jet
              
             const int joinTasks = 2;
             JobConfiguration config = new JobConfiguration(typeof(CustomerOrderJoinRecordReader).Assembly);
-            StageConfiguration customerInput = config.AddInputStage("CustomerInput", dfsClient.NameServer.GetFileInfo("/testjoin/customers"), typeof(EmptyTask<Customer>), typeof(RecordFileReader<Customer>));
-            StageConfiguration customerSort = config.AddStage("CustomerSort", typeof(SortTask<Customer>), joinTasks, new InputStageInfo(customerInput) { ChannelType = ChannelType.Pipeline }, null, null);
-            StageConfiguration orderInput = config.AddInputStage("OrderInput", dfsClient.NameServer.GetFileInfo("/testjoin/orders"), typeof(EmptyTask<Order>), typeof(RecordFileReader<Order>));
-            StageConfiguration orderSort = config.AddStage("OrderSort", typeof(SortTask<Order>), joinTasks, new InputStageInfo(orderInput) { ChannelType = ChannelType.Pipeline }, null, null);
+            StageConfiguration customerInput = config.AddInputStage("CustomerInput", fileSystemClient.GetFileInfo("/testjoin/customers"), typeof(EmptyTask<Customer>), typeof(RecordFileReader<Customer>));
+            StageConfiguration customerSort = config.AddStage("CustomerSort", typeof(SortTask<Customer>), joinTasks, new InputStageInfo(customerInput) { ChannelType = ChannelType.Pipeline }, null, null, null);
+            StageConfiguration orderInput = config.AddInputStage("OrderInput", fileSystemClient.GetFileInfo("/testjoin/orders"), typeof(EmptyTask<Order>), typeof(RecordFileReader<Order>));
+            StageConfiguration orderSort = config.AddStage("OrderSort", typeof(SortTask<Order>), joinTasks, new InputStageInfo(orderInput) { ChannelType = ChannelType.Pipeline }, null, null, null);
 
             orderInput.AddSetting(PartitionerConstants.EqualityComparerSetting, typeof(OrderJoinComparer).AssemblyQualifiedName);
             orderSort.AddSetting(TaskConstants.ComparerSettingKey, typeof(OrderJoinComparer).AssemblyQualifiedName);
 
             const string outputPath = "/testjoinoutput";
-            dfsClient.NameServer.CreateDirectory(outputPath);
+            fileSystemClient.CreateDirectory(outputPath);
             InputStageInfo customerSortInfo = new InputStageInfo(customerSort)
             {
                 MultiInputRecordReaderType = typeof(MergeRecordReader<Customer>)
@@ -292,14 +292,14 @@ namespace Tkl.Jumbo.Test.Jet
             {
                 MultiInputRecordReaderType = typeof(MergeRecordReader<Order>)
             };
-            config.AddStage("Join", typeof(EmptyTask<CustomerOrder>), joinTasks, new[] { customerSortInfo, orderSortInfo }, typeof(CustomerOrderJoinRecordReader), outputPath, typeof(RecordFileWriter<CustomerOrder>));
+            config.AddStage("Join", typeof(EmptyTask<CustomerOrder>), joinTasks, new[] { customerSortInfo, orderSortInfo }, typeof(CustomerOrderJoinRecordReader), fileSystemClient, outputPath, typeof(RecordFileWriter<CustomerOrder>));
 
-            RunJob(dfsClient, config);
+            RunJob(fileSystemClient, config);
 
             List<CustomerOrder> actual = new List<CustomerOrder>();
             for( int x = 0; x < joinTasks; ++x )
             {
-                using( DfsInputStream stream = dfsClient.OpenFile(DfsPath.Combine(outputPath, string.Format("Join-{0:00000}", x+1))) )
+                using( Stream stream = fileSystemClient.OpenFile(fileSystemClient.Path.Combine(outputPath, string.Format("Join-{0:00000}", x+1))) )
                 using( RecordFileReader<CustomerOrder> reader = new RecordFileReader<CustomerOrder>(stream) )
                 {
                     while( reader.ReadRecord() )
@@ -328,16 +328,16 @@ namespace Tkl.Jumbo.Test.Jet
             customers.Randomize();
             orders.Randomize();
 
-            DfsClient dfsClient = new DfsClient(Dfs.TestDfsCluster.CreateClientConfig());
-            dfsClient.NameServer.CreateDirectory("/testjbjoin");
-            using( DfsOutputStream stream = dfsClient.CreateFile("/testjbjoin/customers") )
+            FileSystemClient fileSystemClient = FileSystemClient.Create(Dfs.TestDfsCluster.CreateClientConfig());
+            fileSystemClient.CreateDirectory("/testjbjoin");
+            using( Stream stream = fileSystemClient.CreateFile("/testjbjoin/customers") )
             using( RecordFileWriter<Customer> recordFile = new RecordFileWriter<Customer>(stream) )
             {
                 foreach( Customer customer in customers )
                     recordFile.WriteRecord(customer);
             }
 
-            using( DfsOutputStream stream = dfsClient.CreateFile("/testjbjoin/orders") )
+            using( Stream stream = fileSystemClient.CreateFile("/testjbjoin/orders") )
             using( RecordFileWriter<Order> recordFile = new RecordFileWriter<Order>(stream) )
             {
                 foreach( Order order in orders )
@@ -347,7 +347,7 @@ namespace Tkl.Jumbo.Test.Jet
             const string outputPath = "/testjbjoinoutput";
             const int joinTasks = 2;
 
-            JobBuilder builder = new JobBuilder(dfsClient, new JetClient(TestJetCluster.CreateClientConfig()));
+            JobBuilder builder = new JobBuilder(fileSystemClient, new JetClient(TestJetCluster.CreateClientConfig()));
 
             var customerInput = new DfsInput("/testjbjoin/customers", typeof(RecordFileReader<Customer>));
             var orderInput = new DfsInput("/testjbjoin/orders", typeof(RecordFileReader<Order>));
@@ -359,14 +359,14 @@ namespace Tkl.Jumbo.Test.Jet
             builder.PartitionRecords(orderInput, orderChannel).StageId = "OrderInputStage";
             builder.JoinRecords(customerChannel, orderChannel, output, typeof(CustomerOrderJoinRecordReader), null, typeof(OrderJoinComparer));
 
-            dfsClient.NameServer.CreateDirectory(outputPath);
+            fileSystemClient.CreateDirectory(outputPath);
 
-            RunJob(dfsClient, builder.CreateJob());
+            RunJob(fileSystemClient, builder.CreateJob());
 
             List<CustomerOrder> actual = new List<CustomerOrder>();
             for( int x = 0; x < joinTasks; ++x )
             {
-                using( DfsInputStream stream = dfsClient.OpenFile(DfsPath.Combine(outputPath, string.Format("JoinStage-{0:00000}", x + 1))) )
+                using( Stream stream = fileSystemClient.OpenFile(fileSystemClient.Path.Combine(outputPath, string.Format("JoinStage-{0:00000}", x + 1))) )
                 using( RecordFileReader<CustomerOrder> reader = new RecordFileReader<CustomerOrder>(stream) )
                 {
                     while( reader.ReadRecord() )
@@ -389,14 +389,14 @@ namespace Tkl.Jumbo.Test.Jet
         [Test]
         public void TestJobExecutionTaskTimeout()
         {
-            DfsClient dfsClient = new DfsClient(Dfs.TestDfsCluster.CreateClientConfig());
+            FileSystemClient fileSystemClient = FileSystemClient.Create(Dfs.TestDfsCluster.CreateClientConfig());
             JetClient target = new JetClient(TestJetCluster.CreateClientConfig());
             string outputPath = "/timeout";
-            dfsClient.NameServer.CreateDirectory(outputPath);
-            JobConfiguration config = CreateConfiguration(dfsClient, dfsClient.NameServer.GetFileInfo(_fileName), outputPath, false, typeof(DelayTask), typeof(LineAdderTask), ChannelType.File);
+            fileSystemClient.CreateDirectory(outputPath);
+            JobConfiguration config = CreateConfiguration(fileSystemClient, fileSystemClient.GetFileInfo(_fileName), outputPath, false, typeof(DelayTask), typeof(LineAdderTask), ChannelType.File);
             config.AddTypedSetting(TaskServerConfigurationElement.TaskTimeoutJobSettingKey, 20000); // Set timeout to 20 seconds.
 
-            Job job = target.RunJob(config, dfsClient, typeof(DelayTask).Assembly.Location);
+            Job job = target.RunJob(config, fileSystemClient, typeof(DelayTask).Assembly.Location);
             target.WaitForJobCompletion(job.JobId, Timeout.Infinite, 1000);
 
             JobStatus status = target.JobServer.GetJobStatus(job.JobId);
@@ -404,25 +404,25 @@ namespace Tkl.Jumbo.Test.Jet
             Assert.AreEqual(1, status.ErrorTaskCount);
             Assert.AreEqual(2, status.Stages.Where(s => s.StageId == "Task").Single().Tasks[0].Attempts);
 
-            ValidateLineCountOutput(outputPath, dfsClient, _lines);
+            ValidateLineCountOutput(outputPath, fileSystemClient, _lines);
         }
 
         [Test]
         public void TestJobExecutionDynamicPartitionAssignment()
         {
-            DfsClient dfsClient = new DfsClient(Dfs.TestDfsCluster.CreateClientConfig());
+            FileSystemClient fileSystemClient = FileSystemClient.Create(Dfs.TestDfsCluster.CreateClientConfig());
             JetClient target = new JetClient(TestJetCluster.CreateClientConfig());
             const string outputPath = "/dynamicpartitions";
-            dfsClient.NameServer.CreateDirectory(outputPath);
+            fileSystemClient.CreateDirectory(outputPath);
             // The idea of this test is that the delay task will sleep on the first task in the stage so the second task will pick up its partitions.
-            JobConfiguration config = CreateConfiguration(dfsClient, dfsClient.NameServer.GetFileInfo(_fileName), outputPath, false, typeof(EmptyTask<Utf8String>), typeof(DelayTask), ChannelType.File);
+            JobConfiguration config = CreateConfiguration(fileSystemClient, fileSystemClient.GetFileInfo(_fileName), outputPath, false, typeof(EmptyTask<Utf8String>), typeof(DelayTask), ChannelType.File);
             // Delay task should sleep for 10 seconds
             config.AddTypedSetting(DelayTask.DelayTimeSettingKey, 10000);
             // Create 6 partitions.
             config.Stages[0].OutputChannel.PartitionsPerTask = 3;
             config.Stages[1].TaskCount = 2;
 
-            Job job = target.RunJob(config, dfsClient, typeof(DelayTask).Assembly.Location);
+            Job job = target.RunJob(config, fileSystemClient, typeof(DelayTask).Assembly.Location);
             target.WaitForJobCompletion(job.JobId, Timeout.Infinite, 1000);
 
             JobStatus status = target.JobServer.GetJobStatus(job.JobId);
@@ -432,7 +432,7 @@ namespace Tkl.Jumbo.Test.Jet
             int[] lineCounts = new int[6];
             HashPartitioner<Utf8String> partitioner = new HashPartitioner<Utf8String>() { Partitions = 6 };
 
-            using( DfsInputStream stream = dfsClient.OpenFile(_fileName) )
+            using( Stream stream = fileSystemClient.OpenFile(_fileName) )
             using( LineRecordReader reader = new LineRecordReader(stream) )
             {
                 foreach( Utf8String record in reader.EnumerateRecords() )
@@ -444,8 +444,8 @@ namespace Tkl.Jumbo.Test.Jet
 
             for( int x = 0; x < 6; ++x )
             {
-                string path = DfsPath.Combine(outputPath, string.Format(CultureInfo.InvariantCulture, "OutputTask-{0:00000}", x + 1));
-                using( DfsInputStream stream = dfsClient.OpenFile(path) )
+                string path = fileSystemClient.Path.Combine(outputPath, string.Format(CultureInfo.InvariantCulture, "OutputTask-{0:00000}", x + 1));
+                using( Stream stream = fileSystemClient.OpenFile(path) )
                 using( StreamReader reader = new StreamReader(stream) )
                 {
                     Assert.AreEqual(lineCounts[x], Convert.ToInt32(reader.ReadLine()));
@@ -456,33 +456,33 @@ namespace Tkl.Jumbo.Test.Jet
         [Test]
         public void TestJobExecutionHardDependency()
         {
-            DfsClient dfsClient = new DfsClient(Dfs.TestDfsCluster.CreateClientConfig());
+            FileSystemClient fileSystemClient = FileSystemClient.Create(Dfs.TestDfsCluster.CreateClientConfig());
             JetClient target = new JetClient(TestJetCluster.CreateClientConfig());
             string outputPath = "/harddepend";
             string lineCountPath = "/harddepend_linecount";
-            dfsClient.NameServer.CreateDirectory(outputPath);
+            fileSystemClient.CreateDirectory(outputPath);
 
-            using( DfsOutputStream stream = dfsClient.CreateFile(lineCountPath) )
+            using( Stream stream = fileSystemClient.CreateFile(lineCountPath) )
             using( RecordWriter<int> writer = new RecordFileWriter<int>(stream) )
             {
                 writer.WriteRecord(_lines);
             }
 
-            JobConfiguration config = CreateConfiguration(dfsClient, dfsClient.NameServer.GetFileInfo(_fileName), outputPath, false, typeof(LineCounterTask), typeof(LineAdderTask), ChannelType.File);
-            StageConfiguration stage = config.AddInputStage("VerificationStage", dfsClient.NameServer.GetFileInfo(lineCountPath), typeof(LineVerifierTask), typeof(RecordFileReader<int>), outputPath, typeof(TextRecordWriter<bool>));
-            stage.AddSetting("ActualOutputPath", DfsPath.Combine(outputPath, "OutputTask-00001"));
+            JobConfiguration config = CreateConfiguration(fileSystemClient, fileSystemClient.GetFileInfo(_fileName), outputPath, false, typeof(LineCounterTask), typeof(LineAdderTask), ChannelType.File);
+            StageConfiguration stage = config.AddInputStage("VerificationStage", fileSystemClient.GetFileInfo(lineCountPath), typeof(LineVerifierTask), typeof(RecordFileReader<int>), fileSystemClient, outputPath, typeof(TextRecordWriter<bool>));
+            stage.AddSetting("ActualOutputPath", fileSystemClient.Path.Combine(outputPath, "OutputTask-00001"));
             config.GetStage("OutputTask").DependentStages.Add(stage.StageId);
 
-            Job job = target.RunJob(config, dfsClient, typeof(DelayTask).Assembly.Location);
+            Job job = target.RunJob(config, fileSystemClient, typeof(DelayTask).Assembly.Location);
             target.WaitForJobCompletion(job.JobId, Timeout.Infinite, 1000);
 
             JobStatus status = target.JobServer.GetJobStatus(job.JobId);
             Assert.IsTrue(status.IsSuccessful);
             Assert.AreEqual(0, status.ErrorTaskCount); // Re-execution could allow the task to succeed even if the scheduler isn't properly taking the hard dependency into account, so we only accept error count 0
 
-            ValidateLineCountOutput(outputPath, dfsClient, _lines);
+            ValidateLineCountOutput(outputPath, fileSystemClient, _lines);
 
-            using( DfsInputStream stream = dfsClient.OpenFile(DfsPath.Combine(outputPath, "VerificationStage-00001")) )
+            using( Stream stream = fileSystemClient.OpenFile(fileSystemClient.Path.Combine(outputPath, "VerificationStage-00001")) )
             using( StreamReader reader = new StreamReader(stream) )
             {
                 Assert.AreEqual("True", reader.ReadLine());
@@ -500,16 +500,16 @@ namespace Tkl.Jumbo.Test.Jet
         {
             const string outputPath1 = "/multiple1";
             const string outputPath2 = "/multiple2";
-            DfsClient dfsClient = new DfsClient(Dfs.TestDfsCluster.CreateClientConfig());
-            dfsClient.NameServer.CreateDirectory(outputPath1);
-            dfsClient.NameServer.CreateDirectory(outputPath2);
-            JumboFile file = dfsClient.NameServer.GetFileInfo(_fileName);
-            JobConfiguration config1 = CreateConfiguration(dfsClient, file, outputPath1, false, typeof(LineCounterTask), typeof(LineAdderTask), ChannelType.File);
-            JobConfiguration config2 = CreateConfiguration(dfsClient, file, outputPath2, false, typeof(LineCounterTask), typeof(LineAdderTask), ChannelType.File);
+            FileSystemClient fileSystemClient = FileSystemClient.Create(Dfs.TestDfsCluster.CreateClientConfig());
+            fileSystemClient.CreateDirectory(outputPath1);
+            fileSystemClient.CreateDirectory(outputPath2);
+            JumboFile file = fileSystemClient.GetFileInfo(_fileName);
+            JobConfiguration config1 = CreateConfiguration(fileSystemClient, file, outputPath1, false, typeof(LineCounterTask), typeof(LineAdderTask), ChannelType.File);
+            JobConfiguration config2 = CreateConfiguration(fileSystemClient, file, outputPath2, false, typeof(LineCounterTask), typeof(LineAdderTask), ChannelType.File);
 
             JetClient target = new JetClient(TestJetCluster.CreateClientConfig());
-            Job job1 = target.RunJob(config1, dfsClient, typeof(LineCounterTask).Assembly.Location);
-            Job job2 = target.RunJob(config2, dfsClient, typeof(LineCounterTask).Assembly.Location);
+            Job job1 = target.RunJob(config1, fileSystemClient, typeof(LineCounterTask).Assembly.Location);
+            Job job2 = target.RunJob(config2, fileSystemClient, typeof(LineCounterTask).Assembly.Location);
 
             bool complete1 = target.WaitForJobCompletion(job1.JobId, Timeout.Infinite, 1000);
             bool complete2 = target.WaitForJobCompletion(job2.JobId, Timeout.Infinite, 1000);
@@ -522,30 +522,30 @@ namespace Tkl.Jumbo.Test.Jet
             Assert.IsTrue(status.IsSuccessful);
             Assert.AreEqual(0, status.ErrorTaskCount);
 
-            ValidateLineCountOutput(outputPath1, dfsClient, _lines);
-            ValidateLineCountOutput(outputPath2, dfsClient, _lines);
+            ValidateLineCountOutput(outputPath1, fileSystemClient, _lines);
+            ValidateLineCountOutput(outputPath2, fileSystemClient, _lines);
         }
 
 
         private void TestJobExecutionSort(string outputPath, int mergeTasks, int partitionsPerTask, bool forceFileDownload, FileChannelOutputType outputType, ChannelType channelType = ChannelType.File)
         {
             const int recordCount = 2500000;
-            DfsClient dfsClient = new DfsClient(Dfs.TestDfsCluster.CreateClientConfig());
-            dfsClient.NameServer.CreateDirectory(outputPath);
+            FileSystemClient fileSystemClient = FileSystemClient.Create(Dfs.TestDfsCluster.CreateClientConfig());
+            fileSystemClient.CreateDirectory(outputPath);
 
             if( _expectedSortResults == null )
             {
-                _expectedSortResults = CreateNumberListInputFile(recordCount, _sortInput, dfsClient);
+                _expectedSortResults = CreateNumberListInputFile(recordCount, _sortInput, fileSystemClient);
                 _expectedSortResults.Sort();
             }
 
             JobConfiguration config = new JobConfiguration(typeof(StringConversionTask).Assembly);
-            StageConfiguration conversionStage = config.AddInputStage("ConversionStage", dfsClient.NameServer.GetFileInfo(_sortInput), typeof(StringConversionTask), typeof(LineRecordReader));
+            StageConfiguration conversionStage = config.AddInputStage("ConversionStage", fileSystemClient.GetFileInfo(_sortInput), typeof(StringConversionTask), typeof(LineRecordReader));
             StageConfiguration sortStage;
             if( outputType == FileChannelOutputType.SortSpill )
                 sortStage = conversionStage;
             else
-                sortStage = config.AddStage("SortStage", typeof(SortTask<int>), mergeTasks * partitionsPerTask, new InputStageInfo(conversionStage) { ChannelType = ChannelType.Pipeline }, null, null);
+                sortStage = config.AddStage("SortStage", typeof(SortTask<int>), mergeTasks * partitionsPerTask, new InputStageInfo(conversionStage) { ChannelType = ChannelType.Pipeline }, null, null, null);
             if( channelType == ChannelType.Tcp )
                 sortStage.AddTypedSetting(TcpOutputChannel.SpillBufferSizeSettingKey, "1MB");
             else
@@ -553,21 +553,21 @@ namespace Tkl.Jumbo.Test.Jet
                 sortStage.AddTypedSetting(FileOutputChannel.OutputTypeSettingKey, outputType);
                 sortStage.AddTypedSetting(FileOutputChannel.SpillBufferSizeSettingKey, "1MB");
             }
-            config.AddStage("MergeStage", typeof(EmptyTask<int>), mergeTasks, new InputStageInfo(sortStage) { MultiInputRecordReaderType = typeof(MergeRecordReader<int>), PartitionsPerTask = partitionsPerTask, ChannelType = channelType }, outputPath, typeof(BinaryRecordWriter<int>));
+            config.AddStage("MergeStage", typeof(EmptyTask<int>), mergeTasks, new InputStageInfo(sortStage) { MultiInputRecordReaderType = typeof(MergeRecordReader<int>), PartitionsPerTask = partitionsPerTask, ChannelType = channelType }, fileSystemClient, outputPath, typeof(BinaryRecordWriter<int>));
             sortStage.OutputChannel.ForceFileDownload = forceFileDownload;
 
-            RunJob(dfsClient, config);
+            RunJob(fileSystemClient, config);
 
-            CheckOutput(dfsClient, _expectedSortResults, outputPath);
+            CheckOutput(fileSystemClient, _expectedSortResults, outputPath);
         }
 
-        private static void CheckOutput(DfsClient dfsClient, IList<int> expected, string outputPath)
+        private static void CheckOutput(FileSystemClient fileSystemClient, IList<int> expected, string outputPath)
         {
             List<int> actual = new List<int>();
             IList<int>[] partitions;
 
             IEnumerable<string> fileNames;
-            JumboFileSystemEntry entry = dfsClient.NameServer.GetFileSystemEntryInfo(outputPath);
+            JumboFileSystemEntry entry = fileSystemClient.GetFileSystemEntryInfo(outputPath);
             if( entry is JumboFile )
             {
                 fileNames = new[] { entry.FullPath };
@@ -614,7 +614,7 @@ namespace Tkl.Jumbo.Test.Jet
             foreach( string outputFileName in fileNames )
             {
                 actual.Clear();
-                using( DfsInputStream stream = dfsClient.OpenFile(outputFileName) )
+                using( Stream stream = fileSystemClient.OpenFile(outputFileName) )
                 using( BinaryRecordReader<int> reader = new BinaryRecordReader<int>(stream) )
                 {
                     while( reader.ReadRecord() )
@@ -628,10 +628,10 @@ namespace Tkl.Jumbo.Test.Jet
 
         }
 
-        private static JobStatus RunJob(DfsClient dfsClient, JobConfiguration config)
+        private static JobStatus RunJob(FileSystemClient fileSystemClient, JobConfiguration config)
         {
             JetClient target = new JetClient(TestJetCluster.CreateClientConfig());
-            Job job = target.RunJob(config, dfsClient, typeof(StringConversionTask).Assembly.Location);
+            Job job = target.RunJob(config, fileSystemClient, typeof(StringConversionTask).Assembly.Location);
 
             bool complete = target.WaitForJobCompletion(job.JobId, Timeout.Infinite, 1000);
             Assert.IsTrue(complete);
@@ -642,12 +642,12 @@ namespace Tkl.Jumbo.Test.Jet
             return status;
         }
 
-        private static List<int> CreateNumberListInputFile(int recordCount, string inputFileName, DfsClient dfsClient)
+        private static List<int> CreateNumberListInputFile(int recordCount, string inputFileName, FileSystemClient fileSystemClient)
         {
             Random rnd = new Random();
             List<int> expected = new List<int>(recordCount);
 
-            using( DfsOutputStream stream = dfsClient.CreateFile(inputFileName) )
+            using( Stream stream = fileSystemClient.CreateFile(inputFileName) )
             using( TextRecordWriter<int> writer = new TextRecordWriter<int>(stream) )
             {
                 for( int x = 0; x < recordCount; ++x )
@@ -662,8 +662,8 @@ namespace Tkl.Jumbo.Test.Jet
 
         private void RunJob(bool forceFileDownload, string outputPath, TaskKind taskKind, ChannelType channelType, int splitsPerBlock = 1)
         {
-            DfsClient dfsClient = new DfsClient(Dfs.TestDfsCluster.CreateClientConfig());
-            dfsClient.NameServer.CreateDirectory(outputPath);
+            FileSystemClient fileSystemClient = FileSystemClient.Create(Dfs.TestDfsCluster.CreateClientConfig());
+            fileSystemClient.CreateDirectory(outputPath);
 
             int lines = _lines;
             Type counterTask = null;
@@ -685,11 +685,11 @@ namespace Tkl.Jumbo.Test.Jet
                 break;
             }
 
-            Tkl.Jumbo.Dfs.FileSystem.JumboFile file = dfsClient.NameServer.GetFileInfo(_fileName);
-            JobConfiguration config = CreateConfiguration(dfsClient, file, outputPath, forceFileDownload, counterTask, adderTask, channelType, splitsPerBlock);
+            Tkl.Jumbo.Dfs.FileSystem.JumboFile file = fileSystemClient.GetFileInfo(_fileName);
+            JobConfiguration config = CreateConfiguration(fileSystemClient, file, outputPath, forceFileDownload, counterTask, adderTask, channelType, splitsPerBlock);
 
             JetClient target = new JetClient(TestJetCluster.CreateClientConfig());
-            Job job = target.RunJob(config, dfsClient, typeof(LineCounterTask).Assembly.Location);
+            Job job = target.RunJob(config, fileSystemClient, typeof(LineCounterTask).Assembly.Location);
 
             bool complete = target.WaitForJobCompletion(job.JobId, Timeout.Infinite, 1000);
             Assert.IsTrue(complete);
@@ -698,21 +698,21 @@ namespace Tkl.Jumbo.Test.Jet
             Assert.AreEqual(0, status.ErrorTaskCount);
             Assert.AreEqual(config.Stages.Sum(s => s.TaskCount), status.FinishedTaskCount);
 
-            ValidateLineCountOutput(outputPath, dfsClient, lines);
+            ValidateLineCountOutput(outputPath, fileSystemClient, lines);
         }
 
-        private static void ValidateLineCountOutput(string outputPath, DfsClient dfsClient, int lines)
+        private static void ValidateLineCountOutput(string outputPath, FileSystemClient fileSystemClient, int lines)
         {
-            string outputFileName = DfsPath.Combine(outputPath, "OutputTask-00001");
+            string outputFileName = fileSystemClient.Path.Combine(outputPath, "OutputTask-00001");
 
-            using( DfsInputStream stream = dfsClient.OpenFile(outputFileName) )
+            using( Stream stream = fileSystemClient.OpenFile(outputFileName) )
             using( StreamReader reader = new StreamReader(stream) )
             {
                 Assert.AreEqual(lines, Convert.ToInt32(reader.ReadLine()));
             }
         }
 
-        private static JobConfiguration CreateConfiguration(DfsClient dfsClient, Tkl.Jumbo.Dfs.FileSystem.JumboFile file, string outputPath, bool forceFileDownload, Type counterTask, Type adderTask, ChannelType channelType, int splitsPerBlock = 1)
+        private static JobConfiguration CreateConfiguration(FileSystemClient fileSystemClient, Tkl.Jumbo.Dfs.FileSystem.JumboFile file, string outputPath, bool forceFileDownload, Type counterTask, Type adderTask, ChannelType channelType, int splitsPerBlock = 1)
         {
 
             JobConfiguration config = new JobConfiguration(System.IO.Path.GetFileName(typeof(LineCounterTask).Assembly.Location));
@@ -722,10 +722,10 @@ namespace Tkl.Jumbo.Test.Jet
             if( channelType == ChannelType.Pipeline )
             {
                 // Pipeline channel cannot merge so we will add another stage in between.
-                stage = config.AddPointToPointStage("IntermediateTask", stage, adderTask, ChannelType.Pipeline, null, null);
+                stage = config.AddPointToPointStage("IntermediateTask", stage, adderTask, ChannelType.Pipeline, null, null, null);
                 channelType = ChannelType.File;
             }
-            config.AddStage("OutputTask", adderTask, 1, new InputStageInfo(stage) { ChannelType = channelType }, outputPath, typeof(TextRecordWriter<int>));
+            config.AddStage("OutputTask", adderTask, 1, new InputStageInfo(stage) { ChannelType = channelType }, fileSystemClient, outputPath, typeof(TextRecordWriter<int>));
             if( forceFileDownload )
                 config.AddTypedSetting(FileInputChannel.MemoryStorageSizeSetting, 0L);
             foreach( ChannelConfiguration channel in config.GetAllChannels() )

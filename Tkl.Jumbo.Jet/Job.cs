@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using Tkl.Jumbo.Dfs;
+using Tkl.Jumbo.Dfs.FileSystem;
 
 namespace Tkl.Jumbo.Jet
 {
@@ -55,9 +56,9 @@ namespace Tkl.Jumbo.Jet
         /// <summary>
         /// Gets the path, including file name, of the job configuration file.
         /// </summary>
-        public string JobConfigurationFilePath
+        public string GetJobConfigurationFilePath(FileSystemClient client)
         {
-            get { return DfsPath.Combine(Path, JobConfigFileName); }
+            return client.Path.Combine(Path, JobConfigFileName);
         }
 
         /// <summary>

@@ -4,6 +4,7 @@ using System;
 using System.Web;
 using Tkl.Jumbo;
 using Tkl.Jumbo.Dfs;
+using Tkl.Jumbo.Dfs.FileSystem;
 using Tkl.Jumbo.Jet;
 
 public class jobconfig : IHttpHandler
@@ -27,9 +28,9 @@ public class jobconfig : IHttpHandler
         }
         else
         {
-            DfsClient dfsClient = new DfsClient();
-            string configFilePath = DfsPath.Combine(DfsPath.Combine(JetConfiguration.GetConfiguration().JobServer.JetDfsPath, "job_" + jobId.ToString("B")), Job.JobConfigFileName);
-            using( DfsInputStream configStream = dfsClient.OpenFile(configFilePath) )
+            FileSystemClient fileSystemClient = FileSystemClient.Create();
+            string configFilePath = fileSystemClient.Path.Combine(fileSystemClient.Path.Combine(JetConfiguration.GetConfiguration().JobServer.JetDfsPath, "job_" + jobId.ToString("B")), Job.JobConfigFileName);
+            using( System.IO.Stream configStream = fileSystemClient.OpenFile(configFilePath) )
             {
                 configStream.CopyTo(context.Response.OutputStream);
             }

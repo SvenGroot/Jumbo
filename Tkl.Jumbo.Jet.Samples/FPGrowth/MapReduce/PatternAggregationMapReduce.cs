@@ -63,16 +63,16 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth.MapReduce
         /// <param name="builder"></param>
         protected override void BuildJob(JobBuilder builder)
         {
-            string fullOutputPath = DfsPath.Combine(_outputPath, "patterns");
+            string fullOutputPath = FileSystemClient.Path.Combine(_outputPath, "patterns");
             CheckAndCreateOutputPath(fullOutputPath);
-            builder.AddSetting("PFPGrowth.FGListPath", DfsPath.Combine(_outputPath, "fglist"));
+            builder.AddSetting("PFPGrowth.FGListPath", FileSystemClient.Path.Combine(_outputPath, "fglist"));
             JetClient client = new JetClient(JetConfiguration);
             int numPartitions = ReduceTaskCount;
             if( numPartitions == 0 )
                 numPartitions = client.JobServer.GetMetrics().NonInputTaskCapacity;
             numPartitions *= PartitionsPerTask;
 
-            DfsInput input = new DfsInput(DfsPath.Combine(_outputPath, "temppatterns"), typeof(RecordFileReader<Pair<int, MappedFrequentPattern>>));
+            DfsInput input = new DfsInput(FileSystemClient.Path.Combine(_outputPath, "temppatterns"), typeof(RecordFileReader<Pair<int, MappedFrequentPattern>>));
             Channel partitionChannel = new Channel() { PartitionCount = numPartitions, PartitionsPerTask = PartitionsPerTask };
             StageBuilder partitionStage = builder.PartitionRecords(input, partitionChannel);
             partitionStage.StageId = "Map";

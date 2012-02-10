@@ -10,6 +10,7 @@ using DataServerApplication;
 using System.Configuration;
 using System.Diagnostics;
 using Tkl.Jumbo.Dfs;
+using Tkl.Jumbo.Dfs.FileSystem;
 
 namespace Tkl.Jumbo.Test.Dfs
 {
@@ -173,7 +174,7 @@ namespace Tkl.Jumbo.Test.Dfs
 
         public static DfsClient CreateClient()
         {
-            return new DfsClient(CreateClientConfig());
+            return (DfsClient)FileSystemClient.Create(CreateClientConfig());
         }
 
     }

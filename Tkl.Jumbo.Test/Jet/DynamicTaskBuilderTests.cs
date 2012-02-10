@@ -253,7 +253,7 @@ namespace Tkl.Jumbo.Test.Jet
         private TaskContext CreateConfiguration(Type taskType)
         {
             JobConfiguration job = new JobConfiguration();
-            StageConfiguration stage = job.AddStage("TestStage", taskType, 1, null, null, null);
+            StageConfiguration stage = job.AddStage("TestStage", taskType, 1, null, null, null, null);
             return new TaskContext(Guid.Empty, job, new TaskAttemptId(new TaskId(stage.StageId, 1), 1), stage, Path.GetTempPath(), "/fake");
         }
     }

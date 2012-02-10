@@ -10,12 +10,13 @@ using Tkl.Jumbo.Dfs;
 using System.IO;
 using Tkl.Jumbo;
 using System.Web.UI.HtmlControls;
+using Tkl.Jumbo.Dfs.FileSystem;
 
 public partial class _Default : System.Web.UI.Page 
 {
     protected void Page_Load(object sender, EventArgs e)
     {
-        DfsClient client = new DfsClient();
+        DfsClient client = (DfsClient)FileSystemClient.Create();
         DfsMetrics metrics = client.NameServer.GetMetrics();
         Title = string.Format("Jumbo DFS ({0})", metrics.NameServer);
         NameServerColumn.InnerText = metrics.NameServer.ToString();

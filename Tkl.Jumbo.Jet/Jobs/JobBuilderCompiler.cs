@@ -20,13 +20,13 @@ namespace Tkl.Jumbo.Jet.Jobs
     {
         private readonly HashSet<string> _stageIds = new HashSet<string>();
         private readonly JobBuilder _jobBuilder;
-        private readonly DfsClient _dfsClient;
+        private readonly FileSystemClient _fileSystemClient;
         private readonly JetClient _jetClient;
 
-        public JobBuilderCompiler(JobBuilder jobBuilder, DfsClient dfsClient, JetClient jetClient)
+        public JobBuilderCompiler(JobBuilder jobBuilder, FileSystemClient fileSystemClient, JetClient jetClient)
         {
             _jobBuilder = jobBuilder;
-            _dfsClient = dfsClient ?? new DfsClient();
+            _fileSystemClient = fileSystemClient ?? FileSystemClient.Create();
             _jetClient = jetClient ?? new JetClient();
         }
 
@@ -78,7 +78,7 @@ namespace Tkl.Jumbo.Jet.Jobs
             else
             {
                 _jobBuilder.AddAssemblies(stage.TaskType.Assembly);
-                stageConfig = job.AddStage(MakeUniqueStageId(stage.StageId), stage.TaskType, stage.NoInputTaskCount, null, outputPath, outputWriterType);
+                stageConfig = job.AddStage(MakeUniqueStageId(stage.StageId), stage.TaskType, stage.NoInputTaskCount, null, _fileSystemClient, outputPath, outputWriterType);
                 stage.ApplySettings(stageConfig, false);
             }
 
@@ -127,7 +127,7 @@ namespace Tkl.Jumbo.Jet.Jobs
                     stageId = MakeUniqueStageId(stageId);
                 job.RenameStage(sendingStage, stageId);
                 if( outputPath != null )
-                    sendingStage.SetDfsOutput(outputPath, outputWriterType);
+                    sendingStage.SetDfsOutput(_fileSystemClient, outputPath, outputWriterType);
             }
             else
             {
@@ -174,7 +174,7 @@ namespace Tkl.Jumbo.Jet.Jobs
                                     DisableDynamicPartitionAssignment = channel.DisableDynamicPartitionAssignment
                                 };
 
-                stageConfig = job.AddStage(MakeUniqueStageId(stageId), taskType, taskCount, inputInfo, stage.StageMultiInputRecordReaderType, outputPath, outputWriterType);
+                stageConfig = job.AddStage(MakeUniqueStageId(stageId), taskType, taskCount, inputInfo, stage.StageMultiInputRecordReaderType, _fileSystemClient, outputPath, outputWriterType);
 
                 stage.ApplySettings(stageConfig, false);
                 if( isAutoPipeline )
@@ -258,7 +258,7 @@ namespace Tkl.Jumbo.Jet.Jobs
                     _jobBuilder.AddAssemblies(inputChannel.PartitionerType.Assembly);
                 }
 
-                sendingStage = job.AddStage(childStageId, childTaskType, childTaskCount, inputInfo, null, null);
+                sendingStage = job.AddStage(childStageId, childTaskType, childTaskCount, inputInfo, null, null, null);
             }
 
             _jobBuilder.AddAssemblies(childTaskType.Assembly);
@@ -267,7 +267,7 @@ namespace Tkl.Jumbo.Jet.Jobs
 
         private StageConfiguration CreateDfsInputStage(StageBuilder stage, JobConfiguration job, string outputPath, Type outputWriterType, DfsInput dfsInput)
         {
-            JumboFileSystemEntry dfsEntry = _dfsClient.NameServer.GetFileSystemEntryInfo(dfsInput.Path);
+            JumboFileSystemEntry dfsEntry = _fileSystemClient.GetFileSystemEntryInfo(dfsInput.Path);
             if( dfsEntry == null )
                 throw new InvalidOperationException(string.Format(CultureInfo.CurrentCulture, "The input path {0} does not exist on the DFS.", dfsInput.Path));
             Type taskType = stage.TaskType;
@@ -282,7 +282,7 @@ namespace Tkl.Jumbo.Jet.Jobs
                     taskType = stage.PipelineStageTaskOverride;
             }
 
-            StageConfiguration stageConfig = job.AddInputStage(MakeUniqueStageId(stageId), dfsEntry, stage.TaskType, dfsInput.RecordReaderType, null, null);
+            StageConfiguration stageConfig = job.AddInputStage(MakeUniqueStageId(stageId), dfsEntry, stage.TaskType, dfsInput.RecordReaderType, null, null, null);
             _jobBuilder.AddAssemblies(dfsInput.RecordReaderType.Assembly);
 
             if( stage.PipelineCreation != PipelineCreationMethod.None && blockCount > 1 )
@@ -293,12 +293,12 @@ namespace Tkl.Jumbo.Jet.Jobs
                     ChannelType = Channels.ChannelType.File,
                     MultiInputRecordReaderType = stage.PipelineOutputMultiRecordReader
                 };
-                stageConfig = job.AddStage(MakeUniqueStageId(stage.RealStageId ?? stage.StageId), secondTaskType, 1, inputInfo, outputPath, outputWriterType);
+                stageConfig = job.AddStage(MakeUniqueStageId(stage.RealStageId ?? stage.StageId), secondTaskType, 1, inputInfo, _fileSystemClient, outputPath, outputWriterType);
                 _jobBuilder.AddAssemblies(secondTaskType.Assembly);
             }
             else if( outputPath != null )
             {
-                stageConfig.SetDfsOutput(outputPath, outputWriterType);
+                stageConfig.SetDfsOutput(_fileSystemClient, outputPath, outputWriterType);
                 _jobBuilder.AddAssemblies(outputWriterType.Assembly);
             }
 

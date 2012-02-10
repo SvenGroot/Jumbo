@@ -22,7 +22,7 @@ namespace DfsShell.Commands
 
         public override void Run()
         {
-            Client.NameServer.CreateDirectory(_path);
+            Client.CreateDirectory(_path);
         }
     }
 }

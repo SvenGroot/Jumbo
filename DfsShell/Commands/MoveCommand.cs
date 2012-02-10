@@ -29,7 +29,7 @@ namespace DfsShell.Commands
 
         public override void Run()
         {
-            Client.NameServer.Move(_sourcePath, _destinationPath);
+            Client.Move(_sourcePath, _destinationPath);
         }
     }
 }

@@ -76,7 +76,7 @@ namespace Tkl.Jumbo.Jet.Samples
             {
                 SizePerTask = BlockSize;
                 if( SizePerTask == 0 )
-                    SizePerTask = DfsClient.NameServer.BlockSize;
+                    SizePerTask = FileSystemClient.DefaultBlockSize ?? (64 * BinarySize.Megabyte); // Default to 64MB if the file system doesn't support blocks
             }
 
             // This is an example of how you can use an instance method of a serializable type to communicate state, instead of using individual settings.

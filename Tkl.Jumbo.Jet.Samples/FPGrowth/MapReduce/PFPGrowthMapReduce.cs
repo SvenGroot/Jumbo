@@ -76,9 +76,9 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth.MapReduce
         /// <param name="builder"></param>
         protected override void BuildJob(JobBuilder builder)
         {
-            string fullOutputPath = DfsPath.Combine(_outputPath, "temppatterns");
+            string fullOutputPath = FileSystemClient.Path.Combine(_outputPath, "temppatterns");
             CheckAndCreateOutputPath(fullOutputPath);
-            builder.AddSetting("PFPGrowth.FGListPath", DfsPath.Combine(_outputPath, "fglist"));
+            builder.AddSetting("PFPGrowth.FGListPath", FileSystemClient.Path.Combine(_outputPath, "fglist"));
             JetClient client = new JetClient(JetConfiguration);
             int numPartitions = ReduceTaskCount;
             if( numPartitions == 0 )

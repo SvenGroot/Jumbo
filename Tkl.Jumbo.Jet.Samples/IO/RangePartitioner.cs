@@ -8,6 +8,7 @@ using Tkl.Jumbo.Jet;
 using Tkl.Jumbo.IO;
 using Tkl.Jumbo.Dfs;
 using System.IO;
+using Tkl.Jumbo.Dfs.FileSystem;
 
 namespace Tkl.Jumbo.Jet.Samples.IO
 {
@@ -129,12 +130,12 @@ namespace Tkl.Jumbo.Jet.Samples.IO
         /// <summary>
         /// Creates a file defining the partitioning split points by sampling the input data.
         /// </summary>
-        /// <param name="dfsClient">The <see cref="DfsClient"/> used to access the DFS.</param>
+        /// <param name="fileSystemClient">The <see cref="FileSystemClient"/> used to access the DFS.</param>
         /// <param name="partitionFilePath">The path on the DFS where the partitioning data should be stored.</param>
         /// <param name="input">The input of the job.</param>
         /// <param name="partitions">The number of partitions.</param>
         /// <param name="sampleSize">The total number of records to sample.</param>
-        public static void CreatePartitionFile(DfsClient dfsClient, string partitionFilePath, StageDfsInput input, int partitions, int sampleSize)
+        public static void CreatePartitionFile(FileSystemClient fileSystemClient, string partitionFilePath, StageDfsInput input, int partitions, int sampleSize)
         {
             int samples = Math.Min(10, input.SplitCount);
             int recordsPerSample = sampleSize / samples;
@@ -145,7 +146,7 @@ namespace Tkl.Jumbo.Jet.Samples.IO
 
             for( int sample = 0; sample < samples; ++sample )
             {
-                using( RecordReader<GenSortRecord> reader = (RecordReader<GenSortRecord>)input.CreateRecordReader(dfsClient, sample * sampleStep) )
+                using( RecordReader<GenSortRecord> reader = (RecordReader<GenSortRecord>)input.CreateRecordReader(fileSystemClient, sample * sampleStep) )
                 {
                     int records = 0;
                     while( records++ < recordsPerSample && reader.ReadRecord() )
@@ -159,11 +160,11 @@ namespace Tkl.Jumbo.Jet.Samples.IO
 
             _log.InfoFormat("Sampling complete, writing partition file {0}.", partitionFilePath);
 
-            dfsClient.NameServer.Delete(partitionFilePath, false);
+            fileSystemClient.Delete(partitionFilePath, false);
 
             float stepSize = sampleData.Count / (float)partitions;
 
-            using( DfsOutputStream stream = dfsClient.CreateFile(partitionFilePath) )
+            using( Stream stream = fileSystemClient.CreateFile(partitionFilePath) )
             {
                 for( int x = 1; x < partitions; ++x )
                 {

@@ -68,20 +68,18 @@ namespace Tkl.Jumbo.Jet.Samples
             if( !File.Exists(distsPath) )
                 throw new FileNotFoundException("File not found.", distsPath);
 
-            DfsClient dfsClient = new DfsClient(DfsConfiguration);
-
-            CheckAndCreateOutputPath(dfsClient, _outputPath);
+            CheckAndCreateOutputPath(_outputPath);
 
             JobConfiguration jobConfig = new JobConfiguration(typeof(TpcHTableGenTask).Assembly);
             jobConfig.JobName = GetType().Name; // Use the class name as the job's friendly name.
-            StageConfiguration lineItemStage = jobConfig.AddStage("LineItem", typeof(TpcHTableGenTask), _taskCount, null, _outputPath, typeof(RecordFileWriter<LineItem>));
+            StageConfiguration lineItemStage = jobConfig.AddStage("LineItem", typeof(TpcHTableGenTask), _taskCount, null, FileSystemClient, _outputPath, typeof(RecordFileWriter<LineItem>));
             jobConfig.AddSetting(TpcHTableGenTask.DbGenFileNameSetting, Path.GetFileName(_dbGenPath));
             jobConfig.AddTypedSetting(TpcHTableGenTask.ScaleFactorSetting, _scaleFactor);
 
             ConfigureDfsOutput(lineItemStage);
 
             JetClient jetClient = new JetClient(JetConfiguration);
-            Job job = jetClient.RunJob(jobConfig, dfsClient, typeof(TpcHTableGenTask).Assembly.Location, _dbGenPath, distsPath);
+            Job job = jetClient.RunJob(jobConfig, FileSystemClient, typeof(TpcHTableGenTask).Assembly.Location, _dbGenPath, distsPath);
             return job.JobId;
         }
     }

@@ -8,6 +8,9 @@ using System.Xml.Serialization;
 using System.Collections.ObjectModel;
 using Tkl.Jumbo.IO;
 using Tkl.Jumbo.Dfs;
+using Tkl.Jumbo.Dfs.FileSystem;
+using System.IO;
+using System.Diagnostics;
 
 namespace Tkl.Jumbo.Jet
 {
@@ -95,32 +98,34 @@ namespace Tkl.Jumbo.Jet
         /// </returns>
         public IRecordReader CreateRecordReader(TaskExecutionUtility taskExecution)
         {
-            return CreateRecordReader(taskExecution.DfsClient, taskExecution, taskExecution.Context.TaskAttemptId.TaskId.TaskNumber - 1);
+            return CreateRecordReader(taskExecution.FileSystemClient, taskExecution, taskExecution.Context.TaskAttemptId.TaskId.TaskNumber - 1);
         }
 
         /// <summary>
         /// Creates a record reader for the specified task number.
         /// </summary>
-        /// <param name="dfsClient">The <see cref="DfsClient"/> to use to access the DFS.</param>
+        /// <param name="fileSystemClient">The <see cref="FileSystemClient"/> to use to access the DFS.</param>
         /// <param name="splitIndex">The zero-based index of the input to use.</param>
         /// <returns>
         /// A <see cref="RecordReader{T}"/> that reads the input specified in the <see cref="TaskDfsInput"/> for the task number.
         /// </returns>
-        public IRecordReader CreateRecordReader(DfsClient dfsClient, int splitIndex)
+        public IRecordReader CreateRecordReader(FileSystemClient fileSystemClient, int splitIndex)
         {
-            return CreateRecordReader(dfsClient, null, splitIndex);
+            return CreateRecordReader(fileSystemClient, null, splitIndex);
         }
 
-        private IRecordReader CreateRecordReader(DfsClient dfsClient, TaskExecutionUtility taskExecution, int splitIndex)
+        private IRecordReader CreateRecordReader(FileSystemClient fileSystemClient, TaskExecutionUtility taskExecution, int splitIndex)
         {
-            if( dfsClient == null )
-                throw new ArgumentNullException("dfsClient");
+            if( fileSystemClient == null )
+                throw new ArgumentNullException("fileSystemClient");
             Type recordReaderType = RecordReaderType.ReferencedType;
             int inputIndex = splitIndex / SplitsPerBlock;
             int blockSplitIndex = splitIndex % SplitsPerBlock;
             TaskDfsInput taskInput = _taskInputs[inputIndex];
-            DfsInputStream inputStream = dfsClient.OpenFile(taskInput.Path);
-            long blockSize = inputStream.BlockSize;
+            Stream inputStream = fileSystemClient.OpenFile(taskInput.Path);
+            DfsInputStream dfsStream = inputStream as DfsInputStream;
+            Debug.Assert(dfsStream != null || taskInput.Block == 0); // When the input is not from the DFS, block index should always be 0.
+            long blockSize = dfsStream == null ? inputStream.Length : dfsStream.BlockSize;
             long offset = blockSize * (long)taskInput.Block;
             blockSize = Math.Min(blockSize, inputStream.Length - offset);
             long splitSize = (blockSize / SplitsPerBlock);

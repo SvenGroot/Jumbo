@@ -6,6 +6,7 @@ using Tkl.Jumbo.Dfs;
 using Tkl.Jumbo.IO;
 using System.Diagnostics;
 using Tkl.Jumbo.Jet.Channels;
+using Tkl.Jumbo.Dfs.FileSystem;
 
 namespace Tkl.Jumbo.Jet
 {
@@ -91,8 +92,8 @@ namespace Tkl.Jumbo.Jet
         private PipelinePullTaskRecordWriter<TInput, TOutput> _pipelinePullTaskRecordWriter; // Needed to finish pipelined pull tasks.
         private PipelinePrepartitionedPushTaskRecordWriter<TInput, TOutput> _pipelinePrepartitionedPushTaskRecordWriter; // Needed to finish pipelined prepartitioned push tasks.
 
-        public TaskExecutionUtilityGeneric(DfsClient dfsClient, JetClient jetClient, ITaskServerUmbilicalProtocol umbilical, TaskExecutionUtility parentTask, TaskContext configuration)
-            : base(dfsClient, jetClient, umbilical, parentTask, configuration)
+        public TaskExecutionUtilityGeneric(FileSystemClient fileSystemClient, JetClient jetClient, ITaskServerUmbilicalProtocol umbilical, TaskExecutionUtility parentTask, TaskContext configuration)
+            : base(fileSystemClient, jetClient, umbilical, parentTask, configuration)
         {
         }
 
