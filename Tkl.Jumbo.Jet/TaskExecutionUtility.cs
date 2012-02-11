@@ -15,6 +15,7 @@ using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.IO;
 using Tkl.Jumbo.Dfs.FileSystem;
+using Tkl.Jumbo.Jet.Input;
 
 namespace Tkl.Jumbo.Jet
 {
@@ -198,6 +199,8 @@ namespace Tkl.Jumbo.Jet
                 return _inputReader;
             }
         }
+
+        internal ITaskInput TaskInput { get; private set; }
 
         internal ITaskServerUmbilicalProtocol Umbilical
         {
@@ -578,9 +581,11 @@ namespace Tkl.Jumbo.Jet
 
         private IRecordReader CreateInputRecordReader()
         {
-            if( Context.StageConfiguration.DfsInput != null )
+            if( Context.StageConfiguration.HasInput )
             {
-                return Context.StageConfiguration.DfsInput.CreateRecordReader(this);
+                IStageInput input = (IStageInput)JetActivator.CreateInstance(Context.StageConfiguration.InputType.ReferencedType, this);
+                TaskInput = TaskInputUtility.ReadTaskInput(new LocalFileSystemClient(), _configuration.LocalJobDirectory, _configuration.TaskAttemptId.TaskId.StageId, _configuration.TaskAttemptId.TaskId.TaskNumber - 1);
+                return input.CreateRecordReader(FileSystemClient, JetClient.Configuration, _configuration, TaskInput);
             }
             else if( _inputChannels != null )
             {
@@ -983,7 +988,7 @@ namespace Tkl.Jumbo.Jet
                     metrics.InputBytes += _inputReader.InputBytes;
                 }
 
-                if( Context.StageConfiguration.DfsInput != null )
+                if( Context.StageConfiguration.HasInput )
                 {
                     // It's currently not possible to have a multi input record reader with DFS inputs, so this is safe.
                     if( _inputReader != null )

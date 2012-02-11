@@ -10,6 +10,7 @@ using Tkl.Jumbo.Jet.Channels;
 using Tkl.Jumbo.Jet.Tasks;
 using Tkl.Jumbo.IO;
 using Tkl.Jumbo.Dfs.FileSystem;
+using Tkl.Jumbo.Jet.Input;
 
 namespace Tkl.Jumbo.Jet.Jobs
 {
@@ -282,7 +283,7 @@ namespace Tkl.Jumbo.Jet.Jobs
                     taskType = stage.PipelineStageTaskOverride;
             }
 
-            StageConfiguration stageConfig = job.AddInputStage(MakeUniqueStageId(stageId), dfsEntry, stage.TaskType, dfsInput.RecordReaderType, null, null, null);
+            StageConfiguration stageConfig = job.AddInputStage(MakeUniqueStageId(stageId), FileStageInput.Create(dfsInput.RecordReaderType, _fileSystemClient, dfsEntry), stage.TaskType, null, null, null);
             _jobBuilder.AddAssemblies(dfsInput.RecordReaderType.Assembly);
 
             if( stage.PipelineCreation != PipelineCreationMethod.None && blockCount > 1 )

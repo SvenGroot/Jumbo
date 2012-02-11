@@ -11,6 +11,7 @@ using Tkl.Jumbo.IO;
 using Tkl.Jumbo.Jet.Channels;
 using Tkl.Jumbo.Jet.Tasks;
 using Tkl.Jumbo.Dfs.FileSystem;
+using Tkl.Jumbo.Jet.Input;
 
 namespace Tkl.Jumbo.Test.Jet
 {
@@ -58,23 +59,25 @@ namespace Tkl.Jumbo.Test.Jet
         {
             JobConfiguration target = new JobConfiguration(typeof(Tasks.LineCounterTask).Assembly);
             JumboFile file = CreateFakeTestFile("test");
+            const int splitsPerBlock = 2;
 
-            StageConfiguration stage = target.AddInputStage("InputStage", file, typeof(Tasks.LineCounterTask), typeof(LineRecordReader));
+            StageConfiguration stage = target.AddInputStage("InputStage", new FileStageInput<LineRecordReader>(new LocalFileSystemClient(), file, maxSplitSize: _blockSize / splitsPerBlock), typeof(Tasks.LineCounterTask));
 
-            stage.DfsInput.SplitsPerBlock = 2;
-            Assert.AreEqual(file.Blocks.Count * stage.DfsInput.SplitsPerBlock, stage.TaskCount);
-            Assert.AreEqual(stage.TaskCount, stage.DfsInput.SplitCount);
+            Assert.IsNotNull(stage.Input);
+            Assert.AreEqual(file.Blocks.Count * splitsPerBlock, stage.TaskCount);
+            Assert.AreEqual(stage.TaskCount, stage.Input.TaskInputs.Count);
             Assert.AreEqual(1, target.Stages.Count);
             Assert.AreEqual(stage, target.Stages[0]);
             Assert.AreEqual("InputStage", stage.StageId);
-            Assert.IsNotNull(stage.DfsInput);
-            Assert.AreEqual(file.Blocks.Count, stage.DfsInput.TaskInputs.Count);
-            Assert.AreEqual(typeof(LineRecordReader).AssemblyQualifiedName, stage.DfsInput.RecordReaderType.TypeName);
-            Assert.AreEqual(typeof(LineRecordReader), stage.DfsInput.RecordReaderType.ReferencedType);
-            for( int x = 0; x < stage.DfsInput.TaskInputs.Count; ++x )
+            Assert.AreEqual(file.Blocks.Count * splitsPerBlock, stage.Input.TaskInputs.Count);
+            Assert.IsInstanceOf<FileStageInput<LineRecordReader>>(stage.Input);
+            Assert.AreEqual(typeof(FileStageInput<LineRecordReader>), stage.InputType.ReferencedType);
+            Assert.AreEqual(typeof(FileStageInput<LineRecordReader>).AssemblyQualifiedName, stage.InputType.TypeName);
+            int x = 0;
+            foreach( FileTaskInput input in stage.Input.TaskInputs )
             {
-                Assert.AreEqual(x, stage.DfsInput.TaskInputs[x].Block);
-                Assert.AreEqual(file.FullPath, stage.DfsInput.TaskInputs[x].Path);
+                Assert.AreEqual(x++ * (_blockSize / splitsPerBlock), input.Offset);
+                Assert.AreEqual(_blockSize / splitsPerBlock, input.Size);
             }
             Assert.IsNull(stage.DfsOutput);
             Assert.AreEqual(typeof(Tasks.LineCounterTask).AssemblyQualifiedName, stage.TaskType.TypeName);
@@ -112,7 +115,7 @@ namespace Tkl.Jumbo.Test.Jet
             JobConfiguration target = new JobConfiguration(typeof(Tasks.LineCounterTask).Assembly);
             JumboFile file = CreateFakeTestFile("test1");
 
-            StageConfiguration expected = target.AddInputStage("InputStage", file, typeof(Tasks.LineCounterTask), typeof(LineRecordReader));
+            StageConfiguration expected = target.AddInputStage("InputStage", new FileStageInput<LineRecordReader>(new LocalFileSystemClient(), file), typeof(Tasks.LineCounterTask));
 
             StageConfiguration stage = target.GetStage("InputStage");
             Assert.IsNotNull(stage);
@@ -129,8 +132,8 @@ namespace Tkl.Jumbo.Test.Jet
             JumboFile file1 = CreateFakeTestFile("test1");
             JumboFile file2 = CreateFakeTestFile("test2");
 
-            StageConfiguration inputStage1 = target.AddInputStage("InputStage1", file1, typeof(Tasks.LineCounterTask), typeof(LineRecordReader));
-            StageConfiguration inputStage2 = target.AddInputStage("InputStage2", file2, typeof(Tasks.LineCounterTask), typeof(LineRecordReader));
+            StageConfiguration inputStage1 = target.AddInputStage("InputStage1", new FileStageInput<LineRecordReader>(new LocalFileSystemClient(), file1), typeof(Tasks.LineCounterTask));
+            StageConfiguration inputStage2 = target.AddInputStage("InputStage2", new FileStageInput<LineRecordReader>(new LocalFileSystemClient(), file2), typeof(Tasks.LineCounterTask));
 
             const int taskCount = 3;
             const string outputPath = "/output";
@@ -152,7 +155,7 @@ namespace Tkl.Jumbo.Test.Jet
             JobConfiguration target = new JobConfiguration();
             JumboFile file1 = CreateFakeTestFile("test1");
 
-            StageConfiguration inputStage = target.AddInputStage("InputStage", file1, typeof(SortTask<Utf8String>), typeof(LineRecordReader));
+            StageConfiguration inputStage = target.AddInputStage("InputStage", new FileStageInput<LineRecordReader>(new LocalFileSystemClient(), file1), typeof(SortTask<Utf8String>));
 
             const int taskCount = 3;
             const int partitionsPerTask = 5;
@@ -180,7 +183,7 @@ namespace Tkl.Jumbo.Test.Jet
             const int taskCount = 3;
             const int partitionsPerTask = 5;
 
-            StageConfiguration inputStage = target.AddInputStage("InputStage", file1, typeof(EmptyTask<Utf8String>), typeof(LineRecordReader));
+            StageConfiguration inputStage = target.AddInputStage("InputStage", new FileStageInput<LineRecordReader>(new LocalFileSystemClient(), file1), typeof(EmptyTask<Utf8String>));
             StageConfiguration sortStage = target.AddStage("SortStage", typeof(SortTask<Utf8String>), taskCount * partitionsPerTask, new InputStageInfo(inputStage) { ChannelType = ChannelType.Pipeline }, null, null, null);
 
             StageConfiguration stage = target.AddStage("SecondStage", typeof(EmptyTask<Utf8String>), taskCount, new InputStageInfo(sortStage) { PartitionsPerTask = partitionsPerTask }, FileSystemClient.Create(), "/output", typeof(TextRecordWriter<Utf8String>));
@@ -204,8 +207,8 @@ namespace Tkl.Jumbo.Test.Jet
             JumboFile file1 = CreateFakeTestFile("test1");
             JumboFile file2 = CreateFakeTestFile("test2");
 
-            StageConfiguration inputStage1 = target.AddInputStage("InputStage1", file1, typeof(Tasks.LineCounterTask), typeof(LineRecordReader));
-            StageConfiguration inputStage2 = target.AddInputStage("InputStage2", file2, typeof(Tasks.LineCounterTask), typeof(LineRecordReader));
+            StageConfiguration inputStage1 = target.AddInputStage("InputStage1", new FileStageInput<LineRecordReader>(new LocalFileSystemClient(), file1), typeof(Tasks.LineCounterTask));
+            StageConfiguration inputStage2 = target.AddInputStage("InputStage2", new FileStageInput<LineRecordReader>(new LocalFileSystemClient(), file2), typeof(Tasks.LineCounterTask));
 
             const int taskCount = 3;
             const string outputPath = "/output";
@@ -216,7 +219,7 @@ namespace Tkl.Jumbo.Test.Jet
             Assert.AreEqual(stage, target.Stages[2]);
 
             Assert.AreEqual("SecondStage", stage.StageId);
-            Assert.IsNull(stage.DfsInput);
+            Assert.IsNull(stage.Input);
             if( useOutput )
             {
                 Assert.IsNotNull(stage.DfsOutput);
@@ -294,7 +297,7 @@ namespace Tkl.Jumbo.Test.Jet
 
         private static JumboFile CreateFakeTestFile(string name)
         {
-            return new JumboFile("/" + name, name, DateTime.UtcNow, 1000, _blockSize, 1, RecordStreamOptions.None, false, new[] { Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid() });
+            return new JumboFile("/" + name, name, DateTime.UtcNow, 5 * _blockSize, _blockSize, 1, RecordStreamOptions.None, false, new[] { Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid() });
         }
 
     }

@@ -13,6 +13,7 @@ using Tkl.Jumbo.Jet.Channels;
 using System.Threading;
 using Tkl.Jumbo.Dfs.FileSystem;
 using System.IO;
+using Tkl.Jumbo.Jet.Input;
 
 namespace Tkl.Jumbo.Test.Jet
 {
@@ -50,7 +51,7 @@ namespace Tkl.Jumbo.Test.Jet
 
 
             JobConfiguration config = new JobConfiguration(typeof(StringConversionTask).Assembly);
-            StageConfiguration conversionStage = config.AddInputStage("ConversionStage", fileSystemClient.GetFileInfo(_fileName), typeof(StringConversionTask), typeof(LineRecordReader));
+            StageConfiguration conversionStage = config.AddInputStage("ConversionStage", new FileStageInput<LineRecordReader>(fileSystemClient, fileSystemClient.GetFileInfo(_fileName)), typeof(StringConversionTask));
             StageConfiguration sortStage = config.AddPointToPointStage("SortStage", conversionStage, typeof(SortTask<int>), ChannelType.Pipeline, null, null, null);
             config.AddStage("MergeStage", typeof(EmptyTask<int>), 1, new InputStageInfo(sortStage) { MultiInputRecordReaderType = typeof(MergeRecordReader<int>) }, fileSystemClient, outputPath, typeof(BinaryRecordWriter<int>));
 
@@ -70,7 +71,7 @@ namespace Tkl.Jumbo.Test.Jet
 
 
             JobConfiguration config = new JobConfiguration(typeof(StringConversionTask).Assembly);
-            StageConfiguration conversionStage = config.AddInputStage("ConversionStage", fileSystemClient.GetFileInfo(_fileName), typeof(StringConversionTask), typeof(LineRecordReader));
+            StageConfiguration conversionStage = config.AddInputStage("ConversionStage", new FileStageInput<LineRecordReader>(fileSystemClient, fileSystemClient.GetFileInfo(_fileName)), typeof(StringConversionTask));
             config.AddStage("SortStage", typeof(SortTask<int>), 1, new InputStageInfo(conversionStage), fileSystemClient, outputPath, typeof(BinaryRecordWriter<int>));
 
             RunJob(fileSystemClient, config);
@@ -89,7 +90,7 @@ namespace Tkl.Jumbo.Test.Jet
 
 
             JobConfiguration config = new JobConfiguration(typeof(StringConversionTask).Assembly);
-            StageConfiguration conversionStage = config.AddInputStage("ConversionStage", fileSystemClient.GetFileInfo(_fileName), typeof(StringConversionTask), typeof(LineRecordReader));
+            StageConfiguration conversionStage = config.AddInputStage("ConversionStage", new FileStageInput<LineRecordReader>(fileSystemClient, fileSystemClient.GetFileInfo(_fileName)), typeof(StringConversionTask));
             config.AddStage("SortStage", typeof(SortTask<int>), 1, new InputStageInfo(conversionStage), fileSystemClient, outputPath, typeof(BinaryRecordWriter<int>));
             foreach( ChannelConfiguration channel in config.GetAllChannels() )
             {
@@ -113,7 +114,7 @@ namespace Tkl.Jumbo.Test.Jet
 
 
             JobConfiguration config = new JobConfiguration(typeof(StringConversionTask).Assembly);
-            StageConfiguration conversionStage = config.AddInputStage("ConversionStage", fileSystemClient.GetFileInfo(_fileName), typeof(StringConversionTask), typeof(LineRecordReader));
+            StageConfiguration conversionStage = config.AddInputStage("ConversionStage", new FileStageInput<LineRecordReader>(fileSystemClient, fileSystemClient.GetFileInfo(_fileName)), typeof(StringConversionTask));
             config.AddStage("SortStage", typeof(SortTask<int>), 1, new InputStageInfo(conversionStage), fileSystemClient, outputPath, typeof(BinaryRecordWriter<int>));
             config.AddTypedSetting(FileInputChannel.MemoryStorageSizeSetting, 0L);
             foreach( ChannelConfiguration channel in config.GetAllChannels() )

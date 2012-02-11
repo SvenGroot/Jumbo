@@ -8,6 +8,7 @@ using Tkl.Jumbo.IO;
 using Tkl.Jumbo.Jet;
 using Tkl.Jumbo.Dfs;
 using Tkl.Jumbo.Jet.Samples.IO;
+using Tkl.Jumbo.Jet.Input;
 
 namespace Tkl.Jumbo.Jet.Samples.Tasks
 {
@@ -61,12 +62,13 @@ namespace Tkl.Jumbo.Jet.Samples.Tasks
                 ++count;
             }
 
-            TaskDfsInput dfsInput = TaskContext.StageConfiguration.DfsInput.GetInput(TaskContext.TaskId);
-            _log.InfoFormat("Input file {0} block {1} split {2} contains {3} unordered records.", dfsInput.Path, dfsInput.Block, TaskContext.TaskId.TaskNumber % TaskContext.StageConfiguration.DfsInput.SplitsPerBlock, unsorted);
+            FileTaskInput taskInput = (FileTaskInput)TaskContext.TaskInput;
+            _log.InfoFormat("Input file {0} split offset {1} size {2} contains {3} unordered records.", taskInput.Path, taskInput.Offset, taskInput.Size, unsorted);
 
             ValSortRecord result = new ValSortRecord()
             {
-                InputId = dfsInput.Path + "_" + dfsInput.Block.ToString("00000"),
+                InputId = taskInput.Path,
+                InputOffset = taskInput.Offset,
                 FirstKey = first.ExtractKeyBytes(),
                 LastKey = prev.ExtractKeyBytes(),
                 Records = count,

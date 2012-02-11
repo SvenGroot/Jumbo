@@ -107,8 +107,8 @@ namespace Tkl.Jumbo.Jet.Samples
             //
             string partitionFileName = FileSystemClient.Path.Combine(job.Path, RangePartitioner.SplitFileName);
             var dfsInput = (from stage in jobConfiguration.Stages
-                            where stage.DfsInput != null
-                            select stage.DfsInput).SingleOrDefault();
+                            where stage.Input != null
+                            select stage.Input).SingleOrDefault();
             RangePartitioner.CreatePartitionFile(FileSystemClient, partitionFileName, dfsInput, _mergePartitions, SampleSize);
         }
     }

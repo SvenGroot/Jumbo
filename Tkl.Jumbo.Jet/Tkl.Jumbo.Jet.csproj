@@ -138,6 +138,11 @@
     <Compile Include="IHasAdditionalProgress.cs" />
     <Compile Include="IHasMetrics.cs" />
     <Compile Include="IJobServerTaskProtocol.cs" />
+    <Compile Include="Input\FileStageInput.cs" />
+    <Compile Include="Input\FileTaskInput.cs" />
+    <Compile Include="Input\IStageInput.cs" />
+    <Compile Include="Input\ITaskInput.cs" />
+    <Compile Include="Input\TaskInputUtility.cs" />
     <Compile Include="Jobs\Builder\Channel.cs" />
     <Compile Include="Jobs\Builder\DfsInput.cs" />
     <Compile Include="Jobs\Builder\DfsOutput.cs" />

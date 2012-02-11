@@ -78,7 +78,8 @@ namespace Tkl.Jumbo.Jet.Jobs.Builder
                 throw new ArgumentNullException("input");
 
             stageId = CreateUniqueStageId(stageId);
-            StageConfiguration stage = _job.AddInputStage(stageId, _fileSystemClient.GetFileSystemEntryInfo(input.Path), taskType, input.RecordReaderType);
+            
+            StageConfiguration stage = _job.AddInputStage(stageId, input.CreateStageInput(_fileSystemClient), taskType, null, null, null);
             if( output != null )
                 output.ApplyOutput(_fileSystemClient, stage);
             return stage;

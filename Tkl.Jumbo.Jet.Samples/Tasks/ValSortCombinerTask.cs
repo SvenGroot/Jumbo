@@ -45,7 +45,7 @@ namespace Tkl.Jumbo.Jet.Samples.Tasks
                 else if( diff > 0 )
                 {
                     if( verbose )
-                        _log.InfoFormat("Input parts {0} and {1} are not sorted in relation to each other.", _prev.InputId, record.InputId);
+                        _log.InfoFormat("Input parts {0}-{1} and {2}-{3} are not sorted in relation to each other.", _prev.InputId, _prev.InputOffset, record.InputId, record.InputOffset);
 
                     if( _firstUnsorted == null )
                         _firstUnsorted = _records;
@@ -54,7 +54,7 @@ namespace Tkl.Jumbo.Jet.Samples.Tasks
             }
 
             if( verbose && record.UnsortedRecords.High64 > 0 || record.UnsortedRecords.Low64 > 0 )
-                _log.InfoFormat("Input part {0} has {1} unsorted records.", _prev.InputId, record.UnsortedRecords);
+                _log.InfoFormat("Input part {0}-{1} has {2} unsorted records.", _prev.InputId, _prev.InputOffset, record.UnsortedRecords);
 
             _unsortedRecords += record.UnsortedRecords;
             _checksum += record.Checksum;

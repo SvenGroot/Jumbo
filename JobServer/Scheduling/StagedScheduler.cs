@@ -53,8 +53,8 @@ namespace JobServerApplication.Scheduling
 
             public int Compare(TaskServerJobInfo x, TaskServerJobInfo y)
             {
-                int tasksX = x.GetSchedulableLocalTaskCount(FileSystemClient);
-                int tasksY = y.GetSchedulableLocalTaskCount(FileSystemClient);
+                int tasksX = x.GetSchedulableLocalTaskCount();
+                int tasksY = y.GetSchedulableLocalTaskCount();
 
                 if( tasksX < tasksY )
                     return -1;
@@ -131,14 +131,14 @@ namespace JobServerApplication.Scheduling
                 while( taskServers.Count > 0 && unscheduledTasks > 0 )
                 {
                     TaskServerJobInfo server = taskServers.Peek();
-                    TaskInfo task = server.FindTaskToSchedule(fileSystemClient, distance);
+                    TaskInfo task = server.FindTaskToSchedule(fileSystemClient, ref distance);
                     if( task != null )
                     {
                         server.TaskServer.SchedulerInfo.AssignTask(job, task);
                         --unscheduledTasks;
                         task.SchedulerInfo.CurrentAttemptDataDistance = distance;
 
-                        _log.InfoFormat("Task {0} has been assigned to server {1} ({2}).", task.FullTaskId, server.TaskServer.Address, distance == 0 ? "data local" : (distance == 1 ? "rack local" : "NOT data local"));
+                        _log.InfoFormat("Task {0} has been assigned to server {1} ({2}).", task.FullTaskId, server.TaskServer.Address, distance < 0 ? "no locality data available" : (distance == 0 ? "data local" : (distance == 1 ? "rack local" : "NOT data local")));
                         if( server.TaskServer.SchedulerInfo.AvailableTasks == 0 )
                             taskServers.Dequeue(); // No more available tasks, remove it from the queue
                         else

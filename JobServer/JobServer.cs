@@ -173,7 +173,7 @@ namespace JobServerApplication
             }
 
 
-            JobInfo jobInfo = new JobInfo(job, config);
+            JobInfo jobInfo = new JobInfo(job, config, _fileSystemClient);
             if( !_jobs.TryAdd(jobId, jobInfo) )
                 throw new ArgumentException("The job is already running.");
 

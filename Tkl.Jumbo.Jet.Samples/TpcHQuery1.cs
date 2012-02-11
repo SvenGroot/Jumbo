@@ -12,6 +12,7 @@ using Tkl.Jumbo.Dfs;
 using Tkl.Jumbo.Jet.Tasks;
 using System.Runtime.InteropServices;
 using Tkl.Jumbo.Dfs.FileSystem;
+using Tkl.Jumbo.Jet.Input;
 
 namespace Tkl.Jumbo.Jet.Samples
 {
@@ -54,7 +55,7 @@ namespace Tkl.Jumbo.Jet.Samples
             JobConfiguration jobConfig = new JobConfiguration(typeof(PricingSummaryTask).Assembly);
             jobConfig.JobName = GetType().Name; // Use the class name as the job's friendly name.
             JumboFileSystemEntry input = FileSystemClient.GetFileSystemEntryInfo(_inputPath);
-            StageConfiguration inputStage = jobConfig.AddInputStage("PricingSummaryTask", input, typeof(PricingSummaryTask), typeof(RecordFileReader<LineItem>));
+            StageConfiguration inputStage = jobConfig.AddInputStage("PricingSummaryTask", new FileStageInput<RecordFileReader<LineItem>>(FileSystemClient, input), typeof(PricingSummaryTask));
             StageConfiguration accumulatorPipelineStage = jobConfig.AddPointToPointStage("Accumulator", inputStage, typeof(PricingSummaryAccumulatorTask), Tkl.Jumbo.Jet.Channels.ChannelType.Pipeline, null, null, null);
             StageConfiguration accumulatorStage = jobConfig.AddStage("PricingSummary", typeof(PricingSummaryAccumulatorTask), 1, new InputStageInfo(accumulatorPipelineStage), null, null, null);
             StageConfiguration outputStage = jobConfig.AddPointToPointStage("Sort", accumulatorStage, typeof(SortTask<Pair<PricingSummaryKey, PricingSummaryValue>>), Tkl.Jumbo.Jet.Channels.ChannelType.Pipeline, FileSystemClient, _outputPath, typeof(TextRecordWriter<Pair<PricingSummaryKey, PricingSummaryValue>>));

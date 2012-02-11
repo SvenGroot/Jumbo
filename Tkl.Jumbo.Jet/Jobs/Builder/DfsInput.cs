@@ -5,6 +5,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using Tkl.Jumbo.IO;
+using Tkl.Jumbo.Dfs.FileSystem;
+using Tkl.Jumbo.Jet.Input;
 
 namespace Tkl.Jumbo.Jet.Jobs.Builder
 {
@@ -61,6 +63,16 @@ namespace Tkl.Jumbo.Jet.Jobs.Builder
         public Type RecordType
         {
             get { return _recordType; }
-        }    
+        }
+
+        /// <summary>
+        /// Creates an <see cref="IStageInput"/> for this input.
+        /// </summary>
+        /// <param name="fileSystem">The file system.</param>
+        /// <returns></returns>
+        public Input.IStageInput CreateStageInput(FileSystemClient fileSystem)
+        {
+            return FileStageInput.Create(RecordReaderType, fileSystem, fileSystem.GetFileSystemEntryInfo(Path));
+        }
     }
 }

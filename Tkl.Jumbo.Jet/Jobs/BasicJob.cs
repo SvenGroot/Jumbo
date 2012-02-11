@@ -12,6 +12,7 @@ using Tkl.Jumbo.Jet.Channels;
 using Ookii.CommandLine;
 using System.ComponentModel;
 using Tkl.Jumbo.Dfs.FileSystem;
+using Tkl.Jumbo.Jet.Input;
 
 namespace Tkl.Jumbo.Jet.Jobs
 {
@@ -177,11 +178,11 @@ namespace Tkl.Jumbo.Jet.Jobs
                 // Add the input stage; if it's a one stage job without sorting, also set output.
                 if( SecondStageTaskCount == 0 && !SortFirstStageOutput )
                 {
-                    firstStage = config.AddInputStage(FirstStageName, input, FirstStageTaskType, InputReaderType, FileSystemClient, OutputPath, OutputWriterType);
+                    firstStage = config.AddInputStage(FirstStageName, FileStageInput.Create(InputReaderType, FileSystemClient, input), FirstStageTaskType, FileSystemClient, OutputPath, OutputWriterType);
                     outputStage = firstStage;
                 }
                 else
-                    firstStage = config.AddInputStage(FirstStageName, input, FirstStageTaskType, InputReaderType);
+                    firstStage = config.AddInputStage(FirstStageName, FileStageInput.Create(InputReaderType, FileSystemClient, input), FirstStageTaskType, null, null, null);
             }
             else
             {

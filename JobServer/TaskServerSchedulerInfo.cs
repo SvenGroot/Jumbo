@@ -45,7 +45,7 @@ namespace JobServerApplication
 
         public void AssignTask(JobInfo job, TaskInfo task)
         {
-            if( task.Stage.Configuration.DfsInput != null )
+            if( task.Stage.Configuration.HasInput )
                 AssignedTasks.Add(task);
             else
                 AssignedNonInputTasks.Add(task);

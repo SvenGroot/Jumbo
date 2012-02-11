@@ -15,6 +15,7 @@ using System.IO;
 using Tkl.Jumbo.Jet.Channels;
 using Tkl.Jumbo.Jet.Tasks;
 using Tkl.Jumbo.Dfs.FileSystem;
+using Tkl.Jumbo.Jet.Input;
 
 namespace Tkl.Jumbo.Test.Jet
 {
@@ -75,13 +76,14 @@ namespace Tkl.Jumbo.Test.Jet
 
         private const string _inputPath = "/test.txt";
         private const string _outputPath = "/output";
+        private const int _blockSize = 4194304;
 
         
 
         [TestFixtureSetUp]
         public void SetUp()
         {
-            _cluster = new TestJetCluster(4194304, true, 1, CompressionType.None);
+            _cluster = new TestJetCluster(_blockSize, true, 1, CompressionType.None);
             _fileSystemClient = _cluster.CreateFileSystemClient();
             _jetClient = new JetClient(TestJetCluster.CreateClientConfig());
             Trace.WriteLine("Cluster running.");
@@ -799,13 +801,13 @@ namespace Tkl.Jumbo.Test.Jet
             if( recordReaderType != null )
             {
                 Assert.IsNull(stage.Parent);
-                Assert.IsNotNull(stage.DfsInput);
-                Assert.AreEqual(3, stage.DfsInput.TaskInputs.Count);
-                Assert.AreEqual(recordReaderType, stage.DfsInput.RecordReaderType.ReferencedType);
+                Assert.IsNotNull(stage.Input);
+                Assert.AreEqual(3, stage.Input.TaskInputs.Count);
+                Assert.IsInstanceOf(typeof(FileStageInput<>).MakeGenericType(recordReaderType), stage.Input);
                 for( int x = 0; x < 3; ++x )
                 {
-                    TaskDfsInput input = stage.DfsInput.TaskInputs[x];
-                    Assert.AreEqual(x, input.Block);
+                    FileTaskInput input = (FileTaskInput)stage.Input.TaskInputs[x];
+                    Assert.AreEqual(x * _blockSize, input.Offset);
                     Assert.AreEqual(_inputPath, input.Path);
                 }
             }
@@ -815,7 +817,7 @@ namespace Tkl.Jumbo.Test.Jet
                 foreach( StageConfiguration inputStage in inputStages )
                     Assert.AreEqual(partitionsPerTask, inputStage.OutputChannel.PartitionsPerTask);
 
-                Assert.IsNull(stage.DfsInput);
+                Assert.IsNull(stage.Input);
             }
 
             if( recordWriterType != null )

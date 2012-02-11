@@ -93,8 +93,8 @@ namespace Tkl.Jumbo.Jet.Samples
             FileSystemClient.CreateDirectory(partitionFileDirectory);
 
             var dfsInput = (from stage in jobConfiguration.Stages
-                            where stage.DfsInput != null
-                            select stage.DfsInput).SingleOrDefault();
+                            where stage.Input != null
+                            select stage.Input).SingleOrDefault();
             RangePartitioner.CreatePartitionFile(FileSystemClient, partitionFileName, dfsInput, jobConfiguration.GetStage("MergeStage").TaskCount, SampleSize);
 
             jobConfiguration.AddSetting("partitionFile", partitionFileName);

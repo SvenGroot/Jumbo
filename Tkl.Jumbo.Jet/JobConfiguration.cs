@@ -13,6 +13,7 @@ using System.Reflection;
 using System.Collections.ObjectModel;
 using System.Globalization;
 using Tkl.Jumbo.Dfs.FileSystem;
+using Tkl.Jumbo.Jet.Input;
 
 namespace Tkl.Jumbo.Jet
 {
@@ -115,34 +116,11 @@ namespace Tkl.Jumbo.Jet
         public SettingsDictionary JobSettings { get; set; }
 
         /// <summary>
-        /// Adds a stage that reads from the DFS.
+        /// Adds a stage that reads input from a <see cref="IStageInput"/>.
         /// </summary>
         /// <param name="stageId">The name of the stage. This name will serve as the base name for all the tasks in the stage.</param>
-        /// <param name="inputFileOrDirectory">The DFS file or directory that the stage will read from.</param>
+        /// <param name="input">The <see cref="IStageInput"/> that provides the input.</param>
         /// <param name="taskType">The type implementing the task's functionality; this type must implement <see cref="ITask{TInput,TOutput}"/>.</param>
-        /// <param name="recordReaderType">The type of record reader to use when reading the file; this type must derive from <see cref="RecordReader{T}"/>.</param>
-        /// <returns>A <see cref="StageConfiguration"/> for the new stage.</returns>
-        /// <remarks>
-        /// <note>
-        ///   Information about stages is not preserved through XML serialization, so you should not use this method on a <see cref="JobConfiguration"/>
-        ///   object created using the <see cref="LoadXml(string)"/> method.
-        /// </note>
-        /// <para>
-        ///   The new stage will contain as many tasks are there are blocks in the input file.
-        /// </para>
-        /// </remarks>
-        public StageConfiguration AddInputStage(string stageId, JumboFileSystemEntry inputFileOrDirectory, Type taskType, Type recordReaderType)
-        {
-            return AddInputStage(stageId, inputFileOrDirectory, taskType, recordReaderType, null, null, null);
-        }
-
-        /// <summary>
-        /// Adds a stage that reads from the DFS.
-        /// </summary>
-        /// <param name="stageId">The name of the stage. This name will serve as the base name for all the tasks in the stage.</param>
-        /// <param name="inputFileOrDirectory">The DFS file or directory containing the files that the stage will read from.</param>
-        /// <param name="taskType">The type implementing the task's functionality; this type must implement <see cref="ITask{TInput,TOutput}"/>.</param>
-        /// <param name="recordReaderType">The type of record reader to use when reading the file; this type must derive from <see cref="RecordReader{T}"/>.</param>
         /// <param name="fileSystem">The file system.</param>
         /// <param name="outputPath">The name of a DFS directory to write the stage's output files to, or <see langword="null"/> to indicate this stage does not write to the DFS.</param>
         /// <param name="recordWriterType">The type of the record writer to use when writing to the output files; this parameter is ignored if <paramref name="outputPath"/> is <see langword="null"/>.</param>
@@ -158,23 +136,22 @@ namespace Tkl.Jumbo.Jet
         /// The new stage will contain as many tasks are there are blocks in the input file.
         ///   </para>
         /// </remarks>
-        public StageConfiguration AddInputStage(string stageId, JumboFileSystemEntry inputFileOrDirectory, Type taskType, Type recordReaderType, FileSystemClient fileSystem, string outputPath, Type recordWriterType)
+        public StageConfiguration AddInputStage(string stageId, IStageInput input, Type taskType, FileSystemClient fileSystem = null, string outputPath = null, Type recordWriterType = null)
         {
-            if( inputFileOrDirectory == null )
-                throw new ArgumentNullException("inputFileOrDirectory");
-            IEnumerable<JumboFile> files;
-            JumboFile file = inputFileOrDirectory as JumboFile;
-            if( file != null )
-                files = new[] { file };
-            else
-            {
-                JumboDirectory directory = (JumboDirectory)inputFileOrDirectory;
-                files = (from item in directory.Children
-                         let f = item as JumboFile
-                         where f != null
-                         select f);
-            }
-            return AddInputStage(stageId, files, taskType, recordReaderType, fileSystem, outputPath, recordWriterType);
+            if( stageId == null )
+                throw new ArgumentNullException("stageId");
+            if( stageId.Length == 0 )
+                throw new ArgumentException("Stage ID cannot be empty.", "stageId");
+            if( input == null )
+                throw new ArgumentNullException("input");
+            if( taskType == null )
+                throw new ArgumentNullException("taskType");
+            if( outputPath != null && recordWriterType == null )
+                throw new ArgumentNullException("recordWriterType");
+
+            StageConfiguration stage = CreateStage(stageId, taskType, 0, fileSystem, outputPath, recordWriterType, input);
+            Stages.Add(stage);
+            return stage;
         }
 
         /// <summary>
@@ -248,7 +225,7 @@ namespace Tkl.Jumbo.Jet
                 }
             }
 
-            StageConfiguration stage = CreateStage(stageId, taskType, taskCount, fileSystem, outputPath, recordWriterType, null, null);
+            StageConfiguration stage = CreateStage(stageId, taskType, taskCount, fileSystem, outputPath, recordWriterType, null);
             if( isPipelineChannel )
             {
                 InputStageInfo parentStage = inputStages.First();
@@ -361,7 +338,7 @@ namespace Tkl.Jumbo.Jet
             parentStage.ChildStagePartitionerType = partitionerType ?? typeof(HashPartitioner<>).MakeGenericType(inputType);
         }
 
-        private StageConfiguration CreateStage(string stageId, Type taskType, int taskCount, FileSystemClient fileSystem, string outputPath, Type recordWriterType, IEnumerable<JumboFile> inputs, Type recordReaderType)
+        private StageConfiguration CreateStage(string stageId, Type taskType, int taskCount, FileSystemClient fileSystem, string outputPath, Type recordWriterType, IStageInput input)
         {
             StageConfiguration stage = new StageConfiguration()
             {
@@ -373,21 +350,10 @@ namespace Tkl.Jumbo.Jet
             if( outputPath != null )
                 stage.SetDfsOutput(fileSystem, outputPath, recordWriterType);
 
-            if( inputs != null )
+            if( input != null )
             {
-                StageDfsInput stageInput = new StageDfsInput() { RecordReaderType = recordReaderType };
-                foreach( JumboFile file in inputs )
-                {
-                    for( int block = 0; block < file.Blocks.Count; ++block )
-                    {
-                        stageInput.TaskInputs.Add(new TaskDfsInput()
-                        {
-                            Path = file.FullPath,
-                            Block = block,
-                        });
-                    }
-                }
-                stage.DfsInput = stageInput;
+                ValidateInputType(input, new TaskTypeInfo(taskType));
+                stage.Input = input;
             }
 
             AddAdditionalProgressCounter(taskType);
@@ -676,37 +642,6 @@ namespace Tkl.Jumbo.Jet
             return false;
         }
 
-        private StageConfiguration AddInputStage(string stageId, IEnumerable<JumboFile> inputFiles, Type taskType, Type recordReaderType, FileSystemClient fileSystem, string outputPath, Type recordWriterType)
-        {
-            if( stageId == null )
-                throw new ArgumentNullException("stageId");
-            if( stageId.Length == 0 )
-                throw new ArgumentException("Stage name cannot be empty.", "stageId");
-            if( inputFiles == null )
-                throw new ArgumentNullException("inputFiles");
-            if( inputFiles.Count() == 0 )
-                throw new ArgumentException("You must specify at least one input file.");
-            if( taskType == null )
-                throw new ArgumentNullException("taskType");
-            if( recordReaderType == null )
-                throw new ArgumentNullException("recordReaderType");
-            if( outputPath != null && recordWriterType == null )
-                throw new ArgumentNullException("recordWriterType");
-
-            Type taskInterfaceType = taskType.FindGenericInterfaceType(typeof(ITask<,>));
-            Type inputType = taskInterfaceType.GetGenericArguments()[0];
-            Type recordReaderBaseType = FindGenericBaseType(recordReaderType, typeof(RecordReader<>));
-            Type recordType = recordReaderBaseType.GetGenericArguments()[0];
-            if( inputType != recordType )
-                throw new ArgumentException(string.Format(System.Globalization.CultureInfo.CurrentCulture, "The specified record reader type {0} is not identical to the specified task type's input type {1}.", recordType, inputType));
-
-            ValidateOutputType(outputPath, recordWriterType, taskInterfaceType);
-
-            StageConfiguration stage = CreateStage(stageId, taskType, 0, fileSystem, outputPath, recordWriterType, inputFiles, recordReaderType);
-            Stages.Add(stage);
-            return stage;
-        }
-
         internal static void ValidateOutputType(string outputPath, Type recordWriterType, Type taskInterfaceType)
         {
             if( outputPath != null )
@@ -718,6 +653,12 @@ namespace Tkl.Jumbo.Jet
                 if( outputType != recordType )
                     throw new ArgumentException(string.Format(System.Globalization.CultureInfo.CurrentCulture, "The specified record type {0} is not identical to the specified task type's output type {1}.", recordType, outputType));
             }
+        }
+
+        private static void ValidateInputType(IStageInput input, TaskTypeInfo taskType)
+        {
+            if( input.RecordType != taskType.InputRecordType )
+                throw new ArgumentException(string.Format(System.Globalization.CultureInfo.CurrentCulture, "The specified input's record type {0} is not identical to the specified task type's input record type {1}.", input.RecordType, taskType.InputRecordType));
         }
 
         private static Type FindGenericBaseType(Type type, Type baseType)

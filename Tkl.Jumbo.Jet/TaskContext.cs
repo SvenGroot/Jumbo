@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using Tkl.Jumbo.Jet.Input;
 
 namespace Tkl.Jumbo.Jet
 {
@@ -87,6 +88,17 @@ namespace Tkl.Jumbo.Jet
         public int Attempt
         {
             get { return TaskAttemptId.Attempt; }
+        }
+
+        /// <summary>
+        /// Gets the task input for this task.
+        /// </summary>
+        /// <value>
+        /// The task input, or <see langword="null"/> if this task doesn't have a task input.
+        /// </value>
+        public ITaskInput TaskInput
+        {
+            get { return TaskExecution == null ? null : TaskExecution.TaskInput; }
         }
 
         /// <summary>

@@ -21,7 +21,6 @@ namespace JobServerApplication
     {
         private readonly Dictionary<ServerAddress, TaskServerJobInfo> _taskServers = new Dictionary<ServerAddress,TaskServerJobInfo>();
         private readonly Dictionary<string, List<TaskInfo>> _rackTasks = new Dictionary<string, List<TaskInfo>>();
-        private Dictionary<Guid, List<TaskInfo>> _inputBlockMap;
         private readonly JobInfo _job;
         private readonly Dictionary<string, JumboFile> _files = new Dictionary<string, JumboFile>();
 
@@ -85,46 +84,6 @@ namespace JobServerApplication
             get { return _taskServers.Values.Any(server => server.NeedsCleanup); }
         }
 
-        public Guid[] GetInputBlocks(DfsClient dfsClient)
-        {
-            EnsureInputBlockMapCreated(dfsClient);
-
-            return _inputBlockMap.Keys.ToArray();
-        }
-
-        //public TaskInfo GetTaskForInputBlock(Guid blockId, DfsClient dfsClient)
-        //{
-        //    EnsureInputBlockMapCreated(dfsClient);
-
-        //    return _inputBlockMap[blockId].Where(task => task.Server == null && task.Stage.IsReadyForScheduling).FirstOrDefault();
-        //}
-
-        public IEnumerable<TaskInfo> GetTasksForInputBlock(Guid blockId, DfsClient dfsClient)
-        {
-            EnsureInputBlockMapCreated(dfsClient);
-
-            return _inputBlockMap[blockId];
-        }
-
-        private void EnsureInputBlockMapCreated(DfsClient dfsClient)
-        {
-            if( _inputBlockMap == null )
-            {
-                // This needs to be a list because a job might have multiple stages reading the same block.
-                _inputBlockMap = new Dictionary<Guid, List<TaskInfo>>();
-                foreach( TaskInfo task in _job.GetAllDfsInputTasks() )
-                {
-                    List<TaskInfo> blockTasks;
-                    Guid taskBlockId = task.SchedulerInfo.GetBlockId(dfsClient);
-                    if( !_inputBlockMap.TryGetValue(taskBlockId, out blockTasks) )
-                    {
-                        blockTasks = new List<TaskInfo>();
-                        _inputBlockMap.Add(taskBlockId, blockTasks);
-                    }
-                    blockTasks.Add(task);
-                }
-            }
-        }
 
         public JumboFile GetFileInfo(DfsClient dfsClient, string path)
         {

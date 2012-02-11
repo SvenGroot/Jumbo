@@ -38,30 +38,31 @@ namespace JobServerApplication
 
         public bool NeedsCleanup { get; set; }
 
-        public int GetSchedulableLocalTaskCount(FileSystemClient fileSystemClient)
+        public int GetSchedulableLocalTaskCount()
         {
-            return (from task in GetLocalTasksIfDfs(fileSystemClient)
+            return (from task in GetLocalTasks()
                     where task.Stage.IsReadyForScheduling && task.Server == null && !task.SchedulerInfo.BadServers.Contains(_taskServer)
                     select task).Count();
         }
 
-        public TaskInfo FindTaskToSchedule(FileSystemClient fileSystemClient, int distance)
+        public TaskInfo FindTaskToSchedule(FileSystemClient fileSystemClient, ref int distance)
         {
-            DfsClient dfsClient = fileSystemClient as DfsClient;
             IEnumerable<TaskInfo> eligibleTasks;
-            if( dfsClient == null )
-                eligibleTasks = _job.GetDfsInputTasks();
+            if( fileSystemClient is LocalFileSystemClient )
+            {
+                distance = -1;
+                eligibleTasks = _job.GetDfsInputTasks(); // Local FS has no concept of locality, so just get all tasks.
+            }
             else
             {
                 switch( distance )
                 {
                 case 0:
-                    eligibleTasks = GetLocalTasks(dfsClient);
+                    eligibleTasks = GetLocalTasks();
                     break;
-                // TODO: case 1
                 case 1:
                     if( JobServer.Instance.RackCount > 1 )
-                        eligibleTasks = GetRackLocalTasks(dfsClient);
+                        eligibleTasks = GetRackLocalTasks();
                     else
                         eligibleTasks = _job.GetDfsInputTasks();
                     break;
@@ -76,31 +77,22 @@ namespace JobServerApplication
                     select task).FirstOrDefault();
         }
 
-        private IEnumerable<TaskInfo> GetLocalTasksIfDfs(FileSystemClient fileSystemClient)
-        {
-            DfsClient dfsClient = fileSystemClient as DfsClient;
-            if( dfsClient == null )
-                return _job.GetDfsInputTasks();
-            else
-                return GetLocalTasks(dfsClient);
-        }
-
-        private List<TaskInfo> GetLocalTasks(DfsClient dfsClient)
+        private List<TaskInfo> GetLocalTasks()
         {
             if( _localTasks == null )
-                _localTasks = CreateLocalTaskList(dfsClient);
+                _localTasks = CreateLocalTaskList();
 
             return _localTasks;
         }
 
-        private List<TaskInfo> GetRackLocalTasks(DfsClient dfsClient)
+        private List<TaskInfo> GetRackLocalTasks()
         {
             if( _rackLocalTasks == null )
             {
                 _rackLocalTasks = _job.SchedulerInfo.GetRackTasks(_taskServer.Rack.RackId);
                 if( _rackLocalTasks == null )
                 {
-                    _rackLocalTasks = CreateRackLocalTaskList(dfsClient);
+                    _rackLocalTasks = CreateRackLocalTaskList();
                     _job.SchedulerInfo.AddRackTasks(_taskServer.Rack.RackId, _rackLocalTasks);
                 }
             }
@@ -108,41 +100,19 @@ namespace JobServerApplication
             return _rackLocalTasks;
         }
 
-        private List<TaskInfo> CreateLocalTaskList(DfsClient dfsClient)
+        private List<TaskInfo> CreateLocalTaskList()
         {
-            ServerAddress[] dataServers = DataServerMap.GetDataServersForTaskServer(_taskServer.Address, _job.SchedulerInfo.TaskServers.Select(server => server.TaskServer), dfsClient);
-            return CreateTaskListForServers(dfsClient, dataServers);
+            return (from task in _job.GetAllDfsInputTasks()
+                    where task.IsLocalForHost(_taskServer.Address.HostName)
+                    select task).ToList();
         }
 
-        private List<TaskInfo> CreateRackLocalTaskList(DfsClient dfsClient)
+        private List<TaskInfo> CreateRackLocalTaskList()
         {
-            var taskServers = _job.SchedulerInfo.TaskServers.Select(server => server.TaskServer);
-            var dataServers = from TaskServerInfo taskServer in _taskServer.Rack.Nodes
-                              from dataServer in DataServerMap.GetDataServersForTaskServer(taskServer.Address, taskServers, dfsClient)
-                              select dataServer;
-
-            return CreateTaskListForServers(dfsClient, dataServers);
-        }
-
-        private List<TaskInfo> CreateTaskListForServers(DfsClient dfsClient, IEnumerable<ServerAddress> dataServers)
-        {
-            if( dataServers != null )
-            {
-                HashSet<Guid> localBlocks = null;
-                Guid[] inputBlocks = _job.SchedulerInfo.GetInputBlocks(dfsClient);
-                localBlocks = new HashSet<Guid>();
-                foreach( ServerAddress dataServer in dataServers )
-                {
-                    foreach( Guid blockId in dfsClient.NameServer.GetDataServerBlocks(dataServer, inputBlocks) )
-                        localBlocks.Add(blockId);
-                }
-
-                return (from block in localBlocks
-                        from task in _job.SchedulerInfo.GetTasksForInputBlock(block, dfsClient)
-                        select task).ToList();
-            }
-
-            return new List<TaskInfo>();
+            var taskServers = _taskServer.Rack.Nodes.Cast<TaskServerInfo>();
+            return (from task in _job.GetAllDfsInputTasks()
+                    where taskServers.Any(server => task.IsLocalForHost(server.Address.HostName))
+                    select task).ToList();
         }
     }
 }

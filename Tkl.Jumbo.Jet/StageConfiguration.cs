@@ -10,6 +10,7 @@ using Tkl.Jumbo.Jet.Channels;
 using Tkl.Jumbo.Dfs;
 using System.Globalization;
 using Tkl.Jumbo.Dfs.FileSystem;
+using Tkl.Jumbo.Jet.Input;
 
 namespace Tkl.Jumbo.Jet
 {
@@ -26,6 +27,8 @@ namespace Tkl.Jumbo.Jet
         private bool? _allowOutputRecordReuse;
         private readonly ExtendedCollection<string> _dependentStages = new ExtendedCollection<string>();
         private StageConfiguration _childStage;
+        private IStageInput _input;
+
 
         /// <summary>
         /// Initializes a new instance of the <see cref="StageConfiguration"/> class.
@@ -58,15 +61,15 @@ namespace Tkl.Jumbo.Jet
         /// Gets or sets the number of tasks in this stage.
         /// </summary>
         /// <remarks>
-        /// This property is ignored if <see cref="DfsInput"/> is not <see langword="null"/>.
+        /// This property is ignored if <see cref="Input"/> is not <see langword="null"/>.
         /// </remarks>
         [XmlAttribute("taskCount")]
         public int TaskCount
         {
             get 
             {
-                if( DfsInput != null )
-                    return DfsInput.SplitCount;
+                if( Input != null )
+                    return Input.TaskInputs.Count;
                 return _taskCount; 
             }
             set 
@@ -76,13 +79,55 @@ namespace Tkl.Jumbo.Jet
         }
 
         /// <summary>
-        /// Gets the input that this stage's tasks read from the DFS.
+        /// Gets or sets the input for this stage.
         /// </summary>
+        /// <value>
+        /// The input for the stage, or <see langword="null"/> if the stage has no input or channel input, or the job configuration was loaded from XML.
+        /// </value>
         /// <remarks>
-        /// If this property is not <see langword="null"/>, then the stage will have as many tasks as there are inputs, and
-        /// the <see cref="TaskCount"/> property will be ignored.
+        /// <note>
+        ///   This value is not saved in the job configuration, and will not be available after loading a job configuration.
+        ///   Instead, the type of this property will be saved in <see cref="InputType"/>.
+        /// </note>
+        /// <note>
+        ///   Don't set this property manually while constructing a job. Instead, use the <see cref="JobConfiguration.AddInputStage"/> method.
+        /// </note>
         /// </remarks>
-        public StageDfsInput DfsInput { get; set; }
+        [XmlIgnore]
+        public IStageInput Input
+        {
+            get { return _input; }
+            set 
+            {
+                _input = value;
+                InputType = value == null ? new TypeReference() : new TypeReference(value.GetType());
+            }
+        }
+
+        /// <summary>
+        /// Gets or sets the <see cref="Type"/> of the <see cref="IStageInput"/> used by this stage.
+        /// </summary>
+        /// <value>
+        /// The type of the input, or <see langword="null"/> if the stage has no input or channel input.
+        /// </value>
+        /// <remarks>
+        /// <note>
+        ///   Don't set this property manually while constructing a job. Instead, use the <see cref="JobConfiguration.AddInputStage"/> method.
+        /// </note>
+        /// </remarks>
+        public TypeReference InputType { get; set; }
+
+        /// <summary>
+        /// Gets a value indicating whether this stage has input other than a channel.
+        /// </summary>
+        /// <value>
+        /// 	<see langword="true"/> if this instance has input; otherwise, <see langword="false"/>.
+        /// </value>
+        [XmlIgnore]
+        public bool HasInput
+        {
+            get { return !string.IsNullOrEmpty(InputType.TypeName); }
+        }
 
         /// <summary>
         /// Gets or sets a child stage that will be connected to this stage's tasks via a <see cref="Channels.PipelineOutputChannel"/>.

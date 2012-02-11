@@ -9,6 +9,7 @@ using System.IO;
 using System.Diagnostics;
 using System.Threading;
 using Tkl.Jumbo.Dfs.FileSystem;
+using Tkl.Jumbo.Jet.Input;
 
 namespace Tkl.Jumbo.Jet
 {
@@ -277,6 +278,16 @@ namespace Tkl.Jumbo.Jet
                 config.SaveXml(stream);
             }
 
+            // Save split files for all stages with input.
+            foreach( StageConfiguration stage in config.Stages )
+            {
+                if( stage.Input != null )
+                {
+                    TaskInputUtility.WriteTaskInputs(fileSystemClient, job.Path, stage.StageId, stage.Input.TaskInputs);
+                }
+            }
+
+            // Upload additional files
             if( files != null )
             {
                 foreach( string file in files )

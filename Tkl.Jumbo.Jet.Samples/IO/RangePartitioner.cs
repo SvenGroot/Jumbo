@@ -9,6 +9,7 @@ using Tkl.Jumbo.IO;
 using Tkl.Jumbo.Dfs;
 using System.IO;
 using Tkl.Jumbo.Dfs.FileSystem;
+using Tkl.Jumbo.Jet.Input;
 
 namespace Tkl.Jumbo.Jet.Samples.IO
 {
@@ -135,18 +136,18 @@ namespace Tkl.Jumbo.Jet.Samples.IO
         /// <param name="input">The input of the job.</param>
         /// <param name="partitions">The number of partitions.</param>
         /// <param name="sampleSize">The total number of records to sample.</param>
-        public static void CreatePartitionFile(FileSystemClient fileSystemClient, string partitionFilePath, StageDfsInput input, int partitions, int sampleSize)
+        public static void CreatePartitionFile(FileSystemClient fileSystemClient, string partitionFilePath, IStageInput input, int partitions, int sampleSize)
         {
-            int samples = Math.Min(10, input.SplitCount);
+            int samples = Math.Min(10, input.TaskInputs.Count);
             int recordsPerSample = sampleSize / samples;
-            int sampleStep = input.SplitCount / samples;
+            int sampleStep = input.TaskInputs.Count / samples;
             _log.InfoFormat("Sampling {0} records in {1} samples ({2} records per sample) to create {3} partitions.", sampleSize, samples, recordsPerSample, partitions);
 
             List<byte[]> sampleData = new List<byte[]>(sampleSize);
 
             for( int sample = 0; sample < samples; ++sample )
             {
-                using( RecordReader<GenSortRecord> reader = (RecordReader<GenSortRecord>)input.CreateRecordReader(fileSystemClient, sample * sampleStep) )
+                using( RecordReader<GenSortRecord> reader = (RecordReader<GenSortRecord>)input.CreateRecordReader(fileSystemClient, null, null, input.TaskInputs[sample * sampleStep]) )
                 {
                     int records = 0;
                     while( records++ < recordsPerSample && reader.ReadRecord() )

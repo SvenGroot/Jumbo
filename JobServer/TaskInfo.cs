@@ -24,11 +24,12 @@ namespace JobServerApplication
         private readonly JobInfo _job;
         private readonly TaskPartitionInfo _partitionInfo;
         private readonly TaskSchedulerInfo _schedulerInfo;
+        private readonly string[] _inputLocations;
 
         private long _startTimeUtcTicks;
         private long _endTimeUtcTicks;
 
-        public TaskInfo(JobInfo job, StageInfo stage, IList<StageConfiguration> inputStages, int taskNumber)
+        public TaskInfo(JobInfo job, StageInfo stage, IList<StageConfiguration> inputStages, int taskNumber, string[] inputLocations)
         {
             if( stage == null )
                 throw new ArgumentNullException("stage");
@@ -38,6 +39,7 @@ namespace JobServerApplication
             _taskId = new TaskId(stage.StageId, taskNumber);
             _fullTaskId = Tkl.Jumbo.Jet.Job.CreateFullTaskId(job.Job.JobId, _taskId);
             _job = job;
+            _inputLocations = inputLocations;
 
             if( inputStages != null && inputStages.Count > 0 )
             {
@@ -45,6 +47,11 @@ namespace JobServerApplication
             }
 
             _schedulerInfo = new TaskSchedulerInfo(this);
+        }
+
+        public bool IsLocalForHost(string hostName)
+        {
+            return _inputLocations != null && Array.IndexOf(_inputLocations, hostName) >= 0;
         }
 
         public StageInfo Stage
@@ -71,6 +78,11 @@ namespace JobServerApplication
         public TaskPartitionInfo PartitionInfo
         {
             get { return _partitionInfo; }
+        }
+
+        public string[] InputLocations
+        {
+            get { return _inputLocations; }
         }
 
         public TaskState State
