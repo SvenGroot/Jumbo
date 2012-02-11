@@ -202,105 +202,6 @@ namespace Tkl.Jumbo.Dfs.FileSystem
         }
 
         /// <summary>
-        /// Uploads the contents of the specified stream to the Distributed File System.
-        /// </summary>
-        /// <param name="stream">The stream with the data to upload.</param>
-        /// <param name="dfsPath">The path of the file on the DFS to write the data to.</param>
-        /// <param name="blockSize">The block size of the file, or zero to use the file system default block size.</param>
-        /// <param name="replicationFactor">The number of replicas to create of the file's blocks, or zero to use the file system default replication factor.</param>
-        /// <param name="useLocalReplica"><see langword="true"/> to put the first replica on the node that's creating the file if it's part of the DFS cluster; otherwise, <see langword="false"/>.</param>
-        /// <param name="progressCallback">The <see cref="ProgressCallback"/> that will be called to report progress of the operation. May be <see langword="null"/>.</param>
-        public override void UploadStream(Stream stream, string dfsPath, int blockSize, int replicationFactor, bool useLocalReplica, ProgressCallback progressCallback)
-        {
-            if( dfsPath == null )
-                throw new ArgumentNullException("dfsPath");
-            if( stream == null )
-                throw new ArgumentNullException("stream");
-
-            using( DfsOutputStream outputStream = new DfsOutputStream(NameServer, dfsPath, blockSize, replicationFactor, useLocalReplica, IO.RecordStreamOptions.None) )
-            {
-                CopyStream(dfsPath, stream, outputStream, progressCallback);
-            }
-        }
-
-        /// <summary>
-        /// Uploads a file to the Distributed File System.
-        /// </summary>
-        /// <param name="localPath">The path of the file to upload.</param>
-        /// <param name="dfsPath">The path on the DFS to store the file. If this is the name of an existing directory, the file
-        /// will be stored in that directory.</param>
-        /// <param name="blockSize">The block size of the file, or zero to use the file system default block size.</param>
-        /// <param name="replicationFactor">The number of replicas to create of the file's blocks, or zero to use the file system default replication factor.</param>
-        /// <param name="useLocalReplica"><see langword="true"/> to put the first replica on the node that's creating the file if it's part of the DFS cluster; otherwise, <see langword="false"/>.</param>
-        /// <param name="progressCallback">The <see cref="ProgressCallback"/> that will be called to report progress of the operation. May be <see langword="null"/>.</param>
-        public override void UploadFile(string localPath, string dfsPath, int blockSize, int replicationFactor, bool useLocalReplica, ProgressCallback progressCallback)
-        {
-            if( dfsPath == null )
-                throw new ArgumentNullException("dfsPath");
-            if( localPath == null )
-                throw new ArgumentNullException("localPath");
-            JumboDirectory dir = NameServer.GetDirectoryInfo(dfsPath);
-            if( dir != null )
-            {
-                string fileName = System.IO.Path.GetFileName(localPath);
-                if( !dfsPath.EndsWith(Path.DirectorySeparator.ToString(), StringComparison.Ordinal) )
-                    dfsPath += Path.DirectorySeparator;
-                dfsPath += fileName;
-            }
-            using( System.IO.FileStream inputStream = System.IO.File.OpenRead(localPath) )
-            {
-                UploadStream(inputStream, dfsPath, blockSize, replicationFactor, useLocalReplica, progressCallback);
-            }
-        }
-
-        /// <summary>
-        /// Downloads the specified file from the DFS, saving it to the specified stream.
-        /// </summary>
-        /// <param name="dfsPath">The path of the file on the DFS to download.</param>
-        /// <param name="stream">The stream to save the file to.</param>
-        /// <param name="progressCallback">The <see cref="ProgressCallback"/> that will be called to report progress of the operation. May be <see langword="null"/>.</param>
-        public override void DownloadStream(string dfsPath, System.IO.Stream stream, ProgressCallback progressCallback)
-        {
-            if( dfsPath == null )
-                throw new ArgumentNullException("dfsPath");
-            if( stream == null )
-                throw new ArgumentNullException("stream");
-            using( DfsInputStream inputStream = new DfsInputStream(NameServer, dfsPath) )
-            {
-                CopyStream(dfsPath, inputStream, stream, progressCallback);
-            }
-        }
-
-        /// <summary>
-        /// Downloads the specified file from the DFS to the specified local file.
-        /// </summary>
-        /// <param name="dfsPath">The path of the file on the DFS to download.</param>
-        /// <param name="localPath">The path of the file on the local file system to save the file to. If this is the
-        /// name of an existing directory, the file will be downloaded to that directory.</param>
-        /// <param name="progressCallback">The <see cref="ProgressCallback"/> that will be called to report progress of the operation. May be <see langword="null"/>.</param>
-        public override void DownloadFile(string dfsPath, string localPath, ProgressCallback progressCallback)
-        {
-            if( dfsPath == null )
-                throw new ArgumentNullException("dfsPath");
-            if( localPath == null )
-                throw new ArgumentNullException("localPath");
-
-            if( System.IO.Directory.Exists(localPath) )
-            {
-                int index = dfsPath.LastIndexOf(Path.DirectorySeparator);
-                if( index < 0 || index + 1 >= dfsPath.Length )
-                {
-                    throw new ArgumentException("Invalid DFS path.");
-                }
-                localPath = System.IO.Path.Combine(localPath, dfsPath.Substring(index + 1));
-            }
-            using( System.IO.FileStream stream = System.IO.File.Create(localPath) )
-            {
-                DownloadStream(dfsPath, stream, progressCallback);
-            }
-        }
-
-        /// <summary>
         /// Opens the specified file on the distributed file system for reading.
         /// </summary>
         /// <param name="path">The path of the file.</param>
@@ -351,29 +252,6 @@ namespace Tkl.Jumbo.Dfs.FileSystem
         {
             string url = string.Format(System.Globalization.CultureInfo.InvariantCulture, _nameServerUrlFormat, hostName, port);
             return (T)Activator.GetObject(typeof(T), url);
-        }
-
-        private static void CopyStream(string fileName, System.IO.Stream inputStream, System.IO.Stream outputStream, ProgressCallback progressCallback)
-        {
-            byte[] buffer = new byte[4096];
-            int bytesRead;
-            int prevPercentage = -1;
-            float length = inputStream.Length;
-            if( progressCallback != null )
-                progressCallback(fileName, 0, 0L);
-            while( (bytesRead = inputStream.Read(buffer, 0, buffer.Length)) != 0 )
-            {
-                int percentage = (int)((inputStream.Position / length) * 100);
-                if( percentage > prevPercentage )
-                {
-                    prevPercentage = percentage;
-                    if( progressCallback != null )
-                        progressCallback(fileName, percentage, inputStream.Position);
-                }
-                outputStream.Write(buffer, 0, bytesRead);
-            }
-            if( progressCallback != null )
-                progressCallback(fileName, 100, inputStream.Length);
         }
     }
 }

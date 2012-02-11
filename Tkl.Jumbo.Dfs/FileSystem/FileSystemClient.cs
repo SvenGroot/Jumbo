@@ -125,7 +125,18 @@ namespace Tkl.Jumbo.Dfs.FileSystem
         /// <param name="replicationFactor">The number of replicas to create of the file's blocks, or zero to use the file system default replication factor. This parameter will be ignored if the file system doesn't support replication.</param>
         /// <param name="useLocalReplica"><see langword="true"/> to put the first replica on the node that's creating the file if it's part of the DFS cluster; otherwise, <see langword="false"/>. This parameter will be ignored if the file system doesn't support replica placement.</param>
         /// <param name="progressCallback">The <see cref="ProgressCallback"/> that will be called to report progress of the operation. May be <see langword="null"/>.</param>
-        public abstract void UploadStream(Stream stream, string targetPath, int blockSize, int replicationFactor, bool useLocalReplica, ProgressCallback progressCallback);
+        public void UploadStream(Stream stream, string targetPath, int blockSize, int replicationFactor, bool useLocalReplica, ProgressCallback progressCallback)
+        {
+            if( targetPath == null )
+                throw new ArgumentNullException("targetPath");
+            if( stream == null )
+                throw new ArgumentNullException("stream");
+
+            using( Stream outputStream = CreateFile(targetPath, blockSize, replicationFactor, useLocalReplica, IO.RecordStreamOptions.None) )
+            {
+                CopyStream(targetPath, stream, outputStream, progressCallback);
+            }
+        }
 
         /// <summary>
         /// Uploads a file to the file system.
@@ -148,8 +159,23 @@ namespace Tkl.Jumbo.Dfs.FileSystem
         /// <param name="replicationFactor">The number of replicas to create of the file's blocks, or zero to use the file system default replication factor. This parameter will be ignored if the file system doesn't support replication.</param>
         /// <param name="useLocalReplica"><see langword="true"/> to put the first replica on the node that's creating the file if it's part of the DFS cluster; otherwise, <see langword="false"/>. This parameter will be ignored if the file system doesn't support replica placement.</param>
         /// <param name="progressCallback">The <see cref="ProgressCallback"/> that will be called to report progress of the operation. May be <see langword="null"/>.</param>
-        public abstract void UploadFile(string localSourcePath, string targetPath, int blockSize, int replicationFactor, bool useLocalReplica, ProgressCallback progressCallback);
-
+        public void UploadFile(string localSourcePath, string targetPath, int blockSize, int replicationFactor, bool useLocalReplica, ProgressCallback progressCallback)
+        {
+            if( targetPath == null )
+                throw new ArgumentNullException("targetPath");
+            if( localSourcePath == null )
+                throw new ArgumentNullException("localSourcePath");
+            JumboDirectory dir = GetDirectoryInfo(targetPath);
+            if( dir != null )
+            {
+                string fileName = System.IO.Path.GetFileName(localSourcePath);
+                targetPath = Path.Combine(targetPath, fileName);
+            }
+            using( FileStream inputStream = File.OpenRead(localSourcePath) )
+            {
+                UploadStream(inputStream, targetPath, blockSize, replicationFactor, useLocalReplica, progressCallback);
+            }
+        }
         /// <summary>
         /// Uploads the files in the specified directory to the file system.
         /// </summary>
@@ -174,7 +200,7 @@ namespace Tkl.Jumbo.Dfs.FileSystem
         public void UploadDirectory(string localSourcePath, string targetPath, int blockSize, int replicationFactor, bool useLocalReplica, ProgressCallback progressCallback)
         {
             if( localSourcePath == null )
-                throw new ArgumentNullException("localPath");
+                throw new ArgumentNullException("localSourcePath");
             if( targetPath == null )
                 throw new ArgumentNullException("targetPath");
 
@@ -208,7 +234,17 @@ namespace Tkl.Jumbo.Dfs.FileSystem
         /// <param name="sourcePath">The path of the file on the file system to download.</param>
         /// <param name="stream">The stream to save the file to.</param>
         /// <param name="progressCallback">The <see cref="ProgressCallback"/> that will be called to report progress of the operation. May be <see langword="null"/>.</param>
-        public abstract void DownloadStream(string sourcePath, Stream stream, ProgressCallback progressCallback);
+        public void DownloadStream(string sourcePath, Stream stream, ProgressCallback progressCallback)
+        {
+            if( sourcePath == null )
+                throw new ArgumentNullException("sourcePath");
+            if( stream == null )
+                throw new ArgumentNullException("stream");
+            using( Stream inputStream = OpenFile(sourcePath) )
+            {
+                CopyStream(sourcePath, inputStream, stream, progressCallback);
+            }
+        }
 
         /// <summary>
         /// Downloads the specified file from the file system to the specified local file.
@@ -228,7 +264,23 @@ namespace Tkl.Jumbo.Dfs.FileSystem
         /// <param name="localTargetPath">The path of the file on the local file system to save the file to. If this is the
         /// name of an existing directory, the file will be downloaded to that directory.</param>
         /// <param name="progressCallback">The <see cref="ProgressCallback"/> that will be called to report progress of the operation. May be <see langword="null"/>.</param>
-        public abstract void DownloadFile(string sourcePath, string localTargetPath, ProgressCallback progressCallback);
+        public void DownloadFile(string sourcePath, string localTargetPath, ProgressCallback progressCallback)
+        {
+            if( sourcePath == null )
+                throw new ArgumentNullException("sourcePath");
+            if( localTargetPath == null )
+                throw new ArgumentNullException("localTargetPath");
+
+            if( Directory.Exists(localTargetPath) )
+            {
+                string fileName = Path.GetFileName(sourcePath);
+                localTargetPath = System.IO.Path.Combine(localTargetPath, fileName);
+            }
+            using( FileStream stream = File.Create(localTargetPath) )
+            {
+                DownloadStream(sourcePath, stream, progressCallback);
+            }
+        }
 
         /// <summary>
         /// Downloads the files in the specified directory on the file system.
@@ -348,5 +400,28 @@ namespace Tkl.Jumbo.Dfs.FileSystem
         /// <param name="source">The path of the file or directory to move.</param>
         /// <param name="destination">The path to move the entry to.</param>
         public abstract void Move(string source, string destination);
+
+        private static void CopyStream(string fileName, Stream inputStream, Stream outputStream, ProgressCallback progressCallback)
+        {
+            byte[] buffer = new byte[4096];
+            int bytesRead;
+            int prevPercentage = -1;
+            float length = inputStream.Length;
+            if( progressCallback != null )
+                progressCallback(fileName, 0, 0L);
+            while( (bytesRead = inputStream.Read(buffer, 0, buffer.Length)) != 0 )
+            {
+                int percentage = (int)((inputStream.Position / length) * 100);
+                if( percentage > prevPercentage )
+                {
+                    prevPercentage = percentage;
+                    if( progressCallback != null )
+                        progressCallback(fileName, percentage, inputStream.Position);
+                }
+                outputStream.Write(buffer, 0, bytesRead);
+            }
+            if( progressCallback != null )
+                progressCallback(fileName, 100, inputStream.Length);
+        }
     }
 }
