@@ -102,6 +102,8 @@
     <Compile Include="FileSystem\JumboDirectory.cs" />
     <Compile Include="FileSystem\JumboFile.cs" />
     <Compile Include="FileSystem\JumboFileSystemEntry.cs" />
+    <Compile Include="FileSystem\LocalFileSystemClient.cs" />
+    <Compile Include="FileSystem\LocalPathUtility.cs" />
     <Compile Include="HeartbeatData.cs" />
     <Compile Include="HeartbeatResponse.cs" />
     <Compile Include="INameServerClientProtocol.cs" />

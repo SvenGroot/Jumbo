@@ -6,6 +6,8 @@ using System.Linq;
 using System.Text;
 using Tkl.Jumbo.IO;
 using System.Collections.ObjectModel;
+using System.IO;
+using System.Globalization;
 
 namespace Tkl.Jumbo.Dfs.FileSystem
 {
@@ -124,6 +126,24 @@ namespace Tkl.Jumbo.Dfs.FileSystem
         public ReadOnlyCollection<Guid> Blocks
         {
             get { return _blocks.AsReadOnly(); }
+        }
+
+        /// <summary>
+        /// Creates a <see cref="JumboFile"/> instance for a local file from the specified <see cref="FileInfo"/>.
+        /// </summary>
+        /// <param name="file">The <see cref="FileInfo"/>.</param>
+        /// <param name="rootPath">The root path of the file system.</param>
+        /// <returns>
+        /// A <see cref="JumboFile"/> instance for the local file.
+        /// </returns>
+        public static JumboFile FromFileInfo(FileInfo file, string rootPath)
+        {
+            if( file == null )
+                throw new ArgumentNullException("file");
+            if( !file.Exists )
+                throw new FileNotFoundException(string.Format(CultureInfo.CurrentCulture, "The file '{0}' does not exist.", file.FullName), file.FullName);
+
+            return new JumboFile(StripRootPath(file.FullName, rootPath), file.Name, file.CreationTimeUtc, file.Length, file.Length, 1, RecordStreamOptions.None, false, null);
         }
 
         /// <summary>

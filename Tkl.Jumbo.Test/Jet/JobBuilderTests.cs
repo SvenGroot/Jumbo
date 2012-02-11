@@ -5,8 +5,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using NUnit.Framework;
-using Tkl.Jumbo.Test.Dfs;
-using Tkl.Jumbo.Dfs;
 using System.Threading;
 using System.Diagnostics;
 using Tkl.Jumbo.Jet;
@@ -84,7 +82,7 @@ namespace Tkl.Jumbo.Test.Jet
         public void SetUp()
         {
             _cluster = new TestJetCluster(4194304, true, 1, CompressionType.None);
-            _fileSystemClient = FileSystemClient.Create(TestDfsCluster.CreateClientConfig());
+            _fileSystemClient = _cluster.CreateFileSystemClient();
             _jetClient = new JetClient(TestJetCluster.CreateClientConfig());
             Trace.WriteLine("Cluster running.");
 

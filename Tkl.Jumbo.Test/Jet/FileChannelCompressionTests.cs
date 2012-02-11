@@ -5,7 +5,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using NUnit.Framework;
-using Tkl.Jumbo.Dfs;
 using Tkl.Jumbo.IO;
 using Tkl.Jumbo.Jet;
 using Tkl.Jumbo.Test.Tasks;
@@ -28,7 +27,7 @@ namespace Tkl.Jumbo.Test.Jet
         public void Setup()
         {
             _cluster = new TestJetCluster(16777216, true, 2, CompressionType.GZip);
-            FileSystemClient fileSystemClient = FileSystemClient.Create(Dfs.TestDfsCluster.CreateClientConfig());
+            FileSystemClient fileSystemClient = _cluster.CreateFileSystemClient();
             const int recordCount = 2500000;
             _expected = CreateNumberListInputFile(recordCount, _fileName, fileSystemClient);
             _expected.Sort();
@@ -46,7 +45,7 @@ namespace Tkl.Jumbo.Test.Jet
         public void TestJobExecutionMergeTaskCompression()
         {
             string outputPath = "/mergetaskoutput";
-            FileSystemClient fileSystemClient = FileSystemClient.Create(Dfs.TestDfsCluster.CreateClientConfig());
+            FileSystemClient fileSystemClient = _cluster.CreateFileSystemClient();
             fileSystemClient.CreateDirectory(outputPath);
 
 
@@ -66,7 +65,7 @@ namespace Tkl.Jumbo.Test.Jet
         public void TestJobExecutionCompression()
         {
             string outputPath = "/output";
-            FileSystemClient fileSystemClient = FileSystemClient.Create(Dfs.TestDfsCluster.CreateClientConfig());
+            FileSystemClient fileSystemClient = _cluster.CreateFileSystemClient();
             fileSystemClient.CreateDirectory(outputPath);
 
 
@@ -85,7 +84,7 @@ namespace Tkl.Jumbo.Test.Jet
         public void TestJobExecutionCompressionTcpFileDownload()
         {
             string outputPath = "/tcpoutput";
-            FileSystemClient fileSystemClient = FileSystemClient.Create(Dfs.TestDfsCluster.CreateClientConfig());
+            FileSystemClient fileSystemClient = _cluster.CreateFileSystemClient();
             fileSystemClient.CreateDirectory(outputPath);
 
 
@@ -109,7 +108,7 @@ namespace Tkl.Jumbo.Test.Jet
         public void TestJobExecutionCompressionTcpFileDownloadNoMemoryStorage()
         {
             string outputPath = "/tcpnomemoutput";
-            FileSystemClient fileSystemClient = FileSystemClient.Create(Dfs.TestDfsCluster.CreateClientConfig());
+            FileSystemClient fileSystemClient = _cluster.CreateFileSystemClient();
             fileSystemClient.CreateDirectory(outputPath);
 
 

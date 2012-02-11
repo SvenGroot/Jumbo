@@ -75,7 +75,7 @@ namespace Tkl.Jumbo.Test.Jet
         public void SetUp()
         {
             _cluster = new TestJetCluster(4194304, true, 2, CompressionType.None);
-            _fileSystemClient = FileSystemClient.Create(TestDfsCluster.CreateClientConfig());
+            _fileSystemClient = _cluster.CreateFileSystemClient();
             _jetClient = new JetClient(TestJetCluster.CreateClientConfig());
             Trace.WriteLine("Cluster running.");
 

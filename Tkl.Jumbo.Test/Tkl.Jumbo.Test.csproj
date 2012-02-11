@@ -89,6 +89,7 @@
     <Compile Include="Dfs\DirectoryTests.cs" />
     <Compile Include="Dfs\FileSystemEntryTests.cs" />
     <Compile Include="Dfs\FileTests.cs" />
+    <Compile Include="Dfs\LocalFileSystemClientTests.cs" />
     <Compile Include="Dfs\NameServerConfigurationElementTests.cs" />
     <Compile Include="Dfs\NameServerRestartTests.cs" />
     <Compile Include="Dfs\NameServerSafeModeTests.cs" />
@@ -101,6 +102,7 @@
     <Compile Include="Jet\DynamicTaskBuilderTests.cs" />
     <Compile Include="Jet\FileChannelCompressionTests.cs" />
     <Compile Include="Jet\JetClientTests.cs" />
+    <Compile Include="Jet\JobAndTaskServerLocalFileSystemTests.cs" />
     <Compile Include="Jet\JobAndTaskServerTests.cs" />
     <Compile Include="Jet\JobBuilderTests.cs" />
     <Compile Include="Jet\JobConfigurationTests.cs" />

@@ -20,7 +20,6 @@ namespace Tkl.Jumbo.Dfs.FileSystem
     public class DfsClient : FileSystemClient
     {
         private const string _nameServerUrlFormat = "tcp://{0}:{1}/NameServer";
-        private const int _bufferSize = 4096;
 
         private readonly INameServerClientProtocol _nameServer;
         private static readonly DfsPathUtility _path = new DfsPathUtility(); // Thread-safe, so static is okay
@@ -165,12 +164,13 @@ namespace Tkl.Jumbo.Dfs.FileSystem
             _nameServer.CreateDirectory(path);
         }
 
+
         /// <summary>
         /// Gets information about a directory in the file system.
         /// </summary>
         /// <param name="path">The full path of the directory.</param>
         /// <returns>
-        /// A <see cref="JumboDirectory"/> object representing the directory.
+        /// A <see cref="JumboDirectory"/> object representing the directory, or <see langword="null"/> if the directory doesn't exist.
         /// </returns>
         public override JumboDirectory GetDirectoryInfo(string path)
         {
@@ -182,7 +182,7 @@ namespace Tkl.Jumbo.Dfs.FileSystem
         /// </summary>
         /// <param name="path">The full path of the file.</param>
         /// <returns>
-        /// A <see cref="JumboFile"/> object referring to the file.
+        /// A <see cref="JumboFile"/> object referring to the file, or <see langword="null"/> if the file doesn't exist.
         /// </returns>
         public override JumboFile GetFileInfo(string path)
         {
@@ -194,7 +194,7 @@ namespace Tkl.Jumbo.Dfs.FileSystem
         /// </summary>
         /// <param name="path">The full path of the file or directory.</param>
         /// <returns>
-        /// A <see cref="JumboFileSystemEntry"/> object referring to the file or directory, or <see langword="null"/> if the .
+        /// A <see cref="JumboFileSystemEntry"/> object referring to the file or directory, or <see langword="null"/> if the entry doesn't exist.
         /// </returns>
         public override JumboFileSystemEntry GetFileSystemEntryInfo(string path)
         {

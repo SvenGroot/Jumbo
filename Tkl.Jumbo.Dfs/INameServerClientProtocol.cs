@@ -26,7 +26,7 @@ namespace Tkl.Jumbo.Dfs
         /// Gets information about a directory in the file system.
         /// </summary>
         /// <param name="path">The full path of the directory.</param>
-        /// <returns>A <see cref="JumboDirectory"/> object representing the directory.</returns>
+        /// <returns>A <see cref="JumboDirectory"/> object representing the directory, or <see langword="null"/> if the directory doesn't exist.</returns>
         /// <exception cref="ArgumentNullException"><paramref name="path"/> is <see langword="null" />.</exception>
         /// <exception cref="ArgumentException"><paramref name="path"/> is not an absolute path, contains an empty component, or contains a file name.</exception>
         JumboDirectory GetDirectoryInfo(string path);
@@ -66,7 +66,7 @@ namespace Tkl.Jumbo.Dfs
         /// Gets information about a file.
         /// </summary>
         /// <param name="path">The full path of the file.</param>
-        /// <returns>A <see cref="JumboFile"/> object referring to the file.</returns>
+        /// <returns>A <see cref="JumboFile"/> object referring to the file, or <see langword="null"/> if the file doesn't exist.</returns>
         /// <exception cref="ArgumentNullException"><paramref name="path"/> is <see langword="null" />.</exception>
         /// <exception cref="ArgumentException"><paramref name="path"/> is not an absolute path, contains an empty component, or contains a file name.</exception>
         /// <exception cref="System.IO.DirectoryNotFoundException">One of the parent directories in the path specified in <paramref name="path"/> does not exist.</exception>
@@ -76,7 +76,7 @@ namespace Tkl.Jumbo.Dfs
         /// Gets information about a file or directory.
         /// </summary>
         /// <param name="path">The full path of the file or directory.</param>
-        /// <returns>A <see cref="JumboFileSystemEntry"/> object referring to the file or directory, or <see langword="null" /> if the .</returns>
+        /// <returns>A <see cref="JumboFileSystemEntry"/> object referring to the file or directory, or <see langword="null" /> if the entry doesn't exist.</returns>
         /// <exception cref="ArgumentNullException"><paramref name="path"/> is <see langword="null" />.</exception>
         /// <exception cref="ArgumentException"><paramref name="path"/> is not an absolute path, contains an empty component, or contains a file name.</exception>
         /// <exception cref="System.IO.DirectoryNotFoundException">One of the parent directories in the path specified in <paramref name="path"/> does not exist.</exception>

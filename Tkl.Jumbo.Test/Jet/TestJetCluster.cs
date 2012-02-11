@@ -22,18 +22,36 @@ namespace Tkl.Jumbo.Test.Jet
         public const int TaskServerFileServerPort = 11002;
 
         private string _path;
+        private string _localFsRoot;
         private Dfs.TestDfsCluster _dfsCluster;
 
         private Thread _taskServerThread;
 
-        public TestJetCluster(int? blockSize, bool eraseExistingData, int maxTasks, CompressionType compressionType)
+        public TestJetCluster(int? blockSize, bool eraseExistingData, int maxTasks, CompressionType compressionType, bool localFs = false)
         {
             // We can't run more than one TaskServer because they are single instance.
-            _dfsCluster = new Tkl.Jumbo.Test.Dfs.TestDfsCluster(1, 1, blockSize, eraseExistingData);
-            INameServerClientProtocol nameServer = DfsClient.CreateNameServerClient(Dfs.TestDfsCluster.CreateClientConfig());
-            nameServer.WaitForSafeModeOff(Timeout.Infinite);
+            if( !localFs )
+            {
+                _dfsCluster = new Tkl.Jumbo.Test.Dfs.TestDfsCluster(1, 1, blockSize, eraseExistingData);
+                INameServerClientProtocol nameServer = DfsClient.CreateNameServerClient(Dfs.TestDfsCluster.CreateClientConfig());
+                nameServer.WaitForSafeModeOff(Timeout.Infinite);
+            }
+            else
+            {
+                log4net.LogManager.ResetConfiguration();
+                log4net.Config.BasicConfigurator.Configure();
+                Utilities.TraceLineAndFlush("Jet cluster using local file system.");
+            }
 
             _path = Utilities.TestOutputPath; // The DFS cluster will have made sure this path is created.
+            if( localFs )
+            {
+                if( eraseExistingData && System.IO.Directory.Exists(_path) )
+                    System.IO.Directory.Delete(_path, true);
+                System.IO.Directory.CreateDirectory(_path);
+                _localFsRoot = Path.Combine(_path, "FileSystem");
+                Directory.CreateDirectory(_localFsRoot);
+            }
 
             JetConfiguration jetConfig = new JetConfiguration();
             jetConfig.JobServer.HostName = "localhost";
@@ -50,7 +68,7 @@ namespace Tkl.Jumbo.Test.Jet
             jetConfig.FileChannel.DeleteIntermediateFiles = false;
             if( Environment.OSVersion.Platform == PlatformID.Unix )
                 jetConfig.TaskServer.ListenIPv4AndIPv6 = false;
-            DfsConfiguration dfsConfig = Dfs.TestDfsCluster.CreateClientConfig();
+            DfsConfiguration dfsConfig = localFs ? new LocalFileSystemClient(_localFsRoot).Configuration : Dfs.TestDfsCluster.CreateClientConfig();
             //jetConfig.FileChannel.DeleteIntermediateFiles = false;
 
             Utilities.TraceLineAndFlush("Jet cluster starting.");
@@ -70,7 +88,8 @@ namespace Tkl.Jumbo.Test.Jet
             TaskServer.Shutdown();
             _taskServerThread.Join();
             JobServer.Shutdown();
-            _dfsCluster.Shutdown();
+            if( _dfsCluster != null )
+                _dfsCluster.Shutdown();
             Utilities.TraceLineAndFlush("Jet cluster shutdown complete.");
         }
 
@@ -81,6 +100,19 @@ namespace Tkl.Jumbo.Test.Jet
             config.JobServer.Port = JobServerPort;
             config.TaskServer.Port = TaskServerPort;
             return config;
+        }
+
+        public FileSystemClient CreateFileSystemClient()
+        {
+            if( _dfsCluster == null )
+                return new LocalFileSystemClient(_localFsRoot);
+            else
+                return Dfs.TestDfsCluster.CreateClient();
+        }
+
+        public static JetClient CreateJetClient()
+        {
+            return new JetClient(CreateClientConfig());
         }
 
         private void TaskServerThread(JetConfiguration jetConfig, DfsConfiguration dfsConfig)

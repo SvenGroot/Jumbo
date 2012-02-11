@@ -41,7 +41,7 @@ namespace Tkl.Jumbo.Test.Jet
         public void Setup()
         {
             _cluster = new TestJetCluster(16777216, true, _maxTasks, CompressionType.None);
-            FileSystemClient fileSystemClient = FileSystemClient.Create(Dfs.TestDfsCluster.CreateClientConfig());
+            FileSystemClient fileSystemClient = _cluster.CreateFileSystemClient();
             const int size = 50000000;
             using( Stream stream = fileSystemClient.CreateFile(_fileName) )
             {
@@ -59,7 +59,7 @@ namespace Tkl.Jumbo.Test.Jet
         [Test]
         public void TestJobAbort()
         {
-            FileSystemClient fileSystemClient = FileSystemClient.Create(Dfs.TestDfsCluster.CreateClientConfig());
+            FileSystemClient fileSystemClient = _cluster.CreateFileSystemClient();
             JumboFile file = fileSystemClient.GetFileInfo(_fileName);
             JobConfiguration config = CreateConfiguration(fileSystemClient, file, "/abort", false, typeof(LineCounterTask), typeof(LineAdderTask), ChannelType.File);
 
@@ -187,7 +187,7 @@ namespace Tkl.Jumbo.Test.Jet
         {
             const string inputPath = "/wordcountinput";
             const string outputPath = "/wordcountoutput";
-            FileSystemClient fileSystemClient = FileSystemClient.Create(Dfs.TestDfsCluster.CreateClientConfig());
+            FileSystemClient fileSystemClient = _cluster.CreateFileSystemClient();
             List<string> words;
             using( StreamWriter writer = new StreamWriter(fileSystemClient.CreateFile(inputPath)) )
             {
@@ -229,7 +229,7 @@ namespace Tkl.Jumbo.Test.Jet
         public void TestJobSettings()
         {
             string outputPath = "/settingsoutput";
-            FileSystemClient fileSystemClient = FileSystemClient.Create(Dfs.TestDfsCluster.CreateClientConfig());
+            FileSystemClient fileSystemClient = _cluster.CreateFileSystemClient();
             fileSystemClient.CreateDirectory(outputPath);
 
             List<int> expected = CreateNumberListInputFile(10000, "/settingsinput", fileSystemClient);
@@ -256,7 +256,7 @@ namespace Tkl.Jumbo.Test.Jet
             customers.Randomize();
             orders.Randomize();
 
-            FileSystemClient fileSystemClient = FileSystemClient.Create(Dfs.TestDfsCluster.CreateClientConfig());
+            FileSystemClient fileSystemClient = _cluster.CreateFileSystemClient();
             fileSystemClient.CreateDirectory("/testjoin");
             using( Stream stream = fileSystemClient.CreateFile("/testjoin/customers") )
             using( RecordFileWriter<Customer> recordFile = new RecordFileWriter<Customer>(stream) )
@@ -328,7 +328,7 @@ namespace Tkl.Jumbo.Test.Jet
             customers.Randomize();
             orders.Randomize();
 
-            FileSystemClient fileSystemClient = FileSystemClient.Create(Dfs.TestDfsCluster.CreateClientConfig());
+            FileSystemClient fileSystemClient = _cluster.CreateFileSystemClient();
             fileSystemClient.CreateDirectory("/testjbjoin");
             using( Stream stream = fileSystemClient.CreateFile("/testjbjoin/customers") )
             using( RecordFileWriter<Customer> recordFile = new RecordFileWriter<Customer>(stream) )
@@ -389,7 +389,7 @@ namespace Tkl.Jumbo.Test.Jet
         [Test]
         public void TestJobExecutionTaskTimeout()
         {
-            FileSystemClient fileSystemClient = FileSystemClient.Create(Dfs.TestDfsCluster.CreateClientConfig());
+            FileSystemClient fileSystemClient = _cluster.CreateFileSystemClient();
             JetClient target = new JetClient(TestJetCluster.CreateClientConfig());
             string outputPath = "/timeout";
             fileSystemClient.CreateDirectory(outputPath);
@@ -410,7 +410,7 @@ namespace Tkl.Jumbo.Test.Jet
         [Test]
         public void TestJobExecutionDynamicPartitionAssignment()
         {
-            FileSystemClient fileSystemClient = FileSystemClient.Create(Dfs.TestDfsCluster.CreateClientConfig());
+            FileSystemClient fileSystemClient = _cluster.CreateFileSystemClient();
             JetClient target = new JetClient(TestJetCluster.CreateClientConfig());
             const string outputPath = "/dynamicpartitions";
             fileSystemClient.CreateDirectory(outputPath);
@@ -456,7 +456,7 @@ namespace Tkl.Jumbo.Test.Jet
         [Test]
         public void TestJobExecutionHardDependency()
         {
-            FileSystemClient fileSystemClient = FileSystemClient.Create(Dfs.TestDfsCluster.CreateClientConfig());
+            FileSystemClient fileSystemClient = _cluster.CreateFileSystemClient();
             JetClient target = new JetClient(TestJetCluster.CreateClientConfig());
             string outputPath = "/harddepend";
             string lineCountPath = "/harddepend_linecount";
@@ -500,7 +500,7 @@ namespace Tkl.Jumbo.Test.Jet
         {
             const string outputPath1 = "/multiple1";
             const string outputPath2 = "/multiple2";
-            FileSystemClient fileSystemClient = FileSystemClient.Create(Dfs.TestDfsCluster.CreateClientConfig());
+            FileSystemClient fileSystemClient = _cluster.CreateFileSystemClient();
             fileSystemClient.CreateDirectory(outputPath1);
             fileSystemClient.CreateDirectory(outputPath2);
             JumboFile file = fileSystemClient.GetFileInfo(_fileName);
@@ -530,7 +530,7 @@ namespace Tkl.Jumbo.Test.Jet
         private void TestJobExecutionSort(string outputPath, int mergeTasks, int partitionsPerTask, bool forceFileDownload, FileChannelOutputType outputType, ChannelType channelType = ChannelType.File)
         {
             const int recordCount = 2500000;
-            FileSystemClient fileSystemClient = FileSystemClient.Create(Dfs.TestDfsCluster.CreateClientConfig());
+            FileSystemClient fileSystemClient = _cluster.CreateFileSystemClient();
             fileSystemClient.CreateDirectory(outputPath);
 
             if( _expectedSortResults == null )
@@ -628,7 +628,7 @@ namespace Tkl.Jumbo.Test.Jet
 
         }
 
-        private static JobStatus RunJob(FileSystemClient fileSystemClient, JobConfiguration config)
+        public static JobStatus RunJob(FileSystemClient fileSystemClient, JobConfiguration config)
         {
             JetClient target = new JetClient(TestJetCluster.CreateClientConfig());
             Job job = target.RunJob(config, fileSystemClient, typeof(StringConversionTask).Assembly.Location);
@@ -662,7 +662,7 @@ namespace Tkl.Jumbo.Test.Jet
 
         private void RunJob(bool forceFileDownload, string outputPath, TaskKind taskKind, ChannelType channelType, int splitsPerBlock = 1)
         {
-            FileSystemClient fileSystemClient = FileSystemClient.Create(Dfs.TestDfsCluster.CreateClientConfig());
+            FileSystemClient fileSystemClient = _cluster.CreateFileSystemClient();
             fileSystemClient.CreateDirectory(outputPath);
 
             int lines = _lines;
@@ -701,7 +701,7 @@ namespace Tkl.Jumbo.Test.Jet
             ValidateLineCountOutput(outputPath, fileSystemClient, lines);
         }
 
-        private static void ValidateLineCountOutput(string outputPath, FileSystemClient fileSystemClient, int lines)
+        public static void ValidateLineCountOutput(string outputPath, FileSystemClient fileSystemClient, int lines)
         {
             string outputFileName = fileSystemClient.Path.Combine(outputPath, "OutputTask-00001");
 

@@ -64,7 +64,10 @@ namespace Tkl.Jumbo.Dfs.FileSystem
                 throw new ArgumentNullException("configuration");
 
             // TODO: Other file systems.
-            return new DfsClient(configuration);
+            if( configuration.NameServer.HostName.StartsWith("file://") )
+                return new LocalFileSystemClient(configuration);
+            else
+                return new DfsClient(configuration);
         }
 
         /// <summary>
@@ -80,21 +83,21 @@ namespace Tkl.Jumbo.Dfs.FileSystem
         /// Gets information about a directory in the file system.
         /// </summary>
         /// <param name="path">The full path of the directory.</param>
-        /// <returns>A <see cref="JumboDirectory"/> object representing the directory.</returns>
+        /// <returns>A <see cref="JumboDirectory"/> object representing the directory, or <see langword="null"/> if the directory doesn't exist.</returns>
         public abstract JumboDirectory GetDirectoryInfo(string path);
 
         /// <summary>
         /// Gets information about a file.
         /// </summary>
         /// <param name="path">The full path of the file.</param>
-        /// <returns>A <see cref="JumboFile"/> object referring to the file.</returns>
+        /// <returns>A <see cref="JumboFile"/> object referring to the file, or <see langword="null"/> if the file doesn't exist.</returns>
         public abstract JumboFile GetFileInfo(string path);
 
         /// <summary>
         /// Gets information about a file or directory.
         /// </summary>
         /// <param name="path">The full path of the file or directory.</param>
-        /// <returns>A <see cref="JumboFileSystemEntry"/> object referring to the file or directory, or <see langword="null" /> if the .</returns>
+        /// <returns>A <see cref="JumboFileSystemEntry"/> object referring to the file or directory, or <see langword="null" /> if the entry doesn't exist.</returns>
         public abstract JumboFileSystemEntry GetFileSystemEntryInfo(string path);
 
         /// <summary>

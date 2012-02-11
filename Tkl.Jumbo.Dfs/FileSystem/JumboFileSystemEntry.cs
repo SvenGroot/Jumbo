@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.IO;
 
 namespace Tkl.Jumbo.Dfs.FileSystem
 {
@@ -75,6 +76,44 @@ namespace Tkl.Jumbo.Dfs.FileSystem
         public DateTime DateCreated
         {
             get { return _dateCreated; }
+        }
+
+        /// <summary>
+        /// Creates a <see cref="JumboFileSystemEntry"/> instance for a local file or directory from a <see cref="FileSystemInfo"/>.
+        /// </summary>
+        /// <param name="info">The <see cref="FileSystemInfo"/>.</param>
+        /// <param name="rootPath">The root path of the file system.</param>
+        /// <param name="includeChildren">If set to <see langword="true"/>, include the children if this is a directory.</param>
+        /// <returns>
+        /// A <see cref="JumboFileSystemEntry"/> instance for the local file or directory.
+        /// </returns>
+        public static JumboFileSystemEntry FromFileSystemInfo(FileSystemInfo info, string rootPath, bool includeChildren = true)
+        {
+            if( info == null )
+                throw new ArgumentNullException("info");
+
+            FileInfo file = info as FileInfo;
+            if( file != null )
+                return JumboFile.FromFileInfo(file, rootPath);
+            else
+                return JumboDirectory.FromDirectoryInfo((DirectoryInfo)info, rootPath, includeChildren);
+        }
+
+        internal static string StripRootPath(string fullPath, string rootPath)
+        {
+            if( rootPath == null )
+                return fullPath;
+
+            if( !fullPath.StartsWith(rootPath) )
+                throw new ArgumentException("Invalid path.");
+
+            int length = rootPath.Length;
+            if( rootPath[rootPath.Length - 1] == Path.DirectorySeparatorChar || rootPath[rootPath.Length - 1] == Path.AltDirectorySeparatorChar )
+                length -= 1;
+            if( fullPath.Length == length )
+                return Path.DirectorySeparatorChar.ToString(); // Root
+            else
+                return fullPath.Substring(length);
         }
     }
 }
