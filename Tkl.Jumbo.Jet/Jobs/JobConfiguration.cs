@@ -121,9 +121,6 @@ namespace Tkl.Jumbo.Jet.Jobs
         /// <param name="stageId">The name of the stage. This name will serve as the base name for all the tasks in the stage.</param>
         /// <param name="input">The <see cref="IDataInput"/> that provides the input.</param>
         /// <param name="taskType">The type implementing the task's functionality; this type must implement <see cref="ITask{TInput,TOutput}"/>.</param>
-        /// <param name="fileSystem">The file system.</param>
-        /// <param name="outputPath">The name of a DFS directory to write the stage's output files to, or <see langword="null"/> to indicate this stage does not write to the DFS.</param>
-        /// <param name="recordWriterType">The type of the record writer to use when writing to the output files; this parameter is ignored if <paramref name="outputPath"/> is <see langword="null"/>.</param>
         /// <returns>
         /// A <see cref="StageConfiguration"/> for the new stage.
         /// </returns>
@@ -136,7 +133,7 @@ namespace Tkl.Jumbo.Jet.Jobs
         /// The new stage will contain as many tasks are there are blocks in the input file.
         ///   </para>
         /// </remarks>
-        public StageConfiguration AddInputStage(string stageId, IDataInput input, Type taskType, FileSystemClient fileSystem = null, string outputPath = null, Type recordWriterType = null)
+        public StageConfiguration AddInputStage(string stageId, IDataInput input, Type taskType)
         {
             if( stageId == null )
                 throw new ArgumentNullException("stageId");
@@ -146,10 +143,8 @@ namespace Tkl.Jumbo.Jet.Jobs
                 throw new ArgumentNullException("input");
             if( taskType == null )
                 throw new ArgumentNullException("taskType");
-            if( outputPath != null && recordWriterType == null )
-                throw new ArgumentNullException("recordWriterType");
 
-            StageConfiguration stage = CreateStage(stageId, taskType, 0, fileSystem, outputPath, recordWriterType, input);
+            StageConfiguration stage = CreateStage(stageId, taskType, 0, input);
             Stages.Add(stage);
             return stage;
         }
@@ -161,15 +156,12 @@ namespace Tkl.Jumbo.Jet.Jobs
         /// <param name="taskType">The type implementing the task's functionality; this type must implement <see cref="ITask{TInput,TOutput}"/>.</param>
         /// <param name="taskCount">The number of tasks in the new stage.</param>
         /// <param name="inputStage">Information about the input stage for this stage, or <see langword="null"/> if the stage has no inputs.</param>
-        /// <param name="fileSystemClient">The file system client.</param>
-        /// <param name="outputPath">The name of a DFS directory to write the stage's output files to, or <see langword="null"/> to indicate this stage does not write to the DFS.</param>
-        /// <param name="recordWriterType">The type of the record writer to use when writing to the output files; this parameter is ignored if <paramref name="outputPath"/> is <see langword="null"/>.</param>
         /// <returns>
         /// A <see cref="StageConfiguration"/> for the new stage.
         /// </returns>
-        public StageConfiguration AddStage(string stageId, Type taskType, int taskCount, InputStageInfo inputStage, FileSystemClient fileSystemClient, string outputPath, Type recordWriterType)
+        public StageConfiguration AddStage(string stageId, Type taskType, int taskCount, InputStageInfo inputStage)
         {
-            return AddStage(stageId, taskType, taskCount, inputStage == null ? null : new[] { inputStage }, null, fileSystemClient, outputPath, recordWriterType);
+            return AddStage(stageId, taskType, taskCount, inputStage == null ? null : new[] { inputStage }, null);
         }
 
         /// <summary>
@@ -181,14 +173,11 @@ namespace Tkl.Jumbo.Jet.Jobs
         /// <param name="inputStages">Information about the input stages for this stage, or <see langword="null"/> if the stage has no inputs.</param>
         /// <param name="stageMultiInputRecordReaderType">The type of the multi input record reader to use to combine records from multiple input stages. This type must
         /// inherit from <see cref="MultiInputRecordReader{T}"/>. This type is not used if the stage has zero or one inputs.</param>
-        /// <param name="fileSystem">The file system.</param>
-        /// <param name="outputPath">The name of a DFS directory to write the stage's output files to, or <see langword="null"/> to indicate this stage does not write to the DFS.</param>
-        /// <param name="recordWriterType">The type of the record writer to use when writing to the output files; this parameter is ignored if <paramref name="outputPath"/> is <see langword="null"/>.</param>
         /// <returns>
         /// A <see cref="StageConfiguration"/> for the new stage.
         /// </returns>
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1062:Validate arguments of public methods", MessageId = "3")]
-        public StageConfiguration AddStage(string stageId, Type taskType, int taskCount, IEnumerable<InputStageInfo> inputStages, Type stageMultiInputRecordReaderType, FileSystemClient fileSystem, string outputPath, Type recordWriterType)
+        public StageConfiguration AddStage(string stageId, Type taskType, int taskCount, IEnumerable<InputStageInfo> inputStages, Type stageMultiInputRecordReaderType)
         {
             if( stageId == null )
                 throw new ArgumentNullException("stageId");
@@ -196,11 +185,8 @@ namespace Tkl.Jumbo.Jet.Jobs
                 throw new ArgumentNullException("taskType");
             if( taskCount <= 0 )
                 throw new ArgumentOutOfRangeException("taskCount", "A stage must have at least one task.");
-            if( outputPath != null && recordWriterType == null )
-                throw new ArgumentNullException("recordWriterType");
 
             Type taskInterfaceType = taskType.FindGenericInterfaceType(typeof(ITask<,>), true);
-            ValidateOutputType(outputPath, recordWriterType, taskInterfaceType);
 
             Type inputType = taskInterfaceType.GetGenericArguments()[0];
 
@@ -225,7 +211,7 @@ namespace Tkl.Jumbo.Jet.Jobs
                 }
             }
 
-            StageConfiguration stage = CreateStage(stageId, taskType, taskCount, fileSystem, outputPath, recordWriterType, null);
+            StageConfiguration stage = CreateStage(stageId, taskType, taskCount, null);
             if( isPipelineChannel )
             {
                 InputStageInfo parentStage = inputStages.First();
@@ -247,7 +233,7 @@ namespace Tkl.Jumbo.Jet.Jobs
                     {
                         if( info.InputStage.ChildStage != null )
                             throw new ArgumentException("One of the specified input stages already has a child stage so cannot be used as input.", "inputStages");
-                        else if( info.InputStage.DfsOutput != null )
+                        else if( info.InputStage.HasDataOutput )
                             throw new ArgumentException("One of the specified input stages already has DFS output so cannot be used as input.", "inputStages");
                         else if( info.InputStage.OutputChannel != null )
                             throw new ArgumentException("One of the specified input stages already has an output channel so cannot be used as input.", "inputStages");
@@ -284,13 +270,10 @@ namespace Tkl.Jumbo.Jet.Jobs
         /// <param name="inputStage">The stage from which this stage gets its input.</param>
         /// <param name="taskType">The type implementing the task action; this type must implement <see cref="ITask{TInput,TOutput}"/>.</param>
         /// <param name="channelType">One of the <see cref="ChannelType"/> files indicating the type of channel to use between the the input stages and the new stage.</param>
-        /// <param name="fileSystem">The file system.</param>
-        /// <param name="outputPath">The name of a DFS directory to write the stage's output files to, or <see langword="null"/> to indicate this stage does not write to the DFS.</param>
-        /// <param name="recordWriterType">The type of the record writer to use when writing to the output files; this parameter is ignored if <paramref name="outputPath"/> is <see langword="null"/>.</param>
         /// <returns>
         /// A <see cref="StageConfiguration"/> for the new stage.
         /// </returns>
-        public StageConfiguration AddPointToPointStage(string stageId, StageConfiguration inputStage, Type taskType, ChannelType channelType, FileSystemClient fileSystem, string outputPath, Type recordWriterType)
+        public StageConfiguration AddPointToPointStage(string stageId, StageConfiguration inputStage, Type taskType, ChannelType channelType)
         {
             if( inputStage == null )
                 throw new ArgumentNullException("inputStage");
@@ -299,7 +282,7 @@ namespace Tkl.Jumbo.Jet.Jobs
                 ChannelType = channelType,
                 ChannelConnectivity = ChannelConnectivity.PointToPoint
             };
-            return AddStage(stageId, taskType, channelType == ChannelType.Pipeline ? 1 : inputStage.TotalTaskCount, info, fileSystem, outputPath, recordWriterType);
+            return AddStage(stageId, taskType, channelType == ChannelType.Pipeline ? 1 : inputStage.TotalTaskCount, info);
         }
 
         private static void ValidateChannelConnectivityConstraints(IEnumerable<InputStageInfo> inputStages, StageConfiguration stage)
@@ -338,7 +321,7 @@ namespace Tkl.Jumbo.Jet.Jobs
             parentStage.ChildStagePartitionerType = partitionerType ?? typeof(HashPartitioner<>).MakeGenericType(inputType);
         }
 
-        private StageConfiguration CreateStage(string stageId, Type taskType, int taskCount, FileSystemClient fileSystem, string outputPath, Type recordWriterType, IDataInput input)
+        private StageConfiguration CreateStage(string stageId, Type taskType, int taskCount, IDataInput input)
         {
             StageConfiguration stage = new StageConfiguration()
             {
@@ -346,9 +329,6 @@ namespace Tkl.Jumbo.Jet.Jobs
                 TaskType = taskType,
                 TaskCount = taskCount,
             };
-
-            if( outputPath != null )
-                stage.SetDfsOutput(fileSystem, outputPath, recordWriterType);
 
             if( input != null )
             {
@@ -640,19 +620,6 @@ namespace Tkl.Jumbo.Jet.Jobs
                 }
             }
             return false;
-        }
-
-        internal static void ValidateOutputType(string outputPath, Type recordWriterType, Type taskInterfaceType)
-        {
-            if( outputPath != null )
-            {
-                // Validate output type.
-                Type outputType = taskInterfaceType.GetGenericArguments()[1];
-                Type recordWriterBaseType = FindGenericBaseType(recordWriterType, typeof(RecordWriter<>));
-                Type recordType = recordWriterBaseType.GetGenericArguments()[0];
-                if( outputType != recordType )
-                    throw new ArgumentException(string.Format(System.Globalization.CultureInfo.CurrentCulture, "The specified record type {0} is not identical to the specified task type's output type {1}.", recordType, outputType));
-            }
         }
 
         private static Type FindGenericBaseType(Type type, Type baseType)

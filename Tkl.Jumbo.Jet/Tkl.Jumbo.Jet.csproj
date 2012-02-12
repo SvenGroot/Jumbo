@@ -85,6 +85,10 @@
     <Compile Include="..\AssemblyInfoCommon.cs">
       <Link>Properties\AssemblyInfoCommon.cs</Link>
     </Compile>
+    <Compile Include="IO\FileDataOutput.cs" />
+    <Compile Include="IO\FileOutputCommitter.cs" />
+    <Compile Include="IO\IDataOutput.cs" />
+    <Compile Include="IO\IOutputCommitter.cs" />
     <Compile Include="Jobs\AdditionalProgressCounter.cs" />
     <Compile Include="AdditionalProgressCounterAttribute.cs" />
     <Compile Include="AdditionalProgressValue.cs" />
@@ -143,8 +147,8 @@
     <Compile Include="IO\ITaskInput.cs" />
     <Compile Include="IO\TaskInputUtility.cs" />
     <Compile Include="Jobs\Builder\Channel.cs" />
-    <Compile Include="Jobs\Builder\DfsInput.cs" />
-    <Compile Include="Jobs\Builder\DfsOutput.cs" />
+    <Compile Include="Jobs\Builder\FileInput.cs" />
+    <Compile Include="Jobs\Builder\FileOutput.cs" />
     <Compile Include="Jobs\Builder\DynamicTaskBuilder.cs" />
     <Compile Include="Jobs\Builder\IJobBuilderOperation.cs" />
     <Compile Include="Jobs\Builder\IOperationInput.cs" />
@@ -207,7 +211,6 @@
     <Compile Include="InitialStatusJetHeartbeatData.cs" />
     <Compile Include="TaskContext.cs" />
     <Compile Include="TaskAttemptId.cs" />
-    <Compile Include="Jobs\TaskDfsOutput.cs" />
     <Compile Include="TaskExecutionUtility.cs" />
     <Compile Include="TaskExecutionUtilityGeneric.cs" />
     <Compile Include="TaskId.cs" />

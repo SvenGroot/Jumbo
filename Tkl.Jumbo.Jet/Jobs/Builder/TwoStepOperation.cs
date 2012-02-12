@@ -138,7 +138,7 @@ namespace Tkl.Jumbo.Jet.Jobs.Builder
 
         private static IOperationInput CreateExtraStepForDfsInput(JobBuilder builder, IOperationInput input)
         {
-            DfsInput dfsInput = input as DfsInput;
+            FileInput dfsInput = input as FileInput;
             if( dfsInput != null )
             {
                 // If the input is DFS, we want to create a channel around which our first and second step are created.

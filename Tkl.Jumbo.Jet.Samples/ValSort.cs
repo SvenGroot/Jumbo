@@ -15,6 +15,7 @@ using Tkl.Jumbo.Jet.Channels;
 using Tkl.Jumbo.IO;
 using Ookii.CommandLine;
 using System.IO;
+using Tkl.Jumbo.Jet.IO;
 
 namespace Tkl.Jumbo.Jet.Samples
 {
@@ -90,7 +91,7 @@ namespace Tkl.Jumbo.Jet.Samples
         /// <param name="jobConfiguration"></param>
         protected override void OnJobCreated(Job job, JobConfiguration jobConfiguration)
         {
-            _outputFile = jobConfiguration.GetStage("SortStage").ChildStage.DfsOutput.GetPath(1);
+            _outputFile = ((FileDataOutput<TextRecordWriter<ValSortRecord>>)jobConfiguration.GetStage("SortStage").ChildStage.DataOutput).GetOutputPath(jobConfiguration.GetStage("SortStage").ChildStage, 1);
         }
 
         /// <summary>

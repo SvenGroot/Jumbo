@@ -4,19 +4,20 @@ using System.Linq;
 using System.Text;
 using Tkl.Jumbo.IO;
 using Tkl.Jumbo.Dfs.FileSystem;
+using Tkl.Jumbo.Jet.IO;
 
 namespace Tkl.Jumbo.Jet.Jobs.Builder
 {
     /// <summary>
     /// Represents output written to the DFS for a job being constructed by the <see cref="JobBuilder"/> class.
     /// </summary>
-    public sealed class DfsOutput : IOperationOutput
+    public sealed class FileOutput : IOperationOutput
     {
         private readonly string _path;
         private readonly Type _recordWriterType;
         private readonly Type _recordType;
 
-        internal DfsOutput(string path, Type recordWriterType)
+        internal FileOutput(string path, Type recordWriterType)
         {
             if( path == null )
                 throw new ArgumentNullException("path");
@@ -82,10 +83,8 @@ namespace Tkl.Jumbo.Jet.Jobs.Builder
         {
             if( stage == null )
                 throw new ArgumentNullException("stage");
-            stage.SetDfsOutput(fileSystem, Path, RecordWriterType);
-            stage.DfsOutput.BlockSize = BlockSize;
-            stage.DfsOutput.ReplicationFactor = ReplicationFactor;
-            stage.DfsOutput.RecordOptions = RecordOptions;
+
+            stage.DataOutput = FileDataOutput.Create(RecordWriterType, fileSystem, Path, BlockSize, ReplicationFactor, RecordOptions);
         }
     }
 }

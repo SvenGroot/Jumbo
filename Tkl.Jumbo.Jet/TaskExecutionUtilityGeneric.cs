@@ -139,7 +139,7 @@ namespace Tkl.Jumbo.Jet
 
         protected override IRecordWriter CreateOutputRecordWriter()
         {
-            if( Context.StageConfiguration.DfsOutput != null )
+            if( Context.StageConfiguration.HasDataOutput )
             {
                 if( Context.StageConfiguration.InternalPartitionCount == 1 )
                 {

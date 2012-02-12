@@ -13,13 +13,13 @@ namespace Tkl.Jumbo.Jet.Jobs.Builder
     /// <summary>
     /// Represents input read from the DFS for a job being constructed by the <see cref="JobBuilder"/> class.
     /// </summary>
-    public sealed class DfsInput : IOperationInput
+    public sealed class FileInput : IOperationInput
     {
         private readonly string _path;
         private readonly Type _recordReaderType;
         private readonly Type _recordType;
 
-        internal DfsInput(string path, Type recordReaderType)
+        internal FileInput(string path, Type recordReaderType)
         {
             if( path == null )
                 throw new ArgumentNullException("path");

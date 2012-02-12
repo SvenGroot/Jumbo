@@ -64,7 +64,7 @@ namespace JobServerApplication
                 // Don't allow failures for a job with a TCP channel.
                 if( stage.Leaf.OutputChannel != null && stage.Leaf.OutputChannel.ChannelType == Tkl.Jumbo.Jet.Channels.ChannelType.Tcp )
                     _maxTaskFailures = 1;
-                bool nonInputStage = !stage.HasInput;
+                bool nonInputStage = !stage.HasDataInput;
                 // Don't do the work trying to find the input stages if the stage has dfs inputs.
                 StageConfiguration[] inputStages = nonInputStage ? config.GetInputStagesForStage(stage.StageId).ToArray() : null;
                 StageInfo stageInfo = new StageInfo(this, stage);

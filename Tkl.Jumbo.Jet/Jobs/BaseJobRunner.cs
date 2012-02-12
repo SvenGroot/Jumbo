@@ -34,7 +34,7 @@ namespace Tkl.Jumbo.Jet.Jobs
         /// Gets or sets the replication factor of the job's output files.
         /// </summary>
         /// <remarks>
-        /// Derived classes should use this value with the <see cref="TaskDfsOutput"/> items of the job configuration.
+        /// Derived classes should use this value with the <see cref="IO.FileDataOutput{TRecordWriter}"/> items of the job configuration.
         /// </remarks>
         [CommandLineArgument(), Description("Replication factor of the job's output files.")]
         public int ReplicationFactor { get; set; }
@@ -43,7 +43,7 @@ namespace Tkl.Jumbo.Jet.Jobs
         /// Gets or sets the block size of the job's output files.
         /// </summary>
         /// <remarks>
-        /// Derived classes should use this value with the <see cref="TaskDfsOutput"/> items of the job configuration.
+        /// Derived classes should use this value with the <see cref="IO.FileDataOutput{TRecordWriter}"/> items of the job configuration.
         /// </remarks>
         [CommandLineArgument(), Description("Block size of the job's output files.")]
         public BinarySize BlockSize { get; set; }
@@ -179,28 +179,6 @@ namespace Tkl.Jumbo.Jet.Jobs
                     throw new ArgumentException("The specified output path already exists on the DFS.", "outputPath");
             }
             FileSystemClient.CreateDirectory(outputPath);
-        }
-
-        /// <summary>
-        /// Sets the <see cref="ReplicationFactor"/> and <see cref="BlockSize"/> for the specified stage's DFS output.
-        /// </summary>
-        /// <param name="stage">The stage whose DFS output to configure.</param>
-        protected void ConfigureDfsOutput(StageConfiguration stage)
-        {
-            if( stage == null )
-                throw new ArgumentNullException("stage");
-            if( stage.DfsOutput == null )
-                throw new ArgumentException("Stage has no DFS output", "stage");
-
-            if( ReplicationFactor < 0 )
-                throw new InvalidOperationException("Replication factor may not be less than zero.");
-            if( BlockSize.Value < 0 )
-                throw new InvalidOperationException("Block size may not be less than zero.");
-            if( BlockSize.Value > Int32.MaxValue )
-                throw new InvalidOperationException("Block size may not be larger than 2GB.");
-
-            stage.DfsOutput.BlockSize = (int)BlockSize.Value;
-            stage.DfsOutput.ReplicationFactor = ReplicationFactor;
         }
 
         /// <summary>

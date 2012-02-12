@@ -16,7 +16,7 @@ namespace Tkl.Jumbo.Jet.Jobs.Builder
         private readonly JobBuilder _builder;
         private readonly TaskTypeInfo _taskTypeInfo;
         private readonly Channel _inputChannel;
-        private readonly DfsInput _dfsInput;
+        private readonly FileInput _dfsInput;
         private readonly int _noInputTaskCount;
 
         private SettingsDictionary _settings;
@@ -82,7 +82,7 @@ namespace Tkl.Jumbo.Jet.Jobs.Builder
                 if( _taskTypeInfo.InputRecordType != input.RecordType )
                     throw new ArgumentException(string.Format(CultureInfo.CurrentCulture, "The input record type {0} of the task {1} doesn't match the record type {2} of the input.", _taskTypeInfo.InputRecordType, taskType, input.RecordType));
 
-                _dfsInput = input as DfsInput;
+                _dfsInput = input as FileInput;
                 if( _dfsInput == null )
                     _inputChannel = new Channel((IJobBuilderOperation)input, this);
             }

@@ -98,13 +98,13 @@ namespace Tkl.Jumbo.Jet.Jobs.Builder
         /// <param name="outputPath">The output path.</param>
         /// <param name="recordWriterType">The type of the record writer to use.</param>
         /// <returns>
-        /// A <see cref="DfsOutput"/>.
+        /// A <see cref="FileOutput"/>.
         /// </returns>
-        protected DfsOutput WriteOutput(IJobBuilderOperation operation, string outputPath, Type recordWriterType)
+        protected FileOutput WriteOutput(IJobBuilderOperation operation, string outputPath, Type recordWriterType)
         {
             if( operation == null )
                 throw new ArgumentNullException("operation");
-            DfsOutput output = operation.JobBuilder.Write(operation, outputPath, recordWriterType);
+            FileOutput output = operation.JobBuilder.Write(operation, outputPath, recordWriterType);
             output.BlockSize = (int)BlockSize;
             output.ReplicationFactor = ReplicationFactor;
             CheckAndCreateOutputPath(outputPath);

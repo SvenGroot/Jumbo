@@ -27,7 +27,8 @@ namespace Tkl.Jumbo.Jet.Jobs
         private bool? _allowOutputRecordReuse;
         private readonly ExtendedCollection<string> _dependentStages = new ExtendedCollection<string>();
         private StageConfiguration _childStage;
-        private IDataInput _input;
+        private IDataInput _dataInput;
+        private IDataOutput _dataOutput;
         private TypeReference _taskType;
         private TaskTypeInfo _taskTypeInfo;
 
@@ -117,13 +118,13 @@ namespace Tkl.Jumbo.Jet.Jobs
         [XmlIgnore]
         public IDataInput DataInput
         {
-            get { return _input; }
+            get { return _dataInput; }
             set 
             {
                 // We can do validation here because this is not a serialized property.
                 if( value != null && TaskTypeInfo != null )
                     ValidateInputType(value, TaskTypeInfo);
-                _input = value;
+                _dataInput = value;
                 DataInputType = value == null ? TypeReference.Empty : new TypeReference(value.GetType());
                 if( value != null )
                     value.NotifyAddedToStage(this);
@@ -142,6 +143,7 @@ namespace Tkl.Jumbo.Jet.Jobs
         /// </note>
         /// </remarks>
         public TypeReference DataInputType { get; set; }
+        
 
         /// <summary>
         /// Gets a value indicating whether this stage has input other than a channel.
@@ -150,9 +152,70 @@ namespace Tkl.Jumbo.Jet.Jobs
         /// 	<see langword="true"/> if this instance has input; otherwise, <see langword="false"/>.
         /// </value>
         [XmlIgnore]
-        public bool HasInput
+        public bool HasDataInput
         {
             get { return !string.IsNullOrEmpty(DataInputType.TypeName); }
+        }
+
+        /// <summary>
+        /// Gets or sets the data output for this stage.
+        /// </summary>
+        /// <value>
+        /// The output for the stage, or <see langword="null"/> if the stage has no output or channel output, or the job configuration was loaded from XML.
+        /// </value>
+        /// <remarks>
+        /// <note>
+        ///   This value is not saved in the job configuration, and will not be available after loading a job configuration.
+        ///   Instead, the type of this property will be saved in <see cref="DataInputType"/>.
+        /// </note>
+        /// </remarks>
+        [XmlIgnore]
+        public IDataOutput DataOutput
+        {
+            get { return _dataOutput; }
+            set 
+            {
+                if( value == null )
+                {
+                    _dataInput = null;
+                    DataOutputType = TypeReference.Empty;
+                }
+                else
+                {
+                    if( OutputChannel != null || ChildStage != null )
+                        throw new InvalidOperationException("Cannot add data output to a stage that already has an output channel.");
+                    if( TaskTypeInfo != null )
+                        ValidateOutputType(value, TaskTypeInfo);
+                    _dataOutput = value;
+                    DataOutputType = value.GetType();
+                    value.NotifyAddedToStage(this);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Gets or sets the <see cref="Type"/> of the <see cref="IDataOutput"/> used by this stage.
+        /// </summary>
+        /// <value>
+        /// The type of the input, or <see langword="null"/> if the stage has no output or channel output.
+        /// </value>
+        /// <remarks>
+        /// <note>
+        ///   Don't set this property manually while constructing a job. Instead, use the <see cref="DataOutput"/> property.
+        /// </note>
+        /// </remarks>
+        public TypeReference DataOutputType { get; set; }
+
+        /// <summary>
+        /// Gets a value indicating whether this stage has an <see cref="IDataOutput"/> to which the output is written.
+        /// </summary>
+        /// <value>
+        /// 	<see langword="true"/> if this instance has data output; otherwise, <see langword="false"/>.
+        /// </value>
+        [XmlIgnore]
+        public bool HasDataOutput
+        {
+            get { return !string.IsNullOrEmpty(DataOutputType.TypeName); }
         }
 
         /// <summary>
@@ -224,11 +287,6 @@ namespace Tkl.Jumbo.Jet.Jobs
         /// </summary>
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2227:CollectionPropertiesShouldBeReadOnly")]
         public SettingsDictionary StageSettings { get; set; }
-
-        /// <summary>
-        /// Gets or sets the output to the distributed file system for this stage.
-        /// </summary>
-        public TaskDfsOutput DfsOutput { get; set; }
 
         /// <summary>
         /// Gets or sets the output channel configuration for this stage.
@@ -421,33 +479,6 @@ namespace Tkl.Jumbo.Jet.Jobs
         }
 
         /// <summary>
-        /// Sets the DFS output of the stage.
-        /// </summary>
-        /// <param name="fileSystem">The file system.</param>
-        /// <param name="outputPath">The path of the directory on the DFS to write to.</param>
-        /// <param name="recordWriterType">The type of the record writer to use.</param>
-        public void SetDfsOutput(FileSystemClient fileSystem, string outputPath, Type recordWriterType)
-        {
-            if( fileSystem == null )
-                throw new ArgumentNullException("fileSystem");
-            if( outputPath == null )
-                throw new ArgumentNullException("outputPath");
-            if( recordWriterType == null )
-                throw new ArgumentNullException("recordWriterType");
-            if( TaskType.TypeName == null || string.IsNullOrEmpty(StageId) )
-                throw new InvalidOperationException("Cannot set output before stage ID and task type are set.");
-            if( ChildStage != null || OutputChannel != null || DfsOutput != null )
-                throw new InvalidOperationException("This stage already has output.");
-            JobConfiguration.ValidateOutputType(outputPath, recordWriterType, TaskType.ReferencedType.FindGenericInterfaceType(typeof(ITask<,>)));
-
-            DfsOutput = new TaskDfsOutput()
-            {
-                PathFormat = fileSystem.Path.Combine(outputPath, StageId + "-{0:00000}"),
-                RecordWriterType = recordWriterType,
-            };
-        }
-
-        /// <summary>
         /// Gets a setting with the specified type and default value.
         /// </summary>
         /// <typeparam name="T">The type of the setting.</typeparam>
@@ -550,6 +581,12 @@ namespace Tkl.Jumbo.Jet.Jobs
         {
             if( input.RecordType != taskType.InputRecordType )
                 throw new ArgumentException(string.Format(System.Globalization.CultureInfo.CurrentCulture, "The specified input's record type {0} is not identical to the specified task type's input record type {1}.", input.RecordType, taskType.InputRecordType));
+        }
+
+        private static void ValidateOutputType(IDataOutput output, TaskTypeInfo taskType)
+        {
+            if( output.RecordType != taskType.OutputRecordType )
+                throw new ArgumentException(string.Format(System.Globalization.CultureInfo.CurrentCulture, "The specified output's record type {0} is not identical to the specified task type's output record type {1}.", output.RecordType, taskType.OutputRecordType));
         }
     }
 }

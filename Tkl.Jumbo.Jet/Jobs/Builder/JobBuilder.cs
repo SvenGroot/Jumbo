@@ -76,10 +76,10 @@ namespace Tkl.Jumbo.Jet.Jobs.Builder
         /// </summary>
         /// <param name="path">The path of a directory or file on the DFS.</param>
         /// <param name="recordReaderType">Type of the record reader.</param>
-        /// <returns>A <see cref="DfsInput"/> instance representing this input.</returns>
-        public DfsInput Read(string path, Type recordReaderType)
+        /// <returns>A <see cref="FileInput"/> instance representing this input.</returns>
+        public FileInput Read(string path, Type recordReaderType)
         {
-            DfsInput input = new DfsInput(path, recordReaderType);
+            FileInput input = new FileInput(path, recordReaderType);
             AddAssembly(recordReaderType.Assembly);
             return input;
         }
@@ -109,13 +109,13 @@ namespace Tkl.Jumbo.Jet.Jobs.Builder
         /// <param name="operation">The operation.</param>
         /// <param name="path">The path of a directory on the DFS.</param>
         /// <param name="recordWriterType">Type of the record writer. This may be a generic type definition.</param>
-        /// <returns>A <see cref="DfsOutput"/> instance representing the output.</returns>
+        /// <returns>A <see cref="FileOutput"/> instance representing the output.</returns>
         /// <remarks>
         /// <para>
         ///   If <paramref name="recordWriterType"/> is a generic type definition, it will be constructed using the output record type of the operation.
         /// </para>
         /// </remarks>
-        public DfsOutput Write(IJobBuilderOperation operation, string path, Type recordWriterType)
+        public FileOutput Write(IJobBuilderOperation operation, string path, Type recordWriterType)
         {
             if( operation == null )
                 throw new ArgumentNullException("operation");
@@ -127,7 +127,7 @@ namespace Tkl.Jumbo.Jet.Jobs.Builder
             if( recordWriterType.IsGenericTypeDefinition )
                 recordWriterType = recordWriterType.MakeGenericType(operation.RecordType);
 
-            DfsOutput output = new DfsOutput(path, recordWriterType);
+            FileOutput output = new FileOutput(path, recordWriterType);
             operation.SetOutput(output);
 
             AddAssembly(recordWriterType.Assembly);

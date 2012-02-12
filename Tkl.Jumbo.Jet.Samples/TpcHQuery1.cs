@@ -56,12 +56,11 @@ namespace Tkl.Jumbo.Jet.Samples
             jobConfig.JobName = GetType().Name; // Use the class name as the job's friendly name.
             JumboFileSystemEntry input = FileSystemClient.GetFileSystemEntryInfo(_inputPath);
             StageConfiguration inputStage = jobConfig.AddInputStage("PricingSummaryTask", new FileDataInput<RecordFileReader<LineItem>>(FileSystemClient, input), typeof(PricingSummaryTask));
-            StageConfiguration accumulatorPipelineStage = jobConfig.AddPointToPointStage("Accumulator", inputStage, typeof(PricingSummaryAccumulatorTask), Tkl.Jumbo.Jet.Channels.ChannelType.Pipeline, null, null, null);
-            StageConfiguration accumulatorStage = jobConfig.AddStage("PricingSummary", typeof(PricingSummaryAccumulatorTask), 1, new InputStageInfo(accumulatorPipelineStage), null, null, null);
-            StageConfiguration outputStage = jobConfig.AddPointToPointStage("Sort", accumulatorStage, typeof(SortTask<Pair<PricingSummaryKey, PricingSummaryValue>>), Tkl.Jumbo.Jet.Channels.ChannelType.Pipeline, FileSystemClient, _outputPath, typeof(TextRecordWriter<Pair<PricingSummaryKey, PricingSummaryValue>>));
+            StageConfiguration accumulatorPipelineStage = jobConfig.AddPointToPointStage("Accumulator", inputStage, typeof(PricingSummaryAccumulatorTask), Tkl.Jumbo.Jet.Channels.ChannelType.Pipeline);
+            StageConfiguration accumulatorStage = jobConfig.AddStage("PricingSummary", typeof(PricingSummaryAccumulatorTask), 1, new InputStageInfo(accumulatorPipelineStage));
+            StageConfiguration outputStage = jobConfig.AddPointToPointStage("Sort", accumulatorStage, typeof(SortTask<Pair<PricingSummaryKey, PricingSummaryValue>>), Tkl.Jumbo.Jet.Channels.ChannelType.Pipeline);
+            outputStage.DataOutput = FileDataOutput.Create(typeof(TextRecordWriter<Pair<PricingSummaryKey, PricingSummaryValue>>), FileSystemClient, _outputPath, (int)BlockSize, ReplicationFactor);
             jobConfig.AddTypedSetting(PricingSummaryTask.DeltaSettingName, _delta);
-
-            ConfigureDfsOutput(outputStage);
 
             return jetClient.RunJob(jobConfig, FileSystemClient, typeof(PricingSummaryTask).Assembly.Location).JobId;
         }

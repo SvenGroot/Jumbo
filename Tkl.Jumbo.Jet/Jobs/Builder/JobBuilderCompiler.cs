@@ -68,7 +68,7 @@ namespace Tkl.Jumbo.Jet.Jobs.Builder
         /// <param name="input">The DFS input for the stage.</param>
         /// <param name="output">The output for the stage. May be <see langword="null"/>.</param>
         /// <returns>The <see cref="StageConfiguration"/> for the stage.</returns>
-        public StageConfiguration CreateStage(string stageId, Type taskType, DfsInput input, IOperationOutput output)
+        public StageConfiguration CreateStage(string stageId, Type taskType, FileInput input, IOperationOutput output)
         {
             if( stageId == null )
                 throw new ArgumentNullException("stageId");
@@ -79,7 +79,7 @@ namespace Tkl.Jumbo.Jet.Jobs.Builder
 
             stageId = CreateUniqueStageId(stageId);
             
-            StageConfiguration stage = _job.AddInputStage(stageId, input.CreateStageInput(_fileSystemClient), taskType, null, null, null);
+            StageConfiguration stage = _job.AddInputStage(stageId, input.CreateStageInput(_fileSystemClient), taskType);
             if( output != null )
                 output.ApplyOutput(_fileSystemClient, stage);
             return stage;
@@ -128,7 +128,7 @@ namespace Tkl.Jumbo.Jet.Jobs.Builder
                 if( input == null || input.ChannelType != Channels.ChannelType.Pipeline )
                     stageId = CreateUniqueStageId(stageId);
 
-                stage = _job.AddStage(stageId, taskType, DetermineTaskCount(taskCount, input), input, null, null, null);
+                stage = _job.AddStage(stageId, taskType, DetermineTaskCount(taskCount, input), input);
             }
 
             if( output != null )

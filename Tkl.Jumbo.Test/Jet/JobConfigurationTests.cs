@@ -64,6 +64,7 @@ namespace Tkl.Jumbo.Test.Jet
             StageConfiguration stage = target.AddInputStage("InputStage", new FileDataInput<LineRecordReader>(new LocalFileSystemClient(), file, maxSplitSize: _blockSize / splitsPerBlock), typeof(Tasks.LineCounterTask));
 
             Assert.IsNotNull(stage.DataInput);
+            Assert.IsTrue(stage.HasDataInput);
             Assert.AreEqual(file.Blocks.Count * splitsPerBlock, stage.TaskCount);
             Assert.AreEqual(stage.TaskCount, stage.DataInput.TaskInputs.Count);
             Assert.AreEqual(1, target.Stages.Count);
@@ -80,7 +81,9 @@ namespace Tkl.Jumbo.Test.Jet
                 Assert.AreEqual(x++ * (_blockSize / splitsPerBlock), input.Offset);
                 Assert.AreEqual(_blockSize / splitsPerBlock, input.Size);
             }
-            Assert.IsNull(stage.DfsOutput);
+            Assert.IsNull(stage.DataOutput);
+            Assert.IsNull(stage.DataOutputType.ReferencedType);
+            Assert.IsFalse(stage.HasDataOutput);
             Assert.AreEqual(typeof(Tasks.LineCounterTask).AssemblyQualifiedName, stage.TaskType.TypeName);
             Assert.AreEqual(typeof(Tasks.LineCounterTask), stage.TaskType.ReferencedType);
 
@@ -138,7 +141,8 @@ namespace Tkl.Jumbo.Test.Jet
 
             const int taskCount = 3;
             const string outputPath = "/output";
-            target.AddStage("SecondStage", typeof(Tasks.LineAdderTask), taskCount, new[] { new InputStageInfo(inputStage1), new InputStageInfo(inputStage2) }, typeof(MultiRecordReader<int>), FileSystemClient.Create(), outputPath, typeof(TextRecordWriter<int>));
+            var stage = target.AddStage("SecondStage", typeof(Tasks.LineAdderTask), taskCount, new[] { new InputStageInfo(inputStage1), new InputStageInfo(inputStage2) }, typeof(MultiRecordReader<int>));
+            stage.DataOutput = new FileDataOutput<TextRecordWriter<int>>(FileSystemClient.Create(), outputPath);
 
             
             List<StageConfiguration> stages = target.GetInputStagesForStage("SecondStage").ToList();
@@ -161,7 +165,8 @@ namespace Tkl.Jumbo.Test.Jet
             const int taskCount = 3;
             const int partitionsPerTask = 5;
 
-            StageConfiguration stage = target.AddStage("SecondStage", typeof(EmptyTask<Utf8String>), taskCount, new InputStageInfo(inputStage) { PartitionsPerTask = partitionsPerTask }, FileSystemClient.Create(), "/output", typeof(TextRecordWriter<Utf8String>));
+            StageConfiguration stage = target.AddStage("SecondStage", typeof(EmptyTask<Utf8String>), taskCount, new InputStageInfo(inputStage) { PartitionsPerTask = partitionsPerTask });
+            stage.DataOutput = new FileDataOutput<TextRecordWriter<Utf8String>>(FileSystemClient.Create(), "/output");
 
             ChannelConfiguration channel = inputStage.OutputChannel;
             Assert.AreEqual(ChannelType.File, channel.ChannelType);
@@ -185,9 +190,10 @@ namespace Tkl.Jumbo.Test.Jet
             const int partitionsPerTask = 5;
 
             StageConfiguration inputStage = target.AddInputStage("InputStage", new FileDataInput<LineRecordReader>(new LocalFileSystemClient(), file1), typeof(EmptyTask<Utf8String>));
-            StageConfiguration sortStage = target.AddStage("SortStage", typeof(SortTask<Utf8String>), taskCount * partitionsPerTask, new InputStageInfo(inputStage) { ChannelType = ChannelType.Pipeline }, null, null, null);
+            StageConfiguration sortStage = target.AddStage("SortStage", typeof(SortTask<Utf8String>), taskCount * partitionsPerTask, new InputStageInfo(inputStage) { ChannelType = ChannelType.Pipeline });
 
-            StageConfiguration stage = target.AddStage("SecondStage", typeof(EmptyTask<Utf8String>), taskCount, new InputStageInfo(sortStage) { PartitionsPerTask = partitionsPerTask }, FileSystemClient.Create(), "/output", typeof(TextRecordWriter<Utf8String>));
+            StageConfiguration stage = target.AddStage("SecondStage", typeof(EmptyTask<Utf8String>), taskCount, new InputStageInfo(sortStage) { PartitionsPerTask = partitionsPerTask });
+            stage.DataOutput = new FileDataOutput<TextRecordWriter<Utf8String>>(FileSystemClient.Create(), "/output");
 
             ChannelConfiguration channel = sortStage.OutputChannel;
             Assert.AreEqual(ChannelType.File, channel.ChannelType);
@@ -213,7 +219,9 @@ namespace Tkl.Jumbo.Test.Jet
 
             const int taskCount = 3;
             const string outputPath = "/output";
-            StageConfiguration stage = target.AddStage("SecondStage", typeof(Tasks.LineAdderTask), taskCount, new[] { new InputStageInfo(inputStage1), new InputStageInfo(inputStage2) }, typeof(MultiRecordReader<int>), FileSystemClient.Create(), useOutput ? outputPath : null, typeof(TextRecordWriter<int>));
+            StageConfiguration stage = target.AddStage("SecondStage", typeof(Tasks.LineAdderTask), taskCount, new[] { new InputStageInfo(inputStage1), new InputStageInfo(inputStage2) }, typeof(MultiRecordReader<int>));
+            if( useOutput )
+                stage.DataOutput = new FileDataOutput<TextRecordWriter<int>>(FileSystemClient.Create(), outputPath);
 
             Assert.AreEqual(taskCount, stage.TaskCount);
             Assert.AreEqual(3, target.Stages.Count);
@@ -221,15 +229,26 @@ namespace Tkl.Jumbo.Test.Jet
 
             Assert.AreEqual("SecondStage", stage.StageId);
             Assert.IsNull(stage.DataInput);
+            Assert.IsNull(stage.DataInputType.ReferencedType);
+            Assert.IsFalse(stage.HasDataInput);
             if( useOutput )
             {
-                Assert.IsNotNull(stage.DfsOutput);
-                Assert.AreEqual(DfsPath.Combine(outputPath, stage.StageId + "-{0:00000}"), stage.DfsOutput.PathFormat);
-                Assert.AreEqual(typeof(TextRecordWriter<int>).AssemblyQualifiedName, stage.DfsOutput.RecordWriterType.TypeName);
-                Assert.AreEqual(typeof(TextRecordWriter<int>), stage.DfsOutput.RecordWriterType.ReferencedType);
+                Assert.IsNotNull(stage.DataOutput);
+                Assert.IsTrue(stage.HasDataOutput);
+                Type outputType = typeof(FileDataOutput<>).MakeGenericType(typeof(TextRecordWriter<int>));
+                Assert.IsInstanceOf(outputType, stage.DataOutput);
+                Assert.AreEqual(outputType, stage.DataOutputType.ReferencedType);
+                Assert.AreEqual(outputType.AssemblyQualifiedName, stage.DataOutputType.TypeName);
+                Assert.AreEqual(DfsPath.Combine(outputPath, stage.StageId + "-{0:00000}"), stage.GetSetting(FileDataOutput.OutputPathFormatSettingKey, null));
+                Assert.AreEqual(0, stage.GetTypedSetting(FileDataOutput.BlockSizeSettingKey, 0));
+                Assert.AreEqual(0, stage.GetTypedSetting(FileDataOutput.ReplicationFactorSettingKey, 0));
             }
             else
-                Assert.IsNull(stage.DfsOutput);
+            {
+                Assert.IsNull(stage.DataOutput);
+                Assert.IsNull(stage.DataOutputType.ReferencedType);
+                Assert.IsFalse(stage.HasDataOutput);
+            }
 
             Assert.AreEqual(typeof(Tasks.LineAdderTask).AssemblyQualifiedName, stage.TaskType.TypeName);
             Assert.AreEqual(typeof(Tasks.LineAdderTask), stage.TaskType.ReferencedType);

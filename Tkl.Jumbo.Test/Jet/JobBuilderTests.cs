@@ -714,11 +714,15 @@ namespace Tkl.Jumbo.Test.Jet
         {
             Assert.IsNull(stage.ChildStage);
             Assert.IsNull(stage.OutputChannel);
-            Assert.IsNotNull(stage.DfsOutput);
-            Assert.AreEqual(_fileSystemClient.Path.Combine(_outputPath, stage.StageId + "-{0:00000}"), stage.DfsOutput.PathFormat);
-            Assert.AreEqual(blockSize, stage.DfsOutput.BlockSize);
-            Assert.AreEqual(replicationFactor, stage.DfsOutput.ReplicationFactor);
-            Assert.AreEqual(recordWriterType, stage.DfsOutput.RecordWriterType.ReferencedType);
+            Assert.IsNotNull(stage.DataOutput);
+            Assert.IsTrue(stage.HasDataOutput);
+            Type outputType = typeof(FileDataOutput<>).MakeGenericType(recordWriterType);
+            Assert.IsInstanceOf(outputType, stage.DataOutput);
+            Assert.AreEqual(outputType, stage.DataOutputType.ReferencedType);
+            Assert.AreEqual(outputType.AssemblyQualifiedName, stage.DataOutputType.TypeName);
+            Assert.AreEqual(_fileSystemClient.Path.Combine(_outputPath, stage.StageId + "-{0:00000}"), stage.GetSetting(FileDataOutput.OutputPathFormatSettingKey, null));
+            Assert.AreEqual(blockSize, stage.GetTypedSetting(FileDataOutput.BlockSizeSettingKey, 0));
+            Assert.AreEqual(replicationFactor, stage.GetTypedSetting(FileDataOutput.ReplicationFactorSettingKey, 0));
         }
 
         private static void VerifyChannel(StageConfiguration sender, StageConfiguration receiver, ChannelType channelType, Type partitionerType = null, Type multiInputRecordReaderType = null, int partitionsPerTask = 1, PartitionAssignmentMethod assigmentMethod = PartitionAssignmentMethod.Linear)
@@ -728,7 +732,9 @@ namespace Tkl.Jumbo.Test.Jet
                 partitionerType = typeof(HashPartitioner<>).MakeGenericType(info.OutputRecordType);
             if( multiInputRecordReaderType == null )
                 multiInputRecordReaderType = typeof(MultiRecordReader<>).MakeGenericType(info.OutputRecordType);
-            Assert.IsNull(sender.DfsOutput);
+            Assert.IsNull(sender.DataOutput);
+            Assert.IsNull(sender.DataOutputType.ReferencedType);
+            Assert.IsFalse(sender.HasDataOutput);
             Assert.IsNull(receiver.DataInput);
             if( channelType == ChannelType.Pipeline )
             {

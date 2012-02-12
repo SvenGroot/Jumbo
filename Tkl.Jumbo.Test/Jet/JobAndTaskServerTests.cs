@@ -202,7 +202,8 @@ namespace Tkl.Jumbo.Test.Jet
             stage.AddSetting(FileOutputChannel.SpillSortCombinerTypeSettingKey, typeof(WordCountReduceTask).AssemblyQualifiedName);
             stage.AddSetting(FileOutputChannel.SpillBufferSizeSettingKey, "5MB");
 
-            job.AddStage("WordCountReduceStage", typeof(WordCountReduceTask), 1, new InputStageInfo(stage) { MultiInputRecordReaderType = typeof(MergeRecordReader<Pair<Utf8String, int>>) }, fileSystemClient, outputPath, typeof(BinaryRecordWriter<Pair<Utf8String, int>>));
+            var stage2 = job.AddStage("WordCountReduceStage", typeof(WordCountReduceTask), 1, new InputStageInfo(stage) { MultiInputRecordReaderType = typeof(MergeRecordReader<Pair<Utf8String, int>>) });
+            stage2.DataOutput = new FileDataOutput<BinaryRecordWriter<Pair<Utf8String, int>>>(fileSystemClient, outputPath);
 
             JobStatus status = RunJob(fileSystemClient, job);
 
@@ -236,7 +237,8 @@ namespace Tkl.Jumbo.Test.Jet
             List<int> expected = CreateNumberListInputFile(10000, "/settingsinput", fileSystemClient);
 
             JobConfiguration config = new JobConfiguration(typeof(MultiplierTask).Assembly);
-            config.AddInputStage("MultiplyStage", new FileDataInput<LineRecordReader>(fileSystemClient, fileSystemClient.GetFileInfo("/settingsinput")), typeof(MultiplierTask), fileSystemClient, outputPath, typeof(BinaryRecordWriter<int>));
+            var stage = config.AddInputStage("MultiplyStage", new FileDataInput<LineRecordReader>(fileSystemClient, fileSystemClient.GetFileInfo("/settingsinput")), typeof(MultiplierTask));
+            stage.DataOutput = new FileDataOutput<BinaryRecordWriter<int>>(fileSystemClient, outputPath);
             int factor = new Random().Next(2, 100);
             config.AddTypedSetting("factor", factor);
 
@@ -276,9 +278,9 @@ namespace Tkl.Jumbo.Test.Jet
             const int joinTasks = 2;
             JobConfiguration config = new JobConfiguration(typeof(CustomerOrderJoinRecordReader).Assembly);
             StageConfiguration customerInput = config.AddInputStage("CustomerInput", new FileDataInput<RecordFileReader<Customer>>(fileSystemClient, fileSystemClient.GetFileInfo("/testjoin/customers")), typeof(EmptyTask<Customer>));
-            StageConfiguration customerSort = config.AddStage("CustomerSort", typeof(SortTask<Customer>), joinTasks, new InputStageInfo(customerInput) { ChannelType = ChannelType.Pipeline }, null, null, null);
+            StageConfiguration customerSort = config.AddStage("CustomerSort", typeof(SortTask<Customer>), joinTasks, new InputStageInfo(customerInput) { ChannelType = ChannelType.Pipeline });
             StageConfiguration orderInput = config.AddInputStage("OrderInput", new FileDataInput<RecordFileReader<Order>>(fileSystemClient, fileSystemClient.GetFileInfo("/testjoin/orders")), typeof(EmptyTask<Order>));
-            StageConfiguration orderSort = config.AddStage("OrderSort", typeof(SortTask<Order>), joinTasks, new InputStageInfo(orderInput) { ChannelType = ChannelType.Pipeline }, null, null, null);
+            StageConfiguration orderSort = config.AddStage("OrderSort", typeof(SortTask<Order>), joinTasks, new InputStageInfo(orderInput) { ChannelType = ChannelType.Pipeline });
 
             orderInput.AddSetting(PartitionerConstants.EqualityComparerSetting, typeof(OrderJoinComparer).AssemblyQualifiedName);
             orderSort.AddSetting(TaskConstants.ComparerSettingKey, typeof(OrderJoinComparer).AssemblyQualifiedName);
@@ -293,7 +295,8 @@ namespace Tkl.Jumbo.Test.Jet
             {
                 MultiInputRecordReaderType = typeof(MergeRecordReader<Order>)
             };
-            config.AddStage("Join", typeof(EmptyTask<CustomerOrder>), joinTasks, new[] { customerSortInfo, orderSortInfo }, typeof(CustomerOrderJoinRecordReader), fileSystemClient, outputPath, typeof(RecordFileWriter<CustomerOrder>));
+            var stage = config.AddStage("Join", typeof(EmptyTask<CustomerOrder>), joinTasks, new[] { customerSortInfo, orderSortInfo }, typeof(CustomerOrderJoinRecordReader));
+            stage.DataOutput = new FileDataOutput<RecordFileWriter<CustomerOrder>>(fileSystemClient, outputPath);
 
             RunJob(fileSystemClient, config);
 
@@ -402,7 +405,8 @@ namespace Tkl.Jumbo.Test.Jet
             }
 
             JobConfiguration config = CreateConfiguration(fileSystemClient, fileSystemClient.GetFileInfo(_fileName), outputPath, false, typeof(LineCounterTask), typeof(LineAdderTask), ChannelType.File);
-            StageConfiguration stage = config.AddInputStage("VerificationStage", new FileDataInput<RecordFileReader<int>>(fileSystemClient, fileSystemClient.GetFileInfo(lineCountPath)), typeof(LineVerifierTask), fileSystemClient, outputPath, typeof(TextRecordWriter<bool>));
+            StageConfiguration stage = config.AddInputStage("VerificationStage", new FileDataInput<RecordFileReader<int>>(fileSystemClient, fileSystemClient.GetFileInfo(lineCountPath)), typeof(LineVerifierTask));
+            stage.DataOutput = new FileDataOutput<TextRecordWriter<bool>>(fileSystemClient, outputPath);
             stage.AddSetting("ActualOutputPath", fileSystemClient.Path.Combine(outputPath, "OutputTask-00001"));
             config.GetStage("OutputTask").DependentStages.Add(stage.StageId);
 
@@ -478,7 +482,7 @@ namespace Tkl.Jumbo.Test.Jet
             if( outputType == FileChannelOutputType.SortSpill )
                 sortStage = conversionStage;
             else
-                sortStage = config.AddStage("SortStage", typeof(SortTask<int>), mergeTasks * partitionsPerTask, new InputStageInfo(conversionStage) { ChannelType = ChannelType.Pipeline }, null, null, null);
+                sortStage = config.AddStage("SortStage", typeof(SortTask<int>), mergeTasks * partitionsPerTask, new InputStageInfo(conversionStage) { ChannelType = ChannelType.Pipeline });
             if( channelType == ChannelType.Tcp )
                 sortStage.AddTypedSetting(TcpOutputChannel.SpillBufferSizeSettingKey, "1MB");
             else
@@ -486,7 +490,8 @@ namespace Tkl.Jumbo.Test.Jet
                 sortStage.AddTypedSetting(FileOutputChannel.OutputTypeSettingKey, outputType);
                 sortStage.AddTypedSetting(FileOutputChannel.SpillBufferSizeSettingKey, "1MB");
             }
-            config.AddStage("MergeStage", typeof(EmptyTask<int>), mergeTasks, new InputStageInfo(sortStage) { MultiInputRecordReaderType = typeof(MergeRecordReader<int>), PartitionsPerTask = partitionsPerTask, ChannelType = channelType }, fileSystemClient, outputPath, typeof(BinaryRecordWriter<int>));
+            var stage = config.AddStage("MergeStage", typeof(EmptyTask<int>), mergeTasks, new InputStageInfo(sortStage) { MultiInputRecordReaderType = typeof(MergeRecordReader<int>), PartitionsPerTask = partitionsPerTask, ChannelType = channelType });
+            stage.DataOutput = new FileDataOutput<BinaryRecordWriter<int>>(fileSystemClient, outputPath);
             sortStage.OutputChannel.ForceFileDownload = forceFileDownload;
 
             RunJob(fileSystemClient, config);
@@ -654,10 +659,11 @@ namespace Tkl.Jumbo.Test.Jet
             if( channelType == ChannelType.Pipeline )
             {
                 // Pipeline channel cannot merge so we will add another stage in between.
-                stage = config.AddPointToPointStage("IntermediateTask", stage, adderTask, ChannelType.Pipeline, null, null, null);
+                stage = config.AddPointToPointStage("IntermediateTask", stage, adderTask, ChannelType.Pipeline);
                 channelType = ChannelType.File;
             }
-            config.AddStage("OutputTask", adderTask, 1, new InputStageInfo(stage) { ChannelType = channelType }, fileSystemClient, outputPath, typeof(TextRecordWriter<int>));
+            var stage2 = config.AddStage("OutputTask", adderTask, 1, new InputStageInfo(stage) { ChannelType = channelType });
+            stage2.DataOutput = new FileDataOutput<TextRecordWriter<int>>(fileSystemClient, outputPath);
             if( forceFileDownload )
                 config.AddTypedSetting(FileInputChannel.MemoryStorageSizeSetting, 0L);
             foreach( ChannelConfiguration channel in config.GetAllChannels() )

@@ -8,7 +8,7 @@ using Tkl.Jumbo.Jet.Channels;
 namespace Tkl.Jumbo.Jet.Jobs
 {
     /// <summary>
-    /// Provides information about an input stage to the <see cref="JobConfiguration.AddStage(string, Type, int, InputStageInfo, Tkl.Jumbo.Dfs.FileSystem.FileSystemClient, string, Type)"/> method.
+    /// Provides information about an input stage to the <see cref="JobConfiguration.AddStage(string, Type, int, InputStageInfo)"/> method.
     /// </summary>
     public class InputStageInfo
     {

@@ -25,12 +25,6 @@ namespace Tkl.Jumbo.Jet
     {
         #region Nested types
 
-        private sealed class DfsOutputInfo
-        {
-            public string DfsOutputPath { get; set; }
-            public string DfsOutputTempPath { get; set; }
-        }
-
         private sealed class TaskProgressSource : IHasAdditionalProgress
         {
             private readonly TaskExecutionUtility _task;
@@ -77,7 +71,7 @@ namespace Tkl.Jumbo.Jet
         private readonly List<string> _statusMessages;
         private readonly bool _isAssociatedTask;
         private readonly bool _processesAllPartitions;
-        private List<DfsOutputInfo> _dfsOutputs;
+        private List<IOutputCommitter> _dataOutputs;
         private volatile bool _finished;
         private volatile bool _disposed;
         private Dictionary<string, List<IHasAdditionalProgress>> _additionalProgressSources;
@@ -580,7 +574,7 @@ namespace Tkl.Jumbo.Jet
 
         private IRecordReader CreateInputRecordReader()
         {
-            if( Context.StageConfiguration.HasInput )
+            if( Context.StageConfiguration.HasDataInput )
             {
                 IDataInput input = (IDataInput)JetActivator.CreateInstance(Context.StageConfiguration.DataInputType.ReferencedType, this);
                 TaskInput = TaskInputUtility.ReadTaskInput(new LocalFileSystemClient(), _configuration.LocalJobDirectory, _configuration.TaskAttemptId.TaskId.StageId, _configuration.TaskAttemptId.TaskId.TaskNumber - 1);
@@ -664,7 +658,7 @@ namespace Tkl.Jumbo.Jet
 
             CalculateMetrics(metrics);
 
-            if( Context.StageConfiguration.DfsOutput != null )
+            if( Context.StageConfiguration.HasDataOutput )
             {
                 if( _outputWriter != null )
                 {
@@ -672,8 +666,8 @@ namespace Tkl.Jumbo.Jet
                     // Not setting it to null so there's no chance it'll get recreated.
                 }
 
-                foreach( DfsOutputInfo output in _dfsOutputs )
-                    FileSystemClient.Move(output.DfsOutputTempPath, output.DfsOutputPath);
+                foreach( IOutputCommitter output in _dataOutputs )
+                    output.Commit(FileSystemClient);
             }
         }
 
@@ -850,11 +844,13 @@ namespace Tkl.Jumbo.Jet
             string file = FileSystemClient.Path.Combine(FileSystemClient.Path.Combine(Context.DfsJobDirectory, "temp"), Context.TaskAttemptId + "_part" + partition.ToString(System.Globalization.CultureInfo.InvariantCulture));
             _log.DebugFormat("Opening output file {0}", file);
 
-            TaskDfsOutput output = Context.StageConfiguration.DfsOutput;
-            if( _dfsOutputs == null )
-                _dfsOutputs = new List<DfsOutputInfo>();
-            _dfsOutputs.Add(new DfsOutputInfo() { DfsOutputTempPath = file, DfsOutputPath = output.GetPath(partition) });
-            return output.CreateRecordWriter(this, file);
+            IDataOutput output = (IDataOutput)Activator.CreateInstance(Context.StageConfiguration.DataOutputType.ReferencedType);
+            if( _dataOutputs == null )
+                _dataOutputs = new List<IOutputCommitter>();
+
+            IOutputCommitter committer = output.CreateOutput(FileSystemClient, JetClient.Configuration, Context, partition);
+            _dataOutputs.Add(committer);
+            return committer.RecordWriter;
         }
 
         /// <summary>
@@ -987,7 +983,7 @@ namespace Tkl.Jumbo.Jet
                     metrics.InputBytes += _inputReader.InputBytes;
                 }
 
-                if( Context.StageConfiguration.HasInput )
+                if( Context.StageConfiguration.HasDataInput )
                 {
                     // It's currently not possible to have a multi input record reader with DFS inputs, so this is safe.
                     if( _inputReader != null )
@@ -1015,7 +1011,7 @@ namespace Tkl.Jumbo.Jet
                     metrics.OutputBytes += _outputWriter.OutputBytes;
                 }
 
-                if( Context.StageConfiguration.DfsOutput != null )
+                if( Context.StageConfiguration.HasDataOutput )
                 {
                     metrics.DfsBytesWritten += _outputWriter.BytesWritten;
                 }
