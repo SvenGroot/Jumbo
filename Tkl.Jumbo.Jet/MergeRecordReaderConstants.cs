@@ -13,7 +13,7 @@ namespace Tkl.Jumbo.Jet
     public static class MergeRecordReaderConstants
     {
         /// <summary>
-        /// The name of the setting in <see cref="StageConfiguration.StageSettings"/> that specifies the maximum number
+        /// The name of the setting in the job or stage settings that specifies the maximum number
         /// of files to merge in one pass. This setting must be a <see cref="Int32"/> that is greater than or equal to 2.
         /// If this setting is not specified, the value of the <see cref="MergeRecordReaderConfigurationElement.MaxFileInputs"/>
         /// setting is used.

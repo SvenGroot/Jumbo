@@ -6,6 +6,9 @@ using System.Linq;
 using System.Text;
 using Tkl.Jumbo.Dfs;
 using Tkl.Jumbo.Dfs.FileSystem;
+using Ookii.CommandLine;
+using System.ComponentModel;
+using System.IO;
 
 namespace Tkl.Jumbo.Jet.Jobs.Builder
 {
@@ -14,6 +17,15 @@ namespace Tkl.Jumbo.Jet.Jobs.Builder
     /// </summary>
     public abstract class JobBuilderJob : BaseJobRunner
     {
+        /// <summary>
+        /// Gets or sets a value indicating whether the job runner will only create and print the job configuration, instead of running the job.
+        /// </summary>
+        /// <value>
+        /// 	<see langword="true"/> if the job runner will only create the configuration; otherwise, <see langword="false"/>.
+        /// </value>
+        [CommandLineArgument(ValueDescription = "FileName"), Description("Don't run the job, but only create the configuration and write it to the specified file. Use this to test if your job builder job is creating the correct configuration without running the job. Note there can still be side-effects such as output directories on the file system being created. If the OverwriteOutput switch is specified, the output directory will still be erased!")]
+        public string ConfigOnly { get; set; }
+
         /// <summary>
         /// Starts the job.
         /// </summary>
@@ -37,13 +49,23 @@ namespace Tkl.Jumbo.Jet.Jobs.Builder
 
                 ApplyJobPropertiesAndSettings(config);
 
-                Job job = jetClient.JobServer.CreateJob();
+                if( ConfigOnly != null )
+                {
+                    using( Stream stream = File.Create(ConfigOnly) )
+                    {
+                        config.SaveXml(stream);
+                    }
+                    return Guid.Empty;
+                }
+                else
+                {
+                    Job job = jetClient.JobServer.CreateJob();
 
-                OnJobCreated(job, config);
+                    OnJobCreated(job, config);
+                    jetClient.RunJob(job, config, fileSystemClient, builder.AssemblyLocations.ToArray());
 
-                jetClient.RunJob(job, config, fileSystemClient, builder.AssemblyLocations.ToArray());
-
-                return job.JobId;
+                    return job.JobId;
+                }
             }
             finally
             {

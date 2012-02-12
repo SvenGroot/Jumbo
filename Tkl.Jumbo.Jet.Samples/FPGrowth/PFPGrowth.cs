@@ -4,7 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using Tkl.Jumbo.Jet.Jobs;
+using Tkl.Jumbo.Jet.Jobs.Builder;
 using System.ComponentModel;
 using Tkl.Jumbo.IO;
 using System.IO;
@@ -34,7 +34,6 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
         public PFPGrowth([Description("The input file or directory on the DFS containing the transaction database.")] string inputPath,
                          [Description("The output directory on the DFS where the result will be written.")] string outputPath)
         {
-            PartitionsPerTask = 1;
             _inputPath = inputPath;
             _outputPath = outputPath;
         }
@@ -43,79 +42,49 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
         /// Gets or sets the min support.
         /// </summary>
         /// <value>The min support.</value>
-        [CommandLineArgument("m", DefaultValue = 2), JobSetting, Description("The minimum support of the patterns to mine.")]
+        [CommandLineArgument(DefaultValue = 2), Jobs.JobSetting, Description("The minimum support of the patterns to mine.")]
         public int MinSupport { get; set; }
 
         /// <summary>
         /// Gets or sets the number of groups.
         /// </summary>
         /// <value>The number of groups.</value>
-        [CommandLineArgument("g", DefaultValue = 50), JobSetting, Description("The number of groups to create.")]
+        [CommandLineArgument(DefaultValue = 50), Jobs.JobSetting, Description("The number of groups to create.")]
         public int Groups { get; set; }
 
         /// <summary>
         /// Gets or sets the number of feature count accumulator tasks.
         /// </summary>
         /// <value>The number of accumulator tasks.</value>
-        [CommandLineArgument("c", DefaultValue = 0), Description("The number of feature accumulator tasks to use. Defaults to the capacity of the cluster.")]
+        [CommandLineArgument, Description("The number of feature accumulator tasks to use. Defaults to the capacity of the cluster.")]
         public int AccumulatorTaskCount { get; set; }
 
         /// <summary>
         /// Gets or sets the FP growth task count.
         /// </summary>
         /// <value>The FP growth task count.</value>
-        [CommandLineArgument("f"), Description("The number of FP-growth tasks to use. The default is the capacity of the cluster.")]
+        [CommandLineArgument, Description("The number of FP-growth tasks to use. The default is the capacity of the cluster.")]
         public int FPGrowthTaskCount { get; set; }
-
-        /// <summary>
-        /// Gets or sets a value indicating whether [use transaction tree].
-        /// </summary>
-        /// <value><c>true</c> if [use transaction tree]; otherwise, <c>false</c>.</value>
-        [CommandLineArgument("tt"), Description("Use a transaction tree for the intermediate data.")]
-        public bool UseTransactionTree { get; set; }
 
         /// <summary>
         /// Gets or sets the pattern count.
         /// </summary>
         /// <value>The pattern count.</value>
-        [CommandLineArgument("k", DefaultValue = 50), JobSetting, Description("The number of patterns to return for each item.")]
+        [CommandLineArgument(DefaultValue = 50), Jobs.JobSetting, Description("The number of patterns to return for each item.")]
         public int PatternCount { get; set; }
 
         /// <summary>
         /// Gets or sets the aggregate task count.
         /// </summary>
         /// <value>The aggregate task count.</value>
-        [CommandLineArgument("a"), Description("The number of aggregation tasks to use. The default is the number of nodes in the cluster.")]
+        [CommandLineArgument, Description("The number of aggregation tasks to use. The default is the number of nodes in the cluster.")]
         public int AggregateTaskCount { get; set; }
-
-        /// <summary>
-        /// Gets or sets the size of the write buffer.
-        /// </summary>
-        /// <value>The size of the write buffer.</value>
-        [CommandLineArgument("buffer"), Description("The size of the write buffer for the output channel of the GenerateGroupTransactions stage.")]
-        public BinarySize WriteBufferSize { get; set; }
-
-        /// <summary>
-        /// Gets or sets the type of the compression.
-        /// </summary>
-        /// <value>The type of the compression.</value>
-        [CommandLineArgument("compression"), Description("The type of compression to use for the output of the GenerateGroupTransactions stage.")]
-        public CompressionType CompressionType { get; set; }
-
-        /// <summary>
-        /// Gets or sets a value indicating whether the intermediate data should be stored in partition file format.
-        /// </summary>
-        /// <value>
-        /// 	<see langword="true"/> if the intermediate data should be stored in partition file format; otherwise, <see langword="false"/>.
-        /// </value>
-        [CommandLineArgument("pf"), Description("When set, the job will use the single-file partition file format for the intermediate data.")]
-        public bool UsePartitionFile { get; set; }
 
         /// <summary>
         /// Gets or sets a value indicating the number of partitions per task for the MineTransactions stage.
         /// </summary>
         /// <value>The partitions per task.</value>
-        [CommandLineArgument("ppt"), Description("The number of partitions per task for the MineTransactions stage.")]
+        [CommandLineArgument(DefaultValue = 1), Description("The number of partitions per task for the MineTransactions stage.")]
         public int PartitionsPerTask { get; set; }
 
         /// <summary>
@@ -124,29 +93,57 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
         /// <value>
         /// 	<see langword="true"/> if the output format is binary; otherwise, <see langword="false"/>.
         /// </value>
-        [CommandLineArgument("binaryOutput"), Description("When set, the output will written using a BinaryRecordWriter rather than as text.")]
+        [CommandLineArgument, Description("When set, the output will written using a BinaryRecordWriter rather than as text.")]
         public bool BinaryOutput { get; set; }
 
         /// <summary>
         /// Constructs the job configuration using the specified job builder.
         /// </summary>
-        /// <param name="builder">The <see cref="JobBuilder"/>.</param>
-        protected override void BuildJob(JobBuilder builder)
+        /// <param name="job">The <see cref="JobBuilder"/> used to create the job.</param>
+        protected override void BuildJob(JobBuilder job)
         {
-            CheckAndCreateOutputPath(_outputPath);
-            
-            // We need to determine this rather than let the JobBuilder do this because we need that information before the JobBuilder would calculate it.
+            // Need to determine this now because we need it to validate the number of groups.
             if( FPGrowthTaskCount == 0 )
-                FPGrowthTaskCount = new JetClient(JetConfiguration).JobServer.GetMetrics().NonInputTaskCapacity;
+                FPGrowthTaskCount = JetClient.JobServer.GetMetrics().NonInputTaskCapacity;
 
-            if( UseTransactionTree )
-            {
-                BuildJob<TransactionTree>(builder, GenerateGroupTransactionTrees, MineTransactionTrees);
-            }
-            else
-            {
-                BuildJob<Transaction>(builder, GenerateGroupTransactions, null);
-            }
+            // Interesting observation: if the number of groups equals or is smaller than the number of partitions, we don't need to sort, because each
+            // partition will get exactly one group.
+            if( FPGrowthTaskCount * PartitionsPerTask < Groups )
+                throw new NotSupportedException("The number of groups must be less then or equal to the number of partitions.");
+
+            string fglistDirectory = FileSystemClient.Path.Combine(_outputPath, "fglist");
+            string resultDirectory = FileSystemClient.Path.Combine(_outputPath, "output");
+
+            var input = job.Read(_inputPath, typeof(LineRecordReader));
+            // Generate (feature,1) pairs for each feature in the transaction DB
+            var countedFeatures = job.Process<Utf8String, Pair<Utf8String, int>>(input, CountFeatures);
+            // Count the frequency of each feature.
+            var aggregatedFeatureCounts = job.GroupAggregate<Utf8String, int>(countedFeatures, AccumulateFeatureCounts);
+            aggregatedFeatureCounts.InputChannel.TaskCount = AccumulatorTaskCount;
+            // Remove non-frequent features
+            var filteredFeatureCounts = job.Process(aggregatedFeatureCounts, typeof(FeatureFilterTask));
+            filteredFeatureCounts.InputChannel.ChannelType = ChannelType.Pipeline;
+            // Sort and group the features.
+            var groupedFeatures = job.Process(filteredFeatureCounts, typeof(FeatureGroupTask));
+            groupedFeatures.InputChannel.TaskCount = 1;
+            WriteOutput(groupedFeatures, fglistDirectory, typeof(BinaryRecordWriter<>));
+
+            // Generate group-dependent transactions
+            var groupedTransactions = job.Process<Utf8String, Pair<int, Transaction>>(input, GenerateGroupTransactions);
+            groupedTransactions.AddSchedulingDependency(groupedFeatures);
+
+            // Mine groups for frequent patterns.
+            var patterns = job.Process(groupedTransactions, typeof(TransactionMiningTask));
+            patterns.InputChannel.TaskCount = FPGrowthTaskCount;
+            patterns.InputChannel.PartitionsPerTask = PartitionsPerTask;
+            patterns.InputChannel.PartitionAssignmentMethod = PartitionAssignmentMethod.Striped;
+            
+            // Aggregate frequent patterns.
+            var aggregatedPatterns = job.Process<Pair<int, WritableCollection<MappedFrequentPattern>>, Pair<Utf8String, WritableCollection<FrequentPattern>>>(patterns, AggregatePatterns);
+            aggregatedPatterns.InputChannel.TaskCount = AggregateTaskCount;
+            WriteOutput(aggregatedPatterns, resultDirectory, BinaryOutput ? typeof(BinaryRecordWriter<>) : typeof(TextRecordWriter<>));
+
+            job.Settings.Add("PFPGrowth.FGListPath", FileSystemClient.Path.Combine(fglistDirectory, "FeatureGroupTaskStage-00001"));
         }
 
         /// <summary>
@@ -192,21 +189,53 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
         /// <param name="output">The output.</param>
         /// <param name="config">The config.</param>
         [AllowRecordReuse]
-        public static void GenerateGroupTransactionTrees(RecordReader<Utf8String> input, RecordWriter<Pair<int, TransactionTree>> output, TaskContext config)
-        {
-            GenerateGroupTransactionsInternal(input, null, output, config);
-        }
-
-        /// <summary>
-        /// Generates the group transactions.
-        /// </summary>
-        /// <param name="input">The input.</param>
-        /// <param name="output">The output.</param>
-        /// <param name="config">The config.</param>
-        [AllowRecordReuse]
         public static void GenerateGroupTransactions(RecordReader<Utf8String> input, RecordWriter<Pair<int, Transaction>> output, TaskContext config)
         {
-            GenerateGroupTransactionsInternal(input, output, null, config);
+            Dictionary<string, int> itemMapping = new Dictionary<string, int>();
+            List<FGListItem> fgList = LoadFGList(config, itemMapping);
+
+            char[] separator = { ' ' };
+
+            foreach( Utf8String transaction in input.EnumerateRecords() )
+            {
+                // Extract the items for the transaction
+                string[] items = transaction.ToString().Split(separator, StringSplitOptions.RemoveEmptyEntries);
+                int itemCount = items.Length;
+                // Map them to their item IDs.
+                int mappedItemCount = 0;
+                int[] mappedItems = new int[itemCount];
+                for( int x = 0; x < itemCount; ++x )
+                {
+                    int itemId;
+                    // Items that are not in the mapping are not frequent.
+                    if( itemMapping.TryGetValue(items[x], out itemId) )
+                    {
+                        mappedItems[mappedItemCount] = itemId;
+                        ++mappedItemCount;
+                    }
+                }
+
+                if( mappedItemCount > 0 )
+                {
+                    // Sort by item ID; this ensures the items have the same order as they have in the FGList.
+                    Array.Sort(mappedItems, 0, mappedItemCount);
+
+                    int currentGroupId = -1;
+                    for( int x = 0; x < mappedItemCount; ++x )
+                    {
+                        int groupId = fgList[mappedItems[x]].GroupId;
+                        if( currentGroupId != groupId )
+                        {
+                            if( currentGroupId != -1 )
+                            {
+                                OutputGroupTransaction(output, mappedItems, currentGroupId, x, config);
+                            }
+                            currentGroupId = groupId;
+                        }
+                    }
+                    OutputGroupTransaction(output, mappedItems, currentGroupId, mappedItemCount, config);
+                }
+            }
         }
 
         /// <summary>
@@ -220,22 +249,40 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
         {
             if( input.ReadRecord() )
             {
-                MineTransactionsInternal(input, null, output, config);
-            }
-        }
+                // job settings
+                int minSupport = config.JobConfiguration.GetTypedSetting("PFPGrowth.MinSupport", 2);
+                int k = config.JobConfiguration.GetTypedSetting("PFPGrowth.PatternCount", 50);
+                // stage settings
+                int numGroups = config.StageConfiguration.GetTypedSetting("PFPGrowth.Groups", 50);
+                int itemCount = LoadFGList(config, null).Count;
 
-        /// <summary>
-        /// Mines the transactions.
-        /// </summary>
-        /// <param name="input">The input.</param>
-        /// <param name="output">The output.</param>
-        /// <param name="config">The config.</param>
-        [AllowRecordReuse]
-        public static void MineTransactionTrees(RecordReader<Pair<int, TransactionTree>> input, RecordWriter<Pair<int, WritableCollection<MappedFrequentPattern>>> output, TaskContext config)
-        {
-            if( input.ReadRecord() )
-            {
-                MineTransactionsInternal(null, input, output, config);
+                int maxPerGroup = itemCount / numGroups;
+                if( itemCount % numGroups != 0 )
+                    maxPerGroup++;
+                FrequentPatternMaxHeap[] itemHeaps = null;
+                while( true )
+                {
+                    FPTree tree;
+                    int groupId;
+                    if( input.HasFinished )
+                        break;
+                    groupId = input.CurrentRecord.Key;
+                    _log.InfoFormat("Building tree for group {0}.", groupId);
+                    tree = new FPTree(EnumerateGroup(input), minSupport, Math.Min((groupId + 1) * maxPerGroup, itemCount), config);
+
+                    // The tree needs to do mining only for the items in its group.
+                    itemHeaps = tree.Mine(k, false, groupId * maxPerGroup, itemHeaps);
+                }
+
+                if( itemHeaps != null )
+                {
+                    for( int item = 0; item < itemHeaps.Length; ++item )
+                    {
+                        FrequentPatternMaxHeap heap = itemHeaps[item];
+                        if( heap != null )
+                            heap.OutputItems(item, output);
+                    }
+                }
             }
         }
 
@@ -297,55 +344,6 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
             _log.InfoFormat("Found {0} frequent patterns in total.", patternCount);
         }
 
-        private static void MineTransactionsInternal(RecordReader<Pair<int, Transaction>> transactionInput, RecordReader<Pair<int, TransactionTree>> treeInput, RecordWriter<Pair<int, WritableCollection<MappedFrequentPattern>>> output, TaskContext config)
-        {
-            // job settings
-            int minSupport = config.JobConfiguration.GetTypedSetting("PFPGrowth.MinSupport", 2);
-            int k = config.JobConfiguration.GetTypedSetting("PFPGrowth.PatternCount", 50);
-            // stage settings
-            int numGroups = config.StageConfiguration.GetTypedSetting("PFPGrowth.Groups", 50);
-            int itemCount = LoadFGList(config, null).Count;
-
-            int maxPerGroup = itemCount / numGroups;
-            if( itemCount % numGroups != 0 )
-                maxPerGroup++;
-            FrequentPatternMaxHeap[] itemHeaps = null;
-            while( true )
-            {
-                FPTree tree;
-                int groupId;
-                if( transactionInput != null )
-                {
-                    if( transactionInput.HasFinished )
-                        break;
-                    groupId = transactionInput.CurrentRecord.Key;
-                    _log.InfoFormat("Building tree for group {0}.", groupId);
-                    tree = new FPTree(EnumerateGroup(transactionInput), minSupport, Math.Min((groupId + 1) * maxPerGroup, itemCount), config);
-                }
-                else
-                {
-                    if( treeInput.HasFinished )
-                        break;
-                    groupId = treeInput.CurrentRecord.Key;
-                    _log.InfoFormat("Building tree for group {0}.", groupId);
-                    tree = new FPTree(EnumerateGroup(treeInput), minSupport, Math.Min((groupId + 1) * maxPerGroup, itemCount), config);
-                }
-
-                // The tree needs to do mining only for the items in its group.
-                itemHeaps = tree.Mine(k, false, groupId * maxPerGroup, itemHeaps);
-            }
-
-            if( itemHeaps != null )
-            {
-                for( int item = 0; item < itemHeaps.Length; ++item )
-                {
-                    FrequentPatternMaxHeap heap = itemHeaps[item];
-                    if( heap != null )
-                        heap.OutputItems(item, output);
-                }
-            }
-        }
-
         private static IEnumerable<ITransaction> EnumerateGroup(RecordReader<Pair<int, Transaction>> reader)
         {
             int groupId = reader.CurrentRecord.Key;
@@ -356,98 +354,12 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
             } while( reader.ReadRecord() && reader.CurrentRecord.Key == groupId );
         }
 
-        private static IEnumerable<ITransaction> EnumerateGroup(RecordReader<Pair<int, TransactionTree>> reader)
-        {
-            int groupId = reader.CurrentRecord.Key;
-            do
-            {
-                foreach( WeightedTransaction transaction in reader.CurrentRecord.Value )
-                    yield return transaction;
-            } while( reader.ReadRecord() && reader.CurrentRecord.Key == groupId );
-        }
-
-        private static void GenerateGroupTransactionsInternal(RecordReader<Utf8String> input, RecordWriter<Pair<int, Transaction>> transactionOutput, RecordWriter<Pair<int, TransactionTree>> treeOutput, TaskContext config)
-        {
-            Dictionary<string, int> itemMapping = new Dictionary<string,int>();
-            List<FGListItem> fgList = LoadFGList(config, itemMapping);
-            TransactionTree[] groups = null;
-            int numGroups = 0;
-            if( treeOutput != null )
-            {
-                numGroups = fgList[fgList.Count - 1].GroupId + 1;
-                groups = new TransactionTree[numGroups];
-            }
-
-            char[] separator = { ' ' };
-
-            foreach( Utf8String transaction in input.EnumerateRecords() )
-            {
-                // Extract the items for the transaction
-                string[] items = transaction.ToString().Split(separator, StringSplitOptions.RemoveEmptyEntries);
-                int itemCount = items.Length;
-                // Map them to their item IDs.
-                int mappedItemCount = 0;
-                int[] mappedItems = new int[itemCount];
-                for( int x = 0; x < itemCount; ++x )
-                {
-                    int itemId;
-                    // Items that are not in the mapping are not frequent.
-                    if( itemMapping.TryGetValue(items[x], out itemId) )
-                    {
-                        mappedItems[mappedItemCount] = itemId;
-                        ++mappedItemCount;
-                    }
-                }
-
-                if( mappedItemCount > 0 )
-                {
-                    // Sort by item ID; this ensures the items have the same order as they have in the FGList.
-                    Array.Sort(mappedItems, 0, mappedItemCount);
-
-                    int currentGroupId = -1;
-                    for( int x = 0; x < mappedItemCount; ++x )
-                    {
-                        int groupId = fgList[mappedItems[x]].GroupId;
-                        if( currentGroupId != groupId )
-                        {
-                            if( currentGroupId != -1 )
-                            {
-                                OutputGroupTransaction(transactionOutput, groups, mappedItems, currentGroupId, x, config);
-                            }
-                            currentGroupId = groupId;
-                        }
-                    }
-                    OutputGroupTransaction(transactionOutput, groups, mappedItems, currentGroupId, mappedItemCount, config);
-                }
-            }
-
-            if( treeOutput != null )
-            {
-                for( int group = 0; group < numGroups; ++group )
-                {
-                    if( groups[group] != null )
-                    {
-                        treeOutput.WriteRecord(Pair.MakePair(group, groups[group]));
-                    }
-                }
-            }
-        }
-
-        private static void OutputGroupTransaction(RecordWriter<Pair<int, Transaction>> transactionOutput, TransactionTree[] groups, int[] mappedItems, int currentGroupId, int x, TaskContext config)
+        private static void OutputGroupTransaction(RecordWriter<Pair<int, Transaction>> transactionOutput, int[] mappedItems, int currentGroupId, int x, TaskContext config)
         {
             //config.StatusMessage = "Generating group dependent transactions for group: " + currentGroupId.ToString(CultureInfo.InvariantCulture);
-            if( transactionOutput == null )
-            {
-                if( groups[currentGroupId] == null )
-                    groups[currentGroupId] = new TransactionTree();
-                groups[currentGroupId].AddTransaction(mappedItems, x);
-            }
-            else
-            {
-                int[] groupItems = new int[x];
-                Array.Copy(mappedItems, groupItems, x);
-                transactionOutput.WriteRecord(Pair.MakePair(currentGroupId, new Transaction() { Items = groupItems, Length = groupItems.Length }));
-            }
+            int[] groupItems = new int[x];
+            Array.Copy(mappedItems, groupItems, x);
+            transactionOutput.WriteRecord(Pair.MakePair(currentGroupId, new Transaction() { Items = groupItems, Length = groupItems.Length }));
         }
 
         internal static List<FGListItem> LoadFGList(TaskContext context, Dictionary<string, int> itemMapping)
@@ -476,59 +388,6 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
             }
 
             return fgList;
-        }
-
-        private void BuildJob<T>(JobBuilder builder, TaskFunction<Utf8String, Pair<int, T>> generateFunction, TaskFunction<Pair<int, T>, Pair<int, WritableCollection<MappedFrequentPattern>>> mineFunction)
-        {
-            string fglistDirectory = FileSystemClient.Path.Combine(_outputPath, "fglist");
-            string resultDirectory = FileSystemClient.Path.Combine(_outputPath, "output");
-
-            FileSystemClient.CreateDirectory(fglistDirectory);
-            FileSystemClient.CreateDirectory(resultDirectory);
-
-            var input = new DfsInput(_inputPath, typeof(LineRecordReader));
-
-            // Generate (feature,1) pairs for each feature in the transaction DB
-            var featureChannel = new Channel() { PartitionCount = AccumulatorTaskCount };
-            builder.ProcessRecords<Utf8String, Pair<Utf8String, int>>(input, featureChannel, CountFeatures);
-            // Count the frequency of each feature.
-            var countChannel = new Channel() { ChannelType = ChannelType.Pipeline };
-            builder.AccumulateRecords<Utf8String, int>(featureChannel, countChannel, AccumulateFeatureCounts);
-            // Remove non-frequent features
-            var flistChannel = new Channel() { PartitionCount = 1 };
-            builder.ProcessRecords(countChannel, flistChannel, typeof(FeatureFilterTask));
-            // Sort and group the features.
-            var fglistOutput = CreateDfsOutput(fglistDirectory, typeof(BinaryRecordWriter<>));
-            StageBuilder groupListStage = builder.ProcessRecords(flistChannel, fglistOutput, typeof(FeatureGroupTask));
-
-            // Generate group-dependent transactions
-            var groupChannel = new Channel() { PartitionCount = FPGrowthTaskCount * PartitionsPerTask, PartitionsPerTask = PartitionsPerTask, PartitionAssignmentMethod = PartitionAssignmentMethod.Striped };
-            StageBuilder groupStage = builder.ProcessRecords(input, groupChannel, generateFunction);
-            groupStage.AddSetting(OutputChannel.CompressionTypeSetting, CompressionType, StageSettingCategory.OutputChannel);
-            if( WriteBufferSize.Value > 0 )
-                groupStage.AddSetting(FileOutputChannel.WriteBufferSizeSettingKey, WriteBufferSize, StageSettingCategory.OutputChannel);
-            groupStage.AddSetting(FileOutputChannel.OutputTypeSettingKey, UsePartitionFile ? FileChannelOutputType.Spill : FileChannelOutputType.MultiFile, StageSettingCategory.OutputChannel);
-            groupStage.AddSchedulingDependency(groupListStage);
-
-            // Interesting observation: if the number of groups equals or is smaller than the number of partitions, we don't need to sort, because each
-            // partition will get exactly one group.
-            if( FPGrowthTaskCount * PartitionsPerTask < Groups )
-            {
-                throw new NotSupportedException("The number of groups must be less then or equal to the number of partitions.");
-            }
-
-            // Mine groups for frequent patterns.
-            var patternChannel = new Channel() { PartitionCount = AggregateTaskCount };
-            if( mineFunction == null )
-                builder.ProcessRecords(groupChannel, patternChannel, typeof(TransactionMiningTask)).StageId = "MineTransactions";
-            else
-                builder.ProcessRecords(groupChannel, patternChannel, mineFunction);
-
-            // Aggregate frequent patterns.
-            var output = CreateDfsOutput(resultDirectory, BinaryOutput ? typeof(BinaryRecordWriter<>) : typeof(TextRecordWriter<>));
-            builder.ProcessRecords<Pair<int, WritableCollection<MappedFrequentPattern>>, Pair<Utf8String, WritableCollection<FrequentPattern>>>(patternChannel, output, AggregatePatterns);
-
-            builder.AddSetting("PFPGrowth.FGListPath", FileSystemClient.Path.Combine(fglistDirectory, "FeatureGroupTask-00001"));
         }
     }
 }

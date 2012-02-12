@@ -743,6 +743,23 @@ namespace Tkl.Jumbo.Jet
             AddSetting(key, value);
         }
 
+
+        /// <summary>
+        /// Adds the specified settings.
+        /// </summary>
+        /// <param name="settings">The settings. May be <see langword="null"/>.</param>
+        public void AddSettings(IEnumerable<KeyValuePair<string, string>> settings)
+        {
+            if( settings != null )
+            {
+                if( JobSettings == null )
+                    JobSettings = new SettingsDictionary();
+
+                foreach( KeyValuePair<string, string> setting in settings )
+                    JobSettings.Add(setting.Key, setting.Value);
+            }
+        }
+
         internal void AddSetting(string key, object value)
         {
             if( JobSettings == null )

@@ -4,7 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using Tkl.Jumbo.Jet.Jobs;
+using Tkl.Jumbo.Jet.Jobs.Builder;
 using System.ComponentModel;
 using Ookii.CommandLine;
 using Tkl.Jumbo.Dfs;
@@ -38,64 +38,55 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth.MapReduce
         {
             _inputPath = inputPath;
             _outputPath = outputPath;
-            PartitionsPerTask = 1;
         }
 
         /// <summary>
         /// Gets or sets the min support.
         /// </summary>
         /// <value>The min support.</value>
-        [CommandLineArgument("m", DefaultValue = 2), JobSetting, Description("The minimum support of the patterns to mine.")]
+        [CommandLineArgument(DefaultValue = 2), Jobs.JobSetting, Description("The minimum support of the patterns to mine.")]
         public int MinSupport { get; set; }
 
         /// <summary>
         /// Gets or sets the number of groups.
         /// </summary>
         /// <value>The number of groups.</value>
-        [CommandLineArgument("g", DefaultValue = 50), JobSetting, Description("The number of groups to create.")]
+        [CommandLineArgument(DefaultValue = 50), Jobs.JobSetting, Description("The number of groups to create.")]
         public int Groups { get; set; }
 
         /// <summary>
         /// Gets or sets the number of reduce tasks.
         /// </summary>
         /// <value>The number of accumulator tasks.</value>
-        [CommandLineArgument("r", DefaultValue = 0), Description("The number of reduce tasks to use. Defaults to the capacity of the cluster.")]
+        [CommandLineArgument, Description("The number of reduce tasks to use. Defaults to the capacity of the cluster.")]
         public int ReduceTaskCount { get; set; }
 
         /// <summary>
         /// Gets or sets a value indicating the number of partitions per task.
         /// </summary>
         /// <value>The partitions per task.</value>
-        [CommandLineArgument("ppt"), Description("The number of partitions per task for the MineTransactions stage.")]
+        [CommandLineArgument(DefaultValue = 1), Description("The number of partitions per task for the MineTransactions stage.")]
         public int PartitionsPerTask { get; set; }
 
         /// <summary>
         /// When implemented in a derived class, constructs the job configuration using the specified job builder.
         /// </summary>
-        /// <param name="builder">The job builder.</param>
-        protected override void BuildJob(JobBuilder builder)
+        /// <param name="job">The <see cref="JobBuilder"/> used to create the job.</param>
+        protected override void BuildJob(JobBuilder job)
         {
             string fullOutputPath = FileSystemClient.Path.Combine(_outputPath, "featurecount");
-            CheckAndCreateOutputPath(fullOutputPath);
             JetClient client = new JetClient(JetConfiguration);
-            int numPartitions = ReduceTaskCount;
-            if( numPartitions == 0 )
-                numPartitions = client.JobServer.GetMetrics().NonInputTaskCapacity;
-            numPartitions *= PartitionsPerTask;
 
-            DfsInput input = new DfsInput(_inputPath, typeof(LineRecordReader));
+            var input = job.Read(_inputPath, typeof(LineRecordReader));
 
-            Channel mapChannel = new Channel() { ChannelType = ChannelType.Pipeline, PartitionCount = numPartitions };
-            StageBuilder mapStage = builder.MapRecords<Utf8String, Pair<string, int>>(input, mapChannel, MapRecords);
-            mapStage.StageId = "Map";
-            Channel sortChannel = new Channel() { ChannelType = ChannelType.Pipeline };
-            builder.SortRecords(mapChannel, sortChannel, typeof(StringPairComparer));
-            Channel combineChannel = new Channel() { PartitionCount = numPartitions, PartitionsPerTask = PartitionsPerTask };
-            builder.ProcessRecords(sortChannel, combineChannel, typeof(WordCountCombinerTask)); // Can reuse this because it has the same semantics
-            DfsOutput output = new DfsOutput(fullOutputPath, typeof(BinaryRecordWriter<Pair<string, int>>));
-            StageBuilder reduceStage = builder.ReduceRecords<string, int, Pair<string, int>>(combineChannel, output, ReduceRecords);
-            reduceStage.StageId = "Reduce";
-            reduceStage.AddSetting(MergeRecordReaderConstants.ComparerSetting, typeof(StringPairComparer).AssemblyQualifiedName, StageSettingCategory.InputRecordReader);
+            var mapped = job.Process<Utf8String, Pair<Utf8String, int>>(input, MapRecords);
+            mapped.StageId = "Map";
+            var sorted = job.SpillSort<Utf8String, int>(mapped, CombineRecords);
+            sorted.InputChannel.TaskCount = ReduceTaskCount;
+            sorted.InputChannel.PartitionsPerTask = PartitionsPerTask;
+            var reduced = job.Reduce<Utf8String, int, Pair<Utf8String, int>>(sorted, ReduceRecords);
+            reduced.StageId = "Reduce";
+            WriteOutput(reduced, _outputPath, typeof(BinaryRecordWriter<>));
         }
 
         /// <summary>
@@ -160,18 +151,36 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth.MapReduce
         /// <summary>
         /// Maps the records.
         /// </summary>
-        /// <param name="record">The record.</param>
+        /// <param name="input">The input.</param>
         /// <param name="output">The output.</param>
         /// <param name="context">The context.</param>
         [AllowRecordReuse]
-        public static void MapRecords(Utf8String record, RecordWriter<Pair<string, int>> output, TaskContext context)
+        public static void MapRecords(RecordReader<Utf8String> input, RecordWriter<Pair<Utf8String, int>> output, TaskContext context)
         {
+            Pair<Utf8String, int> outputRecord = Pair.MakePair(new Utf8String(), 1);
+            char[] separator = { ' ' };
             context.StatusMessage = "Extracting features.";
-            string[] features = record.ToString().Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
-            foreach( string feature in features )
+            foreach( Utf8String record in input.EnumerateRecords() )
             {
-                output.WriteRecord(Pair.MakePair(feature, 1));
+                string[] features = record.ToString().Split(separator, StringSplitOptions.RemoveEmptyEntries);
+                foreach( string feature in features )
+                {
+                    outputRecord.Key.Set(feature);
+                    output.WriteRecord(outputRecord);
+                }
             }
+        }
+
+        /// <summary>
+        /// Combines the records.
+        /// </summary>
+        /// <param name="key">The key.</param>
+        /// <param name="values">The values.</param>
+        /// <param name="output">The output.</param>
+        [AllowRecordReuse(PassThrough = true)]
+        public static void CombineRecords(Utf8String key, IEnumerable<int> values, RecordWriter<Pair<Utf8String, int>> output)
+        {
+            output.WriteRecord(Pair.MakePair(key, values.Sum()));
         }
 
         /// <summary>
@@ -181,8 +190,8 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth.MapReduce
         /// <param name="values">The values.</param>
         /// <param name="output">The output.</param>
         /// <param name="context">The context.</param>
-        [AllowRecordReuse]
-        public static void ReduceRecords(string key, IEnumerable<int> values, RecordWriter<Pair<string, int>> output, TaskContext context)
+        [AllowRecordReuse(PassThrough = true)]
+        public static void ReduceRecords(Utf8String key, IEnumerable<int> values, RecordWriter<Pair<Utf8String, int>> output, TaskContext context)
         {
             int sum = values.Sum();
             if( sum >= context.JobConfiguration.GetTypedSetting("FeatureCountMapReduce.MinSupport", 2) )

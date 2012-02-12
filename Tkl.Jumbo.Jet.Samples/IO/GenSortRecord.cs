@@ -25,6 +25,7 @@ namespace Tkl.Jumbo.Jet.Samples.IO
     ///   See http://www.hpl.hp.com/hosted/sortbenchmark/ for more details.
     /// </para>
     /// </remarks>
+    [RawComparer(typeof(GenSortRecordRawComparer))]
     public sealed class GenSortRecord : IWritable, IComparable<GenSortRecord>
     {
         /// <summary>

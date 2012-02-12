@@ -43,7 +43,7 @@ namespace Tkl.Jumbo.Jet.Tasks
         /// <summary>
         /// The name of the setting in <see cref="StageConfiguration.StageSettings"/> that specifies the delegate to
         /// be called in any of the task types that use a delegate. The value of the setting is a base64-encoded binary serialization
-        /// of the delegateThis setting is used by the <see cref="Tkl.Jumbo.Jet.Jobs.JobBuilder"/>
+        /// of the delegateThis setting is used by the <see cref="Tkl.Jumbo.Jet.Jobs.Builder.JobBuilder"/>
         /// and should not normally be used by your code.
         /// </summary>
         public const string JobBuilderDelegateSettingKey = "JobBuilder.Delegate";

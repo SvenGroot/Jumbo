@@ -68,9 +68,14 @@ namespace JetShell.Commands
                         else
                         {
                             Guid jobId = jobRunner.RunJob();
-                            bool success = JetClient.WaitForJobCompletion(jobId);
-                            jobRunner.FinishJob(success);
-                            ExitCode = success ? 0 : 1;
+                            if( jobId != Guid.Empty )
+                            {
+                                bool success = JetClient.WaitForJobCompletion(jobId);
+                                jobRunner.FinishJob(success);
+                                ExitCode = success ? 0 : 1;
+                            }
+                            else
+                                ExitCode = 2;
                         }
                     }
                 }

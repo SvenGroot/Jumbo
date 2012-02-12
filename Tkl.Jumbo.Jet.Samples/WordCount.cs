@@ -1,66 +1,193 @@
-﻿// $Id$
-//
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using Tkl.Jumbo.Jet.Jobs;
-using System.ComponentModel;
-using Tkl.Jumbo.Dfs;
-using Tkl.Jumbo.Jet.Samples.Tasks;
-using Tkl.Jumbo.IO;
+using Tkl.Jumbo.Jet.Jobs.Builder;
+using Ookii.CommandLine;
 using Tkl.Jumbo.Jet.Samples.IO;
-using System.Runtime.InteropServices;
-using Tkl.Jumbo.Jet.Channels;
+using Tkl.Jumbo.Jet.Tasks;
+using Tkl.Jumbo.IO;
+using System.ComponentModel;
 
 namespace Tkl.Jumbo.Jet.Samples
 {
+    /// <summary>
+    /// The type of WordCount implementation to use.
+    /// </summary>
+    public enum WordCountKind
+    {
+        /// <summary>
+        /// Optimized with WordRecordReader
+        /// </summary>
+        Optimized,
+        /// <summary>
+        /// Optimized with LineRecordReader
+        /// </summary>
+        OptimizedLineRecordReader,
+        /// <summary>
+        /// Naive implementation
+        /// </summary>
+        Naive,
+        /// <summary>
+        /// MapReduce implementation
+        /// </summary>
+        MapReduce
+    }
+
     /// <summary>
     /// Job runner for word count.
     /// </summary>
     [Description("Counts the number of occurrences of each word in the input file or files. This version uses JobBuilder.")]
     public sealed class WordCount : JobBuilderJob
     {
-        private string _inputPath;
-        private string _outputPath;
-        private int _combinerTasks;
+        /// <summary>
+        /// Gets or sets the input path.
+        /// </summary>
+        /// <value>
+        /// The input path.
+        /// </value>
+        [CommandLineArgument(Position = 0, IsRequired = true), Description("The input file or directory on the Jumbo DFS containing the text to perform the word count on.")]
+        public string InputPath { get; set; }
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="WordCount"/> class.
+        /// Gets or sets the output path.
         /// </summary>
-        /// <param name="inputPath">The input file or directory on the DFS.</param>
-        /// <param name="outputPath">The directory on the DFS to which to write the output.</param>
-        /// <param name="combinerTasks">The number of comber tasks to use.</param>
-        public WordCount([Description("The input file or directory on the Jumbo DFS containing the text to perform the word count on.")] string inputPath, 
-                         [Description("The output directory on the Jumbo DFS where the results of the word count will be written.")] string outputPath,
-                         [Description("The number of combiner tasks to use. Defaults to the number of nodes in Jet cluster."), Optional, DefaultParameterValue(0)] int combinerTasks)
-        {
-            if( inputPath == null )
-                throw new ArgumentNullException("inputPath");
-            if( outputPath == null )
-                throw new ArgumentNullException("outputPath");
+        /// <value>
+        /// The output path.
+        /// </value>
+        [CommandLineArgument(Position = 1, IsRequired = true), Description("The output directory on the Jumbo DFS where the results of the word count will be written.")]
+        public string OutputPath { get; set; }
 
-            _inputPath = inputPath;
-            _outputPath = outputPath;
-            _combinerTasks = combinerTasks;
+        /// <summary>
+        /// Gets or sets the partitions.
+        /// </summary>
+        /// <value>
+        /// The partitions.
+        /// </value>
+        [CommandLineArgument(Position = 2), Description("The number of partitions to use. Defaults to the capacity of the Jet cluster.")]
+        public int Partitions { get; set; }
+
+        /// <summary>
+        /// Gets or sets the kind.
+        /// </summary>
+        /// <value>
+        /// The kind.
+        /// </value>
+        [CommandLineArgument, Description("The kind of implementation to use.")]
+        public WordCountKind Kind { get; set; }
+
+        /// <summary>
+        /// When implemented in a derived class, constructs the job configuration using the specified job builder.
+        /// </summary>
+        /// <param name="job">The <see cref="JobBuilder"/> used to create the job.</param>
+        protected override void BuildJob(JobBuilder job)
+        {
+            switch( Kind )
+            {
+            case WordCountKind.Optimized:
+                BuildJobOptimized(job);
+                break;
+            case WordCountKind.OptimizedLineRecordReader:
+                BuildJobOptimizedLineRecordReader(job);
+                break;
+            case WordCountKind.Naive:
+                BuildJobNaive(job);
+                break;
+            case WordCountKind.MapReduce:
+                BuildJobMapReduce(job);
+                break;
+            }
+        }
+
+        private void BuildJobOptimized(JobBuilder job)
+        {
+            var input = job.Read(InputPath, typeof(WordRecordReader));
+            var pairs = job.Process(input, typeof(GenerateInt32PairTask<>));
+            pairs.StageId = "WordCount";
+            var counted = job.GroupAggregate(pairs, typeof(SumTask<>));
+            counted.StageId = "WordCountAggregation";
+            counted.InputChannel.PartitionCount = Partitions;
+            WriteOutput(counted, OutputPath, typeof(TextRecordWriter<>));
+        }
+
+        private void BuildJobOptimizedLineRecordReader(JobBuilder job)
+        {
+            var input = job.Read(InputPath, typeof(LineRecordReader));
+            var pairs = job.Process<Utf8String, Pair<Utf8String, int>>(input, SplitLines);
+            pairs.StageId = "WordCount";
+            var counted = job.GroupAggregate(pairs, typeof(SumTask<>));
+            counted.StageId = "WordCountAggregation";
+            counted.InputChannel.PartitionCount = Partitions;
+            WriteOutput(counted, OutputPath, typeof(TextRecordWriter<>));
+        }
+
+        private void BuildJobNaive(JobBuilder job)
+        {
+            var input = job.Read(InputPath, typeof(LineRecordReader));
+            var pairs = job.Map<Utf8String, Pair<Utf8String, int>>(input, (record, output) => output.WriteRecords(record.ToString().Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries).Select(word => Pair.MakePair(new Utf8String(word), 1))), RecordReuseMode.Allow);
+            pairs.StageId = "WordCount";
+            var counted = job.GroupAggregate<Utf8String, int>(pairs, (key, value, newValue) => value + newValue);
+            counted.StageId = "WordCountAggregation";
+            counted.InputChannel.PartitionCount = Partitions;
+            WriteOutput(counted, OutputPath, typeof(TextRecordWriter<>));
+        }
+
+        private void BuildJobMapReduce(JobBuilder job)
+        {
+            var input = job.Read(InputPath, typeof(LineRecordReader));
+            var pairs = job.Process<Utf8String, Pair<Utf8String, int>>(input, SplitLines);
+            pairs.StageId = "WordCount";
+            // Need two functions to work around the fact that the dynamic task builder currently can't handle the same function twice.
+            var sorted = job.SpillSort<Utf8String, int>(pairs, ReduceWordCount);
+            sorted.InputChannel.PartitionCount = Partitions;
+            var counted = job.Reduce<Utf8String, int, Pair<Utf8String, int>>(sorted, ReduceWordCount2);
+            counted.StageId = "WordCountAggregation";
+            WriteOutput(counted, OutputPath, typeof(TextRecordWriter<>));
         }
 
         /// <summary>
-        /// Builds the job.
+        /// Splits the lines.
         /// </summary>
-        /// <param name="builder">The job builder</param>
-        protected override void BuildJob(JobBuilder builder)
+        /// <param name="input">The input.</param>
+        /// <param name="output">The output.</param>
+        [AllowRecordReuse]
+        public static void SplitLines(RecordReader<Utf8String> input, RecordWriter<Pair<Utf8String, int>> output)
         {
-            CheckAndCreateOutputPath(_outputPath);
+            Pair<Utf8String, int> record = Pair.MakePair(new Utf8String(), 1);
+            char[] separator = new[] { ' ' };
+            foreach( Utf8String line in input.EnumerateRecords() )
+            {
+                string[] words = line.ToString().Split(separator);
+                foreach( string word in words )
+                {
+                    record.Key.Set(word);
+                    output.WriteRecord(record);
+                }
+            }
+        }
 
-            var input = new DfsInput(_inputPath, typeof(WordRecordReader));
-            var output = CreateDfsOutput(_outputPath, typeof(TextRecordWriter<Pair<Utf8String, int>>));
+        /// <summary>
+        /// Reduces the word count.
+        /// </summary>
+        /// <param name="key">The key.</param>
+        /// <param name="values">The values.</param>
+        /// <param name="output">The output.</param>
+        [AllowRecordReuse(PassThrough = true)]
+        public static void ReduceWordCount(Utf8String key, IEnumerable<int> values, RecordWriter<Pair<Utf8String, int>> output)
+        {
+            output.WriteRecord(Pair.MakePair(key, values.Sum()));
+        }
 
-            StageBuilder[] stages = builder.Count<Utf8String>(input, output);
-
-            ((Channel)stages[0].Output).PartitionCount = _combinerTasks;
-            stages[0].StageId = "WordCountStage";
-            stages[1].StageId = "WordCountSumStage";
+        /// <summary>
+        /// Reduces the word count.
+        /// </summary>
+        /// <param name="key">The key.</param>
+        /// <param name="values">The values.</param>
+        /// <param name="output">The output.</param>
+        [AllowRecordReuse(PassThrough = true)]
+        public static void ReduceWordCount2(Utf8String key, IEnumerable<int> values, RecordWriter<Pair<Utf8String, int>> output)
+        {
+            output.WriteRecord(Pair.MakePair(key, values.Sum()));
         }
     }
 }

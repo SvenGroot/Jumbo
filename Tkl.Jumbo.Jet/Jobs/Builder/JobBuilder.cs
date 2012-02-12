@@ -24,6 +24,7 @@ namespace Tkl.Jumbo.Jet.Jobs.Builder
         private readonly FileSystemClient _fileSystemClient;
         private readonly JetClient _jetClient;
         private readonly DynamicTaskBuilder _taskBuilder = new DynamicTaskBuilder();
+        private SettingsDictionary _settings;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="JobBuilder"/> class.
@@ -90,6 +91,17 @@ namespace Tkl.Jumbo.Jet.Jobs.Builder
         /// The name of the job.
         /// </value>
         public string JobName { get; set; }
+
+        /// <summary>
+        /// Gets the settings for the job.
+        /// </summary>
+        /// <value>
+        /// A <see cref="SettingsDictionary"/> containing the settings.
+        /// </value>
+        public SettingsDictionary Settings
+        {
+            get { return _settings ?? (_settings = new SettingsDictionary()); }
+        }
 
         /// <summary>
         /// Writes the result of the specified operation to the DFS.
@@ -221,6 +233,7 @@ namespace Tkl.Jumbo.Jet.Jobs.Builder
                 compiler.Job.AssemblyFileNames.Add(_taskBuilder.DynamicAssemblyFileName);
             }
 
+            compiler.Job.AddSettings(_settings);
             return compiler.Job;
         }
 

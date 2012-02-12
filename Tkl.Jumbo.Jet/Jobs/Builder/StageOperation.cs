@@ -18,7 +18,10 @@ namespace Tkl.Jumbo.Jet.Jobs.Builder
         private readonly Channel _inputChannel;
         private readonly DfsInput _dfsInput;
         private readonly int _noInputTaskCount;
+
         private SettingsDictionary _settings;
+        private List<StageOperation> _dependencies;
+        private List<StageOperation> _dependentStages;
 
         private StageConfiguration _stage;
 
@@ -141,12 +144,32 @@ namespace Tkl.Jumbo.Jet.Jobs.Builder
         /// Gets the settings for the stage.
         /// </summary>
         /// <value>
-        /// The settings.
+        /// A <see cref="SettingsDictionary"/> containing the settings.
         /// </value>
         public SettingsDictionary Settings
         {
             get { return _settings ?? (_settings = new SettingsDictionary()); }
         }
+
+        /// <summary>
+        /// Adds a scheduling dependency on the specified stage to this stage.
+        /// </summary>
+        /// <param name="stage">The stage that this stage depends on.</param>
+        public void AddSchedulingDependency(StageOperation stage)
+        {
+            if( stage == null )
+                throw new ArgumentNullException("stage");
+            if( stage._builder != _builder )
+                throw new ArgumentException("The specified stage does not belong to the same job.", "stage");
+
+            // Dependencies are recorded in both directions so it doesn't matter which of the stages is created first by the JobBuilderCompiler.
+            if( _dependencies == null )
+                _dependencies = new List<StageOperation>();
+            _dependencies.Add(stage);
+            if( stage._dependentStages == null )
+                stage._dependentStages = new List<StageOperation>();
+            stage._dependentStages.Add(this);
+        }        
 
         /// <summary>
         /// Creates the configuration for this stage.
@@ -159,6 +182,43 @@ namespace Tkl.Jumbo.Jet.Jobs.Builder
                 return compiler.CreateStage(StageId, _taskTypeInfo.TaskType, _dfsInput, _output);
             else
                 return compiler.CreateStage(StageId, _taskTypeInfo.TaskType, _inputChannel == null ? _noInputTaskCount : _inputChannel.TaskCount, _inputChannel == null ? null : _inputChannel.CreateInput(), _output, true);
+        }
+
+        private void ApplySchedulingDependencies()
+        {
+            if( _dependencies != null )
+            {
+                // We depend on other stages.
+                if( _stage.Parent != null )
+                    throw new InvalidOperationException(string.Format(CultureInfo.CurrentCulture, "Stage {0} is a child stage which cannot have scheduler dependencies.", _stage.CompoundStageId));
+                foreach( StageOperation stage in _dependencies )
+                {
+                    // If the stage config is null it hasn't been created yet, and the dependency will be set once it is created.
+                    if( stage._stage != null )
+                    {
+                        if( stage._stage.ChildStage != null )
+                            throw new InvalidOperationException(string.Format(CultureInfo.CurrentCulture, "Cannot add a dependency to stage {0} because it has a child stage.", stage._stage.CompoundStageId));
+                        stage._stage.DependentStages.Add(_stage.StageId);
+                    }
+                }
+            }
+
+            if( _dependentStages != null )
+            {
+                // Other stages depend on us.
+                if( _stage.ChildStage != null )
+                    throw new InvalidOperationException(string.Format(CultureInfo.CurrentCulture, "Cannot add a dependency to stage {0} because it has a child stage.", _stage.CompoundStageId));
+                foreach( StageOperation stage in _dependentStages )
+                {
+                    // If the stage config is null it hasn't been created yet, and the dependency will be set once it is created.
+                    if( stage._stage != null )
+                    {
+                        if( stage._stage.Parent != null )
+                            throw new InvalidOperationException(string.Format(CultureInfo.CurrentCulture, "Stage {0} is a child stage which cannot have scheduler dependencies.", stage._stage.CompoundStageId));
+                        _stage.DependentStages.Add(stage._stage.StageId);
+                    }
+                }
+            }
         }
 
         Type IOperationInput.RecordType
@@ -175,6 +235,7 @@ namespace Tkl.Jumbo.Jet.Jobs.Builder
         {
             _stage = CreateConfiguration(compiler);
             _stage.AddSettings(_settings);
+            ApplySchedulingDependencies();
         }
 
         void IJobBuilderOperation.SetOutput(IOperationOutput output)

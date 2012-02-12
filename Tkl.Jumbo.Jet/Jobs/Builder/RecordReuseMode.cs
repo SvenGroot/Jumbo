@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-namespace Tkl.Jumbo.Jet.Jobs
+namespace Tkl.Jumbo.Jet.Jobs.Builder
 {
     /// <summary>
     /// The way the record reuse attribute is applied to tasks that are generated from a

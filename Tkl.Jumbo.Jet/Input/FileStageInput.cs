@@ -27,6 +27,8 @@ namespace Tkl.Jumbo.Jet.Input
         {
             if( recordReaderType == null )
                 throw new ArgumentNullException("recordReaderType");
+            if( fileOrDirectory == null )
+                throw new ArgumentNullException("fileOrDirectory");
             return (IStageInput)Activator.CreateInstance(typeof(FileStageInput<>).MakeGenericType(recordReaderType), fileSystem, fileOrDirectory, minSplitSize, maxSplitSize);
         }
 
@@ -43,6 +45,8 @@ namespace Tkl.Jumbo.Jet.Input
         {
             if( recordReaderType == null )
                 throw new ArgumentNullException("recordReaderType");
+            if( inputFiles == null )
+                throw new ArgumentNullException("inputFiles");
             return (IStageInput)Activator.CreateInstance(typeof(FileStageInput<>).MakeGenericType(recordReaderType), fileSystem, inputFiles, minSplitSize, maxSplitSize);
         }
     }

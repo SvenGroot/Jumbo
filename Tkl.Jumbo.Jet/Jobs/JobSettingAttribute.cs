@@ -17,7 +17,7 @@ namespace Tkl.Jumbo.Jet.Jobs
     ///   to add the properties tot the job settings.
     /// </para>
     /// <para>
-    ///   The <see cref="JobBuilderJob"/> class automatically
+    ///   The <see cref="Builder.JobBuilderJob"/> class automatically
     ///   do this after the <see cref="JobConfiguration"/> has been created.
     /// </para>
     /// </remarks>

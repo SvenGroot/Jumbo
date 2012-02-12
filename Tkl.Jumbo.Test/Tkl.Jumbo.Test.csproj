@@ -104,11 +104,10 @@
     <Compile Include="Jet\JetClientTests.cs" />
     <Compile Include="Jet\JobAndTaskServerLocalFileSystemTests.cs" />
     <Compile Include="Jet\JobAndTaskServerTests.cs" />
-    <Compile Include="Jet\JobBuilderTests.cs" />
     <Compile Include="Jet\JobConfigurationTests.cs" />
     <Compile Include="Jet\MergeHelperTests.cs" />
     <Compile Include="Jet\MergeRecordReaderTests.cs" />
-    <Compile Include="Jet\NewJobBuilderTests.cs" />
+    <Compile Include="Jet\JobBuilderTests.cs" />
     <Compile Include="Jet\SortSpillRecordWriterTests.cs" />
     <Compile Include="Jet\TaskIdTests.cs" />
     <Compile Include="Jet\TaskTests.cs" />
