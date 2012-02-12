@@ -21,9 +21,7 @@ namespace Tkl.Jumbo.Jet.Jobs.Builder
         ///   The stage created by this method will have no input, so the input record reader for the task will be <see langword="null"/>.
         /// </note>
         /// <para>
-        ///   If <paramref name="taskType"/> is a generic type definition with a singe type parameter, it will be constructed using the input's record type.
-        ///   You can use this with types such as <see cref="Tasks.EmptyTask{T}"/>, in which case you can specify them as <c>typeof(EmptyTask&lt;&gt;)</c> without
-        ///   specifying the record type.
+        ///   You can use the <see cref="Tasks.NoInputTask{T}"/> class as a base class for tasks used with this method, although this is not a requirement.
         /// </para>
         /// </remarks>
         public StageOperation Generate(int taskCount, Type taskType)

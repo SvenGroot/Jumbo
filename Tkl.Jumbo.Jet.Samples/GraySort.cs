@@ -98,10 +98,10 @@ namespace Tkl.Jumbo.Jet.Samples
         }
 
         /// <summary>
-        /// Overrides <see cref="BasicJob.OnJobCreated"/>.
+        /// Called when the job has been created on the job server, but before running it.
         /// </summary>
-        /// <param name="job"></param>
-        /// <param name="jobConfiguration"></param>
+        /// <param name="job">The <see cref="Job"/> instance describing the job.</param>
+        /// <param name="jobConfiguration">The <see cref="JobConfiguration"/> that will be used when the job is started.</param>
         protected override void OnJobCreated(Job job, JobConfiguration jobConfiguration)
         {
             //

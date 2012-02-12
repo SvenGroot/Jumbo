@@ -197,9 +197,7 @@
     <Compile Include="JobConfiguration.cs" />
     <Compile Include="JobServerConfigurationElement.cs" />
     <Compile Include="JobStatus.cs" />
-    <Compile Include="Jobs\AccumulatorJob.cs" />
     <Compile Include="Jobs\BaseJobRunner.cs" />
-    <Compile Include="Jobs\BasicJob.cs" />
     <Compile Include="Jobs\IJobRunner.cs" />
     <Compile Include="Jobs\JobBuilderDelegates.cs" />
     <Compile Include="Jobs\JobRunnerInfo.cs" />
@@ -239,6 +237,7 @@
     <Compile Include="TaskStatusChangedJetHeartbeatData.cs" />
     <Compile Include="Tasks\AccumulatorTask.cs" />
     <Compile Include="Tasks\GenerateInt32PairTask.cs" />
+    <Compile Include="Tasks\NoInputTask.cs" />
     <Compile Include="Tasks\ReduceTask.cs" />
     <Compile Include="Tasks\SumTask.cs" />
     <Compile Include="Tasks\EmptyTask.cs" />
