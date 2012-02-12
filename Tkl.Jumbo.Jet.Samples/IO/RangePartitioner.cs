@@ -9,7 +9,7 @@ using Tkl.Jumbo.IO;
 using Tkl.Jumbo.Dfs;
 using System.IO;
 using Tkl.Jumbo.Dfs.FileSystem;
-using Tkl.Jumbo.Jet.Input;
+using Tkl.Jumbo.Jet.IO;
 
 namespace Tkl.Jumbo.Jet.Samples.IO
 {

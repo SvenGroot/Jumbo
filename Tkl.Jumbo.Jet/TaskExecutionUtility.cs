@@ -13,7 +13,7 @@ using Tkl.Jumbo.Dfs;
 using Tkl.Jumbo.Dfs.FileSystem;
 using Tkl.Jumbo.IO;
 using Tkl.Jumbo.Jet.Channels;
-using Tkl.Jumbo.Jet.Input;
+using Tkl.Jumbo.Jet.IO;
 using Tkl.Jumbo.Jet.Jobs;
 
 namespace Tkl.Jumbo.Jet

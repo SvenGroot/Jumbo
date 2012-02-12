@@ -5,7 +5,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Threading;
 using Tkl.Jumbo.Dfs.FileSystem;
-using Tkl.Jumbo.Jet.Input;
+using Tkl.Jumbo.Jet.IO;
 using Tkl.Jumbo.Jet.Jobs;
 
 namespace Tkl.Jumbo.Jet

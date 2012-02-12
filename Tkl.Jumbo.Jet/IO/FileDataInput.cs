@@ -7,47 +7,60 @@ using System.Text;
 using Tkl.Jumbo.Dfs.FileSystem;
 using Tkl.Jumbo.IO;
 
-namespace Tkl.Jumbo.Jet.Input
+namespace Tkl.Jumbo.Jet.IO
 {
     /// <summary>
-    /// Provides methods to create <see cref="FileStageInput{TRecordReader}"/> instances.
+    /// Provides methods to create <see cref="FileDataInput{TRecordReader}"/> instances.
     /// </summary>
     public static class FileDataInput
     {
         /// <summary>
-        /// Creates a <see cref="FileStageInput{TRecordReader}"/> for the specified record reader type.
+        /// The key of the setting in the stage settings that holds the input path.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        ///   The input path setting is informational only; it is not used by the <see cref="FileDataInput{TRecordReader}"/> class. Changing this setting does not affect the job.
+        /// </para>
+        /// <para>
+        ///   This setting will only be set if the <see cref="FileDataInput{TRecordReader}"/> was created from a single file or directory.
+        /// </para>
+        /// </remarks>
+        public const string InputPathSettingKey = "FileDataInput.InputPath";
+
+        /// <summary>
+        /// Creates a <see cref="FileDataInput{TRecordReader}"/> for the specified record reader type.
         /// </summary>
         /// <param name="recordReaderType">Type of the record reader.</param>
         /// <param name="fileSystem">The file system containing the files.</param>
         /// <param name="fileOrDirectory">The input file or directory.</param>
         /// <param name="minSplitSize">The minimum split size.</param>
         /// <param name="maxSplitSize">The maximum split size.</param>
-        /// <returns>The <see cref="FileStageInput{TRecordReader}"/></returns>
+        /// <returns>The <see cref="FileDataInput{TRecordReader}"/></returns>
         public static IDataInput Create(Type recordReaderType, FileSystemClient fileSystem, JumboFileSystemEntry fileOrDirectory, int minSplitSize = 1, int maxSplitSize = Int32.MaxValue)
         {
             if( recordReaderType == null )
                 throw new ArgumentNullException("recordReaderType");
             if( fileOrDirectory == null )
                 throw new ArgumentNullException("fileOrDirectory");
-            return (IDataInput)Activator.CreateInstance(typeof(FileStageInput<>).MakeGenericType(recordReaderType), fileSystem, fileOrDirectory, minSplitSize, maxSplitSize);
+            return (IDataInput)Activator.CreateInstance(typeof(FileDataInput<>).MakeGenericType(recordReaderType), fileSystem, fileOrDirectory, minSplitSize, maxSplitSize);
         }
 
         /// <summary>
-        /// Creates a <see cref="FileStageInput{TRecordReader}"/> for the specified record reader type.
+        /// Creates a <see cref="FileDataInput{TRecordReader}"/> for the specified record reader type.
         /// </summary>
         /// <param name="recordReaderType">Type of the record reader.</param>
         /// <param name="fileSystem">The file system containing the files.</param>
         /// <param name="inputFiles">The input files.</param>
         /// <param name="minSplitSize">The minimum split size.</param>
         /// <param name="maxSplitSize">The maximum split size.</param>
-        /// <returns>The <see cref="FileStageInput{TRecordReader}"/></returns>
+        /// <returns>The <see cref="FileDataInput{TRecordReader}"/></returns>
         public static IDataInput Create(Type recordReaderType, FileSystemClient fileSystem, IEnumerable<JumboFile> inputFiles, int minSplitSize = 1, int maxSplitSize = Int32.MaxValue)
         {
             if( recordReaderType == null )
                 throw new ArgumentNullException("recordReaderType");
             if( inputFiles == null )
                 throw new ArgumentNullException("inputFiles");
-            return (IDataInput)Activator.CreateInstance(typeof(FileStageInput<>).MakeGenericType(recordReaderType), fileSystem, inputFiles, minSplitSize, maxSplitSize);
+            return (IDataInput)Activator.CreateInstance(typeof(FileDataInput<>).MakeGenericType(recordReaderType), fileSystem, inputFiles, minSplitSize, maxSplitSize);
         }
     }
 
@@ -55,39 +68,41 @@ namespace Tkl.Jumbo.Jet.Input
     /// Provides a stage with input from a file system.
     /// </summary>
     /// <typeparam name="TRecordReader">The type of the record reader.</typeparam>
-    public class FileStageInput<TRecordReader> : IDataInput
+    public class FileDataInput<TRecordReader> : IDataInput
         where TRecordReader : IRecordReader
     {
         private readonly List<ITaskInput> _taskInputs;
         private const double _splitSlack = 1.1;
+        private readonly string _inputPath;
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="FileStageInput&lt;TRecordReader&gt;"/> class.
+        /// Initializes a new instance of the <see cref="FileDataInput&lt;TRecordReader&gt;"/> class.
         /// </summary>
-        public FileStageInput()
+        public FileDataInput()
         {
         }
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="FileStageInput&lt;TRecordReader&gt;"/> class.
+        /// Initializes a new instance of the <see cref="FileDataInput&lt;TRecordReader&gt;"/> class.
         /// </summary>
         /// <param name="fileSystem">The file system containing the files.</param>
         /// <param name="fileOrDirectory">The input file or directory.</param>
         /// <param name="minSplitSize">The minimum split size.</param>
         /// <param name="maxSplitSize">The maximum split size.</param>
-        public FileStageInput(FileSystemClient fileSystem, JumboFileSystemEntry fileOrDirectory, int minSplitSize = 1, int maxSplitSize = Int32.MaxValue)
+        public FileDataInput(FileSystemClient fileSystem, JumboFileSystemEntry fileOrDirectory, int minSplitSize = 1, int maxSplitSize = Int32.MaxValue)
             : this(fileSystem, EnumerateFiles(fileOrDirectory), minSplitSize, maxSplitSize)
         {
+            _inputPath = fileOrDirectory.FullPath;
         }
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="FileStageInput&lt;TRecordReader&gt;"/> class.
+        /// Initializes a new instance of the <see cref="FileDataInput&lt;TRecordReader&gt;"/> class.
         /// </summary>
         /// <param name="fileSystem">The file system containing the files.</param>
         /// <param name="inputFiles">The input files.</param>
         /// <param name="minSplitSize">The minimum split size.</param>
         /// <param name="maxSplitSize">The maximum split size.</param>
-        public FileStageInput(FileSystemClient fileSystem, IEnumerable<JumboFile> inputFiles, int minSplitSize = 1, int maxSplitSize = Int32.MaxValue)
+        public FileDataInput(FileSystemClient fileSystem, IEnumerable<JumboFile> inputFiles, int minSplitSize = 1, int maxSplitSize = Int32.MaxValue)
         {
             if( fileSystem == null )
                 throw new ArgumentNullException("fileSystem");
@@ -165,6 +180,20 @@ namespace Tkl.Jumbo.Jet.Input
 
             FileTaskInput fileInput = (FileTaskInput)input;
             return (IRecordReader)JetActivator.CreateInstance(typeof(TRecordReader), fileSystem.Configuration, jetConfiguration, context, fileSystem.OpenFile(fileInput.Path), fileInput.Offset, fileInput.Size, context == null ? false : context.AllowRecordReuse);
+        }
+
+        /// <summary>
+        /// Notifies the data input that it has been added to a stage.
+        /// </summary>
+        /// <param name="stage">The stage configuration of the stage.</param>
+        public void NotifyAddedToStage(Jobs.StageConfiguration stage)
+        {
+            if( stage == null )
+                throw new ArgumentNullException("stage");
+            // This setting is added for informational purposes only (so someone reading the job config can see what the input path was).
+            // It is not used at all after setting it.
+            if( _inputPath != null )
+                stage.AddSetting(FileDataInput.InputPathSettingKey, _inputPath);
         }
         
         private static IEnumerable<string> GetSplitLocations(DfsClient dfsClient, JumboFile file, long offset)

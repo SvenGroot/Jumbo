@@ -16,7 +16,7 @@ using Tkl.Jumbo.Jet.Tasks;
 using Tkl.Jumbo.Jet.Jobs;
 using System.Globalization;
 using Tkl.Jumbo.Dfs.FileSystem;
-using Tkl.Jumbo.Jet.Input;
+using Tkl.Jumbo.Jet.IO;
 
 namespace Tkl.Jumbo.Test.Jet
 {
@@ -197,7 +197,7 @@ namespace Tkl.Jumbo.Test.Jet
             fileSystemClient.CreateDirectory(outputPath);
 
             JobConfiguration job = new JobConfiguration(typeof(WordCountTask).Assembly);
-            StageConfiguration stage = job.AddInputStage("WordCountStage", new FileStageInput<LineRecordReader>(fileSystemClient, fileSystemClient.GetFileInfo(inputPath)), typeof(WordCountTask));
+            StageConfiguration stage = job.AddInputStage("WordCountStage", new FileDataInput<LineRecordReader>(fileSystemClient, fileSystemClient.GetFileInfo(inputPath)), typeof(WordCountTask));
             stage.AddTypedSetting(FileOutputChannel.OutputTypeSettingKey, FileChannelOutputType.SortSpill);
             stage.AddSetting(FileOutputChannel.SpillSortCombinerTypeSettingKey, typeof(WordCountReduceTask).AssemblyQualifiedName);
             stage.AddSetting(FileOutputChannel.SpillBufferSizeSettingKey, "5MB");
@@ -236,7 +236,7 @@ namespace Tkl.Jumbo.Test.Jet
             List<int> expected = CreateNumberListInputFile(10000, "/settingsinput", fileSystemClient);
 
             JobConfiguration config = new JobConfiguration(typeof(MultiplierTask).Assembly);
-            config.AddInputStage("MultiplyStage", new FileStageInput<LineRecordReader>(fileSystemClient, fileSystemClient.GetFileInfo("/settingsinput")), typeof(MultiplierTask), fileSystemClient, outputPath, typeof(BinaryRecordWriter<int>));
+            config.AddInputStage("MultiplyStage", new FileDataInput<LineRecordReader>(fileSystemClient, fileSystemClient.GetFileInfo("/settingsinput")), typeof(MultiplierTask), fileSystemClient, outputPath, typeof(BinaryRecordWriter<int>));
             int factor = new Random().Next(2, 100);
             config.AddTypedSetting("factor", factor);
 
@@ -275,9 +275,9 @@ namespace Tkl.Jumbo.Test.Jet
              
             const int joinTasks = 2;
             JobConfiguration config = new JobConfiguration(typeof(CustomerOrderJoinRecordReader).Assembly);
-            StageConfiguration customerInput = config.AddInputStage("CustomerInput", new FileStageInput<RecordFileReader<Customer>>(fileSystemClient, fileSystemClient.GetFileInfo("/testjoin/customers")), typeof(EmptyTask<Customer>));
+            StageConfiguration customerInput = config.AddInputStage("CustomerInput", new FileDataInput<RecordFileReader<Customer>>(fileSystemClient, fileSystemClient.GetFileInfo("/testjoin/customers")), typeof(EmptyTask<Customer>));
             StageConfiguration customerSort = config.AddStage("CustomerSort", typeof(SortTask<Customer>), joinTasks, new InputStageInfo(customerInput) { ChannelType = ChannelType.Pipeline }, null, null, null);
-            StageConfiguration orderInput = config.AddInputStage("OrderInput", new FileStageInput<RecordFileReader<Order>>(fileSystemClient, fileSystemClient.GetFileInfo("/testjoin/orders")), typeof(EmptyTask<Order>));
+            StageConfiguration orderInput = config.AddInputStage("OrderInput", new FileDataInput<RecordFileReader<Order>>(fileSystemClient, fileSystemClient.GetFileInfo("/testjoin/orders")), typeof(EmptyTask<Order>));
             StageConfiguration orderSort = config.AddStage("OrderSort", typeof(SortTask<Order>), joinTasks, new InputStageInfo(orderInput) { ChannelType = ChannelType.Pipeline }, null, null, null);
 
             orderInput.AddSetting(PartitionerConstants.EqualityComparerSetting, typeof(OrderJoinComparer).AssemblyQualifiedName);
@@ -402,7 +402,7 @@ namespace Tkl.Jumbo.Test.Jet
             }
 
             JobConfiguration config = CreateConfiguration(fileSystemClient, fileSystemClient.GetFileInfo(_fileName), outputPath, false, typeof(LineCounterTask), typeof(LineAdderTask), ChannelType.File);
-            StageConfiguration stage = config.AddInputStage("VerificationStage", new FileStageInput<RecordFileReader<int>>(fileSystemClient, fileSystemClient.GetFileInfo(lineCountPath)), typeof(LineVerifierTask), fileSystemClient, outputPath, typeof(TextRecordWriter<bool>));
+            StageConfiguration stage = config.AddInputStage("VerificationStage", new FileDataInput<RecordFileReader<int>>(fileSystemClient, fileSystemClient.GetFileInfo(lineCountPath)), typeof(LineVerifierTask), fileSystemClient, outputPath, typeof(TextRecordWriter<bool>));
             stage.AddSetting("ActualOutputPath", fileSystemClient.Path.Combine(outputPath, "OutputTask-00001"));
             config.GetStage("OutputTask").DependentStages.Add(stage.StageId);
 
@@ -473,7 +473,7 @@ namespace Tkl.Jumbo.Test.Jet
             }
 
             JobConfiguration config = new JobConfiguration(typeof(StringConversionTask).Assembly);
-            StageConfiguration conversionStage = config.AddInputStage("ConversionStage", new FileStageInput<LineRecordReader>(fileSystemClient, fileSystemClient.GetFileInfo(_sortInput)), typeof(StringConversionTask));
+            StageConfiguration conversionStage = config.AddInputStage("ConversionStage", new FileDataInput<LineRecordReader>(fileSystemClient, fileSystemClient.GetFileInfo(_sortInput)), typeof(StringConversionTask));
             StageConfiguration sortStage;
             if( outputType == FileChannelOutputType.SortSpill )
                 sortStage = conversionStage;
@@ -650,7 +650,7 @@ namespace Tkl.Jumbo.Test.Jet
 
             JobConfiguration config = new JobConfiguration(System.IO.Path.GetFileName(typeof(LineCounterTask).Assembly.Location));
 
-            StageConfiguration stage = config.AddInputStage("Task", new FileStageInput<LineRecordReader>(fileSystemClient, file, maxSplitSize: (int)(file.BlockSize / splitsPerBlock)), counterTask);
+            StageConfiguration stage = config.AddInputStage("Task", new FileDataInput<LineRecordReader>(fileSystemClient, file, maxSplitSize: (int)(file.BlockSize / splitsPerBlock)), counterTask);
             if( channelType == ChannelType.Pipeline )
             {
                 // Pipeline channel cannot merge so we will add another stage in between.

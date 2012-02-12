@@ -6,7 +6,7 @@ using Tkl.Jumbo.Dfs.FileSystem;
 using System.IO;
 using Tkl.Jumbo.IO;
 
-namespace Tkl.Jumbo.Jet.Input
+namespace Tkl.Jumbo.Jet.IO
 {
     /// <summary>
     /// Provides methods for saving and loading task inputs.

@@ -4,10 +4,10 @@ using System.Linq;
 using System.Text;
 using System.IO;
 
-namespace Tkl.Jumbo.Jet.Input
+namespace Tkl.Jumbo.Jet.IO
 {
     /// <summary>
-    /// Represents a task input for a stage using <see cref="FileStageInput{TRecordReader}"/>.
+    /// Represents a task input for a stage using <see cref="FileDataInput{TRecordReader}"/>.
     /// </summary>
     public class FileTaskInput : ITaskInput
     {

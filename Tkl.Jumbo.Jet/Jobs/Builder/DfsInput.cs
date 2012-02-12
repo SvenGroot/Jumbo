@@ -6,7 +6,7 @@ using System.Linq;
 using System.Text;
 using Tkl.Jumbo.IO;
 using Tkl.Jumbo.Dfs.FileSystem;
-using Tkl.Jumbo.Jet.Input;
+using Tkl.Jumbo.Jet.IO;
 
 namespace Tkl.Jumbo.Jet.Jobs.Builder
 {
@@ -70,7 +70,7 @@ namespace Tkl.Jumbo.Jet.Jobs.Builder
         /// </summary>
         /// <param name="fileSystem">The file system.</param>
         /// <returns></returns>
-        public Input.IDataInput CreateStageInput(FileSystemClient fileSystem)
+        public IO.IDataInput CreateStageInput(FileSystemClient fileSystem)
         {
             return FileDataInput.Create(RecordReaderType, fileSystem, fileSystem.GetFileSystemEntryInfo(Path));
         }

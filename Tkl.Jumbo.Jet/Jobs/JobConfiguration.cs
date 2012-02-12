@@ -13,7 +13,7 @@ using System.Reflection;
 using System.Collections.ObjectModel;
 using System.Globalization;
 using Tkl.Jumbo.Dfs.FileSystem;
-using Tkl.Jumbo.Jet.Input;
+using Tkl.Jumbo.Jet.IO;
 
 namespace Tkl.Jumbo.Jet.Jobs
 {

@@ -10,7 +10,7 @@ using Tkl.Jumbo.Jet.Channels;
 using Tkl.Jumbo.Dfs;
 using System.Globalization;
 using Tkl.Jumbo.Dfs.FileSystem;
-using Tkl.Jumbo.Jet.Input;
+using Tkl.Jumbo.Jet.IO;
 
 namespace Tkl.Jumbo.Jet.Jobs
 {
@@ -125,6 +125,8 @@ namespace Tkl.Jumbo.Jet.Jobs
                     ValidateInputType(value, TaskTypeInfo);
                 _input = value;
                 DataInputType = value == null ? TypeReference.Empty : new TypeReference(value.GetType());
+                if( value != null )
+                    value.NotifyAddedToStage(this);
             }
         }
 

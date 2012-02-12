@@ -8,7 +8,7 @@ using Tkl.Jumbo.IO;
 using Tkl.Jumbo.Jet;
 using Tkl.Jumbo.Dfs;
 using Tkl.Jumbo.Jet.Samples.IO;
-using Tkl.Jumbo.Jet.Input;
+using Tkl.Jumbo.Jet.IO;
 
 namespace Tkl.Jumbo.Jet.Samples.Tasks
 {

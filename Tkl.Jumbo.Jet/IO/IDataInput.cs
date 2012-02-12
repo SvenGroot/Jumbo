@@ -6,8 +6,9 @@ using System.Linq;
 using System.Text;
 using Tkl.Jumbo.IO;
 using Tkl.Jumbo.Dfs.FileSystem;
+using Tkl.Jumbo.Jet.Jobs;
 
-namespace Tkl.Jumbo.Jet.Input
+namespace Tkl.Jumbo.Jet.IO
 {
     /// <summary>
     /// Provides methods for defining input (other than a channel) to a stage.
@@ -41,5 +42,17 @@ namespace Tkl.Jumbo.Jet.Input
         /// The record reader.
         /// </returns>
         IRecordReader CreateRecordReader(FileSystemClient fileSystem, JetConfiguration jetConfiguration, TaskContext context, ITaskInput input);
+
+        /// <summary>
+        /// Notifies the data input that it has been added to a stage.
+        /// </summary>
+        /// <param name="stage">The stage configuration of the stage.</param>
+        /// <remarks>
+        /// <para>
+        ///   Implement this method if you want to add any setting to the stage. Keep in mind that the stage may still be under construction, so not all its
+        ///   properties may have their final values yet.
+        /// </para>
+        /// </remarks>
+        void NotifyAddedToStage(StageConfiguration stage);
     }
 }

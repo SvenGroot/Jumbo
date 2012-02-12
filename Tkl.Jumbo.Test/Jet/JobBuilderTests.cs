@@ -10,7 +10,7 @@ using Tkl.Jumbo.Dfs.FileSystem;
 using Tkl.Jumbo.IO;
 using Tkl.Jumbo.Jet;
 using Tkl.Jumbo.Jet.Channels;
-using Tkl.Jumbo.Jet.Input;
+using Tkl.Jumbo.Jet.IO;
 using Tkl.Jumbo.Jet.Jobs;
 using Tkl.Jumbo.Jet.Jobs.Builder;
 using Tkl.Jumbo.Jet.Tasks;
@@ -701,7 +701,7 @@ namespace Tkl.Jumbo.Test.Jet
             Assert.IsNull(stage.Parent);
             CollectionAssert.IsEmpty(job.GetInputStagesForStage(stage.StageId));
             Assert.AreEqual(stage.TaskCount, stage.DataInput.TaskInputs.Count);
-            Assert.IsInstanceOf(typeof(FileStageInput<>).MakeGenericType(recordReaderType), stage.DataInput);
+            Assert.IsInstanceOf(typeof(FileDataInput<>).MakeGenericType(recordReaderType), stage.DataInput);
             for( int x = 0; x < 3; ++x )
             {
                 FileTaskInput input = (FileTaskInput)stage.DataInput.TaskInputs[x];

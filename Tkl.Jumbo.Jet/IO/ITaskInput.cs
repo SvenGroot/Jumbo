@@ -6,7 +6,7 @@ using System.Linq;
 using System.Text;
 using Tkl.Jumbo.IO;
 
-namespace Tkl.Jumbo.Jet.Input
+namespace Tkl.Jumbo.Jet.IO
 {
     /// <summary>
     /// Provides methods for describing a task input.
