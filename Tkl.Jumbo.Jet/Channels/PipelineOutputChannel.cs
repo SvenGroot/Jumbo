@@ -2,12 +2,8 @@
 //
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using Tkl.Jumbo.IO;
-using System.Reflection;
-using System.IO;
-using Tkl.Jumbo.Dfs;
+using Tkl.Jumbo.Jet.Jobs;
 
 namespace Tkl.Jumbo.Jet.Channels
 {

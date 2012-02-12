@@ -12,7 +12,7 @@ using System.Globalization;
 using Tkl.Jumbo.Dfs.FileSystem;
 using Tkl.Jumbo.Jet.Input;
 
-namespace Tkl.Jumbo.Jet
+namespace Tkl.Jumbo.Jet.Jobs
 {
     /// <summary>
     /// Provides the configuration for a stage in a job. A stage is a collection of tasks that perform the same function
@@ -27,8 +27,9 @@ namespace Tkl.Jumbo.Jet
         private bool? _allowOutputRecordReuse;
         private readonly ExtendedCollection<string> _dependentStages = new ExtendedCollection<string>();
         private StageConfiguration _childStage;
-        private IStageInput _input;
-
+        private IDataInput _input;
+        private TypeReference _taskType;
+        private TaskTypeInfo _taskTypeInfo;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="StageConfiguration"/> class.
@@ -55,21 +56,41 @@ namespace Tkl.Jumbo.Jet
         /// <summary>
         /// Gets or sets the type that implements the task.
         /// </summary>
-        public TypeReference TaskType { get; set; }
+        public TypeReference TaskType
+        {
+            get { return _taskType; }
+            set 
+            { 
+                _taskType = value;
+                _taskTypeInfo = null;
+            }
+        }
+
+        /// <summary>
+        /// Gets information about the task type.
+        /// </summary>
+        /// <value>
+        /// The <see cref="TaskTypeInfo"/> for the <see cref="TaskType"/>, or <see langword="null"/> if the type has not been set.
+        /// </value>
+        [XmlIgnore]
+        public TaskTypeInfo TaskTypeInfo
+        {
+            get { return _taskType.ReferencedType == null ? null : _taskTypeInfo ?? (_taskTypeInfo = new TaskTypeInfo(_taskType.ReferencedType)); }
+        }
 
         /// <summary>
         /// Gets or sets the number of tasks in this stage.
         /// </summary>
         /// <remarks>
-        /// This property is ignored if <see cref="Input"/> is not <see langword="null"/>.
+        /// This property is ignored if <see cref="DataInput"/> is not <see langword="null"/>.
         /// </remarks>
         [XmlAttribute("taskCount")]
         public int TaskCount
         {
             get 
             {
-                if( Input != null )
-                    return Input.TaskInputs.Count;
+                if( DataInput != null )
+                    return DataInput.TaskInputs.Count;
                 return _taskCount; 
             }
             set 
@@ -87,25 +108,28 @@ namespace Tkl.Jumbo.Jet
         /// <remarks>
         /// <note>
         ///   This value is not saved in the job configuration, and will not be available after loading a job configuration.
-        ///   Instead, the type of this property will be saved in <see cref="InputType"/>.
+        ///   Instead, the type of this property will be saved in <see cref="DataInputType"/>.
         /// </note>
         /// <note>
         ///   Don't set this property manually while constructing a job. Instead, use the <see cref="JobConfiguration.AddInputStage"/> method.
         /// </note>
         /// </remarks>
         [XmlIgnore]
-        public IStageInput Input
+        public IDataInput DataInput
         {
             get { return _input; }
             set 
             {
+                // We can do validation here because this is not a serialized property.
+                if( value != null && TaskTypeInfo != null )
+                    ValidateInputType(value, TaskTypeInfo);
                 _input = value;
-                InputType = value == null ? new TypeReference() : new TypeReference(value.GetType());
+                DataInputType = value == null ? TypeReference.Empty : new TypeReference(value.GetType());
             }
         }
 
         /// <summary>
-        /// Gets or sets the <see cref="Type"/> of the <see cref="IStageInput"/> used by this stage.
+        /// Gets or sets the <see cref="Type"/> of the <see cref="IDataInput"/> used by this stage.
         /// </summary>
         /// <value>
         /// The type of the input, or <see langword="null"/> if the stage has no input or channel input.
@@ -115,7 +139,7 @@ namespace Tkl.Jumbo.Jet
         ///   Don't set this property manually while constructing a job. Instead, use the <see cref="JobConfiguration.AddInputStage"/> method.
         /// </note>
         /// </remarks>
-        public TypeReference InputType { get; set; }
+        public TypeReference DataInputType { get; set; }
 
         /// <summary>
         /// Gets a value indicating whether this stage has input other than a channel.
@@ -126,7 +150,7 @@ namespace Tkl.Jumbo.Jet
         [XmlIgnore]
         public bool HasInput
         {
-            get { return !string.IsNullOrEmpty(InputType.TypeName); }
+            get { return !string.IsNullOrEmpty(DataInputType.TypeName); }
         }
 
         /// <summary>
@@ -518,6 +542,12 @@ namespace Tkl.Jumbo.Jet
         public override string ToString()
         {
             return string.Format(CultureInfo.InvariantCulture, "StageConfiguration {{ StageId = \"{0}\" }}", StageId);
+        }
+
+        private static void ValidateInputType(IDataInput input, TaskTypeInfo taskType)
+        {
+            if( input.RecordType != taskType.InputRecordType )
+                throw new ArgumentException(string.Format(System.Globalization.CultureInfo.CurrentCulture, "The specified input's record type {0} is not identical to the specified task type's input record type {1}.", input.RecordType, taskType.InputRecordType));
         }
     }
 }

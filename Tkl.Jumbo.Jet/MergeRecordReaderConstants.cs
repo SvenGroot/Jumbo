@@ -21,7 +21,7 @@ namespace Tkl.Jumbo.Jet
         public const string MaxFileInputsSetting = "MergeRecordReader.MaxFileInputs";
 
         /// <summary>
-        /// The name of the setting in the <see cref="StageConfiguration.StageSettings"/> or <see cref="JobConfiguration.JobSettings"/>
+        /// The name of the setting in the <see cref="Jobs.StageConfiguration.StageSettings"/> or <see cref="Jobs.JobConfiguration.JobSettings"/>
         /// that specifies the usage level of the channel's memory storage that will trigger a merge pass. This
         /// setting must be a <see cref="Single"/> between 0 and 1. If it isn't specified, the value of the <see cref="MergeRecordReaderConfigurationElement.MemoryStorageTriggerLevel"/>
         /// property will be used.
@@ -29,13 +29,13 @@ namespace Tkl.Jumbo.Jet
         public const string MemoryStorageTriggerLevelSetting = "MergeRecordReader.MemoryStorageTriggerLevel";
 
         /// <summary>
-        /// The name of the setting in <see cref="StageConfiguration.StageSettings"/> that specifies the <see cref="IComparer{T}"/>
+        /// The name of the setting in <see cref="Jobs.StageConfiguration.StageSettings"/> that specifies the <see cref="IComparer{T}"/>
         /// to use. If this setting is not specified, <see cref="Comparer{T}.Default"/> will be used.
         /// </summary>
         public const string ComparerSetting = "MergeRecordReader.Comparer";
 
         /// <summary>
-        /// The name of the setting in the <see cref="JobConfiguration.JobSettings"/> or <see cref="StageConfiguration.StageSettings"/>
+        /// The name of the setting in the <see cref="Jobs.JobConfiguration.JobSettings"/> or <see cref="Jobs.StageConfiguration.StageSettings"/>
         /// that specifies whether all in-memory inputs must be merged and purged to disk before the final pass. The value
         /// of this setting must be of type <see cref="Boolean"/>. The default value is the value of <see cref="MergeRecordReaderConfigurationElement.PurgeMemoryBeforeFinalPass"/>.
         /// </summary>

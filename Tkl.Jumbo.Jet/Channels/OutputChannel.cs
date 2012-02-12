@@ -2,10 +2,10 @@
 //
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Collections.ObjectModel;
+using System.Linq;
 using Tkl.Jumbo.IO;
+using Tkl.Jumbo.Jet.Jobs;
 
 namespace Tkl.Jumbo.Jet.Channels
 {
@@ -15,7 +15,7 @@ namespace Tkl.Jumbo.Jet.Channels
     public abstract class OutputChannel : IOutputChannel
     {
         /// <summary>
-        /// The name of the setting in <see cref="JobConfiguration.JobSettings"/> or <see cref="StageConfiguration.StageSettings"/> that overrides the global compression setting.
+        /// The name of the setting in <see cref="Jobs.JobConfiguration.JobSettings"/> or <see cref="Jobs.StageConfiguration.StageSettings"/> that overrides the global compression setting.
         /// </summary>
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Naming", "CA1702:CompoundWordsShouldBeCasedCorrectly", MessageId = "TypeSetting")]
         public const string CompressionTypeSetting = "FileChannel.CompressionType";

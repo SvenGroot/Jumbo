@@ -18,6 +18,11 @@ namespace Tkl.Jumbo
         private Type _type;
 
         /// <summary>
+        /// A <see cref="TypeReference"/> instance that doesn't reference any type.
+        /// </summary>
+        public static readonly TypeReference Empty = new TypeReference();
+
+        /// <summary>
         /// Initializes a new instance of the <see cref="TypeReference"/> structure using the specified type.
         /// </summary>
         /// <param name="type">The type this instance should reference. May be <see langword="null"/>.</param>

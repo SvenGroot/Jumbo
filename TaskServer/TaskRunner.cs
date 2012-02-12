@@ -3,16 +3,11 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading;
-using IO = System.IO;
-using Tkl.Jumbo.Jet;
-using Tkl.Jumbo.Dfs;
-using System.Diagnostics;
-using Tkl.Jumbo;
-using System.ComponentModel;
-using System.Globalization;
 using Tkl.Jumbo.Dfs.FileSystem;
+using Tkl.Jumbo.Jet;
+using Tkl.Jumbo.Jet.Jobs;
+using IO = System.IO;
 
 namespace TaskServerApplication
 {

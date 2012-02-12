@@ -2,21 +2,19 @@
 //
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using NUnit.Framework;
-using Tkl.Jumbo.Dfs;
-using Tkl.Jumbo.Jet;
 using System.Diagnostics;
-using Tkl.Jumbo.Jet.Jobs.Builder;
-using Tkl.Jumbo.Test.Dfs;
-using Tkl.Jumbo.IO;
-using Tkl.Jumbo.Test.Tasks;
 using System.IO;
-using Tkl.Jumbo.Jet.Channels;
-using Tkl.Jumbo.Jet.Tasks;
+using System.Linq;
+using NUnit.Framework;
 using Tkl.Jumbo.Dfs.FileSystem;
+using Tkl.Jumbo.IO;
+using Tkl.Jumbo.Jet;
+using Tkl.Jumbo.Jet.Channels;
 using Tkl.Jumbo.Jet.Input;
+using Tkl.Jumbo.Jet.Jobs;
+using Tkl.Jumbo.Jet.Jobs.Builder;
+using Tkl.Jumbo.Jet.Tasks;
+using Tkl.Jumbo.Test.Tasks;
 
 namespace Tkl.Jumbo.Test.Jet
 {
@@ -589,7 +587,7 @@ namespace Tkl.Jumbo.Test.Jet
 
             Assert.AreEqual(1, config.Stages.Count);
             StageConfiguration stage = config.Stages[0];
-            Assert.IsNull(stage.Input);
+            Assert.IsNull(stage.DataInput);
             CollectionAssert.IsEmpty(config.GetInputStagesForStage(stage.StageId));
             VerifyStage(stage, 5, typeof(LineCounterTask).Name + "Stage", typeof(LineCounterTask));
             VerifyDfsOutput(stage, typeof(TextRecordWriter<int>));
@@ -610,7 +608,7 @@ namespace Tkl.Jumbo.Test.Jet
 
             Assert.AreEqual(1, config.Stages.Count);
             StageConfiguration stage = config.Stages[0];
-            Assert.IsNull(stage.Input);
+            Assert.IsNull(stage.DataInput);
             CollectionAssert.IsEmpty(config.GetInputStagesForStage(stage.StageId));
             VerifyStage(stage, 5, "GenerateRecordsTaskStage", operation.TaskType.TaskType);
             VerifyDfsOutput(stage, typeof(TextRecordWriter<int>));
@@ -632,7 +630,7 @@ namespace Tkl.Jumbo.Test.Jet
 
             Assert.AreEqual(1, config.Stages.Count);
             StageConfiguration stage = config.Stages[0];
-            Assert.IsNull(stage.Input);
+            Assert.IsNull(stage.DataInput);
             CollectionAssert.IsEmpty(config.GetInputStagesForStage(stage.StageId));
             VerifyStage(stage, 5, "GenerateRecordsNoContextTaskStage", operation.TaskType.TaskType);
             VerifyDfsOutput(stage, typeof(TextRecordWriter<int>));
@@ -699,14 +697,14 @@ namespace Tkl.Jumbo.Test.Jet
 
         private static void VerifyDfsInput(JobConfiguration job, StageConfiguration stage, Type recordReaderType)
         {
-            Assert.IsNotNull(stage.Input);
+            Assert.IsNotNull(stage.DataInput);
             Assert.IsNull(stage.Parent);
             CollectionAssert.IsEmpty(job.GetInputStagesForStage(stage.StageId));
-            Assert.AreEqual(stage.TaskCount, stage.Input.TaskInputs.Count);
-            Assert.IsInstanceOf(typeof(FileStageInput<>).MakeGenericType(recordReaderType), stage.Input);
+            Assert.AreEqual(stage.TaskCount, stage.DataInput.TaskInputs.Count);
+            Assert.IsInstanceOf(typeof(FileStageInput<>).MakeGenericType(recordReaderType), stage.DataInput);
             for( int x = 0; x < 3; ++x )
             {
-                FileTaskInput input = (FileTaskInput)stage.Input.TaskInputs[x];
+                FileTaskInput input = (FileTaskInput)stage.DataInput.TaskInputs[x];
                 Assert.AreEqual(x * _blockSize, input.Offset);
                 Assert.AreEqual(_inputPath, input.Path);
             }
@@ -731,7 +729,7 @@ namespace Tkl.Jumbo.Test.Jet
             if( multiInputRecordReaderType == null )
                 multiInputRecordReaderType = typeof(MultiRecordReader<>).MakeGenericType(info.OutputRecordType);
             Assert.IsNull(sender.DfsOutput);
-            Assert.IsNull(receiver.Input);
+            Assert.IsNull(receiver.DataInput);
             if( channelType == ChannelType.Pipeline )
             {
                 Assert.IsNull(sender.OutputChannel);

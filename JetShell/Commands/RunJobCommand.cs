@@ -1,16 +1,12 @@
 ﻿// $Id$
 //
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.ComponentModel;
-using System.Reflection;
-using Tkl.Jumbo.Jet.Jobs;
-using Tkl.Jumbo.Jet;
-using System.Threading;
 using System.IO;
+using System.Reflection;
 using Ookii.CommandLine;
+using Tkl.Jumbo.Jet;
+using Tkl.Jumbo.Jet.Jobs;
 
 namespace JetShell.Commands
 {

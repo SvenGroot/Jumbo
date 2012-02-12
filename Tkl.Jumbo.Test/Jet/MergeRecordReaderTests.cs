@@ -2,13 +2,12 @@
 //
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using NUnit.Framework;
 using System.IO;
+using System.Linq;
+using NUnit.Framework;
 using Tkl.Jumbo.IO;
 using Tkl.Jumbo.Jet;
-using Tkl.Jumbo.Jet.Tasks;
+using Tkl.Jumbo.Jet.Jobs;
 
 namespace Tkl.Jumbo.Test.Jet
 {

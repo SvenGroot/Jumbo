@@ -2,15 +2,13 @@
 //
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using Tkl.Jumbo.IO;
-using System.Net.Sockets;
-using System.Net;
-using System.Threading;
 using System.IO;
-using System.Diagnostics;
+using System.Net;
+using System.Net.Sockets;
 using System.Runtime.Serialization.Formatters.Binary;
+using System.Threading;
+using Tkl.Jumbo.IO;
+using Tkl.Jumbo.Jet.Jobs;
 
 namespace Tkl.Jumbo.Jet.Channels
 {

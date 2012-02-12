@@ -1,15 +1,12 @@
 ﻿// $Id$
 //
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using Tkl.Jumbo.Dfs;
-using System.IO;
 using System.Diagnostics;
+using System.IO;
 using System.Threading;
 using Tkl.Jumbo.Dfs.FileSystem;
 using Tkl.Jumbo.Jet.Input;
+using Tkl.Jumbo.Jet.Jobs;
 
 namespace Tkl.Jumbo.Jet
 {
@@ -281,9 +278,9 @@ namespace Tkl.Jumbo.Jet
             // Save split files for all stages with input.
             foreach( StageConfiguration stage in config.Stages )
             {
-                if( stage.Input != null )
+                if( stage.DataInput != null )
                 {
-                    TaskInputUtility.WriteTaskInputs(fileSystemClient, job.Path, stage.StageId, stage.Input.TaskInputs);
+                    TaskInputUtility.WriteTaskInputs(fileSystemClient, job.Path, stage.StageId, stage.DataInput.TaskInputs);
                 }
             }
 

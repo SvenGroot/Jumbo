@@ -1,18 +1,15 @@
 ﻿// $Id$
 //
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Xml.Serialization;
 
-namespace Tkl.Jumbo.Jet
+namespace Tkl.Jumbo.Jet.Jobs
 {
     /// <summary>
     /// Provides information about additional progress counters in the <see cref="JobConfiguration"/>.
     /// </summary>
-    [Serializable]
-    [XmlType(Namespace=JobConfiguration.XmlNamespace)]
+    [Serializable] // Binary serializable because it's used in JobStatus
+    [XmlType(Namespace=JobConfiguration.XmlNamespace)] // XML serializable for JobConfiguration.
     public class AdditionalProgressCounter
     {
         /// <summary>

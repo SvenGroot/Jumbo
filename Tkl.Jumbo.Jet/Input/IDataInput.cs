@@ -12,7 +12,7 @@ namespace Tkl.Jumbo.Jet.Input
     /// <summary>
     /// Provides methods for defining input (other than a channel) to a stage.
     /// </summary>
-    public interface IStageInput
+    public interface IDataInput
     {
         /// <summary>
         /// Gets the inputs for each task.

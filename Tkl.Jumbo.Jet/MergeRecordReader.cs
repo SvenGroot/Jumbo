@@ -18,7 +18,7 @@ namespace Tkl.Jumbo.Jet
     /// <remarks>
     /// <para>
     ///   If <see cref="Channel"/> is not <see langword="null"/>, the <see cref="MergeRecordReader{T}"/> will use the <see cref="Tasks.TaskConstants.ComparerSettingKey"/>
-    ///   on the <see cref="StageConfiguration.StageSettings"/> of the input stage to determine the comparer to use. Otherwise, it will use the 
+    ///   on the <see cref="Jobs.StageConfiguration.StageSettings"/> of the input stage to determine the comparer to use. Otherwise, it will use the 
     ///   <see cref="MergeRecordReaderConstants.ComparerSetting"/> of the current stage. If neither is specified, <see cref="Comparer{T}.Default"/> will be used.
     /// </para>
     /// </remarks>

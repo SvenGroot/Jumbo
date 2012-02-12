@@ -8,7 +8,7 @@ using System.Xml.Serialization;
 using System.Xml;
 using System.ComponentModel;
 
-namespace Tkl.Jumbo.Jet
+namespace Tkl.Jumbo.Jet.Jobs
 {
     /// <summary>
     /// Provides settings for a job configuration.

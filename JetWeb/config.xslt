@@ -315,9 +315,9 @@
       </td>
     </tr>
   </xsl:template>
-  <xsl:template match="job:Stage[job:InputType!='' or //job:OutputChannel/job:OutputStage=@id or //job:DependentStages/job:string=@id]" mode="input">
+  <xsl:template match="job:Stage[job:DataInputType!='' or //job:OutputChannel/job:OutputStage=@id or //job:DependentStages/job:string=@id]" mode="input">
     <table class="input">
-      <xsl:apply-templates select="job:InputType[.!='']" />
+      <xsl:apply-templates select="job:DataInputType[.!='']" />
       <xsl:apply-templates select="//job:OutputChannel[job:OutputStage=current()/@id]" mode="input" />
       <xsl:if test="//job:DependentStages/job:string=current()/@id">
         <tr>
@@ -330,7 +330,7 @@
     </table>
   </xsl:template>
   <xsl:template match="job:Stage | job:ChildStage" mode="input"></xsl:template>
-  <xsl:template match="job:InputType">
+  <xsl:template match="job:DataInputType">
     <tr>
       <th scope="row">Input type:</th>
       <td>

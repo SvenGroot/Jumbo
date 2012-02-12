@@ -1,12 +1,9 @@
 ﻿// $Id$
 //
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Xml.Serialization;
 
-namespace Tkl.Jumbo.Jet
+namespace Tkl.Jumbo.Jet.Jobs
 {
     /// <summary>
     /// Provides job configuration options to configure the behaviour of the scheduler.

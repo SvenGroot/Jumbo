@@ -9,7 +9,7 @@ using Tkl.Jumbo.Dfs;
 using Tkl.Jumbo.IO;
 using System.IO;
 
-namespace Tkl.Jumbo.Jet
+namespace Tkl.Jumbo.Jet.Jobs
 {
     /// <summary>
     /// Provides information about output that a task will write to the Distributed File System.

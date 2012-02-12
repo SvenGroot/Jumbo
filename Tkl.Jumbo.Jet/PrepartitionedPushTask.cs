@@ -17,12 +17,12 @@ namespace Tkl.Jumbo.Jet
     ///   and task instance for every partition.
     /// </para>
     /// <para>
-    ///   If the task needs to know how many partitions there are it should check the <see cref="StageConfiguration.InternalPartitionCount"/> property
+    ///   If the task needs to know how many partitions there are it should check the <see cref="Jobs.StageConfiguration.InternalPartitionCount"/> property
     ///   of the <see cref="TaskContext.StageConfiguration"/> property.
     /// </para>
     /// <para>
     ///   Although tasks using this interface are free to change the partition a record belongs to, it cannot change the number of partitions.
-    ///   All output partition numbers must be between 0 inclusive and <see cref="StageConfiguration.InternalPartitionCount"/> exclusive.
+    ///   All output partition numbers must be between 0 inclusive and <see cref="Jobs.StageConfiguration.InternalPartitionCount"/> exclusive.
     /// </para>
     /// </remarks>
     public abstract class PrepartitionedPushTask<TInput, TOutput> : Configurable, ITask<TInput, TOutput>

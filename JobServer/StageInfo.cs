@@ -1,13 +1,11 @@
 ﻿// $Id$
 //
-using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using Tkl.Jumbo.Jet;
-using Tkl.Jumbo;
-using System.Collections.ObjectModel;
 using System.Threading;
+using Tkl.Jumbo;
+using Tkl.Jumbo.Jet;
+using Tkl.Jumbo.Jet.Jobs;
 
 namespace JobServerApplication
 {

@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.ComponentModel;
+using Tkl.Jumbo.Jet.Jobs;
 using Tkl.Jumbo.Jet.Jobs.Builder;
 using Tkl.Jumbo.Dfs;
 using Tkl.Jumbo.Jet.Samples.Tasks;

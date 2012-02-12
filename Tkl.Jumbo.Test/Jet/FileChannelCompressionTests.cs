@@ -2,18 +2,17 @@
 //
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+using System.IO;
+using System.Threading;
 using NUnit.Framework;
+using Tkl.Jumbo.Dfs.FileSystem;
 using Tkl.Jumbo.IO;
 using Tkl.Jumbo.Jet;
-using Tkl.Jumbo.Test.Tasks;
-using Tkl.Jumbo.Jet.Tasks;
 using Tkl.Jumbo.Jet.Channels;
-using System.Threading;
-using Tkl.Jumbo.Dfs.FileSystem;
-using System.IO;
 using Tkl.Jumbo.Jet.Input;
+using Tkl.Jumbo.Jet.Jobs;
+using Tkl.Jumbo.Jet.Tasks;
+using Tkl.Jumbo.Test.Tasks;
 
 namespace Tkl.Jumbo.Test.Jet
 {

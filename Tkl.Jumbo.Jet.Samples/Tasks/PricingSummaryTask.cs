@@ -1,11 +1,9 @@
 ﻿// $Id$
 //
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using Tkl.Jumbo.Jet.Samples.IO;
 using Tkl.Jumbo.IO;
+using Tkl.Jumbo.Jet.Jobs;
+using Tkl.Jumbo.Jet.Samples.IO;
 
 namespace Tkl.Jumbo.Jet.Samples.Tasks
 {

@@ -66,13 +66,13 @@ namespace Tkl.Jumbo.Jet.Jobs.Builder
         }
 
         /// <summary>
-        /// Creates an <see cref="IStageInput"/> for this input.
+        /// Creates an <see cref="IDataInput"/> for this input.
         /// </summary>
         /// <param name="fileSystem">The file system.</param>
         /// <returns></returns>
-        public Input.IStageInput CreateStageInput(FileSystemClient fileSystem)
+        public Input.IDataInput CreateStageInput(FileSystemClient fileSystem)
         {
-            return FileStageInput.Create(RecordReaderType, fileSystem, fileSystem.GetFileSystemEntryInfo(Path));
+            return FileDataInput.Create(RecordReaderType, fileSystem, fileSystem.GetFileSystemEntryInfo(Path));
         }
     }
 }

@@ -3,15 +3,15 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using NUnit.Framework;
-using Tkl.Jumbo.Jet;
 using Tkl.Jumbo.Dfs;
-using Tkl.Jumbo.IO;
-using Tkl.Jumbo.Jet.Channels;
-using Tkl.Jumbo.Jet.Tasks;
 using Tkl.Jumbo.Dfs.FileSystem;
+using Tkl.Jumbo.IO;
+using Tkl.Jumbo.Jet;
+using Tkl.Jumbo.Jet.Channels;
 using Tkl.Jumbo.Jet.Input;
+using Tkl.Jumbo.Jet.Jobs;
+using Tkl.Jumbo.Jet.Tasks;
 
 namespace Tkl.Jumbo.Test.Jet
 {
@@ -63,18 +63,18 @@ namespace Tkl.Jumbo.Test.Jet
 
             StageConfiguration stage = target.AddInputStage("InputStage", new FileStageInput<LineRecordReader>(new LocalFileSystemClient(), file, maxSplitSize: _blockSize / splitsPerBlock), typeof(Tasks.LineCounterTask));
 
-            Assert.IsNotNull(stage.Input);
+            Assert.IsNotNull(stage.DataInput);
             Assert.AreEqual(file.Blocks.Count * splitsPerBlock, stage.TaskCount);
-            Assert.AreEqual(stage.TaskCount, stage.Input.TaskInputs.Count);
+            Assert.AreEqual(stage.TaskCount, stage.DataInput.TaskInputs.Count);
             Assert.AreEqual(1, target.Stages.Count);
             Assert.AreEqual(stage, target.Stages[0]);
             Assert.AreEqual("InputStage", stage.StageId);
-            Assert.AreEqual(file.Blocks.Count * splitsPerBlock, stage.Input.TaskInputs.Count);
-            Assert.IsInstanceOf<FileStageInput<LineRecordReader>>(stage.Input);
-            Assert.AreEqual(typeof(FileStageInput<LineRecordReader>), stage.InputType.ReferencedType);
-            Assert.AreEqual(typeof(FileStageInput<LineRecordReader>).AssemblyQualifiedName, stage.InputType.TypeName);
+            Assert.AreEqual(file.Blocks.Count * splitsPerBlock, stage.DataInput.TaskInputs.Count);
+            Assert.IsInstanceOf<FileStageInput<LineRecordReader>>(stage.DataInput);
+            Assert.AreEqual(typeof(FileStageInput<LineRecordReader>), stage.DataInputType.ReferencedType);
+            Assert.AreEqual(typeof(FileStageInput<LineRecordReader>).AssemblyQualifiedName, stage.DataInputType.TypeName);
             int x = 0;
-            foreach( FileTaskInput input in stage.Input.TaskInputs )
+            foreach( FileTaskInput input in stage.DataInput.TaskInputs )
             {
                 Assert.AreEqual(x++ * (_blockSize / splitsPerBlock), input.Offset);
                 Assert.AreEqual(_blockSize / splitsPerBlock, input.Size);
@@ -219,7 +219,7 @@ namespace Tkl.Jumbo.Test.Jet
             Assert.AreEqual(stage, target.Stages[2]);
 
             Assert.AreEqual("SecondStage", stage.StageId);
-            Assert.IsNull(stage.Input);
+            Assert.IsNull(stage.DataInput);
             if( useOutput )
             {
                 Assert.IsNotNull(stage.DfsOutput);

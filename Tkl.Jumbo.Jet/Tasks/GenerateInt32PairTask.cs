@@ -15,7 +15,7 @@ namespace Tkl.Jumbo.Jet.Tasks
     /// <remarks>
     /// <para>
     ///   The value assigned to each key/value pair is 1 by default, but can be overridden by specifying a setting
-    ///   with the <see cref="TaskConstants.GeneratePairTaskDefaultValueKey"/> in the <see cref="StageConfiguration.StageSettings"/>.
+    ///   with the <see cref="TaskConstants.GeneratePairTaskDefaultValueKey"/> in the <see cref="Jobs.StageConfiguration.StageSettings"/>.
     /// </para>
     /// </remarks>
     [AllowRecordReuse(PassThrough=true)]

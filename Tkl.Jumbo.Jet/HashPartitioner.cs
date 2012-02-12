@@ -14,7 +14,7 @@ namespace Tkl.Jumbo.Jet
     /// <remarks>
     /// <para>
     ///   You can customize the behaviour of the <see cref="HashPartitioner{T}"/> by specifying a custom <see cref="IEqualityComparer{T}"/>.
-    ///   To do this, specify the type name of the custom comparer in the <see cref="StageConfiguration.StageSettings"/> of the stage
+    ///   To do this, specify the type name of the custom comparer in the <see cref="Jobs.StageConfiguration.StageSettings"/> of the stage
     ///   that produces the records to be partitioned using the <see cref="PartitionerConstants.EqualityComparerSetting"/> key.
     /// </para>
     /// <para>

@@ -2,20 +2,19 @@
 //
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using Tkl.Jumbo.Dfs;
-using Tkl.Jumbo.Jet.Channels;
-using Tkl.Jumbo.IO;
-using System.Reflection;
-using System.Collections;
-using System.Threading;
-using System.Net.Sockets;
-using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
+using System.Net.Sockets;
+using System.Reflection;
+using System.Text;
+using System.Threading;
+using Tkl.Jumbo.Dfs;
 using Tkl.Jumbo.Dfs.FileSystem;
+using Tkl.Jumbo.IO;
+using Tkl.Jumbo.Jet.Channels;
 using Tkl.Jumbo.Jet.Input;
+using Tkl.Jumbo.Jet.Jobs;
 
 namespace Tkl.Jumbo.Jet
 {
@@ -583,7 +582,7 @@ namespace Tkl.Jumbo.Jet
         {
             if( Context.StageConfiguration.HasInput )
             {
-                IStageInput input = (IStageInput)JetActivator.CreateInstance(Context.StageConfiguration.InputType.ReferencedType, this);
+                IDataInput input = (IDataInput)JetActivator.CreateInstance(Context.StageConfiguration.DataInputType.ReferencedType, this);
                 TaskInput = TaskInputUtility.ReadTaskInput(new LocalFileSystemClient(), _configuration.LocalJobDirectory, _configuration.TaskAttemptId.TaskId.StageId, _configuration.TaskAttemptId.TaskId.TaskNumber - 1);
                 return input.CreateRecordReader(FileSystemClient, JetClient.Configuration, _configuration, TaskInput);
             }

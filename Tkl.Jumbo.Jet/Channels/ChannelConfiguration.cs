@@ -1,12 +1,7 @@
 ﻿// $Id$
 //
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Xml.Serialization;
-using Tkl.Jumbo.Dfs;
-using System.Collections.ObjectModel;
+using Tkl.Jumbo.Jet.Jobs;
 
 namespace Tkl.Jumbo.Jet.Channels
 {

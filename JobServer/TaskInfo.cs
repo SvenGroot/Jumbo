@@ -2,14 +2,9 @@
 //
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using Tkl.Jumbo.Jet;
-using System.IO;
-using Tkl.Jumbo.Dfs;
 using System.Threading;
-using System.Collections.ObjectModel;
-using Tkl.Jumbo.Jet.Channels;
+using Tkl.Jumbo.Jet;
+using Tkl.Jumbo.Jet.Jobs;
 
 namespace JobServerApplication
 {

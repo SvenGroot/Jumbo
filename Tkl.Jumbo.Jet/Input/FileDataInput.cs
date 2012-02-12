@@ -12,7 +12,7 @@ namespace Tkl.Jumbo.Jet.Input
     /// <summary>
     /// Provides methods to create <see cref="FileStageInput{TRecordReader}"/> instances.
     /// </summary>
-    public static class FileStageInput
+    public static class FileDataInput
     {
         /// <summary>
         /// Creates a <see cref="FileStageInput{TRecordReader}"/> for the specified record reader type.
@@ -23,13 +23,13 @@ namespace Tkl.Jumbo.Jet.Input
         /// <param name="minSplitSize">The minimum split size.</param>
         /// <param name="maxSplitSize">The maximum split size.</param>
         /// <returns>The <see cref="FileStageInput{TRecordReader}"/></returns>
-        public static IStageInput Create(Type recordReaderType, FileSystemClient fileSystem, JumboFileSystemEntry fileOrDirectory, int minSplitSize = 1, int maxSplitSize = Int32.MaxValue)
+        public static IDataInput Create(Type recordReaderType, FileSystemClient fileSystem, JumboFileSystemEntry fileOrDirectory, int minSplitSize = 1, int maxSplitSize = Int32.MaxValue)
         {
             if( recordReaderType == null )
                 throw new ArgumentNullException("recordReaderType");
             if( fileOrDirectory == null )
                 throw new ArgumentNullException("fileOrDirectory");
-            return (IStageInput)Activator.CreateInstance(typeof(FileStageInput<>).MakeGenericType(recordReaderType), fileSystem, fileOrDirectory, minSplitSize, maxSplitSize);
+            return (IDataInput)Activator.CreateInstance(typeof(FileStageInput<>).MakeGenericType(recordReaderType), fileSystem, fileOrDirectory, minSplitSize, maxSplitSize);
         }
 
         /// <summary>
@@ -41,13 +41,13 @@ namespace Tkl.Jumbo.Jet.Input
         /// <param name="minSplitSize">The minimum split size.</param>
         /// <param name="maxSplitSize">The maximum split size.</param>
         /// <returns>The <see cref="FileStageInput{TRecordReader}"/></returns>
-        public static IStageInput Create(Type recordReaderType, FileSystemClient fileSystem, IEnumerable<JumboFile> inputFiles, int minSplitSize = 1, int maxSplitSize = Int32.MaxValue)
+        public static IDataInput Create(Type recordReaderType, FileSystemClient fileSystem, IEnumerable<JumboFile> inputFiles, int minSplitSize = 1, int maxSplitSize = Int32.MaxValue)
         {
             if( recordReaderType == null )
                 throw new ArgumentNullException("recordReaderType");
             if( inputFiles == null )
                 throw new ArgumentNullException("inputFiles");
-            return (IStageInput)Activator.CreateInstance(typeof(FileStageInput<>).MakeGenericType(recordReaderType), fileSystem, inputFiles, minSplitSize, maxSplitSize);
+            return (IDataInput)Activator.CreateInstance(typeof(FileStageInput<>).MakeGenericType(recordReaderType), fileSystem, inputFiles, minSplitSize, maxSplitSize);
         }
     }
 
@@ -55,7 +55,7 @@ namespace Tkl.Jumbo.Jet.Input
     /// Provides a stage with input from a file system.
     /// </summary>
     /// <typeparam name="TRecordReader">The type of the record reader.</typeparam>
-    public class FileStageInput<TRecordReader> : IStageInput
+    public class FileStageInput<TRecordReader> : IDataInput
         where TRecordReader : IRecordReader
     {
         private readonly List<ITaskInput> _taskInputs;

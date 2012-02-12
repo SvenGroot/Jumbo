@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.ComponentModel;
+using Tkl.Jumbo.Jet.Jobs;
 using Tkl.Jumbo.Jet.Jobs.Builder;
 using Tkl.Jumbo.Jet.Samples.IO;
 using Tkl.Jumbo.Jet.Tasks;
@@ -98,8 +99,8 @@ namespace Tkl.Jumbo.Jet.Samples
             // Sample the input and create the partition split points for the RangePartitioner.
             string partitionFileName = FileSystemClient.Path.Combine(job.Path, RangePartitioner.SplitFileName);
             var input = (from stage in jobConfiguration.Stages
-                            where stage.Input != null
-                            select stage.Input).SingleOrDefault();
+                            where stage.DataInput != null
+                            select stage.DataInput).SingleOrDefault();
             RangePartitioner.CreatePartitionFile(FileSystemClient, partitionFileName, input, _mergeTasks, SampleSize);
         }
     }

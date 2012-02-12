@@ -136,7 +136,7 @@ namespace Tkl.Jumbo.Jet.Samples.IO
         /// <param name="input">The input of the job.</param>
         /// <param name="partitions">The number of partitions.</param>
         /// <param name="sampleSize">The total number of records to sample.</param>
-        public static void CreatePartitionFile(FileSystemClient fileSystemClient, string partitionFilePath, IStageInput input, int partitions, int sampleSize)
+        public static void CreatePartitionFile(FileSystemClient fileSystemClient, string partitionFilePath, IDataInput input, int partitions, int sampleSize)
         {
             int samples = Math.Min(10, input.TaskInputs.Count);
             int recordsPerSample = sampleSize / samples;
