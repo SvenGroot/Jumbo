@@ -6,6 +6,8 @@ using System.Linq;
 using System.Web;
 using Tkl.Jumbo.Dfs;
 using Tkl.Jumbo.Dfs.FileSystem;
+using Tkl.Jumbo;
+using System.Globalization;
 
 /// <summary>
 /// Summary description for FileSystemEntryInfo
@@ -19,12 +21,13 @@ public class FileSystemEntryInfo
     public FileSystemEntryInfo(JumboFileSystemEntry entry, bool includeChildren)
     {
         Name = entry.Name;
-        DateCreated = entry.DateCreated;
+        DateCreated = entry.DateCreated.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture);
         FullPath = entry.FullPath;
         JumboFile file = entry as JumboFile;
         if( file != null )
         {
-            Size = file.Size;
+            SizeInBytes = file.Size.ToString("#,##0", CultureInfo.InvariantCulture);
+            FormattedSize = new BinarySize(file.Size).ToString("SB", CultureInfo.InvariantCulture);
         }
         else
         {
@@ -45,9 +48,11 @@ public class FileSystemEntryInfo
 
     public bool IsDirectory { get; set; }
 
-    public long Size { get; set; }
+    public string SizeInBytes { get; set; }
 
-    public DateTime DateCreated { get; set; }
+    public string FormattedSize { get; set; }
+
+    public string DateCreated { get; set; }
 
     public FileSystemEntryInfo[] Children { get; set; }
 }

@@ -641,6 +641,29 @@ namespace Tkl.Jumbo.Test.Jet
         }
 
         [Test]
+        public void TestGenerateDelegateProgressContext()
+        {
+            JobBuilder builder = new JobBuilder(_fileSystemClient, _jetClient);
+
+            var operation = builder.Generate<int>(5, GenerateRecordsProgressContext);
+            builder.Write(operation, _outputPath, typeof(TextRecordWriter<>));
+
+            JobConfiguration config = builder.CreateJob();
+            Assert.AreEqual(9, config.AssemblyFileNames.Count); // Includes generated assembly and the one from the method and all its references.
+            StringAssert.StartsWith("Tkl.Jumbo.Jet.Generated.", config.AssemblyFileNames.Last());
+            Assert.AreEqual("GenerateRecordsProgressContextTask", operation.TaskType.TaskType.Name);
+
+            Assert.AreEqual(1, config.Stages.Count);
+            StageConfiguration stage = config.Stages[0];
+            Assert.IsNull(stage.DataInput);
+            CollectionAssert.IsEmpty(config.GetInputStagesForStage(stage.StageId));
+            VerifyStage(stage, 5, "GenerateRecordsProgressContextTaskStage", operation.TaskType.TaskType);
+            VerifyDfsOutput(stage, typeof(TextRecordWriter<int>));
+            config.Validate();
+            builder.TaskBuilder.DeleteAssembly();
+        }
+
+        [Test]
         public void TestGenerateDelegateNoContext()
         {
             JobBuilder builder = new JobBuilder(_fileSystemClient, _jetClient);
@@ -698,6 +721,10 @@ namespace Tkl.Jumbo.Test.Jet
         }
 
         public static void GenerateRecords(RecordWriter<int> output, TaskContext context)
+        {
+        }
+
+        public static void GenerateRecordsProgressContext(RecordWriter<int> output, ProgressContext context)
         {
         }
 

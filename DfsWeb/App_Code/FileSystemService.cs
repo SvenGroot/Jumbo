@@ -14,7 +14,7 @@ using Tkl.Jumbo.Dfs.FileSystem;
 [WebService(Namespace = "http://www.tkl.iis.u-tokyo.ac.jp/schema/Jumbo/FileSystemService")]
 [WebServiceBinding(ConformsTo = WsiProfiles.BasicProfile1_1)]
 // To allow this Web Service to be called from script, using ASP.NET AJAX, uncomment the following line. 
-// [System.Web.Script.Services.ScriptService]
+[System.Web.Script.Services.ScriptService]
 public class FileSystemService : System.Web.Services.WebService
 {
 
@@ -26,7 +26,7 @@ public class FileSystemService : System.Web.Services.WebService
     }
 
     [WebMethod]
-    public FileSystemEntryInfo GetDirectoryContents(string path)
+    public FileSystemEntryInfo GetDirectoryListing(string path)
     {
         FileSystemClient client = FileSystemClient.Create();
         return new FileSystemEntryInfo(client.GetDirectoryInfo(path), true);

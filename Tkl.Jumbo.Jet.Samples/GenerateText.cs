@@ -7,6 +7,7 @@ using System.ComponentModel;
 using Tkl.Jumbo.IO;
 using Ookii.CommandLine;
 using System.IO;
+using Tkl.Jumbo.Jet.Tasks;
 
 namespace Tkl.Jumbo.Jet.Samples
 {
@@ -89,11 +90,11 @@ namespace Tkl.Jumbo.Jet.Samples
         /// </summary>
         /// <param name="output">The output.</param>
         /// <param name="context">The context.</param>
-        public static void Generate(RecordWriter<Utf8String> output, TaskContext context)
+        public static void Generate(RecordWriter<Utf8String> output, ProgressContext context)
         {
-            long sizePerTask = context.GetTypedSetting("GenerateText.SizePerTask", BinarySize.Zero).Value;
-            int wordsPerLine = context.GetTypedSetting("GenerateText.WordsPerLine", 10);
-            int wordsPerLineRandomization = context.GetTypedSetting("GenerateText.WordsPerLineRandomization", 5);
+            long sizePerTask = context.TaskContext.GetTypedSetting("GenerateText.SizePerTask", BinarySize.Zero).Value;
+            int wordsPerLine = context.TaskContext.GetTypedSetting("GenerateText.WordsPerLine", 10);
+            int wordsPerLineRandomization = context.TaskContext.GetTypedSetting("GenerateText.WordsPerLineRandomization", 5);
 
             Utf8String[] words = LoadWords();
 
@@ -103,6 +104,7 @@ namespace Tkl.Jumbo.Jet.Samples
             int lines = 0;
             while( output.OutputBytes + line.ByteLength + Environment.NewLine.Length < sizePerTask )
             {
+                context.Progress = (float)output.OutputBytes / (float)sizePerTask;
                 output.WriteRecord(line);
                 ++lines;
                 GenerateLine(rnd, line, words, wordsPerLine + rnd.Next(wordsPerLineRandomization));

@@ -119,10 +119,18 @@ ul#FileSystem img.directory
 {
     cursor: pointer;
 }
-ul#FileSystem img, ul#FileSystem span
+ul#FileSystem img
 {
     vertical-align: middle;
     margin-right: 0.5em;
+}
+ul#FileSystem .icons
+{
+    padding: 0 0.5em;
+}
+ul#FileSystem .icons img
+{
+    cursor: pointer;
 }
 ul.blockList
 {
@@ -131,4 +139,12 @@ ul.blockList
     padding: 0;
     font-family: Consolas, monospace;
     font-size: 100%;
+}
+.warning
+{
+    background-color: yellow;
+}
+.error
+{
+    background-color: orange;
 }

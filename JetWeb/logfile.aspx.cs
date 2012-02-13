@@ -11,6 +11,7 @@ using System.Net.Sockets;
 using System.Runtime.Serialization.Formatters.Binary;
 using System.IO;
 using Tkl.Jumbo;
+using System.Text;
 
 public partial class logfile : System.Web.UI.Page
 {
@@ -39,15 +40,14 @@ public partial class logfile : System.Web.UI.Page
             break;
         }
 
-
+        string log;
         if( taskServer == null )
         {
             JetClient client = new JetClient();
             JetMetrics metrics = client.JobServer.GetMetrics();
             Title = string.Format("Job server {0} log file - Jumbo Jet", metrics.JobServer);
             HeaderText.InnerText = string.Format("Job server {0} log file", metrics.JobServer);
-            string log = client.JobServer.GetLogFileContents(kind, maxSize);
-            LogFileContents.InnerText = log;
+            log = client.JobServer.GetLogFileContents(kind, maxSize);
         }
         else
         {
@@ -57,7 +57,7 @@ public partial class logfile : System.Web.UI.Page
             string taskId = Request.QueryString["task"];
             if( taskId == null )
             {
-                LogFileContents.InnerText = client.GetLogFileContents(kind, maxSize);
+                log = client.GetLogFileContents(kind, maxSize);
                 Title = string.Format("Task server {0} log file - Jumbo Jet", taskServer);
                 HeaderText.InnerText = string.Format("Task server {0} log file", taskServer);
             }
@@ -68,17 +68,39 @@ public partial class logfile : System.Web.UI.Page
 
                 if( Request.QueryString["profile"] == "true" )
                 {
-                    LogFileContents.InnerText = client.GetTaskProfileOutput(jobId, new TaskAttemptId(new TaskId(taskId), attempt));
+                    log = client.GetTaskProfileOutput(jobId, new TaskAttemptId(new TaskId(taskId), attempt));
                     Title = string.Format("Task {{{0}}}_{1}_{2} profile output (on {3}) - Jumbo Jet", jobId, taskId, attempt, taskServer);
                     HeaderText.InnerText = string.Format("Task {{{0}}}_{1}_{2} profile output (on {3})", jobId, taskId, attempt, taskServer);
                 }
                 else
                 {
-                    LogFileContents.InnerText = client.GetTaskLogFileContents(jobId, new TaskAttemptId(new TaskId(taskId), attempt), maxSize);
+                    log = client.GetTaskLogFileContents(jobId, new TaskAttemptId(new TaskId(taskId), attempt), maxSize);
                     Title = string.Format("Task {{{0}}}_{1}_{2} log file (on {3}) - Jumbo Jet", jobId, taskId, attempt, taskServer);
                     HeaderText.InnerText = string.Format("Task {{{0}}}_{1}_{2} log file (on {3})", jobId, taskId, attempt, taskServer);
                 }
             }
         }
+        LogFileContents.InnerHtml = FormatLogFile(log);
+    }
+
+    private string FormatLogFile(string log)
+    {
+        StringBuilder result = new StringBuilder(log.Length);
+        using( StringReader reader = new StringReader(log) )
+        {
+            string line;
+            while( (line = reader.ReadLine()) != null )
+            {
+                if( line.Contains(" WARN ") )
+                    result.AppendFormat("<span class=\"warning\">{0}</span>", Server.HtmlEncode(line));
+                else if( line.Contains(" ERROR ") )
+                    result.AppendFormat("<span class=\"error\">{0}</span>", Server.HtmlEncode(line));
+                else
+                    result.Append(Server.HtmlEncode(line));
+                result.AppendLine();
+            }
+        }
+
+        return result.ToString();
     }
 }

@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using Tkl.Jumbo.IO;
+using Tkl.Jumbo.Jet.Tasks;
 
 namespace Tkl.Jumbo.Jet.Jobs.Builder
 {
@@ -46,6 +47,36 @@ namespace Tkl.Jumbo.Jet.Jobs.Builder
         ///   on any external state.
         /// </note>
         /// <para>
+        ///   You can set the <see cref="ProgressContext.Progress"/> property to report progress of the generation process.
+        /// </para>
+        /// <para>
+        ///   If the target method is a <see langword="public" /> <see langword="static"/> method, it will be called directly by the generated task class. Otherwise, the supplied
+        ///   delegate will be serialized to the task settings and used to call the method. If the target method is an instance method, the instance it belongs to will be
+        ///   serialized as well (this class must have the <see cref="SerializableAttribute"/> attribute).
+        /// </para>
+        /// </remarks>
+        public StageOperation Generate<T>(int taskCount, Action<RecordWriter<T>, ProgressContext> generator)
+        {
+            return GenerateCore<T>(taskCount, generator, true);
+        }
+
+        /// <summary>
+        /// Generates records using a task that takes no input.
+        /// </summary>
+        /// <typeparam name="T">The type of the records.</typeparam>
+        /// <param name="taskCount">The task count.</param>
+        /// <param name="generator">The generator function.</param>
+        /// <returns>A <see cref="StageOperation"/> instance that can be used to further customize the operation.</returns>
+        /// <remarks>
+        /// <para>
+        ///   This method generates a class implementing <see cref="ITask{TInput, TOutput}"/> which calls the target method of the <paramref name="generator"/> delegate
+        ///   from the <see cref="ITask{TInput, TOutput}.Run"/> method.
+        /// </para>
+        /// <note>
+        ///   The task method will be called from a completely different process than the one that is using <see cref="JobBuilder"/>, so it should not really
+        ///   on any external state.
+        /// </note>
+        /// <para>
         ///   If the target method is a <see langword="public" /> <see langword="static"/> method, it will be called directly by the generated task class. Otherwise, the supplied
         ///   delegate will be serialized to the task settings and used to call the method. If the target method is an instance method, the instance it belongs to will be
         ///   serialized as well (this class must have the <see cref="SerializableAttribute"/> attribute).
@@ -53,7 +84,7 @@ namespace Tkl.Jumbo.Jet.Jobs.Builder
         /// </remarks>
         public StageOperation Generate<T>(int taskCount, Action<RecordWriter<T>, TaskContext> generator)
         {
-            return GenerateCore<T>(taskCount, generator);
+            return GenerateCore<T>(taskCount, generator, false);
         }
 
         /// <summary>
@@ -80,16 +111,18 @@ namespace Tkl.Jumbo.Jet.Jobs.Builder
         /// </remarks>
         public StageOperation Generate<T>(int taskCount, Action<RecordWriter<T>> generator)
         {
-            return GenerateCore<T>(taskCount, generator);
+            return GenerateCore<T>(taskCount, generator, false);
         }
         
-        private StageOperation GenerateCore<T>(int taskCount, Delegate generator)
+        private StageOperation GenerateCore<T>(int taskCount, Delegate generator, bool useProgressContext)
         {
             if( generator == null )
                 throw new ArgumentNullException("generator");
 
             // Record reuse is irrelevant for a task with no input.
-            Type taskType = _taskBuilder.CreateDynamicTask(typeof(ITask<int, T>).GetMethod("Run"), generator, 1, RecordReuseMode.Default);
+            Type taskType = useProgressContext 
+                                ? _taskBuilder.CreateDynamicTask(typeof(GeneratorTask<T>).GetMethod("Generate", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance), generator, 0, RecordReuseMode.Default)
+                                : _taskBuilder.CreateDynamicTask(typeof(ITask<int, T>).GetMethod("Run"), generator, 1, RecordReuseMode.Default);
 
             StageOperation result = new StageOperation(this, taskCount, taskType);
             AddAssemblyAndSerializeDelegateIfNeeded(generator, result);

@@ -168,3 +168,11 @@ ul#FileSystem img, ul#FileSystem span
 {
     background-color: #A3FFAA;
 }
+.warning
+{
+    background-color: yellow;
+}
+.error
+{
+    background-color: orange;
+}
