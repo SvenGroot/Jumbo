@@ -20,6 +20,8 @@ namespace Tkl.Jumbo.Jet.Jobs.Builder
         /// <returns>A <see cref="TwoStepOperation"/> instance that can be used to further customize the operation.</returns>
         public TwoStepOperation GroupAggregate(IOperationInput input, Type accumulatorTaskType)
         {
+            if( input == null )
+                throw new ArgumentNullException("input");
             if( accumulatorTaskType == null )
                 throw new ArgumentNullException("accumulatorTaskType");
 

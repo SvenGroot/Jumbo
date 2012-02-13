@@ -85,6 +85,16 @@ namespace Tkl.Jumbo.Jet
 
             public int Compare(MergeInput x, MergeInput y)
             {
+                if( x == null )
+                {
+                    if( y == null )
+                        return 0;
+                    else
+                        return -1;
+                }
+                else if( y == null )
+                    return 1;
+
                 if( _rawComparer == null )
                     return _comparer.Compare(x.RecordReader.CurrentRecord, y.RecordReader.CurrentRecord);
                 else
@@ -261,10 +271,11 @@ namespace Tkl.Jumbo.Jet
             IEnumerable<MergeResultRecord<T>> mergeResult = Merge(diskInputs, memoryInputs, maxDiskInputsPerPass, comparer, allowRecordReuse, false, intermediateOutputPath, passFilePrefix, compressionType, bufferSize, enableChecksum);
             return WriteMergePass(mergeResult, fileName, bufferSize, compressionType, enableChecksum, IsUsingRawRecords);
         }
-        
+
         private long WriteMergePass(IEnumerable<MergeResultRecord<T>> pass, string outputFileName, int bufferSize, CompressionType compressionType, bool enableChecksum, bool rawReaderSupported)
         {
-            using( Stream outputStream = new ChecksumOutputStream(File.Create(outputFileName, bufferSize), true, enableChecksum).CreateCompressor(compressionType) )
+            using( Stream fileStream = File.Create(outputFileName, bufferSize) )
+            using( Stream outputStream = new ChecksumOutputStream(fileStream, true, enableChecksum).CreateCompressor(compressionType) )
             {
                 return WriteMergePass(pass, outputStream, rawReaderSupported);
             }

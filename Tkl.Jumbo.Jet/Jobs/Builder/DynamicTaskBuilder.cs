@@ -244,7 +244,7 @@ namespace Tkl.Jumbo.Jet.Jobs.Builder
 
         private static void SetTaskAttributes(MethodInfo taskMethod, RecordReuseMode mode, TypeBuilder taskTypeBuilder)
         {
-            if( mode != RecordReuseMode.DontAllow )
+            if( mode != RecordReuseMode.DoNotAllow )
             {
                 Type allowRecordReuseAttributeType = typeof(AllowRecordReuseAttribute);
                 AllowRecordReuseAttribute allowRecordReuse = (AllowRecordReuseAttribute)Attribute.GetCustomAttribute(taskMethod, allowRecordReuseAttributeType);
@@ -308,7 +308,7 @@ namespace Tkl.Jumbo.Jet.Jobs.Builder
             return delegateField;
         }
 
-        private MethodBuilder OverrideMethod(TypeBuilder taskTypeBuilder, MethodInfo interfaceMethod)
+        private static MethodBuilder OverrideMethod(TypeBuilder taskTypeBuilder, MethodInfo interfaceMethod)
         {
             ParameterInfo[] parameters = interfaceMethod.GetParameters();
             MethodBuilder method = taskTypeBuilder.DefineMethod(interfaceMethod.Name, MethodAttributes.Public | MethodAttributes.Virtual, interfaceMethod.ReturnType, parameters.Select(p => p.ParameterType).ToArray());

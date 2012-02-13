@@ -9,7 +9,7 @@ namespace Tkl.Jumbo.Jet.Channels
     /// Flags controlling the behavior of the <see cref="SpillRecordWriter{T}"/>.
     /// </summary>
     [Flags]
-    public enum SpillRecordWriterFlags
+    public enum SpillRecordWriterOptions
     {
         /// <summary>
         /// Default behavior is used. Records will never wrap around the end of the buffer, and index entries always describe only one record.

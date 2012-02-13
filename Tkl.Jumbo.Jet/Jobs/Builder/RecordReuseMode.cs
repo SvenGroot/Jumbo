@@ -24,7 +24,7 @@ namespace Tkl.Jumbo.Jet.Jobs.Builder
         /// <summary>
         /// The record reuse attribute is never applied.
         /// </summary>
-        DontAllow,
+        DoNotAllow,
         /// <summary>
         /// The record reuse attribute is always applied, with <see cref="AllowRecordReuseAttribute.PassThrough"/> set to <see langword="false"/>.
         /// </summary>

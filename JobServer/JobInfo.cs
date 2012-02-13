@@ -70,7 +70,7 @@ namespace JobServerApplication
                 // Don't do the work trying to find the input stages if the stage has dfs inputs.
                 StageConfiguration[] inputStages = nonInputStage ? config.GetInputStagesForStage(stage.StageId).ToArray() : null;
                 StageInfo stageInfo = new StageInfo(this, stage);
-                List<string[]> inputLocations = nonInputStage ? null : TaskInputUtility.ReadTaskInputLocations(fileSystem, job.Path, stage.StageId);
+                IList<string[]> inputLocations = nonInputStage ? null : TaskInputUtility.ReadTaskInputLocations(fileSystem, job.Path, stage.StageId);
                 if( inputLocations != null && inputLocations.Count != stage.TaskCount )
                     throw new ArgumentException(string.Format(CultureInfo.InvariantCulture, "The number of input splits for stage {0} doesn't match the stage's task count.", stage.StageId));
                 for( int x = 1; x <= stage.TaskCount; ++x )

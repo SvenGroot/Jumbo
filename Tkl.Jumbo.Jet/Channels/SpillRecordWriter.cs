@@ -220,7 +220,7 @@ namespace Tkl.Jumbo.Jet.Channels
         private readonly CircularBufferStream _buffer;
         private readonly BinaryWriter _bufferWriter;
         private readonly List<RecordIndexEntry>[] _indices;
-        private readonly SpillRecordWriterFlags _flags;
+        private readonly SpillRecordWriterOptions _flags;
         private int _lastPartition = -1;
         private int _bufferRemaining;
         private int _lastRecordEnd;
@@ -248,8 +248,8 @@ namespace Tkl.Jumbo.Jet.Channels
         /// <param name="partitioner">The partitioner for the records.</param>
         /// <param name="bufferSize">The size of the in-memory buffer.</param>
         /// <param name="limit">The amount of data in the buffer when a spill is triggered.</param>
-        /// <param name="flags">A combination of <see cref="SpillRecordWriterFlags"/> values.</param>
-        protected SpillRecordWriter(IPartitioner<T> partitioner, int bufferSize, int limit, SpillRecordWriterFlags flags)
+        /// <param name="options">A combination of <see cref="SpillRecordWriterOptions"/> values.</param>
+        protected SpillRecordWriter(IPartitioner<T> partitioner, int bufferSize, int limit, SpillRecordWriterOptions options)
         {
             if( partitioner == null )
                 throw new ArgumentNullException("partitioner");
@@ -263,7 +263,7 @@ namespace Tkl.Jumbo.Jet.Channels
             _indices = new List<RecordIndexEntry>[partitioner.Partitions];
             _bufferRemaining = limit;
             _spillIndices = new RecordIndexEntry[partitioner.Partitions][];
-            _flags = flags;
+            _flags = options;
             //_debugWriter = new StreamWriter(outputPath + ".debug.txt");
         }
 
@@ -334,6 +334,7 @@ namespace Tkl.Jumbo.Jet.Channels
         ///   Use this if you want to to custom writing of the partitions.
         /// </para>
         /// </remarks>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1819:PropertiesShouldNotReturnArrays")]
         protected byte[] SpillBuffer
         {
             get
@@ -406,7 +407,7 @@ namespace Tkl.Jumbo.Jet.Channels
             int recordLength;
             if( recordEnd >= recordStart )
                 recordLength = recordEnd - recordStart;
-            else if( _flags.HasFlag(SpillRecordWriterFlags.AllowRecordWrapping) )
+            else if( _flags.HasFlag(SpillRecordWriterOptions.AllowRecordWrapping) )
                 recordLength = (_buffer.Size - recordStart) + recordEnd;
             else
             {
@@ -419,7 +420,7 @@ namespace Tkl.Jumbo.Jet.Channels
             int partition = _partitioner.GetPartition(record);
 
             List<RecordIndexEntry> index = _indices[partition];
-            if( _flags.HasFlag(SpillRecordWriterFlags.AllowMultiRecordIndexEntries) && partition == _lastPartition )
+            if( _flags.HasFlag(SpillRecordWriterOptions.AllowMultiRecordIndexEntries) && partition == _lastPartition )
             {
                 // If the new record was the same partition as the last record, we just update that one.
                 int lastEntry = index.Count - 1;
@@ -498,6 +499,8 @@ namespace Tkl.Jumbo.Jet.Channels
         /// <param name="outputStream">The output stream to write the partition to.</param>
         protected void WritePartition(int partition, Stream outputStream)
         {
+            if( outputStream == null )
+                throw new ArgumentNullException("outputStream");
             RecordIndexEntry[] index = _spillIndices[partition];
             if( index != null )
             {
@@ -523,6 +526,8 @@ namespace Tkl.Jumbo.Jet.Channels
         /// <param name="output">The raw record writer to write the partition to.</param>
         protected void WritePartition(int partition, RecordWriter<RawRecord> output)
         {
+            if( output == null )
+                throw new ArgumentNullException("output");
             if( _record == null )
                 _record = new RawRecord();
 
@@ -619,6 +624,7 @@ namespace Tkl.Jumbo.Jet.Channels
             _spillInProgress = true;
         }
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1031:DoNotCatchGeneralExceptionTypes")]
         private void SpillThread()
         {
             try

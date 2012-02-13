@@ -11,7 +11,7 @@ namespace Tkl.Jumbo.Jet
     /// <summary>
     /// The identifier of a task attempt.
     /// </summary>
-    [Serializable]
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1036:OverrideMethodsOnComparableTypes"), Serializable]
     public sealed class TaskAttemptId : IEquatable<TaskAttemptId>, IComparable<TaskAttemptId>, IComparable
     {
         private readonly TaskId _taskId;
@@ -147,5 +147,32 @@ namespace Tkl.Jumbo.Jet
                 throw new ArgumentException("obj is not a TaskAttemptId.", "obj");
             return CompareTo(other);
         }
+
+        /// <summary>
+        /// Determines whether two specified instances have the same value.
+        /// </summary>
+        /// <param name="left">The first instance to compare, or <see langword="null"/>.</param>
+        /// <param name="right">The second instance to compare, or <see langword="null"/>.</param>
+        /// <returns>
+        /// <see langword="true"/> if the value of <paramref name="left"/> is the same as the value of <paramref name="right"/>; otherwise, <see langword="false"/>. 
+        /// </returns>
+        public static bool operator ==(TaskAttemptId left, TaskAttemptId right)
+        {
+            return EqualityComparer<TaskAttemptId>.Default.Equals(left, right);
+        }
+
+        /// <summary>
+        /// Determines whether two specified instances have different values.
+        /// </summary>
+        /// <param name="left">The first instance to compare, or <see langword="null"/>.</param>
+        /// <param name="right">The second instance to compare, or <see langword="null"/>.</param>
+        /// <returns>
+        /// <see langword="true"/> if the value of <paramref name="left"/> is different from the value of <paramref name="right"/>; otherwise, <see langword="false"/>. 
+        /// </returns>
+        public static bool operator !=(TaskAttemptId left, TaskAttemptId right)
+        {
+            return !EqualityComparer<TaskAttemptId>.Default.Equals(left, right);
+        }
+    
     }
 }

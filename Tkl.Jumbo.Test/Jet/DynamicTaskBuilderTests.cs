@@ -179,7 +179,7 @@ namespace Tkl.Jumbo.Test.Jet
             VerifyRecordReuse(type, true, true);
             // Not allowed despite attribute
             target = new DynamicTaskBuilder();
-            type = target.CreateDynamicTask(runMethod, (Action<RecordReader<int>, RecordWriter<int>>)TaskMethodAllowRecordReuse, 0, RecordReuseMode.DontAllow);
+            type = target.CreateDynamicTask(runMethod, (Action<RecordReader<int>, RecordWriter<int>>)TaskMethodAllowRecordReuse, 0, RecordReuseMode.DoNotAllow);
             VerifyRecordReuse(type, false);
             // No attribute
             target = new DynamicTaskBuilder();

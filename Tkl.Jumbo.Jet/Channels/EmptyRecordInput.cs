@@ -55,6 +55,7 @@ namespace Tkl.Jumbo.Jet.Channels
             return reader;
         }
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Reliability", "CA2000:Dispose objects before losing scope", Justification = "Setting SourceName cannot throw.")]
         protected override RecordReader<RawRecord> CreateRawReader()
         {
             return new EmptyRecordReader<RawRecord>() { SourceName = _sourceName };

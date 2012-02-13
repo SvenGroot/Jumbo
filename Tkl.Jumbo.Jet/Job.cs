@@ -58,6 +58,8 @@ namespace Tkl.Jumbo.Jet
         /// </summary>
         public string GetJobConfigurationFilePath(FileSystemClient client)
         {
+            if( client == null )
+                throw new ArgumentNullException("client");
             return client.Path.Combine(Path, JobConfigFileName);
         }
 

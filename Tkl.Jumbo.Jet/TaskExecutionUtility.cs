@@ -15,12 +15,14 @@ using Tkl.Jumbo.IO;
 using Tkl.Jumbo.Jet.Channels;
 using Tkl.Jumbo.Jet.IO;
 using Tkl.Jumbo.Jet.Jobs;
+using System.Globalization;
 
 namespace Tkl.Jumbo.Jet
 {
     /// <summary>
     /// Encapsulates all the data and functionality needed to run a task and its pipelined tasks.
     /// </summary>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Maintainability", "CA1506:AvoidExcessiveClassCoupling")]
     public abstract class TaskExecutionUtility : IDisposable
     {
         #region Nested types
@@ -316,6 +318,7 @@ namespace Tkl.Jumbo.Jet
         ///   This method should only be invoked by the TaskHost, and by the TaskServer when using AppDomain mode.
         /// </para>
         /// </remarks>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Reliability", "CA2001:AvoidCallingProblematicMethods", MessageId = "System.Reflection.Assembly.LoadFrom"), System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1031:DoNotCatchGeneralExceptionTypes")]
         public static void RunTask(Guid jobId, string jobDirectory, string dfsJobDirectory, TaskAttemptId taskAttemptId)
         {
             AssemblyResolver.Register();
@@ -327,8 +330,8 @@ namespace Tkl.Jumbo.Jet
                 string logFile = Path.Combine(jobDirectory, taskAttemptId.ToString() + ".log");
                 ConfigureLog(logFile);
 
-                _log.InfoFormat("Running task; job ID = \"{0}\", job directory = \"{1}\", task attempt ID = \"{2}\", DFS job directory = \"{3}\"", jobId, jobDirectory, taskAttemptId, dfsJobDirectory);
-                _log.DebugFormat("Command line: {0}", Environment.CommandLine);
+                _log.InfoFormat(CultureInfo.InvariantCulture, "Running task; job ID = \"{0}\", job directory = \"{1}\", task attempt ID = \"{2}\", DFS job directory = \"{3}\"", jobId, jobDirectory, taskAttemptId, dfsJobDirectory);
+                _log.DebugFormat(CultureInfo.InvariantCulture, "Command line: {0}", Environment.CommandLine);
                 _log.LogEnvironmentInformation();
 
                 _log.Info("Loading configuration.");
@@ -383,9 +386,9 @@ namespace Tkl.Jumbo.Jet
                     {
                     }
                 }
-                _log.InfoFormat("Task host finished execution of task, execution time: {0}s", sw.Elapsed.TotalSeconds);
+                _log.InfoFormat(CultureInfo.InvariantCulture, "Task host finished execution of task, execution time: {0}s", sw.Elapsed.TotalSeconds);
                 processorStatus.Refresh();
-                _log.InfoFormat("Processor usage during this task (system-wide, not process specific):");
+                _log.Info("Processor usage during this task (system-wide, not process specific):");
                 _log.Info(processorStatus.Total);
             }
         }
@@ -791,6 +794,7 @@ namespace Tkl.Jumbo.Jet
             sources.Add(progressObj);
         }
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Reliability", "CA2000:Dispose objects before losing scope")]
         private List<IInputChannel> CreateInputChannels(IEnumerable<StageConfiguration> inputStages)
         {
             List<IInputChannel> result = null;

@@ -77,6 +77,8 @@ namespace Tkl.Jumbo.Jet.IO
         /// <param name="writer">The <see cref="BinaryWriter"/> to serialize the object to.</param>
         public void Write(BinaryWriter writer)
         {
+            if( writer == null )
+                throw new ArgumentNullException("writer");
             // Don't serialize _locations
             writer.Write(Path);
             writer.Write(Offset);
@@ -89,6 +91,8 @@ namespace Tkl.Jumbo.Jet.IO
         /// <param name="reader">The <see cref="BinaryReader"/> to deserialize the object from.</param>
         public void Read(BinaryReader reader)
         {
+            if( reader == null )
+                throw new ArgumentNullException("reader");
             Path = reader.ReadString();
             Offset = reader.ReadInt64();
             Size = reader.ReadInt64();

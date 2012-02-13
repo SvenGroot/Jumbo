@@ -118,6 +118,8 @@ namespace Tkl.Jumbo.Jet.Jobs.Builder
         /// </returns>
         protected override StageConfiguration CreateConfiguration(JobBuilderCompiler compiler)
         {
+            if( compiler == null )
+                throw new ArgumentNullException("compiler");
             if( _useSpillSort )
             {
                 if( InputChannel.ChannelType == null )

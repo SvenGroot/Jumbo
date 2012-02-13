@@ -79,6 +79,7 @@ namespace Tkl.Jumbo.Jet.Channels
             }
         }
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Reliability", "CA2000:Dispose objects before losing scope")]
         private Stream CreateStream()
         {
             Stream stream;

@@ -18,7 +18,7 @@ namespace Tkl.Jumbo.Jet.Channels
     /// <summary>
     /// Represents the reading end of a file channel.
     /// </summary>
-    [AdditionalProgressCounter("Shuffle")]
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Maintainability", "CA1506:AvoidExcessiveClassCoupling"), AdditionalProgressCounter("Shuffle")]
     public class FileInputChannel : InputChannel, IDisposable, IHasAdditionalProgress, IHasMetrics
     {
         #region Nested types
@@ -751,14 +751,14 @@ namespace Tkl.Jumbo.Jet.Channels
             catch( SocketException ex )
             {
                 // TODO: If this happens too often, we need to recover somehow.
-                _log.Error(string.Format("Error contacting server {0}:{1}.", server.TaskServer.HostName, port), ex);
+                _log.Error(string.Format(CultureInfo.InvariantCulture, "Error contacting server {0}:{1}.", server.TaskServer.HostName, port), ex);
                 return null;
             }
             catch( IOException ex )
             {
                 if( ex.InnerException is SocketException )
                 {
-                    _log.Error(string.Format("Error contacting server {0}:{1}.", server.TaskServer.HostName, port), ex);
+                    _log.Error(string.Format(CultureInfo.InvariantCulture, "Error contacting server {0}:{1}.", server.TaskServer.HostName, port), ex);
                     return null;
                 }
                 else

@@ -9,6 +9,7 @@ using System.Runtime.Serialization.Formatters.Binary;
 using System.Threading;
 using Tkl.Jumbo.IO;
 using Tkl.Jumbo.Jet.Jobs;
+using System.Globalization;
 
 namespace Tkl.Jumbo.Jet.Channels
 {
@@ -118,6 +119,7 @@ namespace Tkl.Jumbo.Jet.Channels
             }
 
 
+            [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1031:DoNotCatchGeneralExceptionTypes")]
             private void TrySendError(Exception ex)
             {
                 try
@@ -177,6 +179,8 @@ namespace Tkl.Jumbo.Jet.Channels
         public TcpInputChannel(TaskExecutionUtility taskExecution, StageConfiguration inputStage)
             : base(taskExecution, inputStage)
         {
+            if( inputStage == null )
+                throw new ArgumentNullException("inputStage");
             _inputReaderType = typeof(TcpChannelRecordReader<>).MakeGenericType(InputRecordType);
             _inputReaders = new ITcpChannelRecordReader[inputStage.Root.TaskCount][];
         }
@@ -251,6 +255,7 @@ namespace Tkl.Jumbo.Jet.Channels
             throw new NotSupportedException();
         }
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Reliability", "CA2000:Dispose objects before losing scope"), System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1031:DoNotCatchGeneralExceptionTypes")]
         private void BeginAcceptCallback(IAsyncResult ar)
         {
             TcpListener listener = (TcpListener)ar.AsyncState;
@@ -306,7 +311,7 @@ namespace Tkl.Jumbo.Jet.Channels
                     int partitionSize;
                     handler.ReadPartitionHeader(out partition, out partitionSize);
                     if( partition != ActivePartitions[x] )
-                        throw new ChannelException(string.Format("Received partition {0}, excepted {1}.", partition, ActivePartitions[x]));
+                        throw new ChannelException(string.Format(CultureInfo.InvariantCulture, "Received partition {0}, excepted {1}.", partition, ActivePartitions[x]));
                     reader.AddSegment(partitionSize, segmentNumber, handler.Stream);
                     if( finalSegment )
                         reader.CompleteAdding();

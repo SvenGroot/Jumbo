@@ -31,6 +31,7 @@ namespace Tkl.Jumbo.Jet.Tasks
     ///   only if <typeparamref name="TKey"/> is a value type or implements <see cref="ICloneable"/>.
     /// </para>
     /// </remarks>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1005:AvoidExcessiveParametersOnGenericTypes")]
     public abstract class ReduceTask<TKey, TValue, TOutput> : Configurable, ITask<Pair<TKey, TValue>, TOutput>
         where TKey : IComparable<TKey>
     {
@@ -40,7 +41,7 @@ namespace Tkl.Jumbo.Jet.Tasks
         /// <summary>
         /// Initializes a new instance of the <see cref="ReduceTask&lt;TKey, TValue, TOutput&gt;"/> class.
         /// </summary>
-        public ReduceTask()
+        protected ReduceTask()
         {
             if( Attribute.IsDefined(GetType(), typeof(AllowRecordReuseAttribute)) )
             {
@@ -55,7 +56,7 @@ namespace Tkl.Jumbo.Jet.Tasks
         /// <param name="output">A <see cref="RecordWriter{T}"/> to which the task's output should be written.</param>
         public void Run(RecordReader<Pair<TKey, TValue>> input, RecordWriter<TOutput> output)
         {
-            if( input.ReadRecord() )
+            if( input != null && input.ReadRecord() )
             {
                 do
                 {

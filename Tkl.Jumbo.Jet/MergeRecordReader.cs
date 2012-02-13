@@ -148,6 +148,8 @@ namespace Tkl.Jumbo.Jet
         /// </remarks>
         public override void AddInput(IList<RecordInput> partitions)
         {
+            if( partitions == null )
+                throw new ArgumentNullException("partitions");
             CheckDisposed();
             base.AddInput(partitions);
 
@@ -321,7 +323,7 @@ namespace Tkl.Jumbo.Jet
             }
 
             if( _cancelEvent.WaitOne(0) )
-                _log.InfoFormat("Background merger was cancelled.");
+                _log.Info("Background merger was cancelled.");
             else
             {
                 if( _purgeMemoryBeforeFinalPass )

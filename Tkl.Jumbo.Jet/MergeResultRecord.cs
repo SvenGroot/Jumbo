@@ -13,6 +13,7 @@ namespace Tkl.Jumbo.Jet
     /// Represents an output record of a merge operation.
     /// </summary>
     /// <typeparam name="T">The type of the record.</typeparam>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1001:TypesThatOwnDisposableFieldsShouldBeDisposable", Justification = "Memory resources only, no good place to dispose it.")]
     public sealed class MergeResultRecord<T>
     {
         private T _record;
@@ -35,6 +36,7 @@ namespace Tkl.Jumbo.Jet
         ///   If the record was stored in raw form, it is deserialized first.
         /// </para>
         /// </remarks>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1024:UsePropertiesWhereAppropriate", Justification = "Non-trivial code with destructive side-effects.")]
         public T GetValue()
         {
             if( _rawRecord != null )
@@ -62,7 +64,7 @@ namespace Tkl.Jumbo.Jet
         /// Writes the raw record to the specified writer.
         /// </summary>
         /// <param name="writer">The writer.</param>
-        public void WriteRawRecord(BinaryRecordWriter<RawRecord> writer)
+        public void WriteRawRecord(RecordWriter<RawRecord> writer)
         {
             if( writer == null )
                 throw new ArgumentNullException("writer");

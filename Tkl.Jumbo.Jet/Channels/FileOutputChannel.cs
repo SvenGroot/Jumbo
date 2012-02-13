@@ -7,6 +7,7 @@ using System.Text;
 using System.IO;
 using Tkl.Jumbo.IO;
 using System.Configuration;
+using System.Globalization;
 
 namespace Tkl.Jumbo.Jet.Channels
 {
@@ -25,6 +26,7 @@ namespace Tkl.Jumbo.Jet.Channels
         /// The key to use in the job or stage settings to override the default output type specified in <see cref="FileChannelConfigurationElement.OutputType"/>.
         /// Stage settings take precedence over job settings. The setting should have type <see cref="FileChannelOutputType"/>.
         /// </summary>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Naming", "CA1702:CompoundWordsShouldBeCasedCorrectly", MessageId = "TypeSetting")]
         public const string OutputTypeSettingKey = "FileOutputChannel.OutputType";
         /// <summary>
         /// The key to use in the job or stage settings to override the default spill buffer size specified in <see cref="FileChannelConfigurationElement.SpillBufferSize"/>.
@@ -40,6 +42,7 @@ namespace Tkl.Jumbo.Jet.Channels
         /// The key to use in the stage settings to specify the type of a combiner to use when the output type is <see cref="FileChannelOutputType.SortSpill"/>. It's ignored
         /// for other output types. The setting should be an assembly-qualified type name of a type implementing <see cref="ITask{TInput,TOutput}"/>.
         /// </summary>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Naming", "CA1702:CompoundWordsShouldBeCasedCorrectly", MessageId = "TypeSetting")]
         public const string SpillSortCombinerTypeSettingKey = "FileOutputChannel.SpillSortCombiner";
         /// <summary>
         /// The key to use in the job or stage settings to override the minimum number of spills needed for the combiner to be run during the merge specified in 
@@ -200,6 +203,7 @@ namespace Tkl.Jumbo.Jet.Channels
             }
         }
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Reliability", "CA2000:Dispose objects before losing scope")]
         private RecordWriter<T> CreateMultiFileRecordWriter<T>(BinarySize writeBufferSize)
         {
             if( _fileNames.Count == 1 )
@@ -221,6 +225,7 @@ namespace Tkl.Jumbo.Jet.Channels
             }
         }
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Reliability", "CA2000:Dispose objects before losing scope")]
         private RecordWriter<T> CreateSpillRecordWriter<T>(BinarySize writeBufferSize)
         {
             // We're using single file output
@@ -233,7 +238,7 @@ namespace Tkl.Jumbo.Jet.Channels
                 throw new ConfigurationErrorsException("Invalid output buffer limit: " + outputBufferLimit);
             int outputBufferLimitSize = (int)(outputBufferLimit * outputBufferSize.Value);
 
-            _log.DebugFormat("Creating {3} output writer with buffer: {0}; limit: {1}; write buffer: {2}.", outputBufferSize.Value, outputBufferLimitSize, writeBufferSize.Value, _outputType);
+            _log.DebugFormat(CultureInfo.InvariantCulture, "Creating {3} output writer with buffer: {0}; limit: {1}; write buffer: {2}.", outputBufferSize.Value, outputBufferLimitSize, writeBufferSize.Value, _outputType);
 
             IPartitioner<T> partitioner = CreatePartitioner<T>();
             partitioner.Partitions = OutputPartitionIds.Count;

@@ -6,6 +6,7 @@ using System.Runtime.Serialization.Formatters.Binary;
 using System.Threading;
 using Tkl.Jumbo.IO;
 using Tkl.Jumbo.Jet.Jobs;
+using System.Globalization;
 
 namespace Tkl.Jumbo.Jet.Channels
 {
@@ -45,7 +46,7 @@ namespace Tkl.Jumbo.Jet.Channels
         private long _headerBytesWritten;
 
         public TcpChannelRecordWriter(TaskExecutionUtility taskExecution, bool reuseConnections, IPartitioner<T> partitioner, int bufferSize, int limit)
-            : base(partitioner, bufferSize, limit, SpillRecordWriterFlags.AllowRecordWrapping | SpillRecordWriterFlags.AllowMultiRecordIndexEntries)
+            : base(partitioner, bufferSize, limit, SpillRecordWriterOptions.AllowRecordWrapping | SpillRecordWriterOptions.AllowMultiRecordIndexEntries)
         {
             StageConfiguration outputStage = taskExecution.Context.JobConfiguration.GetStage(taskExecution.Context.StageConfiguration.OutputChannel.OutputStage);
             _outputIds = new TaskId[outputStage.TaskCount]; // We need this to be task based, not partition based.
@@ -103,11 +104,11 @@ namespace Tkl.Jumbo.Jet.Channels
 
             for( int taskIndex = 0; taskIndex < _outputIds.Length; ++taskIndex )
             {
-                SendSegmentToTask(finalSpill, sendData, taskIndex);
+                SendSegmentToTask(sendData, taskIndex);
             }
         }
 
-        private void SendSegmentToTask(bool finalSpill, bool sendData, int taskIndex)
+        private void SendSegmentToTask(bool sendData, int taskIndex)
         {
             bool disposeStream = false;
             WriteBufferedStream stream = _taskConnections[taskIndex].ClientStream;
@@ -178,12 +179,12 @@ namespace Tkl.Jumbo.Jet.Channels
         {
             int result = stream.ReadByte();
             if( result == - 1 )
-                throw new ChannelException(string.Format("Task {0} did not send a status result.", _outputIds[taskIndex]));
+                throw new ChannelException(string.Format(CultureInfo.InvariantCulture, "Task {0} did not send a status result.", _outputIds[taskIndex]));
             else if( result == 0 )
             {
                 BinaryFormatter formatter = new BinaryFormatter();
                 Exception ex = (Exception)formatter.Deserialize(stream);
-                throw new ChannelException(string.Format("Task {0} encountered an exception reading channel data.", _outputIds[taskIndex]), ex);
+                throw new ChannelException(string.Format(CultureInfo.InvariantCulture, "Task {0} encountered an exception reading channel data.", _outputIds[taskIndex]), ex);
             }
         }
 
@@ -195,6 +196,7 @@ namespace Tkl.Jumbo.Jet.Channels
             _header[index + 3] = (byte)((value >> 24) & 0xFF);
         }
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Reliability", "CA2000:Dispose objects before losing scope")]
         private TcpClient ConnectToTask(int taskIndex)
         {
             if( _taskConnections[taskIndex].HostName == null )

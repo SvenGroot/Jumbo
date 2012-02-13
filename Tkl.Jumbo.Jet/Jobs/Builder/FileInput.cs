@@ -72,6 +72,8 @@ namespace Tkl.Jumbo.Jet.Jobs.Builder
         /// <returns></returns>
         public IO.IDataInput CreateStageInput(FileSystemClient fileSystem)
         {
+            if( fileSystem == null )
+                throw new ArgumentNullException("fileSystem");
             return FileDataInput.Create(RecordReaderType, fileSystem, fileSystem.GetFileSystemEntryInfo(Path));
         }
     }

@@ -158,7 +158,7 @@ namespace Tkl.Jumbo.Jet.Channels
         /// <param name="combiner">The combiner to use during spills. May be <see langword="null"/>.</param>
         /// <param name="minSpillsForCombineDuringMerge">The minimum number of spills needed for the combiner to rerun during merge. If this value is 0, the combiner will never be run during the merge. Ignored when <paramref name="combiner"/> is <see langword="null"/>.</param>
         public SortSpillRecordWriter(string outputPath, IPartitioner<T> partitioner, int bufferSize, int limit, int writeBufferSize, bool enableChecksum, int maxDiskInputsPerMergePass, ITask<T, T> combiner = null, int minSpillsForCombineDuringMerge = 0)
-            : base(partitioner, bufferSize, limit, SpillRecordWriterFlags.None)
+            : base(partitioner, bufferSize, limit, SpillRecordWriterOptions.None)
         {
             if( outputPath == null )
                 throw new ArgumentNullException("outputPath");
@@ -166,6 +166,8 @@ namespace Tkl.Jumbo.Jet.Channels
                 throw new ArgumentOutOfRangeException("writeBufferSize");
             if( minSpillsForCombineDuringMerge < 0 )
                 throw new ArgumentOutOfRangeException("minSpillsForCombineDuringMerge");
+            if( partitioner == null )
+                throw new ArgumentNullException("partitioner");
             _outputPath = outputPath;
             _partitions = partitioner.Partitions;
             _outputPathBase = Path.Combine(Path.GetDirectoryName(_outputPath), Path.GetFileNameWithoutExtension(_outputPath));
@@ -178,7 +180,7 @@ namespace Tkl.Jumbo.Jet.Channels
             for( int x = 0; x < _spillPartitionIndices.Length; ++x )
                 _spillPartitionIndices[x] = new List<PartitionFileIndexEntry>();
 
-            if( _combiner != null )
+            if( combiner != null )
             {
                 AllowRecordReuseAttribute attribute = (AllowRecordReuseAttribute)Attribute.GetCustomAttribute(combiner.GetType(), typeof(AllowRecordReuseAttribute));
                 _combinerAllowsRecordReuse = (attribute != null); // PassThrough doesn't matter, since the combiner's output always allows record reuse.

@@ -9,6 +9,7 @@ namespace Tkl.Jumbo.Jet
     /// <summary>
     /// Contains the result of a merge operation.
     /// </summary>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Naming", "CA1710:IdentifiersShouldHaveCorrectSuffix")]
     public class MergeResult<T> : IEnumerable<MergeResultRecord<T>>
     {
         private readonly IRecordReader[] _readers; // No need to dispose these; that'll be taken care of by the merger

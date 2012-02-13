@@ -79,6 +79,8 @@ namespace Tkl.Jumbo.Jet.Jobs.Builder
         /// <returns>A <see cref="FileInput"/> instance representing this input.</returns>
         public FileInput Read(string path, Type recordReaderType)
         {
+            if( recordReaderType == null )
+                throw new ArgumentNullException("recordReaderType");
             FileInput input = new FileInput(path, recordReaderType);
             AddAssembly(recordReaderType.Assembly);
             return input;

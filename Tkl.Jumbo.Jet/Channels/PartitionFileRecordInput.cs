@@ -46,6 +46,7 @@ namespace Tkl.Jumbo.Jet.Channels
             get { return !IsReaderCreated && _inputContainsRecordSizes; }
         }
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Reliability", "CA2000:Dispose objects before losing scope")]
         protected override IRecordReader CreateReader()
         {
             PartitionFileStream stream = new PartitionFileStream(_fileName, _bufferSize, _indexEntries);
@@ -54,6 +55,7 @@ namespace Tkl.Jumbo.Jet.Channels
             return reader;
         }
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Reliability", "CA2000:Dispose objects before losing scope")]
         protected override RecordReader<RawRecord> CreateRawReader()
         {
             if( !_inputContainsRecordSizes )

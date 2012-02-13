@@ -47,9 +47,12 @@ namespace Tkl.Jumbo.Jet
         /// </remarks>
         public virtual void Run(RecordReader<TInput> input, RecordWriter<TOutput> output)
         {
-            foreach( TInput record in input.EnumerateRecords() )
+            if( input != null )
             {
-                ProcessRecord(record, output);
+                foreach( TInput record in input.EnumerateRecords() )
+                {
+                    ProcessRecord(record, output);
+                }
             }
             Finish(output);
         }

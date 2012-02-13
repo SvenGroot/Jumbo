@@ -71,7 +71,7 @@ namespace Tkl.Jumbo.Jet.IO
         /// <param name="path">The path of the directory containing the locations file.</param>
         /// <param name="stageId">The ID of the stage whose task input locations to read.</param>
         /// <returns>A list of input locations for each task.</returns>
-        public static List<string[]> ReadTaskInputLocations(FileSystemClient fileSystem, string path, string stageId)
+        public static IList<string[]> ReadTaskInputLocations(FileSystemClient fileSystem, string path, string stageId)
         {
             if( fileSystem == null )
                 throw new ArgumentNullException("fileSystem");

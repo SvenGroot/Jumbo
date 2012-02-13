@@ -205,18 +205,18 @@ namespace Tkl.Jumbo.Jet
 
             return new TaskMetrics()
             {
-                InputRecords = Convert.ToInt64(element.Element("InputRecords").Value),
-                OutputRecords = Convert.ToInt64(element.Element("OutputRecords").Value),
-                InputBytes = Convert.ToInt64(element.Element("InputBytes").Value),
-                OutputBytes = Convert.ToInt64(element.Element("OutputBytes").Value),
-                DfsBytesRead = Convert.ToInt64(element.Element("DfsBytesRead").Value),
-                DfsBytesWritten = Convert.ToInt64(element.Element("DfsBytesWritten").Value),
-                LocalBytesRead = Convert.ToInt64(element.Element("LocalBytesRead").Value),
-                LocalBytesWritten = Convert.ToInt64(element.Element("LocalBytesWritten").Value),
-                NetworkBytesRead = Convert.ToInt64(element.Element("NetworkBytesRead").Value),
-                NetworkBytesWritten = Convert.ToInt64(element.Element("NetworkBytesWritten").Value),
-                DynamicallyAssignedPartitions = Convert.ToInt32(element.Element("DynamicallyAssignedPartitions").Value),
-                DiscardedPartitions = Convert.ToInt32(element.Element("DiscardedPartitions").Value)
+                InputRecords = (long)element.Element("InputRecords"),
+                OutputRecords = (long)element.Element("OutputRecords"),
+                InputBytes = (long)element.Element("InputBytes"),
+                OutputBytes = (long)element.Element("OutputBytes"),
+                DfsBytesRead = (long)element.Element("DfsBytesRead"),
+                DfsBytesWritten = (long)element.Element("DfsBytesWritten"),
+                LocalBytesRead = (long)element.Element("LocalBytesRead"),
+                LocalBytesWritten = (long)element.Element("LocalBytesWritten"),
+                NetworkBytesRead = (long)element.Element("NetworkBytesRead"),
+                NetworkBytesWritten = (long)element.Element("NetworkBytesWritten"),
+                DynamicallyAssignedPartitions = (int)element.Element("DynamicallyAssignedPartitions"),
+                DiscardedPartitions = (int)element.Element("DiscardedPartitions")
             };
         }
     }

@@ -92,6 +92,8 @@ namespace Tkl.Jumbo.Jet.IO
         public FileDataInput(FileSystemClient fileSystem, JumboFileSystemEntry fileOrDirectory, int minSplitSize = 1, int maxSplitSize = Int32.MaxValue)
             : this(fileSystem, EnumerateFiles(fileOrDirectory), minSplitSize, maxSplitSize)
         {
+            if( fileOrDirectory == null )
+                throw new ArgumentNullException("fileOrDirectory");
             _inputPath = fileOrDirectory.FullPath;
         }
 

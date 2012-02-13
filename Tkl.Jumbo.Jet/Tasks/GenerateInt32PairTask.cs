@@ -31,6 +31,10 @@ namespace Tkl.Jumbo.Jet.Tasks
         /// <param name="output">A <see cref="RecordWriter{T}"/> to which the task's output should be written.</param>
         public void Run(RecordReader<T> input, RecordWriter<Pair<T, int>> output)
         {
+            if( input == null )
+                throw new ArgumentNullException("input");
+            if( output == null )
+                throw new ArgumentNullException("output");
             if( TaskContext != null && TaskContext.StageConfiguration.AllowOutputRecordReuse )
             {
                 // Record reuse allowed

@@ -20,7 +20,7 @@ namespace Tkl.Jumbo.Jet.Channels
         private readonly bool _enableChecksum;
 
         public SingleFileMultiRecordWriter(string outputPath, IPartitioner<T> partitioner, int bufferSize, int limit, int writeBufferSize, bool enableChecksum)
-            : base(partitioner, bufferSize, limit, SpillRecordWriterFlags.AllowRecordWrapping | SpillRecordWriterFlags.AllowMultiRecordIndexEntries)
+            : base(partitioner, bufferSize, limit, SpillRecordWriterOptions.AllowRecordWrapping | SpillRecordWriterOptions.AllowMultiRecordIndexEntries)
         {
             _outputPath = outputPath;
             _partitions = partitioner.Partitions;

@@ -178,6 +178,8 @@ namespace Tkl.Jumbo.Jet.Jobs.Builder
         /// <returns>The <see cref="StageConfiguration"/> for the stage.</returns>
         protected virtual StageConfiguration CreateConfiguration(JobBuilderCompiler compiler)
         {
+            if( compiler == null )
+                throw new ArgumentNullException("compiler");
             if( _dfsInput != null )
                 return compiler.CreateStage(StageId, _taskTypeInfo.TaskType, _dfsInput, _output);
             else
