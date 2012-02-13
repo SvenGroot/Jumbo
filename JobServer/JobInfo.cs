@@ -61,6 +61,8 @@ namespace JobServerApplication
             _stages = stages.AsReadOnly();
             foreach( StageConfiguration stage in config.GetDependencyOrderedStages() )
             {
+                if( stage.TaskCount < 1 )
+                    throw new ArgumentException(string.Format(CultureInfo.CurrentCulture, "Stage {0} has no tasks.", stage.StageId), "config");
                 // Don't allow failures for a job with a TCP channel.
                 if( stage.Leaf.OutputChannel != null && stage.Leaf.OutputChannel.ChannelType == Tkl.Jumbo.Jet.Channels.ChannelType.Tcp )
                     _maxTaskFailures = 1;
@@ -86,6 +88,8 @@ namespace JobServerApplication
                 }
                 stages.Add(stageInfo);
             }
+            if( stages.Count == 0 )
+                throw new ArgumentException("The job configuration has no stages.", "config");
 
             if( _config.SchedulerOptions.DfsInputSchedulingMode == SchedulingMode.Default )
                 _config.SchedulerOptions.DfsInputSchedulingMode = JobServer.Instance.Configuration.JobServer.DfsInputSchedulingMode;

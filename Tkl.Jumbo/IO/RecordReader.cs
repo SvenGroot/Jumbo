@@ -10,6 +10,25 @@ using System.Diagnostics;
 namespace Tkl.Jumbo.IO
 {
     /// <summary>
+    /// Provides methods for inspecting record readers.
+    /// </summary>
+    public static class RecordReader
+    {
+        /// <summary>
+        /// Gets the type of the records for the specified record reader.
+        /// </summary>
+        /// <param name="recordReaderType">The type of the record reader.</param>
+        /// <returns>The record type</returns>
+        public static Type GetRecordType(Type recordReaderType)
+        {
+            if( recordReaderType == null )
+                throw new ArgumentNullException("recordReaderType");
+            Type baseType = recordReaderType.FindGenericBaseType(typeof(RecordReader<>), true);
+            return baseType.GetGenericArguments()[0];
+        }
+    }
+
+    /// <summary>
     /// Abstract base class for record readers.
     /// </summary>
     /// <typeparam name="T">The type of the record</typeparam>

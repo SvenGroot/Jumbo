@@ -84,6 +84,7 @@ namespace Tkl.Jumbo.Test.Jet
             {
                 Utilities.GenerateData(stream, 10000000);
             }
+            _fileSystemClient.CreateDirectory("/output");
         }
 
 
@@ -113,6 +114,7 @@ namespace Tkl.Jumbo.Test.Jet
             VerifyStage(stage, 3, typeof(LineCounterTask).Name + "Stage", typeof(LineCounterTask));
             VerifyDfsInput(config, stage, typeof(LineRecordReader));
             VerifyDfsOutput(stage, typeof(TextRecordWriter<int>));
+            config.Validate();
         }
 
         [Test]
@@ -136,6 +138,7 @@ namespace Tkl.Jumbo.Test.Jet
             VerifyChannel(config.Stages[0], config.Stages[1], ChannelType.File);
             VerifyStage(config.Stages[1], 2, typeof(LineAdderTask).Name + "Stage", typeof(LineAdderTask));
             VerifyDfsOutput(config.Stages[1], typeof(TextRecordWriter<int>));
+            config.Validate();
         }
 
         [Test]
@@ -157,6 +160,7 @@ namespace Tkl.Jumbo.Test.Jet
             VerifyStage(stage, 3, "ProcessRecordsTaskStage", operation.TaskType.TaskType);
             VerifyDfsInput(config, stage, typeof(LineRecordReader));
             VerifyDfsOutput(stage, typeof(TextRecordWriter<int>));
+            config.Validate();
             builder.TaskBuilder.DeleteAssembly();
         }
 
@@ -179,6 +183,7 @@ namespace Tkl.Jumbo.Test.Jet
             VerifyStage(stage, 3, "ProcessRecordsNoContextTaskStage", operation.TaskType.TaskType);
             VerifyDfsInput(config, stage, typeof(LineRecordReader));
             VerifyDfsOutput(stage, typeof(TextRecordWriter<int>));
+            config.Validate();
             builder.TaskBuilder.DeleteAssembly();
         }
 
@@ -195,6 +200,7 @@ namespace Tkl.Jumbo.Test.Jet
 
             JobConfiguration config = builder.CreateJob();
             VerifyDfsOutput(config.Stages[0], typeof(TextRecordWriter<int>), 256 << 20, 2);
+            config.Validate();
         }
 
         [Test]
@@ -216,6 +222,7 @@ namespace Tkl.Jumbo.Test.Jet
 
             VerifyChannel(config.Stages[0], config.Stages[1], ChannelType.Tcp, typeof(FakePartitioner<int>), typeof(RoundRobinMultiInputRecordReader<int>), 2, PartitionAssignmentMethod.Striped);
             VerifyStage(config.Stages[1], 4, typeof(LineAdderTask).Name + "Stage", typeof(LineAdderTask));
+            config.Validate();
         }
 
         [Test]
@@ -241,6 +248,7 @@ namespace Tkl.Jumbo.Test.Jet
             VerifyDfsOutput(config.Stages[1], typeof(TextRecordWriter<Utf8String>));
             VerifyStageSetting(config.Stages[0].ChildStage, TaskConstants.ComparerSettingKey, null);
             VerifyStageSetting(config.Stages[1], TaskConstants.ComparerSettingKey, null);
+            config.Validate();
         }
 
         [Test]
@@ -266,6 +274,7 @@ namespace Tkl.Jumbo.Test.Jet
             VerifyDfsOutput(config.Stages[1], typeof(TextRecordWriter<Utf8String>));
             VerifyStageSetting(config.Stages[0], TaskConstants.ComparerSettingKey, null);
             VerifyStageSetting(config.Stages[1], TaskConstants.ComparerSettingKey, null);
+            config.Validate();
         }
 
         [Test]
@@ -296,6 +305,7 @@ namespace Tkl.Jumbo.Test.Jet
             VerifyDfsOutput(config.Stages[1], typeof(TextRecordWriter<int>));
             VerifyStageSetting(config.Stages[0].ChildStage, TaskConstants.ComparerSettingKey, null);
             VerifyStageSetting(config.Stages[1], TaskConstants.ComparerSettingKey, null);
+            config.Validate();
         }
 
         [Test]
@@ -313,6 +323,7 @@ namespace Tkl.Jumbo.Test.Jet
 
             VerifyStageSetting(config.Stages[0].ChildStage, TaskConstants.ComparerSettingKey, typeof(FakeComparer<Utf8String>).AssemblyQualifiedName);
             VerifyStageSetting(config.Stages[1], TaskConstants.ComparerSettingKey, null);
+            config.Validate();
         }
 
         [Test]
@@ -338,6 +349,7 @@ namespace Tkl.Jumbo.Test.Jet
             VerifyStageSetting(config.Stages[1], FileOutputChannel.OutputTypeSettingKey, null);
             VerifyStageSetting(config.Stages[0], TaskConstants.ComparerSettingKey, null);
             VerifyStageSetting(config.Stages[1], TaskConstants.ComparerSettingKey, null);
+            config.Validate();
         }
 
         [Test]
@@ -365,6 +377,7 @@ namespace Tkl.Jumbo.Test.Jet
             VerifyStageSetting(config.Stages[1], TaskConstants.ComparerSettingKey, null);
             VerifyStageSetting(config.Stages[0], FileOutputChannel.SpillSortCombinerTypeSettingKey, typeof(FakeCombiner<Utf8String>).AssemblyQualifiedName);
             VerifyStageSetting(config.Stages[1], FileOutputChannel.SpillSortCombinerTypeSettingKey, null);
+            config.Validate();
         }
 
         [Test]
@@ -394,6 +407,8 @@ namespace Tkl.Jumbo.Test.Jet
             VerifyStageSetting(config.Stages[1], TaskConstants.ComparerSettingKey, null);
             VerifyStageSetting(config.Stages[0], FileOutputChannel.SpillSortCombinerTypeSettingKey, sort.CombinerType.AssemblyQualifiedName);
             VerifyStageSetting(config.Stages[1], FileOutputChannel.SpillSortCombinerTypeSettingKey, null);
+            config.Validate();
+            builder.TaskBuilder.DeleteAssembly();
         }
 
         [Test]
@@ -423,6 +438,8 @@ namespace Tkl.Jumbo.Test.Jet
             VerifyStageSetting(config.Stages[1], TaskConstants.ComparerSettingKey, null);
             VerifyStageSetting(config.Stages[0], FileOutputChannel.SpillSortCombinerTypeSettingKey, sort.CombinerType.AssemblyQualifiedName);
             VerifyStageSetting(config.Stages[1], FileOutputChannel.SpillSortCombinerTypeSettingKey, null);
+            config.Validate();
+            builder.TaskBuilder.DeleteAssembly();
         }
 
         [Test]
@@ -444,6 +461,7 @@ namespace Tkl.Jumbo.Test.Jet
             VerifyChannel(config.Stages[0], config.Stages[1], ChannelType.File);
             VerifyStage(config.Stages[1], 2, typeof(SumTask<Utf8String>).Name + "Stage", typeof(SumTask<Utf8String>));
             VerifyDfsOutput(config.Stages[1], typeof(TextRecordWriter<Pair<Utf8String, int>>));
+            config.Validate();
         }
 
         [Test]
@@ -468,6 +486,7 @@ namespace Tkl.Jumbo.Test.Jet
             VerifyChannel(config.Stages[0].ChildStage, config.Stages[1], ChannelType.File);
             VerifyStage(config.Stages[1], 2, typeof(SumTask<Utf8String>).Name + "Stage", typeof(SumTask<Utf8String>));
             VerifyDfsOutput(config.Stages[1], typeof(TextRecordWriter<Pair<Utf8String, int>>));
+            config.Validate();
         }
 
         [Test]
@@ -491,6 +510,7 @@ namespace Tkl.Jumbo.Test.Jet
             VerifyChannel(config.Stages[0], config.Stages[1], ChannelType.File);
             VerifyStage(config.Stages[1], 2, "AccumulateRecordsTaskStage", aggregated.TaskType.TaskType);
             VerifyDfsOutput(config.Stages[1], typeof(TextRecordWriter<Pair<Utf8String, int>>));
+            config.Validate();
             builder.TaskBuilder.DeleteAssembly();
         }
 
@@ -515,6 +535,7 @@ namespace Tkl.Jumbo.Test.Jet
             VerifyChannel(config.Stages[0], config.Stages[1], ChannelType.File);
             VerifyStage(config.Stages[1], 2, "AccumulateRecordsNoContextTaskStage", aggregated.TaskType.TaskType);
             VerifyDfsOutput(config.Stages[1], typeof(TextRecordWriter<Pair<Utf8String, int>>));
+            config.Validate();
             builder.TaskBuilder.DeleteAssembly();
         }
 
@@ -543,6 +564,7 @@ namespace Tkl.Jumbo.Test.Jet
             VerifyStageSetting(config.Stages[0], FileOutputChannel.OutputTypeSettingKey, FileChannelOutputType.SortSpill.ToString());
             VerifyStage(config.Stages[1], 2, "ReduceRecordsTaskStage", reduced.TaskType.TaskType);
             VerifyDfsOutput(config.Stages[1], typeof(TextRecordWriter<int>));
+            config.Validate();
             builder.TaskBuilder.DeleteAssembly();
         }
 
@@ -570,6 +592,7 @@ namespace Tkl.Jumbo.Test.Jet
             VerifyStageSetting(config.Stages[0], FileOutputChannel.OutputTypeSettingKey, FileChannelOutputType.SortSpill.ToString());
             VerifyStage(config.Stages[1], 2, "ReduceRecordsNoContextTaskStage", reduced.TaskType.TaskType);
             VerifyDfsOutput(config.Stages[1], typeof(TextRecordWriter<int>));
+            config.Validate();
             builder.TaskBuilder.DeleteAssembly();
         }
 
@@ -591,6 +614,7 @@ namespace Tkl.Jumbo.Test.Jet
             CollectionAssert.IsEmpty(config.GetInputStagesForStage(stage.StageId));
             VerifyStage(stage, 5, typeof(LineCounterTask).Name + "Stage", typeof(LineCounterTask));
             VerifyDfsOutput(stage, typeof(TextRecordWriter<int>));
+            config.Validate();
         }
         
         [Test]
@@ -612,6 +636,7 @@ namespace Tkl.Jumbo.Test.Jet
             CollectionAssert.IsEmpty(config.GetInputStagesForStage(stage.StageId));
             VerifyStage(stage, 5, "GenerateRecordsTaskStage", operation.TaskType.TaskType);
             VerifyDfsOutput(stage, typeof(TextRecordWriter<int>));
+            config.Validate();
             builder.TaskBuilder.DeleteAssembly();
         }
 
@@ -634,6 +659,7 @@ namespace Tkl.Jumbo.Test.Jet
             CollectionAssert.IsEmpty(config.GetInputStagesForStage(stage.StageId));
             VerifyStage(stage, 5, "GenerateRecordsNoContextTaskStage", operation.TaskType.TaskType);
             VerifyDfsOutput(stage, typeof(TextRecordWriter<int>));
+            config.Validate();
             builder.TaskBuilder.DeleteAssembly();
         }
         
@@ -750,7 +776,6 @@ namespace Tkl.Jumbo.Test.Jet
                 Assert.IsNull(receiver.Parent);
                 Assert.AreEqual(channelType, sender.OutputChannel.ChannelType);
                 Assert.AreEqual(receiver.StageId, sender.OutputChannel.OutputStage);
-                Assert.AreEqual(ChannelConnectivity.Full, sender.OutputChannel.Connectivity);
                 Assert.AreEqual(partitionerType, sender.OutputChannel.PartitionerType.ReferencedType);
                 Assert.AreEqual(multiInputRecordReaderType, sender.OutputChannel.MultiInputRecordReaderType.ReferencedType);
                 Assert.AreEqual(partitionsPerTask, sender.OutputChannel.PartitionsPerTask);

@@ -2,6 +2,7 @@
 //
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Tkl.Jumbo.IO;
 using Tkl.Jumbo.Jet.Channels;
 
@@ -37,11 +38,6 @@ namespace Tkl.Jumbo.Jet.Jobs
         /// Gets the type of the channel to use.
         /// </summary>
         public ChannelType ChannelType { get; set; }
-
-        /// <summary>
-        /// Gets the type of channel connectivity to use.
-        /// </summary>
-        public ChannelConnectivity ChannelConnectivity { get; set; }
 
         /// <summary>
         /// Gets the type of partitioner to use.
@@ -99,7 +95,7 @@ namespace Tkl.Jumbo.Jet.Jobs
 
         private Type InputStageOutputType
         {
-            get { return InputStage.TaskType.ReferencedType.FindGenericInterfaceType(typeof(ITask<,>), true).GetGenericArguments()[1]; }
+            get { return InputStage.TaskTypeInfo.OutputRecordType; }
         }
 
         private void ValidatePartitionerType()
@@ -120,46 +116,29 @@ namespace Tkl.Jumbo.Jet.Jobs
 
         private void ValidateMultiInputRecordReaderType(Type stageMultiInputRecordReaderType, Type inputType)
         {
-            List<Type> acceptedInputTypes = new List<Type>();
-            Type baseType;
+            IEnumerable<Type> acceptedInputTypes;
             Type recordType;
             if( stageMultiInputRecordReaderType != null )
             {
                 // The output of the stage multi input record reader type must match the input type of the stage.
-                baseType = stageMultiInputRecordReaderType.FindGenericBaseType(typeof(MultiInputRecordReader<>), true);
-                recordType = baseType.GetGenericArguments()[0];
+                recordType = RecordReader.GetRecordType(stageMultiInputRecordReaderType);
                 if( recordType != inputType )
                     throw new ArgumentException(string.Format(System.Globalization.CultureInfo.CurrentCulture, "The specified stage multi input record reader type {0} doesn't return objects of type {1}.", stageMultiInputRecordReaderType, inputType), "stageMultiInputRecordReaderType");
 
-                acceptedInputTypes = GetMultiInputRecordReaderAcceptedInputTypes(stageMultiInputRecordReaderType, inputType);
+                acceptedInputTypes = MultiInputRecordReader.GetAcceptedInputTypes(MultiInputRecordReaderType);
             }
             else
-                acceptedInputTypes = new List<Type>(new[] { inputType });
+                acceptedInputTypes = new[] { inputType };
 
             Type stageOutputType = InputStageOutputType;
-            baseType = MultiInputRecordReaderType.FindGenericBaseType(typeof(MultiInputRecordReader<>), true);
-            recordType = baseType.GetGenericArguments()[0];
+            recordType = RecordReader.GetRecordType(MultiInputRecordReaderType);
             if( !acceptedInputTypes.Contains(recordType) )
                 throw new ArgumentException(string.Format(System.Globalization.CultureInfo.CurrentCulture, "The specified channel multi input record reader type {0} doesn't return objects of the correct type.", MultiInputRecordReaderType));
 
-            List<Type> channelAcceptedInputTypes = GetMultiInputRecordReaderAcceptedInputTypes(MultiInputRecordReaderType, recordType);
+            IEnumerable<Type> channelAcceptedInputTypes = MultiInputRecordReader.GetAcceptedInputTypes(MultiInputRecordReaderType);
             if( !channelAcceptedInputTypes.Contains(stageOutputType) )
                 throw new ArgumentException(string.Format(System.Globalization.CultureInfo.CurrentCulture, "The specified channel multi input record reader type {0} doesn't accept objects of the correct type.", MultiInputRecordReaderType));
         }
 
-        private static List<Type> GetMultiInputRecordReaderAcceptedInputTypes(Type multiInputRecordReaderType, Type inputType)
-        {
-            List<Type> acceptedInputTypes = new List<Type>();
-            Attribute[] attributes = Attribute.GetCustomAttributes(multiInputRecordReaderType, typeof(InputTypeAttribute));
-            if( attributes.Length == 0 )
-                acceptedInputTypes.Add(inputType); // No attribute means the output type of the reader is also the only accepted input type.
-            else
-            {
-                foreach( InputTypeAttribute attribute in attributes )
-                    acceptedInputTypes.Add(attribute.AcceptedType);
-            }
-
-            return acceptedInputTypes;
-        }
     }
 }

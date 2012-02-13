@@ -268,42 +268,61 @@ namespace Tkl.Jumbo.Jet
             if( fileSystemClient == null )
                 throw new ArgumentNullException("fileSystemClient");
 
-            string configFilePath = job.GetJobConfigurationFilePath(fileSystemClient);
-            _log.InfoFormat("Saving job configuration to DFS file {0}.", configFilePath);
-            using( Stream stream = fileSystemClient.CreateFile(configFilePath) )
-            {
-                config.SaveXml(stream);
-            }
-
-            // Save split files for all stages with input.
-            foreach( StageConfiguration stage in config.Stages )
-            {
-                if( stage.DataInput != null )
-                {
-                    TaskInputUtility.WriteTaskInputs(fileSystemClient, job.Path, stage.StageId, stage.DataInput.TaskInputs);
-                }
-            }
-
-            // Upload additional files
-            if( files != null )
-            {
-                foreach( string file in files )
-                {
-                    _log.InfoFormat("Uploading local file {0} to DFS directory {1}.", file, job.Path);
-                    fileSystemClient.UploadFile(file, job.Path);
-                }
-            }
-
-            _log.InfoFormat("Running job {0}.", job.JobId);
             try
             {
-                File.WriteAllText("jumbo_last_job.txt", job.JobId.ToString());
+                config.Validate();
+
+                string configFilePath = job.GetJobConfigurationFilePath(fileSystemClient);
+                _log.InfoFormat("Saving job configuration to DFS file {0}.", configFilePath);
+                using( Stream stream = fileSystemClient.CreateFile(configFilePath) )
+                {
+                    config.SaveXml(stream);
+                }
+
+                // Save split files for all stages with input.
+                foreach( StageConfiguration stage in config.Stages )
+                {
+                    if( stage.DataInput != null )
+                    {
+                        TaskInputUtility.WriteTaskInputs(fileSystemClient, job.Path, stage.StageId, stage.DataInput.TaskInputs);
+                    }
+                }
+
+                // Upload additional files
+                if( files != null )
+                {
+                    foreach( string file in files )
+                    {
+                        _log.InfoFormat("Uploading local file {0} to DFS directory {1}.", file, job.Path);
+                        fileSystemClient.UploadFile(file, job.Path);
+                    }
+                }
+
+                _log.InfoFormat("Running job {0}.", job.JobId);
+                try
+                {
+                    File.WriteAllText("jumbo_last_job.txt", job.JobId.ToString());
+                }
+                catch
+                {
+                    // Don't care if this fails.
+                }
+                JobServer.RunJob(job.JobId);
             }
             catch
             {
-                // Don't care if this fails.
+                try
+                {
+                    // Remove job from the pending queue if submission failed
+                    JobServer.AbortJob(job.JobId);
+                }
+                catch
+                {
+                    // Don't care about abortion failure, and we don't want that to mask the real exception
+                }
+
+                throw;
             }
-            JobServer.RunJob(job.JobId);
         }
 
         /// <summary>

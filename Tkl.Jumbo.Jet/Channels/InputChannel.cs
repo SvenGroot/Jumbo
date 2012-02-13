@@ -45,15 +45,7 @@ namespace Tkl.Jumbo.Jet.Channels
             // in the case of a join it may not.
             InputRecordType = inputStage.TaskType.ReferencedType.FindGenericInterfaceType(typeof(ITask<,>)).GetGenericArguments()[1];
 
-            switch( inputStage.OutputChannel.Connectivity )
-            {
-            case ChannelConnectivity.Full:
-                GetInputTaskIdsFull();
-                break;
-            case ChannelConnectivity.PointToPoint:
-                _inputTaskIds.Add(GetInputTaskIdPointToPoint());
-                break;
-            }
+            GetInputTaskIdsFull();
         }
 
         /// <summary>
@@ -77,16 +69,6 @@ namespace Tkl.Jumbo.Jet.Channels
         protected TaskExecutionUtility TaskExecution { get; private set; }
 
         /// <summary>
-        /// Gets the compression type used by the channel.
-        /// </summary>
-        protected CompressionType CompressionType { get; private set; }
-
-        /// <summary>
-        /// Gets the type of the records create by the input task of this channel.
-        /// </summary>
-        protected Type InputRecordType { get; private set; }
-
-        /// <summary>
         /// Gets the last set of partitions assigned to this channel.
         /// </summary>
         /// <remarks>
@@ -103,21 +85,6 @@ namespace Tkl.Jumbo.Jet.Channels
                 return _partitionsReadOnlyWrapper;
             }
         }
-
-        /// <summary>
-        /// Gets a collection of input task IDs.
-        /// </summary>
-        protected ReadOnlyCollection<string> InputTaskIds
-        {
-            get
-            {
-                if( _inputTaskIdsReadOnlyWrapper == null )
-                    System.Threading.Interlocked.CompareExchange(ref _inputTaskIdsReadOnlyWrapper, _inputTaskIds.AsReadOnly(), null);
-                return _inputTaskIdsReadOnlyWrapper;
-            }
-        }
-
-        #region IInputChannel Members
 
         /// <summary>
         /// Gets a value indicating whether the input channel uses memory storage to store inputs.
@@ -141,6 +108,29 @@ namespace Tkl.Jumbo.Jet.Channels
         /// </para>
         /// </remarks>
         public abstract float MemoryStorageLevel { get; }
+
+        /// <summary>
+        /// Gets the compression type used by the channel.
+        /// </summary>
+        protected CompressionType CompressionType { get; private set; }
+
+        /// <summary>
+        /// Gets the type of the records create by the input task of this channel.
+        /// </summary>
+        protected Type InputRecordType { get; private set; }
+
+        /// <summary>
+        /// Gets a collection of input task IDs.
+        /// </summary>
+        protected ReadOnlyCollection<string> InputTaskIds
+        {
+            get
+            {
+                if( _inputTaskIdsReadOnlyWrapper == null )
+                    System.Threading.Interlocked.CompareExchange(ref _inputTaskIdsReadOnlyWrapper, _inputTaskIds.AsReadOnly(), null);
+                return _inputTaskIdsReadOnlyWrapper;
+            }
+        }
 
         /// <summary>
         /// Creates a <see cref="RecordReader{T}"/> from which the channel can read its input.
@@ -175,8 +165,6 @@ namespace Tkl.Jumbo.Jet.Channels
             _partitions.AddRange(additionalPartitions);
         }
 
-        #endregion
-
         /// <summary>
         /// Creates a record reader of the type indicated by the channel.
         /// </summary>
@@ -207,24 +195,6 @@ namespace Tkl.Jumbo.Jet.Channels
                 TaskId taskId = new TaskId(stage.StageId, x);
                 _inputTaskIds.Add(taskId.ToString());
             }
-        }
-
-        private string GetInputTaskIdPointToPoint()
-        {
-            int outputTaskNumber = TaskExecution.Context.TaskId.TaskNumber;
-            IList<StageConfiguration> inputStages = TaskExecution.Context.JobConfiguration.GetPipelinedStages(InputStage.CompoundStageId);
-
-            int remainder = outputTaskNumber;
-            TaskId result = null;
-            for( int x = 0; x < inputStages.Count - 1; ++x )
-            {
-                int taskCount = JobConfiguration.GetTotalTaskCount(inputStages, x);
-                int inputTaskNumber = (remainder - 1) / taskCount + 1;
-                result = new TaskId(result, inputStages[x].StageId, inputTaskNumber);
-                remainder = (remainder - 1) % taskCount + 1;
-            }
-
-            return result.ToString();
         }
     }
 }

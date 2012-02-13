@@ -11,6 +11,35 @@ using System.Runtime.Serialization;
 namespace Tkl.Jumbo.IO
 {
     /// <summary>
+    /// Provides methods for determining the <see cref="IValueWriter{T}"/> for a type.
+    /// </summary>
+    /// <remarks>
+    /// Normally, you should use the <see cref="ValueWriter{T}"/> class to access value writers.
+    /// </remarks>
+    public static class ValueWriter
+    {
+        /// <summary>
+        /// Gets the <see cref="IValueWriter{T}"/> implementation for the specified type.
+        /// </summary>
+        /// <param name="type">The type.</param>
+        /// <returns>The <see cref="IValueWriter{T}"/> implementation for the specified type, or <see langword="null"/> if the type implements <see cref="IWritable"/>.</returns>
+        /// <exception cref="NotSupportedException">The type has no value writer and does not implement <see cref="IWritable"/>.</exception>
+        public static object GetWriter(Type type)
+        {
+            if( type.GetInterfaces().Contains(typeof(IWritable)) )
+                return null;
+            ValueWriterAttribute attribute = (ValueWriterAttribute)Attribute.GetCustomAttribute(type, typeof(ValueWriterAttribute));
+            if( attribute != null && !string.IsNullOrEmpty(attribute.ValueWriterTypeName) )
+            {
+                Type writerType = Type.GetType(attribute.ValueWriterTypeName, true);
+                return Activator.CreateInstance(writerType);
+            }
+
+            return DefaultValueWriter.GetWriter(type);
+        }
+    }
+
+    /// <summary>
     /// Provides access to <see cref="IValueWriter{T}"/> implementations for various basic framework types and types that specify the <see cref="ValueWriterAttribute"/> attribute.
     /// </summary>
     /// <remarks>
@@ -39,7 +68,7 @@ namespace Tkl.Jumbo.IO
     /// </remarks>
     public static class ValueWriter<T>
     {
-        private static readonly IValueWriter<T> _writer = (IValueWriter<T>)GetWriter();
+        private static readonly IValueWriter<T> _writer = (IValueWriter<T>)ValueWriter.GetWriter(typeof(T));
 
         /// <summary>
         /// Gets the writer for the type, or <see langword="null"/> if it implements <see cref="IWritable"/>.
@@ -97,21 +126,6 @@ namespace Tkl.Jumbo.IO
             }
             else
                 return _writer.Read(reader);
-        }
-
-        private static object GetWriter()
-        {
-            Type type = typeof(T);
-            if( type.GetInterfaces().Contains(typeof(IWritable)) )
-                return null;
-            ValueWriterAttribute attribute = (ValueWriterAttribute)Attribute.GetCustomAttribute(type, typeof(ValueWriterAttribute));
-            if( attribute != null && !string.IsNullOrEmpty(attribute.ValueWriterTypeName) )
-            {
-                Type writerType = Type.GetType(attribute.ValueWriterTypeName, true);
-                return (IValueWriter<T>)Activator.CreateInstance(writerType);
-            }
-
-            return DefaultValueWriter.GetWriter(type);
         }
     }
 }

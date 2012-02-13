@@ -12,6 +12,38 @@ using System.ComponentModel;
 namespace Tkl.Jumbo.IO
 {
     /// <summary>
+    /// Provides methods for working with multi-input record readers.
+    /// </summary>
+    public static class MultiInputRecordReader
+    {
+        /// <summary>
+        /// Gets the accepted input types for a multi-input record reader.
+        /// </summary>
+        /// <param name="type">The type of multi-input record reader.</param>
+        /// <returns>A list of accepted types.</returns>
+        public static IEnumerable<Type> GetAcceptedInputTypes(Type type)
+        {
+            if( type == null )
+                throw new ArgumentNullException("type");
+            Type baseType = type.FindGenericBaseType(typeof(MultiInputRecordReader<>), true);
+
+            return GetAcceptedInputTypesCore(type, baseType);
+        }
+
+        private static IEnumerable<Type> GetAcceptedInputTypesCore(Type type, Type baseType)
+        {
+            Attribute[] attributes = Attribute.GetCustomAttributes(type, typeof(InputTypeAttribute));
+            if( attributes.Length == 0 )
+                yield return baseType.GetGenericArguments()[0];
+            else
+            {
+                foreach( InputTypeAttribute attribute in attributes )
+                    yield return attribute.AcceptedType;
+            }
+        }
+    }
+
+    /// <summary>
     /// Base class for record readers that combine multiple inputs.
     /// </summary>
     /// <typeparam name="T">The type of the records.</typeparam>

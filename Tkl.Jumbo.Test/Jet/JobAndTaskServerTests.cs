@@ -61,6 +61,7 @@ namespace Tkl.Jumbo.Test.Jet
         public void TestJobAbort()
         {
             FileSystemClient fileSystemClient = _cluster.CreateFileSystemClient();
+            fileSystemClient.CreateDirectory("/abort");
             JumboFile file = fileSystemClient.GetFileInfo(_fileName);
             JobConfiguration config = CreateConfiguration(fileSystemClient, file, "/abort", false, typeof(LineCounterTask), typeof(LineAdderTask), ChannelType.File);
 
@@ -659,7 +660,7 @@ namespace Tkl.Jumbo.Test.Jet
             if( channelType == ChannelType.Pipeline )
             {
                 // Pipeline channel cannot merge so we will add another stage in between.
-                stage = config.AddPointToPointStage("IntermediateTask", stage, adderTask, ChannelType.Pipeline);
+                stage = config.AddStage("IntermediateTask", adderTask, 1, new InputStageInfo(stage) { ChannelType = ChannelType.Pipeline });
                 channelType = ChannelType.File;
             }
             var stage2 = config.AddStage("OutputTask", adderTask, 1, new InputStageInfo(stage) { ChannelType = channelType });

@@ -11,6 +11,7 @@ using Tkl.Jumbo.Dfs;
 using System.Globalization;
 using Tkl.Jumbo.Dfs.FileSystem;
 using Tkl.Jumbo.Jet.IO;
+using Tkl.Jumbo.IO;
 
 namespace Tkl.Jumbo.Jet.Jobs
 {
@@ -418,21 +419,6 @@ namespace Tkl.Jumbo.Jet.Jobs
         }
 
         /// <summary>
-        /// Gets the total number of tasks that will be created for this stage, which is the product of this stage's task count and the total task count of the parent stage.
-        /// </summary>
-        [XmlIgnore]
-        public int TotalTaskCount
-        {
-            get
-            {
-                if( Parent == null )
-                    return TaskCount;
-                else
-                    return Parent.TotalTaskCount * TaskCount;
-            }
-        }
-
-        /// <summary>
         /// Gets the total number of partitions output from this stage. This does not include the output channel's partitioning, only the internal partitioning
         /// done by compound stages.
         /// </summary>
@@ -567,6 +553,135 @@ namespace Tkl.Jumbo.Jet.Jobs
         }
 
         /// <summary>
+        /// Checks whether this stage configuration is complete and consistent.
+        /// </summary>
+        /// <param name="job">The job that this stage belongs to.</param>
+        /// <remarks>
+        /// <para>
+        ///   This method is intended to be used after constructing the job before it is submitted. It uses information that may not
+        ///   be available after deserialization, and requires the various types to be loaded.
+        /// </para>
+        /// </remarks>
+        /// <exception cref="InvalidOperationException">The stage configuration is invalid.</exception>
+        /// <exception cref="NotSupportedException">One of the record types used is not supported by <see cref="ValueWriter{T}"/>.</exception>
+        public void Validate(JobConfiguration job)
+        {
+            if( job == null )
+                throw new ArgumentNullException("job");
+            // Some of the things checked here are also checked by the AddStage etc. methods of JobConfiguration, but almost all our properties are read/write (needed for XML serialization)
+            // so it's possible to get the stage in an invalid state by modifying it after it has been added.
+            if( string.IsNullOrWhiteSpace(StageId) )
+                throw new InvalidOperationException("A stage cannot have a blank stage ID.");
+            if( TaskTypeInfo == null )
+                throw new InvalidOperationException(string.Format(CultureInfo.CurrentCulture, "Stage {0} must have a task type.", CompoundStageId));
+            if( TaskCount < 1 )
+                throw new InvalidOperationException(string.Format(CultureInfo.CurrentCulture, "Stage {0} must have at least one task.", CompoundStageId));
+            // Not interested in the actual writers, but this method will throw an exception if the types aren't writable.
+            ValueWriter.GetWriter(TaskTypeInfo.InputRecordType);
+            ValueWriter.GetWriter(TaskTypeInfo.OutputRecordType);
+            if( DataInput != null )
+            {
+                if( Parent != null )
+                    throw new InvalidOperationException(string.Format(CultureInfo.CurrentCulture, "Stage {0} cannot have data input because it is a child stage.", CompoundStageId));
+                if( job.GetInputStagesForStage(StageId).Count() != 0 )
+                    throw new InvalidOperationException(string.Format(CultureInfo.CurrentCulture, "Stage {0} cannot have both data input and an input channel.", CompoundStageId));
+                if( DataInput.RecordType != TaskTypeInfo.InputRecordType )
+                    throw new InvalidOperationException(string.Format(CultureInfo.CurrentCulture, "Stage {0}'s input record type {1} is incompatible with its data input's record record type {2}.", CompoundStageId, DataInput.RecordType, TaskTypeInfo.InputRecordType));
+                if( DataInputType.ReferencedType == null || !DataInputType.ReferencedType.IsInstanceOfType(DataInput) )
+                    throw new InvalidOperationException(string.Format(CultureInfo.CurrentCulture, "Stage {0}'s data input type must match the data input instance.", CompoundStageId));
+            }
+            else
+            {
+                if( DataInputType.ReferencedType != null )
+                    throw new InvalidOperationException(string.Format(CultureInfo.CurrentCulture, "Stage {0}'s data input type must be null when the stage has no data input.", CompoundStageId));
+                if( Parent == null )
+                {
+                    StageConfiguration[] sendingStages = job.GetInputStagesForStage(StageId).ToArray();
+                    IEnumerable<Type> inputTypes;
+                    if( sendingStages.Length > 1 )
+                    {
+                        if( MultiInputRecordReaderType.ReferencedType == null )
+                            throw new InvalidOperationException(string.Format(CultureInfo.CurrentCulture, "Stage {0}'s must specify a stage multi-input record reader because it has more than one input channel.", CompoundStageId));
+                        if( RecordReader.GetRecordType(MultiInputRecordReaderType.ReferencedType) != TaskTypeInfo.InputRecordType )
+                            throw new InvalidOperationException(string.Format(CultureInfo.CurrentCulture, "Stage {0}'s input record type {1} is not compatible with the stage multi-input record reader's record type {2}.", CompoundStageId, TaskTypeInfo.InputRecordType, RecordReader.GetRecordType(MultiInputRecordReaderType.ReferencedType)));
+                        inputTypes = MultiInputRecordReader.GetAcceptedInputTypes(MultiInputRecordReaderType.ReferencedType);
+                    }
+                    else
+                        inputTypes = new[] { TaskTypeInfo.InputRecordType };
+                    
+                    foreach( StageConfiguration sendingStage in sendingStages )
+                    {
+                        if( sendingStage.OutputChannel.MultiInputRecordReaderType.ReferencedType == null )
+                            throw new InvalidOperationException(string.Format(CultureInfo.CurrentCulture, "Stage {0}'s output channel must specify a multi-input record reader type.", sendingStage.CompoundStageId));
+                        if( !inputTypes.Contains(RecordReader.GetRecordType(sendingStage.OutputChannel.MultiInputRecordReaderType.ReferencedType)) )
+                            throw new InvalidOperationException(string.Format(CultureInfo.CurrentCulture, "Stage {0}'s input channel uses incompatible record type {1}.", CompoundStageId, RecordReader.GetRecordType(sendingStage.OutputChannel.MultiInputRecordReaderType.ReferencedType)));
+                    }
+                }
+            }
+
+            if( DataOutput != null )
+            {
+                if( ChildStage != null )
+                    throw new InvalidOperationException(string.Format(CultureInfo.CurrentCulture, "Stage {0} cannot have data output because it has a child stage.", CompoundStageId));
+                if( OutputChannel != null )
+                    throw new InvalidOperationException(string.Format(CultureInfo.CurrentCulture, "Stage {0} has both data output and an output channel.", CompoundStageId));
+                if( DataOutput.RecordType != TaskTypeInfo.OutputRecordType )
+                    throw new InvalidOperationException(string.Format(CultureInfo.CurrentCulture, "Stage {0}'s output record type {1} is incompatible with its data output's record record type {2}.", StageId, DataOutput.RecordType, TaskTypeInfo.OutputRecordType));
+                if( DataOutputType.ReferencedType == null || !DataOutputType.ReferencedType.IsInstanceOfType(DataOutput) )
+                    throw new InvalidOperationException(string.Format(CultureInfo.CurrentCulture, "Stage {0}'s data output type must match the data output instance.", CompoundStageId));
+            }
+            else if( DataOutputType.ReferencedType != null )
+                    throw new InvalidOperationException(string.Format(CultureInfo.CurrentCulture, "Stage {0}'s data output type must be null when the stage has no data output.", CompoundStageId));
+
+            if( OutputChannel != null )
+            {
+                if( ChildStage != null )
+                    throw new InvalidOperationException(string.Format(CultureInfo.CurrentCulture, "Stage {0} cannot have both a child stage and an output channel.", CompoundStageId));
+                if( OutputChannel.MultiInputRecordReaderType.ReferencedType == null )
+                    throw new InvalidOperationException(string.Format(CultureInfo.CurrentCulture, "Stage {0}'s output channel must specify a multi-input record reader type.", CompoundStageId));
+                if( OutputChannel.PartitionerType.ReferencedType == null )
+                    throw new InvalidOperationException(string.Format(CultureInfo.CurrentCulture, "Stage {0}'s output channel must specify a partitioner type.", CompoundStageId));
+                ValidatePartitionerType(OutputChannel.PartitionerType.ReferencedType);
+                if( !MultiInputRecordReader.GetAcceptedInputTypes(OutputChannel.MultiInputRecordReaderType.ReferencedType).Contains(TaskTypeInfo.OutputRecordType) )
+                    throw new InvalidOperationException(string.Format(CultureInfo.CurrentCulture, "Stage {0}'s output channel multi-input record reader type {1} doesn't accept the stage's output record type {2}.", CompoundStageId, OutputChannel.MultiInputRecordReaderType.ReferencedType, TaskTypeInfo.OutputRecordType));
+                if( OutputChannel.OutputStage != null ) // null is allowed for debugging purposes; see OutputChannel class
+                {
+                    StageConfiguration receiver = job.GetStage(OutputChannel.OutputStage);
+                    if( receiver == null )
+                        throw new InvalidOperationException(string.Format(CultureInfo.CurrentCulture, "Stage {0}'s output channel specifies non-existant output stage ID {1}.", CompoundStageId, OutputChannel.OutputStage));
+                    // Receiver types validated when the receiver's Validate method is called.
+                }
+            }
+
+            if( ChildStage != null )
+            {
+                if( ChildStage.TaskCount > 1 && InternalPartitionCount > 1 )
+                    throw new InvalidOperationException(string.Format(CultureInfo.CurrentCulture, "Stage {0} cannot have a child stage with internal partitioning because internal partitioning was already applied in this compound stage.", CompoundStageId));
+                if( ChildStage.TaskCount > 1 )
+                {
+                    if( ChildStagePartitionerType.ReferencedType == null )
+                        throw new InvalidOperationException(string.Format(CultureInfo.CurrentCulture, "Stage {0} must have a child stage partitioner because it has a child stage with internal partitioning.", CompoundStageId));
+                    ValidatePartitionerType(ChildStagePartitionerType.ReferencedType);
+                }
+                
+                ChildStage.Validate(job);
+                if( TaskTypeInfo.OutputRecordType != ChildStage.TaskTypeInfo.InputRecordType )
+                    throw new InvalidOperationException(string.Format(CultureInfo.CurrentCulture, "Stage {0}'s output record type {1} does not match its child stage's input record type {2}.", CompoundStageId, TaskTypeInfo.OutputRecordType, ChildStage.TaskTypeInfo.InputRecordType));
+            }
+
+            if( DependentStages.Count > 0 )
+            {
+                if( ChildStage != null )
+                    throw new InvalidOperationException(string.Format(CultureInfo.CurrentCulture, "Stage {0} cannot have dependent stages because it has a child stage.", CompoundStageId));
+                foreach( string stageId in DependentStages )
+                {
+                    if( job.GetStage(stageId) == null )
+                        throw new InvalidOperationException(string.Format(CultureInfo.CurrentCulture, "Stage {0} specifies non-existant dependent stage ID {1}.", CompoundStageId, stageId));
+                }
+            }
+        }
+
+        /// <summary>
         /// Returns a <see cref="System.String"/> that represents this instance.
         /// </summary>
         /// <returns>
@@ -588,5 +703,18 @@ namespace Tkl.Jumbo.Jet.Jobs
             if( output.RecordType != taskType.OutputRecordType )
                 throw new ArgumentException(string.Format(System.Globalization.CultureInfo.CurrentCulture, "The specified output's record type {0} is not identical to the specified task type's output record type {1}.", output.RecordType, taskType.OutputRecordType));
         }
+
+        private void ValidatePartitionerType(Type partitionerType)
+        {
+            if( partitionerType.ContainsGenericParameters )
+                throw new InvalidOperationException(string.Format(CultureInfo.CurrentCulture, "Stage {0}'s partitioner type must be a closed constructed generic type.", CompoundStageId));
+            Type interfaceType = partitionerType.FindGenericInterfaceType(typeof(IPartitioner<>), false);
+            if( interfaceType == null )
+                throw new InvalidOperationException(string.Format(CultureInfo.CurrentCulture, "Stage {0}'s partitioner type must implement IPartitioner<T>.", CompoundStageId));
+            Type recordType = partitionerType.GetGenericArguments()[0];
+            if( recordType != TaskTypeInfo.OutputRecordType )
+                throw new InvalidOperationException(string.Format(CultureInfo.CurrentCulture, "Stage {0}'s output record type {1} is incompatible with its partitioner's record type {2}.", CompoundStageId, TaskTypeInfo.OutputRecordType, recordType));
+        }
+
     }
 }

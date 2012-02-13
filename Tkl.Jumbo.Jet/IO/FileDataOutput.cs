@@ -91,6 +91,8 @@ namespace Tkl.Jumbo.Jet.IO
                 throw new ArgumentOutOfRangeException("blockSize");
             if( replicationFactor < 0 )
                 throw new ArgumentOutOfRangeException("replicationFactor");
+            if( fileSystem.GetDirectoryInfo(outputPath) == null )
+                throw new DirectoryNotFoundException(string.Format(CultureInfo.CurrentCulture, "The directory '{0}' does not exist.", outputPath));
 
             _fileSystem = fileSystem;
             _outputPath = outputPath;

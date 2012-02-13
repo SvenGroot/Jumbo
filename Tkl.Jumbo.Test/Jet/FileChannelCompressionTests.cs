@@ -51,7 +51,7 @@ namespace Tkl.Jumbo.Test.Jet
 
             JobConfiguration config = new JobConfiguration(typeof(StringConversionTask).Assembly);
             StageConfiguration conversionStage = config.AddInputStage("ConversionStage", new FileDataInput<LineRecordReader>(fileSystemClient, fileSystemClient.GetFileInfo(_fileName)), typeof(StringConversionTask));
-            StageConfiguration sortStage = config.AddPointToPointStage("SortStage", conversionStage, typeof(SortTask<int>), ChannelType.Pipeline);
+            StageConfiguration sortStage = config.AddStage("SortStage", typeof(SortTask<int>), 1, new InputStageInfo(conversionStage) { ChannelType = ChannelType.Pipeline });
             var stage = config.AddStage("MergeStage", typeof(EmptyTask<int>), 1, new InputStageInfo(sortStage) { MultiInputRecordReaderType = typeof(MergeRecordReader<int>) });
             stage.DataOutput = new FileDataOutput<BinaryRecordWriter<int>>(fileSystemClient, outputPath);
 

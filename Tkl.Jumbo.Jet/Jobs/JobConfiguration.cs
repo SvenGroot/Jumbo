@@ -245,7 +245,6 @@ namespace Tkl.Jumbo.Jet.Jobs
                         {
                             ChannelType = info.ChannelType,
                             PartitionerType = info.PartitionerType,
-                            Connectivity = info.ChannelConnectivity,
                             MultiInputRecordReaderType = info.MultiInputRecordReaderType,
                             OutputStage = stageId,
                             PartitionsPerTask = info.PartitionsPerTask,
@@ -263,28 +262,6 @@ namespace Tkl.Jumbo.Jet.Jobs
 
         }
 
-        /// <summary>
-        /// Adds a point to point stage.
-        /// </summary>
-        /// <param name="stageId">The name of the stage; this will be used as the base name for all the tasks in the stage.</param>
-        /// <param name="inputStage">The stage from which this stage gets its input.</param>
-        /// <param name="taskType">The type implementing the task action; this type must implement <see cref="ITask{TInput,TOutput}"/>.</param>
-        /// <param name="channelType">One of the <see cref="ChannelType"/> files indicating the type of channel to use between the the input stages and the new stage.</param>
-        /// <returns>
-        /// A <see cref="StageConfiguration"/> for the new stage.
-        /// </returns>
-        public StageConfiguration AddPointToPointStage(string stageId, StageConfiguration inputStage, Type taskType, ChannelType channelType)
-        {
-            if( inputStage == null )
-                throw new ArgumentNullException("inputStage");
-            InputStageInfo info = new InputStageInfo(inputStage)
-            {
-                ChannelType = channelType,
-                ChannelConnectivity = ChannelConnectivity.PointToPoint
-            };
-            return AddStage(stageId, taskType, channelType == ChannelType.Pipeline ? 1 : inputStage.TotalTaskCount, info);
-        }
-
         private static void ValidateChannelConnectivityConstraints(IEnumerable<InputStageInfo> inputStages, StageConfiguration stage)
         {
             foreach( InputStageInfo info in inputStages )
@@ -292,18 +269,9 @@ namespace Tkl.Jumbo.Jet.Jobs
                 if( info.PartitionsPerTask > 1 && inputStages.Count() > 1 )
                     throw new NotSupportedException("Using multiple partitions per task is not supported when using multiple input stages.");
 
-                switch( info.ChannelConnectivity )
-                {
-                case ChannelConnectivity.PointToPoint:
-                    throw new NotSupportedException("Rules for PointToPoint need to be re-evaluated.");
-                    //if( info.InputStage.TotalTaskCount != stage.TaskCount )
-                    //    throw new ArgumentException("Point to point stage needs to have the same number of outputs as inputs.");
-                    //break;
-                case ChannelConnectivity.Full:
-                    if( info.InputStage.InternalPartitionCount > 1 && info.InputStage.InternalPartitionCount != (stage.TaskCount * info.PartitionsPerTask) )
-                        throw new ArgumentException("A fully connected stage with an internally partitioned compound stage as input needs to have the same number of tasks as the input child stage.");
-                    break;
-                }
+                if( info.InputStage.InternalPartitionCount > 1 && info.InputStage.InternalPartitionCount != (stage.TaskCount * info.PartitionsPerTask) )
+                    throw new ArgumentException("A fully connected stage with an internally partitioned compound stage as input needs to have the same number of tasks as the input child stage.");
+                break;
             }
         }
 
@@ -620,6 +588,30 @@ namespace Tkl.Jumbo.Jet.Jobs
                 }
             }
             return false;
+        }
+
+        /// <summary>
+        /// Checks whether this job configuration is complete and consistent.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        ///   This method is intended to be used after constructing the job before it is submitted. It uses information that may not
+        ///   be available after deserialization, and requires the various types to be loaded.
+        /// </para>
+        /// </remarks>
+        /// <exception cref="InvalidOperationException">The job configuration is invalid.</exception>
+        /// <exception cref="NotSupportedException">One of the record types used is not supported by <see cref="ValueWriter{T}"/>.</exception>
+        public void Validate()
+        {
+            if( Stages.Count == 0 )
+                throw new InvalidOperationException("The job has no stages.");
+            HashSet<string> stageIds = new HashSet<string>();
+            foreach( StageConfiguration stage in Stages )
+            {
+                stage.Validate(this);
+                if( !stageIds.Add(stage.StageId) )
+                    throw new InvalidOperationException(string.Format(CultureInfo.CurrentCulture, "The job contains duplicate stage ID {0}.", stage.StageId));
+            }
         }
 
         private static Type FindGenericBaseType(Type type, Type baseType)

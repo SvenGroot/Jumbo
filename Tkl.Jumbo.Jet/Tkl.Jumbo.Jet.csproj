@@ -96,7 +96,6 @@
     <Compile Include="ArchivedJob.cs" />
     <Compile Include="AssemblyResolver.cs" />
     <Compile Include="Channels\ChannelConfiguration.cs" />
-    <Compile Include="Channels\ChannelConnectivity.cs" />
     <Compile Include="Channels\ChannelType.cs" />
     <Compile Include="Channels\ChecksumInputStream.cs" />
     <Compile Include="Channels\ChecksumOutputStream.cs" />
