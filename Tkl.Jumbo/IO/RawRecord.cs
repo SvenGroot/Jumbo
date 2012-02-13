@@ -44,6 +44,7 @@ namespace Tkl.Jumbo.IO
         /// <summary>
         /// Gets the buffer containing the raw record.
         /// </summary>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1819:PropertiesShouldNotReturnArrays", Justification="Doesn't copy the array, and value is not intended to be write-protected.")]
         public byte[] Buffer { get; private set; }
         /// <summary>
         /// Gets the offset in <see cref="Buffer"/> at which the record starts.
@@ -83,6 +84,8 @@ namespace Tkl.Jumbo.IO
         /// <param name="writer">The <see cref="BinaryWriter"/> to serialize the object to.</param>
         public void Write(BinaryWriter writer)
         {
+            if( writer == null )
+                throw new ArgumentNullException("writer");
             if( Buffer == null )
                 WritableUtility.Write7BitEncodedInt32(writer, 0);
             else
@@ -98,6 +101,8 @@ namespace Tkl.Jumbo.IO
         /// <param name="reader">The <see cref="BinaryReader"/> to deserialize the object from.</param>
         public void Read(BinaryReader reader)
         {
+            if( reader == null )
+                throw new ArgumentNullException("reader");
             Offset = 0;
             Count = WritableUtility.Read7BitEncodedInt32(reader);
             if( Buffer == null || Buffer.Length < Count )

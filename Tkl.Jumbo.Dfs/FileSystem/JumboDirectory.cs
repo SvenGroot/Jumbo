@@ -53,11 +53,24 @@ namespace Tkl.Jumbo.Dfs.FileSystem
         /// </summary>
         /// <param name="directory">The <see cref="DirectoryInfo"/>.</param>
         /// <param name="rootPath">The root path of the file system.</param>
+        /// <returns>
+        /// A <see cref="JumboDirectory"/> instance for the local directory.
+        /// </returns>
+        public static JumboDirectory FromDirectoryInfo(DirectoryInfo directory, string rootPath)
+        {
+            return FromDirectoryInfo(directory, rootPath, true);
+        }
+
+        /// <summary>
+        /// Creates a <see cref="JumboDirectory"/> instance for a local directory from a <see cref="DirectoryInfo"/>.
+        /// </summary>
+        /// <param name="directory">The <see cref="DirectoryInfo"/>.</param>
+        /// <param name="rootPath">The root path of the file system.</param>
         /// <param name="includeChildren">If set to <see langword="true"/>, the children of the directory are included.</param>
         /// <returns>
         /// A <see cref="JumboDirectory"/> instance for the local directory.
         /// </returns>
-        public static JumboDirectory FromDirectoryInfo(DirectoryInfo directory, string rootPath, bool includeChildren = true)
+        public static JumboDirectory FromDirectoryInfo(DirectoryInfo directory, string rootPath, bool includeChildren)
         {
             if( directory == null )
                 throw new ArgumentNullException("directory");

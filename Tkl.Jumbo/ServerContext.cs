@@ -35,6 +35,7 @@ namespace Tkl.Jumbo
         /// Gets the host name of the local machine.
         /// </summary>
         /// <value>The host name of the local machine.</value>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Naming", "CA1702:CompoundWordsShouldBeCasedCorrectly", MessageId = "LocalHost", Justification = "It's not localhost name, it's local host-name.")]
         public static string LocalHostName
         {
             get { return _localHostName; }

@@ -53,7 +53,7 @@ namespace Tkl.Jumbo.Test.Dfs
                 writer.Write(data, 0, 5000);
 
                 stream.Position = 0;
-                packet.Read(reader, PacketFormatOptions.Default, true);
+                packet.Read(reader, PacketFormatOption.Default, true);
             }
             Assert.AreEqual(checksum, packet.Checksum);
             Assert.AreEqual(5000, packet.Size);
@@ -77,7 +77,7 @@ namespace Tkl.Jumbo.Test.Dfs
                 writer.Write(data, 0, 5000);
 
                 stream.Position = 0;
-                packet.Read(reader, PacketFormatOptions.NoSequenceNumber, true);
+                packet.Read(reader, PacketFormatOption.NoSequenceNumber, true);
             }
             Assert.AreEqual(checksum, packet.Checksum);
             Assert.AreEqual(5000, packet.Size);
@@ -104,11 +104,11 @@ namespace Tkl.Jumbo.Test.Dfs
                 writer.Write(data, 0, 5000);
 
                 stream.Position = 0;
-                packet.Read(reader, PacketFormatOptions.ChecksumOnly, true);
+                packet.Read(reader, PacketFormatOption.ChecksumOnly, true);
                 Assert.AreEqual(checksum, packet.Checksum);
                 Assert.AreEqual(Packet.PacketSize, packet.Size);
                 Assert.IsFalse(packet.IsLastPacket);
-                packet.Read(reader, PacketFormatOptions.ChecksumOnly, true);
+                packet.Read(reader, PacketFormatOption.ChecksumOnly, true);
                 Assert.AreEqual(checksum2, packet.Checksum);
                 Assert.AreEqual(5000, packet.Size);
                 Assert.IsTrue(packet.IsLastPacket);
@@ -125,7 +125,7 @@ namespace Tkl.Jumbo.Test.Dfs
             using( BinaryReader reader = new BinaryReader(stream) )
             {
                 Packet packet = new Packet(data, 5000, 2, true);
-                packet.Write(writer, PacketFormatOptions.Default);
+                packet.Write(writer, PacketFormatOption.Default);
 
                 stream.Position = 0;
                 Assert.AreEqual(checksum, reader.ReadUInt32());
@@ -149,7 +149,7 @@ namespace Tkl.Jumbo.Test.Dfs
             using( BinaryReader reader = new BinaryReader(stream) )
             {
                 Packet packet = new Packet(data, 5000, 1, true);
-                packet.Write(writer, PacketFormatOptions.ChecksumOnly);
+                packet.Write(writer, PacketFormatOption.ChecksumOnly);
 
                 stream.Position = 0;
                 Assert.AreEqual(checksum, reader.ReadUInt32());
@@ -170,7 +170,7 @@ namespace Tkl.Jumbo.Test.Dfs
             using( BinaryReader reader = new BinaryReader(stream) )
             {
                 Packet packet = new Packet(data, 5000, 2, true);
-                packet.Write(writer, PacketFormatOptions.NoSequenceNumber);
+                packet.Write(writer, PacketFormatOption.NoSequenceNumber);
 
                 stream.Position = 0;
                 Assert.AreEqual(checksum, reader.ReadUInt32());

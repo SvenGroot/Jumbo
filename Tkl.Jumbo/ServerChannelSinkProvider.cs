@@ -36,7 +36,6 @@ namespace Tkl.Jumbo
         /// <param name="channel">The channel for which to create the channel sink chain.</param>
         /// <returns>The first sink of the newly formed channel sink chain, or <see langword="null"/>, 
         /// which indicates that this provider will not or cannot provide a connection for this endpoint.</returns>
-        [SecurityPermission(SecurityAction.LinkDemand, Flags=SecurityPermissionFlag.Infrastructure)]
         public IServerChannelSink CreateSink(IChannelReceiver channel)
         {
             return new ServerChannelSink(Next.CreateSink(channel));
@@ -46,7 +45,6 @@ namespace Tkl.Jumbo
         /// Returns the channel data for the channel that the current sink is associated with.
         /// </summary>
         /// <param name="channelData">A <see cref="IChannelDataStore"/> object in which the channel data is to be returned. </param>
-        [SecurityPermission(SecurityAction.LinkDemand, Flags = SecurityPermissionFlag.Infrastructure)]
         public void GetChannelData(IChannelDataStore channelData)
         {
         }
@@ -57,9 +55,7 @@ namespace Tkl.Jumbo
         /// <value>The next sink provider in the channel sink provider chain.</value>
         public IServerChannelSinkProvider Next 
         {
-            [SecurityPermission(SecurityAction.LinkDemand, Flags = SecurityPermissionFlag.Infrastructure)]
             get;
-            [SecurityPermission(SecurityAction.LinkDemand, Flags = SecurityPermissionFlag.Infrastructure)]
             set; 
         }
 

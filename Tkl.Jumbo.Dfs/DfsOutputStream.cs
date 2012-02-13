@@ -383,6 +383,8 @@ namespace Tkl.Jumbo.Dfs
                         {
                             if( _sender != null )
                                 _sender.Dispose();
+                            if( _recordBuffer != null )
+                                _recordBuffer.Dispose();
                         }
                     }
                 }
@@ -402,7 +404,7 @@ namespace Tkl.Jumbo.Dfs
         private void WritePacket(byte[] buffer, int length, bool finalPacket)
         {
             EnsureSenderCreated();
-            _packet.CopyFrom(_buffer, length, _nextSequenceNumber++, finalPacket);
+            _packet.CopyFrom(buffer, length, _nextSequenceNumber++, finalPacket);
             _sender.SendPacket(_packet);
         }
 

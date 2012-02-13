@@ -403,6 +403,7 @@ namespace Tkl.Jumbo.IO
 
         #endregion
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Maintainability", "CA1506:AvoidExcessiveClassCoupling")]
         public static object GetWriter(Type type)
         {
             if( type == typeof(int) )

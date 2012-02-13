@@ -149,7 +149,7 @@ namespace DataServerApplication
             {
                 try
                 {
-                    packet.Read(clientReader, PacketFormatOptions.Default, forwarder.IsReponseOnly); // Only the last server in the chain needs to verify checksums
+                    packet.Read(clientReader, PacketFormatOption.Default, forwarder.IsResponseOnly); // Only the last server in the chain needs to verify checksums
                 }
                 catch( InvalidPacketException ex )
                 {
@@ -171,7 +171,7 @@ namespace DataServerApplication
                     forwarder.SendPacket(packet);
                 }
 
-                packet.Write(fileWriter, PacketFormatOptions.ChecksumOnly);
+                packet.Write(fileWriter, PacketFormatOption.ChecksumOnly);
             } while( !packet.IsLastPacket );
             return true;
         }
@@ -247,13 +247,13 @@ namespace DataServerApplication
                     {
                         do
                         {
-                            packet.Read(blockReader, PacketFormatOptions.ChecksumOnly, false);
+                            packet.Read(blockReader, PacketFormatOption.ChecksumOnly, false);
 
                             if( sizeRemaining == 0 )
                                 packet.IsLastPacket = true;
 
                             clientWriter.WriteResult(DataServerClientProtocolResult.Ok);
-                            packet.Write(clientWriter, PacketFormatOptions.NoSequenceNumber);
+                            packet.Write(clientWriter, PacketFormatOption.NoSequenceNumber);
 
                             // assertion to check if we don't jump over zero.
                             System.Diagnostics.Debug.Assert(sizeRemaining > 0 ? sizeRemaining - packet.Size >= 0 : true);

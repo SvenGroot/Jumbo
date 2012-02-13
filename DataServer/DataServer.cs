@@ -347,7 +347,7 @@ namespace DataServerApplication
                     {
                         do
                         {
-                            packet.Read(reader, PacketFormatOptions.ChecksumOnly, true);
+                            packet.Read(reader, PacketFormatOption.ChecksumOnly, true);
                             packet.SequenceNumber++;
                             sender.SendPacket(packet);
                         } while( !packet.IsLastPacket );

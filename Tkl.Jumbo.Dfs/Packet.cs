@@ -175,13 +175,13 @@ namespace Tkl.Jumbo.Dfs
         /// <param name="format">The format.</param>
         /// <param name="verifyChecksum"><see langword="true"/> to verify the checksum read from the data source against
         /// the actual checksum of the data; <see langword="false"/> to skip verifying the checksum.</param>
-        public void Read(BinaryReader reader, PacketFormatOptions format, bool verifyChecksum)
+        public void Read(BinaryReader reader, PacketFormatOption format, bool verifyChecksum)
         {
             if( reader == null )
                 throw new ArgumentNullException("reader");
 
             uint expectedChecksum = reader.ReadUInt32();
-            if( format == PacketFormatOptions.ChecksumOnly )
+            if( format == PacketFormatOption.ChecksumOnly )
             {
                 // Determine the size from the stream length.
                 Size = (int)Math.Min(reader.BaseStream.Length - reader.BaseStream.Position, PacketSize);
@@ -191,7 +191,7 @@ namespace Tkl.Jumbo.Dfs
             {
                 Size = reader.ReadInt32();
                 IsLastPacket = reader.ReadBoolean();
-                if( format != PacketFormatOptions.NoSequenceNumber )
+                if( format != PacketFormatOption.NoSequenceNumber )
                     SequenceNumber = reader.ReadInt64();
                 if( Size > PacketSize || (!IsLastPacket && Size != PacketSize) )
                     throw new InvalidPacketException("The packet has an invalid size.");
@@ -220,17 +220,17 @@ namespace Tkl.Jumbo.Dfs
         /// </summary>
         /// <param name="writer">The <see cref="BinaryWriter"/> to write the packet to.</param>
         /// <param name="format">The format.</param>
-        public void Write(BinaryWriter writer, PacketFormatOptions format)
+        public void Write(BinaryWriter writer, PacketFormatOption format)
         {
             if( writer == null )
                 throw new ArgumentNullException("writer");
 
             writer.Write((uint)Checksum);
-            if( format != PacketFormatOptions.ChecksumOnly )
+            if( format != PacketFormatOption.ChecksumOnly )
             {
                 writer.Write(Size);
                 writer.Write(IsLastPacket);
-                if( format != PacketFormatOptions.NoSequenceNumber )
+                if( format != PacketFormatOption.NoSequenceNumber )
                     writer.Write(SequenceNumber);
             }
             writer.Write(_data, 0, Size);

@@ -287,16 +287,17 @@ namespace Tkl.Jumbo
             return BinarySizeFormatter.Format(this, format, null);
         }
 
+
         /// <summary>
         /// Returns a <see cref="System.String"/> that represents this instance.
         /// </summary>
-        /// <param name="formatProvider">The format provider.</param>
+        /// <param name="provider">The provider.</param>
         /// <returns>
         /// A <see cref="System.String"/> that represents this instance.
         /// </returns>
-        public string ToString(IFormatProvider formatProvider)
+        public string ToString(IFormatProvider provider)
         {
-            return BinarySizeFormatter.Format(this, null, formatProvider);
+            return BinarySizeFormatter.Format(this, null, provider);
         }
 
         /// <summary>
@@ -938,7 +939,7 @@ namespace Tkl.Jumbo
             case "P":
                 return Petabyte;
             default:
-                throw new ArgumentException(string.Format(System.Globalization.CultureInfo.CurrentCulture, "Unrecognized suffix {0}.", unit), "suffix");
+                throw new ArgumentException(string.Format(System.Globalization.CultureInfo.CurrentCulture, "Unrecognized unit {0}.", unit), "unit");
             }
         }
 

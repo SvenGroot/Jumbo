@@ -21,6 +21,8 @@ namespace Tkl.Jumbo.IO
         /// <param name="comparer">The <see cref="IRawComparer"/> for the records in the buffer.</param>
         public static void Sort(this RecordIndexEntry[] index, byte[] buffer, IRawComparer comparer)
         {
+            if( index == null )
+                throw new ArgumentNullException("index");
             Sort(index, buffer, comparer, 0, index.Length);
         }
 

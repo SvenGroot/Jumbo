@@ -16,45 +16,45 @@ namespace Tkl.Jumbo.IO
         /// Compares the binary representation of two objects and returns a value indicating whether one is less than, equal to, or greater than the other.
         /// </summary>
         /// <param name="self">The comparer to use.</param>
-        /// <param name="x">The first record.</param>
-        /// <param name="y">The second record.</param>
+        /// <param name="record1">The first record.</param>
+        /// <param name="record2">The second record.</param>
         /// <returns>
         /// A signed integer that indicates the relative values of the first and second object.
         /// </returns>
-        public static int Compare(this IRawComparer self, RawRecord x, RawRecord y)
+        public static int Compare(this IRawComparer self, RawRecord record1, RawRecord record2)
         {
             if( self == null )
                 throw new ArgumentNullException("self");
-            if( x == null )
+            if( record1 == null )
             {
-                if( y == null )
+                if( record2 == null )
                     return 0;
                 else
                     return -1;
             }
-            else if( y == null )
+            else if( record2 == null )
                 return 1;
 
-            return self.Compare(x.Buffer, x.Offset, x.Count, y.Buffer, y.Offset, y.Count);
+            return self.Compare(record1.Buffer, record1.Offset, record1.Count, record2.Buffer, record2.Offset, record2.Count);
         }
         
         /// <summary>
         /// Helper method to compare a range of bytes.
         /// </summary>
-        /// <param name="x">The buffer containing the first object.</param>
-        /// <param name="xOffset">The offset into <paramref name="x"/> where the first object starts.</param>
-        /// <param name="xCount">The number of bytes in <paramref name="x"/> used by the first object.</param>
-        /// <param name="y">The buffer containing the second object.</param>
-        /// <param name="yOffset">The offset into <paramref name="y"/> where the second object starts.</param>
-        /// <param name="yCount">The number of bytes in <paramref name="y"/> used by the second object.</param>
+        /// <param name="buffer1">The buffer containing the first object.</param>
+        /// <param name="offset1">The offset into <paramref name="buffer1"/> where the first object starts.</param>
+        /// <param name="count1">The number of bytes in <paramref name="buffer1"/> used by the first object.</param>
+        /// <param name="buffer2">The buffer containing the second object.</param>
+        /// <param name="offset2">The offset into <paramref name="buffer2"/> where the second object starts.</param>
+        /// <param name="count2">The number of bytes in <paramref name="buffer2"/> used by the second object.</param>
         /// <returns>A signed integer that indicates the relative values of the first and second object.</returns>
-        public static unsafe int CompareBytes(byte[] x, int xOffset, int xCount, byte[] y, int yOffset, int yCount)
+        public static unsafe int CompareBytes(byte[] buffer1, int offset1, int count1, byte[] buffer2, int offset2, int count2)
         {
-            fixed( byte* str1ptr = x, str2ptr = y )
+            fixed( byte* str1ptr = buffer1, str2ptr = buffer2 )
             {
-                byte* left = str1ptr + xOffset;
-                byte* end = left + Math.Min(xCount, yCount);
-                byte* right = str2ptr + yOffset;
+                byte* left = str1ptr + offset1;
+                byte* end = left + Math.Min(count1, count2);
+                byte* right = str2ptr + offset2;
                 while( left < end )
                 {
                     if( *left != *right )
@@ -62,26 +62,26 @@ namespace Tkl.Jumbo.IO
                     ++left;
                     ++right;
                 }
-                return xCount - yCount;
+                return count1 - count2;
             }
         }
 
         /// <summary>
         /// Helper method to compare a range of bytes with a 7-bit encoded length before the range.
         /// </summary>
-        /// <param name="x">The buffer containing the first object.</param>
-        /// <param name="xOffset">The offset into <paramref name="x"/> where the first object starts.</param>
-        /// <param name="xCount">The number of bytes in <paramref name="x"/> used by the first object.</param>
-        /// <param name="y">The buffer containing the second object.</param>
-        /// <param name="yOffset">The offset into <paramref name="y"/> where the second object starts.</param>
-        /// <param name="yCount">The number of bytes in <paramref name="y"/> used by the second object.</param>
+        /// <param name="buffer1">The buffer containing the first object.</param>
+        /// <param name="offset1">The offset into <paramref name="buffer1"/> where the first object starts.</param>
+        /// <param name="count1">The number of bytes in <paramref name="buffer1"/> used by the first object.</param>
+        /// <param name="buffer2">The buffer containing the second object.</param>
+        /// <param name="offset2">The offset into <paramref name="buffer2"/> where the second object starts.</param>
+        /// <param name="count2">The number of bytes in <paramref name="buffer2"/> used by the second object.</param>
         /// <returns>A signed integer that indicates the relative values of the first and second object.</returns>
-        public static unsafe int CompareBytesWith7BitEncodedLength(byte[] x, int xOffset, int xCount, byte[] y, int yOffset, int yCount)
+        public static unsafe int CompareBytesWith7BitEncodedLength(byte[] buffer1, int offset1, int count1, byte[] buffer2, int offset2, int count2)
         {
-            fixed( byte* str1ptr = x, str2ptr = y )
+            fixed( byte* str1ptr = buffer1, str2ptr = buffer2 )
             {
-                byte* left = str1ptr + xOffset;
-                byte* right = str2ptr + yOffset;
+                byte* left = str1ptr + offset1;
+                byte* right = str2ptr + offset2;
                 int length1 = Decode7BitEncodedInt32(ref left);
                 int length2 = Decode7BitEncodedInt32(ref right);
                 byte* end = left + Math.Min(length1, length2);
@@ -92,7 +92,7 @@ namespace Tkl.Jumbo.IO
                     ++left;
                     ++right;
                 }
-                return xCount - yCount;
+                return count1 - count2;
             }
         }
 

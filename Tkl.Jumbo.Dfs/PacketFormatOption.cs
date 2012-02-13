@@ -10,7 +10,7 @@ namespace Tkl.Jumbo.Dfs
     /// <summary>
     /// Indicates how to read or write a <see cref="Packet"/>.
     /// </summary>
-    public enum PacketFormatOptions
+    public enum PacketFormatOption
     {
         /// <summary>
         /// Reads or writes all fields.

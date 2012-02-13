@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Globalization;
 
 namespace Tkl.Jumbo
 {
@@ -53,7 +54,7 @@ namespace Tkl.Jumbo
                 }
 
                 if( prefix != null && char.IsLower(prefix, 0) )
-                    realPrefix = realPrefix.ToLowerInvariant();
+                    realPrefix = realPrefix.ToLower(CultureInfo.CurrentCulture);
 
                 if( factor > 1 )
                     realPrefix += iec;

@@ -37,7 +37,6 @@ namespace Tkl.Jumbo
         /// <param name="remoteChannelData">A channel data object that describes a channel on the remote server.</param>
         /// <returns>The first sink of the newly formed channel sink chain, or <see langword="null"/>, 
         /// which indicates that this provider will not or cannot provide a connection for this endpoint.</returns>
-        [SecurityPermission(SecurityAction.LinkDemand, Flags = SecurityPermissionFlag.Infrastructure)]
         public IClientChannelSink CreateSink(IChannelSender channel, string url, object remoteChannelData)
         {
             return new ClientChannelSink(Next.CreateSink(channel, url, remoteChannelData));
@@ -49,9 +48,7 @@ namespace Tkl.Jumbo
         /// <value>The next sink provider in the channel sink provider chain.</value>
         public IClientChannelSinkProvider Next 
         {
-            [SecurityPermission(SecurityAction.LinkDemand, Flags = SecurityPermissionFlag.Infrastructure)]
             get;
-            [SecurityPermission(SecurityAction.LinkDemand, Flags = SecurityPermissionFlag.Infrastructure)]
             set; 
         }
 

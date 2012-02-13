@@ -173,6 +173,7 @@ namespace Tkl.Jumbo.IO
         ///   as the record type.
         /// </para>
         /// </remarks>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1024:UsePropertiesWhereAppropriate", Justification = "Code has non-safe side-effects")]
         public RecordReader<RawRecord> GetRawReader()
         {
             CheckDisposed();

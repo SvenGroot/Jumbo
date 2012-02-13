@@ -53,13 +53,22 @@ namespace Tkl.Jumbo
             {
                 _log.InfoFormat("Retrieving log file {0}", fileName);
                 System.IO.FileStream logStream = System.IO.File.Open(fileName, System.IO.FileMode.Open, System.IO.FileAccess.Read, System.IO.FileShare.ReadWrite);
-                if( maxSize > 0 && logStream.Length > maxSize )
+                try
                 {
-                    logStream.Position = logStream.Length - maxSize;
-                    while( logStream.ReadByte() != '\n' )
-                        ;
+                    if( maxSize > 0 && logStream.Length > maxSize )
+                    {
+                        logStream.Position = logStream.Length - maxSize;
+                        while( logStream.ReadByte() != '\n' )
+                        {
+                        }
+                    }
+                    return logStream;
                 }
-                return logStream;
+                catch
+                {
+                    logStream.Dispose();
+                    throw;
+                }
             }
             else
             {

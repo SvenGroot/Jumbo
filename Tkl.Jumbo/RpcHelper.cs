@@ -110,6 +110,7 @@ namespace Tkl.Jumbo
         /// <param name="remotingAction">The <see cref="Action"/> that performs the remoting call.</param>
         /// <param name="retryInterval">The amount of time to wait, in milliseconds, before retrying after a failure.</param>
         /// <param name="maxRetries">The maximum amount of times to retry, or -1 to retry indefinitely.</param>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1031:DoNotCatchGeneralExceptionTypes")]
         public static void TryRemotingCall(Action remotingAction, int retryInterval, int maxRetries)
         {
             if( remotingAction == null )

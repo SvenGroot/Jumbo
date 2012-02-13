@@ -73,7 +73,7 @@ namespace Tkl.Jumbo.IO
         /// <param name="allowRecordReuse"><see langword="true"/> if the reader can reuse the same instance of <typeparamref name="T"/> every time; <see langword="false"/>
         /// if a new instance must be created for every record.</param>
         public BinaryRecordReader(Stream stream, bool allowRecordReuse)
-            : this(stream, 0, stream.Length, allowRecordReuse, false)
+            : this(stream, 0, stream == null ? 0 : stream.Length, allowRecordReuse, false)
         {
         }
 

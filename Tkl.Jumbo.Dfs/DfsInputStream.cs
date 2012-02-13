@@ -415,7 +415,7 @@ namespace Tkl.Jumbo.Dfs
                     {
                         throw new DfsException("The data server reported an error.");
                     }
-                    _currentPacket.Read(_serverReader, PacketFormatOptions.NoSequenceNumber, true);
+                    _currentPacket.Read(_serverReader, PacketFormatOption.NoSequenceNumber, true);
                     if( _currentPacket.IsLastPacket )
                     {
                         CloseDataServerConnection();

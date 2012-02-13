@@ -64,7 +64,7 @@ namespace Tkl.Jumbo.Dfs.FileSystem
                 throw new ArgumentNullException("configuration");
 
             // TODO: Other file systems.
-            if( configuration.NameServer.HostName.StartsWith("file://") )
+            if( configuration.NameServer.HostName.StartsWith("file://", StringComparison.Ordinal) )
                 return new LocalFileSystemClient(configuration);
             else
                 return new DfsClient(configuration);

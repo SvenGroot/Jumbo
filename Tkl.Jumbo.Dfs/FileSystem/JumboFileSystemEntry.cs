@@ -83,11 +83,24 @@ namespace Tkl.Jumbo.Dfs.FileSystem
         /// </summary>
         /// <param name="info">The <see cref="FileSystemInfo"/>.</param>
         /// <param name="rootPath">The root path of the file system.</param>
+        /// <returns>
+        /// A <see cref="JumboFileSystemEntry"/> instance for the local file or directory.
+        /// </returns>
+        public static JumboFileSystemEntry FromFileSystemInfo(FileSystemInfo info, string rootPath)
+        {
+            return FromFileSystemInfo(info, rootPath, true);
+        }
+
+        /// <summary>
+        /// Creates a <see cref="JumboFileSystemEntry"/> instance for a local file or directory from a <see cref="FileSystemInfo"/>.
+        /// </summary>
+        /// <param name="info">The <see cref="FileSystemInfo"/>.</param>
+        /// <param name="rootPath">The root path of the file system.</param>
         /// <param name="includeChildren">If set to <see langword="true"/>, include the children if this is a directory.</param>
         /// <returns>
         /// A <see cref="JumboFileSystemEntry"/> instance for the local file or directory.
         /// </returns>
-        public static JumboFileSystemEntry FromFileSystemInfo(FileSystemInfo info, string rootPath, bool includeChildren = true)
+        public static JumboFileSystemEntry FromFileSystemInfo(FileSystemInfo info, string rootPath, bool includeChildren)
         {
             if( info == null )
                 throw new ArgumentNullException("info");
@@ -104,7 +117,7 @@ namespace Tkl.Jumbo.Dfs.FileSystem
             if( rootPath == null )
                 return fullPath;
 
-            if( !fullPath.StartsWith(rootPath) )
+            if( !fullPath.StartsWith(rootPath, StringComparison.Ordinal) )
                 throw new ArgumentException("Invalid path.");
 
             int length = rootPath.Length;

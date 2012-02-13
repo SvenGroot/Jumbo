@@ -10,6 +10,7 @@ namespace Tkl.Jumbo.IO
     /// <summary>
     /// Interface for streams that offer special handling of records.
     /// </summary>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Naming", "CA1711:IdentifiersShouldNotHaveIncorrectSuffix", Justification = "Interface should only be applied to streams.")]
     public interface IRecordOutputStream
     {
         /// <summary>

@@ -41,7 +41,7 @@ namespace Tkl.Jumbo.IO
         /// </summary>
         /// <param name="source">The list to read from.</param>
         public EnumerableRecordReader(IList<T> source)
-            : this(source, source.Count)
+            : this(source, source == null ? 0 : source.Count)
         {
 
         }

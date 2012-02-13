@@ -10,135 +10,136 @@ namespace Tkl.Jumbo.IO
     /// <summary>
     /// Provides raw comparers for built-in framework types.
     /// </summary>
+    [global::System.Runtime.CompilerServices.CompilerGenerated]
     static class DefaultRawComparer
     {
         #region Nested types
 
         private sealed class SByteComparer : IRawComparer
         {
-            public int Compare(byte[] x, int xOffset, int xCount, byte[] y, int yOffset, int yCount)
+            public int Compare(byte[] buffer1, int offset1, int count1, byte[] buffer2, int offset2, int count2)
             {
-                SByte value1 = (SByte)x[xOffset];
-                SByte value2 = (SByte)y[yOffset];
+                SByte value1 = (SByte)buffer1[offset1];
+                SByte value2 = (SByte)buffer2[offset2];
                 return value1 < value2 ? -1 : (value1 == value2 ? 0 : 1);
             }
         }
 
         private sealed class ByteComparer : IRawComparer
         {
-            public int Compare(byte[] x, int xOffset, int xCount, byte[] y, int yOffset, int yCount)
+            public int Compare(byte[] buffer1, int offset1, int count1, byte[] buffer2, int offset2, int count2)
             {
-                Byte value1 = (Byte)x[xOffset];
-                Byte value2 = (Byte)y[yOffset];
+                Byte value1 = (Byte)buffer1[offset1];
+                Byte value2 = (Byte)buffer2[offset2];
                 return value1 < value2 ? -1 : (value1 == value2 ? 0 : 1);
             }
         }
 
         private sealed class Int16Comparer : IRawComparer
         {
-            public int Compare(byte[] x, int xOffset, int xCount, byte[] y, int yOffset, int yCount)
+            public int Compare(byte[] buffer1, int offset1, int count1, byte[] buffer2, int offset2, int count2)
             {
-                Int16 value1 = LittleEndianBitConverter.ToInt16(x, xOffset);
-                Int16 value2 = LittleEndianBitConverter.ToInt16(y, yOffset);
+                Int16 value1 = LittleEndianBitConverter.ToInt16(buffer1, offset1);
+                Int16 value2 = LittleEndianBitConverter.ToInt16(buffer2, offset2);
                 return value1 < value2 ? -1 : (value1 == value2 ? 0 : 1);
             }
         }
 
         private sealed class UInt16Comparer : IRawComparer
         {
-            public int Compare(byte[] x, int xOffset, int xCount, byte[] y, int yOffset, int yCount)
+            public int Compare(byte[] buffer1, int offset1, int count1, byte[] buffer2, int offset2, int count2)
             {
-                UInt16 value1 = LittleEndianBitConverter.ToUInt16(x, xOffset);
-                UInt16 value2 = LittleEndianBitConverter.ToUInt16(y, yOffset);
+                UInt16 value1 = LittleEndianBitConverter.ToUInt16(buffer1, offset1);
+                UInt16 value2 = LittleEndianBitConverter.ToUInt16(buffer2, offset2);
                 return value1 < value2 ? -1 : (value1 == value2 ? 0 : 1);
             }
         }
 
         private sealed class Int32Comparer : IRawComparer
         {
-            public int Compare(byte[] x, int xOffset, int xCount, byte[] y, int yOffset, int yCount)
+            public int Compare(byte[] buffer1, int offset1, int count1, byte[] buffer2, int offset2, int count2)
             {
-                Int32 value1 = LittleEndianBitConverter.ToInt32(x, xOffset);
-                Int32 value2 = LittleEndianBitConverter.ToInt32(y, yOffset);
+                Int32 value1 = LittleEndianBitConverter.ToInt32(buffer1, offset1);
+                Int32 value2 = LittleEndianBitConverter.ToInt32(buffer2, offset2);
                 return value1 < value2 ? -1 : (value1 == value2 ? 0 : 1);
             }
         }
 
         private sealed class UInt32Comparer : IRawComparer
         {
-            public int Compare(byte[] x, int xOffset, int xCount, byte[] y, int yOffset, int yCount)
+            public int Compare(byte[] buffer1, int offset1, int count1, byte[] buffer2, int offset2, int count2)
             {
-                UInt32 value1 = LittleEndianBitConverter.ToUInt32(x, xOffset);
-                UInt32 value2 = LittleEndianBitConverter.ToUInt32(y, yOffset);
+                UInt32 value1 = LittleEndianBitConverter.ToUInt32(buffer1, offset1);
+                UInt32 value2 = LittleEndianBitConverter.ToUInt32(buffer2, offset2);
                 return value1 < value2 ? -1 : (value1 == value2 ? 0 : 1);
             }
         }
 
         private sealed class Int64Comparer : IRawComparer
         {
-            public int Compare(byte[] x, int xOffset, int xCount, byte[] y, int yOffset, int yCount)
+            public int Compare(byte[] buffer1, int offset1, int count1, byte[] buffer2, int offset2, int count2)
             {
-                Int64 value1 = LittleEndianBitConverter.ToInt64(x, xOffset);
-                Int64 value2 = LittleEndianBitConverter.ToInt64(y, yOffset);
+                Int64 value1 = LittleEndianBitConverter.ToInt64(buffer1, offset1);
+                Int64 value2 = LittleEndianBitConverter.ToInt64(buffer2, offset2);
                 return value1 < value2 ? -1 : (value1 == value2 ? 0 : 1);
             }
         }
 
         private sealed class UInt64Comparer : IRawComparer
         {
-            public int Compare(byte[] x, int xOffset, int xCount, byte[] y, int yOffset, int yCount)
+            public int Compare(byte[] buffer1, int offset1, int count1, byte[] buffer2, int offset2, int count2)
             {
-                UInt64 value1 = LittleEndianBitConverter.ToUInt64(x, xOffset);
-                UInt64 value2 = LittleEndianBitConverter.ToUInt64(y, yOffset);
+                UInt64 value1 = LittleEndianBitConverter.ToUInt64(buffer1, offset1);
+                UInt64 value2 = LittleEndianBitConverter.ToUInt64(buffer2, offset2);
                 return value1 < value2 ? -1 : (value1 == value2 ? 0 : 1);
             }
         }
 
         private sealed class DecimalComparer : IRawComparer
         {
-            public int Compare(byte[] x, int xOffset, int xCount, byte[] y, int yOffset, int yCount)
+            public int Compare(byte[] buffer1, int offset1, int count1, byte[] buffer2, int offset2, int count2)
             {
-                Decimal value1 = LittleEndianBitConverter.ToDecimal(x, xOffset);
-                Decimal value2 = LittleEndianBitConverter.ToDecimal(y, yOffset);
+                Decimal value1 = LittleEndianBitConverter.ToDecimal(buffer1, offset1);
+                Decimal value2 = LittleEndianBitConverter.ToDecimal(buffer2, offset2);
                 return value1 < value2 ? -1 : (value1 == value2 ? 0 : 1);
             }
         }
 
         private sealed class SingleComparer : IRawComparer
         {
-            public int Compare(byte[] x, int xOffset, int xCount, byte[] y, int yOffset, int yCount)
+            public int Compare(byte[] buffer1, int offset1, int count1, byte[] buffer2, int offset2, int count2)
             {
-                Single value1 = LittleEndianBitConverter.ToSingle(x, xOffset);
-                Single value2 = LittleEndianBitConverter.ToSingle(y, yOffset);
+                Single value1 = LittleEndianBitConverter.ToSingle(buffer1, offset1);
+                Single value2 = LittleEndianBitConverter.ToSingle(buffer2, offset2);
                 return value1 < value2 ? -1 : (value1 == value2 ? 0 : 1);
             }
         }
 
         private sealed class DoubleComparer : IRawComparer
         {
-            public int Compare(byte[] x, int xOffset, int xCount, byte[] y, int yOffset, int yCount)
+            public int Compare(byte[] buffer1, int offset1, int count1, byte[] buffer2, int offset2, int count2)
             {
-                Double value1 = LittleEndianBitConverter.ToDouble(x, xOffset);
-                Double value2 = LittleEndianBitConverter.ToDouble(y, yOffset);
+                Double value1 = LittleEndianBitConverter.ToDouble(buffer1, offset1);
+                Double value2 = LittleEndianBitConverter.ToDouble(buffer2, offset2);
                 return value1 < value2 ? -1 : (value1 == value2 ? 0 : 1);
             }
         }
 
         private sealed class DateTimeComparer : IRawComparer
         {
-            public int Compare(byte[] x, int xOffset, int xCount, byte[] y, int yOffset, int yCount)
+            public int Compare(byte[] buffer1, int offset1, int count1, byte[] buffer2, int offset2, int count2)
             {
-                DateTime value1 = LittleEndianBitConverter.ToDateTime(x, xOffset);
-                DateTime value2 = LittleEndianBitConverter.ToDateTime(y, yOffset);
+                DateTime value1 = LittleEndianBitConverter.ToDateTime(buffer1, offset1);
+                DateTime value2 = LittleEndianBitConverter.ToDateTime(buffer2, offset2);
                 return value1 < value2 ? -1 : (value1 == value2 ? 0 : 1);
             }
         }
 
         private sealed class StringComparer : IRawComparer
         {
-            public int Compare(byte[] x, int xOffset, int xCount, byte[] y, int yOffset, int yCount)
+            public int Compare(byte[] buffer1, int offset1, int count1, byte[] buffer2, int offset2, int count2)
             {
-                return RawComparerHelper.CompareBytesWith7BitEncodedLength(x, xOffset, xCount, y, yOffset, yCount);
+                return RawComparerHelper.CompareBytesWith7BitEncodedLength(buffer1, offset1, count1, buffer2, offset2, count2);
             }
         }
 

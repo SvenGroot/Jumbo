@@ -162,6 +162,8 @@ namespace Tkl.Jumbo.IO
         /// </remarks>
         public override void AddInput(IList<RecordInput> partitions)
         {
+            if( partitions == null )
+                throw new ArgumentNullException("partitions");
             IRecordReader reader = partitions[0].Reader;
             switch( CurrentInputCount )
             {

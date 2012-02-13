@@ -26,6 +26,8 @@ namespace Tkl.Jumbo.IO
         /// <exception cref="NotSupportedException">The type has no value writer and does not implement <see cref="IWritable"/>.</exception>
         public static object GetWriter(Type type)
         {
+            if( type == null )
+                throw new ArgumentNullException("type");
             if( type.GetInterfaces().Contains(typeof(IWritable)) )
                 return null;
             ValueWriterAttribute attribute = (ValueWriterAttribute)Attribute.GetCustomAttribute(type, typeof(ValueWriterAttribute));
@@ -93,6 +95,7 @@ namespace Tkl.Jumbo.IO
         ///   the value. If it does not, the <see cref="IValueWriter{T}"/> is used to write the value.
         /// </para>
         /// </remarks>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1000:DoNotDeclareStaticMembersOnGenericTypes")]
         public static void WriteValue(T value, BinaryWriter writer)
         {
             if( _writer == null )
@@ -116,6 +119,7 @@ namespace Tkl.Jumbo.IO
         ///   should not be used in scenarios where you wish to support record reuse.
         /// </para>
         /// </remarks>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1000:DoNotDeclareStaticMembersOnGenericTypes")]
         public static T ReadValue(BinaryReader reader)
         {
             if( _writer == null )

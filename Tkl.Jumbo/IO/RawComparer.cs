@@ -22,6 +22,7 @@ namespace Tkl.Jumbo.IO
     {
         #region Nested types
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1001:TypesThatOwnDisposableFieldsShouldBeDisposable", Justification = "All resources are memory resources, and there's no place it would get disposed.")]
         private sealed class DeserializingComparer : IRawComparer
         {
             private readonly MemoryBufferStream _stream1;
@@ -56,6 +57,7 @@ namespace Tkl.Jumbo.IO
         /// Gets the <see cref="IRawComparer"/> instance, or <see langword="null"/> if the <typeparamref name="T"/> doesn't have
         /// a raw comparer.
         /// </summary>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1000:DoNotDeclareStaticMembersOnGenericTypes")]
         public static IRawComparer Comparer
         {
             get { return _comparer; }
@@ -65,6 +67,7 @@ namespace Tkl.Jumbo.IO
         /// Creates a raw comparer.
         /// </summary>
         /// <returns>The raw comparer for the type, or a comparer that deserializes in order to compare if the type has no raw comparer.</returns>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1000:DoNotDeclareStaticMembersOnGenericTypes")]
         public static IRawComparer CreateComparer()
         {
             return _comparer ?? new DeserializingComparer();

@@ -18,10 +18,10 @@ namespace Tkl.Jumbo.IO
         /// <summary>
         /// Initializes a new instance of the <see cref="RawComparerAttribute"/> class.
         /// </summary>
-        /// <param name="RawComparerTypeName">The type name of the type implementing <see cref="IRawComparer"/>.</param>
-        public RawComparerAttribute(string RawComparerTypeName)
+        /// <param name="rawComparerTypeName">The type name of the type implementing <see cref="IRawComparer"/>.</param>
+        public RawComparerAttribute(string rawComparerTypeName)
         {
-            _rawComparerTypeName = RawComparerTypeName;
+            _rawComparerTypeName = rawComparerTypeName;
         }
 
         /// <summary>

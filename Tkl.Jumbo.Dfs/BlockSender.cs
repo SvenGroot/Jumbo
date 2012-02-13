@@ -15,7 +15,7 @@ namespace Tkl.Jumbo.Dfs
     /// <summary>
     /// Handles sending a block to a data server, and sending acknowledgements to a client.
     /// </summary>
-    public class BlockSender : IDisposable
+    public sealed class BlockSender : IDisposable
     {
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(BlockSender));
 
@@ -82,7 +82,7 @@ namespace Tkl.Jumbo.Dfs
         /// <value>
         /// 	<see langword="true"/> if this instance is reponse only; otherwise, <see langword="false"/>.
         /// </value>
-        public bool IsReponseOnly
+        public bool IsResponseOnly
         {
             get { return _serverClient == null; }
         }
@@ -101,13 +101,15 @@ namespace Tkl.Jumbo.Dfs
         /// <param name="packet">The packet.</param>
         public void SendPacket(Packet packet)
         {
+            if( packet == null )
+                throw new ArgumentNullException("packet");
             ThrowIfErrorOccurred();
 
             if( _hasLastPacket )
                 throw new InvalidOperationException("The last packet has been sent.");
 
             if( _serverWriter != null )
-                packet.Write(_serverWriter, PacketFormatOptions.Default);
+                packet.Write(_serverWriter, PacketFormatOption.Default);
 
             _pendingAcknowledgements.Add(packet.SequenceNumber, _cancellation.Token);
             if( packet.IsLastPacket )
@@ -150,13 +152,10 @@ namespace Tkl.Jumbo.Dfs
         public void Dispose()
         {
             Dispose(true);
+            GC.SuppressFinalize(this);
         }
 
-        /// <summary>
-        /// Releases unmanaged and - optionally - managed resources
-        /// </summary>
-        /// <param name="disposing"><see langword="true"/> to release both managed and unmanaged resources; <see langword="false"/> to release only unmanaged resources.</param>
-        protected void Dispose(bool disposing)
+        private void Dispose(bool disposing)
         {
             if( !_disposed )
             {
@@ -175,6 +174,7 @@ namespace Tkl.Jumbo.Dfs
 
                     _acknowledgementThread.Join();
                     _cancellation.Dispose();
+                    _pendingAcknowledgements.Dispose();
                 }
             }
         }
@@ -208,6 +208,7 @@ namespace Tkl.Jumbo.Dfs
                 throw new ObjectDisposedException(this.GetType().FullName);
         }
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1031:DoNotCatchGeneralExceptionTypes")]
         private void AcknowledgementThread()
         {
             try

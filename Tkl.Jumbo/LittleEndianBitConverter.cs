@@ -28,6 +28,10 @@ namespace Tkl.Jumbo
         /// <returns>A 16-bit signed integer formed by two bytes beginning at <paramref name="offset"/>.</returns>
         public static short ToInt16(byte[] buffer, int offset)
         {
+            if( buffer == null )
+                throw new ArgumentNullException("buffer");
+            if( offset < 0 || offset > buffer.Length - 2 )
+                throw new ArgumentOutOfRangeException("offset");
             return (short)(buffer[offset] | (buffer[offset + 1] << 8));
         }
 
@@ -40,6 +44,10 @@ namespace Tkl.Jumbo
         [CLSCompliant(false)]
         public static ushort ToUInt16(byte[] buffer, int offset)
         {
+            if( buffer == null )
+                throw new ArgumentNullException("buffer");
+            if( offset < 0 || offset > buffer.Length - 2 )
+                throw new ArgumentOutOfRangeException("offset");
             return (ushort)(buffer[offset] | (buffer[offset + 1] << 8));
         }
 
@@ -51,6 +59,10 @@ namespace Tkl.Jumbo
         /// <returns>A 32-bit signed integer formed by four bytes beginning at <paramref name="offset"/>.</returns>
         public static int ToInt32(byte[] buffer, int offset)
         {
+            if( buffer == null )
+                throw new ArgumentNullException("buffer");
+            if( offset < 0 || offset > buffer.Length - 4 )
+                throw new ArgumentOutOfRangeException("offset");
             return (buffer[offset]) | (buffer[offset + 1] << 8) | (buffer[offset + 2] << 16) | (buffer[offset + 3] << 24);
         }
 
@@ -63,6 +75,10 @@ namespace Tkl.Jumbo
         [CLSCompliant(false)]
         public static uint ToUInt32(byte[] buffer, int offset)
         {
+            if( buffer == null )
+                throw new ArgumentNullException("buffer");
+            if( offset < 0 || offset > buffer.Length - 4 )
+                throw new ArgumentOutOfRangeException("offset");
             return (uint)(buffer[offset] | (buffer[offset + 1] << 8) | (buffer[offset + 2] << 16) | (buffer[offset + 3] << 24));
         }
 
@@ -74,6 +90,10 @@ namespace Tkl.Jumbo
         /// <returns>A 64-bit signed integer formed by eight bytes beginning at <paramref name="offset"/>.</returns>
         public static long ToInt64(byte[] buffer, int offset)
         {
+            if( buffer == null )
+                throw new ArgumentNullException("buffer");
+            if( offset < 0 || offset > buffer.Length - 8 )
+                throw new ArgumentOutOfRangeException("offset");
             uint low = (uint)(buffer[offset] | (buffer[offset + 1] << 8) | (buffer[offset + 2] << 16) | (buffer[offset + 3] << 24));
             uint high = (uint)(buffer[offset + 4] | (buffer[offset + 5] << 8) | (buffer[offset + 6] << 16) | (buffer[offset + 7] << 24));
             return ((long)high << 32) | low;
@@ -88,6 +108,10 @@ namespace Tkl.Jumbo
         [CLSCompliant(false)]
         public static ulong ToUInt64(byte[] buffer, int offset)
         {
+            if( buffer == null )
+                throw new ArgumentNullException("buffer");
+            if( offset < 0 || offset > buffer.Length - 8 )
+                throw new ArgumentOutOfRangeException("offset");
             uint low = (uint)(buffer[offset] | (buffer[offset + 1] << 8) | (buffer[offset + 2] << 16) | (buffer[offset + 3] << 24));
             uint high = (uint)(buffer[offset + 4] | (buffer[offset + 5] << 8) | (buffer[offset + 6] << 16) | (buffer[offset + 7] << 24));
             return ((ulong)high << 32) | low;
@@ -101,6 +125,10 @@ namespace Tkl.Jumbo
         /// <returns>A single-precision floating point number formed by four bytes beginning at <paramref name="offset"/>.</returns>
         public static unsafe float ToSingle(byte[] buffer, int offset)
         {
+            if( buffer == null )
+                throw new ArgumentNullException("buffer");
+            if( offset < 0 || offset > buffer.Length - 4 )
+                throw new ArgumentOutOfRangeException("offset");
             uint bits = (uint)(buffer[offset] | (buffer[offset + 1] << 8) | (buffer[offset + 2] << 16) | (buffer[offset + 3] << 24));
             return *(float*)&bits;
         }
@@ -113,6 +141,10 @@ namespace Tkl.Jumbo
         /// <returns>A double-precision floating point number formed by four bytes beginning at <paramref name="offset"/>.</returns>
         public static unsafe double ToDouble(byte[] buffer, int offset)
         {
+            if( buffer == null )
+                throw new ArgumentNullException("buffer");
+            if( offset < 0 || offset > buffer.Length - 8 )
+                throw new ArgumentOutOfRangeException("offset");
             uint low = (uint)(buffer[offset] | (buffer[offset + 1] << 8) | (buffer[offset + 2] << 16) | (buffer[offset + 3] << 24));
             uint high = (uint)(buffer[offset + 4] | (buffer[offset + 5] << 8) | (buffer[offset + 6] << 16) | (buffer[offset + 7] << 24));
             ulong bits = ((ulong)high << 32) | low;
@@ -127,6 +159,10 @@ namespace Tkl.Jumbo
         /// <returns>A decimal value formed by sixteen bytes beginning at <paramref name="offset"/>.</returns>
         public static decimal ToDecimal(byte[] buffer, int offset)
         {
+            if( buffer == null )
+                throw new ArgumentNullException("buffer");
+            if( offset < 0 || offset > buffer.Length - 16 )
+                throw new ArgumentOutOfRangeException("offset");
             int[] bits = new[] 
             { 
                 (buffer[offset] | (buffer[offset + 1] << 8) | (buffer[offset + 2] << 16) | (buffer[offset + 3] << 24)),
@@ -145,6 +181,10 @@ namespace Tkl.Jumbo
         /// <returns>A date and time formed by twelve bytes beginning at <paramref name="offset"/>.</returns>
         public static DateTime ToDateTime(byte[] buffer, int offset)
         {
+            if( buffer == null )
+                throw new ArgumentNullException("buffer");
+            if( offset < 0 || offset > buffer.Length - 12 )
+                throw new ArgumentOutOfRangeException("offset");
             DateTimeKind kind = (DateTimeKind)ToInt32(buffer, offset);
             long ticks = ToInt64(buffer, offset + 4);
             return new DateTime(ticks, kind);
@@ -156,8 +196,13 @@ namespace Tkl.Jumbo
         /// <param name="buffer">An array of bytes.</param>
         /// <param name="offset">The starting position within <paramref name="buffer"/>. On return, contains the offset after the value.</param>
         /// <returns>A 32-bit integer in compressed format, using between one and five bytes. </returns>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1045:DoNotPassTypesByReference", MessageId = "1#")]
         public static int ToInt32From7BitEncoding(byte[] buffer, ref int offset)
         {
+            if( buffer == null )
+                throw new ArgumentNullException("buffer");
+            if( offset < 0 || offset >= buffer.Length )
+                throw new ArgumentOutOfRangeException("offset");
             byte currentByte;
             int result = 0;
             int bits = 0;
