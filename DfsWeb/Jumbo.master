@@ -13,7 +13,7 @@
             CLR Version: <asp:Label ID="ClrVersionLabel" runat="server" /> (<asp:Label ID="ArchitectureLabel" runat="server" /> bit runtime)
         </p>
         <h1>
-            <em>Jumbo</em> DFS
+            <a href="~/" runat="server"><em>Jumbo</em> DFS</a>
         </h1>
     </div>
     <div id="MainContent">

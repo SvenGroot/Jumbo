@@ -1,71 +1,39 @@
-﻿#MainContent
+﻿#SideBar
 {
-	margin-left: 201px; /* width+border of sidebar */
+    position: absolute;
+    right: 0;
+    width: 300px;
+    background-color: #002E65;
+    border-left: solid 1px black;
+    border-bottom: solid 1px black;
 }
-#MainContent.mainContentCollapsedSideBar
+#SideBarInner
 {
-	margin-left: 11px;
+    background-color: #DADFF2;
+    margin: 0 0 0.3em 0.3em;
+    min-height: 400px;
+    border: solid 1px black;
+    border-right: none;
+    padding: 1em;
 }
-.sideBar, .sideBarCollapsed
+#SideBarInner div
 {
-	position: absolute;
-	left: 0;
-	border-right: solid 1px black;
-	border-bottom: solid 1px black;
-	background: #a2a6b5;
-	overflow: hidden;
+    margin: 0.3em 0;
+    overflow-wrap: break-word;
+    word-wrap: break-word;
 }
-.sideBar
+#SideBarInner input
 {
-	width: 200px;
+    width: 100%;
 }
-.sideBarCollapsed
+#PageContent
 {
-	width: 10px;
+    padding: 1em 1em 1em 2em;
+    margin-right: 300px;
+    border-top: solid 1px black;
 }
-.sideBarPanel
+#MainContent
 {
-	margin-left: 10px;
-	padding: 15px 10px 10px 2px;
-	background: #002E65;
-	min-height: 500px;
-}
-.sideBarPanel ul
-{
-	list-style: none;
-	margin: 0;
-	padding: 0;
-}
-.sideBarPanel h2
-{
-	margin: 0;
-	font-size: 100%;
-	font-style: italic;
-	color: white;
-}
-.sideBarPanel a
-{
-	color: #C2C6D5;
-}
-.sideBarPanel a:hover
-{
-	color: white;
-}
-.sideBarPanel .selectedPage
-{
-	color: white;
-}
-.sideBarCollapseButton
-{
-	width: 6px;
-	height: 9px;
-	background-image: url('../images/arrowleft.gif');
-	position: absolute;
-	top: 5px;
-	right: 2px;
-	overflow: hidden;
-}
-.sideBarCollapsed .sideBarCollapseButton
-{
-	background-image: url('../images/arrowright.gif');
+    padding: 0;
+    border-top: none;
 }

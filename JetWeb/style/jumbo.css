@@ -69,6 +69,11 @@ h1
 	background: #002E65;
 	color: White;
 }
+h1 a
+{
+    color: inherit;
+    text-decoration: none;
+}
 #VersionInfo
 {
     float: right;

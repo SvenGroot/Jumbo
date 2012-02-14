@@ -27,7 +27,11 @@ public class FileSystemEntryInfo
         if( file != null )
         {
             SizeInBytes = file.Size.ToString("#,##0", CultureInfo.InvariantCulture);
-            FormattedSize = new BinarySize(file.Size).ToString("SB", CultureInfo.InvariantCulture);
+            FormattedSize = new BinarySize(file.Size).ToString("0.##SB", CultureInfo.InvariantCulture);
+            BlockSize = new BinarySize(file.BlockSize).ToString("AB", CultureInfo.InvariantCulture);
+            ReplicationFactor = file.ReplicationFactor;
+            BlockCount = file.Blocks.Count;
+            RecordOptions = file.RecordOptions.ToString();
         }
         else
         {
@@ -55,4 +59,12 @@ public class FileSystemEntryInfo
     public string DateCreated { get; set; }
 
     public FileSystemEntryInfo[] Children { get; set; }
+
+    public string BlockSize { get; set; }
+
+    public int ReplicationFactor { get; set; }
+
+    public int BlockCount { get; set; }
+
+    public string RecordOptions { get; set; }
 }

@@ -14,5 +14,6 @@ public partial class filesystem : System.Web.UI.Page
         Master.AddScript("script/jquery-1.6.4.min.js");
         Master.AddScript("script/json2.min.js");
         Master.AddScript("script/filesystem.js");
+        Master.AddStyleSheet("style/sidebar.css");
     }
 }
