@@ -73,14 +73,6 @@ namespace Tkl.Jumbo.Jet
         public string DfsJobDirectory { get; private set; }
 
         /// <summary>
-        /// Gets a value that indicates whether record reuse is allowed.
-        /// </summary>
-        public bool AllowRecordReuse
-        {
-            get { return TaskExecution == null ? false : TaskExecution.AllowRecordReuse; }
-        }
-
-        /// <summary>
         /// Gets the attempt number of this task attempt.
         /// </summary>
         public int Attempt

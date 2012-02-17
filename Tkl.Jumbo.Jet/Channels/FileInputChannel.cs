@@ -803,7 +803,7 @@ namespace Tkl.Jumbo.Jet.Channels
                         checksumStream = new ChecksumInputStream(memoryStream, true).CreateDecompressor(CompressionType, uncompressedSize);
                     else
                         checksumStream = new SegmentedChecksumInputStream(memoryStream, segmentCount);
-                    downloadedFiles.Add(new StreamRecordInput(_inputReaderType, checksumStream, true, task.TaskAttemptId.TaskId.ToString(), _channelInputType == FileChannelOutputType.SortSpill, TaskExecution.AllowRecordReuse));
+                    downloadedFiles.Add(new StreamRecordInput(_inputReaderType, checksumStream, true, task.TaskAttemptId.TaskId.ToString(), _channelInputType == FileChannelOutputType.SortSpill, TaskExecution.Context.StageConfiguration.AllowRecordReuse));
                 }
                 NetworkBytesRead += size;
             }

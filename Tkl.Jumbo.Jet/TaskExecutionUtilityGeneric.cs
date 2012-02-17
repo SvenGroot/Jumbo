@@ -86,7 +86,7 @@ namespace Tkl.Jumbo.Jet
 
         #endregion
 
-        private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(TaskExecutionUtility)); // Intentionally not using the generic type as the log source.
+        private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(TaskExecutionUtility));
 
         private bool _hasTaskRun;
         private PipelinePullTaskRecordWriter<TInput, TOutput> _pipelinePullTaskRecordWriter; // Needed to finish pipelined pull tasks.
@@ -163,6 +163,8 @@ namespace Tkl.Jumbo.Jet
                 throw new InvalidOperationException("Can't create pipeline record writer for non-child task.");
 
             RecordWriter<TOutput> output = (RecordWriter<TOutput>)OutputWriter;
+
+            WarnIfNoRecordReuse();
 
             object task = Task;
             PushTask<TInput, TOutput> pushTask = task as PushTask<TInput, TOutput>;

@@ -24,8 +24,6 @@ namespace Tkl.Jumbo.Jet.Jobs
     {
         private string _stageId;
         private int _taskCount;
-        private bool? _allowRecordReuse;
-        private bool? _allowOutputRecordReuse;
         private readonly ExtendedCollection<string> _dependentStages = new ExtendedCollection<string>();
         private StageConfiguration _childStage;
         private IDataInput _dataInput;
@@ -336,33 +334,23 @@ namespace Tkl.Jumbo.Jet.Jobs
         ///   If the <see cref="AllowRecordReuseAttribute.PassThrough"/> property is <see langword="true"/>, then this property will return <see langword="true"/>
         ///   only if the <see cref="AllowOutputRecordReuse"/> property is <see langword="true" />.
         /// </para>
-        /// <para>
-        ///   This property should only be queried on a completed <see cref="StageConfiguration"/>, because the result gets cached and will not be updated
-        ///   when <see cref="TaskType"/> or one of the child stages changes.
-        /// </para>
         /// </remarks>
         [XmlIgnore]
         public bool AllowRecordReuse
         {
             get
             {
-                if( _allowRecordReuse == null )
+                if( TaskTypeInfo == null )
+                    return false;
+                switch( TaskTypeInfo.RecordReuse )
                 {
-                    // If this is a child stage and the task is a pull task then record reuse is not allowed, because the PipelinePullTaskRecordWriter doesn't support it.
-                    if( Parent != null && TaskType.ReferencedType.FindGenericInterfaceType(typeof(ITask<,>), false) != null )
-                        _allowRecordReuse = false;
-                    else
-                    {
-                        AllowRecordReuseAttribute attribute = (AllowRecordReuseAttribute)Attribute.GetCustomAttribute(TaskType.ReferencedType, typeof(AllowRecordReuseAttribute));
-                        if( attribute == null )
-                            _allowRecordReuse = false;
-                        else if( attribute.PassThrough )
-                            _allowRecordReuse = AllowOutputRecordReuse;
-                        else
-                            _allowRecordReuse = true;
-                    }
+                case TaskRecordReuse.Allowed:
+                    return true;
+                case TaskRecordReuse.Passthrough:
+                    return AllowOutputRecordReuse;
+                default:
+                    return false;
                 }
-                return _allowRecordReuse.Value;
             }
         }
 
@@ -372,8 +360,8 @@ namespace Tkl.Jumbo.Jet.Jobs
         /// </summary>
         /// <remarks>
         /// <para>
-        ///   This property will return <see langword="true"/> if this stage has no child stages, or if the <see cref="AllowRecordReuse"/>
-        ///   property is <see langword="true"/> for all child stages.
+        ///   This property will return <see langword="true"/> if this stage has no child stage, or if child stage's <see cref="AllowRecordReuse"/>
+        ///   property is <see langword="true"/> and the child stage is a push task.
         /// </para>
         /// <para>
         ///   If you write a task type that may be used in multiple types of jobs, and you are not certain what the job configuration
@@ -382,8 +370,7 @@ namespace Tkl.Jumbo.Jet.Jobs
         ///   a new instance every time.
         /// </para>
         /// <para>
-        ///   This property should only be queried on a completed <see cref="StageConfiguration"/>, because the result gets cached and will not be updated
-        ///   when one of the child stages changes.
+        ///   A child stage which isn't a push task doesn't support output record reuse because the pipeline channel for pull tasks doesn't support it.
         /// </para>
         /// </remarks>
         [XmlIgnore]
@@ -391,15 +378,7 @@ namespace Tkl.Jumbo.Jet.Jobs
         {
             get
             {
-                if( _allowOutputRecordReuse == null )
-                {
-                    _allowOutputRecordReuse = true;
-                    if( ChildStage != null )
-                    {
-                        _allowOutputRecordReuse = ChildStage.AllowRecordReuse;
-                    }
-                }
-                return _allowOutputRecordReuse.Value;
+                return ChildStage != null ? ChildStage.TaskTypeInfo.IsPushTask && ChildStage.AllowRecordReuse : true;
             }
         }
 

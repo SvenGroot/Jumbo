@@ -181,7 +181,7 @@ namespace Tkl.Jumbo.Jet.IO
                 throw new ArgumentNullException("input");
 
             FileTaskInput fileInput = (FileTaskInput)input;
-            return (IRecordReader)JetActivator.CreateInstance(typeof(TRecordReader), fileSystem.Configuration, jetConfiguration, context, fileSystem.OpenFile(fileInput.Path), fileInput.Offset, fileInput.Size, context == null ? false : context.AllowRecordReuse);
+            return (IRecordReader)JetActivator.CreateInstance(typeof(TRecordReader), fileSystem.Configuration, jetConfiguration, context, fileSystem.OpenFile(fileInput.Path), fileInput.Offset, fileInput.Size, context == null ? false : context.StageConfiguration.AllowRecordReuse);
         }
 
         /// <summary>

@@ -118,7 +118,7 @@ namespace Tkl.Jumbo.Jet.Channels
                 int newBufferUsed = Interlocked.Add(ref _bufferUsed, count);
                 while( newBufferUsed > _buffer.Length )
                 {
-                    _log.WarnFormat("Waiting for buffer space, current buffer pos {0}, buffer used {1}", _bufferPos, newBufferUsed);
+                    _log.InfoFormat("Waiting for buffer space, current buffer pos {0}, buffer used {1}", _bufferPos, newBufferUsed);
                     _writer.RequestOutputSpill();
                     // This is only safe for one thread to use write, but record writers and streams are not thread safe, so no problem
                     // If the cancel event was set while writing, the object was disposed or an error occurred in the spill thread.

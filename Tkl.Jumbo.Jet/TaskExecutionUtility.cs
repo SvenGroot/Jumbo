@@ -60,12 +60,13 @@ namespace Tkl.Jumbo.Jet
         #endregion
 
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(TaskExecutionUtility));
+
         private readonly int _progressInterval = 5000;
 
         private readonly FileSystemClient _fileSystemClient;
         private readonly JetClient _jetClient;
         private readonly IJobServerTaskProtocol _jobServerTaskClient;
-        private readonly TaskContext _configuration;
+        private readonly TaskContext _context;
         private readonly ITaskServerUmbilicalProtocol _umbilical;
         private readonly TaskExecutionUtility _rootTask;
         private readonly Type _taskType;
@@ -107,9 +108,9 @@ namespace Tkl.Jumbo.Jet
             _fileSystemClient = fileSystemClient;
             _jetClient = jetClient;
             _jobServerTaskClient = JetClient.CreateJobServerTaskClient(jetClient.Configuration);
-            _configuration = configuration;
+            _context = configuration;
             _umbilical = umbilical;
-            _taskType = _configuration.StageConfiguration.TaskType.ReferencedType;
+            _taskType = _context.StageConfiguration.TaskType.ReferencedType;
             configuration.TaskExecution = this;
             _progressInterval = _jetClient.Configuration.TaskServer.ProgressInterval;
 
@@ -204,7 +205,7 @@ namespace Tkl.Jumbo.Jet
 
         internal TaskContext Context
         {
-            get { return _configuration; }
+            get { return _context; }
         }
 
         internal JetClient JetClient
@@ -220,11 +221,6 @@ namespace Tkl.Jumbo.Jet
         internal IJobServerTaskProtocol JobServerTaskClient
         {
             get { return _jobServerTaskClient; }
-        }
-
-        internal bool AllowRecordReuse
-        {
-            get { return _configuration.StageConfiguration.AllowRecordReuse; }
         }
 
         internal TaskExecutionUtility RootTask
@@ -579,13 +575,14 @@ namespace Tkl.Jumbo.Jet
         {
             if( Context.StageConfiguration.HasDataInput )
             {
+                WarnIfNoRecordReuse();
                 IDataInput input = (IDataInput)JetActivator.CreateInstance(Context.StageConfiguration.DataInputType.ReferencedType, this);
-                TaskInput = TaskInputUtility.ReadTaskInput(new LocalFileSystemClient(), _configuration.LocalJobDirectory, _configuration.TaskAttemptId.TaskId.StageId, _configuration.TaskAttemptId.TaskId.TaskNumber - 1);
-                return input.CreateRecordReader(FileSystemClient, JetClient.Configuration, _configuration, TaskInput);
+                TaskInput = TaskInputUtility.ReadTaskInput(new LocalFileSystemClient(), _context.LocalJobDirectory, _context.TaskAttemptId.TaskId.StageId, _context.TaskAttemptId.TaskId.TaskNumber - 1);
+                return input.CreateRecordReader(FileSystemClient, JetClient.Configuration, _context, TaskInput);
             }
             else if( _inputChannels != null )
             {
-                //_log.Debug("Creating input channel record reader.");
+                WarnIfNoRecordReuse();
                 IRecordReader result;
                 if( _inputChannels.Count == 1 )
                 {
@@ -596,7 +593,7 @@ namespace Tkl.Jumbo.Jet
                     Type multiInputRecordReaderType = Context.StageConfiguration.MultiInputRecordReaderType.ReferencedType;
                     int bufferSize = (multiInputRecordReaderType.IsGenericType && multiInputRecordReaderType.GetGenericTypeDefinition() == typeof(MergeRecordReader<>)) ? (int)JetClient.Configuration.MergeRecordReader.MergeStreamReadBufferSize : (int)JetClient.Configuration.FileChannel.ReadBufferSize;
                     CompressionType compressionType = Context.GetTypedSetting(FileOutputChannel.CompressionTypeSetting, JetClient.Configuration.FileChannel.CompressionType);
-                    IMultiInputRecordReader reader = (IMultiInputRecordReader)JetActivator.CreateInstance(multiInputRecordReaderType, this, new int[] { 0 }, _inputChannels.Count, AllowRecordReuse, bufferSize, compressionType);
+                    IMultiInputRecordReader reader = (IMultiInputRecordReader)JetActivator.CreateInstance(multiInputRecordReaderType, this, new int[] { 0 }, _inputChannels.Count, Context.StageConfiguration.AllowRecordReuse, bufferSize, compressionType);
                     foreach( IInputChannel inputChannel in _inputChannels )
                     {
                         IRecordReader channelReader = inputChannel.CreateRecordReader();
@@ -610,6 +607,29 @@ namespace Tkl.Jumbo.Jet
             }
             else
                 return null;
+        }
+
+        /// <summary>
+        /// Writes a warning to the log if the task doesn't support record reuse.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        ///   Information about record reuse for each task in a compound is added to the log so that developers debugging tasks and record readers
+        ///   are aware of whether or not record reuse was allowed. This can help spot situations where a task or record reader was created
+        ///   with the wrong assumptions. Particularly note that if a child stage reports it does not support record reuse, it means that
+        ///   the parent task may not use output record reuse.
+        /// </para>
+        /// </remarks>
+        protected void WarnIfNoRecordReuse()
+        {
+            if( !_context.StageConfiguration.AllowRecordReuse )
+            {
+                // We don't warn for value types, since record reuse is irrelevant in that case.
+                if( !_context.StageConfiguration.TaskTypeInfo.InputRecordType.IsValueType )
+                    _log.WarnFormat("Input record reuse not allowed for task {0}.", Context.TaskId);
+            }
+            else
+                _log.InfoFormat("Input record reuse is allowed for task {0}.", Context.TaskId);
         }
 
         /// <summary>

@@ -293,7 +293,7 @@ namespace Tkl.Jumbo.Jet.Channels
                     readers = new ITcpChannelRecordReader[ActivePartitions.Count];
                     for( int x = 0; x < readers.Length; ++x )
                     {
-                        ITcpChannelRecordReader reader = (ITcpChannelRecordReader)JetActivator.CreateInstance(_inputReaderType, TaskExecution, TaskExecution.AllowRecordReuse);
+                        ITcpChannelRecordReader reader = (ITcpChannelRecordReader)JetActivator.CreateInstance(_inputReaderType, TaskExecution, TaskExecution.Context.StageConfiguration.AllowRecordReuse);
                         readers[x] = reader;
                         inputs[x] = new ReaderRecordInput((IRecordReader)reader, true);
                     }

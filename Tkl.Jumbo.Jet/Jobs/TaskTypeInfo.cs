@@ -15,6 +15,7 @@ namespace Tkl.Jumbo.Jet.Jobs
         private readonly Type _inputRecordType;
         private readonly Type _outputRecordType;
         private readonly Type _taskType;
+        private readonly TaskRecordReuse _recordReuse;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="TaskTypeInfo"/> class.
@@ -32,6 +33,9 @@ namespace Tkl.Jumbo.Jet.Jobs
             Type[] arguments = interfaceType.GetGenericArguments();
             _inputRecordType = arguments[0];
             _outputRecordType = arguments[1];
+            AllowRecordReuseAttribute recordReuseAttribute = (AllowRecordReuseAttribute)Attribute.GetCustomAttribute(taskType, typeof(AllowRecordReuseAttribute));
+            if( recordReuseAttribute != null )
+                _recordReuse = recordReuseAttribute.PassThrough ? TaskRecordReuse.Passthrough : TaskRecordReuse.Allowed;
         }
 
         /// <summary>
@@ -65,6 +69,28 @@ namespace Tkl.Jumbo.Jet.Jobs
         public Type OutputRecordType
         {
             get { return _outputRecordType; }
+        }
+
+        /// <summary>
+        /// Gets a value indicating whether the task type allows record reuse.
+        /// </summary>
+        /// <value>
+        /// One of the values of the <see cref="TaskRecordReuse"/> enumeration.
+        /// </value>
+        public TaskRecordReuse RecordReuse
+        {
+            get { return _recordReuse; }
+        }
+
+        /// <summary>
+        /// Gets a value indicating whether this task is a push task.
+        /// </summary>
+        /// <value>
+        /// 	<see langword="true"/> if this task is a push task; otherwise, <see langword="false"/>.
+        /// </value>
+        public bool IsPushTask
+        {
+            get { return _taskType.FindGenericBaseType(typeof(PushTask<,>), false) != null || _taskType.FindGenericBaseType(typeof(PrepartitionedPushTask<,>), false) != null; }
         }
     }
 }
