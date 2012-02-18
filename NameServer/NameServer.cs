@@ -46,7 +46,6 @@ namespace NameServerApplication
         private readonly Thread _dataServerMonitorThread;
         private readonly AutoResetEvent _dataServerMonitorEvent = new AutoResetEvent(false);
         private bool _safeMode = true;
-        private System.Threading.ManualResetEvent _safeModeEvent = new System.Threading.ManualResetEvent(false);
         private readonly Timer _checkpointTimer;
         private readonly ServerAddress _localAddress;
 
@@ -208,12 +207,10 @@ namespace NameServerApplication
                     if( _safeMode )
                     {
                         _log.InfoFormat("Safemode is ON.");
-                        _safeModeEvent.Reset();
                     }
                     else
                     {
                         _log.InfoFormat("Safemode is OFF.");
-                        _safeModeEvent.Set();
                         _dataServerMonitorEvent.Set(); // Force an immediate replication check if safe mode is disabled prematurely.
                     }
                 }
@@ -367,16 +364,6 @@ namespace NameServerApplication
             }
 
             throw new ArgumentException("Invalid block kind.", "kind");
-        }
-
-        public bool WaitForSafeModeOff(int timeOut)
-        {
-            _log.Debug("WaitForSafeModeOff called");
-            if( _safeMode )
-                if( _safeModeEvent.WaitOne(timeOut, false) )
-                    Debug.Assert(!_safeMode);
-
-            return !_safeMode;
         }
 
         public DfsMetrics GetMetrics()

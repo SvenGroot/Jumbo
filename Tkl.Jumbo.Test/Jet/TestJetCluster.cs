@@ -33,8 +33,7 @@ namespace Tkl.Jumbo.Test.Jet
             if( !localFs )
             {
                 _dfsCluster = new Tkl.Jumbo.Test.Dfs.TestDfsCluster(1, 1, blockSize, eraseExistingData);
-                INameServerClientProtocol nameServer = DfsClient.CreateNameServerClient(Dfs.TestDfsCluster.CreateClientConfig());
-                nameServer.WaitForSafeModeOff(Timeout.Infinite);
+                Dfs.TestDfsCluster.CreateClient().WaitForSafeModeOff(Timeout.Infinite);
             }
             else
             {

@@ -27,7 +27,7 @@ namespace Tkl.Jumbo.Test.Dfs
             Trace.WriteLine("Starting nameserver.");
             DfsConfiguration config = TestDfsCluster.CreateClientConfig();
             _nameServer = DfsClient.CreateNameServerClient(config);
-            _nameServer.WaitForSafeModeOff(Timeout.Infinite);
+            TestDfsCluster.CreateClient().WaitForSafeModeOff(Timeout.Infinite);
             Trace.WriteLine("Name server running.");
             Trace.Flush();
         }

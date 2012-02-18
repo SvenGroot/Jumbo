@@ -28,7 +28,7 @@ namespace Tkl.Jumbo.Test.Dfs
             Utilities.TraceLineAndFlush("Starting cluster.");
             DfsConfiguration config = TestDfsCluster.CreateClientConfig();
             _nameServer = DfsClient.CreateNameServerClient(config);
-            _nameServer.WaitForSafeModeOff(Timeout.Infinite);
+            TestDfsCluster.CreateClient().WaitForSafeModeOff(Timeout.Infinite);
             Utilities.TraceLineAndFlush("Cluster started.");
         }
 

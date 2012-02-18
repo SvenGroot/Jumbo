@@ -100,7 +100,7 @@ namespace DfsShell.Commands
 
         private readonly string _path;
 
-        public PrintFileCommand([Description("The path of the text file on the DFS.")] string path)
+        public PrintFileCommand([Description("The path of the text file on the DFS."), ArgumentName("Path")] string path)
         {
             if( path == null )
                 throw new ArgumentNullException("path");
@@ -108,16 +108,16 @@ namespace DfsShell.Commands
             _path = path;
         }
 
-        [CommandLineArgument("encoding", DefaultValue="utf-8"), Description("The text encoding to use. The default value is utf-8.")]
+        [CommandLineArgument(DefaultValue="utf-8"), Description("The text encoding to use. The default value is utf-8.")]
         public string Encoding { get; set; }
 
-        [CommandLineArgument("size", DefaultValue=long.MaxValue), Description("The maximum number of bytes to read from the file. If not specified, the entire file will be read.")]
-        public long Size { get; set; }
+        [CommandLineArgument(DefaultValue=long.MaxValue), Description("The maximum number of bytes to read from the file. If not specified, the entire file will be read.")]
+        public BinarySize Size { get; set; }
 
-        [CommandLineArgument("tail"), Description("Prints the end rather than the start of the file up to the specified size.")]
+        [CommandLineArgument, Description("Prints the end rather than the start of the file up to the specified size.")]
         public bool Tail { get; set; }
 
-        [CommandLineArgument("rr"), Description("Specified the type of record reader to use to read the contents of the file. This must be the assembly-qualified mangled name.")]
+        [CommandLineArgument, Description("Specified the type of record reader to use to read the contents of the file. This must be the assembly-qualified mangled name.")]
         public string RecordReaderType { get; set; }
 
         public override void Run()
@@ -132,16 +132,17 @@ namespace DfsShell.Commands
                 {
                     if( Tail )
                     {
-                        long newPosition = stream.Length - Size;
+                        long newPosition = stream.Length - (long)Size;
                         if( newPosition > 0 )
                             stream.Position = newPosition;
                     }
-                    using( SizeLimitedStream limitedStream = new SizeLimitedStream(stream, Tail ? long.MaxValue : Size) )
+                    using( SizeLimitedStream limitedStream = new SizeLimitedStream(stream, Tail ? long.MaxValue : (long)Size) )
                     using( StreamReader reader = new StreamReader(limitedStream, encoding) )
+                    using( LineWrappingTextWriter writer = LineWrappingTextWriter.ForConsoleOut() )
                     {
                         string line;
                         while( (line = reader.ReadLine()) != null )
-                            Console.WriteLine(line);
+                            writer.WriteLine(line);
                     }
                 }
             }
@@ -174,7 +175,7 @@ namespace DfsShell.Commands
                         return;
                     }
 
-                    long offset = Tail ? 0 : stream.Length - Size;
+                    long offset = Tail ? 0 : stream.Length - (long)Size;
                     if( offset < 0 )
                         offset = 0;
                     reader = (IRecordReader)Activator.CreateInstance(recordReaderType, stream, offset, Size, true);

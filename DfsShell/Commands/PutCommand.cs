@@ -21,8 +21,8 @@ namespace DfsShell.Commands
         private readonly string _localPath;
         private readonly string _dfsPath;
 
-        public PutCommand([Description("The path of the local file or directory to upload.")] string localPath,
-                              [Description("The path of the DFS file or directory to upload to.")] string dfsPath)
+        public PutCommand([Description("The path of the local file or directory to upload."), ArgumentName("LocalPath")] string localPath,
+                              [Description("The path of the DFS file or directory to upload to."), ArgumentName("DfsPath")] string dfsPath)
         {
             if( localPath == null )
                 throw new ArgumentNullException("localPath");
@@ -33,28 +33,28 @@ namespace DfsShell.Commands
             _dfsPath = dfsPath;
         }
 
-        [CommandLineArgument("b"), Description("The block size of the DFS file.")]
+        [CommandLineArgument, Description("The block size of the DFS file.")]
         public BinarySize BlockSize { get; set; }
 
-        [CommandLineArgument("r"), Description("The replication factor of the DFS file.")]
+        [CommandLineArgument, Description("The replication factor of the DFS file.")]
         public int ReplicationFactor { get; set; }
 
-        [CommandLineArgument("q"), Description("Suppress progress information output.")]
+        [CommandLineArgument, Description("Suppress progress information output.")]
         public bool Quiet { get; set; }
 
-        [CommandLineArgument("rr"), Description("The record reader used to read the file(s). This must be the assembly-qualified name of the type. If this argument is specified, you must also specify a record writer using the same record type.")]
-        public string RecordReaderTypeName { get; set; }
+        [CommandLineArgument, Description("The record reader used to read the file(s). This must be the assembly-qualified name of the type. If this argument is specified, you must also specify a record writer using the same record type.")]
+        public string RecordReaderType { get; set; }
 
-        [CommandLineArgument("rw"), Description("The record writer used to write the file(s) to the DFS. This must be the assembly-qualified name of the type. If this argument is specified, you must also specify a record writer using the same record type.")]
-        public string RecordWriterTypeName { get; set; }
+        [CommandLineArgument, Description("The record writer used to write the file(s) to the DFS. This must be the assembly-qualified name of the type. If this argument is specified, you must also specify a record writer using the same record type.")]
+        public string RecordWriterType { get; set; }
 
-        [CommandLineArgument("ro"), Description("The record options for the file. Must be a comma-separated list of the values of the RecordStreamOptions enumeration. If this option is anything other than None, you must specify a record reader and record writer.")]
+        [CommandLineArgument, Description("The record options for the file. Must be a comma-separated list of the values of the RecordStreamOptions enumeration. If this option is anything other than None, you must specify a record reader and record writer.")]
         public RecordStreamOptions RecordOptions { get; set; }
 
-        [CommandLineArgument("text"), Description("Treat the file as line-separated text. This is equivalent to specifying LineRecordReader as the record reader and TextRecordReader<Utf8String> as the record writer.")]
+        [CommandLineArgument("Text"), Description("Treat the file as line-separated text. This is equivalent to specifying LineRecordReader as the record reader and TextRecordReader<Utf8String> as the record writer.")]
         public bool TextFile { get; set; }
 
-        [CommandLineArgument("nl"), Description("The first replica should not be put on the local node if that node is part of the DFS. Note that the first replica might still be placed on the local node; it is just no longer guaranteed.")]
+        [CommandLineArgument, Description("The first replica should not be put on the local node if that node is part of the DFS. Note that the first replica might still be placed on the local node; it is just no longer guaranteed.")]
         public bool NoLocalReplica { get; set; }
 
         public override void Run()
@@ -158,7 +158,7 @@ namespace DfsShell.Commands
             recordWriterType = null;
             if( TextFile )
             {
-                if( !(RecordReaderTypeName == null && RecordWriterTypeName == null) )
+                if( !(RecordReaderType == null && RecordWriterType == null) )
                 {
                     Console.Error.WriteLine("You may not specify a record reader or record writer if the -text option is specified.");
                     return false;
@@ -167,15 +167,15 @@ namespace DfsShell.Commands
                 recordWriterType = typeof(TextRecordWriter<Utf8String>);
                 return true;
             }
-            else if( RecordReaderTypeName != null || RecordWriterTypeName != null )
+            else if( RecordReaderType != null || RecordWriterType != null )
             {
-                if( RecordReaderTypeName == null || RecordWriterTypeName == null )
+                if( RecordReaderType == null || RecordWriterType == null )
                 {
                     Console.Error.WriteLine("You must specify both a record reader and a record writer.");
                     return false;
                 }
-                recordReaderType = Type.GetType(RecordReaderTypeName, true);
-                recordWriterType = Type.GetType(RecordWriterTypeName, true);
+                recordReaderType = Type.GetType(RecordReaderType, true);
+                recordWriterType = Type.GetType(RecordWriterType, true);
 
                 Type recordReaderRecordType = recordReaderType.FindGenericBaseType(typeof(RecordReader<>), true).GetGenericArguments()[0];
                 Type recordWriterRecordType = recordWriterType.FindGenericBaseType(typeof(RecordWriter<>), true).GetGenericArguments()[0];

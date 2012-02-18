@@ -11,6 +11,8 @@ using System.Runtime.Serialization.Formatters.Binary;
 using System.IO;
 using Tkl.Jumbo.IO;
 using Tkl.Jumbo.Dfs.FileSystem;
+using System.Diagnostics;
+using System.Threading;
 
 namespace Tkl.Jumbo.Dfs.FileSystem
 {
@@ -247,6 +249,36 @@ namespace Tkl.Jumbo.Dfs.FileSystem
         public override void Move(string source, string destination)
         {
             _nameServer.Move(source, destination);
+        }
+
+        /// <summary>
+        /// Waits until safe mode is off.
+        /// </summary>
+        /// <param name="millisecondsTimeout">The maximum time to wait for safe mode to be turned off in milliseconds, or <see cref="System.Threading.Timeout.Infinite"/> to wait indefinitely.</param>
+        /// <returns><see langword="true"/> if safe mode was turned off; <see langword="false"/> if the time out expired.</returns>
+        public bool WaitForSafeModeOff(int millisecondsTimeout)
+        {
+            return WaitForSafeModeOff(millisecondsTimeout, 1000);
+        }
+
+        /// <summary>
+        /// Waits until safe mode is off.
+        /// </summary>
+        /// <param name="millisecondsTimeout">The maximum time to wait for safe mode to be turned off in milliseconds, or <see cref="System.Threading.Timeout.Infinite"/> to wait indefinitely.</param>
+        /// <param name="millisecondsInterval">The polling interval, in milliseconds.</param>
+        /// <returns><see langword="true"/> if safe mode was turned off; <see langword="false"/> if the time out expired.</returns>
+        public bool WaitForSafeModeOff(int millisecondsTimeout, int millisecondsInterval)
+        {
+            if( millisecondsInterval < 0 )
+                throw new ArgumentOutOfRangeException("millisecondsInterval");
+            Stopwatch sw = Stopwatch.StartNew();
+
+            while( NameServer.SafeMode && (millisecondsTimeout == Timeout.Infinite || sw.ElapsedMilliseconds < millisecondsTimeout) )
+            {
+                Thread.Sleep(millisecondsInterval);
+            }
+
+            return NameServer.SafeMode;
         }
 
         private static T CreateNameServerClientInternal<T>(string hostName, int port)

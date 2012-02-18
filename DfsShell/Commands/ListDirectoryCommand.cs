@@ -17,7 +17,7 @@ namespace DfsShell.Commands
     {
         private readonly string _path;
 
-        public ListDirectoryCommand([Optional, DefaultParameterValue("/"), Description("The path of the DFS directory. The default value is /.")] string path)
+        public ListDirectoryCommand([Description("The path of the DFS directory. The default value is /."), ArgumentName("Path")] string path = "/")
         {
             if( path == null )
                 throw new ArgumentNullException("path");

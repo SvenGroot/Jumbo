@@ -17,7 +17,7 @@ namespace DfsShell.Commands
     {
         private readonly int _timeout;
 
-        public WaitSafeModeCommand([Optional, DefaultParameterValue(Timeout.Infinite), Description("The timeout of the wait operation in milliseconds. The default is to wait indefinitely.")] int timeout)
+        public WaitSafeModeCommand([Description("The timeout of the wait operation in milliseconds. The default is to wait indefinitely."), ArgumentName("Timeout")] int timeout = Timeout.Infinite)
         {
             _timeout = timeout;
         }
@@ -25,7 +25,7 @@ namespace DfsShell.Commands
         public override void Run()
         {
             DfsClient dfsClient = Client as DfsClient;
-            if( dfsClient == null || dfsClient.NameServer.WaitForSafeModeOff(_timeout) )
+            if( dfsClient == null || dfsClient.WaitForSafeModeOff(_timeout) )
                 Console.WriteLine("Safe mode is OFF.");
             else
                 Console.WriteLine("Safe mode is ON.");            

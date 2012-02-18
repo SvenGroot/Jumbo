@@ -17,13 +17,13 @@ namespace DfsShell.Commands
     {
         private readonly BlockKind _kind;
 
-        public PrintBlocksCommand([Optional, DefaultValue(BlockKind.Normal), Description("The kind of blocks to include in the results: Normal, Pending, or UnderReplicated. The default is Normal.")] BlockKind kind)
+        public PrintBlocksCommand([Description("The kind of blocks to include in the results: Normal, Pending, or UnderReplicated. The default is Normal."), ArgumentName("Kind")] BlockKind kind = BlockKind.Normal)
         {
             _kind = kind;
         }
 
-        [CommandLineArgument("f"), Description("Include the path of the file that each block belongs to.")]
-        public bool IncludeFiles { get; set; }
+        [CommandLineArgument, Description("Show the path of the file that each block belongs to.")]
+        public bool ShowFiles { get; set; }
 
         public override void Run()
         {
@@ -35,7 +35,7 @@ namespace DfsShell.Commands
                 Guid[] blocks = dfsClient.NameServer.GetBlocks(_kind);
                 foreach( Guid blockId in blocks )
                 {
-                    if( IncludeFiles )
+                    if( ShowFiles )
                         Console.WriteLine("{0:B}: {1}", blockId, dfsClient.NameServer.GetFileForBlock(blockId));
                     else
                         Console.WriteLine(blockId.ToString("B"));

@@ -76,11 +76,6 @@ namespace NameServerApplication
             return NameServer.Instance.GetBlocks(kind);
         }
 
-        public bool WaitForSafeModeOff(int timeout)
-        {
-            return NameServer.Instance.WaitForSafeModeOff(timeout);
-        }
-
         public DfsMetrics GetMetrics()
         {
             return NameServer.Instance.GetMetrics();

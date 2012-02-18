@@ -15,8 +15,8 @@ namespace DfsShell.Commands
         private readonly string _sourcePath;
         private readonly string _destinationPath;
 
-        public MoveCommand([Description("The path of the file or directory on the DFS to move.")] string source,
-                           [Description("The path on the DFS to move the file or directory to.")] string destination)
+        public MoveCommand([Description("The path of the file or directory on the DFS to move."), ArgumentName("Path")] string source,
+                           [Description("The path on the DFS to move the file or directory to."), ArgumentName("Destination")] string destination)
         {
             if( source == null )
                 throw new ArgumentNullException("source");

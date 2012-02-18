@@ -12,6 +12,11 @@ namespace DfsShell.Commands
 {
     abstract class DfsShellCommand : ShellCommand
     {
-        public FileSystemClient Client { get; set; }
+        private readonly FileSystemClient _client = FileSystemClient.Create();
+
+        public FileSystemClient Client
+        {
+            get { return _client; }
+        }
     }
 }

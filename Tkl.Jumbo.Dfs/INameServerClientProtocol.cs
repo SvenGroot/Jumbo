@@ -121,13 +121,6 @@ namespace Tkl.Jumbo.Dfs
         Guid[] GetBlocks(BlockKind kind);
 
         /// <summary>
-        /// Waits until safe mode is off or the time out expires.
-        /// </summary>
-        /// <param name="timeout">The maximum time to wait for safe mode to be turned off in milliseconds, or <see cref="System.Threading.Timeout.Infinite"/> to wait indefinitely.</param>
-        /// <returns><see langword="true"/> if safe mode was turned off; <see langword="false"/> if the time out expired.</returns>
-        bool WaitForSafeModeOff(int timeout);
-
-        /// <summary>
         /// Gets current metrics for the distributed file system.
         /// </summary>
         /// <returns>An object holding the metrics for the name server.</returns>

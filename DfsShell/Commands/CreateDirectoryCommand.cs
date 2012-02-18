@@ -15,7 +15,7 @@ namespace DfsShell.Commands
     {
         private readonly string _path;
 
-        public CreateDirectoryCommand([Description("The path of the new directory to create.")]string path)
+        public CreateDirectoryCommand([Description("The path of the new directory to create."), ArgumentName("Path")]string path)
         {
             _path = path;
         }

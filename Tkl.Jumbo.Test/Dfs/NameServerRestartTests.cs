@@ -23,8 +23,9 @@ namespace Tkl.Jumbo.Test.Dfs
             try
             {
                 cluster = new TestDfsCluster(1, 1);
-                INameServerClientProtocol nameServer = DfsClient.CreateNameServerClient(TestDfsCluster.CreateClientConfig());
-                nameServer.WaitForSafeModeOff(Timeout.Infinite);
+                DfsClient client = TestDfsCluster.CreateClient();
+                INameServerClientProtocol nameServer = client.NameServer;
+                client.WaitForSafeModeOff(Timeout.Infinite);
                 DateTime rootCreatedDate = nameServer.GetDirectoryInfo("/").DateCreated;
                 nameServer.CreateDirectory("/test1");
                 nameServer.CreateDirectory("/test2");
@@ -61,7 +62,7 @@ namespace Tkl.Jumbo.Test.Dfs
                     Thread.Sleep(1000);
                     cluster = new TestDfsCluster(1, 1, null, false);
                     nameServer = DfsClient.CreateNameServerClient(TestDfsCluster.CreateClientConfig());
-                    nameServer.WaitForSafeModeOff(Timeout.Infinite);
+                    TestDfsCluster.CreateClient().WaitForSafeModeOff(Timeout.Infinite);
 
                     Assert.AreEqual(rootCreatedDate, nameServer.GetDirectoryInfo("/").DateCreated);
 
@@ -122,7 +123,7 @@ namespace Tkl.Jumbo.Test.Dfs
             {
                 cluster = new TestDfsCluster(1, 1);
                 INameServerClientProtocol nameServer = DfsClient.CreateNameServerClient(TestDfsCluster.CreateClientConfig());
-                nameServer.WaitForSafeModeOff(Timeout.Infinite);
+                TestDfsCluster.CreateClient().WaitForSafeModeOff(Timeout.Infinite);
                 DateTime rootCreatedDate = nameServer.GetDirectoryInfo("/").DateCreated;
                 nameServer.CreateDirectory("/test1");
                 nameServer.CreateDirectory("/test2");
@@ -166,7 +167,7 @@ namespace Tkl.Jumbo.Test.Dfs
                 Thread.Sleep(1000);
                 cluster = new TestDfsCluster(1, 1, null, false);
                 nameServer = DfsClient.CreateNameServerClient(TestDfsCluster.CreateClientConfig());
-                nameServer.WaitForSafeModeOff(Timeout.Infinite);
+                TestDfsCluster.CreateClient().WaitForSafeModeOff(Timeout.Infinite);
 
                 Assert.AreEqual(rootCreatedDate, nameServer.GetDirectoryInfo("/").DateCreated);
 

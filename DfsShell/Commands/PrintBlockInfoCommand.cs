@@ -16,7 +16,7 @@ namespace DfsShell.Commands
     {
         private readonly Guid _blockId;
 
-        public PrintBlockInfoCommand([Description("The block ID.")] Guid blockId)
+        public PrintBlockInfoCommand([Description("The block ID."), ArgumentName("BlockId")] Guid blockId)
         {
             _blockId = blockId;
         }

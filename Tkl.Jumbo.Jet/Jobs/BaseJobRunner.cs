@@ -78,9 +78,8 @@ namespace Tkl.Jumbo.Jet.Jobs
         ///   in a derived class after creating your job configuration.
         /// </para>
         /// </remarks>
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1819:PropertiesShouldNotReturnArrays")]
-        [CommandLineArgument("P", ValueDescription = "[Stage:]Property=Value"), Description("Modifies the value of one of the properties in the job configuration after the job has been created. Uses the format \"PropertyName=value\" or \"CompoundStageId:PropertyName=value\". You can access properties more than one level deep, e.g. \"MyStage:OutputChannel.PartitionsPerTask=2\". Can be specified more than once.")]
-        public string[] JobOrStageProperties { get; set; }
+        [CommandLineArgument("Property", ValueDescription = "[Stage:]Property=Value"), AllowDuplicateDictionaryKeys, Description("Modifies the value of one of the properties in the job configuration after the job has been created. Uses the format \"PropertyName=value\" or \"CompoundStageId:PropertyName=value\". You can access properties more than one level deep, e.g. \"MyStage:OutputChannel.PartitionsPerTask=2\". Can be specified more than once.")]
+        public Dictionary<string, string> JobOrStageProperties { get; set; }
 
         /// <summary>
         /// Gets or sets additional job or stage settings that will be defined in the job configuration.
@@ -104,9 +103,8 @@ namespace Tkl.Jumbo.Jet.Jobs
         ///   in a derived class after creating your job configuration.
         /// </para>
         /// </remarks>
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1819:PropertiesShouldNotReturnArrays")]
-        [CommandLineArgument("D", ValueDescription = "[Stage:]Setting=Value"), Description("Defines or overrides a job or stage setting in the job configuration. Uses the format \"SettingName=value\" or \"CompoundStageId:SettingName=value\". Can be specified more than once.")]
-        public string[] JobOrStageSettings { get; set; }
+        [CommandLineArgument("Setting", ValueDescription = "[Stage:]Setting=Value"), AllowDuplicateDictionaryKeys, Description("Defines or overrides a job or stage setting in the job configuration. Uses the format \"SettingName=value\" or \"CompoundStageId:SettingName=value\". Can be specified more than once.")]
+        public Dictionary<string, string> JobOrStageSettings { get; set; }
 
         /// <summary>
         /// Gets the DFS client.
@@ -246,12 +244,11 @@ namespace Tkl.Jumbo.Jet.Jobs
         {
             if( JobOrStageSettings != null )
             {
-                foreach( string setting in JobOrStageSettings )
+                foreach( KeyValuePair<string, string> setting in JobOrStageSettings )
                 {
                     string compoundStageId;
                     string settingName;
-                    string settingValue;
-                    ParsePropertyOrSetting(setting, out compoundStageId, out settingName, out settingValue);
+                    ParsePropertyOrSetting(setting.Key, out compoundStageId, out settingName);
 
                     SettingsDictionary target = null;
                     if( compoundStageId == null )
@@ -264,13 +261,13 @@ namespace Tkl.Jumbo.Jet.Jobs
                     {
                         StageConfiguration stage = jobConfiguration.GetStageWithCompoundId(compoundStageId);
                         if( stage == null )
-                            throw new InvalidOperationException(string.Format(CultureInfo.CurrentCulture, "Stage {0} specified in command line argument -D:{1} does not exist.", compoundStageId, setting));
+                            throw new InvalidOperationException(string.Format(CultureInfo.CurrentCulture, "Stage {0} specified in command line argument -Setting {1}={2} does not exist.", compoundStageId, setting.Key, setting.Value));
                         if( stage.StageSettings == null )
                             stage.StageSettings = new SettingsDictionary();
                         target = stage.StageSettings;
                     }
 
-                    target[settingName] = settingValue;
+                    target[settingName] = setting.Value;
                 }
             }
         }
@@ -279,47 +276,41 @@ namespace Tkl.Jumbo.Jet.Jobs
         {
             if( JobOrStageProperties != null )
             {
-                foreach( string prop in JobOrStageProperties )
+                foreach( KeyValuePair<string, string> property in JobOrStageProperties )
                 {
-                    ApplyJobProperty(jobConfiguration, prop);
+                    ApplyJobProperty(jobConfiguration, property);
                 }
             }
         }
 
-        private static void ApplyJobProperty(JobConfiguration job, string prop)
+        private static void ApplyJobProperty(JobConfiguration job, KeyValuePair<string, string> property)
         {
             string compoundStageId;
             string propName;
-            string propValue;
-            ParsePropertyOrSetting(prop, out compoundStageId, out propName, out propValue);
+            ParsePropertyOrSetting(property.Key, out compoundStageId, out propName);
 
             object target = job;
             if( compoundStageId != null )
             {
                 target = job.GetStageWithCompoundId(compoundStageId);
                 if( target == null )
-                    throw new InvalidOperationException(string.Format(CultureInfo.CurrentCulture, "Stage {0} specified in command line argument -P:{1} does not exist.", compoundStageId, prop));
+                    throw new InvalidOperationException(string.Format(CultureInfo.CurrentCulture, "Stage {0} specified in command line argument -Property {1}={2} does not exist.", compoundStageId, property.Key, property.Value));
             }
 
-            ApplyJobProperty(target, propName, propValue);
+            ApplyJobProperty(target, propName, property.Value);
         }
 
-        private static void ParsePropertyOrSetting(string propOrSetting, out string compoundStageId, out string name, out string value)
+        private static void ParsePropertyOrSetting(string propOrSettingKey, out string compoundStageId, out string name)
         {
             compoundStageId = null;
 
-            int colonIndex = propOrSetting.IndexOf(':');
+            int colonIndex = propOrSettingKey.IndexOf(':');
             if( colonIndex >= 0 )
             {
-                compoundStageId = propOrSetting.Substring(0, colonIndex);
+                compoundStageId = propOrSettingKey.Substring(0, colonIndex);
             }
 
-            int equalsIndex = propOrSetting.IndexOf('=', colonIndex + 1);
-            if( equalsIndex < 0 )
-                throw new InvalidOperationException(string.Format(CultureInfo.CurrentCulture, "Job property specified in command line argument -P:{0} has no value.", propOrSetting));
-
-            name = propOrSetting.Substring(colonIndex + 1, equalsIndex - colonIndex - 1);
-            value = propOrSetting.Substring(equalsIndex + 1);
+            name = propOrSettingKey.Substring(colonIndex + 1);
         }
 
         private static void ApplyJobProperty(object target, string path, string value)

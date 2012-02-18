@@ -505,9 +505,14 @@
             Attribute that specifies the name of a <see cref="T:Ookii.CommandLine.ShellCommand"/>.
             </summary>
         </member>
+        <member name="M:Ookii.CommandLine.ShellCommandAttribute.#ctor">
+            <summary>
+            Initializes a new instance of the <see cref="T:Ookii.CommandLine.ShellCommandAttribute"/> class using the target's type name as the command name.
+            </summary>
+        </member>
         <member name="M:Ookii.CommandLine.ShellCommandAttribute.#ctor(System.String)">
             <summary>
-            Initializes a new instance of the <see cref="T:Ookii.CommandLine.ShellCommandAttribute"/> class.
+            Initializes a new instance of the <see cref="T:Ookii.CommandLine.ShellCommandAttribute"/> class using the specified command name.
             </summary>
             <param name="commandName">The name of the command, which can be used to locate it using the <see cref="M:Ookii.CommandLine.ShellCommand.GetShellCommand(System.Reflection.Assembly,System.String)"/> method.</param>
         </member>
@@ -518,6 +523,30 @@
             <value>
             The name of the command.
             </value>
+        </member>
+        <member name="P:Ookii.CommandLine.ShellCommandAttribute.CustomArgumentParsing">
+            <summary>
+            Gets or sets a value indicating whether the command does its own argument parsing.
+            </summary>
+            <value>
+            	<see langword="true"/> if the command does its own argument parsing; otherwise, <see langword="false"/>. The default value is <see langword="false"/>.
+            </value>
+            <remarks>
+            <para>
+              If this property is set to <see langword="true"/>, the <see cref="M:Ookii.CommandLine.ShellCommand.CreateShellCommand(System.Reflection.Assembly,System.String[],System.Int32)"/> method and 
+              the <see cref="M:Ookii.CommandLine.ShellCommand.RunShellCommand(System.Reflection.Assembly,System.String[],System.Int32)"/>  will not create the command with the <see cref="T:Ookii.CommandLine.CommandLineParser"/>. Instead,
+              the command type must define a constructor that takes three arguments: an array of <see cref="T:System.String"/> values that will contain the raw command line arguments, an <see cref="T:System.Int32"/> that
+              indicates the index of the first argument in the array after the command name, and a <see cref="T:Ookii.CommandLine.CreateShellCommandOptions"/> instance specifying argument parsing
+              and error handling options.
+            </para>
+            <para>
+              This constructor should not throw an exception is argument parsing fails. Instead, it should write error and usage information to the <see cref="T:System.IO.TextWriter"/> instances specified by
+              <see cref="P:Ookii.CommandLine.CreateShellCommandOptions.Error"/> and <see cref="P:Ookii.CommandLine.CreateShellCommandOptions.Out"/>.
+            </para>
+            <para>
+              If this property is set to <see langword="true"/> and the shell command type does not have a constructor with those arguments, creating the command will fail.
+            </para>
+            </remarks>
         </member>
         <member name="T:Ookii.CommandLine.CreateShellCommandOptions">
             <summary>
@@ -794,6 +823,16 @@
             Invalid value for a dictionary argument; typically the result of a duplicate key.
             </summary>
         </member>
+        <member name="F:Ookii.CommandLine.CommandLineArgumentErrorCategory.CreateArgumentsTypeError">
+            <summary>
+            An error occurred creating an instance of the arguments type (e.g. the constructor threw an exception).
+            </summary>
+        </member>
+        <member name="F:Ookii.CommandLine.CommandLineArgumentErrorCategory.ApplyValueError">
+            <summary>
+            An error occurred applying the value of the argument (e.g. the property set accessor threw an exception).
+            </summary>
+        </member>
         <member name="T:Ookii.CommandLine.ArgumentParsedEventArgs">
             <summary>
             Provides data for the <see cref="E:Ookii.CommandLine.CommandLineParser.ArgumentParsed"/> event.
@@ -972,7 +1011,13 @@
             </para>
             <para>
               This format string should have two placeholders, which are used for the command name and its description. If the format string ends in
-              a line break, the command descriptions will be separated by a blank line (this is the default).
+              a line break, the command descriptions will be separated by a blank line (this is the default). It can have two additional placeholders,
+              which are used for the value description (formatted according to the <see cref="P:Ookii.CommandLine.WriteUsageOptions.ValueDescriptionFormat"/>), and the primary argument
+              name prefix.
+            </para>
+            <para>
+              For example, you can create argument descriptions in the style of the PowerShell Get-Help commandlet by setting this property
+              to "    {3}{0} {2}\n{1}\n" and setting <see cref="P:Ookii.CommandLine.WriteUsageOptions.ArgumentDescriptionIndent"/> to 8.
             </para>
             </remarks>
         </member>
@@ -1107,6 +1152,11 @@
         <member name="P:Ookii.CommandLine.Properties.Resources.ArrayNotLastArgument">
             <summary>
               Looks up a localized string similar to A positional array argument must be the last positional argument..
+            </summary>
+        </member>
+        <member name="P:Ookii.CommandLine.Properties.Resources.CreateArgumentsTypeErrorFormat">
+            <summary>
+              Looks up a localized string similar to An error occurred creating an instance of the arguments type: {0}.
             </summary>
         </member>
         <member name="P:Ookii.CommandLine.Properties.Resources.DefaultArgumentDescriptionFormat">
@@ -1256,6 +1306,11 @@
               Looks up a localized string similar to The property defining the argument &apos;{0}&apos; doesn&apos;t have a public set accessor..
             </summary>
         </member>
+        <member name="P:Ookii.CommandLine.Properties.Resources.SetValueErrorFormat">
+            <summary>
+              Looks up a localized string similar to An error occurred setting the value of argument &apos;{0}&apos;: {1}.
+            </summary>
+        </member>
         <member name="P:Ookii.CommandLine.Properties.Resources.TooManyArguments">
             <summary>
               Looks up a localized string similar to Too many arguments were supplied..
@@ -1354,7 +1409,8 @@
             <para>
               If an argument has a type other than <see cref="T:System.String"/>, the <see cref="T:Ookii.CommandLine.CommandLineParser"/> class will use the
               <see cref="T:System.ComponentModel.TypeDescriptor"/> class to get a <see cref="T:System.ComponentModel.TypeConverter"/> for that type to convert the supplied string value
-              to the correct type.
+              to the correct type. You can also use the <see cref="T:System.ComponentModel.TypeConverterAttribute"/> on the property or constructor parameter
+              that defines the attribute to specify a custom type converter.
             </para>
             <para>
               If an argument has an array type, it can be specified more than once, and the value for each time is it specified
@@ -2378,6 +2434,24 @@
               This is not the long description used to describe the purpose of the argument. That should be specified
               using the <see cref="T:System.ComponentModel.DescriptionAttribute"/> attribute.
             </note>
+            </remarks>
+        </member>
+        <member name="T:Ookii.CommandLine.AllowDuplicateDictionaryKeysAttribute">
+            <summary>
+            Indicates that a dictionary argument accepts the same key more than once.
+            </summary>
+            <remarks>
+            <para>
+              If this attribute is applied to an argument whose type is <see cref="T:System.Collections.Generic.Dictionary`2"/> or
+              <see cref="T:System.Collections.Generic.IDictionary`2"/>, a duplicate key will simply overwrite the previous value.
+            </para>
+            <para>
+              If this attribute is not applied, a <see cref="T:Ookii.CommandLine.CommandLineArgumentException"/> with a <see cref="P:Ookii.CommandLine.CommandLineArgumentException.Category"/>
+              of <see cref="F:Ookii.CommandLine.CommandLineArgumentErrorCategory.InvalidDictionaryValue"/> will be thrown when a duplicate key is specified.
+            </para>
+            <para>
+              The <see cref="T:Ookii.CommandLine.AllowDuplicateDictionaryKeysAttribute"/> is ignored if it is applied to any other type of argument.
+            </para>
             </remarks>
         </member>
     </members>

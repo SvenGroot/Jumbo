@@ -19,8 +19,8 @@ namespace DfsShell.Commands
         private readonly string _localPath;
         private readonly string _dfsPath;
 
-        public GetCommand([Description("The path of the DFS file or directory to retrieve.")] string dfsPath,
-                          [Optional, DefaultParameterValue("."), Description("The local path where the file should be stored. The default value is the current directory.")] string localPath)
+        public GetCommand([Description("The path of the DFS file or directory to retrieve."), ArgumentName("DfsPath")] string dfsPath,
+                          [Optional, DefaultParameterValue("."), Description("The local path where the file should be stored. The default value is the current directory."), ArgumentName("LocalPath")] string localPath)
         {
             if( dfsPath == null )
                 throw new ArgumentNullException("dfsPath");
@@ -31,7 +31,7 @@ namespace DfsShell.Commands
             _localPath = localPath;
         }
 
-        [CommandLineArgument("q"), Description("Suppress progress information output.")]
+        [CommandLineArgument, Description("Suppress progress information output.")]
         public bool Quiet { get; set; }
 
         public override void Run()

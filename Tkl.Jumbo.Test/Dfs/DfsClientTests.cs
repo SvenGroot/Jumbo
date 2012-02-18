@@ -21,8 +21,7 @@ namespace Tkl.Jumbo.Test.Dfs
         public void Setup()
         {
             _cluster = new TestDfsCluster(1, 1);
-            DfsConfiguration config = TestDfsCluster.CreateClientConfig();
-            INameServerClientProtocol client = DfsClient.CreateNameServerClient(config);
+            DfsClient client = TestDfsCluster.CreateClient();
             client.WaitForSafeModeOff(Timeout.Infinite);
         }
 

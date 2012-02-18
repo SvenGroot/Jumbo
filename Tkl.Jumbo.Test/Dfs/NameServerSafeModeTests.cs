@@ -25,11 +25,11 @@ namespace Tkl.Jumbo.Test.Dfs
                 INameServerClientProtocol nameServer = DfsClient.CreateNameServerClient(TestDfsCluster.CreateClientConfig());
                 Utilities.TraceLineAndFlush("Cluster started");
                 Assert.IsTrue(nameServer.SafeMode);
-                Assert.IsFalse(nameServer.WaitForSafeModeOff(500));
+                Assert.IsFalse(TestDfsCluster.CreateClient().WaitForSafeModeOff(500));
                 Utilities.TraceLineAndFlush("Starting data servers");
                 cluster.StartDataServers(1);
                 Utilities.TraceLineAndFlush("Data servers started");
-                Assert.IsTrue(nameServer.WaitForSafeModeOff(Timeout.Infinite));
+                Assert.IsTrue(TestDfsCluster.CreateClient().WaitForSafeModeOff(Timeout.Infinite));
                 Utilities.TraceLineAndFlush("Safe mode off");
                 Assert.IsFalse(nameServer.SafeMode);
             }

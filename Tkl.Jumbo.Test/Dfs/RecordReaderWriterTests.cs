@@ -30,7 +30,7 @@ namespace Tkl.Jumbo.Test.Dfs
             _cluster = new TestDfsCluster(1, 1, _blockSize);
             Trace.WriteLine("Starting nameserver.");
             _dfsClient = TestDfsCluster.CreateClient();
-            _dfsClient.NameServer.WaitForSafeModeOff(Timeout.Infinite);
+            _dfsClient.WaitForSafeModeOff(Timeout.Infinite);
             Trace.WriteLine("Name server running.");
             _records = Utilities.GenerateUtf8TextData(100000, 1000).ToList();
         }

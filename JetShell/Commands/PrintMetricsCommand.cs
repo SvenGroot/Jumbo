@@ -25,7 +25,7 @@ namespace JetShell.Commands
                 metrics.PrintMetrics(Console.Out);
         }
 
-        [CommandLineArgument("r")]
+        [CommandLineArgument, Description("Print a list of running jobs.")]
         public bool RunningJobs { get; set; }
     }
 }

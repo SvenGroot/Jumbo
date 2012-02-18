@@ -8,6 +8,7 @@ using System.ComponentModel;
 using System.Reflection;
 using Tkl.Jumbo.Dfs;
 using Ookii.CommandLine;
+using System.Collections;
 
 namespace Tkl.Jumbo.Jet.Jobs
 {
@@ -142,10 +143,12 @@ namespace Tkl.Jumbo.Jet.Jobs
                         if( argument.HasValue )
                         {
                             logMessage.Append(", ");
-                            logMessage.Append(argument.ArgumentName);
+                            logMessage.Append(argument.MemberName);
                             logMessage.Append(" = ");
-                            if( argument.ArgumentType.IsArray )
-                                AppendMultiValueArgument(logMessage, (Array)argument.Value);
+                            if( argument.IsDictionary )
+                                AppendDictionayArgument(logMessage, (IDictionary)argument.Value);
+                            else if( argument.IsMultiValue )
+                                AppendMultiValueArgument(logMessage, (IEnumerable)argument.Value);
                             else
                                 logMessage.Append(argument.Value);
                         }
@@ -171,21 +174,26 @@ namespace Tkl.Jumbo.Jet.Jobs
             return CreateInstance(DfsConfiguration.GetConfiguration(), JetConfiguration.GetConfiguration(), args, index);
         }
 
-        private static void AppendMultiValueArgument(StringBuilder logMessage, Array value)
+        private static void AppendDictionayArgument(StringBuilder logMessage, IDictionary values)
         {
-            if( value.Length > 1 )
-                logMessage.Append("{ ");
+            logMessage.Append("{ ");
             bool first = true;
-            foreach( object item in value )
+            foreach( DictionaryEntry entry in values )
             {
                 if( first )
                     first = false;
                 else
                     logMessage.Append(", ");
-                logMessage.Append(item);
+                logMessage.AppendFormat("{0}={1}", entry.Key, entry.Value);
             }
-            if( value.Length > 1 )
-                logMessage.Append(" }");
+            logMessage.Append(" }");
+        }
+
+        private static void AppendMultiValueArgument(StringBuilder logMessage, IEnumerable values)
+        {
+            logMessage.Append("{ ");
+            logMessage.Append(string.Join(", ", values.Cast<object>()));
+            logMessage.Append(" }");
         }
     }
 }

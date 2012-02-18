@@ -11,6 +11,11 @@ namespace JetShell.Commands
 {
     abstract class JetShellCommand : ShellCommand
     {
-        public JetClient JetClient { get; set; }
+        private readonly JetClient _jetClient = new JetClient();
+
+        public JetClient JetClient 
+        {
+            get { return _jetClient; }
+        }
     }
 }
