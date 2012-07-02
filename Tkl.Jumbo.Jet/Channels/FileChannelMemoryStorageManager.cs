@@ -22,18 +22,22 @@ namespace Tkl.Jumbo.Jet.Channels
         private readonly long _maxSize;
         private readonly List<UnmanagedBufferMemoryStream> _inputs = new List<UnmanagedBufferMemoryStream>();
         private readonly long _maxSingleStreamSize;
+        private readonly bool _refuseStreamIfBufferFull;
         private long _currentSize;
         private bool _disposed;
 
         public event EventHandler StreamRemoved;
 
-        private FileChannelMemoryStorageManager(long maxSize)
+        public event EventHandler WaitingForBuffer;
+
+        private FileChannelMemoryStorageManager(long maxSize, bool refuseStreamIfBufferFull)
         {
             if( maxSize < 0 )
                 throw new ArgumentOutOfRangeException("maxSize", "Memory storage size must be larger than zero.");
             _maxSize = maxSize;
             _maxSingleStreamSize = (long)(_maxSize * _maxSingleStreamFraction);
             _log.InfoFormat("Created memory storage with maximum size {0}.", maxSize);
+            _refuseStreamIfBufferFull = refuseStreamIfBufferFull;
         }
 
         public float Level
@@ -50,12 +54,14 @@ namespace Tkl.Jumbo.Jet.Channels
         }
 
         [MethodImpl(MethodImplOptions.Synchronized)]
-        public static FileChannelMemoryStorageManager GetInstance(long maxSize)
+        public static FileChannelMemoryStorageManager GetInstance(long maxSize, bool refuseStreamIfBufferFull)
         {
             if( _instance == null )
-                _instance = new FileChannelMemoryStorageManager(maxSize);
+                _instance = new FileChannelMemoryStorageManager(maxSize, refuseStreamIfBufferFull);
             else if( _instance._maxSize != maxSize )
                 _log.WarnFormat("A memory storage manager with a different max size ({0}) than the existing manager was requested; using the original size ({1}).", maxSize, _instance._maxSize);
+            else if( _instance._refuseStreamIfBufferFull != refuseStreamIfBufferFull )
+                _log.Warn("Existing memory storage manager uses different settings than the requested one.");
             return _instance;
         }
 
@@ -72,16 +78,21 @@ namespace Tkl.Jumbo.Jet.Channels
             {
                 while( _currentSize + size > _maxSize )
                 {
+                    if( _refuseStreamIfBufferFull )
+                        return null;
+
                     if( !waited )
                     {
                         _log.Info("Waiting for buffer space...");
+                        OnWaitingForBuffer(EventArgs.Empty);
                         if( disposeOnWait != null )
                             disposeOnWait.Dispose();
                     }
                     waited = true;
                     Monitor.Wait(_inputs);
                 }
-                _log.Info("Buffer space available");
+                if( waited )
+                    _log.Info("Buffer space available");
 
                 UnmanagedBufferMemoryStream stream = new UnmanagedBufferMemoryStream(size);
                 stream.Disposed += new EventHandler(UnmanagedBufferMemoryStream_Disposed);
@@ -95,6 +106,13 @@ namespace Tkl.Jumbo.Jet.Channels
         private void OnStreamRemoved(EventArgs e)
         {
             EventHandler handler = StreamRemoved;
+            if( handler != null )
+                handler(this, e);
+        }
+
+        private void OnWaitingForBuffer(EventArgs e)
+        {
+            EventHandler handler = WaitingForBuffer;
             if( handler != null )
                 handler(this, e);
         }

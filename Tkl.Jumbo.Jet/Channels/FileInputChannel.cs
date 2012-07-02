@@ -267,6 +267,10 @@ namespace Tkl.Jumbo.Jet.Channels
         /// The name of the setting in <see cref="JobConfiguration.JobSettings"/> that overrides the global memory storage size setting.
         /// </summary>
         public const string MemoryStorageSizeSetting = "FileChannel.MemoryStorageSize";
+        /// <summary>
+        /// The name of the setting in <see cref="JobConfiguration.JobSettings"/> that indicates that shuffling should not wait for memory if the buffer is full.
+        /// </summary>
+        public const string ShuffleToDiskIfBufferFullSettingKey = "FileChannel.ShuffleToDiskIfBufferFull";
 
         private const int _pollingInterval = 5000;
         private const int _downloadRetryInterval = 500;
@@ -327,11 +331,12 @@ namespace Tkl.Jumbo.Jet.Channels
             if( !inputStage.TryGetTypedSetting(FileOutputChannel.OutputTypeSettingKey, out _channelInputType) )
                 _channelInputType = taskExecution.Context.JobConfiguration.GetTypedSetting(FileOutputChannel.OutputTypeSettingKey, taskExecution.JetClient.Configuration.FileChannel.OutputType);
 
-            long memoryStorageSize = TaskExecution.Context.JobConfiguration.GetTypedSetting(MemoryStorageSizeSetting, (long)TaskExecution.JetClient.Configuration.FileChannel.MemoryStorageSize);
+            long memoryStorageSize = (long)TaskExecution.Context.JobConfiguration.GetTypedSetting(MemoryStorageSizeSetting, TaskExecution.JetClient.Configuration.FileChannel.MemoryStorageSize);
             if( memoryStorageSize > 0 )
             {
-                _memoryStorage = FileChannelMemoryStorageManager.GetInstance(memoryStorageSize);
+                _memoryStorage = FileChannelMemoryStorageManager.GetInstance(memoryStorageSize, taskExecution.Context.GetTypedSetting(ShuffleToDiskIfBufferFullSettingKey, false));
                 _memoryStorage.StreamRemoved += new EventHandler(_memoryStorage_StreamRemoved);
+                _memoryStorage.WaitingForBuffer += new EventHandler(_memoryStorage_WaitingForBuffer);
             }
         }
 
@@ -934,6 +939,11 @@ namespace Tkl.Jumbo.Jet.Channels
         private void _memoryStorage_StreamRemoved(object sender, EventArgs e)
         {
             _hasNonMemoryInputs = false;
+        }
+
+        private void _memoryStorage_WaitingForBuffer(object sender, EventArgs e)
+        {
+            OnMemoryStorageFull(EventArgs.Empty);
         }
     }
 }

@@ -21,6 +21,11 @@ namespace Tkl.Jumbo.Jet.Channels
         private readonly ReadOnlyCollection<int> _partitionsReadOnlyWrapper;
 
         /// <summary>
+        /// Occurs when the input channel stalls waiting for space to become available in the memory storage.
+        /// </summary>
+        public event EventHandler MemoryStorageFull;
+
+        /// <summary>
         /// Initializes a new instance of the <see cref="InputChannel"/> class.
         /// </summary>
         /// <param name="taskExecution">The task execution utility for the task that this channel is for.</param>
@@ -184,6 +189,17 @@ namespace Tkl.Jumbo.Jet.Channels
                 channelReader.Channel = this;
             JetActivator.ApplyConfiguration(reader, TaskExecution.FileSystemClient.Configuration, TaskExecution.JetClient.Configuration, TaskExecution.Context);
             return reader;
+        }
+
+        /// <summary>
+        /// Raises the <see cref="E:MemoryStorageFull"/> event.
+        /// </summary>
+        /// <param name="e">The <see cref="System.EventArgs"/> instance containing the event data.</param>
+        protected virtual void OnMemoryStorageFull(EventArgs e)
+        {
+            EventHandler handler = MemoryStorageFull;
+            if( handler != null )
+                handler(this, e);
         }
 
         private void GetInputTaskIdsFull()
