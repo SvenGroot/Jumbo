@@ -131,6 +131,7 @@ namespace Tkl.Jumbo.Jet.Channels
                 {
                     _log.Warn("Attempt to remove a stream that was not registered.");
                 }
+                Monitor.PulseAll(_inputs);
             }
         }
 
