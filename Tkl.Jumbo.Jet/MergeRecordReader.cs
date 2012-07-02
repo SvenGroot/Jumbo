@@ -332,6 +332,8 @@ namespace Tkl.Jumbo.Jet
                         merger.RunMemoryPurgePass(_mergeHelper);
                 }
 
+                _log.Info("Preparing final merge");
+
                 foreach( PartitionMerger<T> merger in _partitionMergers )
                     merger.PrepareFinalPass(_mergeHelper);
 

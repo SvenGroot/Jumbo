@@ -97,6 +97,8 @@ namespace Tkl.Jumbo.Jet
 
                 long uncompressedSize = merger.WriteMerge(outputFileName, null, passInputs, _reader.MaxDiskInputsPerMergePass, _comparer, _reader.AllowRecordReuse, _reader.IntermediateOutputPath, _intermediateFilePrefix, _reader.CompressionType, _reader.BufferSize, _reader.JetConfiguration.FileChannel.EnableChecksum);
 
+                _log.InfoFormat("Background merge complete");
+
                 lock( _diskInputs )
                     _diskInputs.Add(new FileRecordInput(typeof(BinaryRecordReader<T>), outputFileName, null, uncompressedSize, true, merger.IsUsingRawRecords, 0, _reader.AllowRecordReuse, _reader.BufferSize, _reader.CompressionType));
             }
@@ -113,6 +115,8 @@ namespace Tkl.Jumbo.Jet
                 string outputFileName = Path.Combine(_reader.IntermediateOutputPath, string.Format(CultureInfo.InvariantCulture, "partition{0}_background_merge{1}.tmp", _partitionNumber, _backgroundPassCount));
 
                 long uncompressedSize = merger.WriteMerge(outputFileName, passInputs, null, _reader.MaxDiskInputsPerMergePass, _comparer, _reader.AllowRecordReuse, _reader.IntermediateOutputPath, _intermediateFilePrefix, _reader.CompressionType, _reader.BufferSize, _reader.JetConfiguration.FileChannel.EnableChecksum);
+
+                _log.InfoFormat("Background merge complete");
 
                 lock( _diskInputs )
                     _diskInputs.Add(new FileRecordInput(typeof(BinaryRecordReader<T>), outputFileName, null, uncompressedSize, true, merger.IsUsingRawRecords, 0, _reader.AllowRecordReuse, _reader.BufferSize, _reader.CompressionType));
