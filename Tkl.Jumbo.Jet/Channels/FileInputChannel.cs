@@ -30,6 +30,7 @@ namespace Tkl.Jumbo.Jet.Channels
             private readonly int _fileServerPort;
             private readonly List<CompletedTask> _completedTasks = new List<CompletedTask>();
             private readonly List<CompletedTask> _tasksToDownload = new List<CompletedTask>(); // may only be accessed by the download thread
+            private int _downloadedTasks;
 
             public InputServer(ServerAddress taskServer, int fileServerPort)
             {
@@ -94,6 +95,7 @@ namespace Tkl.Jumbo.Jet.Channels
             {
                 _tasksToDownload.AddRange(_completedTasks);
                 _completedTasks.Clear();
+                _downloadedTasks = 0;
 
                 return _tasksToDownload.Count > 0;
             }
@@ -101,9 +103,22 @@ namespace Tkl.Jumbo.Jet.Channels
             /// <summary>
             /// NOTE: Only call from download thread.
             /// </summary>
+            public void NotifyTaskDownloaded()
+            {
+                ++_downloadedTasks;
+            }
+
+            /// <summary>
+            /// NOTE: Only call from download thread.
+            /// </summary>
             public void NotifyDownloadSuccess()
             {
-                _tasksToDownload.Clear();
+                if( _downloadedTasks == _tasksToDownload.Count )
+                    _tasksToDownload.Clear();
+                else if( _downloadedTasks > 0 )
+                    _tasksToDownload.RemoveRange(0, _downloadedTasks);
+
+                _downloadedTasks = 0;
             }
         }
 
@@ -162,6 +177,86 @@ namespace Tkl.Jumbo.Jet.Channels
                     }
 
                     _channel.NotifyTaskCompletion(task);
+                }
+            }
+        }
+
+        private sealed class ServerConnection : IDisposable
+        {
+            private readonly string _hostName;
+            private readonly int _port;
+            private TcpClient _client;
+            private NetworkStream _stream;
+            private WriteBufferedStream _bufferStream;
+            private BinaryWriter _writer;
+            private BinaryReader _reader;
+
+            public BinaryReader Reader
+            {
+                get { return _reader; }
+            }
+
+            public BinaryWriter Writer
+            {
+                get { return _writer; }
+            }
+
+            public NetworkStream Stream
+            {
+                get { return _stream; }
+            }
+
+            public ServerConnection(string hostName, int port)
+            {
+                _hostName = hostName;
+                _port = port;
+            }
+
+            public bool Connect()
+            {
+                _client = new TcpClient(_hostName, _port);
+                _stream = _client.GetStream();
+                _stream.ReadTimeout = 30000;
+                _stream.WriteTimeout = 30000;
+                _bufferStream = new WriteBufferedStream(_stream);
+                _writer = new BinaryWriter(_bufferStream);
+                _reader = new BinaryReader(_stream);
+
+                int connectionAccepted = _reader.ReadInt32();
+                if( connectionAccepted == 0 )
+                {
+                    _log.WarnFormat("Server {0}:{1} is busy.", _hostName, _port);
+                    return false;
+                }
+                return true;
+            }
+            
+            public void Dispose()
+            {
+                if( _reader != null )
+                {
+                    _reader.Dispose();
+                    _reader = null;
+                }
+                if( _writer != null )
+                {
+                    _writer.Dispose();
+                    _writer = null;
+                }
+                if( _bufferStream != null )
+                {
+                    _bufferStream.Dispose();
+                    _bufferStream = null;
+                }
+                if( _stream != null )
+                {
+                    _stream.Dispose();
+                    _stream = null;
+                }
+                if( _client != null )
+                {
+                    ((IDisposable)_client).Dispose();
+                    _client = null;
                 }
             }
         }
@@ -593,25 +688,21 @@ namespace Tkl.Jumbo.Jet.Channels
 
         private bool RetrieveInputFiles(IMultiInputRecordReader reader, InputServer server)
         {
-            IList<IList<RecordInput>> inputs;
+            int downloadedTasks;
 
             if( !InputStage.OutputChannel.ForceFileDownload && server.IsLocal )
             {
-                inputs = UseLocalFilesForInput(server);
+                downloadedTasks = UseLocalFilesForInput(server, reader);
             }
             else
             {
-                inputs = DownloadFiles(server);
-                if( inputs == null )
+                downloadedTasks = DownloadFiles(server, reader);
+                if( downloadedTasks == 0 )
                     return false; // Couldn't download because the server was busy
             }
 
-            foreach( IList<RecordInput> taskInputs in inputs )
-            {
-                reader.AddInput(taskInputs);
-            }
             server.NotifyDownloadSuccess();
-            int files = Interlocked.Add(ref _filesRetrieved, inputs.Count);
+            int files = Interlocked.Add(ref _filesRetrieved, downloadedTasks);
             TaskExecution.ChannelStatusMessage = string.Format(CultureInfo.InvariantCulture, "Downloaded {0} of {1} input files.", files, InputTaskIds.Count);
 
             if( !_isReady )
@@ -625,14 +716,13 @@ namespace Tkl.Jumbo.Jet.Channels
             return true;
         }
 
-        private IList<IList<RecordInput>> UseLocalFilesForInput(InputServer server)
+        private int UseLocalFilesForInput(InputServer server, IMultiInputRecordReader multiInputRecordReader)
         {
-            List<IList<RecordInput>> result = new List<IList<RecordInput>>(server.TasksToDownloadCount);
+            int downloadedTasks = 0;
             ITaskServerClientProtocol taskServer = JetClient.CreateTaskServerClient(server.TaskServer);
             foreach( CompletedTask task in server.TasksToDownload )
             {
                 IList<RecordInput> inputs = new List<RecordInput>(ActivePartitions.Count);
-                result.Add(inputs);
                 string taskOutputDirectory = taskServer.GetOutputFileDirectory(task.JobId);
 
                 _log.InfoFormat("Using local input files from task {0} for {1} partitions.", task.TaskAttemptId, ActivePartitions.Count);
@@ -644,8 +734,11 @@ namespace Tkl.Jumbo.Jet.Channels
                 {
                     UseLocalPartitionFileForInput(task, inputs, taskOutputDirectory);
                 }
+                multiInputRecordReader.AddInput(inputs);
+                server.NotifyTaskDownloaded();
+                ++downloadedTasks;
             }
-            return result;
+            return downloadedTasks;
         }
 
         private void UseLocalMultiFilesForInput(CompletedTask task, IList<RecordInput> inputs, string taskOutputDirectory)
@@ -696,97 +789,91 @@ namespace Tkl.Jumbo.Jet.Channels
         }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Maintainability", "CA1506:AvoidExcessiveClassCoupling")]
-        private IList<IList<RecordInput>> DownloadFiles(InputServer server)
+        private int DownloadFiles(InputServer server, IMultiInputRecordReader multiInputRecordReader)
         {
             int port = server.FileServerPort;
 
             _log.InfoFormat(CultureInfo.InvariantCulture, "Downloading tasks {0} input files from server {1}:{2}.", server.TasksToDownload.ToDelimitedString(), server.TaskServer.HostName, server.FileServerPort);
 
-            List<IList<RecordInput>> result = new List<IList<RecordInput>>(server.TasksToDownloadCount);
+            int downloadedTaskCount = 0;
             try
             {
-                using( TcpClient client = new TcpClient(server.TaskServer.HostName, port) )
-                using( NetworkStream stream = client.GetStream() )
-                using( WriteBufferedStream bufferStream = new WriteBufferedStream(stream) )
-                using( BinaryWriter writer = new BinaryWriter(bufferStream) )
-                using( BinaryReader reader = new BinaryReader(stream) )
+                using( ServerConnection connection = new ServerConnection(server.TaskServer.HostName, port) )
                 {
-                    stream.ReadTimeout = 30000;
-                    stream.WriteTimeout = 30000;
+                    if( !connection.Connect() )
+                        return downloadedTaskCount;
 
-                    int connectionAccepted = reader.ReadInt32();
-                    if( connectionAccepted == 0 )
-                    {
-                        _log.WarnFormat("Server {0}:{1} is busy.", server.TaskServer.HostName, port);
-                        return null;
-                    }
-
-                    writer.Write(_jobID.ToByteArray());
-                    writer.Write(_channelInputType != FileChannelOutputType.MultiFile);
-                    writer.Write(ActivePartitions.Count);
+                    connection.Writer.Write(_jobID.ToByteArray());
+                    connection.Writer.Write(_channelInputType != FileChannelOutputType.MultiFile);
+                    connection.Writer.Write(ActivePartitions.Count);
                     foreach( int partition in ActivePartitions )
-                        writer.Write(partition);
-                    writer.Write(server.TasksToDownloadCount);
+                        connection.Writer.Write(partition);
+                    connection.Writer.Write(server.TasksToDownloadCount);
                     foreach( CompletedTask task in server.TasksToDownload )
-                        writer.Write(task.TaskAttemptId.ToString());
+                        connection.Writer.Write(task.TaskAttemptId.ToString());
                     if( _channelInputType == FileChannelOutputType.MultiFile )
-                        writer.Write(_outputStageId);
+                        connection.Writer.Write(_outputStageId);
 
-                    writer.Flush();
+                    connection.Writer.Flush();
 
                     foreach( CompletedTask task in server.TasksToDownload )
                     {
                         List<RecordInput> downloadedFiles = new List<RecordInput>(ActivePartitions.Count);
-                        result.Add(downloadedFiles);
                         foreach( int partition in ActivePartitions )
                         {
-                            DownloadPartition(task, downloadedFiles, stream, reader, partition);
+                            // TODO: Find a way to not throw away previously downloaded partitions if this returns false
+                            if( !DownloadPartition(task, downloadedFiles, connection, partition) )
+                                return downloadedTaskCount;
                         }
+                        multiInputRecordReader.AddInput(downloadedFiles);
+                        server.NotifyTaskDownloaded();
+                        ++downloadedTaskCount;
                     }
                     _log.Debug("Download complete.");
 
-                    return result;
+                    return downloadedTaskCount;
                 }
             }
             catch( SocketException ex )
             {
                 // TODO: If this happens too often, we need to recover somehow.
                 _log.Error(string.Format(CultureInfo.InvariantCulture, "Error contacting server {0}:{1}.", server.TaskServer.HostName, port), ex);
-                return null;
+                return downloadedTaskCount;
             }
             catch( IOException ex )
             {
                 if( ex.InnerException is SocketException )
                 {
                     _log.Error(string.Format(CultureInfo.InvariantCulture, "Error contacting server {0}:{1}.", server.TaskServer.HostName, port), ex);
-                    return null;
+                    return downloadedTaskCount;
                 }
                 else
                     throw;
             }
         }
 
-        private void DownloadPartition(CompletedTask task, List<RecordInput> downloadedFiles, NetworkStream stream, BinaryReader reader, int partition)
+        // Returns false if a reconnection was needed and the server refused the new connection due to load
+        private bool DownloadPartition(CompletedTask task, List<RecordInput> downloadedFiles, ServerConnection connection, int partition)
         {
-            long size = reader.ReadInt64();
+            long size = connection.Reader.ReadInt64();
             if( size > 0 )
             {
                 long uncompressedSize = size;
                 int segmentCount = 0;
                 if( _channelInputType == FileChannelOutputType.MultiFile )
-                    uncompressedSize = reader.ReadInt64();
+                    uncompressedSize = connection.Reader.ReadInt64();
                 else
-                    segmentCount = reader.ReadInt32();
+                    segmentCount = connection.Reader.ReadInt32();
                 string targetFile = null;
-                Stream memoryStream = null;
+                Tuple<Stream, bool> reservedMemory = null;
 
-                if( _memoryStorage == null || (memoryStream = _memoryStorage.AddStreamIfSpaceAvailable((int)size)) == null )
+                if( _memoryStorage == null || (reservedMemory = _memoryStorage.WaitForSpaceAndAddStream((int)size, connection)) == null )
                 {
                     _hasNonMemoryInputs = true;
                     targetFile = Path.Combine(_inputDirectory, string.Format(System.Globalization.CultureInfo.InvariantCulture, "{0}_part{1}.input", task.TaskAttemptId.TaskId, partition));
                     using( FileStream fileStream = File.Create(targetFile, _writeBufferSize) )
                     {
-                        stream.CopySize(fileStream, size, _writeBufferSize);
+                        connection.Stream.CopySize(fileStream, size, _writeBufferSize);
                     }
                     downloadedFiles.Add(new FileRecordInput(_inputReaderType, targetFile, task.TaskAttemptId.TaskId.ToString(), uncompressedSize, TaskExecution.JetClient.Configuration.FileChannel.DeleteIntermediateFiles, _channelInputType == FileChannelOutputType.SortSpill, segmentCount, _reader.AllowRecordReuse, _reader.BufferSize, _reader.CompressionType));
                     _log.DebugFormat("Input stored in local file {0}.", targetFile);
@@ -796,13 +883,19 @@ namespace Tkl.Jumbo.Jet.Channels
                 }
                 else
                 {
-                    stream.CopySize(memoryStream, size);
-                    memoryStream.Position = 0;
+                    if( !reservedMemory.Item2 )
+                    {
+                        // Had to wait for memory, so connection was closed; attempt a reconnect
+                        if( !connection.Connect() )
+                            return false;
+                    }
+                    connection.Stream.CopySize(reservedMemory.Item1, size);
+                    reservedMemory.Item1.Position = 0;
                     Stream checksumStream;
                     if( _channelInputType == FileChannelOutputType.MultiFile )
-                        checksumStream = new ChecksumInputStream(memoryStream, true).CreateDecompressor(CompressionType, uncompressedSize);
+                        checksumStream = new ChecksumInputStream(reservedMemory.Item1, true).CreateDecompressor(CompressionType, uncompressedSize);
                     else
-                        checksumStream = new SegmentedChecksumInputStream(memoryStream, segmentCount);
+                        checksumStream = new SegmentedChecksumInputStream(reservedMemory.Item1, segmentCount);
                     downloadedFiles.Add(new StreamRecordInput(_inputReaderType, checksumStream, true, task.TaskAttemptId.TaskId.ToString(), _channelInputType == FileChannelOutputType.SortSpill, TaskExecution.Context.StageConfiguration.AllowRecordReuse));
                 }
                 NetworkBytesRead += size;
@@ -814,6 +907,8 @@ namespace Tkl.Jumbo.Jet.Channels
             }
             else
                 throw new InvalidOperationException(); // TODO: Recover from this.
+
+            return true;
         }
 
         private void StartThreads()

@@ -16,9 +16,12 @@ namespace Tkl.Jumbo.Jet.Channels
     {
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(FileChannelMemoryStorageManager));
 
+        private const double _maxSingleStreamFraction = 0.25;
+
         private static FileChannelMemoryStorageManager _instance;
         private readonly long _maxSize;
         private readonly List<UnmanagedBufferMemoryStream> _inputs = new List<UnmanagedBufferMemoryStream>();
+        private readonly long _maxSingleStreamSize;
         private long _currentSize;
         private bool _disposed;
 
@@ -29,6 +32,7 @@ namespace Tkl.Jumbo.Jet.Channels
             if( maxSize < 0 )
                 throw new ArgumentOutOfRangeException("maxSize", "Memory storage size must be larger than zero.");
             _maxSize = maxSize;
+            _maxSingleStreamSize = (long)(_maxSize * _maxSingleStreamFraction);
             _log.InfoFormat("Created memory storage with maximum size {0}.", maxSize);
         }
 
@@ -55,24 +59,36 @@ namespace Tkl.Jumbo.Jet.Channels
             return _instance;
         }
 
+        // Boolean in result indicates if stream was allocated immediately; false if a wait occurred (and disposeOnWait was disposed).
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Reliability", "CA2000:Dispose objects before losing scope")]
-        public Stream AddStreamIfSpaceAvailable(int size)
+        public Tuple<Stream, bool> WaitForSpaceAndAddStream(int size, IDisposable disposeOnWait)
         {
             CheckDisposed();
+            if( size > _maxSingleStreamSize )
+                return null;
+
+            bool waited = false;
             lock( _inputs )
             {
-                long spaceAvailable = _maxSize - _currentSize;
-                if( size < spaceAvailable )
+                while( _currentSize + size > _maxSize )
                 {
-                    UnmanagedBufferMemoryStream stream = new UnmanagedBufferMemoryStream(size);
-                    stream.Disposed += new EventHandler(UnmanagedBufferMemoryStream_Disposed);
-                    _inputs.Add(stream);
-                    _currentSize += size;
-                    //_log.DebugFormat("Added stream of size {0} to memory storage; space used now {1}.", size, _currentSize);
-                    return stream;
+                    if( !waited )
+                    {
+                        _log.Info("Waiting for buffer space...");
+                        if( disposeOnWait != null )
+                            disposeOnWait.Dispose();
+                    }
+                    waited = true;
+                    Monitor.Wait(_inputs);
                 }
-                else
-                    return null;
+                _log.Info("Buffer space available");
+
+                UnmanagedBufferMemoryStream stream = new UnmanagedBufferMemoryStream(size);
+                stream.Disposed += new EventHandler(UnmanagedBufferMemoryStream_Disposed);
+                _inputs.Add(stream);
+                _currentSize += size;
+                //_log.DebugFormat("Added stream of size {0} to memory storage; space used now {1}.", size, _currentSize);
+                return Tuple.Create((Stream)stream, !waited);
             }
         }
 
