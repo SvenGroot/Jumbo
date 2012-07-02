@@ -700,7 +700,7 @@ namespace Tkl.Jumbo.Jet.Jobs
             Type interfaceType = partitionerType.FindGenericInterfaceType(typeof(IPartitioner<>), false);
             if( interfaceType == null )
                 throw new InvalidOperationException(string.Format(CultureInfo.CurrentCulture, "Stage {0}'s partitioner type must implement IPartitioner<T>.", CompoundStageId));
-            Type recordType = partitionerType.GetGenericArguments()[0];
+            Type recordType = interfaceType.GetGenericArguments()[0];
             if( recordType != TaskTypeInfo.OutputRecordType )
                 throw new InvalidOperationException(string.Format(CultureInfo.CurrentCulture, "Stage {0}'s output record type {1} is incompatible with its partitioner's record type {2}.", CompoundStageId, TaskTypeInfo.OutputRecordType, recordType));
         }
