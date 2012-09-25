@@ -230,6 +230,7 @@ namespace Tkl.Jumbo.Jet.Channels
         private readonly object _spillLock = new object();
         private int _spillStart;
         private int _spillEnd;
+        private int _spillSize;
         private volatile bool _spillInProgress;
         private AutoResetEvent _spillWaitingEvent = new AutoResetEvent(false);
         private Thread _spillThread;
@@ -617,10 +618,10 @@ namespace Tkl.Jumbo.Jet.Channels
             _lastPartition = -1;
             _spillStart = _spillEnd; // _outputEnd contains the place where the last output stopped.
             _spillEnd = _lastRecordEnd; // End at the last record.
-            int spillSize = _spillEnd - _spillStart;
-            if( spillSize <= 0 )
-                spillSize += _buffer.Size;
-            _bufferRemaining += spillSize;
+            _spillSize = _spillEnd - _spillStart;
+            if( hasRecords && _spillSize <= 0 )
+                _spillSize += _buffer.Size;
+            _bufferRemaining += _spillSize;
             _spillInProgress = true;
         }
 
@@ -646,7 +647,6 @@ namespace Tkl.Jumbo.Jet.Channels
         private void PerformSpill(bool finalSpill)
         {
             Debug.Assert(_spillInProgress);
-            int spillSize = 0;
             try
             {
                 // We don't need to take the _spillLock for the actuall spill itself, because no one is going to access the relevant variables
@@ -657,9 +657,6 @@ namespace Tkl.Jumbo.Jet.Channels
                 //    _debugWriter.WriteLine("Starting output from {0} to {1}.", _outputStart, _outputEnd);
                 SpillOutput(finalSpill);
                 _log.DebugFormat("Finished writing output segment {0}.", _spillCount);
-                spillSize = _spillEnd - _spillStart;
-                if( spillSize <= 0 )
-                    spillSize += _buffer.Size;
             }
             finally
             {
@@ -673,7 +670,7 @@ namespace Tkl.Jumbo.Jet.Channels
             // There is a race condition that allows the buffer to be filled up again
             // *before* _spillInProgress becomes false, causing the writing thread to
             // not start a new spill and then hang waiting for the buffer to free up.
-            _buffer.FreeBuffer(spillSize);
+            _buffer.FreeBuffer(_spillSize);
         }
     }
 }

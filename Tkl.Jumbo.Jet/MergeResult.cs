@@ -26,7 +26,7 @@ namespace Tkl.Jumbo.Jet
         /// </summary>
         public float Progress
         {
-            get { return _readers.Average(r => r.Progress); }
+            get { return _readers.Length == 0 ? 1.0f : _readers.Average(r => r.Progress); }
         }
 
         /// <summary>
