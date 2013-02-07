@@ -25,7 +25,7 @@ namespace Tkl.Jumbo
         /// Initializes a new instance of the <see cref="UnmanagedBufferMemoryStream"/>.
         /// </summary>
         /// <param name="capacity">The capacity of the memory stream.</param>
-        public UnmanagedBufferMemoryStream(int capacity)
+        public UnmanagedBufferMemoryStream(long capacity)
         {
             _buffer = new UnmanagedBuffer(capacity);
             unsafe
@@ -38,7 +38,7 @@ namespace Tkl.Jumbo
         /// <summary>
         /// Gets the capacity the stream had when it was created.
         /// </summary>
-        public int InitialCapacity { get; private set; }
+        public long InitialCapacity { get; private set; }
 
         /// <summary>
         /// Releases all resources used by the <see cref="UnmanagedBufferMemoryStream"/>.

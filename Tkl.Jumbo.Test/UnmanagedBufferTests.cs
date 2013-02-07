@@ -19,7 +19,7 @@ namespace Tkl.Jumbo.Test
                 byte[] expected = Utilities.GenerateData(512);
                 byte[] actual = new byte[512];
 
-                int index = UnmanagedBuffer.CopyCircular(expected, 0, target, 0, expected.Length);
+                long index = UnmanagedBuffer.CopyCircular(expected, 0, target, 0, expected.Length);
 
                 Assert.AreEqual(512, index);
                 UnmanagedBuffer.CopyCircular(target, 0, actual, 0, 512);
