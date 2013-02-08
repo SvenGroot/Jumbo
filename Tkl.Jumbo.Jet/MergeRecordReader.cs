@@ -33,8 +33,6 @@ namespace Tkl.Jumbo.Jet
         private bool _purgeMemoryBeforeFinalPass;
         private bool _disposed;
         private bool _configured;
-        private IInputChannel _channel;
-        private volatile bool _memoryStorageFull;
 
         private readonly MergeHelper<T> _mergeHelper = new MergeHelper<T>();
         private PartitionMerger<T>[] _partitionMergers;
@@ -96,18 +94,7 @@ namespace Tkl.Jumbo.Jet
         /// Gets or sets the input channel that this reader is reading from.
         /// </summary>
         /// <value>The channel.</value>
-        public IInputChannel Channel
-        {
-            get { return _channel; }
-            set
-            {
-                if( _channel != null )
-                    _channel.MemoryStorageFull -= new EventHandler(_channel_MemoryStorageFull);
-                _channel = value;
-                if( _channel != null )
-                    _channel.MemoryStorageFull += new EventHandler(_channel_MemoryStorageFull);
-            }
-        }
+        public IInputChannel Channel { get; set; }
 
         /// <summary>
         /// Gets or sets the configuration used to access the Distributed File System.
@@ -322,9 +309,8 @@ namespace Tkl.Jumbo.Jet
 
             while( CurrentInputCount < TotalInputCount )
             {
-                if( Channel != null && Channel.UsesMemoryStorage && (_memoryStorageFull || Channel.MemoryStorageLevel >= _memoryStorageTriggerLevel) )
+                if( Channel != null && Channel.UsesMemoryStorage && Channel.MemoryStorageLevel >= _memoryStorageTriggerLevel )
                 {
-                    _memoryStorageFull = false;
                     foreach( PartitionMerger<T> merger in _partitionMergers )
                         merger.RunMemoryPurgePass(_mergeHelper);
                 }
@@ -398,12 +384,6 @@ namespace Tkl.Jumbo.Jet
                 return finalPassMerger.FinalPassResult.GetEnumerator();
             }
             return null;
-        }
-
-        void _channel_MemoryStorageFull(object sender, EventArgs e)
-        {
-            _memoryStorageFull = true;
-            _inputAddedEvent.Set();
         }
     }
 }

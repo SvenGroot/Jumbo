@@ -16,28 +16,20 @@ namespace Tkl.Jumbo.Jet.Channels
     {
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(FileChannelMemoryStorageManager));
 
-        private const double _maxSingleStreamFraction = 0.25;
-
         private static FileChannelMemoryStorageManager _instance;
         private readonly long _maxSize;
         private readonly List<UnmanagedBufferMemoryStream> _inputs = new List<UnmanagedBufferMemoryStream>();
-        private readonly long _maxSingleStreamSize;
-        private readonly bool _refuseStreamIfBufferFull;
         private long _currentSize;
         private bool _disposed;
 
         public event EventHandler StreamRemoved;
 
-        public event EventHandler WaitingForBuffer;
-
-        private FileChannelMemoryStorageManager(long maxSize, bool refuseStreamIfBufferFull)
+        private FileChannelMemoryStorageManager(long maxSize)
         {
             if( maxSize < 0 )
                 throw new ArgumentOutOfRangeException("maxSize", "Memory storage size must be larger than zero.");
             _maxSize = maxSize;
-            _maxSingleStreamSize = (long)(_maxSize * _maxSingleStreamFraction);
             _log.InfoFormat("Created memory storage with maximum size {0}.", maxSize);
-            _refuseStreamIfBufferFull = refuseStreamIfBufferFull;
         }
 
         public float Level
@@ -54,65 +46,39 @@ namespace Tkl.Jumbo.Jet.Channels
         }
 
         [MethodImpl(MethodImplOptions.Synchronized)]
-        public static FileChannelMemoryStorageManager GetInstance(long maxSize, bool refuseStreamIfBufferFull)
+        public static FileChannelMemoryStorageManager GetInstance(long maxSize)
         {
             if( _instance == null )
-                _instance = new FileChannelMemoryStorageManager(maxSize, refuseStreamIfBufferFull);
+                _instance = new FileChannelMemoryStorageManager(maxSize);
             else if( _instance._maxSize != maxSize )
                 _log.WarnFormat("A memory storage manager with a different max size ({0}) than the existing manager was requested; using the original size ({1}).", maxSize, _instance._maxSize);
-            else if( _instance._refuseStreamIfBufferFull != refuseStreamIfBufferFull )
-                _log.Warn("Existing memory storage manager uses different settings than the requested one.");
             return _instance;
         }
 
-        // Boolean in result indicates if stream was allocated immediately; false if a wait occurred (and disposeOnWait was disposed).
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Reliability", "CA2000:Dispose objects before losing scope")]
-        public Tuple<Stream, bool> WaitForSpaceAndAddStream(int size, IDisposable disposeOnWait)
+        public Stream AddStreamIfSpaceAvailable(int size)
         {
             CheckDisposed();
-            if( size > _maxSingleStreamSize )
-                return null;
-
-            bool waited = false;
             lock( _inputs )
             {
-                while( _currentSize + size > _maxSize )
+                long spaceAvailable = _maxSize - _currentSize;
+                if( size < spaceAvailable )
                 {
-                    if( _refuseStreamIfBufferFull )
-                        return null;
-
-                    if( !waited )
-                    {
-                        _log.Info("Waiting for buffer space...");
-                        OnWaitingForBuffer(EventArgs.Empty);
-                        if( disposeOnWait != null )
-                            disposeOnWait.Dispose();
-                    }
-                    waited = true;
-                    Monitor.Wait(_inputs);
+                    UnmanagedBufferMemoryStream stream = new UnmanagedBufferMemoryStream(size);
+                    stream.Disposed += new EventHandler(UnmanagedBufferMemoryStream_Disposed);
+                    _inputs.Add(stream);
+                    _currentSize += size;
+                    //_log.DebugFormat("Added stream of size {0} to memory storage; space used now {1}.", size, _currentSize);
+                    return stream;
                 }
-                if( waited )
-                    _log.Info("Buffer space available");
-
-                UnmanagedBufferMemoryStream stream = new UnmanagedBufferMemoryStream(size);
-                stream.Disposed += new EventHandler(UnmanagedBufferMemoryStream_Disposed);
-                _inputs.Add(stream);
-                _currentSize += size;
-                //_log.DebugFormat("Added stream of size {0} to memory storage; space used now {1}.", size, _currentSize);
-                return Tuple.Create((Stream)stream, !waited);
+                else
+                    return null;
             }
         }
 
         private void OnStreamRemoved(EventArgs e)
         {
             EventHandler handler = StreamRemoved;
-            if( handler != null )
-                handler(this, e);
-        }
-
-        private void OnWaitingForBuffer(EventArgs e)
-        {
-            EventHandler handler = WaitingForBuffer;
             if( handler != null )
                 handler(this, e);
         }
@@ -131,7 +97,6 @@ namespace Tkl.Jumbo.Jet.Channels
                 {
                     _log.Warn("Attempt to remove a stream that was not registered.");
                 }
-                Monitor.PulseAll(_inputs);
             }
         }
 

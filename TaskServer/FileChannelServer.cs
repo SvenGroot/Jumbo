@@ -23,12 +23,15 @@ namespace TaskServerApplication
     /// - Connect.
     /// - Send job ID (byte[])
     /// - Send true if single file output, otherwise false (boolean)
+    /// - Send partition count (int32)
+    /// - Send partitions (int32[])
+    /// - Send task attempt ID count (int32)
+    /// - Send task attempt IDs (string[])
     /// - If multi file output
     ///   - Send output stage ID (string)
-    /// - Repeat
-    ///   - Send task attempt ID, empty string if finished
-    ///   - Repeat
-    ///     - Send partition number, -1 if finished
+    /// - For each task.
+    ///   - For each partition
+    ///     - If a failure occurs, the server writes -1 (int64).
     ///     - Server writes partition size (int64, may be 0)
     ///     - If multi file output
     ///       - Server writes uncompressed file size; if there's no compression this will equal the file size (int64)
@@ -65,33 +68,42 @@ namespace TaskServerApplication
                         Guid jobId = new Guid(guidBytes);
                         bool singleFileOutput = reader.ReadBoolean(); // Is the output a single indexed partition file?
 
+                        int partitionCount = reader.ReadInt32();
+                        int[] partitions = new int[partitionCount];
+                        for( int x = 0; x < partitionCount; ++x )
+                            partitions[x] = reader.ReadInt32();
+
+                        int taskCount = reader.ReadInt32();
+                        string[] tasks = new string[taskCount];
+                        for( int x = 0; x < taskCount; ++x )
+                        {
+                            tasks[x] = reader.ReadString();
+                        }
+
                         Stopwatch sw = _log.IsDebugEnabled ? Stopwatch.StartNew() : null;
                         if( singleFileOutput )
                         {
-                            SendSingleFileOutput(reader, writer, jobId);
+                            SendSingleFileOutput(writer, jobId, partitions, tasks);
                         }
                         else
                         {
                             string outputStageId = reader.ReadString();
 
                             string jobDirectory = _taskServer.GetJobDirectory(jobId);
-
-                            string task;
-                            while( (task = reader.ReadString()).Length > 0 )
+                            foreach( string task in tasks )
                             {
-                                int partition;
-                                while( (partition = reader.ReadInt32()) >= 0 )
+                                foreach( int partition in partitions )
                                 {
                                     string outputFile = FileOutputChannel.CreateChannelFileName(task, TaskId.CreateTaskIdString(outputStageId, partition));
                                     SendFile(writer, jobId, jobDirectory, outputFile);
                                 }
                             }
                         }
-                        //if( _log.IsDebugEnabled )
-                        //{
-                        //    sw.Stop();
-                        //    _log.DebugFormat("Sent tasks {0} partitions {1} to client {2} in {3}ms", tasks.ToDelimitedString(","), partitions.ToDelimitedString(","), client.Client.RemoteEndPoint, sw.ElapsedMilliseconds);
-                        //}
+                        if( _log.IsDebugEnabled )
+                        {
+                            sw.Stop();
+                            _log.DebugFormat("Sent tasks {0} partitions {1} to client {2} in {3}ms", tasks.ToDelimitedString(","), partitions.ToDelimitedString(","), client.Client.RemoteEndPoint, sw.ElapsedMilliseconds);
+                        }
                     }
                     catch( Exception )
                     {
@@ -135,19 +147,17 @@ namespace TaskServerApplication
             //}
         }
 
-        private void SendSingleFileOutput(BinaryReader reader, BinaryWriter writer, Guid jobId)
+        private void SendSingleFileOutput(BinaryWriter writer, Guid jobId, int[] partitions, string[] tasks)
         {
             string dir = _taskServer.GetJobDirectory(jobId);
-            string task;
-            while( (task = reader.ReadString()).Length > 0 )
+            foreach( string task in tasks )
             {
                 string outputFile = FileOutputChannel.CreateChannelFileName(task, null);
                 string path = Path.Combine(dir, outputFile);
                 PartitionFileIndex index = _indexCache.GetIndex(path);
                 using( FileStream stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read, _bufferSize) )
                 {
-                    int partition;
-                    while( (partition = reader.ReadInt32()) >= 0 )
+                    foreach( int partition in partitions )
                     {
                         IEnumerable<PartitionFileIndexEntry> entries = index.GetEntriesForPartition(partition);
                         if( entries == null )

@@ -1,6 +1,5 @@
 ﻿// $Id$
 //
-using System;
 using System.Collections.Generic;
 using Tkl.Jumbo.IO;
 using Tkl.Jumbo.Jet.Jobs;
@@ -12,14 +11,6 @@ namespace Tkl.Jumbo.Jet.Channels
     /// </summary>
     public interface IInputChannel
     {
-        /// <summary>
-        /// Occurs when the input channel stalls waiting for space to become available in the memory storage.
-        /// </summary>
-        /// <remarks>
-        /// When this event occurs, the channel consumer must process some inputs to clear memory.
-        /// </remarks>
-        event EventHandler MemoryStorageFull;
-
         /// <summary>
         /// Gets the configuration of the input channel.
         /// </summary>
