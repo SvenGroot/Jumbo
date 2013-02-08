@@ -42,15 +42,42 @@ namespace Tkl.Jumbo.Jet.Channels
         /// Gets the index entries for the specified partition.
         /// </summary>
         /// <param name="partition">The partition.</param>
-        /// <returns></returns>
+        /// <returns>A list of partition index entries, or <see langword="null"/> if the file contains no data for this partition.</returns>
         public IEnumerable<PartitionFileIndexEntry> GetEntriesForPartition(int partition)
+        {
+            WaitUntilLoaded();
+            if( partition < 1 || partition > _index.Length )
+                throw new ArgumentOutOfRangeException("partition");
+            return _index[partition - 1];
+        }
+
+        /// <summary>
+        /// Gets the size of the specified partition.
+        /// </summary>
+        /// <param name="partition">The partition.</param>
+        /// <param name="includeSegmentHeader">If set to <see langword="true" />, include an additional 8 bytes for each segment.</param>
+        /// <returns>The size of the partition.</returns>
+        public long GetPartitionSize(int partition, bool includeSegmentHeader)
+        {
+            WaitUntilLoaded();
+            if( partition < 1 || partition > _index.Length )
+                throw new ArgumentOutOfRangeException("partition");
+            List<PartitionFileIndexEntry> index = _index[partition - 1];
+            long result = 0;
+            if( index != null )
+            {
+                result = index.Sum(e => e.Count);
+                if( includeSegmentHeader )
+                    result += index.Count * sizeof(long);
+            }
+            return result;
+        }
+
+        private void WaitUntilLoaded()
         {
             _loadCompleteEvent.WaitOne();
             if( _loadException != null )
                 throw new TargetInvocationException(_loadException);
-            if( partition < 1 || partition > _index.Length )
-                throw new ArgumentOutOfRangeException("partition");
-            return _index[partition - 1];
         }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1031:DoNotCatchGeneralExceptionTypes")]

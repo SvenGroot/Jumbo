@@ -158,7 +158,7 @@ namespace TaskServerApplication
                 string outputFile = FileOutputChannel.CreateChannelFileName(task, null);
                 string path = Path.Combine(dir, outputFile);
                 PartitionFileIndex index = _indexCache.GetIndex(path);
-                long totalSize = partitions.Sum(p => index.GetEntriesForPartition(p).Sum(e => e.Count) + sizeof(long) * index.GetEntriesForPartition(p).Count());
+                long totalSize = partitions.Sum(p => index.GetPartitionSize(p, true));
                 writer.Write(totalSize);
                 using( FileStream stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read, _bufferSize) )
                 {
