@@ -21,6 +21,22 @@ namespace Tkl.Jumbo.Jet.Channels
         private readonly ReadOnlyCollection<int> _partitionsReadOnlyWrapper;
 
         /// <summary>
+        /// Occurs when the input channel stalls waiting for space to become available in the memory storage.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        ///   If the channel consumer (e.g. a <see cref="MultiInputRecordReader{T}"/>) can free up the required amount of space,
+        ///   set the <see cref="MemoryStorageFullEventArgs.CancelWaiting"/> property to <see langword="false"/> so the memory
+        ///   storage manager will continue waiting for the request.
+        /// </para>
+        /// <para>
+        ///   If the <see cref="MemoryStorageFullEventArgs.CancelWaiting"/> property is left at its default value of <see langword="true"/>,
+        ///   the memory storage manager will immediately deny the request so the channel will store the input on disk instead.
+        /// </para>
+        /// </remarks>
+        public event EventHandler<MemoryStorageFullEventArgs> MemoryStorageFull;
+
+        /// <summary>
         /// Initializes a new instance of the <see cref="InputChannel"/> class.
         /// </summary>
         /// <param name="taskExecution">The task execution utility for the task that this channel is for.</param>
@@ -184,6 +200,17 @@ namespace Tkl.Jumbo.Jet.Channels
                 channelReader.Channel = this;
             JetActivator.ApplyConfiguration(reader, TaskExecution.FileSystemClient.Configuration, TaskExecution.JetClient.Configuration, TaskExecution.Context);
             return reader;
+        }
+
+        /// <summary>
+        /// Raises the <see cref="E:MemoryStorageFull" /> event.
+        /// </summary>
+        /// <param name="e">The <see cref="EventArgs"/> instance containing the event data.</param>
+        protected virtual void OnMemoryStorageFull(MemoryStorageFullEventArgs e)
+        {
+            EventHandler<MemoryStorageFullEventArgs> handler = MemoryStorageFull;
+            if( handler != null )
+                handler(this, e);
         }
 
         private void GetInputTaskIdsFull()

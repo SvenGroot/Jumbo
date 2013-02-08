@@ -21,7 +21,8 @@ namespace Tkl.Jumbo
             string numberFormat = null;
             long factor;
 
-            if( string.IsNullOrEmpty(format) )
+            // Must support the "G" specifier, required by IFormattable
+            if( string.IsNullOrEmpty(format) || string.Equals(format, "g", StringComparison.OrdinalIgnoreCase) )
             {
                 factor = DetermineAutomaticScalingFactor(value, false, out realPrefix);
                 after = "B";

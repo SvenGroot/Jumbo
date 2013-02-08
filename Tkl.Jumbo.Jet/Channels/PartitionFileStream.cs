@@ -25,7 +25,7 @@ namespace Tkl.Jumbo.Jet.Channels
             _fileName = fileName;
             _bufferSize = bufferSize;
             int segmentCount = indexEntries.Count();
-            _length = indexEntries.Sum(e => e.Count) - segmentCount;
+            _length = Math.Max(0, indexEntries.Sum(e => e.Count) - segmentCount);
             _indexEntries = indexEntries.GetEnumerator();
             _baseStream = new FileStream(_fileName, FileMode.Open, FileAccess.Read, FileShare.Read, _bufferSize);
             if( NextSegment() )

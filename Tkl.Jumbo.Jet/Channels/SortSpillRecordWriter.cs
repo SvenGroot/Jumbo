@@ -300,7 +300,10 @@ namespace Tkl.Jumbo.Jet.Channels
                     indexWriter.WriteRecord(new PartitionFileIndexEntry(_partitions, 0L, 0L));
 
                     for( int partition = 0; partition < _partitions; ++partition )
-                        indexWriter.WriteRecord(_spillPartitionIndices[partition][0]);
+                    {
+                        if( _spillPartitionIndices[partition][0].Count > 0 )
+                            indexWriter.WriteRecord(_spillPartitionIndices[partition][0]);
+                    }
 
                     _bytesWritten += indexStream.Length;
                 }

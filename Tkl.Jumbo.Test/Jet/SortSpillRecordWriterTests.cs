@@ -64,6 +64,12 @@ namespace Tkl.Jumbo.Test.Jet
             TestSpillRecordWriter(5, 110000, 100 * 1024, 6, true);
         }
 
+        [Test]
+        public void TestEmptySpill()
+        {
+            TestSpillRecordWriter(1, 0, 100 * 1024, 1, false);
+        }
+
         private void TestSpillRecordWriter(int partitionCount, int records, int bufferSize, int expectedSpillCount, bool useCombiner = false)
         {
             List<int> values;

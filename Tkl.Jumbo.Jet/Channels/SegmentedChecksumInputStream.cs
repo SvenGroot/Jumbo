@@ -36,11 +36,11 @@ namespace Tkl.Jumbo.Jet.Channels
             if( segmentCount < 1 )
                 throw new ArgumentOutOfRangeException("segmentCount");
             _baseStream = baseStream;
-            _length = _baseStream.Length - (segmentCount * (sizeof(long) + 1));
+            _length = Math.Max(0, _baseStream.Length - (segmentCount * (sizeof(long) + 1)));
             NextSegment();
 
             // We assume that if the checksum is enabled for one segment, it's enabled for all.
-            if( _currentSegment.IsChecksumEnabled )
+            if( _currentSegment != null && _currentSegment.IsChecksumEnabled )
                 _length -= (sizeof(uint) * segmentCount);
         }
 
@@ -87,6 +87,9 @@ namespace Tkl.Jumbo.Jet.Channels
 
             if( count < 0 )
                 throw new ArgumentOutOfRangeException("count");
+
+            if( _currentSegment == null ) // Can only happen if the stream was empty
+                return 0;
 
             int totalBytesRead = 0;
             while( count > 0 )
