@@ -74,42 +74,19 @@ namespace Tkl.Jumbo.Jet
         }
 
         /// <summary>
-        /// Writes the configuration data to the specified file.
+        /// Loads the Jet configuration from the specified configuratino.
         /// </summary>
-        /// <param name="fileName">The path to the file to write the configuration data to.</param>
-        public void ToXml(string fileName)
+        /// <param name="configuration">The configuration.</param>
+        /// <returns>
+        /// A <see cref="JetConfiguration" /> object representing the settings in the application configuration file, or
+        /// a default instance if the section was not present in the configuration file.
+        /// </returns>
+        public static JetConfiguration GetConfiguration(Configuration configuration)
         {
-            if( fileName == null )
-                throw new ArgumentNullException("fileName");
-
-            XmlWriterSettings settings = new XmlWriterSettings() { Indent = true };
-            using( XmlWriter writer = XmlWriter.Create(fileName, settings) )
-            {
-                writer.WriteStartDocument();
-                writer.WriteStartElement("tkl.jumbo.jet");
-                SerializeElement(writer, false);
-                writer.WriteEndElement();
-                writer.WriteEndDocument();
-            }
-        }
-
-        /// <summary>
-        /// Reads the configuration data from the specified file.
-        /// </summary>
-        /// <param name="fileName">The path to the file to read the configuration data from.</param>
-        /// <returns>An instance of <see cref="JetConfiguration"/> holding the configuration data.</returns>
-        public static JetConfiguration FromXml(string fileName)
-        {
-            if( fileName == null )
-                throw new ArgumentNullException("fileName");
-
-            using( XmlReader reader = XmlReader.Create(fileName) )
-            {
-                reader.MoveToContent();
-                JetConfiguration config = new JetConfiguration();
-                config.DeserializeElement(reader, false);
-                return config;
-            }
+            if( configuration == null )
+                throw new ArgumentNullException("configuration");
+            JetConfiguration config = (JetConfiguration)configuration.GetSection("tkl.jumbo.jet");
+            return config ?? new JetConfiguration();
         }
     }
 }

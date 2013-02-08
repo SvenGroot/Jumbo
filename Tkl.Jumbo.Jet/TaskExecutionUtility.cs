@@ -16,6 +16,7 @@ using Tkl.Jumbo.Jet.Channels;
 using Tkl.Jumbo.Jet.IO;
 using Tkl.Jumbo.Jet.Jobs;
 using System.Globalization;
+using System.Configuration;
 
 namespace Tkl.Jumbo.Jet
 {
@@ -332,8 +333,11 @@ namespace Tkl.Jumbo.Jet
 
                 _log.Info("Loading configuration.");
                 string configDirectory = Path.Combine(jobDirectory, "config");
-                DfsConfiguration dfsConfig = DfsConfiguration.FromXml(Path.Combine(configDirectory, "dfs.config"));
-                JetConfiguration jetConfig = JetConfiguration.FromXml(Path.Combine(configDirectory, "jet.config"));
+
+                Configuration appConfig = ConfigurationManager.OpenMappedExeConfiguration(new ExeConfigurationFileMap() { ExeConfigFilename = Path.Combine(configDirectory, "taskhost.config") }, ConfigurationUserLevel.None);
+
+                DfsConfiguration dfsConfig = DfsConfiguration.GetConfiguration(appConfig);
+                JetConfiguration jetConfig = JetConfiguration.GetConfiguration(appConfig);
 
                 _log.Info("Creating RPC clients.");
                 ITaskServerUmbilicalProtocol umbilical = JetClient.CreateTaskServerUmbilicalClient(jetConfig.TaskServer.Port);
