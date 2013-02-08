@@ -273,14 +273,11 @@ namespace TaskServerApplication
                     IO.Directory.CreateDirectory(configPath);
 
                     Configuration configToSave = ConfigurationManager.OpenExeConfiguration(ConfigurationUserLevel.None);
-                    if( configToSave.GetSection("tkl.jumbo.jet") != _taskServer.Configuration )
+                    if( ConfigurationManager.GetSection("tkl.jumbo.jet") != _taskServer.Configuration )
                     {
                         if( configToSave.GetSection("tkl.jumbo.jet") != null )
                             configToSave.Sections.Remove("tkl.jumbo.jet");
                         configToSave.Sections.Add("tkl.jumbo.jet", _taskServer.Configuration);
-                    }
-                    if( configToSave.GetSection("tkl.jumbo.dfs") != null )
-                    {
                         if( configToSave.GetSection("tkl.jumbo.dfs") != null )
                             configToSave.Sections.Remove("tkl.jumbo.dfs");
                         configToSave.Sections.Add("tkl.jumbo.dfs", _taskServer.DfsConfiguration);
