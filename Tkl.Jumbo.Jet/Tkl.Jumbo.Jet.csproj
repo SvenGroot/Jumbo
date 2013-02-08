@@ -85,6 +85,7 @@
     <Compile Include="..\AssemblyInfoCommon.cs">
       <Link>Properties\AssemblyInfoCommon.cs</Link>
     </Compile>
+    <Compile Include="Channels\MemoryStorageFullEventArgs.cs" />
     <Compile Include="IO\FileDataOutput.cs" />
     <Compile Include="IO\FileOutputCommitter.cs" />
     <Compile Include="IO\IDataOutput.cs" />

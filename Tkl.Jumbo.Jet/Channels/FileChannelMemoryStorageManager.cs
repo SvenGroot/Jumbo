@@ -71,7 +71,7 @@ namespace Tkl.Jumbo.Jet.Channels
         private bool _disposed;
 
         public event EventHandler StreamRemoved;
-        public event EventHandler WaitingForBuffer;
+        public event EventHandler<MemoryStorageFullEventArgs> WaitingForBuffer;
 
         private FileChannelMemoryStorageManager(long maxSize)
         {
@@ -105,8 +105,7 @@ namespace Tkl.Jumbo.Jet.Channels
             return _instance;
         }
 
-        // Boolean in result indicates if stream was allocated immediately; false if a wait occurred (and disposeOnWait was disposed).
-        public Reservation WaitForSpaceAndReserve(long size, IDisposable disposeOnWait)
+        public Reservation WaitForSpaceAndReserve(long size, IDisposable disposeOnWait, int millisecondsTimeout)
         {
             CheckDisposed();
             if( size > _maxSingleStreamSize )
@@ -120,12 +119,19 @@ namespace Tkl.Jumbo.Jet.Channels
                     if( !waited )
                     {
                         _log.Info("Waiting for buffer space...");
-                        OnWaitingForBuffer(EventArgs.Empty);
+                        MemoryStorageFullEventArgs e = new MemoryStorageFullEventArgs(_currentSize + size - _maxSize);
+                        OnWaitingForBuffer(e);
+                        if( e.CancelWaiting )
+                            return null;
                         if( disposeOnWait != null )
                             disposeOnWait.Dispose();
                     }
                     waited = true;
-                    Monitor.Wait(_inputs);
+                    if( !Monitor.Wait(_inputs, millisecondsTimeout) )
+                    {
+                        _log.Warn("Waiting for buffer space timed out.");
+                        return null;
+                    }
                 }
                 if( waited )
                     _log.Info("Buffer space available");
@@ -143,9 +149,9 @@ namespace Tkl.Jumbo.Jet.Channels
                 handler(this, e);
         }
 
-        private void OnWaitingForBuffer(EventArgs e)
+        private void OnWaitingForBuffer(MemoryStorageFullEventArgs e)
         {
-            EventHandler handler = WaitingForBuffer;
+            EventHandler<MemoryStorageFullEventArgs> handler = WaitingForBuffer;
             if( handler != null )
                 handler(this, e);
         }

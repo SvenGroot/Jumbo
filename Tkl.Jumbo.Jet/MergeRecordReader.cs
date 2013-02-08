@@ -400,8 +400,9 @@ namespace Tkl.Jumbo.Jet
             return null;
         }
         
-        private void _channel_MemoryStorageFull(object sender, EventArgs e)
+        private void _channel_MemoryStorageFull(object sender, MemoryStorageFullEventArgs e)
         {
+            e.CancelWaiting = false;
             _memoryStorageFull = true;
             _inputAddedEvent.Set();
         }

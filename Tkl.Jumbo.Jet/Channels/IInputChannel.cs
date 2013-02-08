@@ -16,9 +16,17 @@ namespace Tkl.Jumbo.Jet.Channels
         /// Occurs when the input channel stalls waiting for space to become available in the memory storage.
         /// </summary>
         /// <remarks>
-        /// When this event occurs, the channel consumer must process some inputs to clear memory.
+        /// <para>
+        ///   If the channel consumer (e.g. a <see cref="MultiInputRecordReader{T}"/>) can free up the required amount of space,
+        ///   set the <see cref="MemoryStorageFullEventArgs.CancelWaiting"/> property to <see langword="false"/> so the memory
+        ///   storage manager will continue waiting for the request.
+        /// </para>
+        /// <para>
+        ///   If the <see cref="MemoryStorageFullEventArgs.CancelWaiting"/> property is left at its default value of <see langword="true"/>,
+        ///   the memory storage manager will immediately deny the request so the channel will store the input on disk instead.
+        /// </para>
         /// </remarks>
-        event EventHandler MemoryStorageFull;
+        event EventHandler<MemoryStorageFullEventArgs> MemoryStorageFull;
         
         /// <summary>
         /// Gets the configuration of the input channel.

@@ -270,6 +270,11 @@ namespace Tkl.Jumbo.Jet.Channels
         /// </summary>
         public const string MemoryStorageSizeSetting = "FileChannel.MemoryStorageSize";
 
+        /// <summary>
+        /// The name of the setting in <see cref="JobConfiguration.JobSettings"/> that overrides the global memory storage wait timeout setting.
+        /// </summary>
+        public const string MemoryStorageWaitTimeoutSetting = "FileChannel.MemoryStorageWaitTimeout";
+
         private const int _pollingInterval = 5000;
         private const int _downloadRetryInterval = 500;
         private const int _downloadRetryIntervalRandomization = 2000;
@@ -301,6 +306,7 @@ namespace Tkl.Jumbo.Jet.Channels
         private volatile bool _hasNonMemoryInputs;
         private TaskCompletionBroadcastServer _taskCompletionBroadcastServer;
         private readonly Random _rnd = new Random(); // Use only inside _orderedServers lock
+        private readonly int _memoryStorageWaitTimeout;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="FileInputChannel"/> class.
@@ -335,6 +341,7 @@ namespace Tkl.Jumbo.Jet.Channels
                 _memoryStorage = FileChannelMemoryStorageManager.GetInstance(memoryStorageSize);
                 _memoryStorage.StreamRemoved += new EventHandler(_memoryStorage_StreamRemoved);
                 _memoryStorage.WaitingForBuffer += _memoryStorage_WaitingForBuffer;
+                _memoryStorageWaitTimeout = TaskExecution.Context.JobConfiguration.GetTypedSetting(MemoryStorageWaitTimeoutSetting, TaskExecution.JetClient.Configuration.FileChannel.MemoryStorageWaitTimeout);
             }
         }
 
@@ -806,7 +813,7 @@ namespace Tkl.Jumbo.Jet.Channels
                     foreach( CompletedTask task in server.TasksToDownload )
                     {
                         long size = connection.Reader.ReadInt64();
-                        using( FileChannelMemoryStorageManager.Reservation reservation = _memoryStorage == null ? null : _memoryStorage.WaitForSpaceAndReserve(size, connection) )
+                        using( FileChannelMemoryStorageManager.Reservation reservation = _memoryStorage == null ? null : _memoryStorage.WaitForSpaceAndReserve(size, connection, _memoryStorageWaitTimeout) )
                         {
                             if( reservation != null && reservation.Waited )
                             {
@@ -923,9 +930,9 @@ namespace Tkl.Jumbo.Jet.Channels
             _hasNonMemoryInputs = false;
         }
 
-        private void _memoryStorage_WaitingForBuffer(object sender, EventArgs e)
+        private void _memoryStorage_WaitingForBuffer(object sender, MemoryStorageFullEventArgs e)
         {
-            OnMemoryStorageFull(EventArgs.Empty);
+            OnMemoryStorageFull(e);
         }
 
     }

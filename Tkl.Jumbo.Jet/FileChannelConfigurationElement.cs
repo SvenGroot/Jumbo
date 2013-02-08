@@ -55,6 +55,16 @@ namespace Tkl.Jumbo.Jet
         }
 
         /// <summary>
+        /// Gets or sets the amount of time to wait for memory to become available before shuffling to disk.
+        /// </summary>
+        [ConfigurationProperty("memoryStorageWaitTimeout", DefaultValue = 60000, IsRequired = false, IsKey = false)]
+        public int MemoryStorageWaitTimeout
+        {
+            get { return (int)this["memoryStorageWaitTimeout"]; }
+            set { this["memoryStorageWaitTimeout"] = value; }
+        }
+
+        /// <summary>
         /// Gets or sets the type of compression to use for intermediate files.
         /// </summary>
         [ConfigurationProperty("compressionType", DefaultValue = CompressionType.None, IsRequired = false, IsKey = false)]
