@@ -2,7 +2,7 @@ $scriptPath = Split-Path $MyInvocation.MyCommand.Path
 $inputFile = Join-Path $scriptPath AssemblyInfoCommon.cs.template
 $outputFile = Join-Path $scriptPath AssemblyInfoCommon.cs
 
-$year = ([DateTime]::Today.Year - 2001) % 6
+$year = ([DateTime]::Today.Year - 2000) % 6
 $build = "$year" + [DateTime]::Today.ToString("MMdd")
 
 # Use 0 as revision for non-release builds to speed up debug builds

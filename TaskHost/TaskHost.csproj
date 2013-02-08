@@ -94,6 +94,15 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
+    <None Include="..\common.config">
+      <Link>common.config</Link>
+    </None>
+    <None Include="..\dfs.config">
+      <Link>dfs.config</Link>
+    </None>
+    <None Include="..\jet.config">
+      <Link>jet.config</Link>
+    </None>
     <None Include="app.config" />
     <None Include="TaskHost.build" />
   </ItemGroup>
