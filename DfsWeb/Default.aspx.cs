@@ -10,12 +10,13 @@ using Tkl.Jumbo.Dfs;
 using System.IO;
 using Tkl.Jumbo;
 using System.Web.UI.HtmlControls;
+using Tkl.Jumbo.Dfs.FileSystem;
 
 public partial class _Default : System.Web.UI.Page 
 {
     protected void Page_Load(object sender, EventArgs e)
     {
-        DfsClient client = new DfsClient();
+        DfsClient client = (DfsClient)FileSystemClient.Create();
         DfsMetrics metrics = client.NameServer.GetMetrics();
         Title = string.Format("Jumbo DFS ({0})", metrics.NameServer);
         NameServerColumn.InnerText = metrics.NameServer.ToString();
@@ -54,10 +55,10 @@ public partial class _Default : System.Web.UI.Page
 
     private string FormatSize(long bytes)
     {
-        if( bytes < ByteSize.Kilobyte )
+        if( bytes < BinarySize.Kilobyte )
         {
             return string.Format("{0:#,0} bytes", bytes);
         }
-        return string.Format("<abbr title=\"{1:#,0} bytes\">{0:#,0.0}</abbr>", new ByteSize(bytes).ToShortString("#,0.#", ByteSizeSuffixOptions.LeadingSpace), bytes);
+        return string.Format("<abbr title=\"{1:#,0} bytes\">{0:#,0.# SB}</abbr>", (BinarySize)bytes, bytes);
     }
 }

@@ -2,13 +2,13 @@
 //
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
-using System.Text;
 using NUnit.Framework;
-using Tkl.Jumbo.Jet.Tasks;
 using Tkl.Jumbo.IO;
 using Tkl.Jumbo.Jet;
-using System.IO;
+using Tkl.Jumbo.Jet.Jobs;
+using Tkl.Jumbo.Jet.Tasks;
 
 namespace Tkl.Jumbo.Test.Jet
 {
@@ -31,6 +31,17 @@ namespace Tkl.Jumbo.Test.Jet
             protected override int Accumulate(Utf8String key, int currentValue, int newValue)
             {
                 return currentValue + newValue;
+            }
+        }
+
+        private class TestReducer : ReduceTask<Utf8String, int, Pair<Utf8String, int>>
+        {
+            protected override void Reduce(Utf8String key, IEnumerable<int> values, RecordWriter<Pair<Utf8String, int>> output)
+            {
+                int sum = values.Sum();
+                output.WriteRecord(Pair.MakePair(key, sum));
+                // Test that the values collection is properly guarded against repeated iteration (we can't consume any more records beyond our key).
+                CollectionAssert.IsEmpty(values);
             }
         }
 
@@ -62,7 +73,7 @@ namespace Tkl.Jumbo.Test.Jet
             }
             ListRecordWriter<int> output = new ListRecordWriter<int>();
             MultiRecordWriter<int> multiOutput = new MultiRecordWriter<int>(new[] { output }, new PrepartitionedPartitioner<int>());
-            PrepartitionedRecordWriter<int> prepartitionedOutput = new PrepartitionedRecordWriter<int>(multiOutput);
+            PrepartitionedRecordWriter<int> prepartitionedOutput = new PrepartitionedRecordWriter<int>(multiOutput, false);
 
             SortTask<int> target = new SortTask<int>();
             target.NotifyConfigurationChanged();
@@ -79,10 +90,10 @@ namespace Tkl.Jumbo.Test.Jet
         public void TestAccumulatorTask()
         {
             JobConfiguration jobConfig = new JobConfiguration();
-            StageConfiguration stageConfig = jobConfig.AddStage("Accumulate", typeof(TestAccumulator), 1, null, null, null);
+            StageConfiguration stageConfig = jobConfig.AddStage("Accumulate", typeof(TestAccumulator), 1, null);
             TaskContext config = new TaskContext(Guid.NewGuid(), jobConfig, new TaskAttemptId(new TaskId("Accumulate", 1), 1), stageConfig, Utilities.TestOutputPath, "/JumboJet/fake");
 
-            IPushTask<Pair<Utf8String, int>, Pair<Utf8String, int>> task = new TestAccumulator();
+            PushTask<Pair<Utf8String, int>, Pair<Utf8String, int>> task = new TestAccumulator();
             JetActivator.ApplyConfiguration(task, null, null, config);
             ListRecordWriter<Pair<Utf8String, int>> output = new ListRecordWriter<Pair<Utf8String, int>>(true);
 
@@ -111,10 +122,10 @@ namespace Tkl.Jumbo.Test.Jet
         public void TestAccumulatorTaskRecordReuse()
         {
             JobConfiguration jobConfig = new JobConfiguration();
-            StageConfiguration stageConfig = jobConfig.AddStage("Accumulate", typeof(TestAccumulator), 1, null, null, null);
+            StageConfiguration stageConfig = jobConfig.AddStage("Accumulate", typeof(TestAccumulator), 1, null);
             TaskContext config = new TaskContext(Guid.NewGuid(), jobConfig, new TaskAttemptId(new TaskId("Accumulate", 1), 1), stageConfig, Utilities.TestOutputPath, "/JumboJet/fake");
 
-            IPushTask<Pair<Utf8String, int>, Pair<Utf8String, int>> task = new TestRecordReuseAccumulator();
+            PushTask<Pair<Utf8String, int>, Pair<Utf8String, int>> task = new TestRecordReuseAccumulator();
             JetActivator.ApplyConfiguration(task, null, null, config);
             ListRecordWriter<Pair<Utf8String, int>> output = new ListRecordWriter<Pair<Utf8String, int>>(true);
 
@@ -145,6 +156,41 @@ namespace Tkl.Jumbo.Test.Jet
             task.Finish(output);
 
             var result = output.List;
+            ValidateOutput(result);
+        }
+
+        [Test]
+        public void TestReduceTask()
+        {
+            TestReducer task = new TestReducer();
+            task.NotifyConfigurationChanged();
+            var records = CreateRecords();
+
+            records.Sort();
+
+            ListRecordWriter<Pair<Utf8String, int>> output = new ListRecordWriter<Pair<Utf8String,int>>();
+            task.Run(new EnumerableRecordReader<Pair<Utf8String, int>>(records), output);
+
+            ValidateOutput(output.List);
+        }
+
+        private List<Pair<Utf8String, int>> CreateRecords()
+        {
+            List<Pair<Utf8String, int>> records = new List<Pair<Utf8String,int>>();
+            records.Add(new Pair<Utf8String, int>(new Utf8String("hello"), 1));
+            records.Add(new Pair<Utf8String, int>(new Utf8String("bye"), 2));
+            records.Add(new Pair<Utf8String, int>(new Utf8String("bye"), 3));
+            records.Add(new Pair<Utf8String, int>(new Utf8String("hello"), 4));
+            records.Add(new Pair<Utf8String, int>(new Utf8String("hello"), 5));
+            records.Add(new Pair<Utf8String, int>(new Utf8String("bye"), 1));
+            records.Add(new Pair<Utf8String, int>(new Utf8String("foo"), 1));
+            records.Add(new Pair<Utf8String, int>(new Utf8String("bye"), 1));
+
+            return records;
+        }
+
+        private static void ValidateOutput(System.Collections.ObjectModel.ReadOnlyCollection<Pair<Utf8String, int>> result)
+        {
             Assert.AreEqual(3, result.Count);
             Assert.Contains(new Pair<Utf8String, int>(new Utf8String("hello"), 10), result);
             Assert.Contains(new Pair<Utf8String, int>(new Utf8String("bye"), 7), result);
@@ -153,5 +199,6 @@ namespace Tkl.Jumbo.Test.Jet
             CollectionAssert.DoesNotContain(result, new Pair<Utf8String, int>(new Utf8String("hello"), 9));
             CollectionAssert.DoesNotContain(result, new Pair<Utf8String, int>(new Utf8String("bar"), 1));
         }
+
     }
 }

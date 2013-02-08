@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Net;
 using System.Net.Sockets;
+using System.Globalization;
 
 namespace Tkl.Jumbo
 {
@@ -132,6 +133,7 @@ namespace Tkl.Jumbo
             }
         }
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1031:DoNotCatchGeneralExceptionTypes")]
         private void ReceiveFromCallback(IAsyncResult ar)
         {
             try
@@ -147,7 +149,7 @@ namespace Tkl.Jumbo
                 }
                 catch( Exception ex )
                 {
-                    _log.Error(string.Format("Error handling UDP message from {0}.", remoteEndPoint), ex);
+                    _log.Error(string.Format(CultureInfo.InvariantCulture, "Error handling UDP message from {0}.", remoteEndPoint), ex);
                 }
             }
             catch( ObjectDisposedException )

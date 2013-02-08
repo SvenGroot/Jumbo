@@ -25,9 +25,8 @@
         <include name="*.cs"/>
         <include name="IO/*.cs"/>
         <include name="Topology/*.cs" />
-        <include name="CommandLine/*.cs"/>
-	<include name="Rpc/*.cs"/>
-        <include name="../Version.cs"/>
+	      <include name="Rpc/*.cs"/>
+        <include name="../AssemblyInfoCommon.cs"/>
       </sources>
       <resources dynamicprefix="true" prefix="Tkl.Jumbo">
         <include name="Properties/Resources.resx"/>
@@ -39,6 +38,12 @@
         <warning number="0419" />
       </nowarn>
     </csc>
-    <copy file="../lib/log4net.dll" todir="nantbin"/>
+    <copy file="App.config" tofile="nantbin/Tkl.Jumbo.dll.config"/>
+    <copy todir="nantbin">
+      <fileset>
+        <include name="../lib/log4net.dll"/>
+        <include name="../Tkl.Jumbo.Native/nantbin/*.*"/>
+      </fileset>
+    </copy>
   </target>
 </project>

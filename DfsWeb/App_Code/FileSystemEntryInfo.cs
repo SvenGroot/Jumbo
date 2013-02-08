@@ -5,6 +5,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Web;
 using Tkl.Jumbo.Dfs;
+using Tkl.Jumbo.Dfs.FileSystem;
+using Tkl.Jumbo;
+using System.Globalization;
 
 /// <summary>
 /// Summary description for FileSystemEntryInfo
@@ -15,24 +18,29 @@ public class FileSystemEntryInfo
     {
     }
 
-    public FileSystemEntryInfo(FileSystemEntry entry, bool includeChildren)
+    public FileSystemEntryInfo(JumboFileSystemEntry entry, bool includeChildren)
     {
         Name = entry.Name;
-        DateCreated = entry.DateCreated;
+        DateCreated = entry.DateCreated.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture);
         FullPath = entry.FullPath;
-        DfsFile file = entry as DfsFile;
+        JumboFile file = entry as JumboFile;
         if( file != null )
         {
-            Size = file.Size;
+            SizeInBytes = file.Size.ToString("#,##0", CultureInfo.InvariantCulture);
+            FormattedSize = new BinarySize(file.Size).ToString("0.##SB", CultureInfo.InvariantCulture);
+            BlockSize = new BinarySize(file.BlockSize).ToString("AB", CultureInfo.InvariantCulture);
+            ReplicationFactor = file.ReplicationFactor;
+            BlockCount = file.Blocks.Count;
+            RecordOptions = file.RecordOptions.ToString();
         }
         else
         {
-            DfsDirectory dir = (DfsDirectory)entry;
+            JumboDirectory dir = (JumboDirectory)entry;
             IsDirectory = true;
             if( includeChildren )
             {
                 Children = (from child in dir.Children
-                            orderby child.GetType() != typeof(DfsDirectory), child.Name
+                            orderby !(child is JumboDirectory), child.Name
                             select new FileSystemEntryInfo(child, false)).ToArray();
             }
         }
@@ -44,9 +52,19 @@ public class FileSystemEntryInfo
 
     public bool IsDirectory { get; set; }
 
-    public long Size { get; set; }
+    public string SizeInBytes { get; set; }
 
-    public DateTime DateCreated { get; set; }
+    public string FormattedSize { get; set; }
+
+    public string DateCreated { get; set; }
 
     public FileSystemEntryInfo[] Children { get; set; }
+
+    public string BlockSize { get; set; }
+
+    public int ReplicationFactor { get; set; }
+
+    public int BlockCount { get; set; }
+
+    public string RecordOptions { get; set; }
 }

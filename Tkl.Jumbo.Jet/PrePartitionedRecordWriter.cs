@@ -16,9 +16,10 @@ namespace Tkl.Jumbo.Jet
     {
         private readonly RecordWriter<T> _baseWriter;
         private readonly PrepartitionedPartitioner<T> _partitioner;
+        private readonly bool _ownsBaseWriter;
         private bool _disposed;
 
-        internal PrepartitionedRecordWriter(RecordWriter<T> baseWriter)
+        internal PrepartitionedRecordWriter(RecordWriter<T> baseWriter, bool ownsBaseWriter)
         {
             if( baseWriter == null )
                 throw new ArgumentNullException("baseWriter");
@@ -28,6 +29,8 @@ namespace Tkl.Jumbo.Jet
             IMultiRecordWriter<T> multiWriter = baseWriter as IMultiRecordWriter<T>;
             if( multiWriter != null )
                 _partitioner = multiWriter.Partitioner as PrepartitionedPartitioner<T>;
+
+            _ownsBaseWriter = ownsBaseWriter;
         }
 
         /// <summary>
@@ -70,6 +73,17 @@ namespace Tkl.Jumbo.Jet
         }
 
         /// <summary>
+        /// Gets the time spent writing.
+        /// </summary>
+        /// <value>
+        /// The time spent writing.
+        /// </value>
+        public TimeSpan WriteTime
+        {
+            get { return _baseWriter.WriteTime; }
+        }
+
+        /// <summary>
         /// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
         /// </summary>
         public void Dispose()
@@ -78,12 +92,21 @@ namespace Tkl.Jumbo.Jet
             GC.SuppressFinalize(this);
         }
 
+        /// <summary>
+        /// Informs the record writer that no further records will be written.
+        /// </summary>
+        public void FinishWriting()
+        {
+            _baseWriter.FinishWriting();
+        }
+
+
         private void Dispose(bool disposing)
         {
             if( !_disposed )
             {
                 _disposed = true;
-                if( disposing )
+                if( disposing && _ownsBaseWriter )
                 {
                     _baseWriter.Dispose();
                 }

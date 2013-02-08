@@ -1,11 +1,9 @@
 ﻿// $Id$
 //
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using Tkl.Jumbo.Jet.Samples.IO;
 using Tkl.Jumbo.IO;
+using Tkl.Jumbo.Jet.Jobs;
+using Tkl.Jumbo.Jet.Samples.IO;
 
 namespace Tkl.Jumbo.Jet.Samples.Tasks
 {
@@ -13,14 +11,14 @@ namespace Tkl.Jumbo.Jet.Samples.Tasks
     /// Task that reads the input of the LineItem table and produces pricing summary items; this is part of TPC-H query 1.
     /// </summary>
     [AllowRecordReuse]
-    public class PricingSummaryTask : Configurable, IPullTask<LineItem, Pair<PricingSummaryKey, PricingSummaryValue>>
+    public class PricingSummaryTask : Configurable, ITask<LineItem, Pair<PricingSummaryKey, PricingSummaryValue>>
     {
         /// <summary>
         /// The name of the setting in <see cref="JobConfiguration.JobSettings"/> that holds the DELTA parameter of the query.
         /// </summary>
         public const string DeltaSettingName = "Delta";
 
-        #region IPullTask<LineItem,KeyValuePairWritable<PricingSummaryKey,PricingSummaryValue>> Members
+        #region ITask<LineItem,KeyValuePairWritable<PricingSummaryKey,PricingSummaryValue>> Members
 
         /// <summary>
         /// Runs the task.

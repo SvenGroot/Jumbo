@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Globalization;
 
 namespace Tkl.Jumbo.Topology
 {
@@ -69,7 +70,7 @@ namespace Tkl.Jumbo.Topology
             public override int Match(string value, int index, bool matchCase)
             {
                 if( value == null )
-                    throw new ArgumentNullException("s");
+                    throw new ArgumentNullException("value");
                 // We want to return -1 if index == length! This is caught by the end > length comparison below.
                 if( index < 0 || index > value.Length )
                     throw new ArgumentOutOfRangeException("index");
@@ -80,7 +81,7 @@ namespace Tkl.Jumbo.Topology
 
                 for( int matchIndex = 0; index < end; ++index, ++matchIndex )
                 {
-                    if( matchCase ? value[index] != _text[matchIndex] : char.ToLower(value[index]) != char.ToLower(_text[matchIndex]) )
+                    if( matchCase ? value[index] != _text[matchIndex] : char.ToUpperInvariant(value[index]) != char.ToUpperInvariant(_text[matchIndex]) )
                         return -1;
                 }
 
@@ -120,7 +121,7 @@ namespace Tkl.Jumbo.Topology
             public override int Match(string value, int index, bool matchCase)
             {
                 if( value == null )
-                    throw new ArgumentNullException("s");
+                    throw new ArgumentNullException("value");
                 // We want to return -1 if index == length. This is caught by the loop and min char count check below.
                 if( index < 0 || index > value.Length )
                     throw new ArgumentOutOfRangeException("index");
@@ -146,7 +147,7 @@ namespace Tkl.Jumbo.Topology
 
             public override string ToString()
             {
-                return string.Format("[{0}-{1}]", _minInclusive.ToString().PadLeft(_minCharCount, '0'), _maxInclusive.ToString().PadLeft(_maxCharCount, '0'));
+                return string.Format(CultureInfo.InvariantCulture, "[{0}-{1}]", _minInclusive.ToString(CultureInfo.InvariantCulture).PadLeft(_minCharCount, '0'), _maxInclusive.ToString(CultureInfo.InvariantCulture).PadLeft(_maxCharCount, '0'));
             }
         }
 
@@ -170,7 +171,7 @@ namespace Tkl.Jumbo.Topology
             public override int Match(string value, int index, bool matchCase)
             {
                 if( value == null )
-                    throw new ArgumentNullException("s");
+                    throw new ArgumentNullException("value");
                 if( index < 0 || index > value.Length )
                     throw new ArgumentOutOfRangeException("index");
 
@@ -241,9 +242,19 @@ namespace Tkl.Jumbo.Topology
         /// Matches the specified string against the pattern.
         /// </summary>
         /// <param name="value">The string to match.</param>
+        /// <returns><see langword="true"/> if <paramref name="value"/> matches the pattern; otherwise, <see langword="false"/>.</returns>
+        public bool Match(string value)
+        {
+            return Match(value, true);
+        }
+
+        /// <summary>
+        /// Matches the specified string against the pattern.
+        /// </summary>
+        /// <param name="value">The string to match.</param>
         /// <param name="matchCase"><see langword="true"/> to perform a case-sensitive comparison; <see langword="false"/> to perform a case-insensitive comparison.</param>
         /// <returns><see langword="true"/> if <paramref name="value"/> matches the pattern; otherwise, <see langword="false"/>.</returns>
-        public bool Match(string value, bool matchCase = true)
+        public bool Match(string value, bool matchCase)
         {
             if( value == null )
                 throw new ArgumentNullException("value");
@@ -259,6 +270,7 @@ namespace Tkl.Jumbo.Topology
             return index == value.Length;
         }
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Maintainability", "CA1502:AvoidExcessiveComplexity")]
         private static List<BaseNode> ParsePattern(string pattern)
         {
             List<BaseNode> current = new List<BaseNode>();
@@ -338,7 +350,7 @@ namespace Tkl.Jumbo.Topology
                     {
                         if( temp.Length == 0 )
                             throw new FormatException("Invalid range expression.");
-                        minInclusive = int.Parse(temp.ToString());
+                        minInclusive = int.Parse(temp.ToString(), CultureInfo.InvariantCulture);
                         minCharCount = temp.Length;
                         temp.Length = 0;
                         state = ParseState.RangeMaximum;
@@ -353,7 +365,7 @@ namespace Tkl.Jumbo.Topology
                     {
                         if( temp.Length == 0 )
                             throw new FormatException("Invalid range expression.");
-                        current.Add(new RangeNode(minInclusive, int.Parse(temp.ToString()), minCharCount, Math.Max(minCharCount, temp.Length)));
+                        current.Add(new RangeNode(minInclusive, int.Parse(temp.ToString(), CultureInfo.InvariantCulture), minCharCount, Math.Max(minCharCount, temp.Length)));
                         temp.Length = 0;
                         state = ParseState.Text;
                     }

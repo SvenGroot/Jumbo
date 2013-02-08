@@ -7,6 +7,7 @@ using System.Text;
 using NUnit.Framework;
 using System.Threading;
 using Tkl.Jumbo.Dfs;
+using Tkl.Jumbo.Dfs.FileSystem;
 
 namespace Tkl.Jumbo.Test.Dfs
 {
@@ -20,8 +21,7 @@ namespace Tkl.Jumbo.Test.Dfs
         public void Setup()
         {
             _cluster = new TestDfsCluster(1, 1);
-            DfsConfiguration config = TestDfsCluster.CreateClientConfig();
-            INameServerClientProtocol client = DfsClient.CreateNameServerClient(config);
+            DfsClient client = TestDfsCluster.CreateClient();
             client.WaitForSafeModeOff(Timeout.Infinite);
         }
 
@@ -38,7 +38,7 @@ namespace Tkl.Jumbo.Test.Dfs
             INameServerClientProtocol client = DfsClient.CreateNameServerClient(config);
             Assert.IsNotNull(client);
             // Just checking if we can communicate, the value doesn't really matter all that much.
-            Assert.AreEqual(config.NameServer.BlockSize, client.BlockSize);
+            Assert.AreEqual((int)config.NameServer.BlockSize, client.BlockSize);
         }
 
         [Test]
@@ -55,14 +55,14 @@ namespace Tkl.Jumbo.Test.Dfs
         public void TestUploadStream()
         {
             const int size = 1000000;
-            DfsClient target = new DfsClient(TestDfsCluster.CreateClientConfig());
+            FileSystemClient target = TestDfsCluster.CreateClient();
             using( System.IO.MemoryStream stream = new System.IO.MemoryStream() )
             {
                 Utilities.GenerateData(stream, size);
                 stream.Position = 0;
                 target.UploadStream(stream, "/uploadstream");
             }
-            DfsFile file = target.NameServer.GetFileInfo("/uploadstream");
+            JumboFile file = target.GetFileInfo("/uploadstream");
             Assert.IsNotNull(file);
             Assert.AreEqual(size, file.Size);
             Assert.IsFalse(file.IsOpenForWriting);
@@ -76,9 +76,9 @@ namespace Tkl.Jumbo.Test.Dfs
             {
                 const int size = 1000000;
                 Utilities.GenerateFile(tempFile, size);
-                DfsClient target = new DfsClient(TestDfsCluster.CreateClientConfig());
+                FileSystemClient target = TestDfsCluster.CreateClient();
                 target.UploadFile(tempFile, "/uploadfile");
-                DfsFile file = target.NameServer.GetFileInfo("/uploadfile");
+                JumboFile file = target.GetFileInfo("/uploadfile");
                 Assert.IsNotNull(file);
                 Assert.AreEqual(size, file.Size);
                 Assert.IsFalse(file.IsOpenForWriting);
@@ -98,11 +98,11 @@ namespace Tkl.Jumbo.Test.Dfs
             {
                 const int size = 1000000;
                 Utilities.GenerateFile(tempFile, size);
-                DfsClient target = new DfsClient(TestDfsCluster.CreateClientConfig());
-                target.NameServer.CreateDirectory("/uploadfiledir");
+                FileSystemClient target = TestDfsCluster.CreateClient();
+                target.CreateDirectory("/uploadfiledir");
                 target.UploadFile(tempFile, "/uploadfiledir");
                 string fileName = System.IO.Path.GetFileName(tempFile);
-                DfsFile file = target.NameServer.GetFileInfo("/uploadfiledir/" + fileName);
+                JumboFile file = target.GetFileInfo("/uploadfiledir/" + fileName);
                 Assert.IsNotNull(file);
                 Assert.AreEqual(size, file.Size);
                 Assert.IsFalse(file.IsOpenForWriting);
@@ -118,7 +118,7 @@ namespace Tkl.Jumbo.Test.Dfs
         public void TestDownloadStream()
         {
             const int size = 1000000;
-            DfsClient target = new DfsClient(TestDfsCluster.CreateClientConfig());
+            FileSystemClient target = TestDfsCluster.CreateClient();
             using( System.IO.MemoryStream stream = new System.IO.MemoryStream() )
             {
                 Utilities.GenerateData(stream, size);

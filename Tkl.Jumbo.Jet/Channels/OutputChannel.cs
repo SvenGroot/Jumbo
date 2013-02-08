@@ -2,10 +2,10 @@
 //
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Collections.ObjectModel;
+using System.Linq;
 using Tkl.Jumbo.IO;
+using Tkl.Jumbo.Jet.Jobs;
 
 namespace Tkl.Jumbo.Jet.Channels
 {
@@ -15,12 +15,12 @@ namespace Tkl.Jumbo.Jet.Channels
     public abstract class OutputChannel : IOutputChannel
     {
         /// <summary>
-        /// The name of the setting in <see cref="JobConfiguration.JobSettings"/> or <see cref="StageConfiguration.StageSettings"/> that overrides the global compression setting.
+        /// The name of the setting in <see cref="Jobs.JobConfiguration.JobSettings"/> or <see cref="Jobs.StageConfiguration.StageSettings"/> that overrides the global compression setting.
         /// </summary>
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Naming", "CA1702:CompoundWordsShouldBeCasedCorrectly", MessageId = "TypeSetting")]
         public const string CompressionTypeSetting = "FileChannel.CompressionType";
 
-        private readonly List<string> _outputIds = new List<string>();
+        private readonly List<string> _outputPartitionIds = new List<string>();
         private ReadOnlyCollection<string> _outputIdsReadOnlyWrapper;
 
         /// <summary>
@@ -35,44 +35,38 @@ namespace Tkl.Jumbo.Jet.Channels
             TaskExecution = taskExecution;
 
             ChannelConfiguration channelConfig = taskExecution.Context.StageConfiguration.OutputChannel;
-            if( channelConfig.Connectivity == ChannelConnectivity.Full )
+            if( channelConfig.OutputStage != null )
             {
-                if( channelConfig.OutputStage != null )
+                StageConfiguration outputStage = taskExecution.Context.JobConfiguration.GetStage(channelConfig.OutputStage);
+                if( taskExecution.Context.StageConfiguration.InternalPartitionCount == 1 || taskExecution.Context.StageConfiguration.IsOutputPrepartitioned )
                 {
-                    StageConfiguration outputStage = taskExecution.Context.JobConfiguration.GetStage(channelConfig.OutputStage);
-                    if( taskExecution.Context.StageConfiguration.InternalPartitionCount == 1 || taskExecution.Context.StageConfiguration.IsOutputPrepartitioned )
+                    // If this task is not a child of a compound task, or there is no partitioning done inside the compound,
+                    // or the parent task uses prepartitioned output, full connectivity means we partition the output into as many pieces as there are output tasks.
+                    int partitionCount = outputStage.TaskCount * channelConfig.PartitionsPerTask;
+                    for( int x = 1; x <= partitionCount; ++x )
                     {
-                        // If this task is not a child of a compound task, or there is no partitioning done inside the compound,
-                        // or the parent task uses prepartitioned output, full connectivity means we partition the output into as many pieces as there are output tasks.
-                        int partitionCount = outputStage.TaskCount * channelConfig.PartitionsPerTask;
-                        for( int x = 1; x <= partitionCount; ++x )
-                        {
-                            _outputIds.Add(TaskId.CreateTaskIdString(channelConfig.OutputStage, x));
-                        }
-                    }
-                    else
-                    {
-                        // This task is a child task in a compound, which means partitioning has already been done. It is assumed the task counts are identical (should've been checked at job creation time)
-                        // and this task produces only one file that is meant for the output task with a matching number. If there are multiple input stages for that output task, it is assumed they 
-                        // all produce the same partitions.
-                        _outputIds.Add(TaskId.CreateTaskIdString(channelConfig.OutputStage, taskExecution.Context.TaskId.PartitionNumber));
+                        _outputPartitionIds.Add(TaskId.CreateTaskIdString(channelConfig.OutputStage, x));
                     }
                 }
-            }
-            else
-            {
-                if( channelConfig.OutputStage != null )
+                else
                 {
-                    string outputStageId = channelConfig.OutputStage;
-
-                    int outputTaskNumber = GetOutputTaskNumber();
-
-                    _outputIds.Add(TaskId.CreateTaskIdString(outputStageId, outputTaskNumber));
+                    // This task is a child task in a compound, which means partitioning has already been done. It is assumed the task counts are identical (should've been checked at job creation time)
+                    // and this task produces only one file that is meant for the output task with a matching number. If there are multiple input stages for that output task, it is assumed they 
+                    // all produce the same partitions.
+                    _outputPartitionIds.Add(TaskId.CreateTaskIdString(channelConfig.OutputStage, taskExecution.Context.TaskId.PartitionNumber));
                 }
             }
 
             CompressionType = taskExecution.Context.GetTypedSetting(CompressionTypeSetting, taskExecution.JetClient.Configuration.FileChannel.CompressionType);
         }
+
+        /// <summary>
+        /// Creates a <see cref="RecordWriter{T}"/> to which the channel can write its output.
+        /// </summary>
+        /// <typeparam name="T">The type of the records.</typeparam>
+        /// <returns>A <see cref="RecordWriter{T}"/> for the channel.</returns>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1004:GenericMethodsShouldProvideTypeParameter")]
+        public abstract RecordWriter<T> CreateRecordWriter<T>();
 
         /// <summary>
         /// Gets the task execution utility for the task that this channel is for.
@@ -82,12 +76,13 @@ namespace Tkl.Jumbo.Jet.Channels
         /// <summary>
         /// Gets the IDs of the partitions that this channel writes output to.
         /// </summary>
-        protected ReadOnlyCollection<string> OutputIds
+        /// <value>The output ids.</value>
+        protected ReadOnlyCollection<string> OutputPartitionIds
         {
             get
             {
                 if( _outputIdsReadOnlyWrapper == null )
-                    System.Threading.Interlocked.CompareExchange(ref _outputIdsReadOnlyWrapper, _outputIds.AsReadOnly(), null);
+                    System.Threading.Interlocked.CompareExchange(ref _outputIdsReadOnlyWrapper, _outputPartitionIds.AsReadOnly(), null);
                 return _outputIdsReadOnlyWrapper;
             }
         }
@@ -124,44 +119,5 @@ namespace Tkl.Jumbo.Jet.Channels
                 partitioner = (IPartitioner<T>)JetActivator.CreateInstance(TaskExecution.Context.StageConfiguration.OutputChannel.PartitionerType.ReferencedType, TaskExecution);
             return partitioner;
         }
-
-        private int GetOutputTaskNumber()
-        {
-            // TODO: Re-evaluate connecting rules for PointToPoint.
-            // If there are multiple input stages, we need to check which one we are and adjust the output task number according to the
-            // number of tasks in the preceding input stages.
-            string inputStageId = TaskExecution.Context.StageConfiguration.CompoundStageId;
-            List<StageConfiguration> inputStages = TaskExecution.Context.JobConfiguration.GetInputStagesForStage(TaskExecution.Context.StageConfiguration.OutputChannel.OutputStage).ToList();
-            int inputStageIndex = inputStages.IndexOf(TaskExecution.Context.StageConfiguration);
-
-            int outputTaskNumber = 0;
-            IList<StageConfiguration> stages;
-            for( int x = 0; x < inputStageIndex; ++x )
-            {
-                outputTaskNumber += inputStages[x].TotalTaskCount;
-            }
-
-            stages = TaskExecution.Context.JobConfiguration.GetPipelinedStages(inputStageId);
-            TaskId current = TaskExecution.Context.TaskId;
-            outputTaskNumber += current.TaskNumber;
-            for( int x = stages.Count - 2; x >= 0; --x )
-            {
-                current = current.ParentTaskId;
-                outputTaskNumber += (current.TaskNumber - 1) * JobConfiguration.GetTotalTaskCount(stages, x);
-            }
-            return outputTaskNumber;
-        }
-
-        #region IOutputChannel Members
-
-        /// <summary>
-        /// Creates a <see cref="RecordWriter{T}"/> to which the channel can write its output.
-        /// </summary>
-        /// <typeparam name="T">The type of the records.</typeparam>
-        /// <returns>A <see cref="RecordWriter{T}"/> for the channel.</returns>
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1004:GenericMethodsShouldProvideTypeParameter")]
-        public abstract Tkl.Jumbo.IO.RecordWriter<T> CreateRecordWriter<T>();
-
-        #endregion
     }
 }

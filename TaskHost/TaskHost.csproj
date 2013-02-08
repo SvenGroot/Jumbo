@@ -73,8 +73,8 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="..\Version.cs">
-      <Link>Properties\Version.cs</Link>
+    <Compile Include="..\AssemblyInfoCommon.cs">
+      <Link>Properties\AssemblyInfoCommon.cs</Link>
     </Compile>
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
@@ -94,6 +94,15 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
+    <None Include="..\common.config">
+      <Link>common.config</Link>
+    </None>
+    <None Include="..\dfs.config">
+      <Link>dfs.config</Link>
+    </None>
+    <None Include="..\jet.config">
+      <Link>jet.config</Link>
+    </None>
     <None Include="app.config" />
     <None Include="TaskHost.build" />
   </ItemGroup>

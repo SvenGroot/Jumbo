@@ -25,7 +25,7 @@ namespace Tkl.Jumbo.Jet.Tasks
     ///   implement <see cref="ICloneable"/>.
     /// </para>
     /// </remarks>
-    public abstract class AccumulatorTask<TKey, TValue> : Configurable, IPushTask<Pair<TKey, TValue>, Pair<TKey, TValue>>
+    public abstract class AccumulatorTask<TKey, TValue> : PushTask<Pair<TKey, TValue>, Pair<TKey, TValue>>
         where TKey : IComparable<TKey>
     {
         #region Nested types
@@ -54,15 +54,13 @@ namespace Tkl.Jumbo.Jet.Tasks
             }
         }
 
-        #region IPushTask<KeyValuePairWritable<TKey,TValue>,KeyValuePairWritable<TKey,TValue>> Members
-
         /// <summary>
         /// Method called for each record in the task's input.
         /// </summary>
         /// <param name="record">The record to process.</param>
         /// <param name="output">The <see cref="RecordWriter{T}"/> to which the task's output should be written.</param>
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1062:Validate arguments of public methods", MessageId = "0")]
-        public void ProcessRecord(Pair<TKey, TValue> record, RecordWriter<Pair<TKey, TValue>> output)
+        public override void ProcessRecord(Pair<TKey, TValue> record, RecordWriter<Pair<TKey, TValue>> output)
         {
             ValueContainer value;
             if( _acculumatedValues.TryGetValue(record.Key, out value) )
@@ -92,7 +90,7 @@ namespace Tkl.Jumbo.Jet.Tasks
         /// <remarks>
         /// This enables the task to finish up its processing and write any further records it may have collected during processing.
         /// </remarks>
-        public void Finish(RecordWriter<Pair<TKey, TValue>> output)
+        public override void Finish(RecordWriter<Pair<TKey, TValue>> output)
         {
             if( output == null )
                 throw new ArgumentNullException("output");
@@ -109,8 +107,6 @@ namespace Tkl.Jumbo.Jet.Tasks
                 output.WriteRecord(record);
             }
         }
-
-        #endregion
 
         /// <summary>
         /// When implemented in a derived class, accumulates the values of the records.

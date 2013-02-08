@@ -8,6 +8,7 @@ using Tkl.Jumbo;
 using Tkl.Jumbo.Dfs;
 using Tkl.Jumbo.Jet;
 using System.Diagnostics;
+using Tkl.Jumbo.Dfs.FileSystem;
 
 namespace JobServerApplication.Scheduling
 {
@@ -48,12 +49,12 @@ namespace JobServerApplication.Scheduling
 
         private sealed class TaskServerDfsInputLocalTasksComparer : IComparer<TaskServerJobInfo>
         {
-            public DfsClient DfsClient { get; set; }
+            public FileSystemClient FileSystemClient { get; set; }
 
             public int Compare(TaskServerJobInfo x, TaskServerJobInfo y)
             {
-                int tasksX = x.GetSchedulableLocalTaskCount(DfsClient);
-                int tasksY = y.GetSchedulableLocalTaskCount(DfsClient);
+                int tasksX = x.GetSchedulableLocalTaskCount();
+                int tasksY = y.GetSchedulableLocalTaskCount();
 
                 if( tasksX < tasksY )
                     return -1;
@@ -71,7 +72,7 @@ namespace JobServerApplication.Scheduling
         private readonly TaskServerDfsInputComparer _dfsInputComparer = new TaskServerDfsInputComparer();
         private readonly TaskServerDfsInputLocalTasksComparer _dfsInputLocalTasksComparer = new TaskServerDfsInputLocalTasksComparer();
 
-        public void ScheduleTasks(IEnumerable<JobInfo> jobs, DfsClient dfsClient)
+        public void ScheduleTasks(IEnumerable<JobInfo> jobs, FileSystemClient fileSystemClient)
         {
             bool tasksAndCapacityLeft = true;
             // Schedule with increasing data distance or until we run out of capacity or tasks
@@ -84,7 +85,7 @@ namespace JobServerApplication.Scheduling
                 {
                     if( job.UnscheduledTasks > 0 && distance <= job.Configuration.SchedulerOptions.MaximumDataDistance )
                     {
-                        tasksAndCapacityLeft |= ScheduleDfsInputTasks(job, dfsClient, distance);
+                        tasksAndCapacityLeft |= ScheduleDfsInputTasks(job, fileSystemClient, distance);
                     }
                 }
             }
@@ -98,7 +99,7 @@ namespace JobServerApplication.Scheduling
             }
         }
 
-        private bool ScheduleDfsInputTasks(JobInfo job, DfsClient dfsClient, int distance)
+        private bool ScheduleDfsInputTasks(JobInfo job, FileSystemClient fileSystemClient, int distance)
         {
             int unscheduledTasks = job.GetDfsInputTasks().Where(task => task.Server == null).Count(); // Tasks that can be scheduled but haven't been scheduled yet.
             bool capacityRemaining = false;
@@ -115,7 +116,7 @@ namespace JobServerApplication.Scheduling
                     comparer = _dfsInputComparer;
                     break;
                 case SchedulingMode.OptimalLocality:
-                    _dfsInputLocalTasksComparer.DfsClient = dfsClient;
+                    _dfsInputLocalTasksComparer.FileSystemClient = fileSystemClient;
                     comparer = _dfsInputLocalTasksComparer;
                     break;
                 default:
@@ -130,14 +131,14 @@ namespace JobServerApplication.Scheduling
                 while( taskServers.Count > 0 && unscheduledTasks > 0 )
                 {
                     TaskServerJobInfo server = taskServers.Peek();
-                    TaskInfo task = server.FindTaskToSchedule(dfsClient, distance);
+                    TaskInfo task = server.FindTaskToSchedule(fileSystemClient, ref distance);
                     if( task != null )
                     {
                         server.TaskServer.SchedulerInfo.AssignTask(job, task);
                         --unscheduledTasks;
                         task.SchedulerInfo.CurrentAttemptDataDistance = distance;
 
-                        _log.InfoFormat("Task {0} has been assigned to server {1} ({2}).", task.FullTaskId, server.TaskServer.Address, distance == 0 ? "data local" : (distance == 1 ? "rack local" : "NOT data local"));
+                        _log.InfoFormat("Task {0} has been assigned to server {1} ({2}).", task.FullTaskId, server.TaskServer.Address, distance < 0 ? "no locality data available" : (distance == 0 ? "data local" : (distance == 1 ? "rack local" : "NOT data local")));
                         if( server.TaskServer.SchedulerInfo.AvailableTasks == 0 )
                             taskServers.Dequeue(); // No more available tasks, remove it from the queue
                         else
@@ -188,7 +189,7 @@ namespace JobServerApplication.Scheduling
             }
         }
 
-        //public void ScheduleNonInputTasks(JobInfo job, IList<TaskInfo> tasks, DfsClient dfsClient)
+        //public void ScheduleNonInputTasks(JobInfo job, IList<TaskInfo> tasks, FileSystemClient fileSystemClient)
         //{
         //    int taskIndex = 0;
         //    bool outOfSlots = false;

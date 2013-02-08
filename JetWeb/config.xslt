@@ -8,7 +8,9 @@
   <xsl:template match="/">
     <html xml:lang="en-us">
       <head>
-        <title>Job <xsl:value-of select="job:Job/@name"/> configuration</title>
+        <title>
+          Job <xsl:value-of select="job:Job/@name"/> configuration
+        </title>
         <style type="text/css">
           <![CDATA[
           body 
@@ -67,7 +69,7 @@
         ]]>
         </style>
         <script type="text/javascript">
-          <xsl:text disable-output-escaping="yes">
+          <xsl:text>
           <![CDATA[
               window.onload = function () {
                   var spans = document.getElementsByTagName("span");
@@ -185,7 +187,9 @@
                 <xsl:if test="position()!=1">
                   <xsl:text>, </xsl:text>
                 </xsl:if>
-                <a href="#{.}"><xsl:value-of select="."/></a>
+                <a href="#{.}">
+                  <xsl:value-of select="."/>
+                </a>
               </xsl:for-each>
             </td>
           </tr>
@@ -204,7 +208,7 @@
       <xsl:apply-templates select="." mode="input" />
       <xsl:apply-templates select="job:ChildStage" />
       <xsl:apply-templates select="job:OutputChannel"/>
-      <xsl:apply-templates select="job:DfsOutput"/>
+      <xsl:apply-templates select="job:DataOutputType[.!='']"/>
       <xsl:apply-templates select="job:StageSettings"/>
     </div>
   </xsl:template>
@@ -215,7 +219,9 @@
           <xsl:value-of select="@type"/> channel to stage:
         </th>
         <td>
-          <a href="#{job:OutputStage}"><xsl:value-of select="job:OutputStage"/></a>
+          <a href="#{job:OutputStage}">
+            <xsl:value-of select="job:OutputStage"/>
+          </a>
           <xsl:if test="@forceFileDownload='true'">
             <xsl:text> (force file download)</xsl:text>
           </xsl:if>
@@ -258,38 +264,16 @@
       </xsl:if>
     </table>
   </xsl:template>
-  <xsl:template match="job:DfsOutput">
+  <xsl:template match="job:DataOutputType[.!='']">
     <table class="output">
       <tr>
-        <th scope="row">DFS output:</th>
-        <td>
-          <xsl:value-of select="@path"/>
-        </td>
-      </tr>
-      <tr>
-        <th scope="row">Record writer:</th>
+        <th scope="row">Data output type:</th>
         <td>
           <span class="type">
-            <xsl:value-of select="job:RecordWriterType"/>
+            <xsl:value-of select="."/>
           </span>
         </td>
       </tr>
-      <xsl:if test="@blockSize>0">
-        <tr>
-          <th scope="row">Block size:</th>
-          <td>
-            <xsl:value-of select="format-number(@blockSize, '###,##0')"/>
-          </td>
-        </tr>
-      </xsl:if>
-      <xsl:if test="@replicationFactor>0">
-        <tr>
-          <th scope="row">Replication factor:</th>
-          <td>
-            <xsl:value-of select="@replicationFactor"/>
-          </td>
-        </tr>
-      </xsl:if>
     </table>
   </xsl:template>
   <xsl:template match="job:JobSettings | job:StageSettings">
@@ -315,9 +299,9 @@
       </td>
     </tr>
   </xsl:template>
-  <xsl:template match="job:Stage[job:DfsInput or //job:OutputChannel/job:OutputStage=@id or //job:DependentStages/job:string=@id]" mode="input">
+  <xsl:template match="job:Stage[job:DataInputType!='' or //job:OutputChannel/job:OutputStage=@id or //job:DependentStages/job:string=@id]" mode="input">
     <table class="input">
-      <xsl:apply-templates select="job:DfsInput" />
+      <xsl:apply-templates select="job:DataInputType[.!='']" />
       <xsl:apply-templates select="//job:OutputChannel[job:OutputStage=current()/@id]" mode="input" />
       <xsl:if test="//job:DependentStages/job:string=current()/@id">
         <tr>
@@ -330,25 +314,12 @@
     </table>
   </xsl:template>
   <xsl:template match="job:Stage | job:ChildStage" mode="input"></xsl:template>
-  <xsl:template match="job:DfsInput">
+  <xsl:template match="job:DataInputType">
     <tr>
-      <th scope="row">DFS input:</th>
-      <td>
-        <xsl:value-of select="job:TaskInputs/job:TaskDfsInput/@path"/>
-        <xsl:text>, block </xsl:text>
-        <xsl:value-of select="job:TaskInputs/job:TaskDfsInput/@block"/>
-        <xsl:if test="count(job:TaskInputs/job:TaskDfsInput)>1">
-          <xsl:text> (and </xsl:text>
-          <xsl:value-of select="count(job:TaskInputs/job:TaskDfsInput)-1"/>
-          <xsl:text> others).</xsl:text>
-        </xsl:if>
-      </td>
-    </tr>
-    <tr>
-      <th scope="row">Record reader:</th>
+      <th scope="row">Data input type:</th>
       <td>
         <span class="type">
-          <xsl:value-of select="job:RecordReaderType"/>
+          <xsl:value-of select="." />
         </span>
       </td>
     </tr>

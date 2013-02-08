@@ -4,10 +4,11 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using Tkl.Jumbo.CommandLine;
+using Ookii.CommandLine;
 using System.ComponentModel;
 using Tkl.Jumbo.Dfs;
 using System.Runtime.InteropServices;
+using Tkl.Jumbo.Dfs.FileSystem;
 
 namespace DfsShell.Commands
 {
@@ -16,23 +17,29 @@ namespace DfsShell.Commands
     {
         private readonly BlockKind _kind;
 
-        public PrintBlocksCommand([Optional, DefaultValue(BlockKind.Normal), Description("The kind of blocks to include in the results: Normal, Pending, or UnderReplicated. The default is Normal.")] BlockKind kind)
+        public PrintBlocksCommand([Description("The kind of blocks to include in the results: Normal, Pending, or UnderReplicated. The default is Normal."), ArgumentName("Kind")] BlockKind kind = BlockKind.Normal)
         {
             _kind = kind;
         }
 
-        [NamedCommandLineArgument("f"), Description("Include the path of the file that each block belongs to.")]
-        public bool IncludeFiles { get; set; }
+        [CommandLineArgument, Description("Show the path of the file that each block belongs to.")]
+        public bool ShowFiles { get; set; }
 
         public override void Run()
         {
-            Guid[] blocks = Client.NameServer.GetBlocks(_kind);
-            foreach( Guid blockId in blocks )
+            DfsClient dfsClient = Client as DfsClient;
+            if( dfsClient == null )
+                Console.WriteLine("The configured file system doesn't support blocks.");
+            else
             {
-                if( IncludeFiles )
-                    Console.WriteLine("{0:B}: {1}", blockId, Client.NameServer.GetFileForBlock(blockId));
-                else
-                    Console.WriteLine(blockId.ToString("B"));
+                Guid[] blocks = dfsClient.NameServer.GetBlocks(_kind);
+                foreach( Guid blockId in blocks )
+                {
+                    if( ShowFiles )
+                        Console.WriteLine("{0:B}: {1}", blockId, dfsClient.NameServer.GetFileForBlock(blockId));
+                    else
+                        Console.WriteLine(blockId.ToString("B"));
+                }
             }
         }
     }

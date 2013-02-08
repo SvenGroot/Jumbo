@@ -10,7 +10,7 @@ using Tkl.Jumbo.Jet;
 namespace Tkl.Jumbo.Test.Tasks
 {
     [AllowRecordReuse]
-    public class LineCounterTask : Configurable, IPullTask<Utf8String, int>
+    public class LineCounterTask : Configurable, ITask<Utf8String, int>
     {
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(LineCounterTask));
 

@@ -18,6 +18,7 @@
         <include name="System.Runtime.Remoting.dll"/>
         <include name="System.Xml.Linq.dll"/>
         <include name="../lib/log4net.dll"/>
+        <include name="../lib/Ookii.CommandLine.dll"/>
         <include name="../Tkl.Jumbo/nantbin/Tkl.Jumbo.dll"/>
         <include name="../Tkl.Jumbo.Dfs/nantbin/Tkl.Jumbo.Dfs.dll"/>
       </references>
@@ -25,12 +26,15 @@
         <include name="Properties/AssemblyInfo.cs"/>
         <include name="*.cs"/>
         <include name="Channels/*.cs"/>
-	<include name="Tasks/*.cs"/>
-	<include name="Jobs/*.cs"/>
-        <include name="../Version.cs"/>
+	      <include name="Tasks/*.cs"/>
+	      <include name="Jobs/*.cs"/>
+        <include name="Jobs/Builder/*.cs" />
+        <include name="IP/*.cs"/>
+        <include name="../AssemblyInfoCommon.cs"/>
       </sources>
       <nowarn>
         <!-- XML comment warnings; this is somewhat broken in Mono. -->
+        <warning number="1580" />
         <warning number="1584" />
         <warning number="1574" />
         <warning number="0419" />
@@ -39,6 +43,7 @@
     <copy todir="nantbin">
       <fileset>
         <include name="../lib/log4net.dll"/>
+        <include name="../lib/Ookii.CommandLine.dll"/>
         <include name="../Tkl.Jumbo/nantbin/*.*"/>
         <include name="../Tkl.Jumbo.Dfs/nantbin/*.*"/>
       </fileset>

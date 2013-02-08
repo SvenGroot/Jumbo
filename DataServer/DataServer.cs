@@ -12,6 +12,7 @@ using Tkl.Jumbo;
 using System.Net.Sockets;
 using System.Net;
 using Tkl.Jumbo.Rpc;
+using Tkl.Jumbo.Dfs.FileSystem;
 
 namespace DataServerApplication
 {
@@ -348,11 +349,11 @@ namespace DataServerApplication
                     {
                         do
                         {
-                            packet.Read(reader, true, true);
-                            sender.AddPacket(packet);
+                            packet.Read(reader, PacketFormatOption.ChecksumOnly, true);
+                            packet.SequenceNumber++;
+                            sender.SendPacket(packet);
                         } while( !packet.IsLastPacket );
-                        sender.WaitUntilSendFinished();
-                        sender.ThrowIfErrorOccurred();
+                        sender.WaitForAcknowledgements();
                     }
                     _log.InfoFormat("Finished replicating block {0}.", response.BlockAssignment.BlockId);
                 }

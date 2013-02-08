@@ -9,9 +9,10 @@ using Tkl.Jumbo.IO;
 
 namespace Tkl.Jumbo.Test.Tasks
 {
-    public class StringConversionTask : IPullTask<Utf8String, int>
+    [AllowRecordReuse]
+    public class StringConversionTask : ITask<Utf8String, int>
     {
-        #region IPullTask<Utf8StringWritable,int> Members
+        #region ITask<Utf8StringWritable,int> Members
 
         public void Run(RecordReader<Utf8String> input, RecordWriter<int> output)
         {

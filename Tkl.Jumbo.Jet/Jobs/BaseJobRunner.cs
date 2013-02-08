@@ -5,10 +5,11 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using Tkl.Jumbo.Dfs;
-using Tkl.Jumbo.CommandLine;
+using Ookii.CommandLine;
 using System.ComponentModel;
 using System.Reflection;
 using System.Globalization;
+using Tkl.Jumbo.Dfs.FileSystem;
 
 namespace Tkl.Jumbo.Jet.Jobs
 {
@@ -20,32 +21,32 @@ namespace Tkl.Jumbo.Jet.Jobs
         /// <summary>
         /// Gets or sets a value that indicates whether the output directory should be deleted, if it exists, before the job is executed.
         /// </summary>
-        [NamedCommandLineArgument("d"), Description("Delete the output directory before running the job, if it exists.")]
-        public bool DeleteOutputBeforeRun { get; set; }
+        [CommandLineArgument(), Description("Delete the output directory before running the job, if it exists.")]
+        public bool OverwriteOutput { get; set; }
 
         /// <summary>
         /// Gets or sets a value that indicates whether the job runner should wait for user input before starting the job and before exitting.
         /// </summary>
-        [NamedCommandLineArgument("i"), Description("Wait for user confirmation before starting the job and before exitting.")]
+        [CommandLineArgument("Interactive"), Description("Wait for user confirmation before starting the job and before exitting.")]
         public bool IsInteractive { get; set; }
 
         /// <summary>
         /// Gets or sets the replication factor of the job's output files.
         /// </summary>
         /// <remarks>
-        /// Derived classes should use this value with the <see cref="TaskDfsOutput"/> items of the job configuration.
+        /// Derived classes should use this value with the <see cref="IO.FileDataOutput{TRecordWriter}"/> items of the job configuration.
         /// </remarks>
-        [NamedCommandLineArgument("replication"), Description("Replication factor of the job's output files.")]
+        [CommandLineArgument(), Description("Replication factor of the job's output files.")]
         public int ReplicationFactor { get; set; }
 
         /// <summary>
         /// Gets or sets the block size of the job's output files.
         /// </summary>
         /// <remarks>
-        /// Derived classes should use this value with the <see cref="TaskDfsOutput"/> items of the job configuration.
+        /// Derived classes should use this value with the <see cref="IO.FileDataOutput{TRecordWriter}"/> items of the job configuration.
         /// </remarks>
-        [NamedCommandLineArgument("blockSize"), Description("Block size of the job's output files.")]
-        public ByteSize BlockSize { get; set; }
+        [CommandLineArgument(), Description("Block size of the job's output files.")]
+        public BinarySize BlockSize { get; set; }
 
         /// <summary>
         /// Gets or sets the property values that will override predefined values in the job configuration.
@@ -77,8 +78,8 @@ namespace Tkl.Jumbo.Jet.Jobs
         ///   in a derived class after creating your job configuration.
         /// </para>
         /// </remarks>
-        [NamedCommandLineArgument("P"), Description("Modifies the value of one of the properties in the job configuration after the job has been created. Uses the format \"PropertyName=value\" or \"CompoundStageId:PropertyName=value\". You can access properties more than one level deep, e.g. \"MyStage:OutputChannel.PartitionsPerTask=2\". Can be specified more than once.")]
-        public string[] JobOrStageProperties { get; set; }
+        [CommandLineArgument("Property", ValueDescription = "[Stage:]Property=Value"), AllowDuplicateDictionaryKeys, Description("Modifies the value of one of the properties in the job configuration after the job has been created. Uses the format \"PropertyName=value\" or \"CompoundStageId:PropertyName=value\". You can access properties more than one level deep, e.g. \"MyStage:OutputChannel.PartitionsPerTask=2\". Can be specified more than once.")]
+        public Dictionary<string, string> JobOrStageProperties { get; set; }
 
         /// <summary>
         /// Gets or sets additional job or stage settings that will be defined in the job configuration.
@@ -102,8 +103,24 @@ namespace Tkl.Jumbo.Jet.Jobs
         ///   in a derived class after creating your job configuration.
         /// </para>
         /// </remarks>
-        [NamedCommandLineArgument("D"), Description("Defines or overrides a job or stage setting in the job configuration. Uses the format \"SettingName=value\" or \"CompoundStageId:SettingName=value\". Can be specified more than once.")]
-        public string[] JobOrStageSettings { get; set; }
+        [CommandLineArgument("Setting", ValueDescription = "[Stage:]Setting=Value"), AllowDuplicateDictionaryKeys, Description("Defines or overrides a job or stage setting in the job configuration. Uses the format \"SettingName=value\" or \"CompoundStageId:SettingName=value\". Can be specified more than once.")]
+        public Dictionary<string, string> JobOrStageSettings { get; set; }
+
+        /// <summary>
+        /// Gets the DFS client.
+        /// </summary>
+        /// <value>
+        /// The DFS client.
+        /// </value>
+        protected FileSystemClient FileSystemClient { get; private set; }
+
+        /// <summary>
+        /// Gets the jet client.
+        /// </summary>
+        /// <value>
+        /// The jet client.
+        /// </value>
+        protected JetClient JetClient { get; private set; }
 
         #region IJobRunner Members
 
@@ -142,75 +159,36 @@ namespace Tkl.Jumbo.Jet.Jobs
         }
 
         /// <summary>
-        /// If <see cref="DeleteOutputBeforeRun"/> is <see langword="true"/>, deletes the output path and then re-creates it; otherwise,
-        /// checks if the output path exists and creates it if it doesn't exist and fails if it does. Uses the value of the <see cref="Configurable.DfsConfiguration"/>
-        /// property to access the DFS.
+        /// If <see cref="OverwriteOutput"/> is <see langword="true"/>, deletes the output path and then re-creates it; otherwise,
+        /// checks if the output path exists and creates it if it doesn't exist and fails if it does.
         /// </summary>
         /// <param name="outputPath">The directory where the job's output will be stored.</param>
         protected void CheckAndCreateOutputPath(string outputPath)
         {
-            CheckAndCreateOutputPath(new DfsClient(DfsConfiguration), outputPath);
-        }
-
-        /// <summary>
-        /// If <see cref="DeleteOutputBeforeRun"/> is <see langword="true"/>, deletes the output path and then re-creates it; otherwise,
-        /// checks if the output path exists and creates it if it doesn't exist and fails if it does.
-        /// </summary>
-        /// <param name="dfsClient">The <see cref="DfsClient"/> used to access the Distributed File System.</param>
-        /// <param name="outputPath">The directory where the job's output will be stored.</param>
-        protected void CheckAndCreateOutputPath(DfsClient dfsClient, string outputPath)
-        {
-            if( dfsClient == null )
-                throw new ArgumentNullException("dfsClient");
             if( outputPath == null )
                 throw new ArgumentNullException("outputPath");
 
-            if( DeleteOutputBeforeRun )
+            if( OverwriteOutput )
             {
-                dfsClient.NameServer.Delete(outputPath, true);
+                FileSystemClient.Delete(outputPath, true);
             }
             else
             {
-                DfsDirectory outputDir = dfsClient.NameServer.GetDirectoryInfo(outputPath);
+                JumboDirectory outputDir = FileSystemClient.GetDirectoryInfo(outputPath);
                 if( outputDir != null )
                     throw new ArgumentException("The specified output path already exists on the DFS.", "outputPath");
             }
-            dfsClient.NameServer.CreateDirectory(outputPath);
+            FileSystemClient.CreateDirectory(outputPath);
         }
 
         /// <summary>
-        /// Sets the <see cref="ReplicationFactor"/> and <see cref="BlockSize"/> for the specified stage's DFS output.
+        /// Gets a <see cref="JumboFileSystemEntry"/> instance for the specified path, or throws an exception if the input doesn't exist.
         /// </summary>
-        /// <param name="stage">The stage whose DFS output to configure.</param>
-        protected void ConfigureDfsOutput(StageConfiguration stage)
-        {
-            if( stage == null )
-                throw new ArgumentNullException("stage");
-            if( stage.DfsOutput == null )
-                throw new ArgumentException("Stage has no DFS output", "stage");
-
-            if( ReplicationFactor < 0 )
-                throw new InvalidOperationException("Replication factor may not be less than zero.");
-            if( BlockSize.Value < 0 )
-                throw new InvalidOperationException("Block size may not be less than zero.");
-            if( BlockSize.Value > Int32.MaxValue )
-                throw new InvalidOperationException("Block size may not be larger than 2GB.");
-
-            stage.DfsOutput.BlockSize = (int)BlockSize.Value;
-            stage.DfsOutput.ReplicationFactor = ReplicationFactor;
-        }
-
-        /// <summary>
-        /// Gets a <see cref="FileSystemEntry"/> instance for the specified path, or throws an exception if the input doesn't exist.
-        /// </summary>
-        /// <param name="dfsClient">The <see cref="DfsClient"/> used to access the Distributed File System.</param>
         /// <param name="inputPath">The input file or directory.</param>
-        /// <returns>A <see cref="FileSystemEntry"/> instance for the specified path</returns>
-        protected static FileSystemEntry GetInputFileSystemEntry(DfsClient dfsClient, string inputPath)
+        /// <returns>A <see cref="JumboFileSystemEntry"/> instance for the specified path</returns>
+        protected JumboFileSystemEntry GetInputFileSystemEntry(string inputPath)
         {
-            if( dfsClient == null )
-                throw new ArgumentNullException("dfsClient");
-            FileSystemEntry input = dfsClient.NameServer.GetFileSystemEntryInfo(inputPath);
+            JumboFileSystemEntry input = FileSystemClient.GetFileSystemEntryInfo(inputPath);
             if( input == null )
                 throw new ArgumentException("The specified input path doesn't exist.", "inputPath");
             return input;
@@ -234,6 +212,17 @@ namespace Tkl.Jumbo.Jet.Jobs
             ApplyJobOrStageSettings(jobConfiguration);
         }
 
+        /// <summary>
+        /// Indicates the configuration has been changed. <see cref="JetActivator.ApplyConfiguration"/> calls this method
+        /// after setting the configuration.
+        /// </summary>
+        public override void NotifyConfigurationChanged()
+        {
+            base.NotifyConfigurationChanged();
+            FileSystemClient = FileSystemClient.Create(DfsConfiguration);
+            JetClient = new JetClient(JetConfiguration);
+        }
+
         private void ApplySettingProperties(JobConfiguration jobConfiguration)
         {
             PropertyInfo[] props = GetType().GetProperties();
@@ -255,12 +244,11 @@ namespace Tkl.Jumbo.Jet.Jobs
         {
             if( JobOrStageSettings != null )
             {
-                foreach( string setting in JobOrStageSettings )
+                foreach( KeyValuePair<string, string> setting in JobOrStageSettings )
                 {
                     string compoundStageId;
                     string settingName;
-                    string settingValue;
-                    ParsePropertyOrSetting(setting, out compoundStageId, out settingName, out settingValue);
+                    ParsePropertyOrSetting(setting.Key, out compoundStageId, out settingName);
 
                     SettingsDictionary target = null;
                     if( compoundStageId == null )
@@ -273,13 +261,13 @@ namespace Tkl.Jumbo.Jet.Jobs
                     {
                         StageConfiguration stage = jobConfiguration.GetStageWithCompoundId(compoundStageId);
                         if( stage == null )
-                            throw new InvalidOperationException(string.Format(CultureInfo.CurrentCulture, "Stage {0} specified in command line argument -D:{1} does not exist.", compoundStageId, setting));
+                            throw new InvalidOperationException(string.Format(CultureInfo.CurrentCulture, "Stage {0} specified in command line argument -Setting {1}={2} does not exist.", compoundStageId, setting.Key, setting.Value));
                         if( stage.StageSettings == null )
                             stage.StageSettings = new SettingsDictionary();
                         target = stage.StageSettings;
                     }
 
-                    target[settingName] = settingValue;
+                    target[settingName] = setting.Value;
                 }
             }
         }
@@ -288,47 +276,41 @@ namespace Tkl.Jumbo.Jet.Jobs
         {
             if( JobOrStageProperties != null )
             {
-                foreach( string prop in JobOrStageProperties )
+                foreach( KeyValuePair<string, string> property in JobOrStageProperties )
                 {
-                    ApplyJobProperty(jobConfiguration, prop);
+                    ApplyJobProperty(jobConfiguration, property);
                 }
             }
         }
 
-        private static void ApplyJobProperty(JobConfiguration job, string prop)
+        private static void ApplyJobProperty(JobConfiguration job, KeyValuePair<string, string> property)
         {
             string compoundStageId;
             string propName;
-            string propValue;
-            ParsePropertyOrSetting(prop, out compoundStageId, out propName, out propValue);
+            ParsePropertyOrSetting(property.Key, out compoundStageId, out propName);
 
             object target = job;
             if( compoundStageId != null )
             {
                 target = job.GetStageWithCompoundId(compoundStageId);
                 if( target == null )
-                    throw new InvalidOperationException(string.Format(CultureInfo.CurrentCulture, "Stage {0} specified in command line argument -P:{1} does not exist.", compoundStageId, prop));
+                    throw new InvalidOperationException(string.Format(CultureInfo.CurrentCulture, "Stage {0} specified in command line argument -Property {1}={2} does not exist.", compoundStageId, property.Key, property.Value));
             }
 
-            ApplyJobProperty(target, propName, propValue);
+            ApplyJobProperty(target, propName, property.Value);
         }
 
-        private static void ParsePropertyOrSetting(string propOrSetting, out string compoundStageId, out string name, out string value)
+        private static void ParsePropertyOrSetting(string propOrSettingKey, out string compoundStageId, out string name)
         {
             compoundStageId = null;
 
-            int colonIndex = propOrSetting.IndexOf(':');
+            int colonIndex = propOrSettingKey.IndexOf(':');
             if( colonIndex >= 0 )
             {
-                compoundStageId = propOrSetting.Substring(0, colonIndex);
+                compoundStageId = propOrSettingKey.Substring(0, colonIndex);
             }
 
-            int equalsIndex = propOrSetting.IndexOf('=', colonIndex + 1);
-            if( equalsIndex < 0 )
-                throw new InvalidOperationException(string.Format(CultureInfo.CurrentCulture, "Job property specified in command line argument -P:{0} has no value.", propOrSetting));
-
-            name = propOrSetting.Substring(colonIndex + 1, equalsIndex - colonIndex - 1);
-            value = propOrSetting.Substring(equalsIndex + 1);
+            name = propOrSettingKey.Substring(colonIndex + 1);
         }
 
         private static void ApplyJobProperty(object target, string path, string value)

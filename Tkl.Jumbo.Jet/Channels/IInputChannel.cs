@@ -2,9 +2,8 @@
 //
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using Tkl.Jumbo.IO;
+using Tkl.Jumbo.Jet.Jobs;
 
 namespace Tkl.Jumbo.Jet.Channels
 {
@@ -13,6 +12,22 @@ namespace Tkl.Jumbo.Jet.Channels
     /// </summary>
     public interface IInputChannel
     {
+        /// <summary>
+        /// Occurs when the input channel stalls waiting for space to become available in the memory storage.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        ///   If the channel consumer (e.g. a <see cref="MultiInputRecordReader{T}"/>) can free up the required amount of space,
+        ///   set the <see cref="MemoryStorageFullEventArgs.CancelWaiting"/> property to <see langword="false"/> so the memory
+        ///   storage manager will continue waiting for the request.
+        /// </para>
+        /// <para>
+        ///   If the <see cref="MemoryStorageFullEventArgs.CancelWaiting"/> property is left at its default value of <see langword="true"/>,
+        ///   the memory storage manager will immediately deny the request so the channel will store the input on disk instead.
+        /// </para>
+        /// </remarks>
+        event EventHandler<MemoryStorageFullEventArgs> MemoryStorageFull;
+        
         /// <summary>
         /// Gets the configuration of the input channel.
         /// </summary>

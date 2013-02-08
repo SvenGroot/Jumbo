@@ -36,6 +36,16 @@ namespace Tkl.Jumbo
         }
 
         /// <summary>
+        /// Initializes a new instance of the <see cref="UnmanagedBuffer"/> class.
+        /// </summary>
+        /// <param name="size">The size, in bytes, of the buffer.</param>
+        public UnmanagedBuffer(long size)
+        {
+            _buffer = (byte*)Marshal.AllocHGlobal(new IntPtr(size));
+            Size = size;
+        }
+
+        /// <summary>
         /// Releases all resources used by this class.
         /// </summary>
         ~UnmanagedBuffer()
@@ -46,7 +56,7 @@ namespace Tkl.Jumbo
         /// <summary>
         /// Gets the size of the buffer, in bytes.
         /// </summary>
-        public int Size { get; private set; }
+        public long Size { get; private set; }
 
         /// <summary>
         /// Gets a pointer to the first byte of the buffer.
@@ -96,7 +106,7 @@ namespace Tkl.Jumbo
         /// <param name="destinationIndex">The index in <paramref name="destination"/> to start copying at.</param>
         /// <param name="count">The number of bytes to copy.</param>
         /// <returns>The next index position after writing the data.</returns>
-        public static int CopyCircular(byte[] source, int sourceIndex, UnmanagedBuffer destination, int destinationIndex, int count)
+        public static long CopyCircular(byte[] source, int sourceIndex, UnmanagedBuffer destination, long destinationIndex, int count)
         {
             if( source == null )
                 throw new ArgumentNullException("source");
@@ -110,7 +120,7 @@ namespace Tkl.Jumbo
                 throw new ArgumentOutOfRangeException("count");
             if( sourceIndex + count > source.Length )
                 throw new ArgumentException("sourceIndex + count is larger than the source array.");
-            int end = destinationIndex + count;
+            long end = destinationIndex + count;
             if( end > destination.Size )
             {
                 end %= destination.Size;
@@ -126,9 +136,10 @@ namespace Tkl.Jumbo
             }
             else
             {
-                int firstCount = destination.Size - destinationIndex;
+                // Because count is an int, if this condition is true the two casts here will never overflow
+                int firstCount = (int)(destination.Size - destinationIndex);
                 Marshal.Copy(source, sourceIndex, new IntPtr(destination._buffer + destinationIndex), firstCount);
-                Marshal.Copy(source, sourceIndex + firstCount, new IntPtr(destination._buffer), end);
+                Marshal.Copy(source, sourceIndex + firstCount, new IntPtr(destination._buffer), (int)end);
             }
             return end % destination.Size;
         }
@@ -171,7 +182,7 @@ namespace Tkl.Jumbo
         /// <param name="destination">The managed byte array to copy the data to.</param>
         /// <param name="destinationIndex">The index in <paramref name="destination"/> to start copying at.</param>
         /// <param name="count">The number of bytes to copy.</param>
-        public static int CopyCircular(UnmanagedBuffer source, int sourceIndex, byte[] destination, int destinationIndex, int count)
+        public static long CopyCircular(UnmanagedBuffer source, long sourceIndex, byte[] destination, int destinationIndex, int count)
         {
             if( source == null )
                 throw new ArgumentNullException("source");
@@ -186,7 +197,7 @@ namespace Tkl.Jumbo
             if( destinationIndex + count > destination.Length )
                 throw new ArgumentException("destinationIndex + count is larger than the destination array.");
 
-            int end = sourceIndex + count;
+            long end = sourceIndex + count;
             if( end > source.Size )
             {
                 end %= source.Size;
@@ -202,9 +213,9 @@ namespace Tkl.Jumbo
             }
             else
             {
-                int firstCount = source.Size - sourceIndex;
+                int firstCount = (int)(source.Size - sourceIndex);
                 Marshal.Copy(new IntPtr(source._buffer + sourceIndex), destination, destinationIndex, firstCount);
-                Marshal.Copy(new IntPtr(source._buffer), destination, destinationIndex + firstCount, end);
+                Marshal.Copy(new IntPtr(source._buffer), destination, destinationIndex + firstCount, (int)end);
             }
             return end % source.Size;
 

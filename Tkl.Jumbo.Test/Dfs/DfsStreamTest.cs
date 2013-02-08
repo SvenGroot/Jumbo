@@ -9,6 +9,7 @@ using System.Threading;
 using System.IO;
 using System.Diagnostics;
 using Tkl.Jumbo.Dfs;
+using Tkl.Jumbo.Dfs.FileSystem;
 
 namespace Tkl.Jumbo.Test.Dfs
 {
@@ -26,7 +27,7 @@ namespace Tkl.Jumbo.Test.Dfs
             Trace.WriteLine("Starting nameserver.");
             DfsConfiguration config = TestDfsCluster.CreateClientConfig();
             _nameServer = DfsClient.CreateNameServerClient(config);
-            _nameServer.WaitForSafeModeOff(Timeout.Infinite);
+            TestDfsCluster.CreateClient().WaitForSafeModeOff(Timeout.Infinite);
             Trace.WriteLine("Name server running.");
             Trace.Flush();
         }
@@ -152,7 +153,7 @@ namespace Tkl.Jumbo.Test.Dfs
                 }
 
                 // Make a modification so it'll cause an InvalidChecksumException
-                Tkl.Jumbo.Dfs.DfsFile file = _nameServer.GetFileInfo("/DfsInputStreamErrorRecovery.dat");
+                Tkl.Jumbo.Dfs.FileSystem.JumboFile file = _nameServer.GetFileInfo("/DfsInputStreamErrorRecovery.dat");
                 ServerAddress[] servers = _nameServer.GetDataServersForBlock(file.Blocks[0]);
                 string blockFile = Path.Combine(Path.Combine(Utilities.TestOutputPath, "blocks" + (servers[0].Port - TestDfsCluster.FirstDataServerPort).ToString()), file.Blocks[0].ToString());
                 using( FileStream fileStream = new FileStream(blockFile, FileMode.Open, FileAccess.ReadWrite) )
@@ -187,7 +188,7 @@ namespace Tkl.Jumbo.Test.Dfs
             const int size = 100000000;
             const string fileName = "/RecordBoundary";
             const int recordSize = 1000;
-            const int blockSize = 16 * (int)ByteSize.Megabyte;
+            const int blockSize = 16 * (int)BinarySize.Megabyte;
 
             // This test exercises both DfsOutputStream and DfsInputStream by writing a file to the DFS and reading it back
             using( MemoryStream stream = new MemoryStream() )

@@ -11,7 +11,7 @@ using System.IO;
 namespace Tkl.Jumbo.Test.Tasks
 {
     [AllowRecordReuse]
-    public sealed class LineVerifierTask : Configurable, IPullTask<int, bool>
+    public sealed class LineVerifierTask : Configurable, ITask<int, bool>
     {
         public void Run(RecordReader<int> input, RecordWriter<bool> output)
         {

@@ -4,13 +4,14 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using Tkl.Jumbo.CommandLine;
+using Ookii.CommandLine;
 using System.ComponentModel;
 using System.Runtime.InteropServices;
 using System.IO;
 using Tkl.Jumbo.Dfs;
 using Tkl.Jumbo;
 using Tkl.Jumbo.IO;
+using Tkl.Jumbo.Dfs.FileSystem;
 
 namespace DfsShell.Commands
 {
@@ -20,8 +21,8 @@ namespace DfsShell.Commands
         private readonly string _localPath;
         private readonly string _dfsPath;
 
-        public PutCommand([Description("The path of the local file or directory to upload.")] string localPath,
-                              [Description("The path of the DFS file or directory to upload to.")] string dfsPath)
+        public PutCommand([Description("The path of the local file or directory to upload."), ArgumentName("LocalPath")] string localPath,
+                              [Description("The path of the DFS file or directory to upload to."), ArgumentName("DfsPath")] string dfsPath)
         {
             if( localPath == null )
                 throw new ArgumentNullException("localPath");
@@ -32,28 +33,28 @@ namespace DfsShell.Commands
             _dfsPath = dfsPath;
         }
 
-        [NamedCommandLineArgument("b"), Description("The block size of the DFS file.")]
-        public ByteSize BlockSize { get; set; }
+        [CommandLineArgument, Description("The block size of the DFS file.")]
+        public BinarySize BlockSize { get; set; }
 
-        [NamedCommandLineArgument("r"), Description("The replication factor of the DFS file.")]
+        [CommandLineArgument, Description("The replication factor of the DFS file.")]
         public int ReplicationFactor { get; set; }
 
-        [NamedCommandLineArgument("q"), Description("Suppress progress information output.")]
+        [CommandLineArgument, Description("Suppress progress information output.")]
         public bool Quiet { get; set; }
 
-        [NamedCommandLineArgument("rr"), Description("The record reader used to read the file(s). This must be the assembly-qualified name of the type. If this argument is specified, you must also specify a record writer using the same record type.")]
-        public string RecordReaderTypeName { get; set; }
+        [CommandLineArgument, Description("The record reader used to read the file(s). This must be the assembly-qualified name of the type. If this argument is specified, you must also specify a record writer using the same record type.")]
+        public string RecordReaderType { get; set; }
 
-        [NamedCommandLineArgument("rw"), Description("The record writer used to write the file(s) to the DFS. This must be the assembly-qualified name of the type. If this argument is specified, you must also specify a record writer using the same record type.")]
-        public string RecordWriterTypeName { get; set; }
+        [CommandLineArgument, Description("The record writer used to write the file(s) to the DFS. This must be the assembly-qualified name of the type. If this argument is specified, you must also specify a record writer using the same record type.")]
+        public string RecordWriterType { get; set; }
 
-        [NamedCommandLineArgument("ro"), Description("The record options for the file. Must be a comma-separated list of the values of the RecordStreamOptions enumeration. If this option is anything other than None, you must specify a record reader and record writer.")]
+        [CommandLineArgument, Description("The record options for the file. Must be a comma-separated list of the values of the RecordStreamOptions enumeration. If this option is anything other than None, you must specify a record reader and record writer.")]
         public RecordStreamOptions RecordOptions { get; set; }
 
-        [NamedCommandLineArgument("text"), Description("Treat the file as line-separated text. This is equivalent to specifying LineRecordReader as the record reader and TextRecordReader<Utf8String> as the record writer.")]
+        [CommandLineArgument("Text"), Description("Treat the file as line-separated text. This is equivalent to specifying LineRecordReader as the record reader and TextRecordReader<Utf8String> as the record writer.")]
         public bool TextFile { get; set; }
 
-        [NamedCommandLineArgument("nl"), Description("The first replica should not be put on the local node if that node is part of the DFS. Note that the first replica might still be placed on the local node; it is just no longer guaranteed.")]
+        [CommandLineArgument, Description("The first replica should not be put on the local node if that node is part of the DFS. Note that the first replica might still be placed on the local node; it is just no longer guaranteed.")]
         public bool NoLocalReplica { get; set; }
 
         public override void Run()
@@ -81,12 +82,12 @@ namespace DfsShell.Commands
                     }
                     else
                     {
-                        DfsDirectory dir = Client.NameServer.GetDirectoryInfo(_dfsPath);
+                        JumboDirectory dir = Client.GetDirectoryInfo(_dfsPath);
                         string dfsPath = _dfsPath;
                         if( dir != null )
                         {
                             string fileName = Path.GetFileName(_localPath);
-                            dfsPath = DfsPath.Combine(dfsPath, fileName);
+                            dfsPath = Client.Path.Combine(dfsPath, fileName);
                         }
                         if( !Quiet )
                             Console.WriteLine("Copying local file \"{0}\" to DFS file \"{1}\"...", _localPath, dfsPath);
@@ -116,7 +117,7 @@ namespace DfsShell.Commands
             int previousPercentage = -1;
             using( FileStream inputStream = File.OpenRead(localPath) )
             using( IRecordReader reader = (IRecordReader)Activator.CreateInstance(recordReaderType, inputStream) )
-            using( DfsOutputStream outputStream = Client.CreateFile(dfsPath, (int)BlockSize.Value, ReplicationFactor, !NoLocalReplica, RecordOptions) )
+            using( Stream outputStream = Client.CreateFile(dfsPath, (int)BlockSize.Value, ReplicationFactor, !NoLocalReplica, RecordOptions) )
             using( IRecordWriter writer = (IRecordWriter)Activator.CreateInstance(recordWriterType, outputStream) )
             {
                 while( reader.ReadRecord() )
@@ -139,14 +140,14 @@ namespace DfsShell.Commands
         {
             string[] files = System.IO.Directory.GetFiles(localPath);
 
-            DfsDirectory directory = Client.NameServer.GetDirectoryInfo(dfsPath);
+            JumboDirectory directory = Client.GetDirectoryInfo(dfsPath);
             if( directory != null )
                 throw new ArgumentException(string.Format(System.Globalization.CultureInfo.CurrentCulture, "Directory {0} already exists on the DFS.", dfsPath), "dfsPath");
-            Client.NameServer.CreateDirectory(dfsPath);
+            Client.CreateDirectory(dfsPath);
 
             foreach( string file in files )
             {
-                string targetFile = DfsPath.Combine(dfsPath, System.IO.Path.GetFileName(file));
+                string targetFile = Client.Path.Combine(dfsPath, System.IO.Path.GetFileName(file));
                 UploadFileRecords(file, targetFile, recordReaderType, recordWriterType);
             }
         }
@@ -157,7 +158,7 @@ namespace DfsShell.Commands
             recordWriterType = null;
             if( TextFile )
             {
-                if( !(RecordReaderTypeName == null && RecordWriterTypeName == null) )
+                if( !(RecordReaderType == null && RecordWriterType == null) )
                 {
                     Console.Error.WriteLine("You may not specify a record reader or record writer if the -text option is specified.");
                     return false;
@@ -166,15 +167,15 @@ namespace DfsShell.Commands
                 recordWriterType = typeof(TextRecordWriter<Utf8String>);
                 return true;
             }
-            else if( RecordReaderTypeName != null || RecordWriterTypeName != null )
+            else if( RecordReaderType != null || RecordWriterType != null )
             {
-                if( RecordReaderTypeName == null || RecordWriterTypeName == null )
+                if( RecordReaderType == null || RecordWriterType == null )
                 {
                     Console.Error.WriteLine("You must specify both a record reader and a record writer.");
                     return false;
                 }
-                recordReaderType = Type.GetType(RecordReaderTypeName, true);
-                recordWriterType = Type.GetType(RecordWriterTypeName, true);
+                recordReaderType = Type.GetType(RecordReaderType, true);
+                recordWriterType = Type.GetType(RecordWriterType, true);
 
                 Type recordReaderRecordType = recordReaderType.FindGenericBaseType(typeof(RecordReader<>), true).GetGenericArguments()[0];
                 Type recordWriterRecordType = recordWriterType.FindGenericBaseType(typeof(RecordWriter<>), true).GetGenericArguments()[0];

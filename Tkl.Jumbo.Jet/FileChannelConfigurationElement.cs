@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Configuration;
+using Tkl.Jumbo.Jet.Channels;
 
 namespace Tkl.Jumbo.Jet
 {
@@ -17,9 +18,9 @@ namespace Tkl.Jumbo.Jet
         /// Gets or sets the buffer size to use for input to push and pull tasks.
         /// </summary>
         [ConfigurationProperty("readBufferSize", DefaultValue = "64KB", IsRequired = false, IsKey = false)]
-        public ByteSize ReadBufferSize
+        public BinarySize ReadBufferSize
         {
-            get { return (ByteSize)this["readBufferSize"]; }
+            get { return (BinarySize)this["readBufferSize"]; }
             set { this["readBufferSize"] = value; }
         }
 
@@ -27,9 +28,9 @@ namespace Tkl.Jumbo.Jet
         /// Gets or sets the buffer size used by the file output channel to write to intermediate files.
         /// </summary>
         [ConfigurationProperty("writeBufferSize", DefaultValue = "64KB", IsRequired = false, IsKey = false)]
-        public ByteSize WriteBufferSize
+        public BinarySize WriteBufferSize
         {
-            get { return (ByteSize)this["writeBufferSize"]; }
+            get { return (BinarySize)this["writeBufferSize"]; }
             set { this["writeBufferSize"] = value; }
         }
 
@@ -47,10 +48,20 @@ namespace Tkl.Jumbo.Jet
         /// Gets or sets the maximum size of the the in-memory input storage.
         /// </summary>
         [ConfigurationProperty("memoryStorageSize", DefaultValue = "100MB", IsRequired = false, IsKey = false)]
-        public ByteSize MemoryStorageSize
+        public BinarySize MemoryStorageSize
         {
-            get { return (ByteSize)this["memoryStorageSize"]; }
+            get { return (BinarySize)this["memoryStorageSize"]; }
             set { this["memoryStorageSize"] = value; }
+        }
+
+        /// <summary>
+        /// Gets or sets the amount of time to wait for memory to become available before shuffling to disk.
+        /// </summary>
+        [ConfigurationProperty("memoryStorageWaitTimeout", DefaultValue = 60000, IsRequired = false, IsKey = false)]
+        public int MemoryStorageWaitTimeout
+        {
+            get { return (int)this["memoryStorageWaitTimeout"]; }
+            set { this["memoryStorageWaitTimeout"] = value; }
         }
 
         /// <summary>
@@ -73,36 +84,68 @@ namespace Tkl.Jumbo.Jet
             set { this["downloadThreads"] = value; }
         }
 
+
         /// <summary>
-        /// Gets or sets a value that indicates whether the output of the file channel should be stored in a single file for all partitions.
+        /// Gets or sets the output type for the intermediate dta..
         /// </summary>
-        [ConfigurationProperty("singleFileOutput", DefaultValue = false, IsRequired = false, IsKey = false)]
-        public bool SingleFileOutput
+        /// <value>
+        /// One of the values of the <see cref="FileChannelOutputType"/> enumeration.
+        /// </value>
+        [ConfigurationProperty("outputType", DefaultValue = FileChannelOutputType.MultiFile, IsRequired = false, IsKey = false)]
+        public FileChannelOutputType OutputType
         {
-            get { return (bool)this["singleFileOutput"]; }
-            set { this["singleFileOutput"] = value; }
+            get { return (FileChannelOutputType)this["outputType"]; }
+            set { this["outputType"] = value; }
         }
 
         /// <summary>
-        /// Gets or sets the size of the single file output buffer.
+        /// Gets or sets the size of the spill buffer used for <see cref="FileChannelOutputType.Spill"/> and <see cref="FileChannelOutputType.SortSpill"/>.
         /// </summary>
         /// <value>The size of the single file output buffer.</value>
-        [ConfigurationProperty("singleFileOutputBufferSize", DefaultValue = "100MB", IsRequired = false, IsKey = false)]
-        public ByteSize SingleFileOutputBufferSize
+        [ConfigurationProperty("spillBufferSize", DefaultValue = "100MB", IsRequired = false, IsKey = false)]
+        public BinarySize SpillBufferSize
         {
-            get { return (ByteSize)this["singleFileOutputBufferSize"]; }
-            set { this["singleFileOutputBufferSize"] = value; }
+            get { return (BinarySize)this["spillBufferSize"]; }
+            set { this["spillBufferSize"] = value; }
         }
 
         /// <summary>
-        /// Gets or sets the percentage of single file output buffer usage at which the file output channel should start writing the buffer to disk.
+        /// Gets or sets the percentage of spill buffer usage at which the <see cref="SpillRecordWriter{T}"/> for a file output channel using 
+        /// <see cref="FileChannelOutputType.Spill"/> and <see cref="FileChannelOutputType.SortSpill"/> should start writing the buffer to disk.
         /// </summary>
         /// <value>The single file output buffer limit.</value>
-        [ConfigurationProperty("singleFileOutputBufferLimit", DefaultValue = 0.6f, IsRequired = false, IsKey = false)]
-        public float SingleFileOutputBufferLimit
+        [ConfigurationProperty("spillBufferLimit", DefaultValue = 0.8f, IsRequired = false, IsKey = false)]
+        public float SpillBufferLimit
         {
-            get { return (float)this["singleFileOutputBufferLimit"]; }
-            set { this["singleFileOutputBufferLimit"] = value; }
+            get { return (float)this["spillBufferLimit"]; }
+            set { this["spillBufferLimit"] = value; }
+        }
+
+        /// <summary>
+        /// Gets or sets the minimum number of spills needed for the <see cref="SortSpillRecordWriter{T}"/> for the a file output channel using
+        /// <see cref="FileChannelOutputType.SortSpill"/> to run the combiner (if there is one) during the merge phase.
+        /// </summary>
+        /// <value>
+        /// The minimum number of spills needed for the combiner to run during the merge phase. The default value is 3.
+        /// </value>
+        [ConfigurationProperty("spillSortMinSpillsForCombineDuringMerge", DefaultValue = 3, IsRequired = false, IsKey = false)]
+        public int SpillSortMinSpillsForCombineDuringMerge
+        {
+            get { return (int)this["spillSortMinSpillsForCombineDuringMerge"]; }
+            set { this["spillSortMinSpillsForCombineDuringMerge"] = value; }
+        }
+
+        /// <summary>
+        /// Gets or sets a value indicating whether checksums are calculated and verified for the intermediate data.
+        /// </summary>
+        /// <value>
+        /// 	<see langword="true"/> if checksums are enabled; otherwise, <see langword="false"/>. The default value is <see langword="true"/>.
+        /// </value>
+        [ConfigurationProperty("enableChecksum", DefaultValue = true, IsRequired = false, IsKey = false)]
+        public bool EnableChecksum
+        {
+            get { return (bool)this["enableChecksum"]; }
+            set { this["enableChecksum"] = value; }
         }
     }
 }

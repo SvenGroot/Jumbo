@@ -36,6 +36,7 @@ namespace Tkl.Jumbo.Jet
         /// <param name="taskExecution">The task execution utility for this task. May be <see langword="null"/>.</param>
         /// <param name="baseReader">The <see cref="MultiInputRecordReader{T}"/> to read from.</param>
         public MultiPartitionRecordReader(TaskExecutionUtility taskExecution, MultiInputRecordReader<T> baseReader)
+            : base(false)
         {
             if( baseReader == null )
                 throw new ArgumentNullException("baseReader");
@@ -43,8 +44,10 @@ namespace Tkl.Jumbo.Jet
             _taskExecution = taskExecution;
             _baseReader = baseReader;
             _baseReader.CurrentPartitionChanging += new EventHandler<CurrentPartitionChangingEventArgs>(_baseReader_CurrentPartitionChanging);
+            _baseReader.HasRecordsChanged += new EventHandler(_baseReader_HasRecordsChanged);
             _log.InfoFormat("Now processing partition {0}.", _baseReader.CurrentPartition);
             AllowAdditionalPartitions = true;
+            HasRecords = baseReader.HasRecords;
         }
 
         /// <summary>
@@ -96,6 +99,26 @@ namespace Tkl.Jumbo.Jet
         public bool AllowAdditionalPartitions { get; set; }
 
         /// <summary>
+        /// Gets or sets a value indicating whether reading records will halt at the end of the current partition.
+        /// </summary>
+        /// <value>
+        /// 	<see langword="true"/> if reading records will halt at the end of the current partition; otherwise, <see langword="false"/>.
+        /// </value>
+        /// <remarks>
+        /// <para>
+        ///   If this property is <see langword="false" />, the <see cref="RecordReader{T}.ReadRecord"/> function will return false when the
+        ///   end of the current partition is reached.
+        /// </para>
+        /// <para>
+        ///   Like setting <see cref="AllowAdditionalPartitions"/> to <see langword="false"/>, this will also prevent additional partitions from being fetched.
+        /// </para>
+        /// <para>
+        ///   To advance to the next partition, set this property back to <see langword="false"/>, and call <see cref="RecordReader{T}.ReadRecord"/> again.
+        /// </para>
+        /// </remarks>
+        public bool StopAtEndOfPartition { get; set; }
+
+        /// <summary>
         /// Reads a record.
         /// </summary>
         /// <returns><see langword="true"/> if an object was successfully read; <see langword="false"/> if there are no more records.</returns>
@@ -117,7 +140,7 @@ namespace Tkl.Jumbo.Jet
         private bool NextPartition()
         {
             // If .NextPartition fails we will check for additional partitions, and if we got any, we need to call NextPartition again.
-            if( !(_baseReader.NextPartition() || (AllowAdditionalPartitions && _taskExecution != null && _taskExecution.GetAdditionalPartitions(_baseReader) && _baseReader.NextPartition())) )
+            if( StopAtEndOfPartition || !(_baseReader.NextPartition() || (AllowAdditionalPartitions && _taskExecution != null && _taskExecution.GetAdditionalPartitions(_baseReader) && _baseReader.NextPartition())) )
                 return false;
 
             _log.InfoFormat("Now processing partition {0}.", _baseReader.CurrentPartition);
@@ -130,5 +153,9 @@ namespace Tkl.Jumbo.Jet
                 e.Cancel = !_taskExecution.NotifyStartPartitionProcessing(e.NewPartitionNumber);
         }
     
+        private void _baseReader_HasRecordsChanged(object sender, EventArgs e)
+        {
+            HasRecords = _baseReader.HasRecords;
+        }
     }
 }

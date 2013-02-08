@@ -100,9 +100,9 @@ namespace Tkl.Jumbo
         public override string ToString()
         {
             if( Environment.OSVersion.Platform == PlatformID.Win32NT )
-                return string.Format(System.Globalization.CultureInfo.CurrentCulture, "Physical: {0}M total, {1}M available; Page file: {2}M total, {3}M available.", TotalPhysicalMemory / ByteSize.Megabyte, AvailablePhysicalMemory / ByteSize.Megabyte, TotalSwap / ByteSize.Megabyte, AvailableSwap / ByteSize.Megabyte);
+                return string.Format(System.Globalization.CultureInfo.CurrentCulture, "Physical: {0}M total, {1}M available; Page file: {2}M total, {3}M available.", TotalPhysicalMemory / BinarySize.Megabyte, AvailablePhysicalMemory / BinarySize.Megabyte, TotalSwap / BinarySize.Megabyte, AvailableSwap / BinarySize.Megabyte);
             else if( Environment.OSVersion.Platform == PlatformID.Unix )
-                return string.Format(System.Globalization.CultureInfo.CurrentCulture, "Physical: {0}M total, {1}M available, {2}M buffered, {3}M cached; Swap: {4}M total, {5}M available.", TotalPhysicalMemory / ByteSize.Megabyte, AvailablePhysicalMemory / ByteSize.Megabyte, BufferedMemory / ByteSize.Megabyte, CachedMemory / ByteSize.Megabyte, TotalSwap / ByteSize.Megabyte, AvailableSwap / ByteSize.Megabyte);
+                return string.Format(System.Globalization.CultureInfo.CurrentCulture, "Physical: {0}M total, {1}M available, {2}M buffered, {3}M cached; Swap: {4}M total, {5}M available.", TotalPhysicalMemory / BinarySize.Megabyte, AvailablePhysicalMemory / BinarySize.Megabyte, BufferedMemory / BinarySize.Megabyte, CachedMemory / BinarySize.Megabyte, TotalSwap / BinarySize.Megabyte, AvailableSwap / BinarySize.Megabyte);
             else
                 return "No memory information.";
         }
@@ -123,8 +123,8 @@ namespace Tkl.Jumbo
                 _availableSwap = 0;
                 foreach( ManagementBaseObject obj in searcher.Get() )
                 {
-                    long size = (uint)obj["AllocatedBaseSize"] * ByteSize.Megabyte;
-                    long used = (uint)obj["CurrentUsage"] * ByteSize.Megabyte;
+                    long size = (uint)obj["AllocatedBaseSize"] * BinarySize.Megabyte;
+                    long used = (uint)obj["CurrentUsage"] * BinarySize.Megabyte;
                     _totalSwap += size;
                     _availableSwap += (size - used);
                 }
@@ -169,7 +169,7 @@ namespace Tkl.Jumbo
             {
                 // Strip the field, the colon, and the kB
                 string valueString = line.Substring(field.Length + 1, line.Length - field.Length - 3);
-                value = long.Parse(valueString, System.Globalization.CultureInfo.InvariantCulture) * ByteSize.Kilobyte;
+                value = long.Parse(valueString, System.Globalization.CultureInfo.InvariantCulture) * BinarySize.Kilobyte;
                 return true;
             }
             else

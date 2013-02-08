@@ -41,9 +41,9 @@ namespace Tkl.Jumbo.Dfs
         /// Gets or sets the default size of a block in a file.
         /// </summary>
         [ConfigurationProperty("blockSize", DefaultValue = "64MB", IsRequired = false, IsKey = false)]
-        public ByteSize BlockSize
+        public BinarySize BlockSize
         {
-            get { return (ByteSize)this["blockSize"]; }
+            get { return (BinarySize)this["blockSize"]; }
             set { this["blockSize"] = value; }
         }
 
@@ -101,9 +101,9 @@ namespace Tkl.Jumbo.Dfs
         /// for new blocks. The default value is 1GB.
         /// </summary>
         [ConfigurationProperty("dataServerFreeSpaceThreshold", DefaultValue = "1GB", IsRequired = false, IsKey = false)]
-        public ByteSize DataServerFreeSpaceThreshold
+        public BinarySize DataServerFreeSpaceThreshold
         {
-            get { return (ByteSize)this["dataServerFreeSpaceThreshold"]; }
+            get { return (BinarySize)this["dataServerFreeSpaceThreshold"]; }
             set { this["dataServerFreeSpaceThreshold"] = value; }
         }
     }

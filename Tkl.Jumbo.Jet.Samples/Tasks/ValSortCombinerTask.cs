@@ -17,7 +17,7 @@ namespace Tkl.Jumbo.Jet.Samples.Tasks
     /// <remarks>
     /// The input <see cref="ValSortRecord"/> records need to be sorted.
     /// </remarks>
-    public class ValSortCombinerTask : Configurable, IPushTask<ValSortRecord, string>
+    public class ValSortCombinerTask : PushTask<ValSortRecord, string>
     {
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(ValSortCombinerTask));
 
@@ -28,14 +28,12 @@ namespace Tkl.Jumbo.Jet.Samples.Tasks
         private UInt128 _records = UInt128.Zero;
         private UInt128? _firstUnsorted;
 
-        #region IPushTask<ValSortRecord,string> Members
-
         /// <summary>
         /// Method called for each record in the task's input.
         /// </summary>
         /// <param name="record">The record to process.</param>
         /// <param name="output">The <see cref="RecordWriter{T}"/> to which the task's output should be written.</param>
-        public void ProcessRecord(ValSortRecord record, RecordWriter<string> output)
+        public override void ProcessRecord(ValSortRecord record, RecordWriter<string> output)
         {
             bool verbose = TaskContext.GetTypedSetting("ValSort.VerboseLogging", false);
 
@@ -47,7 +45,7 @@ namespace Tkl.Jumbo.Jet.Samples.Tasks
                 else if( diff > 0 )
                 {
                     if( verbose )
-                        _log.InfoFormat("Input parts {0} and {1} are not sorted in relation to each other.", _prev.InputId, record.InputId);
+                        _log.InfoFormat("Input parts {0}-{1} and {2}-{3} are not sorted in relation to each other.", _prev.InputId, _prev.InputOffset, record.InputId, record.InputOffset);
 
                     if( _firstUnsorted == null )
                         _firstUnsorted = _records;
@@ -56,7 +54,7 @@ namespace Tkl.Jumbo.Jet.Samples.Tasks
             }
 
             if( verbose && record.UnsortedRecords.High64 > 0 || record.UnsortedRecords.Low64 > 0 )
-                _log.InfoFormat("Input part {0} has {1} unsorted records.", _prev.InputId, record.UnsortedRecords);
+                _log.InfoFormat("Input part {0}-{1} has {2} unsorted records.", _prev.InputId, _prev.InputOffset, record.UnsortedRecords);
 
             _unsortedRecords += record.UnsortedRecords;
             _checksum += record.Checksum;
@@ -77,7 +75,7 @@ namespace Tkl.Jumbo.Jet.Samples.Tasks
         /// <remarks>
         /// This enables the task to finish up its processing and write any further records it may have collected during processing.
         /// </remarks>
-        public void Finish(RecordWriter<string> output)
+        public override void Finish(RecordWriter<string> output)
         {
             if( _unsortedRecords != UInt128.Zero )
             {
@@ -95,7 +93,5 @@ namespace Tkl.Jumbo.Jet.Samples.Tasks
                 output.WriteRecord(string.Format("ERROR - there are {0} unordered records", _unsortedRecords));
             }
         }
-
-        #endregion
     }
 }

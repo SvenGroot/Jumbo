@@ -11,8 +11,6 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
 {
     sealed class FrequentPatternMaxHeap
     {
-        private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(FrequentPatternMaxHeap));
-
         private readonly PriorityQueue<MappedFrequentPattern> _queue;
         private readonly int _maxSize;
         private int _minSupport;
@@ -106,13 +104,26 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
         {
             WritableCollection<MappedFrequentPattern> patterns = new WritableCollection<MappedFrequentPattern>();
             PriorityQueue<MappedFrequentPattern> queue = Queue;
-            _log.InfoFormat("{2}: Found {0} frequent items with min support {1}.", queue.Count, queue.Peek().Support, item);
+            //_log.InfoFormat("{2}: Found {0} frequent items with min support {1}.", queue.Count, queue.Peek().Support, item);
             while( queue.Count > 0 )
             {
                 patterns.Add(queue.Dequeue());
             }
 
             output.WriteRecord(Pair.MakePair(item, patterns));
+        }
+
+        public void OutputItems(int item, RecordWriter<Pair<int, MappedFrequentPattern>> output)
+        {
+            PriorityQueue<MappedFrequentPattern> queue = Queue;
+            //_log.InfoFormat("{2}: Found {0} frequent items with min support {1}.", queue.Count, queue.Peek().Support, item);
+            Pair<int, MappedFrequentPattern> record = new Pair<int,MappedFrequentPattern>();
+            record.Key = item;
+            while( queue.Count > 0 )
+            {
+                record.Value = queue.Dequeue();
+                output.WriteRecord(record);
+            }
         }
 
         private bool AddInternal(MappedFrequentPattern pattern)

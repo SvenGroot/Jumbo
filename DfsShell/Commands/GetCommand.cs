@@ -4,11 +4,12 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using Tkl.Jumbo.CommandLine;
+using Ookii.CommandLine;
 using System.ComponentModel;
 using System.Runtime.InteropServices;
 using Tkl.Jumbo.Dfs;
 using System.IO;
+using Tkl.Jumbo.Dfs.FileSystem;
 
 namespace DfsShell.Commands
 {
@@ -18,8 +19,8 @@ namespace DfsShell.Commands
         private readonly string _localPath;
         private readonly string _dfsPath;
 
-        public GetCommand([Description("The path of the DFS file or directory to retrieve.")] string dfsPath,
-                          [Optional, DefaultParameterValue("."), Description("The local path where the file should be stored. The default value is the current directory.")] string localPath)
+        public GetCommand([Description("The path of the DFS file or directory to retrieve."), ArgumentName("DfsPath")] string dfsPath,
+                          [Optional, DefaultParameterValue("."), Description("The local path where the file should be stored. The default value is the current directory."), ArgumentName("LocalPath")] string localPath)
         {
             if( dfsPath == null )
                 throw new ArgumentNullException("dfsPath");
@@ -30,12 +31,12 @@ namespace DfsShell.Commands
             _localPath = localPath;
         }
 
-        [NamedCommandLineArgument("q"), Description("Suppress progress information output.")]
+        [CommandLineArgument, Description("Suppress progress information output.")]
         public bool Quiet { get; set; }
 
         public override void Run()
         {
-            FileSystemEntry entry = Client.NameServer.GetFileSystemEntryInfo(_dfsPath);
+            JumboFileSystemEntry entry = Client.GetFileSystemEntryInfo(_dfsPath);
             if( entry == null )
             {
                 Console.Error.WriteLine("Path {0} does not exist on the DFS.", _dfsPath);
@@ -47,7 +48,7 @@ namespace DfsShell.Commands
 
             try
             {
-                if( entry is DfsFile )
+                if( entry is JumboFile )
                 {
                     if( Directory.Exists(localPath) )
                     {

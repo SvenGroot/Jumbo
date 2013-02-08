@@ -69,15 +69,18 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="..\Version.cs">
-      <Link>Properties\Version.cs</Link>
+    <Compile Include="..\AssemblyInfoCommon.cs">
+      <Link>Properties\AssemblyInfoCommon.cs</Link>
     </Compile>
     <Compile Include="BlockInfo.cs" />
     <Compile Include="ChecksumOutputStream.cs" />
     <Compile Include="DataServerInfo.cs" />
+    <Compile Include="DfsDirectory.cs" />
+    <Compile Include="DfsFile.cs" />
     <Compile Include="EditLog.cs" />
     <Compile Include="FileDeletedEventArgs.cs" />
     <Compile Include="FileSystem.cs" />
+    <Compile Include="DfsFileSystemEntry.cs" />
     <Compile Include="FileSystemMutation.cs" />
     <Compile Include="NameServer.cs" />
     <Compile Include="PendingBlock.cs" />

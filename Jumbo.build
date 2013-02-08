@@ -29,12 +29,21 @@
     <nant buildfile="TaskServer/TaskServer.build" target="clean"/>
     <nant buildfile="TaskHost/TaskHost.build" target="clean"/>
     <nant buildfile="JetShell/JetShell.build" target="clean"/>
+    <nant buildfile="Tkl.Jumbo.Native/Tkl.Jumbo.Native.build" target="clean" />
   </target>
   <target name="Version.cs">
     <exec program="gen-version.sh"/>
   </target>
-  <target name="Tkl.Jumbo" depends="Version.cs">
-    <exec program="gen-version.sh"/>
+  <target name="Tkl.Jumbo.Native">
+    <mkdir dir="nantbin"/>
+    <nant buildfile="Tkl.Jumbo.Native/Tkl.Jumbo.Native.build"/>
+    <copy todir="nantbin">
+      <fileset basedir="Tkl.Jumbo.Native/nantbin">
+        <include name="*.*" />
+      </fileset>
+    </copy>
+  </target>
+  <target name="Tkl.Jumbo" depends="Tkl.Jumbo.Native,Version.cs">
     <mkdir dir="nantbin"/>
     <nant buildfile="Tkl.Jumbo/Tkl.Jumbo.build" />
     <copy todir="nantbin">

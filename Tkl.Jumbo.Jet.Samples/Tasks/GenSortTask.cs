@@ -8,58 +8,45 @@ using Tkl.Jumbo.Jet;
 using Tkl.Jumbo.IO;
 using Tkl.Jumbo.Jet.Samples.IO;
 using System.Threading;
+using Tkl.Jumbo.Jet.Tasks;
 
 namespace Tkl.Jumbo.Jet.Samples.Tasks
 {
     /// <summary>
     /// A task that generates a specific range of GenSort records.
     /// </summary>
-    [AdditionalProgressCounter("GenSort")]
-    public class GenSortTask : Configurable, IPullTask<int, GenSortRecord>, IHasAdditionalProgress
+    public class GenSortTask : NoInputTask<GenSortRecord>
     {
-        private long _count;
-        private long _generated;
-
-        #region IPullTask<int,GenSortRecord> Members
+        private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(GenSortTask));
 
         /// <summary>
         /// Runs the task.
         /// </summary>
-        /// <param name="input">Not used; this task does not use input.</param>
         /// <param name="output">A <see cref="RecordWriter{T}"/> to which the task's output should be written.</param>
-        public void Run(RecordReader<int> input, RecordWriter<GenSortRecord> output)
+        protected override void Run(RecordWriter<GenSortRecord> output)
         {
-            ulong startRecord = TaskContext.StageConfiguration.GetTypedSetting(TaskContext.TaskId.ToString() + "_startRecord", 0UL);
-            ulong count = TaskContext.StageConfiguration.GetTypedSetting(TaskContext.TaskId.ToString() + "_count", 0UL);
+            ulong startRecord = TaskContext.GetTypedSetting("GenSort.StartRecord", 0UL);
+            ulong count = TaskContext.GetTypedSetting("GenSort.RecordCount", 0UL);
             if( count == 0UL )
                 throw new InvalidOperationException("Count not specified.");
+
+            ulong countPerTask = count / (ulong)TaskContext.StageConfiguration.TaskCount;
+            int taskNum = TaskContext.TaskId.TaskNumber;
+            startRecord += (countPerTask * (ulong)(taskNum - 1));
+            if( taskNum == TaskContext.StageConfiguration.TaskCount )
+                count = countPerTask + count % (ulong)TaskContext.StageConfiguration.TaskCount;
+            else
+                count = countPerTask;
+
+            _log.InfoFormat("Generating {0} records starting at number {1}.", count, startRecord);
+
             GenSortGenerator generator = new GenSortGenerator();
-            _count = (long)count;
+            ulong generated = 0;
             foreach( GenSortRecord record in generator.GenerateRecords(new UInt128(0, startRecord), count) )
             {
                 output.WriteRecord(record);
-                Interlocked.Increment(ref _generated);
-            }
-        }
-
-        #endregion
-
-        /// <summary>
-        /// Gets the additional progress value.
-        /// </summary>
-        /// <value>The additional progress value.</value>
-        /// <remarks>
-        /// This property must be thread safe.
-        /// </remarks>
-        public float AdditionalProgress
-        {
-            get
-            {
-                long count = Interlocked.Read(ref _count);
-                if( count == 0 )
-                    return 0.0f;
-                else
-                    return Interlocked.Read(ref _generated) / (float)_count;
+                ++generated;
+                AdditionalProgress = (float)generated / (float)count;
             }
         }
     }

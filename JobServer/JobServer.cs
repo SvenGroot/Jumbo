@@ -1,22 +1,22 @@
 ﻿// $Id$
 //
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Globalization;
+using System.IO;
 using System.Linq;
-using System.Text;
-using Tkl.Jumbo.Jet;
 using System.Runtime.CompilerServices;
+using System.Threading;
+using System.Xml.Linq;
 using Tkl.Jumbo;
 using Tkl.Jumbo.Dfs;
-using System.Threading;
-using System.Collections;
-using System.IO;
+using Tkl.Jumbo.Dfs.FileSystem;
 using Tkl.Jumbo.IO;
-using System.Xml.Linq;
+using Tkl.Jumbo.Jet;
+using Tkl.Jumbo.Jet.Jobs;
 using Tkl.Jumbo.Rpc;
 using Tkl.Jumbo.Topology;
-using System.Collections.Concurrent;
-using System.Globalization;
 
 namespace JobServerApplication
 {
@@ -32,7 +32,7 @@ namespace JobServerApplication
         private readonly List<JobInfo> _orderedJobs = new List<JobInfo>(); // Jobs in the order that they should be scheduled.
         private readonly Dictionary<Guid, JobInfo> _finishedJobs = new Dictionary<Guid, JobInfo>();
         private readonly List<JobInfo> _jobsNeedingCleanup = new List<JobInfo>();
-        private readonly DfsClient _dfsClient;
+        private readonly FileSystemClient _fileSystemClient;
         private readonly Scheduling.IScheduler _scheduler;
         private readonly object _schedulerLock = new object();
         private readonly ServerAddress _localAddress;
@@ -40,7 +40,6 @@ namespace JobServerApplication
         private readonly CancellationTokenSource _cancellation = new CancellationTokenSource();
         private Thread _schedulerThread;
         private readonly object _schedulerThreadLock = new object();
-        private readonly ManualResetEvent _schedulerWaitingEvent = new ManualResetEvent(false);
         private readonly object _archiveLock = new object();
         private const int _schedulerTimeoutMilliseconds = 30000;
         private const string _archiveFileName = "archive";
@@ -57,7 +56,7 @@ namespace JobServerApplication
 
             Configuration = jetConfiguration;
             _topology = new NetworkTopology(jumboConfiguration);
-            _dfsClient = new DfsClient(dfsConfiguration);
+            _fileSystemClient = FileSystemClient.Create(dfsConfiguration);
             _localAddress = new ServerAddress(ServerContext.LocalHostName, jetConfiguration.JobServer.Port);
 
             _scheduler = (Scheduling.IScheduler)Activator.CreateInstance(Type.GetType("JobServerApplication.Scheduling." + jetConfiguration.JobServer.Scheduler));
@@ -134,9 +133,9 @@ namespace JobServerApplication
         {
             _log.Debug("CreateJob");
             Guid jobID = Guid.NewGuid();
-            string path = DfsPath.Combine(Configuration.JobServer.JetDfsPath, string.Format("job_{{{0}}}", jobID));
-            _dfsClient.NameServer.CreateDirectory(path);
-            _dfsClient.NameServer.CreateDirectory(DfsPath.Combine(path, "temp"));
+            string path = _fileSystemClient.Path.Combine(Configuration.JobServer.JetDfsPath, string.Format("job_{{{0}}}", jobID));
+            _fileSystemClient.CreateDirectory(path);
+            _fileSystemClient.CreateDirectory(_fileSystemClient.Path.Combine(path, "temp"));
             Job job = new Job(jobID, path);
             lock( _pendingJobs )
             {
@@ -158,13 +157,13 @@ namespace JobServerApplication
                 _pendingJobs.Remove(jobId);
             }
 
-            string configFile = job.JobConfigurationFilePath;
+            string configFile = job.GetJobConfigurationFilePath(_fileSystemClient);
 
             _log.InfoFormat("Starting job {0}.", jobId);
             JobConfiguration config;
             try
             {
-                using( DfsInputStream stream = _dfsClient.OpenFile(configFile) )
+                using( Stream stream = _fileSystemClient.OpenFile(configFile) )
                 {
                     config = JobConfiguration.LoadXml(stream);
                 }
@@ -176,7 +175,7 @@ namespace JobServerApplication
             }
 
 
-            JobInfo jobInfo = new JobInfo(job, config);
+            JobInfo jobInfo = new JobInfo(job, config, _fileSystemClient);
             if( !_jobs.TryAdd(jobId, jobInfo) )
                 throw new ArgumentException("The job is already running.");
 
@@ -597,7 +596,7 @@ namespace JobServerApplication
 
                 if( task.Server != server || task.CurrentAttempt == null || task.CurrentAttempt.Attempt != data.TaskAttemptId.Attempt )
                 {
-                    _log.WarnFormat("Task server {0} reported status for task {{1}}_{2} which isn't an active attempt or was not assigned to that server.", server.Address, data.JobId, data.TaskAttemptId);
+                    _log.WarnFormat("Task server {0} reported status for task {{{1}}}_{2} which isn't an active attempt or was not assigned to that server.", server.Address, data.JobId, data.TaskAttemptId);
                     if( data.Status == TaskAttemptStatus.Running )
                         return new KillTaskJetHeartbeatResponse(data.JobId, data.TaskAttemptId);
                     else
@@ -672,8 +671,13 @@ namespace JobServerApplication
                                     failedAttempt.TaskProgress = new TaskProgress();
                                 failedAttempt.TaskProgress.StatusMessage = "Unknown failure reason.";
                             }
-                            job.AddFailedTaskAttempt(failedAttempt);
-                            if( task.Attempts < Configuration.JobServer.MaxTaskAttempts )
+                            if( job.AddFailedTaskAttempt(failedAttempt) >= job.MaxTaskFailures )
+                            {
+                                job.FailureReason = string.Format(CultureInfo.InvariantCulture, "The job experienced the maximum of {0} task failures.", job.MaxTaskFailures);
+                                _log.ErrorFormat("{0} Aborting the job.", job.FailureReason);
+                                job.SchedulerInfo.State = JobState.Failed;
+                            }
+                            else if( task.Attempts < Configuration.JobServer.MaxTaskAttempts )
                             {
                                 // Reschedule
                                 task.Server.SchedulerInfo.UnassignFailedTask(task);
@@ -683,7 +687,7 @@ namespace JobServerApplication
                             else
                             {
                                 job.FailureReason = string.Format(CultureInfo.InvariantCulture, "Task {0} failed more than {1} times.", Job.CreateFullTaskId(data.JobId, data.TaskAttemptId.TaskId), Configuration.JobServer.MaxTaskAttempts);
-                                _log.ErrorFormat("{0}; aborting the job.", job.FailureReason);
+                                _log.ErrorFormat("{0} Aborting the job.", job.FailureReason);
                                 job.SchedulerInfo.State = JobState.Failed;
                             }
                             ++job.SchedulerInfo.Errors;
@@ -923,7 +927,7 @@ namespace JobServerApplication
                 
                 try
                 {
-                    _scheduler.ScheduleTasks(jobs, _dfsClient);
+                    _scheduler.ScheduleTasks(jobs, _fileSystemClient);
                 }
                 catch( Exception ex )
                 {
@@ -997,7 +1001,7 @@ namespace JobServerApplication
                     }
                 }
 
-                _dfsClient.DownloadFile(job.Job.JobConfigurationFilePath, Path.Combine(archiveDir, jobStatus.JobId + "_config.xml"));
+                _fileSystemClient.DownloadFile(job.Job.GetJobConfigurationFilePath(_fileSystemClient), Path.Combine(archiveDir, jobStatus.JobId + "_config.xml"));
                 jobStatus.ToXml().Save(Path.Combine(archiveDir, jobStatus.JobId + "_summary.xml"));
             }
         }

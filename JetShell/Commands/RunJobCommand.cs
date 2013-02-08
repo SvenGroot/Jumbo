@@ -1,48 +1,44 @@
 ﻿// $Id$
 //
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.ComponentModel;
-using System.Reflection;
-using Tkl.Jumbo.Jet.Jobs;
-using Tkl.Jumbo.Jet;
-using System.Threading;
 using System.IO;
-using Tkl.Jumbo.CommandLine;
+using System.Reflection;
+using Ookii.CommandLine;
+using Tkl.Jumbo.Jet;
+using Tkl.Jumbo.Jet.Jobs;
 
 namespace JetShell.Commands
 {
     // Note: this class needs special handling, don't create it using CommandLineParser.
-    [ShellCommand("job"), Description("Runs a job on the Jumbo Jet cluster.")]
+    [ShellCommand("job", CustomArgumentParsing = true), Description("Runs a job on the Jumbo Jet cluster.")]
     class RunJobCommand : JetShellCommand
     {
-        private const int _jobStatusPollInterval = 1000;
-
         private readonly string[] _args;
         private readonly int _argIndex;
+        private readonly CreateShellCommandOptions _options;
 
-        public RunJobCommand(string[] args, int argIndex)
+        public RunJobCommand(string[] args, int argIndex, CreateShellCommandOptions options)
         {
             _args = args;
             _argIndex = argIndex;
+            _options = options;
         }
 
         public override void Run()
         {
-            ExitStatus = 1; // Assume failure unless we can successfully run a job.
+            ExitCode = 1; // Assume failure unless we can successfully run a job.
             if( _args.Length - _argIndex == 0 )
-                Console.WriteLine("Usage: JetShell.exe job <assemblyName> [jobName] [job arguments...]");
+                _options.Out.WriteLine(_options.UsageOptions.UsagePrefix + " job <assemblyName> <jobName> [job arguments...]");
             else
             {
                 string assemblyFileName = _args[_argIndex];
                 Assembly assembly = Assembly.LoadFrom(assemblyFileName);
                 if( _args.Length - _argIndex == 1 )
                 {
-                    Console.WriteLine("Usage: JetShell.exe job <assemblyName> <jobName> [job arguments...]");
-                    Console.WriteLine();
-                    PrintAssemblyJobList(assembly);
+                    _options.Out.WriteLine(_options.UsageOptions.UsagePrefix + " job <assemblyName> <jobName> [job arguments...]");
+                    _options.Out.WriteLine();
+                    PrintAssemblyJobList(_options.Out, assembly);
                 }
                 else
                 {
@@ -50,67 +46,47 @@ namespace JetShell.Commands
                     JobRunnerInfo jobRunnerInfo = JobRunnerInfo.GetJobRunner(assembly, jobName);
                     if( jobRunnerInfo == null )
                     {
-                        Console.WriteLine(string.Format("Job {0} does not exist in the assembly {1}.", jobName, Path.GetFileName(assemblyFileName)).SplitLines(Console.WindowWidth - 1, 0));
-                        PrintAssemblyJobList(assembly);
+                        _options.Error.WriteLine("Job {0} does not exist in the assembly {1}.", jobName, Path.GetFileName(assemblyFileName));
+                        PrintAssemblyJobList(_options.Out, assembly);
                     }
                     else
                     {
                         IJobRunner jobRunner = jobRunnerInfo.CreateInstance(_args, _argIndex + 2);
                         if( jobRunner == null )
                         {
-                            string baseUsage = string.Format("Usage: JetShell.exe job {0} {1} ", Path.GetFileName(assemblyFileName), jobRunnerInfo.Name);
-                            Console.WriteLine(jobRunnerInfo.CommandLineParser.GetCustomUsage(baseUsage, Console.WindowWidth - 1));
+                            _options.UsageOptions.UsagePrefix = string.Format("{0} job {1} {2} ", _options.UsageOptions.UsagePrefix, Path.GetFileName(assemblyFileName), jobRunnerInfo.Name);
+                            jobRunnerInfo.CommandLineParser.WriteUsageToConsole(_options.UsageOptions);
                         }
                         else
                         {
                             Guid jobId = jobRunner.RunJob();
-                            bool success = WaitForJobCompletion(JetClient, jobId);
-                            jobRunner.FinishJob(success);
-                            ExitStatus = success ? 0 : 1;
+                            if( jobId != Guid.Empty )
+                            {
+                                bool success = JetClient.WaitForJobCompletion(jobId);
+                                jobRunner.FinishJob(success);
+                                ExitCode = success ? 0 : 1;
+                            }
+                            else
+                                ExitCode = 2;
                         }
                     }
                 }
             }
         }
 
-        private static bool WaitForJobCompletion(JetClient jetClient, Guid jobId)
+        private void PrintAssemblyJobList(TextWriter writer, Assembly assembly)
         {
-            JobStatus status = null;
-            string previousStatus = null;
-            do
-            {
-                Thread.Sleep(_jobStatusPollInterval);
-                status = jetClient.JobServer.GetJobStatus(jobId);
-                string statusString = status.ToString();
-                if( statusString != previousStatus )
-                {
-                    Console.WriteLine(statusString);
-                    previousStatus = statusString;
-                }
-            } while( !status.IsFinished );
-
-            Console.WriteLine();
-            if( status.IsSuccessful )
-                Console.WriteLine("Job completed.");
-            else
-                Console.WriteLine("Job failed.");
-            Console.WriteLine("Start time: {0:yyyy'-'MM'-'dd' 'HH':'mm':'ss'.'fff}", status.StartTime.ToLocalTime());
-            Console.WriteLine("End time:   {0:yyyy'-'MM'-'dd' 'HH':'mm':'ss'.'fff}", status.EndTime.ToLocalTime());
-            TimeSpan duration = status.EndTime - status.StartTime;
-            Console.WriteLine("Duration:   {0} ({1}s)", duration, duration.TotalSeconds);
-
-            return status.IsSuccessful;
-        }
-
-        private static void PrintAssemblyJobList(Assembly assembly)
-        {
+            LineWrappingTextWriter lineWriter = writer as LineWrappingTextWriter;
             JobRunnerInfo[] jobs = JobRunnerInfo.GetJobRunners(assembly);
-            Console.Write(string.Format("The assembly {0} defines the following jobs:", assembly.GetName().Name).SplitLines(Console.WindowWidth - 1, 0));
-            Console.WriteLine();
+            writer.WriteLine("The assembly {0} defines the following jobs:", assembly.GetName().Name);
+            writer.WriteLine();
+            if( lineWriter != null )
+                lineWriter.Indent = _options.CommandDescriptionIndent;
             foreach( JobRunnerInfo job in jobs )
             {
-                Console.Write(string.Format("{0,13} : {1}", job.Name, job.Description).SplitLines(Console.WindowWidth - 1, 16));
-                Console.WriteLine();
+                if( lineWriter != null )
+                    lineWriter.ResetIndent();
+                writer.WriteLine(_options.CommandDescriptionFormat, job.Name, job.Description);
             }
         }
     }

@@ -11,11 +11,11 @@ namespace Tkl.Jumbo.Jet.Samples.Tasks
     /// <summary>
     /// Task that adds up the individual counts from a <see cref="RecordCountTask{T}"/>.
     /// </summary>
-    public class RecordCountCombinerTask : IPullTask<int, int>
+    public class RecordCountCombinerTask : ITask<int, int>
     {
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(RecordCountCombinerTask));
 
-        #region IPullTask<int, int> Members
+        #region ITask<int, int> Members
 
         /// <summary>
         /// Runs the task.

@@ -59,10 +59,7 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\lib\log4net.dll</HintPath>
     </Reference>
-    <Reference Include="nunit.framework, Version=2.5.7.10213, Culture=neutral, PublicKeyToken=96d09a1eb7f44a77, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>C:\Program Files (x86)\NUnit 2.5.7\bin\net-2.0\framework\nunit.framework.dll</HintPath>
-    </Reference>
+    <Reference Include="nunit.framework, Version=2.6.1.12217, Culture=neutral, PublicKeyToken=96d09a1eb7f44a77, processorArchitecture=MSIL" />
     <Reference Include="System" />
     <Reference Include="System.Configuration" />
     <Reference Include="System.Core">
@@ -72,13 +69,13 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="..\Version.cs">
-      <Link>Properties\Version.cs</Link>
+    <Compile Include="..\AssemblyInfoCommon.cs">
+      <Link>Properties\AssemblyInfoCommon.cs</Link>
     </Compile>
-    <Compile Include="ByteSizeTests.cs" />
+    <Compile Include="BinarySizeTests.cs" />
+    <Compile Include="Crc32Tests.cs" />
     <Compile Include="Dfs\BlockAssignmentTests.cs" />
     <Compile Include="Dfs\BlockReportHeartbeatDataTests.cs" />
-    <Compile Include="Dfs\BlockSenderTests.cs" />
     <Compile Include="Dfs\DataBaseClientProtocolHeaderTests.cs" />
     <Compile Include="Dfs\DataServerClientProtocolReadHeaderTests.cs" />
     <Compile Include="Dfs\DataServerClientProtocolWriteHeaderTests.cs" />
@@ -92,6 +89,7 @@
     <Compile Include="Dfs\DirectoryTests.cs" />
     <Compile Include="Dfs\FileSystemEntryTests.cs" />
     <Compile Include="Dfs\FileTests.cs" />
+    <Compile Include="Dfs\LocalFileSystemClientTests.cs" />
     <Compile Include="Dfs\NameServerConfigurationElementTests.cs" />
     <Compile Include="Dfs\NameServerRestartTests.cs" />
     <Compile Include="Dfs\NameServerSafeModeTests.cs" />
@@ -101,12 +99,16 @@
     <Compile Include="Dfs\RecordReaderWriterTests.cs" />
     <Compile Include="Dfs\ReplicaPlacementTests.cs" />
     <Compile Include="InnerJoinRecordReaderTests.cs" />
+    <Compile Include="Jet\DynamicTaskBuilderTests.cs" />
     <Compile Include="Jet\FileChannelCompressionTests.cs" />
     <Compile Include="Jet\JetClientTests.cs" />
+    <Compile Include="Jet\JobAndTaskServerLocalFileSystemTests.cs" />
     <Compile Include="Jet\JobAndTaskServerTests.cs" />
-    <Compile Include="Jet\JobBuilderTests.cs" />
     <Compile Include="Jet\JobConfigurationTests.cs" />
+    <Compile Include="Jet\MergeHelperTests.cs" />
     <Compile Include="Jet\MergeRecordReaderTests.cs" />
+    <Compile Include="Jet\JobBuilderTests.cs" />
+    <Compile Include="Jet\SortSpillRecordWriterTests.cs" />
     <Compile Include="Jet\TaskIdTests.cs" />
     <Compile Include="Jet\TaskTests.cs" />
     <Compile Include="Jet\TestJetCluster.cs" />
@@ -116,6 +118,7 @@
     <Compile Include="Dfs\TestDfsCluster.cs" />
     <Compile Include="Dfs\TestSetup.cs" />
     <Compile Include="RangeExpressionTests.cs" />
+    <Compile Include="RawComparerTests.cs" />
     <Compile Include="RecordFileTests.cs" />
     <Compile Include="UnmanagedBufferTests.cs" />
     <Compile Include="Utilities.cs" />
@@ -167,7 +170,9 @@
     </Content>
     <None Include="jumbo.snk" />
     <None Include="Tkl.Jumbo.Test.build" />
-    <None Include="Tkl.Jumbo.Test.nunit" />
+    <None Include="Tkl.Jumbo.Test.nunit">
+      <SubType>Designer</SubType>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <BootstrapperPackage Include="Microsoft.Net.Client.3.5">

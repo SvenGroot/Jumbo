@@ -12,15 +12,6 @@ using System.Web.UI;
 /// </summary>
 public static class Extensions
 {
-    //<Extension()> _
-    //Public Function AddScript(ByVal master As MasterPage, ByVal src As String, Optional ByVal type As String = "text/javascript") As HtmlGenericControl
-    //    Dim script As New System.Web.UI.HtmlControls.HtmlGenericControl("script")
-    //    script.Attributes("type") = type
-    //    script.Attributes("src") = src
-    //    master.Page.Header.Controls.Add(script)
-    //    Return script
-    //End Function
-
     public static HtmlGenericControl AddScript(this MasterPage master, string src)
     {
         if( master == null )
@@ -33,5 +24,20 @@ public static class Extensions
         script.Attributes["src"] = src;
         master.Page.Header.Controls.Add(script);
         return script;
+    }
+
+    public static HtmlLink AddStyleSheet(this MasterPage master, string href)
+    {
+        if( master == null )
+            throw new ArgumentNullException("master");
+        if( href == null )
+            throw new ArgumentNullException("src");
+
+        HtmlLink link = new HtmlLink();
+        link.Attributes["rel"] = "stylesheet";
+        link.Attributes["type"] = "text/css";
+        link.Href = href;
+        master.Page.Header.Controls.Add(link);
+        return link;
     }
 }

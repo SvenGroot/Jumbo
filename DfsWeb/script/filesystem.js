@@ -1,128 +1,113 @@
-﻿/// <reference path="simplexpath.js" />
-/// <reference path="ajax.js" />
-/// <reference path="number-functions.js" />
+﻿/// <reference path="jquery-1.6.4-vsdoc.js" />
+/// <reference path="json2.js" />
 
-window.onload = function()
+$(document).ready(function()
 {
-    var root = document.getElementById("FileSystemRoot");
-    root.DfsFullPath = "/";
-    callGetComments("/", root);
-}
+    $("#FileSystemRoot > img").click(toggleDirectory);
+    getDirectoryListing("/", $("#FileSystemRoot"));
+    $("input").focus(function() { $(this).select(); });
+});
 
-function callGetComments(path, listItem)
+function getDirectoryListing(path, li)
 {
-    var types = new Array();
-    types.push("FileSystemEntryInfo");
-    var m = new WebMethod("FileSystemService.asmx", "http://www.tkl.iis.u-tokyo.ac.jp/schema/Jumbo/FileSystemService", "GetDirectoryContents", types, getDirectoryContentsComplete, serviceError);
-    m.listItem = listItem;
-    var params = new CompoundObject();
-    params.path = path;
-    m.call(params);
-
-    return m;
-}
-
-function loadDirectory(src)
-{
-    var li = src.parentNode.parentNode;
-    if( li.childNodes.length == 1 )
-        callGetComments(li.DfsFullPath, li);
-    else
-        li.removeChild(li.childNodes[1]);
-}
-
-function refreshDirectory(directory, listItem)
-{
-    var ul = createHtmlElement("ul");
-    if( directory.Children && directory.Children.length > 0 )
-    {
-        for( var x = 0; x < directory.Children.length; ++x )
-        {
-            var item = directory.Children[x];
-            var li = createHtmlElement("li");
-            var span = createHtmlElement("span");
-            var img = createHtmlElement("img");
-            span.appendChild(img);
-            var date = Date.parseXSD(item.DateCreated);
-            span.appendChild(document.createTextNode(item.Name + " (" + date.ToUtcString()));
-            if( item.IsDirectory == "true" )
-            {                
-                img.src = "images/folder_open.png";
-                img.onclick = function() { loadDirectory(this) };
-                img.className = "directory";
-            }
-            else
+    jsonAjax("FileSystemService.asmx", "GetDirectoryListing", { "path": path }, function(result) {
+            var ul = $("<ul>");
+            $(li).children("span").children("img").attr("src", "images/arrow_open.png");
+            if( result.d.Children && result.d.Children.length > 0 )
             {
-                span.appendChild(document.createTextNode("; "));
-                span.appendChild(formatSize(new Number(item.Size)));
-                img.src = "images/generic_document.png";
+                $.each(result.d.Children, function(index, child)
+                {
+                    var img = $("<img>").attr("alt", child.FullPath).attr("title", child.FullPath);
+                    var outerSpan = $("<span>")
+                    var span = $("<span>").addClass("fileSystemEntry").append(img).appendTo(outerSpan);
+                    span.append(document.createTextNode(child.Name + " (" + child.DateCreated));
+                    if( child.IsDirectory )
+                    {
+                        img.attr("src", "images/folder_open.png");
+                        $("<img>").attr("src", "images/arrow_closed.png").attr("alt", "expand").click(toggleDirectory).addClass("directory").prependTo(outerSpan);
+                    }
+                    else
+                    {
+                        img.attr("src", "images/generic_document.png");
+                        span.append(document.createTextNode("; "));
+                        span.append($("<abbr>").attr("title", child.SizeInBytes + " bytes").text(child.FormattedSize));
+                        span.css("margin-left", "21px");
+                    }
+                    span.append(document.createTextNode(")"));
+                    var fullPath = child.FullPath;
+                    span.click(function()
+                    {
+                        $("#EntryName").text(child.Name);
+                        $("#EntryCreated").text(child.DateCreated);
+                        $("#FullPath").attr("value", child.FullPath);
+                        if( child.IsDirectory )
+                            $("#FileInfo").hide();
+                        else
+                        {
+                            $("#FileInfo").show();
+                            $("#FileFormattedSize").text(child.FormattedSize);
+                            $("#FileSize").text(child.SizeInBytes);
+                            $("#BlockSize").text(child.BlockSize);
+                            $("#BlockCount").text(child.BlockCount);
+                            $("#ReplicationFactor").text(child.ReplicationFactor);
+                            $("#RecordOptions").text(child.RecordOptions);
+                            $("#BlockSize").text(child.BlockSize);
+                            $("#ViewFileLink").attr("href", "viewfile.aspx?path=" + encodeURIComponent(child.FullPath) + "&maxSize=100KB&tail=false");
+                            $("#DownloadLink").attr("href", "downloadfile.ashx?path=" + encodeURIComponent(child.FullPath));
+                        }
+                    });
+//                    if( window.clipboardData )
+//                    {
+//                        var icons = $("<span>").addClass("icons").css("visibility", "hidden").appendTo(span);
+//                        $("<img>").attr("src", "images/copy.png").attr("alt", "Copy path").attr("title", "Copy path").click(function() { window.clipboardData.setData("Text", fullPath) }).appendTo(icons);
+//                        span.mouseenter(function() { $(".icons", this).css("visibility", "visible"); });
+//                        span.mouseleave(function() { $(".icons", this).css("visibility", "hidden"); });
+//                    }
+                    ul.append($("<li>").append(outerSpan));
+                });
             }
-            span.appendChild(document.createTextNode(")"));
-            img.alt = item.FullPath;
-            img.title = item.FullPath;
-            li.appendChild(span);
-            li.DfsFullPath = item.FullPath;
-            ul.appendChild(li);
+            ul.hide();
+            $(li).append(ul);
+            ul.show("normal");
+        }, "Could not load directory contents.");
+}
+
+function toggleDirectory()
+{
+    var li = $(this).parent().parent();
+    var listing = li.children("ul");
+    if( listing.length > 0 )
+    {
+        $(this).attr("src", "images/arrow_closed.png");
+        listing.hide("normal", function() { $(listing).remove(); });        
+    }
+    else
+    {
+        getDirectoryListing($(this).next("span").children("img").attr("alt"), li);
+    }
+}
+
+function jsonAjax(url, method, params, success, errorMessage)
+{
+    return $.ajax({ 
+        type: "POST",
+        url: url + "/" + method,
+        data: JSON.stringify(params),
+        contentType: "application/json; charset=utf-8",
+        dataType: "json",
+        async: true,
+        cache: false,
+        success: success,
+        beforeSend: function(x, s) { x.params = params; },
+        error: function(x, e) 
+        { 
+            if( e != "abort" )
+            {
+                if( x.responseText )
+                    alert(errorMessage + ": " + $.parseJSON(x.responseText).Message);
+                else
+                    alert(errorMessage + ".");
+            }
         }
-    }
-    else
-    {
-        var li = createHtmlElement("li");
-        li.appendChild(document.createTextNode("<empty>"));
-        ul.appendChild(li);
-    }
-    listItem.appendChild(ul);
-}
-
-function getDirectoryContentsComplete(result)
-{
-    refreshDirectory(result, this.listItem);
-}
-
-function serviceError(msg)
-{
-    alert(msg);
-}
-
-function createHtmlElement(name)
-{
-	if( typeof(document.createElementNS) == "function" )
-		return document.createElementNS("http://www.w3.org/1999/xhtml", name);
-	else
-		return document.createElement(name);
-}
-
-function formatSize(bytes)
-{
-    var size;
-    var unit;
-    if( bytes > 0x40000000 )
-    {
-        size = bytes / 0x40000000;
-        unit = "GB";
-    }
-    else if( bytes > 0x100000 )
-    {
-        size = bytes / 0x100000;
-        unit = "MB";
-    }
-    else if( bytes > 0x400 )
-    {
-        size = bytes / 0x400;
-        unit = "KB";
-    }
-    else
-    {
-        return document.createTextNode(bytes.numberFormat("#,0") + " bytes");
-    }
-    var abbr = createHtmlElement("abbr");
-    abbr.title = bytes.numberFormat("#,0") + " bytes";
-    abbr.appendChild(document.createTextNode(size.numberFormat("#,0.0") + " " + unit));
-    return abbr;
-}
-
-Date.prototype.ToUtcString = function()
-{
-    return this.getFullYear() + "-" + FormatNumberForSerialization(this.getMonth()+1) + "-" + FormatNumberForSerialization(this.getDate())
-        + " " + FormatNumberForSerialization(this.getHours()) + ":" + FormatNumberForSerialization(this.getMinutes()) + ":" + FormatNumberForSerialization(this.getSeconds()) + "Z";
+    });
 }

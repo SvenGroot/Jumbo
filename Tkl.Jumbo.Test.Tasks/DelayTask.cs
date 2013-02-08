@@ -11,7 +11,7 @@ using System.Threading;
 namespace Tkl.Jumbo.Test.Tasks
 {
     [AllowRecordReuse]
-    public class DelayTask : Configurable, IPullTask<Utf8String, int>
+    public class DelayTask : Configurable, ITask<Utf8String, int>
     {
         public const string DelayTimeSettingKey = "DelayTime";
 

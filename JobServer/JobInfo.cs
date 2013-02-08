@@ -2,13 +2,15 @@
 //
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using Tkl.Jumbo.Jet;
-using Tkl.Jumbo;
-using System.Threading;
-using Tkl.Jumbo.Dfs;
 using System.Collections.ObjectModel;
+using System.Globalization;
+using System.Linq;
+using System.Threading;
+using Tkl.Jumbo;
+using Tkl.Jumbo.Dfs.FileSystem;
+using Tkl.Jumbo.Jet;
+using Tkl.Jumbo.Jet.IO;
+using Tkl.Jumbo.Jet.Jobs;
 
 namespace JobServerApplication
 {
@@ -36,34 +38,46 @@ namespace JobServerApplication
         private readonly string _jobName;
         private readonly JobConfiguration _config;
         private readonly JobSchedulerInfo _schedulerInfo;
+        private readonly int _maxTaskFailures;
 
         private long _endTimeUtcTicks;
         private volatile List<TaskStatus> _failedTaskAttempts;
 
-        public JobInfo(Job job, JobConfiguration config)
+        public JobInfo(Job job, JobConfiguration config, FileSystemClient fileSystem)
         {
             if( job == null )
                 throw new ArgumentNullException("job");
             if( config == null )
                 throw new ArgumentNullException("config");
+            if( fileSystem == null )
+                throw new ArgumentNullException("fileSystem");
             _job = job;
             _config = config;
 
             _jobName = config.JobName;
+            _maxTaskFailures = JobServer.Instance.Configuration.JobServer.MaxTaskFailures;
 
             List<StageInfo> stages = new List<StageInfo>();
             _stages = stages.AsReadOnly();
             foreach( StageConfiguration stage in config.GetDependencyOrderedStages() )
             {
-                bool nonInputStage = stage.DfsInput == null;
+                if( stage.TaskCount < 1 )
+                    throw new ArgumentException(string.Format(CultureInfo.CurrentCulture, "Stage {0} has no tasks.", stage.StageId), "config");
+                // Don't allow failures for a job with a TCP channel.
+                if( stage.Leaf.OutputChannel != null && stage.Leaf.OutputChannel.ChannelType == Tkl.Jumbo.Jet.Channels.ChannelType.Tcp )
+                    _maxTaskFailures = 1;
+                bool nonInputStage = !stage.HasDataInput;
                 // Don't do the work trying to find the input stages if the stage has dfs inputs.
                 StageConfiguration[] inputStages = nonInputStage ? config.GetInputStagesForStage(stage.StageId).ToArray() : null;
                 StageInfo stageInfo = new StageInfo(this, stage);
+                IList<string[]> inputLocations = nonInputStage ? null : TaskInputUtility.ReadTaskInputLocations(fileSystem, job.Path, stage.StageId);
+                if( inputLocations != null && inputLocations.Count != stage.TaskCount )
+                    throw new ArgumentException(string.Format(CultureInfo.InvariantCulture, "The number of input splits for stage {0} doesn't match the stage's task count.", stage.StageId));
                 for( int x = 1; x <= stage.TaskCount; ++x )
                 {
                     TaskInfo taskInfo;
 
-                    taskInfo = new TaskInfo(this, stageInfo, inputStages, x);
+                    taskInfo = new TaskInfo(this, stageInfo, inputStages, x, nonInputStage ? null : inputLocations[x-1]);
                     _schedulingTasksById.Add(taskInfo.TaskId.ToString(), taskInfo);
                     if( nonInputStage )
                         _orderedSchedulingNonInputTasks.Add(taskInfo);
@@ -74,6 +88,8 @@ namespace JobServerApplication
                 }
                 stages.Add(stageInfo);
             }
+            if( stages.Count == 0 )
+                throw new ArgumentException("The job configuration has no stages.", "config");
 
             if( _config.SchedulerOptions.DfsInputSchedulingMode == SchedulingMode.Default )
                 _config.SchedulerOptions.DfsInputSchedulingMode = JobServer.Instance.Configuration.JobServer.DfsInputSchedulingMode;
@@ -151,6 +167,11 @@ namespace JobServerApplication
         public ReadOnlyCollection<StageInfo> Stages
         {
             get { return _stages; }
+        }
+
+        public int MaxTaskFailures
+        {
+            get { return _maxTaskFailures; }
         }
 
         public int SchedulingTaskCount
@@ -242,7 +263,7 @@ namespace JobServerApplication
         /// Adds a failed task attempt. Doesn't need any locking (because it does its own so that ToJobStatus can be called without locking).
         /// </summary>
         /// <param name="failedTaskAttempt"></param>
-        public void AddFailedTaskAttempt(TaskStatus failedTaskAttempt)
+        public int AddFailedTaskAttempt(TaskStatus failedTaskAttempt)
         {
 #pragma warning disable 420 // volatile field not treated as volatile warning
 
@@ -254,6 +275,7 @@ namespace JobServerApplication
             lock( _failedTaskAttempts )
             {
                 _failedTaskAttempts.Add(failedTaskAttempt);
+                return _failedTaskAttempts.Count;
             }
         }
 

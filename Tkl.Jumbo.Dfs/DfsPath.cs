@@ -79,5 +79,28 @@ namespace Tkl.Jumbo.Dfs
             }
             return path;
         }
+
+        /// <summary>
+        /// Returns the directory information for the specified path string.
+        /// </summary>
+        /// <param name="path">The path of a file or directory.</param>
+        /// <returns>Directory information for <paramref name="path"/>, or <see langword="null"/> if <paramref name="path"/> denotes a root directory. return <see cref="String.Empty"/> if <paramref name="path"/> does
+        /// not contain directory information.</returns>
+        public static string GetDirectoryName(string path)
+        {
+            if( path != null )
+            {
+                if( path == "/" )
+                    return null;
+                int index = path.LastIndexOf(DirectorySeparator);
+                if( index == 0 )
+                    return "/";
+                else if( index > 0 )
+                    return path.Substring(0, index);
+                else
+                    return "";
+            }
+            return null;
+        }
     }
 }

@@ -30,6 +30,7 @@ namespace TaskServerApplication
     /// - If multi file output
     ///   - Send output stage ID (string)
     /// - For each task.
+    ///   - Server writes total size of all requested partitions
     ///   - For each partition
     ///     - If a failure occurs, the server writes -1 (int64).
     ///     - Server writes partition size (int64, may be 0)
@@ -92,6 +93,8 @@ namespace TaskServerApplication
                             string jobDirectory = _taskServer.GetJobDirectory(jobId);
                             foreach( string task in tasks )
                             {
+                                long totalSize = partitions.Sum(p => new FileInfo(Path.Combine(jobDirectory, FileOutputChannel.CreateChannelFileName(task, TaskId.CreateTaskIdString(outputStageId, p)))).Length);
+                                writer.Write(totalSize);
                                 foreach( int partition in partitions )
                                 {
                                     string outputFile = FileOutputChannel.CreateChannelFileName(task, TaskId.CreateTaskIdString(outputStageId, partition));
@@ -155,6 +158,8 @@ namespace TaskServerApplication
                 string outputFile = FileOutputChannel.CreateChannelFileName(task, null);
                 string path = Path.Combine(dir, outputFile);
                 PartitionFileIndex index = _indexCache.GetIndex(path);
+                long totalSize = partitions.Sum(p => index.GetPartitionSize(p, true));
+                writer.Write(totalSize);
                 using( FileStream stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read, _bufferSize) )
                 {
                     foreach( int partition in partitions )
@@ -164,13 +169,16 @@ namespace TaskServerApplication
                             writer.Write(0L);
                         else
                         {
-                            long totalSize = entries.Sum(e => e.Count);
-                            writer.Write(totalSize);
+                            int segmentCount = entries.Count();
+                            long partitionSize = entries.Sum(e => e.Count) + sizeof(long) * segmentCount;
+                            writer.Write(partitionSize);
+                            writer.Write(segmentCount);
                             // No need for compressed size because compression is not supported for partition files currently.
                             foreach( PartitionFileIndexEntry entry in entries )
                             {
+                                writer.Write(entry.Count);
                                 stream.Seek(entry.Offset, SeekOrigin.Begin);
-                                stream.CopySize(writer.BaseStream, entry.Count, 65516);
+                                stream.CopySize(writer.BaseStream, entry.Count, 65536);
                             }
                         }
                     }

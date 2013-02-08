@@ -12,7 +12,7 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
     /// Task for PFP growth transaction mining.
     /// </summary>
     [AllowRecordReuse, ProcessAllInputPartitions, AdditionalProgressCounter("FP growth")]
-    public class TransactionMiningTask : Configurable, IPullTask<Pair<int, Transaction>, Pair<int, WritableCollection<MappedFrequentPattern>>>, IHasAdditionalProgress
+    public class TransactionMiningTask : Configurable, ITask<Pair<int, Transaction>, Pair<int, WritableCollection<MappedFrequentPattern>>>, IHasAdditionalProgress
     {
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(TransactionMiningTask));
         private int _groupsProcessed;
@@ -27,6 +27,7 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
         public void Run(RecordReader<Pair<int, Transaction>> input, RecordWriter<Pair<int, WritableCollection<MappedFrequentPattern>>> output)
         {
             _partitionReader = input as MultiPartitionRecordReader<Pair<int, Transaction>>;
+            bool reuseHeaps = TaskContext.GetTypedSetting("PFPGrowth.ReusePatternHeaps", true);
 
             if( input.ReadRecord() )
             {
@@ -51,34 +52,46 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
                     TaskContext.StatusMessage = message;
                     // Prevent fetching new partitions while building the FP tree.
                     if( _partitionReader != null )
-                        _partitionReader.AllowAdditionalPartitions = false;
+                        _partitionReader.StopAtEndOfPartition = true;
 
                     using( FPTree tree = new FPTree(EnumerateGroup(input), minSupport, Math.Min((groupId + 1) * maxPerGroup, fglist.Count), TaskContext) )
                     {
                         tree.ProgressChanged += new EventHandler(FPTree_ProgressChanged);
 
                         // The tree needs to do mining only for the items in its group.
-                        itemHeaps = tree.Mine(output, k, false, groupId * maxPerGroup, itemHeaps);
+                        itemHeaps = tree.Mine(k, false, groupId * maxPerGroup, itemHeaps);
+                        _log.InfoFormat("Done mining.");
+                        if( !reuseHeaps )
+                        {
+                            OutputPatternHeaps(output, itemHeaps);
+                            itemHeaps = null;
+                        }
                     }
                     ++_groupsProcessed;
                     if( _partitionReader != null )
                     {
                         // Re-enable allow additional partitions, and if we had finished before try calling ReadRecord again.
-                        _partitionReader.AllowAdditionalPartitions = true;
+                        _partitionReader.StopAtEndOfPartition = false;
                         if( input.HasFinished )
                             input.ReadRecord();
                     }
                 }
 
-                if( itemHeaps != null )
+                OutputPatternHeaps(output, itemHeaps);
+            }
+        }
+
+        private static void OutputPatternHeaps(RecordWriter<Pair<int, WritableCollection<MappedFrequentPattern>>> output, FrequentPatternMaxHeap[] itemHeaps)
+        {
+            if( itemHeaps != null )
+            {
+                for( int item = 0; item < itemHeaps.Length; ++item )
                 {
-                    for( int item = 0; item < itemHeaps.Length; ++item )
-                    {
-                        FrequentPatternMaxHeap heap = itemHeaps[item];
-                        if( heap != null )
-                            heap.OutputItems(item, output);
-                    }
+                    FrequentPatternMaxHeap heap = itemHeaps[item];
+                    if( heap != null )
+                        heap.OutputItems(item, output);
                 }
+                _log.InfoFormat("Done writing pattern heaps.");
             }
         }
 

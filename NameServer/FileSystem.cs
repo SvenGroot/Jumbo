@@ -8,6 +8,7 @@ using Tkl.Jumbo.Dfs;
 using System.Runtime.Remoting.Messaging;
 using System.IO;
 using Tkl.Jumbo.IO;
+using Tkl.Jumbo.Dfs.FileSystem;
 
 namespace NameServerApplication
 {
@@ -81,20 +82,20 @@ namespace NameServerApplication
         /// Creates a new directory in the file system.
         /// </summary>
         /// <param name="path">The full path of the new directory.</param>
-        /// <returns>A <see cref="DfsDirectory"/> object representing the newly created directory.</returns>
+        /// <returns>A <see cref="JumboDirectory"/> object representing the newly created directory.</returns>
         /// <remarks>
         /// <para>
         ///   If the directory already existed, no changes are made and the existing directory is returned.
         /// </para>
         /// <para>
-        ///   The returned <see cref="DfsDirectory"/> object is a shallow copy and cannot be used to modify the internal
+        ///   The returned <see cref="JumboDirectory"/> object is a shallow copy and cannot be used to modify the internal
         ///   state of the file system. It contains information only about the direct children of the directory, not any
         ///   further descendants.
         /// </para>
         /// </remarks>
         /// <exception cref="ArgumentNullException"><paramref name="path"/> is <see langword="null" />.</exception>
         /// <exception cref="ArgumentException"><paramref name="path"/> is not an absolute path, contains an empty component, or contains a file name.</exception>
-        public DfsDirectory CreateDirectory(string path)
+        public JumboDirectory CreateDirectory(string path)
         {
             return CreateDirectory(path, DateTime.UtcNow);
         }
@@ -103,20 +104,20 @@ namespace NameServerApplication
         /// Creates a new directory in the file system.
         /// </summary>
         /// <param name="path">The full path of the new directory.</param>
-        /// <returns>A <see cref="DfsDirectory"/> object representing the newly created directory.</returns>
+        /// <returns>A <see cref="JumboDirectory"/> object representing the newly created directory.</returns>
         /// <remarks>
         /// <para>
         ///   If the directory already existed, no changes are made and the existing directory is returned.
         /// </para>
         /// <para>
-        ///   The returned <see cref="DfsDirectory"/> object is a shallow copy and cannot be used to modify the internal
+        ///   The returned <see cref="JumboDirectory"/> object is a shallow copy and cannot be used to modify the internal
         ///   state of the file system. It contains information only about the direct children of the directory, not any
         ///   further descendants.
         /// </para>
         /// </remarks>
         /// <exception cref="ArgumentNullException"><paramref name="path"/> is <see langword="null" />.</exception>
         /// <exception cref="ArgumentException"><paramref name="path"/> is not an absolute path, contains an empty component, or contains a file name.</exception>
-        public DfsDirectory CreateDirectory(string path, DateTime dateCreated)
+        public JumboDirectory CreateDirectory(string path, DateTime dateCreated)
         {
             _log.DebugFormat("CreateDirectory: path = \"{0}\"", path);
 
@@ -125,25 +126,25 @@ namespace NameServerApplication
             {
                 lock( _root )
                 {
-                    result = (DfsDirectory)result.ShallowClone();
+                    return result.ToJumboDirectory();
                 }
             }
-            return result;
+            return null;
         }
 
         /// <summary>
         /// Gets information about a directory in the file system.
         /// </summary>
         /// <param name="path">The full path of the directory.</param>
-        /// <returns>A <see cref="DfsDirectory"/> object representing the directory.</returns>
+        /// <returns>A <see cref="JumboDirectory"/> object representing the directory.</returns>
         /// <remarks>
-        ///   The returned <see cref="DfsDirectory"/> object is a shallow copy and cannot be used to modify the internal
+        ///   The returned <see cref="JumboDirectory"/> object is a shallow copy and cannot be used to modify the internal
         ///   state of the file system. It contains information only about the direct children of the directory, not any
         ///   further descendants.
         /// </remarks>
         /// <exception cref="ArgumentNullException"><paramref name="path"/> is <see langword="null" />.</exception>
         /// <exception cref="ArgumentException"><paramref name="path"/> is not an absolute path, contains an empty component, or contains a file name.</exception>
-        public DfsDirectory GetDirectoryInfo(string path)
+        public JumboDirectory GetDirectoryInfo(string path)
         {
             _log.DebugFormat("GetDirectory: path = \"{0}\"", path);
 
@@ -152,10 +153,10 @@ namespace NameServerApplication
             {
                 lock( _root )
                 {
-                    result = (DfsDirectory)result.ShallowClone();
+                    return result.ToJumboDirectory();
                 }
             }
-            return result;
+            return null;
         }
 
         /// <summary>
@@ -202,7 +203,7 @@ namespace NameServerApplication
             {
                 string name;
                 DfsDirectory parent;
-                FileSystemEntry entry;
+                DfsFileSystemEntry entry;
                 FindEntry(path, out name, out parent, out entry);
                 if( entry != null )
                     throw new ArgumentException("The specified directory already has a file or directory with the specified name.", "name");
@@ -240,21 +241,20 @@ namespace NameServerApplication
         /// <exception cref="ArgumentNullException"><paramref name="path"/> is <see langword="null" />.</exception>
         /// <exception cref="ArgumentException"><paramref name="path"/> is not an absolute path, contains an empty component, or contains a file name.</exception>
         /// <exception cref="System.IO.DirectoryNotFoundException">One of the parent directories in the path specified in <paramref name="path"/> does not exist.</exception>
-        public DfsFile GetFileInfo(string path)
+        public JumboFile GetFileInfo(string path)
         {
             if( path == null )
                 throw new ArgumentNullException("name");
 
             _log.DebugFormat("GetFileInfo: path = \"{0}\"", path);
 
-            DfsFile result = null;
+            JumboFile result = null;
             lock( _root )
             {
-                result = GetFileInfoInternal(path);
-                if( result != null )
-                    result = (DfsFile)result.ShallowClone();
+                DfsFile file = GetFileInfoInternal(path);
+                if( file != null )
+                    result = file.ToJumboFile();
             }
-            _log.Debug("GetFileInfo complete.");
             return result;
         }
 
@@ -262,29 +262,30 @@ namespace NameServerApplication
         /// Gets information about a file or directory.
         /// </summary>
         /// <param name="path">The full path of the file or directory.</param>
-        /// <returns>A <see cref="FileSystemEntry"/> object referring to the file or directory.</returns>
+        /// <returns>A <see cref="DfsFileSystemEntry"/> object referring to the file or directory.</returns>
         /// <remarks>
-        ///   The returned <see cref="FileSystemEntry"/> object is a shallow copy and cannot be used to modify the internal
+        ///   The returned <see cref="DfsFileSystemEntry"/> object is a shallow copy and cannot be used to modify the internal
         ///   state of the file system.
         /// </remarks>
         /// <exception cref="ArgumentNullException"><paramref name="path"/> is <see langword="null" />.</exception>
         /// <exception cref="ArgumentException"><paramref name="path"/> is not an absolute path, contains an empty component, or contains a file name.</exception>
         /// <exception cref="System.IO.DirectoryNotFoundException">One of the parent directories in the path specified in <paramref name="path"/> does not exist.</exception>
-        public FileSystemEntry GetFileSystemEntryInfo(string path)
+        public JumboFileSystemEntry GetFileSystemEntryInfo(string path)
         {
             if( path == null )
                 throw new ArgumentNullException("path");
 
             _log.DebugFormat("GetFileSystemEntryInfo: path = \"{0}\"", path);
 
-            FileSystemEntry result;
+            JumboFileSystemEntry result = null;
             lock( _root )
             {
                 string name;
                 DfsDirectory parent;
-                FindEntry(path, out name, out parent, out result);
-                if( result != null )
-                    result = result.ShallowClone();
+                DfsFileSystemEntry entry;
+                FindEntry(path, out name, out parent, out entry);
+                if( entry != null )
+                    result = entry.ToJumboFileSystemEntry();
             }
             return result;
         }
@@ -391,7 +392,7 @@ namespace NameServerApplication
             _log.DebugFormat("Delete: path = \"{0}\", recursive = {1}", path, recursive);
             string name;
             DfsDirectory parent;
-            FileSystemEntry entry;
+            DfsFileSystemEntry entry;
             // The entire operation must be locked, otherwise it opens up the possibility of someone else deleting
             // the file.
             lock( _root )
@@ -427,7 +428,7 @@ namespace NameServerApplication
             lock( _root )
             {
                 string fromName;
-                FileSystemEntry fromEntry;
+                DfsFileSystemEntry fromEntry;
                 DfsDirectory fromParent;
                 FindEntry(from, out fromName, out fromParent, out fromEntry);
 
@@ -435,7 +436,7 @@ namespace NameServerApplication
                     throw new ArgumentException(string.Format("The file or directory \"{0}\" does not exist.", from));
 
                 string toName;
-                FileSystemEntry toEntry;
+                DfsFileSystemEntry toEntry;
                 DfsDirectory toParent;
                 FindEntry(to, out toName, out toParent, out toEntry);
                 if( toEntry is DfsDirectory )
@@ -526,7 +527,7 @@ namespace NameServerApplication
                 if( version != FileSystemFormatVersion )
                     throw new NotSupportedException("The file system image uses an unsupported file system version.");
 
-                _root = (DfsDirectory)FileSystemEntry.LoadFromFileSystemImage(reader, null, NotifyFileSizeCallback);
+                _root = (DfsDirectory)DfsFileSystemEntry.LoadFromFileSystemImage(reader, null, NotifyFileSizeCallback);
                 _pendingFiles.Clear();
                 int pendingFileCount = reader.ReadInt32();
                 for( int x = 0; x < pendingFileCount; ++x )
@@ -554,7 +555,7 @@ namespace NameServerApplication
         
         private void GetBlocks(DfsDirectory directory, IDictionary<Guid, BlockInfo> blocks)
         {
-            foreach( FileSystemEntry child in directory.Children )
+            foreach( DfsFileSystemEntry child in directory.Children )
             {
                 DfsFile file = child as DfsFile;
                 if( file != null )
@@ -605,7 +606,7 @@ namespace NameServerApplication
 
         private void FindFile(string path, out string name, out DfsDirectory parent, out DfsFile file)
         {
-            FileSystemEntry entry;
+            DfsFileSystemEntry entry;
             FindEntry(path, out name, out parent, out entry);
             file = entry as DfsFile;
         }
@@ -613,7 +614,7 @@ namespace NameServerApplication
         /// <summary>
         /// Note: This function must be called with _root already locked.
         /// </summary>
-        private void FindEntry(string path, out string name, out DfsDirectory parent, out FileSystemEntry file)
+        private void FindEntry(string path, out string name, out DfsDirectory parent, out DfsFileSystemEntry file)
         {
             string directory;
 
@@ -628,7 +629,7 @@ namespace NameServerApplication
             file = FindEntry(parent, name);
         }
         
-        private FileSystemEntry FindEntry(DfsDirectory parent, string name)
+        private DfsFileSystemEntry FindEntry(DfsDirectory parent, string name)
         {
             return (from child in parent.Children
                     where child.Name == name
@@ -729,7 +730,7 @@ namespace NameServerApplication
             return result;
         }
 
-        private void DeleteInternal(DfsDirectory parent, FileSystemEntry entry, bool recursive)
+        private void DeleteInternal(DfsDirectory parent, DfsFileSystemEntry entry, bool recursive)
         {
             _log.InfoFormat("Deleting file system entry \"{0}\"", entry.FullPath);
             _editLog.LogDelete(entry.FullPath, recursive);
@@ -746,7 +747,7 @@ namespace NameServerApplication
             }
         }
 
-        private void Move(FileSystemEntry entry, DfsDirectory newParent, string newName)
+        private void Move(DfsFileSystemEntry entry, DfsDirectory newParent, string newName)
         {
             string to = DfsPath.Combine(newParent.FullPath, newName ?? entry.Name);
             _log.InfoFormat("Moving file system entry \"{0}\" to \"{1}\".", entry.FullPath, to);
@@ -757,7 +758,7 @@ namespace NameServerApplication
 
         private void DeleteFilesRecursive(DfsDirectory dir)
         {
-            foreach( FileSystemEntry entry in dir.Children )
+            foreach( DfsFileSystemEntry entry in dir.Children )
             {
                 DfsDirectory childDir = entry as DfsDirectory;
                 if( childDir != null )

@@ -12,6 +12,38 @@ using System.ComponentModel;
 namespace Tkl.Jumbo.IO
 {
     /// <summary>
+    /// Provides methods for working with multi-input record readers.
+    /// </summary>
+    public static class MultiInputRecordReader
+    {
+        /// <summary>
+        /// Gets the accepted input types for a multi-input record reader.
+        /// </summary>
+        /// <param name="type">The type of multi-input record reader.</param>
+        /// <returns>A list of accepted types.</returns>
+        public static IEnumerable<Type> GetAcceptedInputTypes(Type type)
+        {
+            if( type == null )
+                throw new ArgumentNullException("type");
+            Type baseType = type.FindGenericBaseType(typeof(MultiInputRecordReader<>), true);
+
+            return GetAcceptedInputTypesCore(type, baseType);
+        }
+
+        private static IEnumerable<Type> GetAcceptedInputTypesCore(Type type, Type baseType)
+        {
+            Attribute[] attributes = Attribute.GetCustomAttributes(type, typeof(InputTypeAttribute));
+            if( attributes.Length == 0 )
+                yield return baseType.GetGenericArguments()[0];
+            else
+            {
+                foreach( InputTypeAttribute attribute in attributes )
+                    yield return attribute.AcceptedType;
+            }
+        }
+    }
+
+    /// <summary>
     /// Base class for record readers that combine multiple inputs.
     /// </summary>
     /// <typeparam name="T">The type of the records.</typeparam>
@@ -22,6 +54,10 @@ namespace Tkl.Jumbo.IO
     /// </para>
     /// <para>
     ///   If you accept inputs of types other than <typeparamref name="T"/>, you must specify that using the <see cref="InputTypeAttribute"/>.
+    /// </para>
+    /// <para>
+    ///   The initial value of <see cref="RecordReader{T}.HasRecords"/> will be <see langword="false"/>. It is up to the deriving class
+    ///   to set it to <see langword="true"/> when appropriate.
     /// </para>
     /// <note>
     ///   While the <see cref="AddInput"/>, <see cref="WaitForInputs"/> 
@@ -40,6 +76,8 @@ namespace Tkl.Jumbo.IO
             private readonly int _partitionNumber;
             private readonly List<RecordInput> _inputs;
             private volatile int _firstNonMemoryIndex;
+            private long _inputBytes = -1;
+            private long _bytesRead = -1;
 
             public Partition(int partitionNumber, int totalInputCount)
             {
@@ -65,6 +103,9 @@ namespace Tkl.Jumbo.IO
             {
                 get
                 {
+                    if( _inputBytes >= 0 )
+                        return _inputBytes;
+
                     return (from input in _inputs
                             where input.IsReaderCreated
                             select input.Reader.InputBytes).Sum();
@@ -75,6 +116,9 @@ namespace Tkl.Jumbo.IO
             {
                 get
                 {
+                    if( _bytesRead >= 0 )
+                        return _bytesRead;
+
                     return (from input in _inputs
                             where input.IsReaderCreated
                             select input.Reader.BytesRead).Sum();
@@ -120,6 +164,10 @@ namespace Tkl.Jumbo.IO
 
             public void Dispose()
             {
+                if( _inputBytes == -1 )
+                    _inputBytes = InputBytesSum;
+                if( _bytesRead == -1 )
+                    _bytesRead = BytesReadSum;
                 foreach( RecordInput input in _inputs )
                     input.Dispose();
             }
@@ -163,6 +211,7 @@ namespace Tkl.Jumbo.IO
         /// <param name="bufferSize">The buffer size to use to read input files.</param>
         /// <param name="compressionType">The compression type to us to read input files.</param>
         protected MultiInputRecordReader(IEnumerable<int> partitions, int totalInputCount, bool allowRecordReuse, int bufferSize, CompressionType compressionType)
+            : base(false)
         {
             if( partitions == null )
                 throw new ArgumentNullException("partitions");
@@ -263,23 +312,6 @@ namespace Tkl.Jumbo.IO
                 }
             }
         }
-
-        /// <summary>
-        /// Gets a value that indicates if any reader for the current partition has data available.
-        /// </summary>
-        public override bool RecordsAvailable
-        {
-            get
-            {
-                lock( _partitions )
-                {
-                    // We treat inputs whose reader hasn't yet been created as if RecordsAvailable is true, as they are read from a file
-                    // so their readers would always return true anyway.
-                    return _partitions.Exists(p => p.Exists(i => !i.IsReaderCreated || i.Reader.RecordsAvailable));
-                }
-            }
-        }
-
 
         /// <summary>
         /// Gets the current number of inputs that have been added to the <see cref="MultiInputRecordReader{T}"/> for the currently active set of partitions.
@@ -424,7 +456,6 @@ namespace Tkl.Jumbo.IO
                 for( int x = 0; x < partitions.Count; ++x )
                 {
                     RecordInput input = partitions[x];
-                    input.Input = this;
                     _partitions[_firstActivePartitionIndex + x].AddInput(input);
                 }
 

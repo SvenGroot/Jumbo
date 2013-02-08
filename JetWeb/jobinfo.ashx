@@ -10,6 +10,7 @@ using ICSharpCode.SharpZipLib.Zip;
 using Tkl.Jumbo;
 using Tkl.Jumbo.Jet;
 using Tkl.Jumbo.Dfs;
+using Tkl.Jumbo.Dfs.FileSystem;
 
 public class jobinfo : IHttpHandler
 {
@@ -72,7 +73,7 @@ public class jobinfo : IHttpHandler
     {
         Guid jobId = new Guid(context.Request.QueryString["id"]);
         JetClient client = new JetClient();
-        DfsClient dfsClient = new DfsClient();
+        FileSystemClient fileSystemClient = FileSystemClient.Create();
         JobStatus job;
         bool archived = context.Request.QueryString["archived"] == "true";
         if( archived )
@@ -96,8 +97,8 @@ public class jobinfo : IHttpHandler
             }
             else
             {
-                string configFilePath = DfsPath.Combine(DfsPath.Combine(client.Configuration.JobServer.JetDfsPath, "job_" + job.JobId.ToString("B")), Job.JobConfigFileName);
-                using( DfsInputStream configStream = dfsClient.OpenFile(configFilePath) )
+                string configFilePath = fileSystemClient.Path.Combine(fileSystemClient.Path.Combine(client.Configuration.JobServer.JetDfsPath, "job_" + job.JobId.ToString("B")), Job.JobConfigFileName);
+                using( Stream configStream = fileSystemClient.OpenFile(configFilePath) )
                 {
                     configStream.CopyTo(stream);
                 }

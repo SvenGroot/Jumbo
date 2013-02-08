@@ -48,7 +48,7 @@ namespace Tkl.Jumbo
         }
 
         /// <summary>
-        /// Copies the specified number of bytes from one stream to another using the specified buffer size.
+        /// Copies the specified number of bytes from one stream to another using the default buffer size.
         /// </summary>
         /// <param name="source">The stream to copy from.</param>
         /// <param name="destination">The stream to copy to.</param>

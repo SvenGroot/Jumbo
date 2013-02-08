@@ -2,13 +2,12 @@
 //
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using NUnit.Framework;
 using System.IO;
+using System.Linq;
+using NUnit.Framework;
 using Tkl.Jumbo.IO;
 using Tkl.Jumbo.Jet;
-using Tkl.Jumbo.Jet.Tasks;
+using Tkl.Jumbo.Jet.Jobs;
 
 namespace Tkl.Jumbo.Test.Jet
 {
@@ -30,6 +29,18 @@ namespace Tkl.Jumbo.Test.Jet
         public void TestMergeRecordReader()
         {
             TestMergeSort(1, 0, 100, CompressionType.None);
+        }
+
+        [Test]
+        public void TestMergeRecordReaderMemoryInputs()
+        {
+            TestMergeSort(1, 0, 100, CompressionType.None, false, true);
+        }
+
+        [Test]
+        public void TestMergeRecordReaderMemoryInputsPurge()
+        {
+            TestMergeSort(1, 0, 100, CompressionType.None, true, true);
         }
 
         [Test]
@@ -68,7 +79,7 @@ namespace Tkl.Jumbo.Test.Jet
             TestMergeSort(3, 2, 20, CompressionType.None);
         }
 
-        private static void TestMergeSort(int partitions, int extraPartitionGroups, int maxMergeInputs, CompressionType compression)
+        private static void TestMergeSort(int partitions, int extraPartitionGroups, int maxMergeInputs, CompressionType compression, bool purgeMemory = false, bool memoryInputs = false)
         {
             const int inputCount = 50;
             const int recordCountMin = 1000;
@@ -76,6 +87,7 @@ namespace Tkl.Jumbo.Test.Jet
             MergeRecordReader<int> reader = new MergeRecordReader<int>(Enumerable.Range(0, partitions), inputCount, false, 4096, compression);
             StageConfiguration stageConfig = new StageConfiguration();
             stageConfig.AddTypedSetting(MergeRecordReaderConstants.MaxFileInputsSetting, maxMergeInputs);
+            stageConfig.AddTypedSetting(MergeRecordReaderConstants.PurgeMemorySettingKey, purgeMemory);
             stageConfig.StageId = "Merge";
             reader.JetConfiguration = new JetConfiguration();
             reader.TaskContext = new TaskContext(Guid.Empty, new JobConfiguration(), new TaskAttemptId(new TaskId(stageConfig.StageId, 1), 1), stageConfig, Utilities.TestOutputPath, "");
@@ -88,7 +100,7 @@ namespace Tkl.Jumbo.Test.Jet
             {
                 for( int partition = 0; partition < partitions; ++partition )
                 {
-                    CreatePartition(recordCountMin, recordCountMax, rnd, sortedLists, partitionInputs, partition, 0);
+                    CreatePartition(recordCountMin, recordCountMax, rnd, sortedLists, partitionInputs, partition, 0, memoryInputs);
                 }
                 reader.AddInput(partitionInputs);
             }
@@ -100,7 +112,7 @@ namespace Tkl.Jumbo.Test.Jet
 
                 List<int> result = new List<int>(reader.EnumerateRecords());
 
-                Assert.IsTrue(Utilities.CompareList(expected, result));
+                CollectionAssert.AreEqual(expected, result);
             }
 
             partitionInputs = new RecordInput[partitionGroupSize];
@@ -113,7 +125,7 @@ namespace Tkl.Jumbo.Test.Jet
                 {
                     for( int partition = 0; partition < partitionGroupSize; ++partition )
                     {
-                        CreatePartition(recordCountMin, recordCountMax, rnd, sortedLists, partitionInputs, partition, firstPartition);
+                        CreatePartition(recordCountMin, recordCountMax, rnd, sortedLists, partitionInputs, partition, firstPartition, memoryInputs);
                     }
                     reader.AddInput(partitionInputs);
                 }
@@ -125,12 +137,12 @@ namespace Tkl.Jumbo.Test.Jet
 
                     List<int> result = new List<int>(reader.EnumerateRecords());
 
-                    Assert.IsTrue(Utilities.CompareList(expected, result));
+                    CollectionAssert.AreEqual(expected, result);
                 }
             }
         }
 
-        private static void CreatePartition(int recordCountMin, int recordCountMax, Random rnd, List<int>[] sortedLists, RecordInput[] partitionInputs, int partition, int firstPartition)
+        private static void CreatePartition(int recordCountMin, int recordCountMax, Random rnd, List<int>[] sortedLists, RecordInput[] partitionInputs, int partition, int firstPartition, bool memoryInputs)
         {
             if( sortedLists[firstPartition + partition] == null )
                 sortedLists[firstPartition + partition] = new List<int>();
@@ -143,7 +155,7 @@ namespace Tkl.Jumbo.Test.Jet
                 sortedLists[firstPartition + partition].Add(value);
             }
             records.Sort();
-            partitionInputs[partition] = new RecordInput(new EnumerableRecordReader<int>(records), false); // pretend these are disk-based inputs.
+            partitionInputs[partition] = new ReaderRecordInput(new EnumerableRecordReader<int>(records), memoryInputs);
         }
     }
 }

@@ -4,13 +4,18 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using Tkl.Jumbo.CommandLine;
+using Ookii.CommandLine;
 using Tkl.Jumbo.Jet;
 
 namespace JetShell.Commands
 {
     abstract class JetShellCommand : ShellCommand
     {
-        public JetClient JetClient { get; set; }
+        private readonly JetClient _jetClient = new JetClient();
+
+        public JetClient JetClient 
+        {
+            get { return _jetClient; }
+        }
     }
 }

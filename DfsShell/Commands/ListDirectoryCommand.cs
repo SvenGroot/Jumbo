@@ -4,10 +4,11 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using Tkl.Jumbo.CommandLine;
+using Ookii.CommandLine;
 using System.ComponentModel;
 using System.Runtime.InteropServices;
 using Tkl.Jumbo.Dfs;
+using Tkl.Jumbo.Dfs.FileSystem;
 
 namespace DfsShell.Commands
 {
@@ -16,7 +17,7 @@ namespace DfsShell.Commands
     {
         private readonly string _path;
 
-        public ListDirectoryCommand([Optional, DefaultParameterValue("/"), Description("The path of the DFS directory. The default value is /.")] string path)
+        public ListDirectoryCommand([Description("The path of the DFS directory. The default value is /."), ArgumentName("Path")] string path = "/")
         {
             if( path == null )
                 throw new ArgumentNullException("path");
@@ -25,7 +26,7 @@ namespace DfsShell.Commands
 
         public override void Run()
         {
-            DfsDirectory dir = Client.NameServer.GetDirectoryInfo(_path);
+            JumboDirectory dir = Client.GetDirectoryInfo(_path);
             if( dir == null )
                 Console.WriteLine("Directory not found.");
             else

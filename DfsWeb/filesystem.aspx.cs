@@ -11,9 +11,9 @@ public partial class filesystem : System.Web.UI.Page
 {
     protected void Page_Load(object sender, EventArgs e)
     {
-        Master.AddScript("script/simplexpath.js");
-        Master.AddScript("script/ajax.js");
+        Master.AddScript("script/jquery-1.6.4.min.js");
+        Master.AddScript("script/json2.min.js");
         Master.AddScript("script/filesystem.js");
-        Master.AddScript("script/number-functions.js");
+        Master.AddStyleSheet("style/sidebar.css");
     }
 }

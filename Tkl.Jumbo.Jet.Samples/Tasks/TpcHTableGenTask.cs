@@ -1,20 +1,17 @@
 ﻿// $Id$
 //
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using Tkl.Jumbo.IO;
-using Tkl.Jumbo.Jet.Samples.IO;
-using System.IO;
 using System.Diagnostics;
+using System.IO;
+using Tkl.Jumbo.IO;
+using Tkl.Jumbo.Jet.Jobs;
+using Tkl.Jumbo.Jet.Samples.IO;
 
 namespace Tkl.Jumbo.Jet.Samples.Tasks
 {
     /// <summary>
     /// Task to generate TPC-H table data.
     /// </summary>
-    public class TpcHTableGenTask : Configurable, IPullTask<int, LineItem>
+    public class TpcHTableGenTask : Configurable, ITask<int, LineItem>
     {
         /// <summary>
         /// The name of the setting in the <see cref="JobConfiguration.JobSettings"/> that specifies the filename of the dbgen executable.
@@ -28,7 +25,7 @@ namespace Tkl.Jumbo.Jet.Samples.Tasks
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(TpcHTableGenTask));
         private readonly LineItem _record = new LineItem();
         
-        #region IPullTask<int,LineItem> Members
+        #region ITask<int,LineItem> Members
 
         /// <summary>
         /// Runs the task.

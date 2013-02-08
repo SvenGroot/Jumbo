@@ -7,6 +7,7 @@ using System.Text;
 using Tkl.Jumbo.Jet;
 using Tkl.Jumbo;
 using Tkl.Jumbo.Dfs;
+using Tkl.Jumbo.Dfs.FileSystem;
 
 namespace JobServerApplication
 {
@@ -22,7 +23,6 @@ namespace JobServerApplication
         private readonly TaskInfo _task;
 
         private List<TaskServerInfo> _badServers;
-        private Guid? _inputBlock;
         private TaskState _state;
 
         public TaskSchedulerInfo(TaskInfo task)
@@ -63,21 +63,5 @@ namespace JobServerApplication
         public int CurrentAttemptDataDistance { get; set; }
 
         public int Attempts { get; set; }
-
-        /// <summary>
-        /// NOTE: Only call if Stage.DfsInputs is not null. The value of this function is cached, only first call uses DfsClient.
-        /// </summary>
-        /// <param name="dfsClient">The DFS client.</param>
-        /// <returns></returns>
-        public Guid GetBlockId(DfsClient dfsClient)
-        {
-            if( _inputBlock == null )
-            {
-                TaskDfsInput input = _task.Stage.Configuration.DfsInput.GetInput(_task.TaskId);
-                Tkl.Jumbo.Dfs.DfsFile file = _task.Job.SchedulerInfo.GetFileInfo(dfsClient, input.Path);
-                _inputBlock = file.Blocks[input.Block];
-            }
-            return _inputBlock.Value;
-        }
     }
 }

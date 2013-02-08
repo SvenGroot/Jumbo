@@ -11,6 +11,7 @@ using System.Diagnostics;
 using System.Net.Sockets;
 using System.Runtime.Serialization.Formatters.Binary;
 using Tkl.Jumbo.Dfs;
+using Tkl.Jumbo.Dfs.FileSystem;
 
 namespace Tkl.Jumbo.Test.Dfs
 {
@@ -30,7 +31,7 @@ namespace Tkl.Jumbo.Test.Dfs
             Utilities.TraceLineAndFlush("Starting cluster.");
             DfsConfiguration config = TestDfsCluster.CreateClientConfig();
             _nameServer = DfsClient.CreateNameServerClient(config);
-            _nameServer.WaitForSafeModeOff(Timeout.Infinite);
+            TestDfsCluster.CreateClient().WaitForSafeModeOff(Timeout.Infinite);
             Utilities.TraceLineAndFlush("Cluster started.");
         }
 
@@ -62,7 +63,7 @@ namespace Tkl.Jumbo.Test.Dfs
                     Assert.AreEqual(size, output.Position);
                 }
 
-                Tkl.Jumbo.Dfs.DfsFile file = _nameServer.GetFileInfo("/TestStreams.dat");
+                Tkl.Jumbo.Dfs.FileSystem.JumboFile file = _nameServer.GetFileInfo("/TestStreams.dat");
                 Assert.AreEqual(1, file.Blocks.Count);
                 Assert.AreEqual(size, file.Size);
                 ServerAddress[] servers = _nameServer.GetDataServersForBlock(file.Blocks[0]);
@@ -87,7 +88,7 @@ namespace Tkl.Jumbo.Test.Dfs
                 header.Size = (int)dataStream.Length;
                 BinaryFormatter formatter = new BinaryFormatter();
                 formatter.Serialize(stream, header);
-                DataServerClientProtocolResult result = (DataServerClientProtocolResult)reader.ReadInt32();
+                DataServerClientProtocolResult result = (DataServerClientProtocolResult)reader.ReadInt16();
                 Assert.AreEqual(DataServerClientProtocolResult.Ok, result);
                 int offset = reader.ReadInt32();
                 Assert.AreEqual(0, offset);
@@ -96,9 +97,9 @@ namespace Tkl.Jumbo.Test.Dfs
                 byte[] buffer2 = new byte[Packet.PacketSize];
                 while( !packet.IsLastPacket )
                 {
-                    result = (DataServerClientProtocolResult)reader.ReadInt32();
+                    result = (DataServerClientProtocolResult)reader.ReadInt16();
                     Assert.AreEqual(DataServerClientProtocolResult.Ok, result);
-                    packet.Read(reader, false, true);
+                    packet.Read(reader, PacketFormatOption.NoSequenceNumber, true);
                     packet.CopyTo(0, buffer1, 0, buffer1.Length);
                     dataStream.Read(buffer2, 0, packet.Size);
                     Assert.IsTrue(Utilities.CompareArray(buffer1, 0, buffer2, 0, packet.Size));

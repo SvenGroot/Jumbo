@@ -3,12 +3,14 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using NUnit.Framework;
-using Tkl.Jumbo.Jet;
 using Tkl.Jumbo.Dfs;
+using Tkl.Jumbo.Dfs.FileSystem;
 using Tkl.Jumbo.IO;
+using Tkl.Jumbo.Jet;
 using Tkl.Jumbo.Jet.Channels;
+using Tkl.Jumbo.Jet.IO;
+using Tkl.Jumbo.Jet.Jobs;
 using Tkl.Jumbo.Jet.Tasks;
 
 namespace Tkl.Jumbo.Test.Jet
@@ -16,7 +18,74 @@ namespace Tkl.Jumbo.Test.Jet
     [TestFixture]
     public class JobConfigurationTests
     {
+        #region Nested types
+
+        private sealed class FakeFileSystemClient : FileSystemClient
+        {
+            public FakeFileSystemClient()
+                : base(new DfsConfiguration())
+            {
+            }
+
+            public override IFileSystemPathUtility Path
+            {
+                get { return new DfsPathUtility(); }
+            }
+
+            public override int? DefaultBlockSize
+            {
+                get { return _blockSize; }
+            }
+
+            public override JumboDirectory GetDirectoryInfo(string path)
+            {
+                if( path == "/output" )
+                    return new JumboDirectory("/output", "output", DateTime.UtcNow, null);
+                return null;
+            }
+
+            public override JumboFile GetFileInfo(string path)
+            {
+                if( path.StartsWith("/test") )
+                    return new JumboFile(path, Path.GetFileName(path), DateTime.UtcNow, 5 * _blockSize, _blockSize, 1, RecordStreamOptions.None, false, Enumerable.Repeat(Guid.Empty, 5));
+                return null;
+            }
+
+            public override JumboFileSystemEntry GetFileSystemEntryInfo(string path)
+            {
+                return GetFileInfo(path) ?? (JumboFileSystemEntry)GetDirectoryInfo(path);
+            }
+
+            public override void CreateDirectory(string path)
+            {
+                throw new NotImplementedException();
+            }
+
+            public override System.IO.Stream OpenFile(string path)
+            {
+                throw new NotImplementedException();
+            }
+
+            public override System.IO.Stream CreateFile(string path, int blockSize, int replicationFactor, bool useLocalReplica, RecordStreamOptions recordOptions)
+            {
+                throw new NotImplementedException();
+            }
+
+            public override bool Delete(string path, bool recursive)
+            {
+                throw new NotImplementedException();
+            }
+
+            public override void Move(string source, string destination)
+            {
+                throw new NotImplementedException();
+            }
+        }
+
+        #endregion
+
         private const int _blockSize = 16 * 1024 * 1024;
+        private readonly FakeFileSystemClient _fileSystem = new FakeFileSystemClient();
 
         [Test]
         public void TestConstructor()
@@ -56,28 +125,35 @@ namespace Tkl.Jumbo.Test.Jet
         public void TestAddInputStage()
         {
             JobConfiguration target = new JobConfiguration(typeof(Tasks.LineCounterTask).Assembly);
-            DfsFile file = CreateFakeTestFile("test");
+            JumboFile file = CreateFakeTestFile("test");
+            const int splitsPerBlock = 2;
 
-            StageConfiguration stage = target.AddInputStage("InputStage", file, typeof(Tasks.LineCounterTask), typeof(LineRecordReader));
+            StageConfiguration stage = target.AddInputStage("InputStage", new FileDataInput<LineRecordReader>(_fileSystem, file, maxSplitSize: _blockSize / splitsPerBlock), typeof(Tasks.LineCounterTask));
 
-            stage.DfsInput.SplitsPerBlock = 2;
-            Assert.AreEqual(file.Blocks.Count * stage.DfsInput.SplitsPerBlock, stage.TaskCount);
-            Assert.AreEqual(stage.TaskCount, stage.DfsInput.SplitCount);
+            Assert.IsNotNull(stage.DataInput);
+            Assert.IsTrue(stage.HasDataInput);
+            Assert.AreEqual(file.Blocks.Count * splitsPerBlock, stage.TaskCount);
+            Assert.AreEqual(stage.TaskCount, stage.DataInput.TaskInputs.Count);
             Assert.AreEqual(1, target.Stages.Count);
             Assert.AreEqual(stage, target.Stages[0]);
             Assert.AreEqual("InputStage", stage.StageId);
-            Assert.IsNotNull(stage.DfsInput);
-            Assert.AreEqual(file.Blocks.Count, stage.DfsInput.TaskInputs.Count);
-            Assert.AreEqual(typeof(LineRecordReader).AssemblyQualifiedName, stage.DfsInput.RecordReaderType.TypeName);
-            Assert.AreEqual(typeof(LineRecordReader), stage.DfsInput.RecordReaderType.ReferencedType);
-            for( int x = 0; x < stage.DfsInput.TaskInputs.Count; ++x )
+            Assert.AreEqual(file.Blocks.Count * splitsPerBlock, stage.DataInput.TaskInputs.Count);
+            Assert.IsInstanceOf<FileDataInput<LineRecordReader>>(stage.DataInput);
+            Assert.AreEqual(typeof(FileDataInput<LineRecordReader>), stage.DataInputType.ReferencedType);
+            Assert.AreEqual(typeof(FileDataInput<LineRecordReader>).AssemblyQualifiedName, stage.DataInputType.TypeName);
+            Assert.AreEqual(file.FullPath, stage.GetSetting(FileDataInput.InputPathSettingKey, null));
+            int x = 0;
+            foreach( FileTaskInput input in stage.DataInput.TaskInputs )
             {
-                Assert.AreEqual(x, stage.DfsInput.TaskInputs[x].Block);
-                Assert.AreEqual(file.FullPath, stage.DfsInput.TaskInputs[x].Path);
+                Assert.AreEqual(x++ * (_blockSize / splitsPerBlock), input.Offset);
+                Assert.AreEqual(_blockSize / splitsPerBlock, input.Size);
             }
-            Assert.IsNull(stage.DfsOutput);
+            Assert.IsNull(stage.DataOutput);
+            Assert.IsNull(stage.DataOutputType.ReferencedType);
+            Assert.IsFalse(stage.HasDataOutput);
             Assert.AreEqual(typeof(Tasks.LineCounterTask).AssemblyQualifiedName, stage.TaskType.TypeName);
             Assert.AreEqual(typeof(Tasks.LineCounterTask), stage.TaskType.ReferencedType);
+            target.Validate();
 
         }
 
@@ -93,25 +169,13 @@ namespace Tkl.Jumbo.Test.Jet
             TestAddStage(true);
         }
 
-        //[Test]
-        //public void TestAddPointToPointStageWithDfsOutput()
-        //{
-        //    TestAddPointToPointStage(true);
-        //}
-
-        //[Test]
-        //public void TestAddPointToPointStageWithoutDfsOutput()
-        //{
-        //    TestAddPointToPointStage(false);
-        //}
-
         [Test]
         public void TestGetStage()
         {
             JobConfiguration target = new JobConfiguration(typeof(Tasks.LineCounterTask).Assembly);
-            DfsFile file = CreateFakeTestFile("test1");
+            JumboFile file = CreateFakeTestFile("test1");
 
-            StageConfiguration expected = target.AddInputStage("InputStage", file, typeof(Tasks.LineCounterTask), typeof(LineRecordReader));
+            StageConfiguration expected = target.AddInputStage("InputStage", new FileDataInput<LineRecordReader>(_fileSystem, file), typeof(Tasks.LineCounterTask));
 
             StageConfiguration stage = target.GetStage("InputStage");
             Assert.IsNotNull(stage);
@@ -125,15 +189,16 @@ namespace Tkl.Jumbo.Test.Jet
         public void TestGetInputStagesForStage()
         {
             JobConfiguration target = new JobConfiguration(typeof(Tasks.LineCounterTask).Assembly);
-            DfsFile file1 = CreateFakeTestFile("test1");
-            DfsFile file2 = CreateFakeTestFile("test2");
+            JumboFile file1 = CreateFakeTestFile("test1");
+            JumboFile file2 = CreateFakeTestFile("test2");
 
-            StageConfiguration inputStage1 = target.AddInputStage("InputStage1", file1, typeof(Tasks.LineCounterTask), typeof(LineRecordReader));
-            StageConfiguration inputStage2 = target.AddInputStage("InputStage2", file2, typeof(Tasks.LineCounterTask), typeof(LineRecordReader));
+            StageConfiguration inputStage1 = target.AddInputStage("InputStage1", new FileDataInput<LineRecordReader>(_fileSystem, file1), typeof(Tasks.LineCounterTask));
+            StageConfiguration inputStage2 = target.AddInputStage("InputStage2", new FileDataInput<LineRecordReader>(_fileSystem, file2), typeof(Tasks.LineCounterTask));
 
             const int taskCount = 3;
             const string outputPath = "/output";
-            target.AddStage("SecondStage", typeof(Tasks.LineAdderTask), taskCount, new[] { new InputStageInfo(inputStage1), new InputStageInfo(inputStage2) }, typeof(MultiRecordReader<int>), outputPath, typeof(TextRecordWriter<int>));
+            var stage = target.AddStage("SecondStage", typeof(Tasks.LineAdderTask), taskCount, new[] { new InputStageInfo(inputStage1), new InputStageInfo(inputStage2) }, typeof(MultiRecordReader<int>));
+            stage.DataOutput = new FileDataOutput<TextRecordWriter<int>>(_fileSystem, outputPath);
 
             
             List<StageConfiguration> stages = target.GetInputStagesForStage("SecondStage").ToList();
@@ -149,18 +214,18 @@ namespace Tkl.Jumbo.Test.Jet
         public void TestAddStageMultiplePartitionsPerTask()
         {
             JobConfiguration target = new JobConfiguration();
-            DfsFile file1 = CreateFakeTestFile("test1");
+            JumboFile file1 = CreateFakeTestFile("test1");
 
-            StageConfiguration inputStage = target.AddInputStage("InputStage", file1, typeof(SortTask<Utf8String>), typeof(LineRecordReader));
+            StageConfiguration inputStage = target.AddInputStage("InputStage", new FileDataInput<LineRecordReader>(_fileSystem, file1), typeof(SortTask<Utf8String>));
 
             const int taskCount = 3;
             const int partitionsPerTask = 5;
 
-            StageConfiguration stage = target.AddStage("SecondStage", typeof(EmptyTask<Utf8String>), taskCount, new InputStageInfo(inputStage) { PartitionsPerTask = partitionsPerTask }, "/output", typeof(TextRecordWriter<Utf8String>));
+            StageConfiguration stage = target.AddStage("SecondStage", typeof(EmptyTask<Utf8String>), taskCount, new InputStageInfo(inputStage) { PartitionsPerTask = partitionsPerTask });
+            stage.DataOutput = new FileDataOutput<TextRecordWriter<Utf8String>>(_fileSystem, "/output");
 
             ChannelConfiguration channel = inputStage.OutputChannel;
             Assert.AreEqual(ChannelType.File, channel.ChannelType);
-            Assert.AreEqual(ChannelConnectivity.Full, channel.Connectivity);
             Assert.IsFalse(channel.ForceFileDownload);
             Assert.AreEqual(typeof(HashPartitioner<Utf8String>).AssemblyQualifiedName, channel.PartitionerType.TypeName);
             Assert.AreEqual(typeof(HashPartitioner<Utf8String>), channel.PartitionerType.ReferencedType);
@@ -168,25 +233,26 @@ namespace Tkl.Jumbo.Test.Jet
             Assert.AreEqual(typeof(MultiRecordReader<Utf8String>).AssemblyQualifiedName, channel.MultiInputRecordReaderType.TypeName);
             Assert.AreEqual(stage.StageId, channel.OutputStage);
             Assert.AreEqual(partitionsPerTask, channel.PartitionsPerTask);
+            target.Validate();
         }
 
         [Test]
         public void TestAddStageMultiplePartitionsPerTaskInternalPartitioning()
         {
             JobConfiguration target = new JobConfiguration();
-            DfsFile file1 = CreateFakeTestFile("test1");
+            JumboFile file1 = CreateFakeTestFile("test1");
 
             const int taskCount = 3;
             const int partitionsPerTask = 5;
 
-            StageConfiguration inputStage = target.AddInputStage("InputStage", file1, typeof(EmptyTask<Utf8String>), typeof(LineRecordReader));
-            StageConfiguration sortStage = target.AddStage("SortStage", typeof(SortTask<Utf8String>), taskCount * partitionsPerTask, new InputStageInfo(inputStage) { ChannelType = ChannelType.Pipeline }, null, null);
+            StageConfiguration inputStage = target.AddInputStage("InputStage", new FileDataInput<LineRecordReader>(_fileSystem, file1), typeof(EmptyTask<Utf8String>));
+            StageConfiguration sortStage = target.AddStage("SortStage", typeof(SortTask<Utf8String>), taskCount * partitionsPerTask, new InputStageInfo(inputStage) { ChannelType = ChannelType.Pipeline });
 
-            StageConfiguration stage = target.AddStage("SecondStage", typeof(EmptyTask<Utf8String>), taskCount, new InputStageInfo(sortStage) { PartitionsPerTask = partitionsPerTask }, "/output", typeof(TextRecordWriter<Utf8String>));
+            StageConfiguration stage = target.AddStage("SecondStage", typeof(EmptyTask<Utf8String>), taskCount, new InputStageInfo(sortStage) { PartitionsPerTask = partitionsPerTask });
+            stage.DataOutput = new FileDataOutput<TextRecordWriter<Utf8String>>(_fileSystem, "/output");
 
             ChannelConfiguration channel = sortStage.OutputChannel;
             Assert.AreEqual(ChannelType.File, channel.ChannelType);
-            Assert.AreEqual(ChannelConnectivity.Full, channel.Connectivity);
             Assert.IsFalse(channel.ForceFileDownload);
             Assert.AreEqual(typeof(HashPartitioner<Utf8String>).AssemblyQualifiedName, channel.PartitionerType.TypeName);
             Assert.AreEqual(typeof(HashPartitioner<Utf8String>), channel.PartitionerType.ReferencedType);
@@ -194,44 +260,57 @@ namespace Tkl.Jumbo.Test.Jet
             Assert.AreEqual(typeof(MultiRecordReader<Utf8String>).AssemblyQualifiedName, channel.MultiInputRecordReaderType.TypeName);
             Assert.AreEqual(stage.StageId, channel.OutputStage);
             Assert.AreEqual(partitionsPerTask, channel.PartitionsPerTask);
+            target.Validate();
         }
 
 
         private void TestAddStage(bool useOutput)
         {
             JobConfiguration target = new JobConfiguration(typeof(Tasks.LineCounterTask).Assembly);
-            DfsFile file1 = CreateFakeTestFile("test1");
-            DfsFile file2 = CreateFakeTestFile("test2");
+            JumboFile file1 = CreateFakeTestFile("test1");
+            JumboFile file2 = CreateFakeTestFile("test2");
 
-            StageConfiguration inputStage1 = target.AddInputStage("InputStage1", file1, typeof(Tasks.LineCounterTask), typeof(LineRecordReader));
-            StageConfiguration inputStage2 = target.AddInputStage("InputStage2", file2, typeof(Tasks.LineCounterTask), typeof(LineRecordReader));
+            StageConfiguration inputStage1 = target.AddInputStage("InputStage1", new FileDataInput<LineRecordReader>(_fileSystem, file1), typeof(Tasks.LineCounterTask));
+            StageConfiguration inputStage2 = target.AddInputStage("InputStage2", new FileDataInput<LineRecordReader>(_fileSystem, file2), typeof(Tasks.LineCounterTask));
 
             const int taskCount = 3;
             const string outputPath = "/output";
-            StageConfiguration stage = target.AddStage("SecondStage", typeof(Tasks.LineAdderTask), taskCount, new[] { new InputStageInfo(inputStage1), new InputStageInfo(inputStage2) }, typeof(MultiRecordReader<int>), useOutput ? outputPath : null, typeof(TextRecordWriter<int>));
+            StageConfiguration stage = target.AddStage("SecondStage", typeof(Tasks.LineAdderTask), taskCount, new[] { new InputStageInfo(inputStage1), new InputStageInfo(inputStage2) }, typeof(MultiRecordReader<int>));
+            if( useOutput )
+                stage.DataOutput = new FileDataOutput<TextRecordWriter<int>>(_fileSystem, outputPath);
 
             Assert.AreEqual(taskCount, stage.TaskCount);
             Assert.AreEqual(3, target.Stages.Count);
             Assert.AreEqual(stage, target.Stages[2]);
 
             Assert.AreEqual("SecondStage", stage.StageId);
-            Assert.IsNull(stage.DfsInput);
+            Assert.IsNull(stage.DataInput);
+            Assert.IsNull(stage.DataInputType.ReferencedType);
+            Assert.IsFalse(stage.HasDataInput);
             if( useOutput )
             {
-                Assert.IsNotNull(stage.DfsOutput);
-                Assert.AreEqual(DfsPath.Combine(outputPath, stage.StageId + "-{0:00000}"), stage.DfsOutput.PathFormat);
-                Assert.AreEqual(typeof(TextRecordWriter<int>).AssemblyQualifiedName, stage.DfsOutput.RecordWriterType.TypeName);
-                Assert.AreEqual(typeof(TextRecordWriter<int>), stage.DfsOutput.RecordWriterType.ReferencedType);
+                Assert.IsNotNull(stage.DataOutput);
+                Assert.IsTrue(stage.HasDataOutput);
+                Type outputType = typeof(FileDataOutput<>).MakeGenericType(typeof(TextRecordWriter<int>));
+                Assert.IsInstanceOf(outputType, stage.DataOutput);
+                Assert.AreEqual(outputType, stage.DataOutputType.ReferencedType);
+                Assert.AreEqual(outputType.AssemblyQualifiedName, stage.DataOutputType.TypeName);
+                Assert.AreEqual(DfsPath.Combine(outputPath, stage.StageId + "-{0:00000}"), stage.GetSetting(FileDataOutput.OutputPathFormatSettingKey, null));
+                Assert.AreEqual(0, stage.GetTypedSetting(FileDataOutput.BlockSizeSettingKey, 0));
+                Assert.AreEqual(0, stage.GetTypedSetting(FileDataOutput.ReplicationFactorSettingKey, 0));
             }
             else
-                Assert.IsNull(stage.DfsOutput);
+            {
+                Assert.IsNull(stage.DataOutput);
+                Assert.IsNull(stage.DataOutputType.ReferencedType);
+                Assert.IsFalse(stage.HasDataOutput);
+            }
 
             Assert.AreEqual(typeof(Tasks.LineAdderTask).AssemblyQualifiedName, stage.TaskType.TypeName);
             Assert.AreEqual(typeof(Tasks.LineAdderTask), stage.TaskType.ReferencedType);
 
             ChannelConfiguration channel = inputStage1.OutputChannel;
             Assert.AreEqual(ChannelType.File, channel.ChannelType);
-            Assert.AreEqual(ChannelConnectivity.Full, channel.Connectivity);
             Assert.IsFalse(channel.ForceFileDownload);
             Assert.AreEqual(typeof(HashPartitioner<int>).AssemblyQualifiedName, channel.PartitionerType.TypeName);
             Assert.AreEqual(typeof(HashPartitioner<int>), channel.PartitionerType.ReferencedType);
@@ -241,7 +320,6 @@ namespace Tkl.Jumbo.Test.Jet
             Assert.AreEqual(1, channel.PartitionsPerTask);
             channel = inputStage2.OutputChannel;
             Assert.AreEqual(ChannelType.File, channel.ChannelType);
-            Assert.AreEqual(ChannelConnectivity.Full, channel.Connectivity);
             Assert.IsFalse(channel.ForceFileDownload);
             Assert.AreEqual(typeof(HashPartitioner<int>).AssemblyQualifiedName, channel.PartitionerType.TypeName);
             Assert.AreEqual(typeof(HashPartitioner<int>), channel.PartitionerType.ReferencedType);
@@ -249,58 +327,12 @@ namespace Tkl.Jumbo.Test.Jet
             Assert.AreEqual(typeof(MultiRecordReader<int>).AssemblyQualifiedName, channel.MultiInputRecordReaderType.TypeName);
             Assert.AreEqual(stage.StageId, channel.OutputStage);
             Assert.AreEqual(1, channel.PartitionsPerTask);
+            target.Validate();
         }
 
-        //private void TestAddPointToPointStage(bool useOutput)
-        //{
-        //    JobConfiguration target = new JobConfiguration(typeof(Tasks.LineCounterTask).Assembly);
-        //    DfsFile file = CreateFakeTestFile("test1");
-
-        //    StageConfiguration inputStage = target.AddInputStage("InputStage", file, typeof(Tasks.LineCounterTask), typeof(LineRecordReader));
-
-        //    // Note that it would make no sense to execute more than one lineaddertask, but we don't care here, it's just to see if the AddStage method work.
-        //    const string outputPath = "/output";
-        //    StageConfiguration stage = target.AddPointToPointStage("SecondStage", inputStage, typeof(Tasks.LineAdderTask), ChannelType.File, useOutput ? outputPath : null, useOutput ? typeof(TextRecordWriter<int>) : null);
-
-        //    Assert.AreEqual(inputStage.TaskCount, stage.TaskCount);
-        //    Assert.AreEqual(2, target.Stages.Count);
-        //    Assert.AreEqual(stage, target.Stages[1]);
-
-        //    Assert.AreEqual("SecondStage", stage.StageId);
-        //    Assert.AreEqual(0, stage.DfsInputs.Count);
-        //    if( useOutput )
-        //    {
-        //        Assert.IsNotNull(stage.DfsOutput);
-        //        Assert.AreEqual(DfsPath.Combine(outputPath, stage.StageId + "{0:000}"), stage.DfsOutput.PathFormat);
-        //        Assert.AreEqual(typeof(TextRecordWriter<int>).AssemblyQualifiedName, stage.DfsOutput.RecordWriterTypeName);
-        //        Assert.AreEqual(typeof(TextRecordWriter<int>), stage.DfsOutput.RecordWriterType);
-        //    }
-        //    else
-        //        Assert.IsNull(stage.DfsOutput);
-        //    Assert.AreEqual(typeof(Tasks.LineAdderTask).AssemblyQualifiedName, stage.TaskTypeName);
-        //    Assert.AreEqual(typeof(Tasks.LineAdderTask), stage.TaskType);
-
-        //    ChannelConfiguration channel = inputStage.OutputChannel;
-        //    Assert.AreEqual(ChannelType.File, channel.ChannelType);
-        //    Assert.AreEqual(ChannelConnectivity.PointToPoint, channel.Connectivity);
-        //    Assert.IsFalse(channel.ForceFileDownload);
-        //    Assert.AreEqual(typeof(HashPartitioner<int>).AssemblyQualifiedName, channel.PartitionerType.TypeName); // not important but anyway
-        //    Assert.AreEqual(typeof(HashPartitioner<int>), channel.PartitionerType.ReferencedType); // not important but anyway
-        //    Assert.AreEqual(typeof(MultiRecordReader<int>), channel.MultiInputRecordReaderType.ReferencedType);
-        //    Assert.AreEqual(typeof(MultiRecordReader<int>).AssemblyQualifiedName, channel.MultiInputRecordReaderType.TypeName);
-        //    Assert.AreEqual(stage.StageId, channel.OutputStage);
-        //}
-
-        private static DfsFile CreateFakeTestFile(string name)
+        private JumboFile CreateFakeTestFile(string name)
         {
-            DfsDirectory dir = new DfsDirectory(null, "root", DateTime.UtcNow);
-            DfsFile file = new DfsFile(dir, name, DateTime.UtcNow, _blockSize, 1, IO.RecordStreamOptions.None);
-            file.Blocks.Add(Guid.NewGuid());
-            file.Blocks.Add(Guid.NewGuid());
-            file.Blocks.Add(Guid.NewGuid());
-            file.Blocks.Add(Guid.NewGuid());
-            file.Blocks.Add(Guid.NewGuid());
-            return file;
+            return _fileSystem.GetFileInfo("/" + name);
         }
 
     }

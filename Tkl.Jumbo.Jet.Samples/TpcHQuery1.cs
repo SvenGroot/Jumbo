@@ -11,6 +11,8 @@ using Tkl.Jumbo.IO;
 using Tkl.Jumbo.Dfs;
 using Tkl.Jumbo.Jet.Tasks;
 using System.Runtime.InteropServices;
+using Tkl.Jumbo.Dfs.FileSystem;
+using Tkl.Jumbo.Jet.IO;
 
 namespace Tkl.Jumbo.Jet.Samples
 {
@@ -48,21 +50,19 @@ namespace Tkl.Jumbo.Jet.Samples
         {
             PromptIfInteractive(true);
 
-            DfsClient dfsClient = new DfsClient(DfsConfiguration);
             JetClient jetClient = new JetClient(JetConfiguration);
-            CheckAndCreateOutputPath(dfsClient, _outputPath);
+            CheckAndCreateOutputPath(_outputPath);
             JobConfiguration jobConfig = new JobConfiguration(typeof(PricingSummaryTask).Assembly);
             jobConfig.JobName = GetType().Name; // Use the class name as the job's friendly name.
-            FileSystemEntry input = dfsClient.NameServer.GetFileSystemEntryInfo(_inputPath);
-            StageConfiguration inputStage = jobConfig.AddInputStage("PricingSummaryTask", input, typeof(PricingSummaryTask), typeof(RecordFileReader<LineItem>));
-            StageConfiguration accumulatorPipelineStage = jobConfig.AddPointToPointStage("Accumulator", inputStage, typeof(PricingSummaryAccumulatorTask), Tkl.Jumbo.Jet.Channels.ChannelType.Pipeline, null, null);
-            StageConfiguration accumulatorStage = jobConfig.AddStage("PricingSummary", typeof(PricingSummaryAccumulatorTask), 1, new InputStageInfo(accumulatorPipelineStage), null, null);
-            StageConfiguration outputStage = jobConfig.AddPointToPointStage("Sort", accumulatorStage, typeof(SortTask<Pair<PricingSummaryKey, PricingSummaryValue>>), Tkl.Jumbo.Jet.Channels.ChannelType.Pipeline, _outputPath, typeof(TextRecordWriter<Pair<PricingSummaryKey, PricingSummaryValue>>));
+            JumboFileSystemEntry input = FileSystemClient.GetFileSystemEntryInfo(_inputPath);
+            StageConfiguration inputStage = jobConfig.AddInputStage("PricingSummaryTask", new FileDataInput<RecordFileReader<LineItem>>(FileSystemClient, input), typeof(PricingSummaryTask));
+            StageConfiguration accumulatorPipelineStage = jobConfig.AddStage("Accumulator", typeof(PricingSummaryAccumulatorTask), 1, new InputStageInfo(inputStage) { ChannelType = Channels.ChannelType.Pipeline });
+            StageConfiguration accumulatorStage = jobConfig.AddStage("PricingSummary", typeof(PricingSummaryAccumulatorTask), 1, new InputStageInfo(accumulatorPipelineStage));
+            StageConfiguration outputStage = jobConfig.AddStage("Sort", typeof(SortTask<Pair<PricingSummaryKey, PricingSummaryValue>>), 1, new InputStageInfo(accumulatorStage) { ChannelType = Channels.ChannelType.Pipeline });
+            outputStage.DataOutput = FileDataOutput.Create(typeof(TextRecordWriter<Pair<PricingSummaryKey, PricingSummaryValue>>), FileSystemClient, _outputPath, (int)BlockSize, ReplicationFactor);
             jobConfig.AddTypedSetting(PricingSummaryTask.DeltaSettingName, _delta);
 
-            ConfigureDfsOutput(outputStage);
-
-            return jetClient.RunJob(jobConfig, dfsClient, typeof(PricingSummaryTask).Assembly.Location).JobId;
+            return jetClient.RunJob(jobConfig, FileSystemClient, typeof(PricingSummaryTask).Assembly.Location).JobId;
         }
     }
 }

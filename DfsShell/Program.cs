@@ -9,96 +9,89 @@ using System.Net.Sockets;
 using IO = System.IO;
 using System.Threading;
 using Tkl.Jumbo;
-using Tkl.Jumbo.CommandLine;
+using Ookii.CommandLine;
 using System.Reflection;
 using DfsShell.Commands;
 using Tkl.Jumbo.Rpc;
+using Tkl.Jumbo.Dfs.FileSystem;
+using System.IO;
 
 namespace DfsShell
 {
     static class Program
     {
-        //private static readonly Dictionary<string, Action<DfsClient, string[]>> _commands = CreateCommandList();
-
-        public static void Main(string[] args)
+        public static int Main(string[] args)
         {
             log4net.Config.XmlConfigurator.Configure();
-            if( args.Length == 0 )
-                PrintUsage();
-            else
+            log4net.LogManager.GetRepository().Threshold = log4net.Core.Level.Info;
+            CreateShellCommandOptions options = new CreateShellCommandOptions()
             {
-                string commandName = args[0].Trim();
-                Type commandType = ShellCommand.GetShellCommand(Assembly.GetExecutingAssembly(), commandName);
-
-                if( commandType != null )
+                ArgumentNamePrefixes = new[] { "-" }, // DFS paths use / as the directory separator, so use - even on Windows.
+                CommandDescriptionFormat = "    {0}\n{1}\n",
+                CommandDescriptionIndent = 8,
+                UsageOptions = new WriteUsageOptions()
                 {
-                    DfsShellCommand command = null;
-                    CommandLineParser parser = new CommandLineParser(commandType);
-                    parser.NamedArgumentSwitch = "-"; // DFS paths use / as the directory separator, so use - even on Windows.
-                    try
-                    {
-                        command = (DfsShellCommand)parser.Parse(args, 1);
-                    }
-                    catch( CommandLineArgumentException ex )
-                    {
-                        Console.Error.WriteLine(ex.Message);
-                        Console.WriteLine();
-                    }
-
-                    if( command == null )
-                        Console.WriteLine(parser.GetCustomUsage("Usage: DfsShell.exe " + commandName.ToLowerInvariant(), Console.WindowWidth - 1));
-                    else
-                    {
-                        try
-                        {
-                            command.Client = new DfsClient();
-                            command.Run();
-                        }
-                        catch( SocketException ex )
-                        {
-                            Console.Error.WriteLine("An error occurred communicating with the server:");
-                            Console.Error.WriteLine(ex.Message);
-                        }
-                        catch( DfsException ex )
-                        {
-                            Console.Error.WriteLine("An error occurred processing the command:");
-                            Console.Error.WriteLine(ex.Message);
-                        }
-                        catch( ArgumentException ex )
-                        {
-                            Console.Error.WriteLine(ex.Message);
-                        }
-                        catch( InvalidOperationException ex )
-                        {
-                            Console.Error.WriteLine("Invalid operation:");
-                            Console.Error.WriteLine(ex.Message);
-                        }
-                    }
+                    UsagePrefix = "Usage: DfsShell",
+                    ArgumentDescriptionFormat = "    {3}{0} {2}\n{1}\n",
+                    ArgumentDescriptionIndent = 8
                 }
-                else
-                    PrintUsage();
+            };
+
+            try
+            {
+                return ShellCommand.RunShellCommand(Assembly.GetExecutingAssembly(), args, 0, options);
+            }
+            catch( SocketException ex )
+            {
+                WriteError("An error occurred communicating with the server:", ex.Message);
+            }
+            catch( DfsException ex )
+            {
+                WriteError("An error occurred executing the command:", ex.Message);
+            }
+            catch( IOException ex )
+            {
+                WriteError("An error occurred executing the command:", ex.Message);
+            }
+            catch( ArgumentException ex )
+            {
+                WriteError("An error occurred executing the command:", ex.Message);
+            }
+            catch( InvalidOperationException ex )
+            {
+                WriteError("Invalid operation:", ex.Message);
+            }
+            catch( Exception ex )
+            {
+                WriteError(null, ex.ToString());
             }
 
             RpcHelper.CloseConnections();
-        }
 
-        private static void PrintVersion(DfsClient client, string[] args)
-        {
-            Console.WriteLine("Jumbo {0}", typeof(Tkl.Jumbo.ServerAddress).Assembly.GetName().Version);
-        }
+            return 1;
 
-        private static void PrintRevision(DfsClient client, string[] args)
-        {
-            Console.WriteLine(typeof(Tkl.Jumbo.ServerAddress).Assembly.GetName().Version.Revision);
         }
 
         private static void PrintUsage()
         {
-            Console.WriteLine("Usage: DfsShell <command> [args...]");
-            Console.WriteLine();
-            Console.WriteLine("The following commands are available:");
-            Console.WriteLine();
-            ShellCommand.PrintAssemblyCommandList(Assembly.GetExecutingAssembly());
+            using( LineWrappingTextWriter writer = LineWrappingTextWriter.ForConsoleOut() )
+            {
+                writer.WriteLine("Usage: DfsShell <command> [args...]");
+                writer.WriteLine();
+                writer.WriteLine("The following commands are available:");
+                writer.WriteLine();
+                ShellCommand.WriteAssemblyCommandList(writer, Assembly.GetExecutingAssembly());
+            }
+        }
+
+        private static void WriteError(string errorType, string message)
+        {
+            using( TextWriter writer = LineWrappingTextWriter.ForConsoleError() )
+            {
+                if( errorType != null )
+                    writer.WriteLine(errorType);
+                writer.WriteLine(message);
+            }
         }
     }
 }

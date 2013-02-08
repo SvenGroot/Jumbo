@@ -4,7 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using Tkl.Jumbo.CommandLine;
+using Ookii.CommandLine;
 using System.ComponentModel;
 
 namespace DfsShell.Commands
@@ -14,7 +14,7 @@ namespace DfsShell.Commands
     {
         private readonly string _path;
 
-        public DeleteCommand([Description("The path of the file or directory on the DFS to delete.")] string path)
+        public DeleteCommand([Description("The path of the file or directory on the DFS to delete."), ArgumentName("Path")] string path)
         {
             if( path == null )
                 throw new ArgumentNullException("path");
@@ -22,12 +22,12 @@ namespace DfsShell.Commands
             _path = path;
         }
 
-        [NamedCommandLineArgument("r"), Description("Recursively delete all children of a directory.")]
+        [CommandLineArgument, Description("Recursively delete all children of a directory.")]
         public bool Recursive { get; set; }
 
         public override void Run()
         {
-            if( !Client.NameServer.Delete(_path, Recursive) )
+            if( !Client.Delete(_path, Recursive) )
                 Console.Error.WriteLine("Path did not exist.");
         }
     }

@@ -17,6 +17,7 @@ using System.Threading;
 using Tkl.Jumbo.IO;
 using Tkl.Jumbo.Jet.Channels;
 using Tkl.Jumbo.Jet.Samples.IO;
+using Tkl.Jumbo.Dfs.FileSystem;
 
 namespace ClientSample
 {
@@ -55,10 +56,10 @@ namespace ClientSample
         private static void ReadTest(string path)
         {
             Console.WriteLine("Reading file {0}.", path);
-            DfsClient client = new DfsClient();
+            FileSystemClient client = FileSystemClient.Create();
             Stopwatch sw = new Stopwatch();
             sw.Start();
-            using( DfsInputStream stream = client.OpenFile(path) )
+            using( Stream stream = client.OpenFile(path) )
             {
                 const int size = 0x10000;
                 byte[] buffer = new byte[size];
@@ -72,12 +73,12 @@ namespace ClientSample
 
         private static void CheckTpcH(string path, string referencePath)
         {
-            DfsClient client = new DfsClient();
+            FileSystemClient client = FileSystemClient.Create();
             LineItem referenceLineItem = new LineItem();
 
-            DfsDirectory directory = client.NameServer.GetDirectoryInfo(path);
+            JumboDirectory directory = client.GetDirectoryInfo(path);
             var files = from child in directory.Children
-                        let file = child as DfsFile
+                        let file = child as JumboFile
                         where file != null && file.Name.StartsWith("LineItem")
                         orderby file.Name
                         select file;
@@ -85,9 +86,9 @@ namespace ClientSample
             int record = 0;
             using( StreamReader reader = File.OpenText(Path.Combine(referencePath, "lineitem.tbl")) )
             {
-                foreach( DfsFile file in files )
+                foreach( JumboFile file in files )
                 {
-                    using( DfsInputStream dfsStream = client.OpenFile(file.FullPath) )
+                    using( Stream dfsStream = client.OpenFile(file.FullPath) )
                     using( RecordFileReader<LineItem> recordReader = new RecordFileReader<LineItem>(dfsStream, 0, dfsStream.Length, true) )
                     {
                         foreach( LineItem item in recordReader.EnumerateRecords() )

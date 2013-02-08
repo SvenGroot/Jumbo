@@ -19,7 +19,7 @@ namespace Tkl.Jumbo.Jet
     public static class PartitionerConstants
     {
         /// <summary>
-        /// The name of the setting in <see cref="StageConfiguration.StageSettings"/> that specifies the <see cref="IEqualityComparer{T}"/>
+        /// The name of the setting in <see cref="Jobs.StageConfiguration.StageSettings"/> that specifies the <see cref="IEqualityComparer{T}"/>
         /// to use. If this setting is not specified, <see cref="EqualityComparer{T}.Default"/> will be used.
         /// </summary>
         public const string EqualityComparerSetting = "Partitioner.EqualityComparer";

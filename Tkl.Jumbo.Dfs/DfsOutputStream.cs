@@ -19,6 +19,8 @@ namespace Tkl.Jumbo.Dfs
     public class DfsOutputStream : Stream, IRecordOutputStream
     {
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(DfsOutputStream));
+        private Packet _packet = new Packet();
+        private long _nextSequenceNumber;
         private BlockSender _sender;
         private BlockAssignment _block;
         private readonly INameServerClientProtocol _nameServer;
@@ -372,8 +374,7 @@ namespace Tkl.Jumbo.Dfs
                     {
                         if( _sender != null )
                         {
-                            _sender.WaitUntilSendFinished();
-                            _sender.ThrowIfErrorOccurred();
+                            _sender.WaitForAcknowledgements();
                         }
                     }
                     finally
@@ -382,6 +383,8 @@ namespace Tkl.Jumbo.Dfs
                         {
                             if( _sender != null )
                                 _sender.Dispose();
+                            if( _recordBuffer != null )
+                                _recordBuffer.Dispose();
                         }
                     }
                 }
@@ -401,7 +404,8 @@ namespace Tkl.Jumbo.Dfs
         private void WritePacket(byte[] buffer, int length, bool finalPacket)
         {
             EnsureSenderCreated();
-            _sender.AddPacket(buffer, length, finalPacket);
+            _packet.CopyFrom(buffer, length, _nextSequenceNumber++, finalPacket);
+            _sender.SendPacket(_packet);
         }
 
         private void EnsureSenderCreated()
@@ -417,7 +421,8 @@ namespace Tkl.Jumbo.Dfs
         private void WritePacket(Stream stream, bool finalPacket)
         {
             EnsureSenderCreated();
-            _sender.AddPacket(stream, finalPacket);
+            _packet.CopyFrom(stream, _nextSequenceNumber++, finalPacket);
+            _sender.SendPacket(_packet);
         }
 
         private void WriteBufferToPacket(bool forceFinalPacket)
@@ -433,7 +438,7 @@ namespace Tkl.Jumbo.Dfs
                 // Do we really want to wait here? We could just let it run in the background and continue on our
                 // merry way. That would require keeping track of them so we know in Dispose when we're really finished.
                 // It would also require the name server to allow appending of new blocks while old ones are still pending.
-                _sender.WaitUntilSendFinished();
+                _sender.WaitForAcknowledgements();
                 _sender.ThrowIfErrorOccurred();
                 _sender = null;
                 _block = null;

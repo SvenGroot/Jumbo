@@ -14,7 +14,7 @@ namespace Tkl.Jumbo.Jet
     public class TaskServerConfigurationElement : ConfigurationElement
     {
         /// <summary>
-        /// The key of the setting in <see cref="JobConfiguration.JobSettings"/> used to override the default <see cref="TaskTimeout"/>.
+        /// The key of the setting in <see cref="Jobs.JobConfiguration.JobSettings"/> used to override the default <see cref="TaskTimeout"/>.
         /// The setting should be an <see cref="Int32"/> indicating the timeout in milliseconds.
         /// </summary>
         public const string TaskTimeoutJobSettingKey = "TaskServer.TaskTimeout";

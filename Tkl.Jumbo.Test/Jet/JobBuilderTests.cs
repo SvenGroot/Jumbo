@@ -2,20 +2,19 @@
 //
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using NUnit.Framework;
-using Tkl.Jumbo.Test.Dfs;
-using Tkl.Jumbo.Dfs;
-using System.Threading;
 using System.Diagnostics;
-using Tkl.Jumbo.Jet;
-using Tkl.Jumbo.Jet.Jobs;
-using Tkl.Jumbo.IO;
-using Tkl.Jumbo.Test.Tasks;
 using System.IO;
+using System.Linq;
+using NUnit.Framework;
+using Tkl.Jumbo.Dfs.FileSystem;
+using Tkl.Jumbo.IO;
+using Tkl.Jumbo.Jet;
 using Tkl.Jumbo.Jet.Channels;
+using Tkl.Jumbo.Jet.IO;
+using Tkl.Jumbo.Jet.Jobs;
+using Tkl.Jumbo.Jet.Jobs.Builder;
 using Tkl.Jumbo.Jet.Tasks;
+using Tkl.Jumbo.Test.Tasks;
 
 namespace Tkl.Jumbo.Test.Jet
 {
@@ -24,10 +23,8 @@ namespace Tkl.Jumbo.Test.Jet
     {
         #region Nested types
 
-        public class FakePartitioner : IPartitioner<int>
+        private class FakePartitioner<T> : IPartitioner<T>
         {
-            #region IPartitioner<int> Members
-
             public int Partitions
             {
                 get
@@ -40,59 +37,56 @@ namespace Tkl.Jumbo.Test.Jet
                 }
             }
 
-            public int GetPartition(int value)
+            public int GetPartition(T value)
             {
                 throw new NotImplementedException();
             }
-
-            #endregion
         }
 
-        public class FakeAccumulatorTask : AccumulatorTask<Utf8String, int>
+        private class FakeComparer<T> : IComparer<T>
         {
-            protected override int Accumulate(Utf8String key, int value, int newValue)
+            public int Compare(T x, T y)
             {
                 throw new NotImplementedException();
             }
         }
 
-        public class FakeKvpProducingTask : IPullTask<Utf8String, Pair<Utf8String, int>>
+        private class FakeCombiner<T> : ITask<T, T>
         {
-            #region IPullTask<Utf8StringWritable,KeyValuePair<Utf8StringWritable,int>> Members
-
-            public void Run(RecordReader<Utf8String> input, RecordWriter<Pair<Utf8String, int>> output)
+            public void Run(RecordReader<T> input, RecordWriter<T> output)
             {
                 throw new NotImplementedException();
             }
-
-            #endregion
         }
+
 
         #endregion
 
         private TestJetCluster _cluster;
-        private DfsClient _dfsClient;
+        private FileSystemClient _fileSystemClient;
         private JetClient _jetClient;
 
         private const string _inputPath = "/test.txt";
         private const string _outputPath = "/output";
+        private const int _blockSize = 4194304;
 
-        
 
         [TestFixtureSetUp]
         public void SetUp()
         {
-            _cluster = new TestJetCluster(4194304, true, 1, CompressionType.None);
-            _dfsClient = new DfsClient(TestDfsCluster.CreateClientConfig());
+            _cluster = new TestJetCluster(_blockSize, true, 2, CompressionType.None);
+            _fileSystemClient = _cluster.CreateFileSystemClient();
             _jetClient = new JetClient(TestJetCluster.CreateClientConfig());
             Trace.WriteLine("Cluster running.");
 
             // This file will purely be used so we have something to use as input when creating jobs, it won't be read so the contents don't matter.
-            using( DfsOutputStream stream = _dfsClient.CreateFile(_inputPath) )
+            using( Stream stream = _fileSystemClient.CreateFile(_inputPath) )
             {
                 Utilities.GenerateData(stream, 10000000);
             }
+            _fileSystemClient.CreateDirectory("/output");
         }
+
 
         [TestFixtureTearDown]
         public void Teardown()
@@ -103,13 +97,13 @@ namespace Tkl.Jumbo.Test.Jet
         }
 
         [Test]
-        public void TestProcessRecordsSingleStage()
+        public void TestProcessSingleStage()
         {
-            JobBuilder builder = new JobBuilder(_dfsClient, _jetClient);
+            JobBuilder builder = new JobBuilder(_fileSystemClient, _jetClient);
 
-            var input = new DfsInput(_inputPath, typeof(LineRecordReader));
-            var output = new DfsOutput(_outputPath, typeof(TextRecordWriter<int>));
-            builder.ProcessRecords(input, output, typeof(LineCounterTask));
+            var input = builder.Read(_inputPath, typeof(LineRecordReader));
+            var operation = builder.Process(input, typeof(LineCounterTask));
+            builder.Write(operation, _outputPath, typeof(TextRecordWriter<>));
 
             JobConfiguration config = builder.CreateJob();
             Assert.AreEqual(1, config.AssemblyFileNames.Count);
@@ -117,19 +111,21 @@ namespace Tkl.Jumbo.Test.Jet
 
             Assert.AreEqual(1, config.Stages.Count);
             StageConfiguration stage = config.Stages[0];
-            VerifyStage(config, stage, 3, typeof(LineCounterTask).Name, typeof(LineCounterTask), null, typeof(LineRecordReader), typeof(TextRecordWriter<int>), ChannelType.File, ChannelConnectivity.Full, null, null, null);
+            VerifyStage(stage, 3, typeof(LineCounterTask).Name + "Stage", typeof(LineCounterTask));
+            VerifyDfsInput(config, stage, typeof(LineRecordReader));
+            VerifyDfsOutput(stage, typeof(TextRecordWriter<int>));
+            config.Validate();
         }
 
         [Test]
-        public void TestProcessRecordsMultiStage()
+        public void TestProcessMultiStage()
         {
-            JobBuilder builder = new JobBuilder(_dfsClient, _jetClient);
+            JobBuilder builder = new JobBuilder(_fileSystemClient, _jetClient);
 
-            var input = new DfsInput(_inputPath, typeof(LineRecordReader));
-            var output = new DfsOutput(_outputPath, typeof(TextRecordWriter<int>));
-            var channel = new Channel();
-            builder.ProcessRecords(input, channel, typeof(LineCounterTask));
-            builder.ProcessRecords(channel, output, typeof(LineAdderTask));
+            var input = builder.Read(_inputPath, typeof(LineRecordReader));
+            var op1 = builder.Process(input, typeof(LineCounterTask));
+            var op2 = builder.Process(op1, typeof(LineAdderTask));
+            builder.Write(op2, _outputPath, typeof(TextRecordWriter<>));
 
             JobConfiguration config = builder.CreateJob();
             Assert.AreEqual(1, config.AssemblyFileNames.Count);
@@ -137,633 +133,747 @@ namespace Tkl.Jumbo.Test.Jet
 
             Assert.AreEqual(2, config.Stages.Count);
 
-            VerifyStage(config, config.Stages[0], 3, typeof(LineCounterTask).Name, typeof(LineCounterTask), null, typeof(LineRecordReader), null, ChannelType.File, ChannelConnectivity.Full, typeof(HashPartitioner<int>), typeof(MultiRecordReader<int>), typeof(LineAdderTask).Name);
-            VerifyStage(config, config.Stages[1], 1, typeof(LineAdderTask).Name, typeof(LineAdderTask), null, null, typeof(TextRecordWriter<int>), ChannelType.File, ChannelConnectivity.Full, null, null, null);
+            VerifyDfsInput(config, config.Stages[0], typeof(LineRecordReader));
+            VerifyStage(config.Stages[0], 3, typeof(LineCounterTask).Name + "Stage", typeof(LineCounterTask));
+            VerifyChannel(config.Stages[0], config.Stages[1], ChannelType.File);
+            VerifyStage(config.Stages[1], 2, typeof(LineAdderTask).Name + "Stage", typeof(LineAdderTask));
+            VerifyDfsOutput(config.Stages[1], typeof(TextRecordWriter<int>));
+            config.Validate();
         }
 
         [Test]
-        public void TestProcessRecordsPipelineChannel()
+        public void TestProcessDelegate()
         {
-            JobBuilder builder = new JobBuilder(_dfsClient, _jetClient);
+            JobBuilder builder = new JobBuilder(_fileSystemClient, _jetClient);
 
-            var input = new DfsInput(_inputPath, typeof(LineRecordReader));
-            var output = new DfsOutput(_outputPath, typeof(TextRecordWriter<int>));
-            var channel = new Channel() { ChannelType = ChannelType.Pipeline };
-            builder.ProcessRecords(input, channel, typeof(LineCounterTask));
-            builder.ProcessRecords(channel, output, typeof(LineAdderTask));
+            var input = builder.Read(_inputPath, typeof(LineRecordReader));
+            var operation = builder.Process<Utf8String, int>(input, ProcessRecords);
+            builder.Write(operation, _outputPath, typeof(TextRecordWriter<>));
 
             JobConfiguration config = builder.CreateJob();
-            Assert.AreEqual(1, config.AssemblyFileNames.Count);
-            Assert.AreEqual(Path.GetFileName(typeof(LineCounterTask).Assembly.Location), config.AssemblyFileNames[0]);
-
-            Assert.AreEqual(1, config.Stages.Count);
-
-            VerifyStage(config, config.Stages[0], 3, typeof(LineCounterTask).Name, typeof(LineCounterTask), null, typeof(LineRecordReader), null, ChannelType.Pipeline, ChannelConnectivity.Full, typeof(HashPartitioner<int>), typeof(MultiRecordReader<int>), typeof(LineAdderTask).Name);
-            VerifyStage(config, config.Stages[0].ChildStage, 1, typeof(LineAdderTask).Name, typeof(LineAdderTask), null, null, typeof(TextRecordWriter<int>), ChannelType.Pipeline, ChannelConnectivity.Full, null, null, null);
-        }
-
-        [Test]
-        public void TestProcessRecordsCustomChannelSettings()
-        {
-            JobBuilder builder = new JobBuilder(_dfsClient, _jetClient);
-
-            var input = new DfsInput(_inputPath, typeof(LineRecordReader));
-            var output = new DfsOutput(_outputPath, typeof(TextRecordWriter<int>));
-            var channel = new Channel() { ChannelType = ChannelType.Tcp, PartitionerType = typeof(FakePartitioner), PartitionCount = 4, PartitionsPerTask = 2 };
-            builder.ProcessRecords(input, channel, typeof(LineCounterTask));
-            builder.ProcessRecords(channel, output, typeof(LineAdderTask));
-
-            JobConfiguration config = builder.CreateJob();
-            Assert.AreEqual(8, config.AssemblyFileNames.Count);
-
-            Assert.AreEqual(2, config.Stages.Count);
-
-            VerifyStage(config, config.Stages[0], 3, typeof(LineCounterTask).Name, typeof(LineCounterTask), null, typeof(LineRecordReader), null, ChannelType.Tcp, ChannelConnectivity.Full, typeof(FakePartitioner), typeof(RoundRobinMultiInputRecordReader<int>), typeof(LineAdderTask).Name);
-            VerifyStage(config, config.Stages[1], 2, 2, typeof(LineAdderTask).Name, typeof(LineAdderTask), null, null, typeof(TextRecordWriter<int>), ChannelType.File, ChannelConnectivity.Full, null, null, null);
-        }
-
-        [Test]
-        public void TestProcessRecordsEmptyTaskReplacementPipelinePossible()
-        {
-            JobBuilder builder = new JobBuilder(_dfsClient, _jetClient);
-
-            var input = new DfsInput(_inputPath, typeof(LineRecordReader));
-            var output = new DfsOutput(_outputPath, typeof(TextRecordWriter<int>));
-            var channel = new Channel() { ChannelType = ChannelType.Pipeline };
-            builder.ProcessRecords(input, channel, typeof(EmptyTask<Utf8String>));
-            builder.ProcessRecords(channel, output, typeof(LineCounterTask));
-
-            // This should result in a single stage job with no child stages, same as if you hadn't done this at all.
-            JobConfiguration config = builder.CreateJob();
-            Assert.AreEqual(1, config.AssemblyFileNames.Count);
-            Assert.AreEqual(Path.GetFileName(typeof(LineCounterTask).Assembly.Location), config.AssemblyFileNames[0]);
-
-            Assert.AreEqual(1, config.Stages.Count);
-            VerifyStage(config, config.Stages[0], 3, typeof(LineCounterTask).Name, typeof(LineCounterTask), null, typeof(LineRecordReader), typeof(TextRecordWriter<int>), ChannelType.File, ChannelConnectivity.Full, null, null, null);  
-        }
-
-        [Test]
-        public void TestProcessRecordsEmptyTaskReplacementPipelineImpossible()
-        {
-            JobBuilder builder = new JobBuilder(_dfsClient, _jetClient);
-
-            var input = new DfsInput(_inputPath, typeof(LineRecordReader));
-            var output = new DfsOutput(_outputPath, typeof(TextRecordWriter<int>));
-            // Empty task replacement is not possible because the output of the empty task is being partitioned.
-            var channel = new Channel() { ChannelType = ChannelType.Pipeline, PartitionCount = 4 };
-            builder.ProcessRecords(input, channel, typeof(EmptyTask<Utf8String>));
-            builder.ProcessRecords(channel, output, typeof(LineCounterTask));
-
-            // This should result in a single stage task with child stages, same as if you hadn't done this at all.
-            JobConfiguration config = builder.CreateJob();
-            Assert.AreEqual(1, config.AssemblyFileNames.Count);
-            Assert.AreEqual(Path.GetFileName(typeof(LineCounterTask).Assembly.Location), config.AssemblyFileNames[0]);
-
-            Assert.AreEqual(1, config.Stages.Count);
-            VerifyStage(config, config.Stages[0], 3, typeof(EmptyTask<Utf8String>).Name, typeof(EmptyTask<Utf8String>), null, typeof(LineRecordReader), null, ChannelType.Pipeline, ChannelConnectivity.Full, typeof(HashPartitioner<Utf8String>), typeof(MultiRecordReader<int>), typeof(LineCounterTask).Name);
-            VerifyStage(config, config.Stages[0].ChildStage, 4, typeof(LineCounterTask).Name, typeof(LineCounterTask), null, null, typeof(TextRecordWriter<int>), ChannelType.Pipeline, ChannelConnectivity.Full, null, null, null);
-        }
-
-        [Test]
-        public void TestProcessRecordsEmptyTaskReplacementPossible()
-        {
-            JobBuilder builder = new JobBuilder(_dfsClient, _jetClient);
-
-            var input = new DfsInput(_inputPath, typeof(LineRecordReader));
-            var output = new DfsOutput(_outputPath, typeof(TextRecordWriter<int>));
-            var channel1 = new Channel() { PartitionCount = 4 };
-            var channel2 = new Channel() { PartitionCount = 4 };
-            builder.ProcessRecords(input, channel1, typeof(LineCounterTask));
-            builder.ProcessRecords(channel1, channel2, typeof(EmptyTask<int>));
-            // Replacement is possible because partitioner type and partition count match.
-            builder.ProcessRecords(channel2, output, typeof(LineAdderTask));
-
-            JobConfiguration config = builder.CreateJob();
-            Assert.AreEqual(1, config.AssemblyFileNames.Count);
-            Assert.AreEqual(Path.GetFileName(typeof(LineCounterTask).Assembly.Location), config.AssemblyFileNames[0]);
-
-            Assert.AreEqual(2, config.Stages.Count);
-            VerifyStage(config, config.Stages[0], 3, typeof(LineCounterTask).Name, typeof(LineCounterTask), null, typeof(LineRecordReader), null, ChannelType.File, ChannelConnectivity.Full, typeof(HashPartitioner<int>), typeof(MultiRecordReader<int>), typeof(LineAdderTask).Name);
-            VerifyStage(config, config.Stages[1], 4, typeof(LineAdderTask).Name, typeof(LineAdderTask), null, null, typeof(TextRecordWriter<int>), ChannelType.File, ChannelConnectivity.Full, null, null, null);
-        }
-
-        [Test]
-        public void TestProcessRecordsEmptyTaskReplacementImpossible()
-        {
-            JobBuilder builder = new JobBuilder(_dfsClient, _jetClient);
-
-            var input = new DfsInput(_inputPath, typeof(LineRecordReader));
-            var output = new DfsOutput(_outputPath, typeof(TextRecordWriter<int>));
-            var channel1 = new Channel() { PartitionCount = 4 };
-            var channel2 = new Channel() { PartitionCount = 2 };
-            builder.ProcessRecords(input, channel1, typeof(LineCounterTask));
-            builder.ProcessRecords(channel1, channel2, typeof(EmptyTask<int>));
-            // Replacement is not possible because partition count doesn't match.
-            builder.ProcessRecords(channel2, output, typeof(LineAdderTask));
-
-            JobConfiguration config = builder.CreateJob();
-            Assert.AreEqual(1, config.AssemblyFileNames.Count);
-            Assert.AreEqual(Path.GetFileName(typeof(LineCounterTask).Assembly.Location), config.AssemblyFileNames[0]);
-
-            Assert.AreEqual(3, config.Stages.Count);
-            VerifyStage(config, config.Stages[0], 3, typeof(LineCounterTask).Name, typeof(LineCounterTask), null, typeof(LineRecordReader), null, ChannelType.File, ChannelConnectivity.Full, typeof(HashPartitioner<int>), typeof(MultiRecordReader<int>), typeof(EmptyTask<int>).Name);
-            VerifyStage(config, config.Stages[1], 4, typeof(EmptyTask<int>).Name, typeof(EmptyTask<int>), null, null, null, ChannelType.File, ChannelConnectivity.Full, typeof(HashPartitioner<int>), typeof(MultiRecordReader<int>), typeof(LineAdderTask).Name);
-            VerifyStage(config, config.Stages[2], 2, typeof(LineAdderTask).Name, typeof(LineAdderTask), null, null, typeof(TextRecordWriter<int>), ChannelType.File, ChannelConnectivity.Full, null, null, null);
-        }
-
-        [Test]
-        public void TestProcessRecordsEmptyTaskReplacementImpossible2()
-        {
-            JobBuilder builder = new JobBuilder(_dfsClient, _jetClient);
-
-            var input = new DfsInput(_inputPath, typeof(LineRecordReader));
-            var output = new DfsOutput(_outputPath, typeof(TextRecordWriter<int>));
-            var channel1 = new Channel() { PartitionCount = 4 };
-            var channel2 = new Channel() { PartitionerType = typeof(FakePartitioner), PartitionCount = 4 };
-            builder.ProcessRecords(input, channel1, typeof(LineCounterTask));
-            builder.ProcessRecords(channel1, channel2, typeof(EmptyTask<int>));
-            // Replacement is not possible because partitioner type doesn't match.
-            builder.ProcessRecords(channel2, output, typeof(LineAdderTask));
-
-            JobConfiguration config = builder.CreateJob();
-            Assert.AreEqual(8, config.AssemblyFileNames.Count);
-            Assert.AreEqual(Path.GetFileName(typeof(LineCounterTask).Assembly.Location), config.AssemblyFileNames[0]);
-
-            Assert.AreEqual(3, config.Stages.Count);
-            VerifyStage(config, config.Stages[0], 3, typeof(LineCounterTask).Name, typeof(LineCounterTask), null, typeof(LineRecordReader), null, ChannelType.File, ChannelConnectivity.Full, typeof(HashPartitioner<int>), typeof(MultiRecordReader<int>), typeof(EmptyTask<int>).Name);
-            VerifyStage(config, config.Stages[1], 4, typeof(EmptyTask<int>).Name, typeof(EmptyTask<int>), null, null, null, ChannelType.File, ChannelConnectivity.Full, typeof(FakePartitioner), typeof(MultiRecordReader<int>), typeof(LineAdderTask).Name);
-            VerifyStage(config, config.Stages[2], 4, typeof(LineAdderTask).Name, typeof(LineAdderTask), null, null, typeof(TextRecordWriter<int>), ChannelType.File, ChannelConnectivity.Full, null, null, null);
-        }
-
-        [Test]
-        public void TestProcessRecordsEmptyTaskReplacementImpossible3()
-        {
-            JobBuilder builder = new JobBuilder(_dfsClient, _jetClient);
-
-            var input = new DfsInput(_inputPath, typeof(LineRecordReader));
-            var output = new DfsOutput(_outputPath, typeof(TextRecordWriter<int>));
-            var channel1 = new Channel() { ChannelType = ChannelType.Pipeline, PartitionCount = 4 };
-            var channel2 = new Channel() { PartitionCount = 4 };
-            builder.ProcessRecords(input, channel1, typeof(LineCounterTask));
-            builder.ProcessRecords(channel1, channel2, typeof(EmptyTask<int>));
-            // Replacement is not possible because partition count doesn't match.
-            builder.ProcessRecords(channel2, output, typeof(LineAdderTask));
-
-            JobConfiguration config = builder.CreateJob();
-            Assert.AreEqual(1, config.AssemblyFileNames.Count);
-            Assert.AreEqual(Path.GetFileName(typeof(LineCounterTask).Assembly.Location), config.AssemblyFileNames[0]);
-
-            Assert.AreEqual(2, config.Stages.Count);
-            VerifyStage(config, config.Stages[0], 3, typeof(LineCounterTask).Name, typeof(LineCounterTask), null, typeof(LineRecordReader), null, ChannelType.Pipeline, ChannelConnectivity.Full, typeof(HashPartitioner<int>), typeof(MultiRecordReader<int>), typeof(EmptyTask<int>).Name);
-            VerifyStage(config, config.Stages[0].ChildStage, 4, typeof(EmptyTask<int>).Name, typeof(EmptyTask<int>), null, null, null, ChannelType.File, ChannelConnectivity.Full, typeof(HashPartitioner<int>), typeof(MultiRecordReader<int>), typeof(LineAdderTask).Name);
-            VerifyStage(config, config.Stages[1], 4, typeof(LineAdderTask).Name, typeof(LineAdderTask), null, null, typeof(TextRecordWriter<int>), ChannelType.File, ChannelConnectivity.Full, null, null, null);
-        }
-
-        [Test]
-        public void TestProcessRecordsPartitionMatching()
-        {
-            JobBuilder builder = new JobBuilder(_dfsClient, _jetClient);
-
-            var input = new DfsInput(_inputPath, typeof(LineRecordReader));
-            var output = new DfsOutput(_outputPath, typeof(TextRecordWriter<int>));
-            var channel1 = new Channel() { ChannelType = ChannelType.Pipeline, PartitionCount = 4 };
-            var channel2 = new Channel();
-            builder.ProcessRecords(input, channel1, typeof(LineCounterTask));
-            builder.ProcessRecords(channel1, channel2, typeof(LineAdderTask));
-            builder.ProcessRecords(channel2, output, typeof(LineAdderTask));
-
-            JobConfiguration config = builder.CreateJob();
-            Assert.AreEqual(1, config.AssemblyFileNames.Count);
-            Assert.AreEqual(Path.GetFileName(typeof(LineCounterTask).Assembly.Location), config.AssemblyFileNames[0]);
-
-            Assert.AreEqual(2, config.Stages.Count);
-            VerifyStage(config, config.Stages[0], 3, typeof(LineCounterTask).Name, typeof(LineCounterTask), null, typeof(LineRecordReader), null, ChannelType.Pipeline, ChannelConnectivity.Full, typeof(HashPartitioner<int>), typeof(MultiRecordReader<int>), typeof(LineAdderTask).Name);
-            VerifyStage(config, config.Stages[0].ChildStage, 4, typeof(LineAdderTask).Name, typeof(LineAdderTask), null, null, null, ChannelType.File, ChannelConnectivity.Full, typeof(HashPartitioner<int>), typeof(MultiRecordReader<int>), typeof(LineAdderTask).Name + "1");
-            // Partition count should be four because it should match the internal partitioning of the compound input stage
-            VerifyStage(config, config.Stages[1], 4, typeof(LineAdderTask).Name + "1", typeof(LineAdderTask), null, null, typeof(TextRecordWriter<int>), ChannelType.File, ChannelConnectivity.Full, null, null, null);
-        }
-
-        [Test]
-        public void TestAccumulateRecordsDfsInput()
-        {
-            JobBuilder builder = new JobBuilder(_dfsClient, _jetClient);
-
-            var input = new DfsInput(_inputPath, typeof(RecordFileReader<Pair<Utf8String, int>>));
-            var output = new DfsOutput(_outputPath, typeof(TextRecordWriter<Pair<Utf8String, int>>));
-            builder.AccumulateRecords(input, output, typeof(FakeAccumulatorTask));
-
-            JobConfiguration config = builder.CreateJob();
-            Assert.AreEqual(8, config.AssemblyFileNames.Count);
-
-            // When you want to accumulate directly on DFS input, it will treat that as being a single input range that should be accumulated in its entirety, not as a pre-partitioned
-            // file. As a result, it will assume you want one partition and create two stages, one to accumulate locally and one to combine the results.
-            Assert.AreEqual(2, config.Stages.Count);
-
-            VerifyStage(config, config.Stages[0], 3, "Partial" + typeof(FakeAccumulatorTask).Name, typeof(FakeAccumulatorTask), null, typeof(RecordFileReader<Pair<Utf8String, int>>), null, ChannelType.File, ChannelConnectivity.Full, typeof(HashPartitioner<Pair<Utf8String, int>>), typeof(MultiRecordReader<Pair<Utf8String, int>>), typeof(FakeAccumulatorTask).Name);
-            VerifyStage(config, config.Stages[1], 1, typeof(FakeAccumulatorTask).Name, typeof(FakeAccumulatorTask), null, null, typeof(TextRecordWriter<Pair<Utf8String, int>>), ChannelType.File, ChannelConnectivity.Full, null, null, null);
-        }
-
-        [Test]
-        public void TestAccumulateRecordsChannelInput()
-        {
-            JobBuilder builder = new JobBuilder(_dfsClient, _jetClient);
-
-            var input = new DfsInput(_inputPath, typeof(LineRecordReader));
-            var output = new DfsOutput(_outputPath, typeof(TextRecordWriter<Pair<Utf8String, int>>));
-            Channel channel = new Channel() { PartitionCount = 2 };
-
-            builder.ProcessRecords(input, channel, typeof(FakeKvpProducingTask));
-            builder.AccumulateRecords(channel, output, typeof(FakeAccumulatorTask));
-
-            JobConfiguration config = builder.CreateJob();
-            Assert.AreEqual(8, config.AssemblyFileNames.Count); // Includes all the stuff Tkl.Jumbo.Test references, including NameServer.exe, etc. which isn't a problem because we're not executing it.
-
-            Assert.AreEqual(2, config.Stages.Count);
-
-            VerifyStage(config, config.Stages[0], 3, typeof(FakeKvpProducingTask).Name, typeof(FakeKvpProducingTask), null, typeof(LineRecordReader), null, ChannelType.Pipeline, ChannelConnectivity.Full, typeof(HashPartitioner<Pair<Utf8String, int>>), null, "Partial" + typeof(FakeAccumulatorTask).Name);
-            VerifyStage(config, config.Stages[0].ChildStage, 1, "Partial" + typeof(FakeAccumulatorTask).Name, typeof(FakeAccumulatorTask), null, null, null, ChannelType.File, ChannelConnectivity.Full, typeof(HashPartitioner<Pair<Utf8String, int>>), typeof(MultiRecordReader<Pair<Utf8String, int>>), typeof(FakeAccumulatorTask).Name);
-            VerifyStage(config, config.Stages[1], 2, typeof(FakeAccumulatorTask).Name, typeof(FakeAccumulatorTask), null, null, typeof(TextRecordWriter<Pair<Utf8String, int>>), ChannelType.File, ChannelConnectivity.Full, null, null, null);
-        }
-
-        [Test]
-        public void TestAccumulateRecordsSingleInputDfsOutput()
-        {
-            JobBuilder builder = new JobBuilder(_dfsClient, _jetClient);
-
-            var input = new DfsInput(_inputPath, typeof(LineRecordReader));
-            var output = new DfsOutput(_outputPath, typeof(TextRecordWriter<Pair<Utf8String, int>>));
-            Channel channel1 = new Channel() { PartitionCount = 1 };
-            Channel channel2 = new Channel() { PartitionCount = 2 };
-
-            builder.ProcessRecords(input, channel1, typeof(EmptyTask<Utf8String>)); // empty task can't be replaced because it has no input channel
-            // This second stage will have only one task
-            builder.ProcessRecords(channel1, channel2, typeof(FakeKvpProducingTask));
-            // accumulator task with input stage with only one task should not create two steps, only one, which is pipelined.
-            builder.AccumulateRecords(channel2, output, typeof(FakeAccumulatorTask));
-
-            JobConfiguration config = builder.CreateJob();
-            Assert.AreEqual(8, config.AssemblyFileNames.Count);
-
-            Assert.AreEqual(2, config.Stages.Count);
-
-            // Not verifying the first stage, not important.
-            VerifyStage(config, config.Stages[1], 1, typeof(FakeKvpProducingTask).Name, typeof(FakeKvpProducingTask), null, null, null, ChannelType.Pipeline, ChannelConnectivity.Full, typeof(HashPartitioner<Pair<Utf8String, int>>), null, typeof(FakeAccumulatorTask).Name);
-            VerifyStage(config, config.Stages[1].ChildStage, 2, typeof(FakeAccumulatorTask).Name, typeof(FakeAccumulatorTask), null, null, typeof(TextRecordWriter<Pair<Utf8String, int>>), ChannelType.File, ChannelConnectivity.Full, null, null, null);
-        }
-
-        [Test]
-        public void TestAccumulateRecordsSingleInputChannelOutput()
-        {
-            JobBuilder builder = new JobBuilder(_dfsClient, _jetClient);
-
-            var input = new DfsInput(_inputPath, typeof(LineRecordReader));
-            var output = new DfsOutput(_outputPath, typeof(TextRecordWriter<Pair<Utf8String, int>>));
-            Channel channel1 = new Channel() { PartitionCount = 1 };
-            Channel channel2 = new Channel() { PartitionCount = 2 };
-            Channel channel3 = new Channel() { PartitionCount = 1 };
-
-            builder.ProcessRecords(input, channel1, typeof(EmptyTask<Utf8String>)); // empty task can't be replaced because it has no input channel
-            // This second stage will have only one task
-            builder.ProcessRecords(channel1, channel2, typeof(FakeKvpProducingTask));
-            // accumulator task with input stage with only one task should not create two steps, only one, which is pipelined.
-            builder.AccumulateRecords(channel2, channel3, typeof(FakeAccumulatorTask));
-            // This won't replace the empty task because the partition count on the channels doesn't match.
-            builder.ProcessRecords(channel3, output, typeof(EmptyTask<Pair<Utf8String, int>>)).StageId = "SecondEmptyTask";
-
-            JobConfiguration config = builder.CreateJob();
-            Assert.AreEqual(8, config.AssemblyFileNames.Count);
-
-            Assert.AreEqual(4, config.Stages.Count);
-
-            // Not verifying the first stage, not important.
-            VerifyStage(config, config.Stages[1], 1, typeof(FakeKvpProducingTask).Name, typeof(FakeKvpProducingTask), null, null, null, ChannelType.Pipeline, ChannelConnectivity.Full, typeof(HashPartitioner<Pair<Utf8String, int>>), null, "Partial" + typeof(FakeAccumulatorTask).Name);
-            VerifyStage(config, config.Stages[1].ChildStage, 1, "Partial" + typeof(FakeAccumulatorTask).Name, typeof(FakeAccumulatorTask), null, null, null, ChannelType.File, ChannelConnectivity.Full, typeof(HashPartitioner<Pair<Utf8String, int>>), typeof(MultiRecordReader<Pair<Utf8String, int>>), typeof(FakeAccumulatorTask).Name);
-            VerifyStage(config, config.Stages[2], 2, typeof(FakeAccumulatorTask).Name, typeof(EmptyTask<Pair<Utf8String, int>>), null, null, null, ChannelType.File, ChannelConnectivity.Full, typeof(HashPartitioner<Pair<Utf8String, int>>), typeof(MultiRecordReader<Pair<Utf8String, int>>), "SecondEmptyTask");
-        }
-
-        [Test]
-        public void TestAccumulateRecordsEmptyTaskReplacement()
-        {
-            JobBuilder builder = new JobBuilder(_dfsClient, _jetClient);
-
-            var input = new DfsInput(_inputPath, typeof(RecordFileReader<Pair<Utf8String, int>>));
-            var output = new DfsOutput(_outputPath, typeof(TextRecordWriter<Pair<Utf8String, int>>));
-            Channel channel = new Channel() { PartitionCount = 1 };
-            builder.ProcessRecords(input, channel, typeof(EmptyTask<Pair<Utf8String, int>>)); // empty task will be replaced because followup explicitly pipeline
-            builder.AccumulateRecords(channel, output, typeof(FakeAccumulatorTask));
-
-            JobConfiguration config = builder.CreateJob();
-            Assert.AreEqual(8, config.AssemblyFileNames.Count);
-
-            Assert.AreEqual(2, config.Stages.Count);
-
-            VerifyStage(config, config.Stages[0], 3, "Partial" + typeof(FakeAccumulatorTask).Name, typeof(FakeAccumulatorTask), null, typeof(RecordFileReader<Pair<Utf8String, int>>), null, ChannelType.File, ChannelConnectivity.Full, typeof(HashPartitioner<Pair<Utf8String, int>>), typeof(MultiRecordReader<Pair<Utf8String, int>>), typeof(FakeAccumulatorTask).Name);
-            VerifyStage(config, config.Stages[1], 1, typeof(FakeAccumulatorTask).Name, typeof(FakeAccumulatorTask), null, null, typeof(TextRecordWriter<Pair<Utf8String, int>>), ChannelType.File, ChannelConnectivity.Full, null, null, null);
-        }
-
-        [Test]
-        public void TestSortRecordsDfsInput()
-        {
-            JobBuilder builder = new JobBuilder(_dfsClient, _jetClient);
-
-            var input = new DfsInput(_inputPath, typeof(LineRecordReader));
-            var output = new DfsOutput(_outputPath, typeof(TextRecordWriter<Utf8String>));
-            builder.SortRecords(input, output);
-
-            JobConfiguration config = builder.CreateJob();
-            Assert.AreEqual(0, config.AssemblyFileNames.Count);
-
-            Assert.AreEqual(2, config.Stages.Count);
-
-            VerifyStage(config, config.Stages[0], 3, "SortStage", typeof(SortTask<Utf8String>), null, typeof(LineRecordReader), null, ChannelType.File, ChannelConnectivity.Full, typeof(HashPartitioner<Utf8String>), typeof(MergeRecordReader<Utf8String>), "MergeStage");
-            VerifyStage(config, config.Stages[1], 1, "MergeStage", typeof(EmptyTask<Utf8String>), null, null, typeof(TextRecordWriter<Utf8String>), ChannelType.File, ChannelConnectivity.Full, null, null, null);
-        }
-
-        [Test]
-        public void TestSortRecordsChannelInput()
-        {
-            JobBuilder builder = new JobBuilder(_dfsClient, _jetClient);
-
-            var input = new DfsInput(_inputPath, typeof(LineRecordReader));
-            var channel = new Channel() { PartitionCount = 2 };
-            var output = new DfsOutput(_outputPath, typeof(TextRecordWriter<Utf8String>));
-            builder.PartitionRecords(input, channel);
-            builder.SortRecords(channel, output);
-
-            JobConfiguration config = builder.CreateJob();
-            Assert.AreEqual(0, config.AssemblyFileNames.Count);
-
-            Assert.AreEqual(2, config.Stages.Count);
-
-            VerifyStage(config, config.Stages[0], 3, "PartitionStage", typeof(EmptyTask<Utf8String>), null, typeof(LineRecordReader), null, ChannelType.Pipeline, ChannelConnectivity.Full, typeof(HashPartitioner<Utf8String>), null, "SortStage");
-            VerifyStage(config, config.Stages[0].ChildStage, 2, "SortStage", typeof(SortTask<Utf8String>), null, null, null, ChannelType.File, ChannelConnectivity.Full, typeof(HashPartitioner<Utf8String>), typeof(MergeRecordReader<Utf8String>), "MergeStage");
-            VerifyStage(config, config.Stages[1], 2, "MergeStage", typeof(EmptyTask<Utf8String>), null, null, typeof(TextRecordWriter<Utf8String>), ChannelType.File, ChannelConnectivity.Full, null, null, null);
-        }
-
-        [Test]
-        public void TestSortRecordsSingleInput()
-        {
-            JobBuilder builder = new JobBuilder(_dfsClient, _jetClient);
-
-            var input = new DfsInput(_inputPath, typeof(LineRecordReader));
-            var channel = new Channel() { PartitionCount = 1 };
-            var channel2 = new Channel() { PartitionCount = 2 };
-            var output = new DfsOutput(_outputPath, typeof(TextRecordWriter<int>));
-            builder.ProcessRecords(input, channel, typeof(LineCounterTask));
-            builder.ProcessRecords(channel, channel2, typeof(LineAdderTask));
-            builder.SortRecords(channel2, output);
-
-            JobConfiguration config = builder.CreateJob();
-            Assert.AreEqual(1, config.AssemblyFileNames.Count);
-
-            Assert.AreEqual(2, config.Stages.Count);
-
-            VerifyStage(config, config.Stages[1].ChildStage, 2, "SortStage", typeof(SortTask<int>), null, null, typeof(TextRecordWriter<int>), ChannelType.File, ChannelConnectivity.Full, null, null, null);
-        }
-
-        [Test]
-        public void TestGenerateRecordsSingleStage()
-        {
-            JobBuilder builder = new JobBuilder(_dfsClient, _jetClient);
-
-            var output = new DfsOutput(_outputPath, typeof(TextRecordWriter<int>));
-            builder.GenerateRecords(output, typeof(LineCounterTask), 2);
-
-            JobConfiguration config = builder.CreateJob();
-            Assert.AreEqual(1, config.AssemblyFileNames.Count);
+            Assert.AreEqual(9, config.AssemblyFileNames.Count); // Includes generated assembly and the one from the method and all its references.
+            StringAssert.StartsWith("Tkl.Jumbo.Jet.Generated.", config.AssemblyFileNames.Last());
+            Assert.AreEqual("ProcessRecordsTask", operation.TaskType.TaskType.Name);
 
             Assert.AreEqual(1, config.Stages.Count);
             StageConfiguration stage = config.Stages[0];
-            VerifyStage(config, stage, 2, typeof(LineCounterTask).Name, typeof(LineCounterTask), null, null, typeof(TextRecordWriter<int>), ChannelType.File, ChannelConnectivity.Full, null, null, null);
+            VerifyStage(stage, 3, "ProcessRecordsTaskStage", operation.TaskType.TaskType);
+            VerifyDfsInput(config, stage, typeof(LineRecordReader));
+            VerifyDfsOutput(stage, typeof(TextRecordWriter<int>));
+            config.Validate();
+            builder.TaskBuilder.DeleteAssembly();
         }
 
         [Test]
-        public void TestGenerateRecordsMultiStage()
+        public void TestProcessDelegateNoContext()
         {
-            JobBuilder builder = new JobBuilder(_dfsClient, _jetClient);
+            JobBuilder builder = new JobBuilder(_fileSystemClient, _jetClient);
 
-            var output = new DfsOutput(_outputPath, typeof(TextRecordWriter<int>));
-            var channel = new Channel();
-            builder.GenerateRecords(channel, typeof(LineCounterTask), 2);
-            builder.ProcessRecords(channel, output, typeof(LineAdderTask));
+            var input = builder.Read(_inputPath, typeof(LineRecordReader));
+            var operation = builder.Process<Utf8String, int>(input, ProcessRecordsNoContext);
+            builder.Write(operation, _outputPath, typeof(TextRecordWriter<>));
+
+            JobConfiguration config = builder.CreateJob();
+            Assert.AreEqual(9, config.AssemblyFileNames.Count); // Includes generated assembly and the one from the method and all its references.
+            StringAssert.StartsWith("Tkl.Jumbo.Jet.Generated.", config.AssemblyFileNames.Last());
+            Assert.AreEqual("ProcessRecordsNoContextTask", operation.TaskType.TaskType.Name);
+
+            Assert.AreEqual(1, config.Stages.Count);
+            StageConfiguration stage = config.Stages[0];
+            VerifyStage(stage, 3, "ProcessRecordsNoContextTaskStage", operation.TaskType.TaskType);
+            VerifyDfsInput(config, stage, typeof(LineRecordReader));
+            VerifyDfsOutput(stage, typeof(TextRecordWriter<int>));
+            config.Validate();
+            builder.TaskBuilder.DeleteAssembly();
+        }
+
+        [Test]
+        public void TestCustomDfsOutput()
+        {
+            JobBuilder builder = new JobBuilder(_fileSystemClient, _jetClient);
+
+            var input = builder.Read(_inputPath, typeof(LineRecordReader));
+            var operation = builder.Process(input, typeof(LineCounterTask));
+            var output = builder.Write(operation, _outputPath, typeof(TextRecordWriter<>));
+            output.BlockSize = 256 << 20;
+            output.ReplicationFactor = 2;
+
+            JobConfiguration config = builder.CreateJob();
+            VerifyDfsOutput(config.Stages[0], typeof(TextRecordWriter<int>), 256 << 20, 2);
+            config.Validate();
+        }
+
+        [Test]
+        public void TestCustomChannel()
+        {
+            JobBuilder builder = new JobBuilder(_fileSystemClient, _jetClient);
+
+            var input = builder.Read(_inputPath, typeof(LineRecordReader));
+            var op1 = builder.Process(input, typeof(LineCounterTask));
+            var op2 = builder.Process(op1, typeof(LineAdderTask));
+            op2.InputChannel.ChannelType = ChannelType.Tcp;
+            op2.InputChannel.TaskCount = 4;
+            op2.InputChannel.PartitionsPerTask = 2;
+            op2.InputChannel.PartitionerType = typeof(FakePartitioner<>);
+            op2.InputChannel.PartitionAssignmentMethod = PartitionAssignmentMethod.Striped;
+            builder.Write(op2, _outputPath, typeof(TextRecordWriter<>));
+
+            JobConfiguration config = builder.CreateJob();
+
+            VerifyChannel(config.Stages[0], config.Stages[1], ChannelType.Tcp, typeof(FakePartitioner<int>), typeof(RoundRobinMultiInputRecordReader<int>), 2, PartitionAssignmentMethod.Striped);
+            VerifyStage(config.Stages[1], 4, typeof(LineAdderTask).Name + "Stage", typeof(LineAdderTask));
+            config.Validate();
+        }
+
+        [Test]
+        public void TestSortDfsInputOutput()
+        {
+            JobBuilder builder = new JobBuilder(_fileSystemClient, _jetClient);
+
+            var input = builder.Read(_inputPath, typeof(LineRecordReader));
+            var sort = builder.Sort(input);
+            builder.Write(sort, _outputPath, typeof(TextRecordWriter<>));
+
+            JobConfiguration config = builder.CreateJob();
+            Assert.AreEqual(0, config.AssemblyFileNames.Count);
+
+            Assert.AreEqual(2, config.Stages.Count);
+
+            VerifyDfsInput(config, config.Stages[0], typeof(LineRecordReader));
+            VerifyStage(config.Stages[0], 3, "ReadStage", typeof(EmptyTask<Utf8String>));
+            VerifyChannel(config.Stages[0], config.Stages[0].ChildStage, ChannelType.Pipeline);
+            VerifyStage(config.Stages[0].ChildStage, 2, "SortStage", typeof(SortTask<Utf8String>));
+            VerifyChannel(config.Stages[0].ChildStage, config.Stages[1], ChannelType.File, multiInputRecordReaderType: typeof(MergeRecordReader<Utf8String>));
+            VerifyStage(config.Stages[1], 2, "MergeStage", typeof(EmptyTask<Utf8String>));
+            VerifyDfsOutput(config.Stages[1], typeof(TextRecordWriter<Utf8String>));
+            VerifyStageSetting(config.Stages[0].ChildStage, TaskConstants.ComparerSettingKey, null);
+            VerifyStageSetting(config.Stages[1], TaskConstants.ComparerSettingKey, null);
+            config.Validate();
+        }
+
+        [Test]
+        public void TestSortDfsInputOutputSinglePartition()
+        {
+            JobBuilder builder = new JobBuilder(_fileSystemClient, _jetClient);
+
+            var input = builder.Read(_inputPath, typeof(LineRecordReader));
+            var sort = builder.Sort(input);
+            sort.InputChannel.PartitionCount = 1;
+            builder.Write(sort, _outputPath, typeof(TextRecordWriter<>));
+
+            JobConfiguration config = builder.CreateJob();
+            Assert.AreEqual(0, config.AssemblyFileNames.Count);
+
+            Assert.AreEqual(2, config.Stages.Count);
+
+            VerifyDfsInput(config, config.Stages[0], typeof(LineRecordReader));
+            // EmptyTask will have been replaced because there is only one partition.
+            VerifyStage(config.Stages[0], 3, "SortStage", typeof(SortTask<Utf8String>));
+            VerifyChannel(config.Stages[0], config.Stages[1], ChannelType.File, multiInputRecordReaderType: typeof(MergeRecordReader<Utf8String>));
+            VerifyStage(config.Stages[1], 1, "MergeStage", typeof(EmptyTask<Utf8String>));
+            VerifyDfsOutput(config.Stages[1], typeof(TextRecordWriter<Utf8String>));
+            VerifyStageSetting(config.Stages[0], TaskConstants.ComparerSettingKey, null);
+            VerifyStageSetting(config.Stages[1], TaskConstants.ComparerSettingKey, null);
+            config.Validate();
+        }
+
+        [Test]
+        public void TestSortChannelInputOutput()
+        {
+            JobBuilder builder = new JobBuilder(_fileSystemClient, _jetClient);
+
+
+            var input = builder.Read(_inputPath, typeof(LineRecordReader));
+            var converted = builder.Process(input, typeof(StringConversionTask));
+            var sorted = builder.Sort(converted);
+            var added = builder.Process(sorted, typeof(LineAdderTask)); // Yeah, this is not a sensible job, so what?
+            builder.Write(added, _outputPath, typeof(TextRecordWriter<>));
 
             JobConfiguration config = builder.CreateJob();
             Assert.AreEqual(1, config.AssemblyFileNames.Count);
+            Assert.AreEqual(Path.GetFileName(typeof(LineCounterTask).Assembly.Location), config.AssemblyFileNames[0]);
 
             Assert.AreEqual(2, config.Stages.Count);
 
-            VerifyStage(config, config.Stages[0], 2, typeof(LineCounterTask).Name, typeof(LineCounterTask), null, null, null, ChannelType.File, ChannelConnectivity.Full, typeof(HashPartitioner<int>), typeof(MultiRecordReader<int>), typeof(LineAdderTask).Name);
-            VerifyStage(config, config.Stages[1], 1, typeof(LineAdderTask).Name, typeof(LineAdderTask), null, null, typeof(TextRecordWriter<int>), ChannelType.File, ChannelConnectivity.Full, null, null, null);
+            VerifyDfsInput(config, config.Stages[0], typeof(LineRecordReader));
+            VerifyStage(config.Stages[0], 3, typeof(StringConversionTask).Name + "Stage", typeof(StringConversionTask));
+            VerifyChannel(config.Stages[0], config.Stages[0].ChildStage, ChannelType.Pipeline);
+            VerifyStage(config.Stages[0].ChildStage, 2, "SortStage", typeof(SortTask<int>));
+            VerifyChannel(config.Stages[0].ChildStage, config.Stages[1], ChannelType.File, multiInputRecordReaderType: typeof(MergeRecordReader<int>));
+            // EmptyTask on second step replaced with LineAdderTask.
+            VerifyStage(config.Stages[1], 2, typeof(LineAdderTask).Name + "Stage", typeof(LineAdderTask));
+            VerifyDfsOutput(config.Stages[1], typeof(TextRecordWriter<int>));
+            VerifyStageSetting(config.Stages[0].ChildStage, TaskConstants.ComparerSettingKey, null);
+            VerifyStageSetting(config.Stages[1], TaskConstants.ComparerSettingKey, null);
+            config.Validate();
         }
 
         [Test]
-        public void TestSchedulingDependency()
+        public void TestSortCustomComparer()
         {
-            JobBuilder builder = new JobBuilder(_dfsClient, _jetClient);
+            JobBuilder builder = new JobBuilder(_fileSystemClient, _jetClient);
 
-            var input = new DfsInput(_inputPath, typeof(LineRecordReader));
-            var channel = new Channel() { PartitionCount = 1 };
-            var output1 = new DfsOutput(_outputPath, typeof(TextRecordWriter<Utf8String>));
-            var output2 = new DfsOutput(_outputPath, typeof(TextRecordWriter<int>));
+            var input = builder.Read(_inputPath, typeof(LineRecordReader));
+            var sort = builder.Sort(input, typeof(FakeComparer<>));
+            builder.Write(sort, _outputPath, typeof(TextRecordWriter<>));
 
-            StageBuilder stage1 = builder.ProcessRecords(input, output1, typeof(EmptyTask<Utf8String>));
-            stage1.StageId = "DependencyStage";
-            StageBuilder stage2 = builder.ProcessRecords(input, channel, typeof(LineCounterTask));
-            stage2.AddSchedulingDependency(stage1);
-            builder.ProcessRecords(channel, output2, typeof(LineAdderTask));
+            JobConfiguration config = builder.CreateJob();
+            Assert.AreNotEqual(0, config.AssemblyFileNames.Count); // Will contain lots of stuff because FakeComparer is in the test assembly, not the test tasks assembly.
+            Assert.AreEqual(2, config.Stages.Count);
+
+            VerifyStageSetting(config.Stages[0].ChildStage, TaskConstants.ComparerSettingKey, typeof(FakeComparer<Utf8String>).AssemblyQualifiedName);
+            VerifyStageSetting(config.Stages[1], TaskConstants.ComparerSettingKey, null);
+            config.Validate();
+        }
+
+        [Test]
+        public void TestSpillSort()
+        {
+            JobBuilder builder = new JobBuilder(_fileSystemClient, _jetClient);
+
+            var input = builder.Read(_inputPath, typeof(LineRecordReader));
+            var sort = builder.SpillSort(input);
+            builder.Write(sort, _outputPath, typeof(TextRecordWriter<>));
+
+            JobConfiguration config = builder.CreateJob();
+            Assert.AreEqual(0, config.AssemblyFileNames.Count);
+
+            Assert.AreEqual(2, config.Stages.Count);
+
+            VerifyDfsInput(config, config.Stages[0], typeof(LineRecordReader));
+            VerifyStage(config.Stages[0], 3, "ReadStage", typeof(EmptyTask<Utf8String>));
+            VerifyChannel(config.Stages[0], config.Stages[1], ChannelType.File, multiInputRecordReaderType: typeof(MergeRecordReader<Utf8String>));
+            VerifyStage(config.Stages[1], 2, "MergeStage", typeof(EmptyTask<Utf8String>));
+            VerifyDfsOutput(config.Stages[1], typeof(TextRecordWriter<Utf8String>));
+            VerifyStageSetting(config.Stages[0], FileOutputChannel.OutputTypeSettingKey, FileChannelOutputType.SortSpill.ToString());
+            VerifyStageSetting(config.Stages[1], FileOutputChannel.OutputTypeSettingKey, null);
+            VerifyStageSetting(config.Stages[0], TaskConstants.ComparerSettingKey, null);
+            VerifyStageSetting(config.Stages[1], TaskConstants.ComparerSettingKey, null);
+            config.Validate();
+        }
+
+        [Test]
+        public void TestSpillSortCombiner()
+        {
+            JobBuilder builder = new JobBuilder(_fileSystemClient, _jetClient);
+
+            var input = builder.Read(_inputPath, typeof(LineRecordReader));
+            var sort = builder.SpillSort(input, typeof(FakeCombiner<>));
+            builder.Write(sort, _outputPath, typeof(TextRecordWriter<>));
+
+            JobConfiguration config = builder.CreateJob();
+            Assert.AreEqual(8, config.AssemblyFileNames.Count);
+
+            Assert.AreEqual(2, config.Stages.Count);
+
+            VerifyDfsInput(config, config.Stages[0], typeof(LineRecordReader));
+            VerifyStage(config.Stages[0], 3, "ReadStage", typeof(EmptyTask<Utf8String>));
+            VerifyChannel(config.Stages[0], config.Stages[1], ChannelType.File, multiInputRecordReaderType: typeof(MergeRecordReader<Utf8String>));
+            VerifyStage(config.Stages[1], 2, "MergeStage", typeof(EmptyTask<Utf8String>));
+            VerifyDfsOutput(config.Stages[1], typeof(TextRecordWriter<Utf8String>));
+            VerifyStageSetting(config.Stages[0], FileOutputChannel.OutputTypeSettingKey, FileChannelOutputType.SortSpill.ToString());
+            VerifyStageSetting(config.Stages[1], FileOutputChannel.OutputTypeSettingKey, null);
+            VerifyStageSetting(config.Stages[0], TaskConstants.ComparerSettingKey, null);
+            VerifyStageSetting(config.Stages[1], TaskConstants.ComparerSettingKey, null);
+            VerifyStageSetting(config.Stages[0], FileOutputChannel.SpillSortCombinerTypeSettingKey, typeof(FakeCombiner<Utf8String>).AssemblyQualifiedName);
+            VerifyStageSetting(config.Stages[1], FileOutputChannel.SpillSortCombinerTypeSettingKey, null);
+            config.Validate();
+        }
+
+        [Test]
+        public void TestSpillSortCombinerDelegate()
+        {
+            JobBuilder builder = new JobBuilder(_fileSystemClient, _jetClient);
+
+            var input = builder.Read(_inputPath, typeof(RecordFileReader<Pair<Utf8String, int>>));
+            var sort = builder.SpillSort<Utf8String, int>(input, CombineRecords);
+            builder.Write(sort, _outputPath, typeof(TextRecordWriter<>));
+
+            JobConfiguration config = builder.CreateJob();
+            Assert.AreEqual(9, config.AssemblyFileNames.Count);
+            StringAssert.StartsWith("Tkl.Jumbo.Jet.Generated.", config.AssemblyFileNames.Last());
+            Assert.AreEqual("CombineRecordsTask", sort.CombinerType.Name);
+
+            Assert.AreEqual(2, config.Stages.Count);
+
+            VerifyDfsInput(config, config.Stages[0], typeof(RecordFileReader<Pair<Utf8String, int>>));
+            VerifyStage(config.Stages[0], 3, "ReadStage", typeof(EmptyTask<Pair<Utf8String, int>>));
+            VerifyChannel(config.Stages[0], config.Stages[1], ChannelType.File, multiInputRecordReaderType: typeof(MergeRecordReader<Pair<Utf8String, int>>));
+            VerifyStage(config.Stages[1], 2, "MergeStage", typeof(EmptyTask<Pair<Utf8String, int>>));
+            VerifyDfsOutput(config.Stages[1], typeof(TextRecordWriter<Pair<Utf8String, int>>));
+            VerifyStageSetting(config.Stages[0], FileOutputChannel.OutputTypeSettingKey, FileChannelOutputType.SortSpill.ToString());
+            VerifyStageSetting(config.Stages[1], FileOutputChannel.OutputTypeSettingKey, null);
+            VerifyStageSetting(config.Stages[0], TaskConstants.ComparerSettingKey, null);
+            VerifyStageSetting(config.Stages[1], TaskConstants.ComparerSettingKey, null);
+            VerifyStageSetting(config.Stages[0], FileOutputChannel.SpillSortCombinerTypeSettingKey, sort.CombinerType.AssemblyQualifiedName);
+            VerifyStageSetting(config.Stages[1], FileOutputChannel.SpillSortCombinerTypeSettingKey, null);
+            config.Validate();
+            builder.TaskBuilder.DeleteAssembly();
+        }
+
+        [Test]
+        public void TestSpillSortCombinerDelegateNoContext()
+        {
+            JobBuilder builder = new JobBuilder(_fileSystemClient, _jetClient);
+
+            var input = builder.Read(_inputPath, typeof(RecordFileReader<Pair<Utf8String, int>>));
+            var sort = builder.SpillSort<Utf8String, int>(input, CombineRecordsNoContext);
+            builder.Write(sort, _outputPath, typeof(TextRecordWriter<>));
+
+            JobConfiguration config = builder.CreateJob();
+            Assert.AreEqual(9, config.AssemblyFileNames.Count);
+            StringAssert.StartsWith("Tkl.Jumbo.Jet.Generated.", config.AssemblyFileNames.Last());
+            Assert.AreEqual("CombineRecordsNoContextTask", sort.CombinerType.Name);
+
+            Assert.AreEqual(2, config.Stages.Count);
+
+            VerifyDfsInput(config, config.Stages[0], typeof(RecordFileReader<Pair<Utf8String, int>>));
+            VerifyStage(config.Stages[0], 3, "ReadStage", typeof(EmptyTask<Pair<Utf8String, int>>));
+            VerifyChannel(config.Stages[0], config.Stages[1], ChannelType.File, multiInputRecordReaderType: typeof(MergeRecordReader<Pair<Utf8String, int>>));
+            VerifyStage(config.Stages[1], 2, "MergeStage", typeof(EmptyTask<Pair<Utf8String, int>>));
+            VerifyDfsOutput(config.Stages[1], typeof(TextRecordWriter<Pair<Utf8String, int>>));
+            VerifyStageSetting(config.Stages[0], FileOutputChannel.OutputTypeSettingKey, FileChannelOutputType.SortSpill.ToString());
+            VerifyStageSetting(config.Stages[1], FileOutputChannel.OutputTypeSettingKey, null);
+            VerifyStageSetting(config.Stages[0], TaskConstants.ComparerSettingKey, null);
+            VerifyStageSetting(config.Stages[1], TaskConstants.ComparerSettingKey, null);
+            VerifyStageSetting(config.Stages[0], FileOutputChannel.SpillSortCombinerTypeSettingKey, sort.CombinerType.AssemblyQualifiedName);
+            VerifyStageSetting(config.Stages[1], FileOutputChannel.SpillSortCombinerTypeSettingKey, null);
+            config.Validate();
+            builder.TaskBuilder.DeleteAssembly();
+        }
+
+        [Test]
+        public void TestGroupAggregateDfsInputOutput()
+        {
+            JobBuilder builder = new JobBuilder(_fileSystemClient, _jetClient);
+
+            var input = builder.Read(_inputPath, typeof(RecordFileReader<Pair<Utf8String, int>>));
+            var aggregated = builder.GroupAggregate(input, typeof(SumTask<>));
+            builder.Write(aggregated, _outputPath, typeof(TextRecordWriter<>));
+
+            JobConfiguration config = builder.CreateJob();
+            Assert.AreEqual(0, config.AssemblyFileNames.Count);
+
+            Assert.AreEqual(2, config.Stages.Count);
+
+            VerifyDfsInput(config, config.Stages[0], typeof(RecordFileReader<Pair<Utf8String, int>>));
+            VerifyStage(config.Stages[0], 3, "Local" + typeof(SumTask<Utf8String>).Name + "Stage", typeof(SumTask<Utf8String>));
+            VerifyChannel(config.Stages[0], config.Stages[1], ChannelType.File);
+            VerifyStage(config.Stages[1], 2, typeof(SumTask<Utf8String>).Name + "Stage", typeof(SumTask<Utf8String>));
+            VerifyDfsOutput(config.Stages[1], typeof(TextRecordWriter<Pair<Utf8String, int>>));
+            config.Validate();
+        }
+
+        [Test]
+        public void TestGroupAggregateChannelInput()
+        {
+            JobBuilder builder = new JobBuilder(_fileSystemClient, _jetClient);
+
+            var input = builder.Read(_inputPath, typeof(LineRecordReader));
+            var paired = builder.Process(input, typeof(GenerateInt32PairTask<>));
+            var aggregated = builder.GroupAggregate(paired, typeof(SumTask<>));
+            builder.Write(aggregated, _outputPath, typeof(TextRecordWriter<>));
+
+            JobConfiguration config = builder.CreateJob();
+            Assert.AreEqual(0, config.AssemblyFileNames.Count);
+
+            Assert.AreEqual(2, config.Stages.Count);
+
+            VerifyDfsInput(config, config.Stages[0], typeof(LineRecordReader));
+            VerifyStage(config.Stages[0], 3, typeof(GenerateInt32PairTask<Utf8String>).Name + "Stage", typeof(GenerateInt32PairTask<Utf8String>));
+            VerifyChannel(config.Stages[0], config.Stages[0].ChildStage, ChannelType.Pipeline);
+            VerifyStage(config.Stages[0].ChildStage, 1, "Local" + typeof(SumTask<Utf8String>).Name + "Stage", typeof(SumTask<Utf8String>));
+            VerifyChannel(config.Stages[0].ChildStage, config.Stages[1], ChannelType.File);
+            VerifyStage(config.Stages[1], 2, typeof(SumTask<Utf8String>).Name + "Stage", typeof(SumTask<Utf8String>));
+            VerifyDfsOutput(config.Stages[1], typeof(TextRecordWriter<Pair<Utf8String, int>>));
+            config.Validate();
+        }
+
+        [Test]
+        public void TestGroupAggregateDelegate()
+        {
+            JobBuilder builder = new JobBuilder(_fileSystemClient, _jetClient);
+
+            var input = builder.Read(_inputPath, typeof(RecordFileReader<Pair<Utf8String, int>>));
+            var aggregated = builder.GroupAggregate<Utf8String, int>(input, AccumulateRecords);
+            builder.Write(aggregated, _outputPath, typeof(TextRecordWriter<>));
+
+            JobConfiguration config = builder.CreateJob();
+            Assert.AreEqual(9, config.AssemblyFileNames.Count);
+            StringAssert.StartsWith("Tkl.Jumbo.Jet.Generated.", config.AssemblyFileNames.Last());
+            Assert.AreEqual("AccumulateRecordsTask", aggregated.TaskType.TaskType.Name);
+
+            Assert.AreEqual(2, config.Stages.Count);
+
+            VerifyDfsInput(config, config.Stages[0], typeof(RecordFileReader<Pair<Utf8String, int>>));
+            VerifyStage(config.Stages[0], 3, "LocalAccumulateRecordsTaskStage", aggregated.TaskType.TaskType);
+            VerifyChannel(config.Stages[0], config.Stages[1], ChannelType.File);
+            VerifyStage(config.Stages[1], 2, "AccumulateRecordsTaskStage", aggregated.TaskType.TaskType);
+            VerifyDfsOutput(config.Stages[1], typeof(TextRecordWriter<Pair<Utf8String, int>>));
+            config.Validate();
+            builder.TaskBuilder.DeleteAssembly();
+        }
+
+        [Test]
+        public void TestGroupAggregateDelegateNoContext()
+        {
+            JobBuilder builder = new JobBuilder(_fileSystemClient, _jetClient);
+
+            var input = builder.Read(_inputPath, typeof(RecordFileReader<Pair<Utf8String, int>>));
+            var aggregated = builder.GroupAggregate<Utf8String, int>(input, AccumulateRecordsNoContext);
+            builder.Write(aggregated, _outputPath, typeof(TextRecordWriter<>));
+
+            JobConfiguration config = builder.CreateJob();
+            Assert.AreEqual(9, config.AssemblyFileNames.Count);
+            StringAssert.StartsWith("Tkl.Jumbo.Jet.Generated.", config.AssemblyFileNames.Last());
+            Assert.AreEqual("AccumulateRecordsNoContextTask", aggregated.TaskType.TaskType.Name);
+
+            Assert.AreEqual(2, config.Stages.Count);
+
+            VerifyDfsInput(config, config.Stages[0], typeof(RecordFileReader<Pair<Utf8String, int>>));
+            VerifyStage(config.Stages[0], 3, "LocalAccumulateRecordsNoContextTaskStage", aggregated.TaskType.TaskType);
+            VerifyChannel(config.Stages[0], config.Stages[1], ChannelType.File);
+            VerifyStage(config.Stages[1], 2, "AccumulateRecordsNoContextTaskStage", aggregated.TaskType.TaskType);
+            VerifyDfsOutput(config.Stages[1], typeof(TextRecordWriter<Pair<Utf8String, int>>));
+            config.Validate();
+            builder.TaskBuilder.DeleteAssembly();
+        }
+
+        [Test]
+        public void TestMapReduce()
+        {
+            JobBuilder builder = new JobBuilder(_fileSystemClient, _jetClient);
+
+            // This is it: the official way to write a "behaves like Hadoop" MapReduce job.
+            var input = builder.Read(_inputPath, typeof(LineRecordReader));
+            var mapped = builder.Map<Utf8String, Pair<Utf8String, int>>(input, MapRecords);
+            var sorted = builder.SpillSort(mapped);
+            var reduced = builder.Reduce<Utf8String, int, int>(sorted, ReduceRecords);
+            builder.Write(reduced, _outputPath, typeof(TextRecordWriter<>));
+
+            JobConfiguration config = builder.CreateJob();
+            Assert.AreEqual(9, config.AssemblyFileNames.Count); // Includes generated assembly and the one from the method and all its references.
+            StringAssert.StartsWith("Tkl.Jumbo.Jet.Generated.", config.AssemblyFileNames.Last());
+            Assert.AreEqual("MapRecordsTask", mapped.TaskType.TaskType.Name);
+            Assert.AreEqual("ReduceRecordsTask", reduced.TaskType.TaskType.Name);
+
+            Assert.AreEqual(2, config.Stages.Count);
+            VerifyDfsInput(config, config.Stages[0], typeof(LineRecordReader));
+            VerifyStage(config.Stages[0], 3, "MapRecordsTaskStage", mapped.TaskType.TaskType);
+            VerifyChannel(config.Stages[0], config.Stages[1], ChannelType.File, multiInputRecordReaderType: typeof(MergeRecordReader<Pair<Utf8String, int>>));
+            VerifyStageSetting(config.Stages[0], FileOutputChannel.OutputTypeSettingKey, FileChannelOutputType.SortSpill.ToString());
+            VerifyStage(config.Stages[1], 2, "ReduceRecordsTaskStage", reduced.TaskType.TaskType);
+            VerifyDfsOutput(config.Stages[1], typeof(TextRecordWriter<int>));
+            config.Validate();
+            builder.TaskBuilder.DeleteAssembly();
+        }
+
+        [Test]
+        public void TestMapReduceNoContext()
+        {
+            JobBuilder builder = new JobBuilder(_fileSystemClient, _jetClient);
+
+            var input = builder.Read(_inputPath, typeof(LineRecordReader));
+            var mapped = builder.Map<Utf8String, Pair<Utf8String, int>>(input, MapRecordsNoContext);
+            var sorted = builder.SpillSort(mapped);
+            var reduced = builder.Reduce<Utf8String, int, int>(sorted, ReduceRecordsNoContext);
+            builder.Write(reduced, _outputPath, typeof(TextRecordWriter<>));
+
+            JobConfiguration config = builder.CreateJob();
+            Assert.AreEqual(9, config.AssemblyFileNames.Count); // Includes generated assembly and the one from the method and all its references.
+            StringAssert.StartsWith("Tkl.Jumbo.Jet.Generated.", config.AssemblyFileNames.Last());
+            Assert.AreEqual("MapRecordsNoContextTask", mapped.TaskType.TaskType.Name);
+            Assert.AreEqual("ReduceRecordsNoContextTask", reduced.TaskType.TaskType.Name);
+
+            Assert.AreEqual(2, config.Stages.Count);
+            VerifyDfsInput(config, config.Stages[0], typeof(LineRecordReader));
+            VerifyStage(config.Stages[0], 3, "MapRecordsNoContextTaskStage", mapped.TaskType.TaskType);
+            VerifyChannel(config.Stages[0], config.Stages[1], ChannelType.File, multiInputRecordReaderType: typeof(MergeRecordReader<Pair<Utf8String, int>>));
+            VerifyStageSetting(config.Stages[0], FileOutputChannel.OutputTypeSettingKey, FileChannelOutputType.SortSpill.ToString());
+            VerifyStage(config.Stages[1], 2, "ReduceRecordsNoContextTaskStage", reduced.TaskType.TaskType);
+            VerifyDfsOutput(config.Stages[1], typeof(TextRecordWriter<int>));
+            config.Validate();
+            builder.TaskBuilder.DeleteAssembly();
+        }
+
+        [Test]
+        public void TestGenerate()
+        {
+            JobBuilder builder = new JobBuilder(_fileSystemClient, _jetClient);
+
+            var operation = builder.Generate(5, typeof(LineCounterTask)); // This task actually requires input but since no one's running it, we don't care.
+            builder.Write(operation, _outputPath, typeof(TextRecordWriter<>));
 
             JobConfiguration config = builder.CreateJob();
             Assert.AreEqual(1, config.AssemblyFileNames.Count);
+            Assert.AreEqual(Path.GetFileName(typeof(LineCounterTask).Assembly.Location), config.AssemblyFileNames[0]);
 
-            Assert.AreEqual(3, config.Stages.Count);
+            Assert.AreEqual(1, config.Stages.Count);
+            StageConfiguration stage = config.Stages[0];
+            Assert.IsNull(stage.DataInput);
+            CollectionAssert.IsEmpty(config.GetInputStagesForStage(stage.StageId));
+            VerifyStage(stage, 5, typeof(LineCounterTask).Name + "Stage", typeof(LineCounterTask));
+            VerifyDfsOutput(stage, typeof(TextRecordWriter<int>));
+            config.Validate();
+        }
+        
+        [Test]
+        public void TestGenerateDelegate()
+        {
+            JobBuilder builder = new JobBuilder(_fileSystemClient, _jetClient);
 
-            VerifyStage(config, config.Stages[0], 3, "DependencyStage", typeof(EmptyTask<Utf8String>), null, typeof(LineRecordReader), typeof(TextRecordWriter<Utf8String>), ChannelType.File, ChannelConnectivity.Full, null, null, null);
-            VerifyStage(config, config.Stages[1], 3, typeof(LineCounterTask).Name, typeof(LineCounterTask), null, typeof(LineRecordReader), null, ChannelType.File, ChannelConnectivity.Full, typeof(HashPartitioner<int>), typeof(MultiRecordReader<int>), typeof(LineAdderTask).Name);
-            VerifyStage(config, config.Stages[2], 1, typeof(LineAdderTask).Name, typeof(LineAdderTask), null, null, typeof(TextRecordWriter<int>), ChannelType.File, ChannelConnectivity.Full, null, null, null);
-            Assert.AreEqual(1, config.Stages[0].DependentStages.Count);
-            Assert.AreEqual(config.Stages[1].StageId, config.Stages[0].DependentStages[0]);
+            var operation = builder.Generate<int>(5, GenerateRecords);
+            builder.Write(operation, _outputPath, typeof(TextRecordWriter<>));
+
+            JobConfiguration config = builder.CreateJob();
+            Assert.AreEqual(9, config.AssemblyFileNames.Count); // Includes generated assembly and the one from the method and all its references.
+            StringAssert.StartsWith("Tkl.Jumbo.Jet.Generated.", config.AssemblyFileNames.Last());
+            Assert.AreEqual("GenerateRecordsTask", operation.TaskType.TaskType.Name);
+
+            Assert.AreEqual(1, config.Stages.Count);
+            StageConfiguration stage = config.Stages[0];
+            Assert.IsNull(stage.DataInput);
+            CollectionAssert.IsEmpty(config.GetInputStagesForStage(stage.StageId));
+            VerifyStage(stage, 5, "GenerateRecordsTaskStage", operation.TaskType.TaskType);
+            VerifyDfsOutput(stage, typeof(TextRecordWriter<int>));
+            config.Validate();
+            builder.TaskBuilder.DeleteAssembly();
         }
 
         [Test]
-        public void TestJoinRecordsDfsInputOutput()
+        public void TestGenerateDelegateProgressContext()
         {
-            JobBuilder builder = new JobBuilder(_dfsClient, _jetClient);
+            JobBuilder builder = new JobBuilder(_fileSystemClient, _jetClient);
 
-            var customerInput = new DfsInput(_inputPath, typeof(RecordFileReader<Customer>));
-            var orderInput = new DfsInput(_inputPath, typeof(RecordFileReader<Order>));
-            var output = new DfsOutput(_outputPath, typeof(RecordFileWriter<CustomerOrder>));
-
-            builder.JoinRecords(customerInput, orderInput, output, typeof(CustomerOrderJoinRecordReader), null, typeof(OrderJoinComparer));
+            var operation = builder.Generate<int>(5, GenerateRecordsProgressContext);
+            builder.Write(operation, _outputPath, typeof(TextRecordWriter<>));
 
             JobConfiguration config = builder.CreateJob();
+            Assert.AreEqual(9, config.AssemblyFileNames.Count); // Includes generated assembly and the one from the method and all its references.
+            StringAssert.StartsWith("Tkl.Jumbo.Jet.Generated.", config.AssemblyFileNames.Last());
+            Assert.AreEqual("GenerateRecordsProgressContextTask", operation.TaskType.TaskType.Name);
 
-            Assert.AreEqual(3, config.Stages.Count);
-
-            VerifyStage(config, config.Stages[0], 3, "JoinOuterSortStage", typeof(SortTask<Customer>), null, typeof(RecordFileReader<Customer>), null, ChannelType.File, ChannelConnectivity.Full, typeof(HashPartitioner<Customer>), typeof(MergeRecordReader<Customer>), "JoinStage");
-            VerifyStage(config, config.Stages[1], 3, "JoinInnerSortStage", typeof(SortTask<Order>), null, typeof(RecordFileReader<Order>), null, ChannelType.File, ChannelConnectivity.Full, typeof(HashPartitioner<Order>), typeof(MergeRecordReader<Order>), "JoinStage");
-            VerifyStage(config, config.Stages[2], 1, "JoinStage", typeof(EmptyTask<CustomerOrder>), typeof(CustomerOrderJoinRecordReader), null, typeof(RecordFileWriter<CustomerOrder>), ChannelType.File, ChannelConnectivity.Full, null, null, null);
-            Assert.IsNull(config.Stages[0].GetSetting(TaskConstants.ComparerSettingKey, null));
-            Assert.AreEqual(typeof(OrderJoinComparer).AssemblyQualifiedName, config.Stages[1].GetSetting(TaskConstants.ComparerSettingKey, null));
+            Assert.AreEqual(1, config.Stages.Count);
+            StageConfiguration stage = config.Stages[0];
+            Assert.IsNull(stage.DataInput);
+            CollectionAssert.IsEmpty(config.GetInputStagesForStage(stage.StageId));
+            VerifyStage(stage, 5, "GenerateRecordsProgressContextTaskStage", operation.TaskType.TaskType);
+            VerifyDfsOutput(stage, typeof(TextRecordWriter<int>));
+            config.Validate();
+            builder.TaskBuilder.DeleteAssembly();
         }
 
         [Test]
-        public void TestJoinRecordsChannelInputOutput()
+        public void TestGenerateDelegateNoContext()
         {
-            JobBuilder builder = new JobBuilder(_dfsClient, _jetClient);
+            JobBuilder builder = new JobBuilder(_fileSystemClient, _jetClient);
 
-            var customerInput = new DfsInput(_inputPath, typeof(RecordFileReader<Customer>));
-            var orderInput = new DfsInput(_inputPath, typeof(RecordFileReader<Order>));
-            var customerChannel = new Channel { PartitionCount = 2 };
-            var orderChannel = new Channel { PartitionCount = 2 };
-            var outputChannel = new Channel { ChannelType = ChannelType.Pipeline };
-            var output = new DfsOutput(_outputPath, typeof(RecordFileWriter<CustomerOrder>));
-
-            builder.PartitionRecords(customerInput, customerChannel);
-            builder.PartitionRecords(orderInput, orderChannel);
-            builder.JoinRecords(customerChannel, orderChannel, outputChannel, typeof(CustomerOrderJoinRecordReader), null, typeof(OrderJoinComparer));
-            builder.ProcessRecords(outputChannel, output, typeof(EmptyTask<CustomerOrder>));
+            var operation = builder.Generate<int>(5, GenerateRecordsNoContext);
+            builder.Write(operation, _outputPath, typeof(TextRecordWriter<>));
 
             JobConfiguration config = builder.CreateJob();
+            Assert.AreEqual(9, config.AssemblyFileNames.Count); // Includes generated assembly and the one from the method and all its references.
+            StringAssert.StartsWith("Tkl.Jumbo.Jet.Generated.", config.AssemblyFileNames.Last());
+            Assert.AreEqual("GenerateRecordsNoContextTask", operation.TaskType.TaskType.Name);
 
-            Assert.AreEqual(3, config.Stages.Count);
-
-            VerifyStage(config, config.Stages[0].ChildStage, 2, "JoinOuterSortStage", typeof(SortTask<Customer>), null, null, null, ChannelType.File, ChannelConnectivity.Full, typeof(HashPartitioner<Customer>), typeof(MergeRecordReader<Customer>), typeof(EmptyTask<CustomerOrder>).Name);
-            VerifyStage(config, config.Stages[1].ChildStage, 2, "JoinInnerSortStage", typeof(SortTask<Order>), null, null, null, ChannelType.File, ChannelConnectivity.Full, typeof(HashPartitioner<Order>), typeof(MergeRecordReader<Order>), typeof(EmptyTask<CustomerOrder>).Name);
-            VerifyStage(config, config.Stages[2], 2, typeof(EmptyTask<CustomerOrder>).Name, typeof(EmptyTask<CustomerOrder>), typeof(CustomerOrderJoinRecordReader), null, typeof(RecordFileWriter<CustomerOrder>), ChannelType.File, ChannelConnectivity.Full, null, null, null);
-            Assert.IsNull(config.Stages[0].GetSetting(PartitionerConstants.EqualityComparerSetting, null));
-            Assert.IsNull(config.Stages[0].ChildStage.GetSetting(TaskConstants.ComparerSettingKey, null));
-            Assert.AreEqual(typeof(OrderJoinComparer).AssemblyQualifiedName, config.Stages[1].GetSetting(PartitionerConstants.EqualityComparerSetting, null));
-            Assert.AreEqual(typeof(OrderJoinComparer).AssemblyQualifiedName, config.Stages[1].ChildStage.GetSetting(TaskConstants.ComparerSettingKey, null));
+            Assert.AreEqual(1, config.Stages.Count);
+            StageConfiguration stage = config.Stages[0];
+            Assert.IsNull(stage.DataInput);
+            CollectionAssert.IsEmpty(config.GetInputStagesForStage(stage.StageId));
+            VerifyStage(stage, 5, "GenerateRecordsNoContextTaskStage", operation.TaskType.TaskType);
+            VerifyDfsOutput(stage, typeof(TextRecordWriter<int>));
+            config.Validate();
+            builder.TaskBuilder.DeleteAssembly();
         }
-
-        [Test]
-        public void TestSumValues()
+        
+        public static void ProcessRecords(RecordReader<Utf8String> input, RecordWriter<int> output, TaskContext context)
         {
-            JobBuilder builder = new JobBuilder(_dfsClient, _jetClient);
-
-            var input = new DfsInput(_inputPath, typeof(LineRecordReader));
-            var output = new DfsOutput(_outputPath, typeof(TextRecordWriter<Pair<Utf8String, int>>));
-            Channel channel = new Channel() { PartitionCount = 2 };
-
-            builder.ProcessRecords(input, channel, typeof(FakeKvpProducingTask));
-            builder.SumValues<Utf8String>(channel, output);
-
-            JobConfiguration config = builder.CreateJob();
-            Assert.AreEqual(8, config.AssemblyFileNames.Count); // Includes all the stuff Tkl.Jumbo.Test references, including NameServer.exe, etc. which isn't a problem because we're not executing it.
-
-            Assert.AreEqual(2, config.Stages.Count);
-
-            VerifyStage(config, config.Stages[0], 3, typeof(FakeKvpProducingTask).Name, typeof(FakeKvpProducingTask), null, typeof(LineRecordReader), null, ChannelType.Pipeline, ChannelConnectivity.Full, typeof(HashPartitioner<Pair<Utf8String, int>>), null, "PartialSumStage");
-            VerifyStage(config, config.Stages[0].ChildStage, 1, "PartialSumStage", typeof(SumTask<Utf8String>), null, null, null, ChannelType.File, ChannelConnectivity.Full, typeof(HashPartitioner<Pair<Utf8String, int>>), typeof(MultiRecordReader<Pair<Utf8String, int>>), "SumStage");
-            VerifyStage(config, config.Stages[1], 2, "SumStage", typeof(SumTask<Utf8String>), null, null, typeof(TextRecordWriter<Pair<Utf8String, int>>), ChannelType.File, ChannelConnectivity.Full, null, null, null);
         }
 
-        [Test]
-        public void TestCountDfsOutput()
+        public static void ProcessRecordsNoContext(RecordReader<Utf8String> input, RecordWriter<int> output)
         {
-            JobBuilder builder = new JobBuilder(_dfsClient, _jetClient);
-
-            var input = new DfsInput(_inputPath, typeof(LineRecordReader));
-            var output = new DfsOutput(_outputPath, typeof(TextRecordWriter<Pair<Utf8String, int>>));
-
-            builder.Count<Utf8String>(input, output);
-
-            JobConfiguration config = builder.CreateJob();
-            Assert.AreEqual(0, config.AssemblyFileNames.Count); // Includes all the stuff Tkl.Jumbo.Test references, including NameServer.exe, etc. which isn't a problem because we're not executing it.
-
-            Assert.AreEqual(2, config.Stages.Count);
-
-            VerifyStage(config, config.Stages[0], 3, "CountStage", typeof(GenerateInt32PairTask<Utf8String>), null, typeof(LineRecordReader), null, ChannelType.Pipeline, ChannelConnectivity.Full, typeof(HashPartitioner<Pair<Utf8String, int>>), null, "PartialSumStage");
-            VerifyStage(config, config.Stages[0].ChildStage, 1, "PartialSumStage", typeof(SumTask<Utf8String>), null, null, null, ChannelType.File, ChannelConnectivity.Full, typeof(HashPartitioner<Pair<Utf8String, int>>), typeof(MultiRecordReader<Pair<Utf8String, int>>), "SumStage");
-            VerifyStage(config, config.Stages[1], 1, "SumStage", typeof(SumTask<Utf8String>), null, null, typeof(TextRecordWriter<Pair<Utf8String, int>>), ChannelType.File, ChannelConnectivity.Full, null, null, null);
         }
 
-        [Test]
-        public void TestCountChannelOutput()
+        public static int AccumulateRecords(Utf8String key, int value, int newValue, TaskContext context)
         {
-            JobBuilder builder = new JobBuilder(_dfsClient, _jetClient);
-
-            var input = new DfsInput(_inputPath, typeof(LineRecordReader));
-            var output = new DfsOutput(_outputPath, typeof(TextRecordWriter<Pair<Utf8String, int>>));
-            Channel channel = new Channel() { PartitionCount = 2 };
-
-            builder.Count<Utf8String>(input, channel);
-            builder.ProcessRecords(channel, output, typeof(EmptyTask<Pair<Utf8String, int>>));
-
-            JobConfiguration config = builder.CreateJob();
-            Assert.AreEqual(0, config.AssemblyFileNames.Count); // Includes all the stuff Tkl.Jumbo.Test references, including NameServer.exe, etc. which isn't a problem because we're not executing it.
-
-            Assert.AreEqual(3, config.Stages.Count);
-
-            VerifyStage(config, config.Stages[0], 3, "CountStage", typeof(GenerateInt32PairTask<Utf8String>), null, typeof(LineRecordReader), null, ChannelType.Pipeline, ChannelConnectivity.Full, typeof(HashPartitioner<Pair<Utf8String, int>>), null, "PartialSumStage");
-            VerifyStage(config, config.Stages[0].ChildStage, 1, "PartialSumStage", typeof(SumTask<Utf8String>), null, null, null, ChannelType.File, ChannelConnectivity.Full, typeof(HashPartitioner<Pair<Utf8String, int>>), typeof(MultiRecordReader<Pair<Utf8String, int>>), "SumStage");
-            VerifyStage(config, config.Stages[1], 2, "SumStage", typeof(SumTask<Utf8String>), null, null, null, ChannelType.File, ChannelConnectivity.Full, typeof(HashPartitioner<Pair<Utf8String, int>>), typeof(MultiRecordReader<Pair<Utf8String, int>>), typeof(EmptyTask<Pair<Utf8String, int>>).Name);
+            return value + newValue;
         }
 
-        private static void VerifyStage(JobConfiguration config, StageConfiguration stage, int taskCount, string stageId, Type taskType, Type stageMultiInputRecordReader, Type recordReaderType, Type recordWriterType, ChannelType channelType, ChannelConnectivity channelConnectivity, Type partitionerType, Type multiInputRecordReader, string outputStageId)
+        public static int AccumulateRecordsNoContext(Utf8String key, int value, int newValue)
         {
-            VerifyStage(config, stage, taskCount, 1, stageId, taskType, stageMultiInputRecordReader, recordReaderType, recordWriterType, channelType, channelConnectivity, partitionerType, multiInputRecordReader, outputStageId);
+            return value + newValue;
         }
 
-        private static void VerifyStage(JobConfiguration config, StageConfiguration stage, int taskCount, int partitionsPerTask, string stageId, Type taskType, Type stageMultiInputRecordReader, Type recordReaderType, Type recordWriterType, ChannelType channelType, ChannelConnectivity channelConnectivity, Type partitionerType, Type multiInputRecordReader, string outputStageId)
+        public static void MapRecords(Utf8String record, RecordWriter<Pair<Utf8String,int>> output, TaskContext context)
+        {
+        }
+
+        public static void MapRecordsNoContext(Utf8String record, RecordWriter<Pair<Utf8String, int>> output)
+        {
+        }
+
+        public static void ReduceRecords(Utf8String key, IEnumerable<int> values, RecordWriter<int> output, TaskContext context)
+        {
+        }
+
+        public static void ReduceRecordsNoContext(Utf8String key, IEnumerable<int> values, RecordWriter<int> output)
+        {
+        }
+
+        public static void GenerateRecords(RecordWriter<int> output, TaskContext context)
+        {
+        }
+
+        public static void GenerateRecordsProgressContext(RecordWriter<int> output, ProgressContext context)
+        {
+        }
+
+        public static void GenerateRecordsNoContext(RecordWriter<int> output)
+        {
+        }
+
+        public static void CombineRecords(Utf8String key, IEnumerable<int> values, RecordWriter<Pair<Utf8String, int>> output, TaskContext context)
+        {
+        }
+
+        public static void CombineRecordsNoContext(Utf8String key, IEnumerable<int> values, RecordWriter<Pair<Utf8String, int>> output)
+        {
+        }
+
+        private static void VerifyStage(StageConfiguration stage, int taskCount, string stageId, Type taskType, Type stageMultiInputRecordReader = null)
         {
             Assert.AreEqual(stageId, stage.StageId);
             Assert.AreEqual(taskCount, stage.TaskCount);
             Assert.AreEqual(taskType, stage.TaskType.ReferencedType);
             Assert.AreEqual(stageMultiInputRecordReader, stage.MultiInputRecordReaderType.ReferencedType);
-            if( recordReaderType != null )
-            {
-                Assert.IsNull(stage.Parent);
-                Assert.IsNotNull(stage.DfsInput);
-                Assert.AreEqual(3, stage.DfsInput.TaskInputs.Count);
-                Assert.AreEqual(recordReaderType, stage.DfsInput.RecordReaderType.ReferencedType);
-                for( int x = 0; x < 3; ++x )
-                {
-                    TaskDfsInput input = stage.DfsInput.TaskInputs[x];
-                    Assert.AreEqual(x, input.Block);
-                    Assert.AreEqual(_inputPath, input.Path);
-                }
-            }
-            else
-            {
-                var inputStages = config.GetInputStagesForStage(stage.StageId);
-                foreach( StageConfiguration inputStage in inputStages )
-                    Assert.AreEqual(partitionsPerTask, inputStage.OutputChannel.PartitionsPerTask);
+        }
 
-                Assert.IsNull(stage.DfsInput);
-            }
-
-            if( recordWriterType != null )
+        private static void VerifyDfsInput(JobConfiguration job, StageConfiguration stage, Type recordReaderType)
+        {
+            Assert.IsNotNull(stage.DataInput);
+            Assert.IsNull(stage.Parent);
+            CollectionAssert.IsEmpty(job.GetInputStagesForStage(stage.StageId));
+            Assert.AreEqual(stage.TaskCount, stage.DataInput.TaskInputs.Count);
+            Assert.IsInstanceOf(typeof(FileDataInput<>).MakeGenericType(recordReaderType), stage.DataInput);
+            for( int x = 0; x < 3; ++x )
             {
-                Assert.IsNull(stage.ChildStage);
-                Assert.IsNull(stage.OutputChannel);
-                Assert.IsNotNull(stage.DfsOutput);
-                Assert.AreEqual(DfsPath.Combine(_outputPath, stageId + "-{0:00000}"), stage.DfsOutput.PathFormat);
-                Assert.AreEqual(0, stage.DfsOutput.ReplicationFactor);
-                Assert.AreEqual(0, stage.DfsOutput.BlockSize);
-                Assert.AreEqual(recordWriterType, stage.DfsOutput.RecordWriterType.ReferencedType);
-            }
-            else
-            {
-                Assert.IsNull(stage.DfsOutput);
-                if( channelType == ChannelType.Pipeline )
-                {
-                    Assert.IsNull(stage.OutputChannel);
-                    Assert.IsNotNull(stage.ChildStage);
-                    Assert.IsNotNull(stage.GetNamedChildStage(outputStageId));
-                    Assert.AreEqual(partitionerType, stage.ChildStagePartitionerType.ReferencedType);
-                }
-                else
-                {
-                    Assert.IsNotNull(stage.OutputChannel);
-                    Assert.AreEqual(channelType, stage.OutputChannel.ChannelType);
-                    Assert.AreEqual(outputStageId, stage.OutputChannel.OutputStage);
-                    Assert.AreEqual(channelConnectivity, stage.OutputChannel.Connectivity);
-                    Assert.AreEqual(partitionerType, stage.OutputChannel.PartitionerType.ReferencedType);
-                    Assert.AreEqual(multiInputRecordReader, stage.OutputChannel.MultiInputRecordReaderType.ReferencedType);
-                }
+                FileTaskInput input = (FileTaskInput)stage.DataInput.TaskInputs[x];
+                Assert.AreEqual(x * _blockSize, input.Offset);
+                Assert.AreEqual(_inputPath, input.Path);
             }
         }
-    
+
+        private void VerifyDfsOutput(StageConfiguration stage, Type recordWriterType, int blockSize = 0, int replicationFactor = 0)
+        {
+            Assert.IsNull(stage.ChildStage);
+            Assert.IsNull(stage.OutputChannel);
+            Assert.IsNotNull(stage.DataOutput);
+            Assert.IsTrue(stage.HasDataOutput);
+            Type outputType = typeof(FileDataOutput<>).MakeGenericType(recordWriterType);
+            Assert.IsInstanceOf(outputType, stage.DataOutput);
+            Assert.AreEqual(outputType, stage.DataOutputType.ReferencedType);
+            Assert.AreEqual(outputType.AssemblyQualifiedName, stage.DataOutputType.TypeName);
+            Assert.AreEqual(_fileSystemClient.Path.Combine(_outputPath, stage.StageId + "-{0:00000}"), stage.GetSetting(FileDataOutput.OutputPathFormatSettingKey, null));
+            Assert.AreEqual(blockSize, stage.GetTypedSetting(FileDataOutput.BlockSizeSettingKey, 0));
+            Assert.AreEqual(replicationFactor, stage.GetTypedSetting(FileDataOutput.ReplicationFactorSettingKey, 0));
+        }
+
+        private static void VerifyChannel(StageConfiguration sender, StageConfiguration receiver, ChannelType channelType, Type partitionerType = null, Type multiInputRecordReaderType = null, int partitionsPerTask = 1, PartitionAssignmentMethod assigmentMethod = PartitionAssignmentMethod.Linear)
+        {
+            TaskTypeInfo info = new TaskTypeInfo(sender.TaskType.ReferencedType);
+            if( partitionerType == null )
+                partitionerType = typeof(HashPartitioner<>).MakeGenericType(info.OutputRecordType);
+            if( multiInputRecordReaderType == null )
+                multiInputRecordReaderType = typeof(MultiRecordReader<>).MakeGenericType(info.OutputRecordType);
+            Assert.IsNull(sender.DataOutput);
+            Assert.IsNull(sender.DataOutputType.ReferencedType);
+            Assert.IsFalse(sender.HasDataOutput);
+            Assert.IsNull(receiver.DataInput);
+            if( channelType == ChannelType.Pipeline )
+            {
+                Assert.IsNull(sender.OutputChannel);
+                Assert.AreEqual(receiver, sender.ChildStage);
+                Assert.AreEqual(sender, receiver.Parent);
+                Assert.AreEqual(partitionerType, sender.ChildStagePartitionerType.ReferencedType);
+            }
+            else
+            {
+                Assert.IsNotNull(sender.OutputChannel);
+                Assert.IsNull(sender.ChildStage);
+                Assert.IsNull(receiver.Parent);
+                Assert.AreEqual(channelType, sender.OutputChannel.ChannelType);
+                Assert.AreEqual(receiver.StageId, sender.OutputChannel.OutputStage);
+                Assert.AreEqual(partitionerType, sender.OutputChannel.PartitionerType.ReferencedType);
+                Assert.AreEqual(multiInputRecordReaderType, sender.OutputChannel.MultiInputRecordReaderType.ReferencedType);
+                Assert.AreEqual(partitionsPerTask, sender.OutputChannel.PartitionsPerTask);
+                Assert.AreEqual(assigmentMethod, sender.OutputChannel.PartitionAssignmentMethod);
+            }
+        }
+
+        private static void VerifyStageSetting(StageConfiguration stage, string settingName, string value)
+        {
+            Assert.AreEqual(value, stage.GetSetting(settingName, null));
+        }
+
+        //private static void VerifyStage(JobConfiguration config, StageConfiguration stage, int taskCount, int partitionsPerTask, string stageId, Type taskType, Type stageMultiInputRecordReader, Type recordReaderType, Type recordWriterType, ChannelType channelType, ChannelConnectivity channelConnectivity, Type partitionerType, Type multiInputRecordReader, string outputStageId)
+        //{
+        //    Assert.AreEqual(stageId, stage.StageId);
+        //    Assert.AreEqual(taskCount, stage.TaskCount);
+        //    Assert.AreEqual(taskType, stage.TaskType.ReferencedType);
+        //    Assert.AreEqual(stageMultiInputRecordReader, stage.MultiInputRecordReaderType.ReferencedType);
+        //    if( recordReaderType != null )
+        //    {
+        //        Assert.IsNull(stage.Parent);
+        //        Assert.IsNotNull(stage.DfsInput);
+        //        Assert.AreEqual(3, stage.DfsInput.TaskInputs.Count);
+        //        Assert.AreEqual(recordReaderType, stage.DfsInput.RecordReaderType.ReferencedType);
+        //        for( int x = 0; x < 3; ++x )
+        //        {
+        //            TaskDfsInput input = stage.DfsInput.TaskInputs[x];
+        //            Assert.AreEqual(x, input.Block);
+        //            Assert.AreEqual(_inputPath, input.Path);
+        //        }
+        //    }
+        //    else
+        //    {
+        //        var inputStages = config.GetInputStagesForStage(stage.StageId);
+        //        foreach( StageConfiguration inputStage in inputStages )
+        //            Assert.AreEqual(partitionsPerTask, inputStage.OutputChannel.PartitionsPerTask);
+
+        //        Assert.IsNull(stage.DfsInput);
+        //    }
+
+        //    if( recordWriterType != null )
+        //    {
+        //        Assert.IsNull(stage.ChildStage);
+        //        Assert.IsNull(stage.OutputChannel);
+        //        Assert.IsNotNull(stage.DfsOutput);
+        //        Assert.AreEqual(DfsPath.Combine(_outputPath, stageId + "-{0:00000}"), stage.DfsOutput.PathFormat);
+        //        Assert.AreEqual(0, stage.DfsOutput.ReplicationFactor);
+        //        Assert.AreEqual(0, stage.DfsOutput.BlockSize);
+        //        Assert.AreEqual(recordWriterType, stage.DfsOutput.RecordWriterType.ReferencedType);
+        //    }
+        //    else
+        //    {
+        //        Assert.IsNull(stage.DfsOutput);
+        //        if( channelType == ChannelType.Pipeline )
+        //        {
+        //            Assert.IsNull(stage.OutputChannel);
+        //            Assert.IsNotNull(stage.ChildStage);
+        //            Assert.IsNotNull(stage.GetNamedChildStage(outputStageId));
+        //            Assert.AreEqual(partitionerType, stage.ChildStagePartitionerType.ReferencedType);
+        //        }
+        //        else
+        //        {
+        //            Assert.IsNotNull(stage.OutputChannel);
+        //            Assert.AreEqual(channelType, stage.OutputChannel.ChannelType);
+        //            Assert.AreEqual(outputStageId, stage.OutputChannel.OutputStage);
+        //            Assert.AreEqual(channelConnectivity, stage.OutputChannel.Connectivity);
+        //            Assert.AreEqual(partitionerType, stage.OutputChannel.PartitionerType.ReferencedType);
+        //            Assert.AreEqual(multiInputRecordReader, stage.OutputChannel.MultiInputRecordReaderType.ReferencedType);
+        //        }
+        //    }
+        //}
+
     }
 }

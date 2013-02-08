@@ -1,422 +1,153 @@
-﻿// $Id$
-//
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using System.Net.Sockets;
 using System.IO;
+using System.Net.Sockets;
 using System.Runtime.Serialization.Formatters.Binary;
+using System.Globalization;
+using System.Collections.Concurrent;
 using System.Threading;
 using System.Diagnostics;
-using System.Runtime.CompilerServices;
 
 namespace Tkl.Jumbo.Dfs
 {
     /// <summary>
-    /// Provides functionality for asynchronous transmission of a block to a data server.
+    /// Handles sending a block to a data server, and sending acknowledgements to a client.
     /// </summary>
-    public class BlockSender : IDisposable
+    public sealed class BlockSender : IDisposable
     {
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(BlockSender));
-        private const int _bufferSize = 10;
-        private readonly PacketBuffer _buffer = new PacketBuffer(_bufferSize);
-        private volatile DataServerClientProtocolResult _lastResult = DataServerClientProtocolResult.Ok;
-        private volatile Exception _lastException;
-        private Thread _sendPacketsThread;
-        private bool _hasLastPacket;
+
         private readonly Guid _blockId;
         private readonly ServerAddress[] _dataServers;
-        private int _offset;
-        private const int _maxQueueSize = Int32.MaxValue;
+        private readonly BinaryWriter _clientWriter; // Not owned by this class; don't dispose.
+        private readonly TcpClient _serverClient;
+        private readonly NetworkStream _serverStream;
+        private readonly BinaryWriter _serverWriter;
+        private readonly BinaryReader _serverReader;
+
+        private readonly BlockingCollection<long> _pendingAcknowledgements = new BlockingCollection<long>();
+        private readonly CancellationTokenSource _cancellation = new CancellationTokenSource();
+        private readonly Thread _acknowledgementThread;
+
         private bool _disposed;
+        private DataServerClientProtocolResult _serverStatus;
+        private bool _hasLastPacket;
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="BlockSender"/> class for the specified block assignment.
+        /// Initializes a new instance of the <see cref="BlockSender"/> class.
         /// </summary>
-        /// <param name="block">A <see cref="BlockAssignment"/> representing the block and the servers is should be sent to.</param>
-        public BlockSender(BlockAssignment block)
+        /// <param name="assignment">The block assignment.</param>
+        public BlockSender(BlockAssignment assignment)
+            : this(assignment.BlockId, assignment.DataServers, null)
         {
-            if( block == null )
-                throw new ArgumentNullException("block");
-
-            _blockId = block.BlockId;
-            _dataServers = block.DataServers.ToArray();
-            _sendPacketsThread = new Thread(SendPacketsThread) { Name = "SendPackets" };
-            _sendPacketsThread.Start();
         }
 
         /// <summary>
-        /// Ensures that resources are freed and other cleanup operations are performed when the garbage collector reclaims the <see cref="BlockSender"/>.
-        /// </summary>
-        ~BlockSender()
-        {
-            Dispose(false);
-        }
-
-        /// <summary>
-        /// Initializes a new instance of the <see cref="BlockSender"/> class for the specified block and data servers.
+        /// Initializes a new instance of the <see cref="BlockSender"/> class.
         /// </summary>
         /// <param name="blockId">The <see cref="Guid"/> of the block to send.</param>
-        /// <param name="dataServers">The list of data servers that the block should be sent to.</param>
-        /// <exception cref="ArgumentNullException"><paramref name="dataServers"/> is <see langword="null" />.</exception>
-        public BlockSender(Guid blockId, IEnumerable<ServerAddress> dataServers)
+        /// <param name="dataServers">The data servers that the block should be forwarded to. May be an empty list.</param>
+        /// <param name="clientWriter">The writer to use to forward acknowledgements. May be null.</param>
+        public BlockSender(Guid blockId, IEnumerable<ServerAddress> dataServers, BinaryWriter clientWriter)
         {
-            if( dataServers == null )
-                throw new ArgumentNullException("dataServers");
-
             _blockId = blockId;
-            _dataServers = dataServers.ToArray();
-            _sendPacketsThread = new Thread(SendPacketsThread) { Name = "SendPackets", IsBackground = true };
-            _sendPacketsThread.Start();
-        }
-
-        /// <summary>
-        /// Initializes a new instance of the <see cref="BlockSender"/> class, using an existing stream to write
-        /// th data to.
-        /// </summary>
-        /// <param name="stream">The <see cref="NetworkStream"/> to write packet data to.</param>
-        /// <param name="offset">The offset value to write to the stream before sending packets.</param>
-        /// <remarks>
-        /// When using this constructor, the <see cref="BlockSender"/> will use server mode, which assumes that
-        /// the <see cref="BlockSender"/> is being used by a server to send data to the client rather than the
-        /// other way around. This means no header is sent, an offset is sent before sending the packets, and
-        /// a <see cref="DataServerClientProtocolResult"/> is inserted between each packet.
-        /// </remarks>
-        public BlockSender(NetworkStream stream, int offset)
-        {
-            if( stream == null )
-                throw new ArgumentNullException("stream");
-
-            _offset = offset;
-            _sendPacketsThread = new Thread(SendPacketsThread) { Name = "SendPackets", IsBackground = true };
-            _sendPacketsThread.Start(stream);
-        }
-
-        /// <summary>
-        /// Gets or sets the last <see cref="DataServerClientProtocolResult"/> sent by the data server.
-        /// </summary>
-        /// <remarks>
-        /// If this property is anything other than <see cref="DataServerClientProtocolResult.Ok"/>, the
-        /// operation will be aborted.
-        /// </remarks>
-        public DataServerClientProtocolResult LastResult
-        {
-            get { return _lastResult; }
-            set
+            _clientWriter = clientWriter;
+            _dataServers = dataServers == null ? new ServerAddress[0] : dataServers.ToArray();
+            if( _dataServers.Length > 0 )
             {
-                _lastResult = value;
-                if( _lastResult != DataServerClientProtocolResult.Ok )
-                    _buffer.Cancel();
+                ServerAddress server = _dataServers[0];
+                try
+                {
+                    _serverClient = new TcpClient(server.HostName, server.Port);
+                    _serverStream = _serverClient.GetStream();
+                    _serverReader = new BinaryReader(_serverStream);
+                    _serverWriter = new BinaryWriter(_serverStream);
+                    if( !WriteHeader() )
+                        throw new DfsException(string.Format(CultureInfo.CurrentCulture, "There was an error connecting to the downstream data server {0}.", server));
+                }
+                catch( Exception ex )
+                {
+                    throw new DfsException(string.Format(CultureInfo.CurrentCulture, "There was an error connecting to the downstream data server {0}.", server), ex);
+                }
             }
+            _acknowledgementThread = new Thread(AcknowledgementThread) { IsBackground = true, Name = "BlockSender_AcknowledgementTread" };
+            _acknowledgementThread.Start();
         }
 
         /// <summary>
-        /// Gets the last <see cref="Exception"/> that occurred while sending the packets.
+        /// Gets a value indicating whether this instance only sends responses, and doesn't send the data to any server.
         /// </summary>
-        public Exception LastException
+        /// <value>
+        /// 	<see langword="true"/> if this instance is reponse only; otherwise, <see langword="false"/>.
+        /// </value>
+        public bool IsResponseOnly
         {
-            get { return _lastException; }
+            get { return _serverClient == null; }
         }
 
         /// <summary>
-        /// Adds a packet to the upload queue.
+        /// Gets the server status.
         /// </summary>
-        /// <param name="packet">The packet to add.</param>
-        /// <remarks>
-        /// <para>
-        ///   The packet will not be sent immediately, but rather it will be added to a queue and sent asynchronously.
-        ///   The packet will be copied so it is safe to overwrite the specified instance after calling this method.
-        /// </para>
-        /// <para>
-        ///   <see cref="BlockSender"/> does not know anything about the block size; it is up to the caller to
-        ///   make sure not more blocks than are allowed are submitted, and that the <see cref="Packet.IsLastPacket"/>
-        ///   property is set to <see langword="true"/> on the last packet.
-        /// </para>
-        /// </remarks>
-        public void AddPacket(Packet packet)
+        public DataServerClientProtocolResult ServerStatus
+        {
+            get { return _serverStatus; }
+        }
+
+        /// <summary>
+        /// Sends the packet to the server, and queues the acknowledgement.
+        /// </summary>
+        /// <param name="packet">The packet.</param>
+        public void SendPacket(Packet packet)
         {
             if( packet == null )
                 throw new ArgumentNullException("packet");
-
-            CheckDisposed();
+            ThrowIfErrorOccurred();
 
             if( _hasLastPacket )
-                throw new InvalidOperationException("You cannot add additional packets after adding the last packet.");
+                throw new InvalidOperationException("The last packet has been sent.");
 
-            Packet bufferPacket = _buffer.WriteItem;
-            ThrowIfErrorOccurred();
-            if( packet == null )
-                throw new InvalidOperationException("The operation has been aborted.");
+            if( _serverWriter != null )
+                packet.Write(_serverWriter, PacketFormatOption.Default);
 
-            bufferPacket.CopyFrom(packet);
-
-            if( bufferPacket.IsLastPacket )
+            _pendingAcknowledgements.Add(packet.SequenceNumber, _cancellation.Token);
+            if( packet.IsLastPacket )
             {
                 _hasLastPacket = true;
+                _pendingAcknowledgements.CompleteAdding();
             }
-            _buffer.NotifyWrite();
         }
 
         /// <summary>
-        /// Adds a packet to the upload queue.
+        /// Waits for acknowledgements.
         /// </summary>
-        /// <param name="data">The data to put in the packet.</param>
-        /// <param name="size">The size of the data in the packet.</param>
-        /// <param name="isLastPacket"><see langword="true"/> if this is the last packet being sent; otherwise <see langword="false"/>.</param>
-        /// <remarks>
-        /// <para>
-        ///   The packet will not be sent immediately, but rather it will be added to a queue and sent asynchronously.
-        /// </para>
-        /// <para>
-        ///   <see cref="BlockSender"/> does not know anything about the block size; it is up to the caller to
-        ///   make sure not more blocks than are allowed are submitted, and that the <see cref="Packet.IsLastPacket"/>
-        ///   property is set to <see langword="true"/> on the last packet.
-        /// </para>
-        /// </remarks>
-        /// <exception cref="ArgumentNullException"><paramref name="data"/> is <see langword="null" />.</exception>
-        public void AddPacket(byte[] data, int size, bool isLastPacket)
+        public void WaitForAcknowledgements()
         {
-            CheckDisposed();
-
-            if( _hasLastPacket )
-                throw new InvalidOperationException("You cannot add additional packets after adding the last packet.");
-
-            Packet packet = _buffer.WriteItem;
             ThrowIfErrorOccurred();
-            if( packet == null )
-                throw new InvalidOperationException("The operation has been aborted.");
-
-            packet.CopyFrom(data, size, isLastPacket);
-
-            if( isLastPacket )
-            {
-                _hasLastPacket = true;
-            }
-            _buffer.NotifyWrite();
-        }
-
-        /// <summary>
-        /// Adds a packet to the upload queue.
-        /// </summary>
-        /// <param name="stream">The stream containing the data to put in the packet.</param>
-        /// <param name="isLastPacket"><see langword="true"/> if this is the last packet being sent; otherwise <see langword="false"/>.</param>
-        /// <remarks>
-        /// <para>
-        ///   The packet will not be sent immediately, but rather it will be added to a queue and sent asynchronously.
-        /// </para>
-        /// <para>
-        ///   <see cref="BlockSender"/> does not know anything about the block size; it is up to the caller to
-        ///   make sure not more packets than are allowed are submitted, and that the <see cref="Packet.IsLastPacket"/>
-        ///   property is set to <see langword="true"/> on the last packet.
-        /// </para>
-        /// </remarks>
-        public void AddPacket(Stream stream, bool isLastPacket)
-        {
-            CheckDisposed();
-
-            if( _hasLastPacket )
-                throw new InvalidOperationException("You cannot add additional packets after adding the last packet.");
-
-            Packet packet = _buffer.WriteItem;
+            _acknowledgementThread.Join();
             ThrowIfErrorOccurred();
-            if( packet == null )
-                throw new InvalidOperationException("The operation has been aborted.");
-
-            packet.CopyFrom(stream, isLastPacket);
-
-            if( isLastPacket )
-            {
-                _hasLastPacket = true;
-            }
-            _buffer.NotifyWrite();
         }
 
         /// <summary>
-        /// Blocks until confirmations have been received for all packets.
+        /// Cancels this instance.
         /// </summary>
-        /// <remarks>
-        /// You should only call this function after you have submitted the last packet of the block with the
-        /// <see cref="AddPacket(Packet)"/> function. This function will not return until all packets have been acknowledged
-        /// or the data server reported an error.
-        /// </remarks>
-        /// <exception cref="InvalidOperationException">A packet with <see cref="Packet.IsLastPacket"/> 
-        /// set to <see langword="true"/> has not been queued yet.</exception>
-        public void WaitUntilSendFinished()
+        public void Cancel()
         {
-            CheckDisposed();
-            if( _lastResult == DataServerClientProtocolResult.Ok && !_hasLastPacket )
-            {
-                _lastResult = DataServerClientProtocolResult.Error;
-                _buffer.Cancel();
-                throw new InvalidOperationException("You cannot call WaitForConfirmations until the last packet has been submitted.");
-            }
-            _sendPacketsThread.Join();
+            _cancellation.Cancel();
         }
 
         /// <summary>
-        /// Throw an exception if there was an error sending a packet to the server, otherwise, do nothing.
+        /// Throws an exception if an error occurred.
         /// </summary>
-        /// <exception cref="DfsException">There was an error sending a packet to the server.</exception>
         public void ThrowIfErrorOccurred()
         {
-            CheckDisposed();
-            if( _lastResult != DataServerClientProtocolResult.Ok )
-                throw new DfsException("There was an error sending a packet to the server.", _lastException);
-        }
-
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Reliability", "CA2000:Dispose objects before losing scope"), System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1031:DoNotCatchGeneralExceptionTypes")]
-        private void SendPacketsThread(object data)
-        {
-            NetworkStream stream = (NetworkStream)data;
-            TcpClient client = null;
-            bool disposeClient = false;
-            try
-            {
-                if( stream == null )
-                {
-                    ServerAddress server = _dataServers[0];
-                    disposeClient = true;
-                    _log.DebugFormat("Connecting to data server {0} to write block {1}.", server, _blockId);
-                    client = new TcpClient(server.HostName, server.Port);
-                    _log.Debug("Connection established.");
-                    stream = client.GetStream();
-                }
-                using( BinaryReader reader = new BinaryReader(stream) )
-                using( Tkl.Jumbo.IO.WriteBufferedStream bufferedStream = new Tkl.Jumbo.IO.WriteBufferedStream(stream) )
-                using( BinaryWriter writer = new BinaryWriter(bufferedStream) )
-                {
-                    // TODO: Configurable timeouts
-                    stream.ReadTimeout = 30000;
-                    stream.WriteTimeout = 30000;
-
-                    if( WriteHeader(bufferedStream, writer, reader) )
-                    {
-                        _log.Debug("Header sent and accepted.");
-                        if( SendPackets(writer, stream, reader) )
-                        {
-                            bufferedStream.Flush(); // We need to flush before waiting for the final OK
-
-                            if( _dataServers == null && _lastResult != DataServerClientProtocolResult.Ok )
-                                writer.Write((int)_lastResult);
-                            else if( _lastResult == DataServerClientProtocolResult.Ok )
-                            {
-                                // If no error has been encountered thus far, we need to wait for the final ok
-                                ReadResult(reader);
-                            }
-                        }
-                        else
-                            _log.Warn("The send packets operation was cancelled.");
-                    }
-                }
-            }
-            catch( Exception ex )
-            {
-                if( _lastResult == DataServerClientProtocolResult.Ok )
-                {
-                    _lastException = ex;
-                    _lastResult = DataServerClientProtocolResult.Error;
-                }
-                try
-                {
-                    _buffer.Cancel();
-                }
-                catch( ObjectDisposedException )
-                {
-                }
-            }
-            finally
-            {
-                if( disposeClient )
-                {
-                    if( stream != null )
-                        stream.Dispose();
-                    if( client != null )
-                        ((IDisposable)client).Dispose();
-                }
-            }
-        }
-
-        private bool SendPackets(BinaryWriter writer, NetworkStream stream, BinaryReader reader)
-        {
-            // Start sending packets; stop when an error occurs or we've sent the last packet.
-            bool lastPacket = false;
-            while( !lastPacket && _lastResult == DataServerClientProtocolResult.Ok )
-            {
-                Packet packet = _buffer.ReadItem;
-                if( packet == null ) // _buffer.Cancel() was called.
-                    return false;
-                if( _dataServers == null )
-                {
-                    writer.Write((int)DataServerClientProtocolResult.Ok);
-                }
-                if( stream.DataAvailable )
-                {
-                    if( !ReadResult(reader) )
-                        break;
-                }
-                packet.Write(writer, false);
-                lastPacket = packet.IsLastPacket;
-            }
-            return true;
-        }
-
-        private bool ReadResult(BinaryReader reader)
-        {
-            DataServerClientProtocolResult result = (DataServerClientProtocolResult)reader.ReadInt32();
-            if( result != DataServerClientProtocolResult.Ok )
-            {
-                _lastResult = result;
-                _buffer.Cancel();
-                return false;
-            }
-            return true;
-        }
-
-        private bool WriteHeader(Stream stream, BinaryWriter writer, BinaryReader reader)
-        {
-            // If the data server is using this class to return data to the client, we don't need to send
-            // a header or listen for results. We do need to send an initial OK and the offset.
-            if( _dataServers == null )
-            {
-                writer.Write((int)DataServerClientProtocolResult.Ok);
-                writer.Write(_offset);
-            }
-            else
-            {
-                // Send the header
-                DataServerClientProtocolWriteHeader header = new DataServerClientProtocolWriteHeader(_dataServers);
-                header.BlockId = _blockId;
-                BinaryFormatter formatter = new BinaryFormatter();
-                formatter.Serialize(stream, header);
-                stream.Flush();
-
-                return ReadResult(reader);
-            }
-            return true;
+            if( _serverStatus != DataServerClientProtocolResult.Ok )
+                throw new DfsException("There was an error sending the block to the downstream data server.");
         }
 
         /// <summary>
-        /// Releases the unmanaged resources used by the <see cref="BlockSender"/> and optionally releases the managed resources.
-        /// </summary>
-        /// <param name="disposing"><see langword="true"/> to release both managed and unmanaged resources; <see langword="false"/> to release only unmanaged resources.</param>
-        protected virtual void Dispose(bool disposing)
-        {
-            if( !_disposed )
-            {
-                _disposed = true;
-                if( _buffer != null )
-                {
-                    _buffer.Cancel();
-                    _buffer.Dispose();
-                }
-            }
-        }
-
-        #region IDisposable Members
-
-        /// <summary>
-        /// Releases all resources used by the <see cref="BlockSender"/>.
+        /// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
         /// </summary>
         public void Dispose()
         {
@@ -424,12 +155,112 @@ namespace Tkl.Jumbo.Dfs
             GC.SuppressFinalize(this);
         }
 
-        #endregion
+        private void Dispose(bool disposing)
+        {
+            if( !_disposed )
+            {
+                _disposed = true;
+                if( disposing )
+                {
+                    _cancellation.Cancel();
+                    if( _serverWriter != null )
+                        _serverWriter.Dispose();
+                    if( _serverReader != null )
+                        _serverReader.Dispose();
+                    if( _serverStream != null )
+                        _serverStream.Dispose();
+                    if( _serverClient != null )
+                        ((IDisposable)_serverClient).Dispose();
+
+                    _acknowledgementThread.Join();
+                    _cancellation.Dispose();
+                    _pendingAcknowledgements.Dispose();
+                }
+            }
+        }
+
+        private bool WriteHeader()
+        {
+            // Send the header
+            DataServerClientProtocolWriteHeader header = new DataServerClientProtocolWriteHeader(_dataServers);
+            header.BlockId = _blockId;
+            BinaryFormatter formatter = new BinaryFormatter();
+            formatter.Serialize(_serverStream, header);
+            _serverStream.Flush();
+
+            return ReadResult();
+        }
+
+        private bool ReadResult()
+        {
+            DataServerClientProtocolResult result = (DataServerClientProtocolResult)_serverReader.ReadInt16();
+            if( result != DataServerClientProtocolResult.Ok )
+            {
+                _serverStatus = result;
+                return false;
+            }
+            return true;
+        }
 
         private void CheckDisposed()
         {
             if( _disposed )
-                throw new ObjectDisposedException("BlockSender");
+                throw new ObjectDisposedException(this.GetType().FullName);
+        }
+
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1031:DoNotCatchGeneralExceptionTypes")]
+        private void AcknowledgementThread()
+        {
+            try
+            {
+                if( _serverClient != null )
+                {
+                    long expected;
+                    while( !_cancellation.IsCancellationRequested && _pendingAcknowledgements.TryTake(out expected, Timeout.Infinite, _cancellation.Token) )
+                    {
+                        long sequenceNumber = _serverReader.ReadInt64();
+                        if( sequenceNumber != expected )
+                        {
+                            _log.ErrorFormat("Block sender received unexpected sequence number acknowledgement {0}", sequenceNumber);
+                            _serverStatus = DataServerClientProtocolResult.Error;
+                        }
+
+                        if( _clientWriter != null )
+                        {
+                            _clientWriter.Write(sequenceNumber);
+                        }
+                    }
+                    if( _cancellation.IsCancellationRequested )
+                        _log.Warn("The block sender was cancelled.");
+                    else
+                    {
+                        Debug.Assert(_pendingAcknowledgements.IsCompleted);
+
+                        // Read the final Ok.
+                        ReadResult();
+                    }
+                }
+                else
+                {
+                    long sequenceNumber;
+                    while( !_cancellation.IsCancellationRequested && _pendingAcknowledgements.TryTake(out sequenceNumber, Timeout.Infinite, _cancellation.Token) )
+                    {
+                        _clientWriter.Write(sequenceNumber);
+                    }
+                    Debug.Assert(_pendingAcknowledgements.IsCompleted || _cancellation.IsCancellationRequested);
+
+                    // Final Ok is written by BlockServer, not us.
+                }
+            }
+            catch( OperationCanceledException )
+            {
+                _log.Warn("The block sender was cancelled.");
+            }
+            catch( Exception ex )
+            {
+                _log.Error("Error while waiting for or writing acknowledgements.", ex);
+                _serverStatus = DataServerClientProtocolResult.Error;
+            }
         }
     }
 }

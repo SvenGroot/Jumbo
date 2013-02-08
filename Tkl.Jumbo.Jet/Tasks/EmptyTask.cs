@@ -16,24 +16,23 @@ namespace Tkl.Jumbo.Jet.Tasks
     /// This task is useful if you immediately want to partition your input without processing it first.
     /// </remarks>
     [AllowRecordReuse(PassThrough=true)]
-    public class EmptyTask<T> : IPullTask<T, T>
+    public class EmptyTask<T> : ITask<T, T>
     {
-        #region IPullTask<T,T> Members
-
         /// <summary>
         /// Runs the task.
         /// </summary>
         /// <param name="input">The input for the task.</param>
         /// <param name="output">The output for the task.</param>
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1062:Validate arguments of public methods", MessageId = "1"), System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1062:Validate arguments of public methods", MessageId = "0")]
         public void Run(RecordReader<T> input, RecordWriter<T> output)
         {
+            if( input == null )
+                throw new ArgumentNullException("input");
+            if( output == null )
+                throw new ArgumentNullException("output");
             foreach( T record in input.EnumerateRecords() )
             {
                 output.WriteRecord(record);
             }
         }
-
-        #endregion
     }
 }

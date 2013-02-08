@@ -55,10 +55,11 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <DocumentationFile>bin\Release\Tkl.Jumbo.XML</DocumentationFile>
-    <RunCodeAnalysis>true</RunCodeAnalysis>
+    <RunCodeAnalysis>false</RunCodeAnalysis>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <CodeAnalysisRuleSet>AllRules.ruleset</CodeAnalysisRuleSet>
   </PropertyGroup>
+  <PropertyGroup />
   <ItemGroup>
     <Reference Include="log4net, Version=1.2.10.0, Culture=neutral, PublicKeyToken=1b44e1d426115821, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
@@ -75,38 +76,42 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="..\Version.cs">
-      <Link>Properties\Version.cs</Link>
+    <Compile Include="..\AssemblyInfoCommon.cs">
+      <Link>Properties\AssemblyInfoCommon.cs</Link>
     </Compile>
-    <Compile Include="ByteSize.cs" />
-    <Compile Include="ByteSizeConverter.cs" />
-    <Compile Include="ByteSizeSuffixOptions.cs" />
+    <Compile Include="BinarySize.cs" />
+    <Compile Include="BinarySizeConverter.cs" />
+    <Compile Include="BinarySizeFormatter.cs" />
     <Compile Include="ChildCollection.cs" />
     <Compile Include="CollectionExtensions.cs" />
-    <Compile Include="CommandLine\ArgumentParsedEventArgs.cs" />
-    <Compile Include="CommandLine\CommandLineArgument.cs" />
-    <Compile Include="CommandLine\CommandLineArgumentException.cs" />
-    <Compile Include="CommandLine\CommandLineConstructorAttribute.cs" />
-    <Compile Include="CommandLine\CommandLineParser.cs" />
-    <Compile Include="CommandLine\ShellCommand.cs" />
-    <Compile Include="CommandLine\NamedCommandLineArgument.cs" />
-    <Compile Include="CommandLine\NamedCommandLineArgumentAttribute.cs" />
-    <Compile Include="CommandLine\PositionalCommandLineArgument.cs" />
-    <Compile Include="CommandLine\ShellCommandAttribute.cs" />
-    <Compile Include="CommandLine\StringExtensions.cs" />
     <Compile Include="CountdownEvent.cs" />
+    <Compile Include="Crc32.cs" />
+    <Compile Include="Crc32Managed.cs" />
     <Compile Include="ExtendedCollection.cs" />
     <Compile Include="CompressionUtility.cs" />
     <Compile Include="CompressionType.cs" />
     <Compile Include="DriveSpaceInfo.cs" />
     <Compile Include="IndividualProcessorStatus.cs" />
+    <Compile Include="IO\IndexedQuickSort.cs" />
+    <Compile Include="IO\MemoryBufferStream.cs" />
     <Compile Include="IO\ChildReaderException.cs" />
     <Compile Include="IO\CurrentPartitionChangingEventArgs.cs" />
+    <Compile Include="IO\DefaultRawComparer.cs" />
     <Compile Include="IO\DefaultValueWriter.cs" />
     <Compile Include="IO\IMultiRecordWriter.cs" />
+    <Compile Include="IO\IRawComparer.cs" />
     <Compile Include="IO\IRecordInputStream.cs" />
     <Compile Include="IO\IRecordOutputStream.cs" />
+    <Compile Include="IO\RawComparer.cs" />
+    <Compile Include="IO\RawComparerAttribute.cs" />
+    <Compile Include="IO\RawComparerHelper.cs" />
+    <Compile Include="IO\Utf8StringRawComparer.cs" />
+    <Compile Include="LittleEndianBitConverter.cs" />
+    <Compile Include="IO\RawRecord.cs" />
+    <Compile Include="IO\ReaderRecordInput.cs" />
+    <Compile Include="IO\RecordIndexEntry.cs" />
     <Compile Include="IO\RecordStreamOptions.cs" />
+    <Compile Include="IO\StreamRecordInput.cs" />
     <Compile Include="IO\ValueWriter.cs" />
     <Compile Include="IO\IMultiInputRecordReader.cs" />
     <Compile Include="IO\InnerJoinRecordReader.cs" />
@@ -203,6 +208,7 @@
     <Compile Include="UnmanagedBufferMemoryStream.cs" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="App.config" />
     <None Include="jumbo.snk" />
     <None Include="Tkl.Jumbo.build" />
   </ItemGroup>

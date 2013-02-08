@@ -4,13 +4,19 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using Tkl.Jumbo.CommandLine;
+using Ookii.CommandLine;
 using Tkl.Jumbo.Dfs;
+using Tkl.Jumbo.Dfs.FileSystem;
 
 namespace DfsShell.Commands
 {
     abstract class DfsShellCommand : ShellCommand
     {
-        public DfsClient Client { get; set; }
+        private readonly FileSystemClient _client = FileSystemClient.Create();
+
+        public FileSystemClient Client
+        {
+            get { return _client; }
+        }
     }
 }

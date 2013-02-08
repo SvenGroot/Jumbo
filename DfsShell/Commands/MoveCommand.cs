@@ -4,7 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using Tkl.Jumbo.CommandLine;
+using Ookii.CommandLine;
 using System.ComponentModel;
 
 namespace DfsShell.Commands
@@ -15,8 +15,8 @@ namespace DfsShell.Commands
         private readonly string _sourcePath;
         private readonly string _destinationPath;
 
-        public MoveCommand([Description("The path of the file or directory on the DFS to move.")] string source,
-                           [Description("The path on the DFS to move the file or directory to.")] string destination)
+        public MoveCommand([Description("The path of the file or directory on the DFS to move."), ArgumentName("Path")] string source,
+                           [Description("The path on the DFS to move the file or directory to."), ArgumentName("Destination")] string destination)
         {
             if( source == null )
                 throw new ArgumentNullException("source");
@@ -29,7 +29,7 @@ namespace DfsShell.Commands
 
         public override void Run()
         {
-            Client.NameServer.Move(_sourcePath, _destinationPath);
+            Client.Move(_sourcePath, _destinationPath);
         }
     }
 }

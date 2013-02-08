@@ -11,6 +11,7 @@ using Tkl.Jumbo.Dfs;
 using Tkl.Jumbo.IO;
 using Tkl.Jumbo.Rpc;
 using Tkl.Jumbo.Topology;
+using Tkl.Jumbo.Dfs.FileSystem;
 
 namespace NameServerApplication
 {
@@ -38,7 +39,6 @@ namespace NameServerApplication
         private readonly Thread _dataServerMonitorThread;
         private readonly AutoResetEvent _dataServerMonitorEvent = new AutoResetEvent(false);
         private bool _safeMode = true;
-        private System.Threading.ManualResetEvent _safeModeEvent = new System.Threading.ManualResetEvent(false);
         private readonly Timer _checkpointTimer;
         private readonly ServerAddress _localAddress;
 
@@ -200,12 +200,10 @@ namespace NameServerApplication
                     if( _safeMode )
                     {
                         _log.InfoFormat("Safemode is ON.");
-                        _safeModeEvent.Reset();
                     }
                     else
                     {
                         _log.InfoFormat("Safemode is OFF.");
-                        _safeModeEvent.Set();
                         _dataServerMonitorEvent.Set(); // Force an immediate replication check if safe mode is disabled prematurely.
                     }
                 }
@@ -219,7 +217,7 @@ namespace NameServerApplication
             _fileSystem.CreateDirectory(path);
         }
 
-        public DfsDirectory GetDirectoryInfo(string path)
+        public JumboDirectory GetDirectoryInfo(string path)
         {
             _log.Debug("GetDirectoryInfo called");
             return _fileSystem.GetDirectoryInfo(path);
@@ -261,13 +259,13 @@ namespace NameServerApplication
             _fileSystem.Move(from, to);
         }
 
-        public DfsFile GetFileInfo(string path)
+        public JumboFile GetFileInfo(string path)
         {
             _log.Debug("GetFileInfo called");
             return _fileSystem.GetFileInfo(path);
         }
 
-        public FileSystemEntry GetFileSystemEntryInfo(string path)
+        public JumboFileSystemEntry GetFileSystemEntryInfo(string path)
         {
             _log.Debug("GetFileSystemEntry called.");
             return _fileSystem.GetFileSystemEntryInfo(path);
@@ -359,16 +357,6 @@ namespace NameServerApplication
             }
 
             throw new ArgumentException("Invalid block kind.", "kind");
-        }
-
-        public bool WaitForSafeModeOff(int timeOut)
-        {
-            _log.Debug("WaitForSafeModeOff called");
-            if( _safeMode )
-                if( _safeModeEvent.WaitOne(timeOut, false) )
-                    Debug.Assert(!_safeMode);
-
-            return !_safeMode;
         }
 
         public DfsMetrics GetMetrics()

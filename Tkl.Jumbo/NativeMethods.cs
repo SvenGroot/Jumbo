@@ -32,5 +32,8 @@ namespace Tkl.Jumbo
         [DllImport("psapi.dll", SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
         public static extern bool GetPerformanceInfo(out PERFORMANCE_INFORMATION pPerformanceInformation, int cb);
+
+        [DllImport("Tkl.Jumbo.Native.dll")]
+        public static extern uint JumboCrc32(byte[] data, uint offset, uint count, uint previousCrc32);
     }
 }

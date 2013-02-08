@@ -15,7 +15,7 @@ namespace Tkl.Jumbo.Jet.Channels
         private readonly string _fileName;
         private readonly IEnumerator<PartitionFileIndexEntry> _indexEntries;
         private PartitionFileIndexEntry _current;
-        private long _segmentPosition;
+        private ChecksumInputStream _currentSegment;
         private readonly long _length;
         private long _position;
         private readonly int _bufferSize;
@@ -24,8 +24,15 @@ namespace Tkl.Jumbo.Jet.Channels
         {
             _fileName = fileName;
             _bufferSize = bufferSize;
-            _length = indexEntries.Sum(e => e.Count);
+            int segmentCount = indexEntries.Count();
+            _length = Math.Max(0, indexEntries.Sum(e => e.Count) - segmentCount);
             _indexEntries = indexEntries.GetEnumerator();
+            _baseStream = new FileStream(_fileName, FileMode.Open, FileAccess.Read, FileShare.Read, _bufferSize);
+            if( NextSegment() )
+            {
+                if( _currentSegment.IsChecksumEnabled )
+                    _length -= (sizeof(uint) * segmentCount);
+            }
         }
 
         public override bool CanRead
@@ -75,45 +82,22 @@ namespace Tkl.Jumbo.Jet.Channels
             if( offset + count > buffer.Length )
                 throw new ArgumentException("The sum of offset and count is greater than the buffer length.");
 
-            if( _baseStream == null )
-                _baseStream = new FileStream(_fileName, FileMode.Open, FileAccess.Read, FileShare.Read, _bufferSize);
+            if( _currentSegment == null )
+                return 0;
 
-            if( _current == null || _segmentPosition == _current.Count )
+            int totalBytesRead = 0;
+            while( count > 0 )
             {
-                if( !_indexEntries.MoveNext() )
-                    return 0;
-                _current = _indexEntries.Current;
-                _baseStream.Seek(_current.Offset, SeekOrigin.Begin);
-                _segmentPosition = 0;
+                int bytesRead = _currentSegment.Read(buffer, offset, count);
+                if( bytesRead == 0 && !NextSegment() )
+                    break;
+                totalBytesRead += bytesRead;
+                _position += bytesRead;
+                count -= bytesRead;
+                offset += bytesRead;
             }
 
-            int bytesRead;
-            if( _segmentPosition + count > _current.Count )
-            {
-                int firstCount = (int)(_current.Count - _segmentPosition);
-                bytesRead = _baseStream.Read(buffer, offset, firstCount);
-                if( _indexEntries.MoveNext() )
-                {
-                    _current = _indexEntries.Current;
-                    _baseStream.Seek(_current.Offset, SeekOrigin.Begin);
-                    int bytesRead2 = _baseStream.Read(buffer, offset + firstCount, count - firstCount);
-                    bytesRead += bytesRead2;
-                    _segmentPosition = bytesRead2;
-                }
-                else
-                {
-                    _segmentPosition = 0;
-                    _current = null;
-                }
-            }
-            else
-            {
-                bytesRead = _baseStream.Read(buffer, offset, count);
-                _segmentPosition += bytesRead;
-            }
-
-            _position += bytesRead;
-            return bytesRead;
+            return totalBytesRead;
         }
 
         public override long Seek(long offset, SeekOrigin origin)
@@ -137,9 +121,28 @@ namespace Tkl.Jumbo.Jet.Channels
             if( disposing )
             {
                 _indexEntries.Dispose();
+                if( _currentSegment != null )
+                    _currentSegment.Dispose();
                 if( _baseStream != null )
-                _baseStream.Dispose();
+                    _baseStream.Dispose();
             }
+        }
+
+        private bool NextSegment()
+        {
+            if( _currentSegment != null )
+                _currentSegment.Dispose();
+
+            if( !_indexEntries.MoveNext() )
+            {
+                _currentSegment = null;
+                return false;
+            }
+
+            _current = _indexEntries.Current;
+            _baseStream.Seek(_current.Offset, SeekOrigin.Begin);
+            _currentSegment = new ChecksumInputStream(_baseStream, false, _current.Count);
+            return true;
         }
     }
 }

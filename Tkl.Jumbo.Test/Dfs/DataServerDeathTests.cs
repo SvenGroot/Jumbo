@@ -8,6 +8,7 @@ using NUnit.Framework;
 using Tkl.Jumbo.Dfs;
 using System.Threading;
 using System.Diagnostics;
+using Tkl.Jumbo.Dfs.FileSystem;
 
 namespace Tkl.Jumbo.Test.Dfs
 {
@@ -27,7 +28,7 @@ namespace Tkl.Jumbo.Test.Dfs
             Utilities.TraceLineAndFlush("Starting cluster.");
             DfsConfiguration config = TestDfsCluster.CreateClientConfig();
             _nameServer = DfsClient.CreateNameServerClient(config);
-            _nameServer.WaitForSafeModeOff(Timeout.Infinite);
+            TestDfsCluster.CreateClient().WaitForSafeModeOff(Timeout.Infinite);
             Utilities.TraceLineAndFlush("Cluster started.");
         }
 

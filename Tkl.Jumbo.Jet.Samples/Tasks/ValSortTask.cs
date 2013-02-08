@@ -8,19 +8,20 @@ using Tkl.Jumbo.IO;
 using Tkl.Jumbo.Jet;
 using Tkl.Jumbo.Dfs;
 using Tkl.Jumbo.Jet.Samples.IO;
+using Tkl.Jumbo.Jet.IO;
 
 namespace Tkl.Jumbo.Jet.Samples.Tasks
 {
     /// <summary>
     /// Task that validates the sort order in its input.
     /// </summary>
-    public class ValSortTask : Configurable, IPullTask<GenSortRecord, ValSortRecord>
+    public class ValSortTask : Configurable, ITask<GenSortRecord, ValSortRecord>
     {
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(ValSortTask));
 
         private Crc32 _crc = new Crc32();
 
-        #region IPullTask<GenSortRecord,ValSortRecord> Members
+        #region ITask<GenSortRecord,ValSortRecord> Members
 
         /// <summary>
         /// Runs the task.
@@ -61,12 +62,13 @@ namespace Tkl.Jumbo.Jet.Samples.Tasks
                 ++count;
             }
 
-            TaskDfsInput dfsInput = TaskContext.StageConfiguration.DfsInput.GetInput(TaskContext.TaskId);
-            _log.InfoFormat("Input file {0} block {1} split {2} contains {3} unordered records.", dfsInput.Path, dfsInput.Block, TaskContext.TaskId.TaskNumber % TaskContext.StageConfiguration.DfsInput.SplitsPerBlock, unsorted);
+            FileTaskInput taskInput = (FileTaskInput)TaskContext.TaskInput;
+            _log.InfoFormat("Input file {0} split offset {1} size {2} contains {3} unordered records.", taskInput.Path, taskInput.Offset, taskInput.Size, unsorted);
 
             ValSortRecord result = new ValSortRecord()
             {
-                InputId = dfsInput.Path + "_" + dfsInput.Block.ToString("00000"),
+                InputId = taskInput.Path,
+                InputOffset = taskInput.Offset,
                 FirstKey = first.ExtractKeyBytes(),
                 LastKey = prev.ExtractKeyBytes(),
                 Records = count,

@@ -7,7 +7,8 @@ using System.Text;
 using System.ComponentModel;
 using System.Reflection;
 using Tkl.Jumbo.Dfs;
-using Tkl.Jumbo.CommandLine;
+using Ookii.CommandLine;
+using System.Collections;
 
 namespace Tkl.Jumbo.Jet.Jobs
 {
@@ -63,7 +64,7 @@ namespace Tkl.Jumbo.Jet.Jobs
             get
             {
                 // DFS paths can start with / so we always use - as the argument switch.
-                return _parser ?? (_parser = new CommandLineParser(_jobRunnerType) { NamedArgumentSwitch = "-" });
+                return _parser ?? (_parser = new CommandLineParser(_jobRunnerType, new[] { "-" }));
             }
         }
 
@@ -80,6 +81,7 @@ namespace Tkl.Jumbo.Jet.Jobs
             Type[] types = assembly.GetTypes();
             return (from type in types
                     where type.IsPublic && type.IsClass && !type.IsAbstract && type.GetInterfaces().Contains(typeof(IJobRunner))
+                    orderby type.Name
                     select new JobRunnerInfo(type)).ToArray();
         }
 
@@ -134,34 +136,26 @@ namespace Tkl.Jumbo.Jet.Jobs
                 StringBuilder logMessage = new StringBuilder("Created job runner for job ");
                 logMessage.Append(Name);
 
-                foreach( NamedCommandLineArgument argument in CommandLineParser.NamedArguments )
+                if( _log.IsInfoEnabled )
                 {
-                    if( argument.Value != null )
+                    foreach( CommandLineArgument argument in CommandLineParser.Arguments )
                     {
-                        logMessage.Append(", ");
-                        logMessage.Append(argument.PropertyName);
-                        logMessage.Append(" = ");
-                        if( argument.ArgumentType.IsArray )
-                            AppendMultiValueArgument(logMessage, (Array)argument.Value);
-                        else
-                            logMessage.Append(argument.Value);
+                        if( argument.HasValue )
+                        {
+                            logMessage.Append(", ");
+                            logMessage.Append(argument.MemberName);
+                            logMessage.Append(" = ");
+                            if( argument.IsDictionary )
+                                AppendDictionayArgument(logMessage, (IDictionary)argument.Value);
+                            else if( argument.IsMultiValue )
+                                AppendMultiValueArgument(logMessage, (IEnumerable)argument.Value);
+                            else
+                                logMessage.Append(argument.Value);
+                        }
                     }
-                }
-                foreach( PositionalCommandLineArgument argument in CommandLineParser.PositionalArguments )
-                {
-                    if( argument.Value != null )
-                    {
-                        logMessage.Append(", ");
-                        logMessage.Append(argument.Name);
-                        logMessage.Append(" = ");
-                        if( argument.ArgumentType.IsArray )
-                            AppendMultiValueArgument(logMessage, (Array)argument.Value);
-                        else
-                            logMessage.Append(argument.Value);
-                    }
-                }
 
-                _log.Info(logMessage.ToString());
+                    _log.Info(logMessage.ToString());
+                }
 
                 JetActivator.ApplyConfiguration(jobRunner, dfsConfiguration, jetConfiguration, null);
             }
@@ -180,21 +174,26 @@ namespace Tkl.Jumbo.Jet.Jobs
             return CreateInstance(DfsConfiguration.GetConfiguration(), JetConfiguration.GetConfiguration(), args, index);
         }
 
-        private static void AppendMultiValueArgument(StringBuilder logMessage, Array value)
+        private static void AppendDictionayArgument(StringBuilder logMessage, IDictionary values)
         {
-            if( value.Length > 1 )
-                logMessage.Append("{ ");
+            logMessage.Append("{ ");
             bool first = true;
-            foreach( object item in value )
+            foreach( DictionaryEntry entry in values )
             {
                 if( first )
                     first = false;
                 else
                     logMessage.Append(", ");
-                logMessage.Append(item);
+                logMessage.AppendFormat("{0}={1}", entry.Key, entry.Value);
             }
-            if( value.Length > 1 )
-                logMessage.Append(" }");
+            logMessage.Append(" }");
+        }
+
+        private static void AppendMultiValueArgument(StringBuilder logMessage, IEnumerable values)
+        {
+            logMessage.Append("{ ");
+            logMessage.Append(string.Join(", ", values.Cast<object>()));
+            logMessage.Append(" }");
         }
     }
 }

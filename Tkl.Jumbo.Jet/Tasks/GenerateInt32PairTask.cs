@@ -15,11 +15,11 @@ namespace Tkl.Jumbo.Jet.Tasks
     /// <remarks>
     /// <para>
     ///   The value assigned to each key/value pair is 1 by default, but can be overridden by specifying a setting
-    ///   with the <see cref="TaskConstants.GeneratePairTaskDefaultValueKey"/> in the <see cref="StageConfiguration.StageSettings"/>.
+    ///   with the <see cref="TaskConstants.GeneratePairTaskDefaultValueKey"/> in the <see cref="Jobs.StageConfiguration.StageSettings"/>.
     /// </para>
     /// </remarks>
     [AllowRecordReuse(PassThrough=true)]
-    public sealed class GenerateInt32PairTask<T> : Configurable, IPullTask<T, Pair<T, int>>
+    public sealed class GenerateInt32PairTask<T> : Configurable, ITask<T, Pair<T, int>>
         where T : IComparable<T>
     {
         private int _value = 1;
@@ -31,6 +31,10 @@ namespace Tkl.Jumbo.Jet.Tasks
         /// <param name="output">A <see cref="RecordWriter{T}"/> to which the task's output should be written.</param>
         public void Run(RecordReader<T> input, RecordWriter<Pair<T, int>> output)
         {
+            if( input == null )
+                throw new ArgumentNullException("input");
+            if( output == null )
+                throw new ArgumentNullException("output");
             if( TaskContext != null && TaskContext.StageConfiguration.AllowOutputRecordReuse )
             {
                 // Record reuse allowed

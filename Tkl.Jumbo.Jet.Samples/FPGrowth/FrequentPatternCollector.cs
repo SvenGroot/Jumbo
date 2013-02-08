@@ -25,7 +25,7 @@ namespace Tkl.Jumbo.Jet.Samples.FPGrowth
         private readonly bool _expandPerfectExtensions;
         private readonly int _heapSize;
 
-        public FrequentPatternCollector(int itemCount, int weight, RecordWriter<Pair<int, WritableCollection<MappedFrequentPattern>>> output, bool expandPerfectExtensions, int minSupport, int k, FrequentPatternMaxHeap[] itemHeaps)
+        public FrequentPatternCollector(int itemCount, int weight, bool expandPerfectExtensions, int minSupport, int k, FrequentPatternMaxHeap[] itemHeaps)
         {
             _items = new int[itemCount];
             _perfectExtensions = new int[itemCount];

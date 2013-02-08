@@ -4,9 +4,10 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using Tkl.Jumbo.CommandLine;
+using Ookii.CommandLine;
 using System.ComponentModel;
 using Tkl.Jumbo.Dfs;
+using Tkl.Jumbo.Dfs.FileSystem;
 
 namespace DfsShell.Commands
 {
@@ -15,8 +16,14 @@ namespace DfsShell.Commands
     {
         public override void Run()
         {
-            DfsMetrics metrics = Client.NameServer.GetMetrics();
-            metrics.PrintMetrics(Console.Out);            
+            DfsClient client = Client as DfsClient;
+            if( client == null )
+                Console.WriteLine("No metrics for the configured file system.");
+            else
+            {
+                DfsMetrics metrics = client.NameServer.GetMetrics();
+                metrics.PrintMetrics(Console.Out);
+            }
         }
     }
 }

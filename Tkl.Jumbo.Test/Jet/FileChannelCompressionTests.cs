@@ -2,16 +2,17 @@
 //
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+using System.IO;
+using System.Threading;
 using NUnit.Framework;
-using Tkl.Jumbo.Dfs;
+using Tkl.Jumbo.Dfs.FileSystem;
 using Tkl.Jumbo.IO;
 using Tkl.Jumbo.Jet;
-using Tkl.Jumbo.Test.Tasks;
-using Tkl.Jumbo.Jet.Tasks;
 using Tkl.Jumbo.Jet.Channels;
-using System.Threading;
+using Tkl.Jumbo.Jet.IO;
+using Tkl.Jumbo.Jet.Jobs;
+using Tkl.Jumbo.Jet.Tasks;
+using Tkl.Jumbo.Test.Tasks;
 
 namespace Tkl.Jumbo.Test.Jet
 {
@@ -26,9 +27,9 @@ namespace Tkl.Jumbo.Test.Jet
         public void Setup()
         {
             _cluster = new TestJetCluster(16777216, true, 2, CompressionType.GZip);
-            DfsClient dfsClient = new DfsClient(Dfs.TestDfsCluster.CreateClientConfig());
+            FileSystemClient fileSystemClient = _cluster.CreateFileSystemClient();
             const int recordCount = 2500000;
-            _expected = CreateNumberListInputFile(recordCount, _fileName, dfsClient);
+            _expected = CreateNumberListInputFile(recordCount, _fileName, fileSystemClient);
             _expected.Sort();
 
             Utilities.TraceLineAndFlush("File generation complete.");
@@ -44,76 +45,80 @@ namespace Tkl.Jumbo.Test.Jet
         public void TestJobExecutionMergeTaskCompression()
         {
             string outputPath = "/mergetaskoutput";
-            DfsClient dfsClient = new DfsClient(Dfs.TestDfsCluster.CreateClientConfig());
-            dfsClient.NameServer.CreateDirectory(outputPath);
+            FileSystemClient fileSystemClient = _cluster.CreateFileSystemClient();
+            fileSystemClient.CreateDirectory(outputPath);
 
 
             JobConfiguration config = new JobConfiguration(typeof(StringConversionTask).Assembly);
-            StageConfiguration conversionStage = config.AddInputStage("ConversionStage", dfsClient.NameServer.GetFileInfo(_fileName), typeof(StringConversionTask), typeof(LineRecordReader));
-            StageConfiguration sortStage = config.AddPointToPointStage("SortStage", conversionStage, typeof(SortTask<int>), ChannelType.Pipeline, null, null);
-            config.AddStage("MergeStage", typeof(EmptyTask<int>), 1, new InputStageInfo(sortStage) { MultiInputRecordReaderType = typeof(MergeRecordReader<int>) }, outputPath, typeof(BinaryRecordWriter<int>));
+            StageConfiguration conversionStage = config.AddInputStage("ConversionStage", new FileDataInput<LineRecordReader>(fileSystemClient, fileSystemClient.GetFileInfo(_fileName)), typeof(StringConversionTask));
+            StageConfiguration sortStage = config.AddStage("SortStage", typeof(SortTask<int>), 1, new InputStageInfo(conversionStage) { ChannelType = ChannelType.Pipeline });
+            var stage = config.AddStage("MergeStage", typeof(EmptyTask<int>), 1, new InputStageInfo(sortStage) { MultiInputRecordReaderType = typeof(MergeRecordReader<int>) });
+            stage.DataOutput = new FileDataOutput<BinaryRecordWriter<int>>(fileSystemClient, outputPath);
 
-            RunJob(dfsClient, config);
+            RunJob(fileSystemClient, config);
 
-            string outputFileName = DfsPath.Combine(outputPath, "MergeStage-00001");
+            string outputFileName = fileSystemClient.Path.Combine(outputPath, "MergeStage-00001");
 
-            CheckOutput(dfsClient, _expected, outputFileName);
+            CheckOutput(fileSystemClient, _expected, outputFileName);
         }
 
         [Test]
         public void TestJobExecutionCompression()
         {
             string outputPath = "/output";
-            DfsClient dfsClient = new DfsClient(Dfs.TestDfsCluster.CreateClientConfig());
-            dfsClient.NameServer.CreateDirectory(outputPath);
+            FileSystemClient fileSystemClient = _cluster.CreateFileSystemClient();
+            fileSystemClient.CreateDirectory(outputPath);
 
 
             JobConfiguration config = new JobConfiguration(typeof(StringConversionTask).Assembly);
-            StageConfiguration conversionStage = config.AddInputStage("ConversionStage", dfsClient.NameServer.GetFileInfo(_fileName), typeof(StringConversionTask), typeof(LineRecordReader));
-            config.AddStage("SortStage", typeof(SortTask<int>), 1, new InputStageInfo(conversionStage), outputPath, typeof(BinaryRecordWriter<int>));
+            StageConfiguration conversionStage = config.AddInputStage("ConversionStage", new FileDataInput<LineRecordReader>(fileSystemClient, fileSystemClient.GetFileInfo(_fileName)), typeof(StringConversionTask));
+            var stage = config.AddStage("SortStage", typeof(SortTask<int>), 1, new InputStageInfo(conversionStage));
+            stage.DataOutput = new FileDataOutput<BinaryRecordWriter<int>>(fileSystemClient, outputPath);
 
-            RunJob(dfsClient, config);
+            RunJob(fileSystemClient, config);
 
-            string outputFileName = DfsPath.Combine(outputPath, "SortStage-00001");
+            string outputFileName = fileSystemClient.Path.Combine(outputPath, "SortStage-00001");
 
-            CheckOutput(dfsClient, _expected, outputFileName);
+            CheckOutput(fileSystemClient, _expected, outputFileName);
         }
 
         [Test]
         public void TestJobExecutionCompressionTcpFileDownload()
         {
             string outputPath = "/tcpoutput";
-            DfsClient dfsClient = new DfsClient(Dfs.TestDfsCluster.CreateClientConfig());
-            dfsClient.NameServer.CreateDirectory(outputPath);
+            FileSystemClient fileSystemClient = _cluster.CreateFileSystemClient();
+            fileSystemClient.CreateDirectory(outputPath);
 
 
             JobConfiguration config = new JobConfiguration(typeof(StringConversionTask).Assembly);
-            StageConfiguration conversionStage = config.AddInputStage("ConversionStage", dfsClient.NameServer.GetFileInfo(_fileName), typeof(StringConversionTask), typeof(LineRecordReader));
-            config.AddStage("SortStage", typeof(SortTask<int>), 1, new InputStageInfo(conversionStage), outputPath, typeof(BinaryRecordWriter<int>));
+            StageConfiguration conversionStage = config.AddInputStage("ConversionStage", new FileDataInput<LineRecordReader>(fileSystemClient, fileSystemClient.GetFileInfo(_fileName)), typeof(StringConversionTask));
+            var stage = config.AddStage("SortStage", typeof(SortTask<int>), 1, new InputStageInfo(conversionStage));
+            stage.DataOutput = new FileDataOutput<BinaryRecordWriter<int>>(fileSystemClient, outputPath);
             foreach( ChannelConfiguration channel in config.GetAllChannels() )
             {
                 if( channel.ChannelType == ChannelType.File )
                     channel.ForceFileDownload = true;
             }
 
-            RunJob(dfsClient, config);
+            RunJob(fileSystemClient, config);
 
-            string outputFileName = DfsPath.Combine(outputPath, "SortStage-00001");
+            string outputFileName = fileSystemClient.Path.Combine(outputPath, "SortStage-00001");
 
-            CheckOutput(dfsClient, _expected, outputFileName);
+            CheckOutput(fileSystemClient, _expected, outputFileName);
         }
 
         [Test]
         public void TestJobExecutionCompressionTcpFileDownloadNoMemoryStorage()
         {
             string outputPath = "/tcpnomemoutput";
-            DfsClient dfsClient = new DfsClient(Dfs.TestDfsCluster.CreateClientConfig());
-            dfsClient.NameServer.CreateDirectory(outputPath);
+            FileSystemClient fileSystemClient = _cluster.CreateFileSystemClient();
+            fileSystemClient.CreateDirectory(outputPath);
 
 
             JobConfiguration config = new JobConfiguration(typeof(StringConversionTask).Assembly);
-            StageConfiguration conversionStage = config.AddInputStage("ConversionStage", dfsClient.NameServer.GetFileInfo(_fileName), typeof(StringConversionTask), typeof(LineRecordReader));
-            config.AddStage("SortStage", typeof(SortTask<int>), 1, new InputStageInfo(conversionStage), outputPath, typeof(BinaryRecordWriter<int>));
+            StageConfiguration conversionStage = config.AddInputStage("ConversionStage", new FileDataInput<LineRecordReader>(fileSystemClient, fileSystemClient.GetFileInfo(_fileName)), typeof(StringConversionTask));
+            var stage = config.AddStage("SortStage", typeof(SortTask<int>), 1, new InputStageInfo(conversionStage));
+            stage.DataOutput = new FileDataOutput<BinaryRecordWriter<int>>(fileSystemClient, outputPath);
             config.AddTypedSetting(FileInputChannel.MemoryStorageSizeSetting, 0L);
             foreach( ChannelConfiguration channel in config.GetAllChannels() )
             {
@@ -122,19 +127,19 @@ namespace Tkl.Jumbo.Test.Jet
             }
 
 
-            RunJob(dfsClient, config);
+            RunJob(fileSystemClient, config);
 
-            string outputFileName = DfsPath.Combine(outputPath, "SortStage-00001");
+            string outputFileName = fileSystemClient.Path.Combine(outputPath, "SortStage-00001");
 
-            CheckOutput(dfsClient, _expected, outputFileName);
+            CheckOutput(fileSystemClient, _expected, outputFileName);
         }
 
-        private static List<int> CreateNumberListInputFile(int recordCount, string inputFileName, DfsClient dfsClient)
+        private static List<int> CreateNumberListInputFile(int recordCount, string inputFileName, FileSystemClient fileSystemClient)
         {
             Random rnd = new Random();
             List<int> expected = new List<int>(recordCount);
 
-            using( DfsOutputStream stream = dfsClient.CreateFile(inputFileName) )
+            using( Stream stream = fileSystemClient.CreateFile(inputFileName) )
             using( TextRecordWriter<int> writer = new TextRecordWriter<int>(stream) )
             {
                 for( int x = 0; x < recordCount; ++x )
@@ -147,10 +152,10 @@ namespace Tkl.Jumbo.Test.Jet
             return expected;
         }
 
-        private static void CheckOutput(DfsClient dfsClient, IList<int> expected, string outputFileName)
+        private static void CheckOutput(FileSystemClient fileSystemClient, IList<int> expected, string outputFileName)
         {
             List<int> actual = new List<int>();
-            using( DfsInputStream stream = dfsClient.OpenFile(outputFileName) )
+            using( Stream stream = fileSystemClient.OpenFile(outputFileName) )
             using( BinaryRecordReader<int> reader = new BinaryRecordReader<int>(stream) )
             {
                 while( reader.ReadRecord() )
@@ -162,10 +167,10 @@ namespace Tkl.Jumbo.Test.Jet
             Assert.IsTrue(Utilities.CompareList(expected, actual));
         }
 
-        private static void RunJob(DfsClient dfsClient, JobConfiguration config)
+        private static void RunJob(FileSystemClient fileSystemClient, JobConfiguration config)
         {
             JetClient target = new JetClient(TestJetCluster.CreateClientConfig());
-            Job job = target.RunJob(config, dfsClient, typeof(StringConversionTask).Assembly.Location);
+            Job job = target.RunJob(config, fileSystemClient, typeof(StringConversionTask).Assembly.Location);
 
             bool complete = target.WaitForJobCompletion(job.JobId, Timeout.Infinite, 1000);
             Assert.IsTrue(complete);

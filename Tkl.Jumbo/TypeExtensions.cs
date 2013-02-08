@@ -39,6 +39,11 @@ namespace Tkl.Jumbo
                 throw new ArgumentNullException("interfaceType");
             // This is necessary because while in .Net you can use type.GetInterface with a generic interface type,
             // in Mono that only works if you specify the type arguments which is precisely what we don't want.
+
+            // First check if the specified type is the requested interface type.
+            if( type.IsInterface && type.IsGenericType && type.GetGenericTypeDefinition() == interfaceType )
+                return type;
+
             Type[] interfaces = type.GetInterfaces();
             foreach( Type i in interfaces )
             {

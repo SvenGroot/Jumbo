@@ -1,12 +1,8 @@
 ﻿// $Id$
 //
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Xml.Serialization;
-using Tkl.Jumbo.Dfs;
-using System.Collections.ObjectModel;
+using Tkl.Jumbo.Jet.Jobs;
 
 namespace Tkl.Jumbo.Jet.Channels
 {
@@ -90,10 +86,5 @@ namespace Tkl.Jumbo.Jet.Channels
         /// Gets or sets the type of partitioner to use to split the input of the channel amount its outputs.
         /// </summary>
         public TypeReference PartitionerType { get; set; }
-
-        /// <summary>
-        /// Indicates the type of connectivity to use for this channel.
-        /// </summary>
-        public ChannelConnectivity Connectivity { get; set; }
     }
 }

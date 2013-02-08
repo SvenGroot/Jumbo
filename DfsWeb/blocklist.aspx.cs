@@ -9,13 +9,16 @@ using System.Web.UI.WebControls;
 using Tkl.Jumbo.Dfs;
 using System.Web.UI.HtmlControls;
 using Tkl.Jumbo;
+using Tkl.Jumbo.Dfs.FileSystem;
 
 public partial class blocklist : System.Web.UI.Page
 {
     protected void Page_Load(object sender, EventArgs e)
     {
         string dataServer = Request.QueryString["dataServer"];
-        DfsClient client = new DfsClient();
+
+        // DFS web only applicable when file system is a DFS.
+        DfsClient client = (DfsClient)FileSystemClient.Create();
         Guid[] blocks;
         string newQueryString;
         if( dataServer == null )

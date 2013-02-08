@@ -12,8 +12,9 @@ using Tkl.Jumbo.Jet;
 using Tkl.Jumbo.Jet.Jobs;
 using System.Threading;
 using Tkl.Jumbo.Rpc;
-using Tkl.Jumbo.CommandLine;
+using Ookii.CommandLine;
 using JetShell.Commands;
+using Tkl.Jumbo.Dfs;
 
 namespace JetShell
 {
@@ -26,84 +27,60 @@ namespace JetShell
             log4net.Config.BasicConfigurator.Configure();
             log4net.LogManager.GetRepository().Threshold = log4net.Core.Level.Info;
 
-            if( args.Length == 0 )
-                PrintUsage();
-            else
-            {
-                string commandName = args[0].Trim();
-                Type commandType = ShellCommand.GetShellCommand(Assembly.GetExecutingAssembly(), commandName);
-
-                if( commandType != null )
+            CreateShellCommandOptions options = new CreateShellCommandOptions()
+            {                
+                ArgumentNamePrefixes = new[] { "-" }, // DFS paths use / as the directory separator, so use - even on Windows.
+                CommandDescriptionFormat = "    {0}\n{1}\n",
+                CommandDescriptionIndent = 8,
+                UsageOptions = new WriteUsageOptions()
                 {
-                    JetShellCommand command = null;
-                    CommandLineParser parser = null;
-                    if( commandType == typeof(RunJobCommand) )
-                    {
-                        command = new RunJobCommand(args, 1);
-                    }
-                    else
-                    {
-                        parser = new CommandLineParser(commandType);
-                        parser.NamedArgumentSwitch = "-"; // DFS paths use / as the directory separator, so use - even on Windows.
-                        try
-                        {
-                            command = (JetShellCommand)parser.Parse(args, 1);
-                        }
-                        catch( CommandLineArgumentException ex )
-                        {
-                            Console.Error.WriteLine(ex.Message);
-                            Console.WriteLine();
-                        }
-                    }
-
-                    if( command == null )
-                        Console.WriteLine(parser.GetCustomUsage("Usage: DfsShell.exe " + commandName.ToLowerInvariant(), Console.WindowWidth - 1));
-                    else
-                    {
-                        try
-                        {
-                            command.JetClient = new JetClient();
-                            command.Run();
-                            return command.ExitStatus;
-                        }
-                        catch( SocketException ex )
-                        {
-                            Console.Error.WriteLine("An error occurred communicating with the server:");
-                            Console.Error.WriteLine(ex.Message);
-                        }
-                        catch( InvalidOperationException ex )
-                        {
-                            Console.Error.WriteLine("Invalid operation:");
-                            Console.Error.WriteLine(ex.Message);
-                        }
-                        catch( TargetInvocationException ex )
-                        {
-                            if( ex.InnerException == null )
-                                Console.Error.WriteLine(ex.Message);
-                            else
-                                Console.Error.WriteLine(ex.InnerException.Message);
-                        }
-                        catch( Exception ex )
-                        {
-						  Console.Error.WriteLine(ex.ToString());
-                        }
-                    }
+                    UsagePrefix = "Usage: JetShell",
+                    ArgumentDescriptionFormat = "    {3}{0} {2}\n{1}\n",
+                    ArgumentDescriptionIndent = 8
                 }
-                else
-                    PrintUsage();
+            };
+
+            try
+            {
+                return ShellCommand.RunShellCommand(Assembly.GetExecutingAssembly(), args, 0, options);
+            }
+            catch( SocketException ex )
+            {
+                WriteError("An error occurred communicating with the server:", ex.Message);
+            }
+            catch( DfsException ex )
+            {
+                WriteError("An error occurred accessing the distributed file system:", ex.Message);
+            }
+            catch( IOException ex )
+            {
+                WriteError("An error occurred executing the command:", ex.Message);
+            }
+            catch( ArgumentException ex )
+            {
+                WriteError("An error occurred executing the command:", ex.Message);
+            }
+            catch( InvalidOperationException ex )
+            {
+                WriteError("Invalid operation:", ex.Message);
+            }
+            catch( Exception ex )
+            {
+                WriteError(null, ex.ToString());
             }
 
             RpcHelper.CloseConnections();
             return 1;
         }
 
-        private static void PrintUsage()
+        private static void WriteError(string errorType, string message)
         {
-            Console.WriteLine("Usage: JetShell <command> [args...]");
-            Console.WriteLine();
-            Console.WriteLine("The following commands are available:");
-            Console.WriteLine();
-            ShellCommand.PrintAssemblyCommandList(Assembly.GetExecutingAssembly());
-        }  
+            using( TextWriter writer = LineWrappingTextWriter.ForConsoleError() )
+            {
+                if( errorType != null )
+                    writer.WriteLine(errorType);
+                writer.WriteLine(message);
+            }
+        }
     }
 }

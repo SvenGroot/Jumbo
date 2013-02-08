@@ -6,6 +6,8 @@ using System.Linq;
 using System.Text;
 using NUnit.Framework;
 using Tkl.Jumbo.Dfs;
+using NameServerApplication;
+using Tkl.Jumbo.Dfs.FileSystem;
 
 namespace Tkl.Jumbo.Test.Dfs
 {
@@ -45,11 +47,11 @@ namespace Tkl.Jumbo.Test.Dfs
         }
 
         [Test]
-        public void TestShallowClone()
+        public void TestToJumboDirectory()
         {
             DfsDirectory target = CreateDirectoryStructure();
             DfsDirectory child1 = (DfsDirectory)target.Children[0];
-            DfsDirectory clone = (DfsDirectory)child1.ShallowClone();
+            JumboDirectory clone = child1.ToJumboDirectory();
             Assert.AreNotSame(child1, clone);
             Assert.AreEqual("child1", clone.Name);
             Assert.AreEqual("/child1", clone.FullPath);
@@ -61,8 +63,8 @@ namespace Tkl.Jumbo.Test.Dfs
             Assert.AreEqual("/child1/child2", clone.Children[0].FullPath);
             Assert.AreEqual("/child1/child3", clone.Children[1].FullPath);
             // Check the level below the children wasn't cloned.
-            Assert.AreEqual(0, ((DfsDirectory)clone.Children[0]).Children.Count);
-            Assert.AreEqual(0, ((DfsDirectory)clone.Children[1]).Children.Count);
+            Assert.AreEqual(0, ((JumboDirectory)clone.Children[0]).Children.Count);
+            Assert.AreEqual(0, ((JumboDirectory)clone.Children[1]).Children.Count);
 
         }
 

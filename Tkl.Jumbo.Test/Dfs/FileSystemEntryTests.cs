@@ -6,13 +6,15 @@ using System.Linq;
 using System.Text;
 using NUnit.Framework;
 using Tkl.Jumbo.Dfs;
+using NameServerApplication;
+using Tkl.Jumbo.Dfs.FileSystem;
 
 namespace Tkl.Jumbo.Test.Dfs
 {
     [TestFixture]
     public class FileSystemEntryTests
     {
-        private class FileSystemEntryDerived : FileSystemEntry
+        private class FileSystemEntryDerived : DfsFileSystemEntry
         {
             public FileSystemEntryDerived(DfsDirectory parent, string name, DateTime dateCreated)
                 : base(parent, name, dateCreated)
@@ -21,6 +23,11 @@ namespace Tkl.Jumbo.Test.Dfs
 
             protected override void LoadFromFileSystemImage(System.IO.BinaryReader reader, Action<long> notifyFileSizeCallback)
             {
+            }
+
+            public override Jumbo.Dfs.FileSystem.JumboFileSystemEntry ToJumboFileSystemEntry(bool includeChildren = true)
+            {
+                throw new NotImplementedException();
             }
         }
 
@@ -53,18 +60,6 @@ namespace Tkl.Jumbo.Test.Dfs
             string expected = "newName";
             target.Name = expected;
             Assert.AreEqual(expected, target.Name);
-        }
-
-        [Test]
-        public void TestShallowClone()
-        {
-            DfsDirectory parent = new DfsDirectory(null, string.Empty, DateTime.Now);
-            FileSystemEntry target = new FileSystemEntryDerived(parent, "test", DateTime.UtcNow);
-            FileSystemEntry clone = target.ShallowClone();
-            Assert.AreNotSame(target, clone);
-            Assert.AreEqual(target.Name, clone.Name);
-            Assert.AreEqual(target.DateCreated, clone.DateCreated);
-            Assert.AreEqual(target.FullPath, clone.FullPath);
         }
     }
 }

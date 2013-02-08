@@ -66,9 +66,29 @@ namespace Tkl.Jumbo.IO
         {
             get
             {
-                return (from writer in Writers
-                        select writer.OutputBytes).Sum();
+                return Writers.Sum(w => w.OutputBytes);
             }
+        }
+
+        /// <summary>
+        /// Gets the number of bytes written.
+        /// </summary>
+        public override long BytesWritten
+        {
+            get
+            {
+                return Writers.Sum(w => w.BytesWritten);
+            }
+        }
+
+        /// <summary>
+        /// Informs the record writer that no further records will be written.
+        /// </summary>
+        public override void FinishWriting()
+        {
+            base.FinishWriting();
+            foreach( var writer in _writers )
+                writer.FinishWriting();
         }
 
         /// <summary>
@@ -93,21 +113,15 @@ namespace Tkl.Jumbo.IO
         /// </remarks>
         protected override void Dispose(bool disposing)
         {
-            try
+            base.Dispose(disposing);
+            if( disposing )
             {
-                if( disposing )
+                if( _writers != null )
                 {
-                    if( _writers != null )
-                    {
-                        foreach( var writer in _writers )
-                            writer.Dispose();
-                        _writers = null;
-                    }
+                    foreach( var writer in _writers )
+                        writer.Dispose();
+                    _writers = null;
                 }
-            }
-            finally
-            {
-                base.Dispose(disposing);
             }
         }
     }

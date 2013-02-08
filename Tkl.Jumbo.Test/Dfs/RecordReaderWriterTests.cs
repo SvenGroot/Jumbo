@@ -9,6 +9,8 @@ using Tkl.Jumbo.Dfs;
 using System.Diagnostics;
 using System.Threading;
 using Tkl.Jumbo.IO;
+using Tkl.Jumbo.Dfs.FileSystem;
+using System.IO;
 
 namespace Tkl.Jumbo.Test.Dfs
 {
@@ -19,7 +21,7 @@ namespace Tkl.Jumbo.Test.Dfs
         private TestDfsCluster _cluster;
         private DfsClient _dfsClient;
         private List<Utf8String> _records;
-        private const int _blockSize = 16 * (int)ByteSize.Megabyte;
+        private const int _blockSize = 16 * (int)BinarySize.Megabyte;
 
         [TestFixtureSetUp]
         public void Setup()
@@ -28,7 +30,7 @@ namespace Tkl.Jumbo.Test.Dfs
             _cluster = new TestDfsCluster(1, 1, _blockSize);
             Trace.WriteLine("Starting nameserver.");
             _dfsClient = TestDfsCluster.CreateClient();
-            _dfsClient.NameServer.WaitForSafeModeOff(Timeout.Infinite);
+            _dfsClient.WaitForSafeModeOff(Timeout.Infinite);
             Trace.WriteLine("Name server running.");
             _records = Utilities.GenerateUtf8TextData(100000, 1000).ToList();
         }
@@ -48,7 +50,7 @@ namespace Tkl.Jumbo.Test.Dfs
         {
             const string fileName = "/lines";
             int recordSize = _records[0].ByteLength + Environment.NewLine.Length;
-            using( DfsOutputStream stream = _dfsClient.CreateFile(fileName, 0, 0) )
+            using( Stream stream = _dfsClient.CreateFile(fileName, 0, 0) )
             using( TextRecordWriter<Utf8String> writer = new TextRecordWriter<Utf8String>(stream) )
             {
                 foreach( Utf8String record in _records )
@@ -61,14 +63,14 @@ namespace Tkl.Jumbo.Test.Dfs
             }
 
             int recordIndex = 0;
-            DfsFile file = _dfsClient.NameServer.GetFileInfo(fileName);
+            JumboFile file = _dfsClient.NameServer.GetFileInfo(fileName);
             int blocks = file.Blocks.Count;
             int totalRecordsRead = 0;
             for( int block = 0; block < blocks; ++block )
             {
                 int offset = block * _blockSize;
                 int size = Math.Min((int)(file.Size - offset), _blockSize);
-                using( DfsInputStream stream = _dfsClient.OpenFile(fileName) )
+                using( Stream stream = _dfsClient.OpenFile(fileName) )
                 using( LineRecordReader reader = new LineRecordReader(stream, block * _blockSize, size, true) )
                 {
                     foreach( Utf8String record in reader.EnumerateRecords() )
@@ -87,7 +89,7 @@ namespace Tkl.Jumbo.Test.Dfs
                     Assert.AreEqual(recordCount * recordSize, reader.InputBytes);
                     Assert.GreaterOrEqual(reader.BytesRead, recordCount * recordSize + (recordSize - offset % recordSize));
                     Assert.AreEqual(stream.Position - offset, reader.BytesRead);
-                    Assert.AreEqual(block == blocks - 1 ? 1 : 2, stream.BlocksRead);
+                    Assert.AreEqual(block == blocks - 1 ? 1 : 2, ((DfsInputStream)stream).BlocksRead);
                 }
             }
 
@@ -99,7 +101,7 @@ namespace Tkl.Jumbo.Test.Dfs
         {
             const string fileName = "/linesboundary";
             int recordSize = _records[0].ByteLength + Environment.NewLine.Length;
-            using( DfsOutputStream stream = _dfsClient.CreateFile(fileName, 0, 0, RecordStreamOptions.DoNotCrossBoundary) )
+            using( Stream stream = _dfsClient.CreateFile(fileName, 0, 0, RecordStreamOptions.DoNotCrossBoundary) )
             using( TextRecordWriter<Utf8String> writer = new TextRecordWriter<Utf8String>(stream) )
             {
                 foreach( Utf8String record in _records )
@@ -115,14 +117,14 @@ namespace Tkl.Jumbo.Test.Dfs
             }
 
             int recordIndex = 0;
-            DfsFile file = _dfsClient.NameServer.GetFileInfo(fileName);
+            JumboFile file = _dfsClient.NameServer.GetFileInfo(fileName);
             int blocks = file.Blocks.Count;
             int totalRecordsRead = 0;
             for( int block = 0; block < blocks; ++block )
             {
                 int offset = block * _blockSize;
                 int size = Math.Min((int)(file.Size - offset), _blockSize);
-                using( DfsInputStream stream = _dfsClient.OpenFile(fileName) )
+                using( Stream stream = _dfsClient.OpenFile(fileName) )
                 using( LineRecordReader reader = new LineRecordReader(stream, block * _blockSize, size, true) )
                 {
                     foreach( Utf8String record in reader.EnumerateRecords() )
@@ -137,7 +139,7 @@ namespace Tkl.Jumbo.Test.Dfs
                     Assert.AreEqual(recordCount * recordSize, reader.InputBytes);
                     Assert.GreaterOrEqual(reader.BytesRead, recordCount * recordSize);
                     Assert.AreEqual(size, reader.BytesRead);
-                    Assert.AreEqual(1, stream.BlocksRead);
+                    Assert.AreEqual(1, ((DfsInputStream)stream).BlocksRead);
                 }
             }
 
@@ -149,7 +151,7 @@ namespace Tkl.Jumbo.Test.Dfs
         {
             const string fileName = "/binaryboundary";
             int recordSize = _records[0].ByteLength + 2; // BinaryRecordWriter writes string length which will take 2 bytes.
-            using( DfsOutputStream stream = _dfsClient.CreateFile(fileName, 0, 0, RecordStreamOptions.DoNotCrossBoundary) )
+            using( Stream stream = _dfsClient.CreateFile(fileName, 0, 0, RecordStreamOptions.DoNotCrossBoundary) )
             using( BinaryRecordWriter<Utf8String> writer = new BinaryRecordWriter<Utf8String>(stream) )
             {
                 foreach( Utf8String record in _records )
@@ -165,14 +167,14 @@ namespace Tkl.Jumbo.Test.Dfs
             }
 
             int recordIndex = 0;
-            DfsFile file = _dfsClient.NameServer.GetFileInfo(fileName);
+            JumboFile file = _dfsClient.NameServer.GetFileInfo(fileName);
             int blocks = file.Blocks.Count;
             int totalRecordsRead = 0;
             for( int block = 0; block < blocks; ++block )
             {
                 int offset = block * _blockSize;
                 int size = Math.Min((int)(file.Size - offset), _blockSize);
-                using( DfsInputStream stream = _dfsClient.OpenFile(fileName) )
+                using( Stream stream = _dfsClient.OpenFile(fileName) )
                 using( BinaryRecordReader<Utf8String> reader = new BinaryRecordReader<Utf8String>(stream, block * _blockSize, size, true) )
                 {
                     foreach( Utf8String record in reader.EnumerateRecords() )
@@ -187,7 +189,7 @@ namespace Tkl.Jumbo.Test.Dfs
                     Assert.AreEqual(recordCount * recordSize, reader.InputBytes);
                     Assert.GreaterOrEqual(reader.BytesRead, recordCount * recordSize);
                     Assert.AreEqual(size, reader.BytesRead);
-                    Assert.AreEqual(1, stream.BlocksRead);
+                    Assert.AreEqual(1, ((DfsInputStream)stream).BlocksRead);
                 }
             }
 

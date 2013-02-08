@@ -8,7 +8,7 @@ using System.Text;
 namespace Tkl.Jumbo.Dfs
 {
     /// <summary>
-    /// Delegate used by <see cref="DfsClient"/> to report progress on various operations.
+    /// Delegate used by <see cref="FileSystem.DfsClient"/> to report progress on various operations.
     /// </summary>
     /// <param name="fileName">The DFS file name to which the progress applies.</param>
     /// <param name="progressPercentage">The progress percentage, between 0 and 100.</param>

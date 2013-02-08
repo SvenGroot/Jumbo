@@ -26,7 +26,7 @@
         <include name="Properties/AssemblyInfo.cs"/>
         <include name="GraySort/*.cs" />
         <include name="*.cs"/>
-        <include name="../Version.cs"/>
+        <include name="../AssemblyInfoCommon.cs"/>
       </sources>
     </csc>
     <copy file="App.config" tofile="nantbin/ClientSample.exe.config"/>

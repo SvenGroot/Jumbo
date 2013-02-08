@@ -12,7 +12,7 @@ namespace Tkl.Jumbo.IO
     /// <summary>
     /// Reads records from a stream using line breaks as the record boundary.
     /// </summary>
-    public class LineRecordReader : StreamRecordReader<Utf8String>
+    public sealed class LineRecordReader : StreamRecordReader<Utf8String>
     {
         #region Nested types
 

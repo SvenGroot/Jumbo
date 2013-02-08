@@ -120,7 +120,11 @@ namespace Tkl.Jumbo
         {
             get
             {
-                return Assembly.GetExecutingAssembly().GetName().Version;
+                AssemblyFileVersionAttribute config = (AssemblyFileVersionAttribute)Attribute.GetCustomAttribute(Assembly.GetExecutingAssembly(), typeof(AssemblyFileVersionAttribute));
+                if( config != null )
+                    return new Version(config.Version);
+                else
+                    return Assembly.GetExecutingAssembly().GetName().Version;
             }
         }
 

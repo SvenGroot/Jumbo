@@ -18,7 +18,7 @@ namespace Tkl.Jumbo.Jet
         /// </summary>
         /// <value>The maximum number of file inputs in a single merge pass. The default value is 100.</value>
         [ConfigurationProperty("maxFileInputs", DefaultValue = 100, IsRequired = false, IsKey = false)]
-        [IntegerValidator(MinValue=2)]
+        [IntegerValidator(MinValue=2, MaxValue=Int32.MaxValue)]
         public int MaxFileInputs
         {
             get { return (int)this["maxFileInputs"]; }
@@ -41,10 +41,24 @@ namespace Tkl.Jumbo.Jet
         /// </summary>
         /// <value>The size of the read buffer for each merge stream.</value>
         [ConfigurationProperty("mergeStreamReadBufferSize", DefaultValue = "1MB", IsRequired = false, IsKey = false)]
-        public ByteSize MergeStreamReadBufferSize
+        public BinarySize MergeStreamReadBufferSize
         {
-            get { return (ByteSize)this["mergeStreamReadBufferSize"]; }
+            get { return (BinarySize)this["mergeStreamReadBufferSize"]; }
             set { this["mergeStreamReadBufferSize"] = value; }
+        }
+
+        /// <summary>
+        /// Gets or sets a value indicating whether all in-memory inputs must be merged and purged to disk before the final pass.
+        /// </summary>
+        /// <value>
+        /// 	<see langword="true"/> if all in-memory inputs must be merged and purged to disk before the final pass; otherwise, <see langword="false"/>.
+        /// 	The default value is <see langword="false"/>.
+        /// </value>
+        [ConfigurationProperty("purgeMemoryBeforeFinalPass", DefaultValue = false, IsRequired = false, IsKey = false)]
+        public bool PurgeMemoryBeforeFinalPass
+        {
+            get { return (bool)this["purgeMemoryBeforeFinalPass"]; }
+            set { this["purgeMemoryBeforeFinalPass"] = value; }
         }
     }
 }

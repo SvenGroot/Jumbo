@@ -19,7 +19,7 @@ namespace Tkl.Jumbo.Jet.Tasks
     ///   may not reuse the <see cref="IWritable"/> instances for the records.
     /// </note>
     /// </remarks>
-    public class SortTask<T> : Configurable, IPrepartitionedPushTask<T, T>
+    public class SortTask<T> : PrepartitionedPushTask<T, T>
     {
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(SortTask<T>));
         private List<T>[] _partitions;
@@ -49,15 +49,13 @@ namespace Tkl.Jumbo.Jet.Tasks
                 _comparer = Comparer<T>.Default;
         }
 
-        #region IPushTask<TInput,TOutput> Members
-
         /// <summary>
         /// Method called for each record in the task's input.
         /// </summary>
         /// <param name="record">The record to process.</param>
         /// <param name="partition">The partition of the record</param>
         /// <param name="output">The <see cref="RecordWriter{T}"/> to which the task's output should be written.</param>
-        public void ProcessRecord(T record, int partition, PrepartitionedRecordWriter<T> output)
+        public override void ProcessRecord(T record, int partition, PrepartitionedRecordWriter<T> output)
         {
             _partitions[partition].Add(record);
         }
@@ -66,7 +64,7 @@ namespace Tkl.Jumbo.Jet.Tasks
         /// Method called after the last record was processed.
         /// </summary>
         /// <param name="output">The <see cref="RecordWriter{T}"/> to which the task's output should be written.</param>
-        public void Finish(PrepartitionedRecordWriter<T> output)
+        public override void Finish(PrepartitionedRecordWriter<T> output)
         {
             if( output == null )
                 throw new ArgumentNullException("output");
@@ -91,10 +89,12 @@ namespace Tkl.Jumbo.Jet.Tasks
             {
                 List<T> records = _partitions[partition];
                 records.Sort(_comparer);
+                _log.DebugFormat("Done sorting partition {0}.", partition);
                 foreach( T record in records )
                 {
                     output.WriteRecord(record, partition);
                 }
+                _log.DebugFormat("Done writing partition {0}.", partition);
             }
             _log.Debug("Done sorting.");
         }
@@ -126,7 +126,5 @@ namespace Tkl.Jumbo.Jet.Tasks
             }
             _log.Debug("Done writing partitions.");
         }
-
-        #endregion
     }
 }

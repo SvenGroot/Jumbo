@@ -30,7 +30,7 @@ namespace NameServerApplication
 
         public BlockAssignment AssignBlockToDataServers(IEnumerable<DataServerInfo> dataServers, BlockInfo block, string writerHostName, bool useLocalReplica)
         {
-            long freeSpaceThreshold = _configuration.NameServer.DataServerFreeSpaceThreshold;
+            long freeSpaceThreshold = (long)_configuration.NameServer.DataServerFreeSpaceThreshold;
             Guid blockId = block.BlockId;
             bool forceDifferentRack = false;
             var currentDataServers = (from server in dataServers

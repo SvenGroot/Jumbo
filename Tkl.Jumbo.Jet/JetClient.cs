@@ -1,14 +1,13 @@
 ﻿// $Id$
 //
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using Tkl.Jumbo.Dfs;
-using System.IO;
 using System.Diagnostics;
+using System.IO;
 using System.Threading;
 using Tkl.Jumbo.Rpc;
+using Tkl.Jumbo.Dfs.FileSystem;
+using Tkl.Jumbo.Jet.IO;
+using Tkl.Jumbo.Jet.Jobs;
 
 namespace Tkl.Jumbo.Jet
 {
@@ -168,7 +167,7 @@ namespace Tkl.Jumbo.Jet
         /// <param name="files">The local paths of the files to store in the job directory on the DFS. This should include the assembly containing the task classes.</param>
         /// <returns>An instance of the <see cref="Job"/> class describing the job that was started.</returns>
         /// <remarks>
-        /// This function uses the application's configuration to create a <see cref="DfsClient"/> to access the DFS.
+        /// This function uses the application's configuration to create a <see cref="FileSystemClient"/> to access the DFS.
         /// </remarks>
         public Job RunJob(JobConfiguration config, params string[] files)
         {
@@ -180,6 +179,41 @@ namespace Tkl.Jumbo.Jet
             RunJob(job, config, files);
             return job;
         }
+
+        /// <summary>
+        /// Waits until the specified job is complete, printing progress updates to the console.
+        /// </summary>
+        /// <param name="jobId">The job ID.</param>
+        /// <param name="pollIntervalMilliseconds">The poll interval in milliseconds.</param>
+        /// <returns><see langword="true"/> if the job completed successfully; otherwise, <see langword="false"/>.</returns>
+        public bool WaitForJobCompletion(Guid jobId, int pollIntervalMilliseconds = 1000)
+        {
+            JobStatus status = null;
+            string previousStatus = null;
+            do
+            {
+                Thread.Sleep(pollIntervalMilliseconds);
+                status = JobServer.GetJobStatus(jobId);
+                string statusString = status.ToString();
+                if( statusString != previousStatus )
+                {
+                    Console.WriteLine(statusString);
+                    previousStatus = statusString;
+                }
+            } while( !status.IsFinished );
+
+            Console.WriteLine();
+            if( status.IsSuccessful )
+                Console.WriteLine("Job completed.");
+            else
+                Console.WriteLine("Job failed.");
+            Console.WriteLine("Start time: {0:yyyy'-'MM'-'dd' 'HH':'mm':'ss'.'fff}", status.StartTime.ToLocalTime());
+            Console.WriteLine("End time:   {0:yyyy'-'MM'-'dd' 'HH':'mm':'ss'.'fff}", status.EndTime.ToLocalTime());
+            TimeSpan duration = status.EndTime - status.StartTime;
+            Console.WriteLine("Duration:   {0} ({1}s)", duration, duration.TotalSeconds);
+
+            return status.IsSuccessful;
+        }
         
         /// <summary>
         /// Stores the job configuration and the specified files on the DFS, and runs the job.
@@ -189,76 +223,106 @@ namespace Tkl.Jumbo.Jet
         /// <param name="files">The local paths of the files to store in the job directory on the DFS. This should include the assembly containing the task classes.</param>
         /// <returns>An instance of the <see cref="Job"/> class describing the job that was started.</returns>
         /// <remarks>
-        /// This function uses the application's configuration to create a <see cref="DfsClient"/> to access the DFS.
+        /// This function uses the application's configuration to create a <see cref="FileSystemClient"/> to access the DFS.
         /// </remarks>
         public void RunJob(Job job, JobConfiguration config, params string[] files)
         {
-            RunJob(job, config, new DfsClient(), files);
+            RunJob(job, config, FileSystemClient.Create(), files);
         }
 
         /// <summary>
-        /// Creates a new job, stores the job configuration and the specified files on the DFS using the specified <see cref="DfsClient"/>, and runs the job.
+        /// Creates a new job, stores the job configuration and the specified files on the DFS using the specified <see cref="FileSystemClient"/>, and runs the job.
         /// </summary>
         /// <param name="config">The <see cref="JobConfiguration"/> for the job.</param>
-        /// <param name="dfsClient">A <see cref="DfsClient"/> used to access the Jumbo DFS.</param>
+        /// <param name="fileSystemClient">A <see cref="FileSystemClient"/> used to access the Jumbo DFS.</param>
         /// <param name="files">The local paths of the files to store in the job directory on the DFS. This should include the assembly containing the task classes.</param>
         /// <returns>An instance of the <see cref="Job"/> class describing the job that was started.</returns>
-        public Job RunJob(JobConfiguration config, DfsClient dfsClient, params string[] files)
+        public Job RunJob(JobConfiguration config, FileSystemClient fileSystemClient, params string[] files)
         {
             if( config == null )
                 throw new ArgumentNullException("config");
-            if( dfsClient == null )
-                throw new ArgumentNullException("dfsClient");
+            if( fileSystemClient == null )
+                throw new ArgumentNullException("fileSystemClient");
 
             Job job = JobServer.CreateJob();
             _log.InfoFormat("Created job {{{0}}}", job.JobId);
-            RunJob(job, config, dfsClient, files);
+            RunJob(job, config, fileSystemClient, files);
             return job;
         }
         
         /// <summary>
-        /// Stores the job configuration and the specified files on the DFS using the specified <see cref="DfsClient"/>, and runs the job.
+        /// Stores the job configuration and the specified files on the DFS using the specified <see cref="FileSystemClient"/>, and runs the job.
         /// </summary>
         /// <param name="job">The job to run.</param>
         /// <param name="config">The <see cref="JobConfiguration"/> for the job.</param>
-        /// <param name="dfsClient">A <see cref="DfsClient"/> used to access the Jumbo DFS.</param>
+        /// <param name="fileSystemClient">A <see cref="FileSystemClient"/> used to access the Jumbo DFS.</param>
         /// <param name="files">The local paths of the files to store in the job directory on the DFS. This should include the assembly containing the task classes.</param>
         /// <returns>An instance of the <see cref="Job"/> class describing the job that was started.</returns>
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1031:DoNotCatchGeneralExceptionTypes")]
-        public void RunJob(Job job, JobConfiguration config, DfsClient dfsClient, params string[] files)
+        public void RunJob(Job job, JobConfiguration config, FileSystemClient fileSystemClient, params string[] files)
         {
             if( job == null )
                 throw new ArgumentNullException("job");
             if( config == null )
                 throw new ArgumentNullException("config");
-            if( dfsClient == null )
-                throw new ArgumentNullException("dfsClient");
+            if( fileSystemClient == null )
+                throw new ArgumentNullException("fileSystemClient");
 
-            _log.InfoFormat("Saving job configuration to DFS file {0}.", job.JobConfigurationFilePath);
-            using( DfsOutputStream stream = dfsClient.CreateFile(job.JobConfigurationFilePath) )
-            {
-                config.SaveXml(stream);
-            }
-
-            if( files != null )
-            {
-                foreach( string file in files )
-                {
-                    _log.InfoFormat("Uploading local file {0} to DFS directory {1}.", file, job.Path);
-                    dfsClient.UploadFile(file, job.Path);
-                }
-            }
-
-            _log.InfoFormat("Running job {0}.", job.JobId);
             try
             {
-                File.WriteAllText("jumbo_last_job.txt", job.JobId.ToString());
+                config.Validate();
+
+                string configFilePath = job.GetJobConfigurationFilePath(fileSystemClient);
+                _log.InfoFormat("Saving job configuration to DFS file {0}.", configFilePath);
+                using( Stream stream = fileSystemClient.CreateFile(configFilePath) )
+                {
+                    config.SaveXml(stream);
+                }
+
+                // Save split files for all stages with input.
+                foreach( StageConfiguration stage in config.Stages )
+                {
+                    if( stage.DataInput != null )
+                    {
+                        TaskInputUtility.WriteTaskInputs(fileSystemClient, job.Path, stage.StageId, stage.DataInput.TaskInputs);
+                    }
+                }
+
+                // Upload additional files
+                if( files != null )
+                {
+                    foreach( string file in files )
+                    {
+                        _log.InfoFormat("Uploading local file {0} to DFS directory {1}.", file, job.Path);
+                        fileSystemClient.UploadFile(file, job.Path);
+                    }
+                }
+
+                _log.InfoFormat("Running job {0}.", job.JobId);
+                try
+                {
+                    File.WriteAllText("jumbo_last_job.txt", job.JobId.ToString());
+                }
+                catch
+                {
+                    // Don't care if this fails.
+                }
+                JobServer.RunJob(job.JobId);
             }
             catch
             {
-                // Don't care if this fails.
+                try
+                {
+                    // Remove job from the pending queue if submission failed
+                    JobServer.AbortJob(job.JobId);
+                }
+                catch
+                {
+                    // Don't care about abortion failure, and we don't want that to mask the real exception
+                }
+
+                throw;
             }
-            JobServer.RunJob(job.JobId);
         }
 
         /// <summary>

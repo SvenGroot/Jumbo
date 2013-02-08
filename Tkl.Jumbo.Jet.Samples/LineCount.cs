@@ -4,10 +4,11 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using Tkl.Jumbo.Jet.Jobs;
 using Tkl.Jumbo.Jet.Samples.Tasks;
 using Tkl.Jumbo.IO;
 using System.ComponentModel;
+using Tkl.Jumbo.Jet.Jobs.Builder;
+using Ookii.CommandLine;
 
 namespace Tkl.Jumbo.Jet.Samples
 {
@@ -15,19 +16,47 @@ namespace Tkl.Jumbo.Jet.Samples
     /// Job runner for line count.
     /// </summary>
     [Description("Counts the number of lines in the input file or files.")]
-    public class LineCount : BasicJob
+    public class LineCount : JobBuilderJob
     {
         /// <summary>
-        /// Initializes a new instance of the <see cref="LineCount"/> class.
+        /// Gets or sets the input path.
         /// </summary>
-        /// <param name="inputPath">The input file or directory on the DFS.</param>
-        /// <param name="outputPath">The directory on the DFS to which to write the output.</param>
-        public LineCount([Description("The input file or directory on the Jumbo DFS containing the text to perform the line count on.")] string inputPath, 
-                         [Description("The output directory on the DFS where the results will be written.")] string outputPath)
-            : base(inputPath, outputPath, 1, typeof(RecordCountTask<Utf8String>), "RecordCountTask", typeof(RecordCountCombinerTask), null, typeof(LineRecordReader), typeof(TextRecordWriter<int>), null, false)
+        /// <value>
+        /// The input path.
+        /// </value>
+        [CommandLineArgument(Position = 0, IsRequired = true), Description("The input file or directory containing the text to perform the line count on.")]
+        public string InputPath { get; set; }
+
+        /// <summary>
+        /// Gets or sets the output path.
+        /// </summary>
+        /// <value>
+        /// The output path.
+        /// </value>
+        [CommandLineArgument(Position = 0, IsRequired = true), Description("The output directory where the results will be written.")]
+        public string OutputPath { get; set; }
+
+        /// <summary>
+        /// Constructs the job configuration using the specified job builder.
+        /// </summary>
+        /// <param name="job">The <see cref="JobBuilder"/> used to create the job.</param>
+        protected override void BuildJob(JobBuilder job)
         {
-            if( inputPath == null )
-                throw new ArgumentNullException("inputPath");
+            var input = job.Read(InputPath, typeof(LineRecordReader));
+            var counted = job.Process(input, typeof(RecordCountTask<>));
+            var summed = job.Process<int, int>(input, SumLineCount); // Record reuse irrelevant because type is int.
+            summed.InputChannel.PartitionCount = 1;
+            WriteOutput(summed, OutputPath, typeof(TextRecordWriter<>));
+        }
+
+        /// <summary>
+        /// Sums the line count.
+        /// </summary>
+        /// <param name="input">The input.</param>
+        /// <param name="output">The output.</param>
+        public static void SumLineCount(RecordReader<int> input, RecordWriter<int> output)
+        {
+            output.WriteRecord(input.EnumerateRecords().Sum());
         }
     }
 }

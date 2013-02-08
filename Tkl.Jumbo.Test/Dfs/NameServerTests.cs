@@ -9,6 +9,7 @@ using System.Threading;
 using System.Net;
 using System.IO;
 using Tkl.Jumbo.Dfs;
+using Tkl.Jumbo.Dfs.FileSystem;
 
 namespace Tkl.Jumbo.Test.Dfs
 {
@@ -27,7 +28,7 @@ namespace Tkl.Jumbo.Test.Dfs
             Utilities.TraceLineAndFlush("Starting cluster.");
             DfsConfiguration config = TestDfsCluster.CreateClientConfig();
             _nameServer = DfsClient.CreateNameServerClient(config);
-            _nameServer.WaitForSafeModeOff(Timeout.Infinite);
+            TestDfsCluster.CreateClient().WaitForSafeModeOff(Timeout.Infinite);
             Utilities.TraceLineAndFlush("Cluster started.");
         }
 
@@ -48,7 +49,7 @@ namespace Tkl.Jumbo.Test.Dfs
             INameServerClientProtocol target = _nameServer;
             string path = "/createdirectory/foo/bar";
             target.CreateDirectory(path);
-            Tkl.Jumbo.Dfs.DfsDirectory result = target.GetDirectoryInfo(path);
+            Tkl.Jumbo.Dfs.FileSystem.JumboDirectory result = target.GetDirectoryInfo(path);
             Assert.AreEqual(path, result.FullPath);
             Assert.AreEqual("bar", result.Name);
             Assert.AreEqual(0, result.Children.Count);
@@ -348,14 +349,14 @@ namespace Tkl.Jumbo.Test.Dfs
             target.CreateFile(filePath, 0, 0, true, IO.RecordStreamOptions.None);
             target.CloseFile(filePath);
 
-            FileSystemEntry entry = target.GetFileSystemEntryInfo(directoryPath);
-            Tkl.Jumbo.Dfs.DfsDirectory dir = entry as Tkl.Jumbo.Dfs.DfsDirectory;
+            JumboFileSystemEntry entry = target.GetFileSystemEntryInfo(directoryPath);
+            Tkl.Jumbo.Dfs.FileSystem.JumboDirectory dir = entry as Tkl.Jumbo.Dfs.FileSystem.JumboDirectory;
             Assert.IsNotNull(dir);
             Assert.AreEqual(directoryPath, dir.FullPath);
             Assert.AreEqual(1, dir.Children.Count);
 
             entry = target.GetFileSystemEntryInfo(filePath);
-            Tkl.Jumbo.Dfs.DfsFile file = entry as Tkl.Jumbo.Dfs.DfsFile;
+            Tkl.Jumbo.Dfs.FileSystem.JumboFile file = entry as Tkl.Jumbo.Dfs.FileSystem.JumboFile;
             Assert.IsNotNull(file);
             Assert.AreEqual(filePath, file.FullPath);
 
@@ -386,7 +387,7 @@ namespace Tkl.Jumbo.Test.Dfs
             Assert.IsFalse(result);
             result = target.Delete("/test1", true);
             Assert.IsTrue(result);
-            Tkl.Jumbo.Dfs.DfsDirectory dir = target.GetDirectoryInfo("/test1");
+            Tkl.Jumbo.Dfs.FileSystem.JumboDirectory dir = target.GetDirectoryInfo("/test1");
             Assert.IsNull(dir);
 
             using( DfsOutputStream stream = new DfsOutputStream(target, "/deletetest") )
@@ -394,7 +395,7 @@ namespace Tkl.Jumbo.Test.Dfs
                 Utilities.GenerateData(stream, 1000);
             }
 
-            DfsFile file = target.GetFileInfo("/deletetest");
+            JumboFile file = target.GetFileInfo("/deletetest");
             ServerAddress[] servers = target.GetDataServersForBlock(file.Blocks[0]);
             Assert.AreEqual(1, servers.Length);
             CollectionAssert.Contains(target.GetDataServerBlocks(servers[0]), file.Blocks[0]);
@@ -424,14 +425,16 @@ namespace Tkl.Jumbo.Test.Dfs
             }
             Assert.IsTrue(hasException);
 
+            Packet p = new Packet();
+            long sequenceNumber = 0;
             using( BlockSender sender = new BlockSender(block) )
             {
                 for( int sizeRemaining = target.BlockSize; sizeRemaining > 0; sizeRemaining -= Packet.PacketSize )
                 {
-                    sender.AddPacket(Utilities.GenerateData(Packet.PacketSize), Packet.PacketSize, sizeRemaining - Packet.PacketSize == 0);
+                    p.CopyFrom(Utilities.GenerateData(Packet.PacketSize), Packet.PacketSize, sequenceNumber++, sizeRemaining - Packet.PacketSize == 0);
+                    sender.SendPacket(p);
                 }
-                sender.WaitUntilSendFinished();
-                sender.ThrowIfErrorOccurred();
+                sender.WaitForAcknowledgements();
             }
 
             BlockAssignment block2 = target.AppendBlock(path, true);
@@ -440,15 +443,16 @@ namespace Tkl.Jumbo.Test.Dfs
             Assert.AreEqual(Dns.GetHostName(), block2.DataServers[0].HostName);
             Assert.IsTrue(block2.DataServers[0].Port == 10001 || block2.DataServers[0].Port == 10002);
 
+            sequenceNumber = 0;
             using( BlockSender sender = new BlockSender(block2) )
             {
-                sender.AddPacket(Utilities.GenerateData(10000), 10000, true);
-                sender.WaitUntilSendFinished();
-                sender.ThrowIfErrorOccurred();
+                p.CopyFrom(Utilities.GenerateData(10000), 10000, sequenceNumber++, true);
+                sender.SendPacket(p);
+                sender.WaitForAcknowledgements();
             }
 
             target.CloseFile(path);
-            Tkl.Jumbo.Dfs.DfsFile file = target.GetFileInfo(path);
+            Tkl.Jumbo.Dfs.FileSystem.JumboFile file = target.GetFileInfo(path);
             Assert.AreEqual(2, file.Blocks.Count);
             Assert.AreEqual(block.BlockId, file.Blocks[0]);
             Assert.AreEqual(block2.BlockId, file.Blocks[1]);
@@ -477,18 +481,21 @@ namespace Tkl.Jumbo.Test.Dfs
                 // these should never be equal.
                 Assert.AreNotEqual(block1.DataServers[0], block2.DataServers[0]);
 
+                Packet p = new Packet();
+                long sequenceNumber = 0;
                 using( BlockSender sender = new BlockSender(block1) )
                 {
-                    sender.AddPacket(Utilities.GenerateData(10000), 10000, true);
-                    sender.WaitUntilSendFinished();
-                    sender.ThrowIfErrorOccurred();
+                    p.CopyFrom(Utilities.GenerateData(10000), 10000, sequenceNumber++, true);
+                    sender.SendPacket(p);
+                    sender.WaitForAcknowledgements();
                 }
 
+                sequenceNumber = 0;
                 using( BlockSender sender = new BlockSender(block2) )
                 {
-                    sender.AddPacket(Utilities.GenerateData(10000), 10000, true);
-                    sender.WaitUntilSendFinished();
-                    sender.ThrowIfErrorOccurred();
+                    p.CopyFrom(Utilities.GenerateData(10000), 10000, sequenceNumber++, true);
+                    sender.SendPacket(p);
+                    sender.WaitForAcknowledgements();
                 }
 
                 target.CloseFile(path1);
@@ -510,7 +517,7 @@ namespace Tkl.Jumbo.Test.Dfs
             INameServerClientProtocol target = _nameServer;
             target.CreateFile("/closefilependingblock", 0, 0, true, IO.RecordStreamOptions.None);
             target.CloseFile("/closefilependingblock");
-            Tkl.Jumbo.Dfs.DfsFile file = target.GetFileInfo("/closefilependingblock");
+            Tkl.Jumbo.Dfs.FileSystem.JumboFile file = target.GetFileInfo("/closefilependingblock");
             Assert.AreEqual(0, file.Blocks.Count);
             Assert.AreEqual(0, target.GetMetrics().PendingBlockCount);
         }
@@ -560,7 +567,7 @@ namespace Tkl.Jumbo.Test.Dfs
             // Test move to different file name in same directory
             _nameServer.Move("/move/dir1/file1", "/move/dir1/file2");
             Assert.IsNull(_nameServer.GetFileInfo("/move/dir1/file1"));
-            Tkl.Jumbo.Dfs.DfsFile file = _nameServer.GetFileInfo("/move/dir1/file2");
+            Tkl.Jumbo.Dfs.FileSystem.JumboFile file = _nameServer.GetFileInfo("/move/dir1/file2");
             Assert.IsNotNull(file);
             Assert.AreEqual("file2", file.Name);
             Assert.AreEqual("/move/dir1/file2", file.FullPath);
@@ -581,7 +588,7 @@ namespace Tkl.Jumbo.Test.Dfs
             // Test move entire directory
             _nameServer.Move("/move/dir1", "/move/dir2");
             Assert.IsNull(_nameServer.GetDirectoryInfo("/move/dir1"));
-            Tkl.Jumbo.Dfs.DfsDirectory dir = _nameServer.GetDirectoryInfo("/move/dir2/dir1");
+            Tkl.Jumbo.Dfs.FileSystem.JumboDirectory dir = _nameServer.GetDirectoryInfo("/move/dir2/dir1");
             Assert.IsNotNull(dir);
             Assert.AreEqual("dir1", dir.Name);
             Assert.AreEqual("/move/dir2/dir1", dir.FullPath);
@@ -622,7 +629,7 @@ namespace Tkl.Jumbo.Test.Dfs
             Assert.AreEqual(replicationFactor == 0 ? 1 : replicationFactor, block.DataServers.Count);
             Assert.AreEqual(Dns.GetHostName(), block.DataServers[0].HostName);
             //Assert.AreEqual(10001, block.DataServers[0].Port);
-            Tkl.Jumbo.Dfs.DfsFile result = target.GetFileInfo(path);
+            Tkl.Jumbo.Dfs.FileSystem.JumboFile result = target.GetFileInfo(path);
             Assert.IsTrue((result.DateCreated - DateTime.UtcNow).TotalSeconds < 1);
             Assert.AreEqual(fileName, result.Name);
             Assert.AreEqual(path, result.FullPath);
@@ -634,9 +641,8 @@ namespace Tkl.Jumbo.Test.Dfs
 
             using( BlockSender sender = new BlockSender(block) )
             {
-                sender.AddPacket(Utilities.GenerateData(10000), 10000, true);
-                sender.WaitUntilSendFinished();
-                sender.ThrowIfErrorOccurred();
+                sender.SendPacket(new Packet(Utilities.GenerateData(10000), 10000, 1, true));
+                sender.WaitForAcknowledgements();
             }
 
             result = target.GetFileInfo(path);

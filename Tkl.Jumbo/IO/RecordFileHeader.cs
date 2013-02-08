@@ -122,10 +122,12 @@ namespace Tkl.Jumbo.IO
 
         private static byte[] GenerateRecordMarker()
         {
-            RandomNumberGenerator rng = RandomNumberGenerator.Create();
-            byte[] boundary = new byte[RecordFile.RecordMarkerSize];
-            rng.GetBytes(boundary);
-            return boundary;
+            using( RandomNumberGenerator rng = RandomNumberGenerator.Create() )
+            {
+                byte[] boundary = new byte[RecordFile.RecordMarkerSize];
+                rng.GetBytes(boundary);
+                return boundary;
+            }
         }
 
         #region IWritable Members

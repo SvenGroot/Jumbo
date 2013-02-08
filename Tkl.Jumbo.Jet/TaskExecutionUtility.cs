@@ -2,33 +2,31 @@
 //
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using Tkl.Jumbo.Dfs;
-using Tkl.Jumbo.Jet.Channels;
-using Tkl.Jumbo.IO;
-using System.Reflection;
-using System.Collections;
-using System.Threading;
-using System.Net.Sockets;
-using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
+using System.Net.Sockets;
+using System.Reflection;
+using System.Text;
+using System.Threading;
+using Tkl.Jumbo.Dfs;
+using Tkl.Jumbo.Dfs.FileSystem;
+using Tkl.Jumbo.IO;
+using Tkl.Jumbo.Jet.Channels;
+using Tkl.Jumbo.Jet.IO;
+using Tkl.Jumbo.Jet.Jobs;
+using System.Globalization;
+using System.Configuration;
 
 namespace Tkl.Jumbo.Jet
 {
     /// <summary>
     /// Encapsulates all the data and functionality needed to run a task and its pipelined tasks.
     /// </summary>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Maintainability", "CA1506:AvoidExcessiveClassCoupling")]
     public abstract class TaskExecutionUtility : IDisposable
     {
         #region Nested types
-
-        private sealed class DfsOutputInfo
-        {
-            public string DfsOutputPath { get; set; }
-            public string DfsOutputTempPath { get; set; }
-        }
 
         private sealed class TaskProgressSource : IHasAdditionalProgress
         {
@@ -63,12 +61,13 @@ namespace Tkl.Jumbo.Jet
         #endregion
 
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(TaskExecutionUtility));
+
         private readonly int _progressInterval = 5000;
 
-        private readonly DfsClient _dfsClient;
+        private readonly FileSystemClient _fileSystemClient;
         private readonly JetClient _jetClient;
         private readonly IJobServerTaskProtocol _jobServerTaskClient;
-        private readonly TaskContext _configuration;
+        private readonly TaskContext _context;
         private readonly ITaskServerUmbilicalProtocol _umbilical;
         private readonly TaskExecutionUtility _rootTask;
         private readonly Type _taskType;
@@ -76,7 +75,7 @@ namespace Tkl.Jumbo.Jet
         private readonly List<string> _statusMessages;
         private readonly bool _isAssociatedTask;
         private readonly bool _processesAllPartitions;
-        private List<DfsOutputInfo> _dfsOutputs;
+        private List<IOutputCommitter> _dataOutputs;
         private volatile bool _finished;
         private volatile bool _disposed;
         private Dictionary<string, List<IHasAdditionalProgress>> _additionalProgressSources;
@@ -96,10 +95,10 @@ namespace Tkl.Jumbo.Jet
 
         internal event EventHandler TaskInstanceCreated;
 
-        internal TaskExecutionUtility(DfsClient dfsClient, JetClient jetClient, ITaskServerUmbilicalProtocol umbilical, TaskExecutionUtility parentTask, TaskContext configuration)
+        internal TaskExecutionUtility(FileSystemClient fileSystemClient, JetClient jetClient, ITaskServerUmbilicalProtocol umbilical, TaskExecutionUtility parentTask, TaskContext configuration)
         {
-            if( dfsClient == null )
-                throw new ArgumentNullException("dfsClient");
+            if( fileSystemClient == null )
+                throw new ArgumentNullException("fileSystemClient");
             if( jetClient == null )
                 throw new ArgumentNullException("jetClient");
             if( umbilical == null )
@@ -107,12 +106,12 @@ namespace Tkl.Jumbo.Jet
             if( configuration == null )
                 throw new ArgumentNullException("configuration");
 
-            _dfsClient = dfsClient;
+            _fileSystemClient = fileSystemClient;
             _jetClient = jetClient;
             _jobServerTaskClient = JetClient.CreateJobServerTaskClient(jetClient.Configuration);
-            _configuration = configuration;
+            _context = configuration;
             _umbilical = umbilical;
-            _taskType = _configuration.StageConfiguration.TaskType.ReferencedType;
+            _taskType = _context.StageConfiguration.TaskType.ReferencedType;
             configuration.TaskExecution = this;
             _progressInterval = _jetClient.Configuration.TaskServer.ProgressInterval;
 
@@ -198,6 +197,8 @@ namespace Tkl.Jumbo.Jet
             }
         }
 
+        internal ITaskInput TaskInput { get; private set; }
+
         internal ITaskServerUmbilicalProtocol Umbilical
         {
             get { return _umbilical; }
@@ -205,7 +206,7 @@ namespace Tkl.Jumbo.Jet
 
         internal TaskContext Context
         {
-            get { return _configuration; }
+            get { return _context; }
         }
 
         internal JetClient JetClient
@@ -213,14 +214,14 @@ namespace Tkl.Jumbo.Jet
             get { return _jetClient; }
         }
 
-        internal DfsClient DfsClient
+        internal FileSystemClient FileSystemClient
         {
-            get { return _dfsClient; }
+            get { return _fileSystemClient; }
         }
 
-        internal bool AllowRecordReuse
+        internal IJobServerTaskProtocol JobServerTaskClient
         {
-            get { return _configuration.StageConfiguration.AllowRecordReuse; }
+            get { return _jobServerTaskClient; }
         }
 
         internal TaskExecutionUtility RootTask
@@ -314,6 +315,7 @@ namespace Tkl.Jumbo.Jet
         ///   This method should only be invoked by the TaskHost, and by the TaskServer when using AppDomain mode.
         /// </para>
         /// </remarks>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Reliability", "CA2001:AvoidCallingProblematicMethods", MessageId = "System.Reflection.Assembly.LoadFrom"), System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1031:DoNotCatchGeneralExceptionTypes")]
         public static void RunTask(Guid jobId, string jobDirectory, string dfsJobDirectory, TaskAttemptId taskAttemptId)
         {
             AssemblyResolver.Register();
@@ -325,14 +327,28 @@ namespace Tkl.Jumbo.Jet
                 string logFile = Path.Combine(jobDirectory, taskAttemptId.ToString() + ".log");
                 ConfigureLog(logFile);
 
-                _log.InfoFormat("Running task; job ID = \"{0}\", job directory = \"{1}\", task attempt ID = \"{2}\", DFS job directory = \"{3}\"", jobId, jobDirectory, taskAttemptId, dfsJobDirectory);
-                _log.DebugFormat("Command line: {0}", Environment.CommandLine);
+                _log.InfoFormat(CultureInfo.InvariantCulture, "Running task; job ID = \"{0}\", job directory = \"{1}\", task attempt ID = \"{2}\", DFS job directory = \"{3}\"", jobId, jobDirectory, taskAttemptId, dfsJobDirectory);
+                _log.DebugFormat(CultureInfo.InvariantCulture, "Command line: {0}", Environment.CommandLine);
                 _log.LogEnvironmentInformation();
 
                 _log.Info("Loading configuration.");
-                string configDirectory = Path.Combine(jobDirectory, "config");
-                DfsConfiguration dfsConfig = DfsConfiguration.FromXml(Path.Combine(configDirectory, "dfs.config"));
-                JetConfiguration jetConfig = JetConfiguration.FromXml(Path.Combine(configDirectory, "jet.config"));
+                string configDirectory = Path.Combine(Path.GetDirectoryName(jobDirectory), "config");
+                string appConfigFile = Path.Combine(configDirectory, "taskhost.config");
+
+                DfsConfiguration dfsConfig;
+                JetConfiguration jetConfig;
+                if( File.Exists(appConfigFile) )
+                {
+                    Configuration appConfig = ConfigurationManager.OpenMappedExeConfiguration(new ExeConfigurationFileMap() { ExeConfigFilename = appConfigFile }, ConfigurationUserLevel.None);
+
+                    dfsConfig = DfsConfiguration.GetConfiguration(appConfig);
+                    jetConfig = JetConfiguration.GetConfiguration(appConfig);
+                }
+                else
+                {
+                    dfsConfig = DfsConfiguration.GetConfiguration();
+                    jetConfig = JetConfiguration.GetConfiguration();
+                }
 
                 _log.Info("Creating RPC clients.");
                 ITaskServerUmbilicalProtocol umbilical = JetClient.CreateTaskServerUmbilicalClient(jetConfig.TaskServer.Port);
@@ -341,7 +357,7 @@ namespace Tkl.Jumbo.Jet
 
                 try
                 {
-                    DfsClient dfsClient = new DfsClient(dfsConfig);
+                    FileSystemClient fileSystemClient = FileSystemClient.Create(dfsConfig);
                     JetClient jetClient = new JetClient(jetConfig);
 
 
@@ -360,7 +376,7 @@ namespace Tkl.Jumbo.Jet
                     }
 
                     TaskMetrics metrics;
-                    using( TaskExecutionUtility taskExecution = TaskExecutionUtility.Create(dfsClient, jetClient, umbilical, jobId, config, taskAttemptId, dfsJobDirectory, jobDirectory) )
+                    using( TaskExecutionUtility taskExecution = TaskExecutionUtility.Create(fileSystemClient, jetClient, umbilical, jobId, config, taskAttemptId, dfsJobDirectory, jobDirectory) )
                     {
                         metrics = taskExecution.RunTask();
                     }
@@ -381,9 +397,9 @@ namespace Tkl.Jumbo.Jet
                     {
                     }
                 }
-                _log.InfoFormat("Task host finished execution of task, execution time: {0}s", sw.Elapsed.TotalSeconds);
+                _log.InfoFormat(CultureInfo.InvariantCulture, "Task host finished execution of task, execution time: {0}s", sw.Elapsed.TotalSeconds);
                 processorStatus.Refresh();
-                _log.InfoFormat("Processor usage during this task (system-wide, not process specific):");
+                _log.Info("Processor usage during this task (system-wide, not process specific):");
                 _log.Info(processorStatus.Total);
             }
         }
@@ -392,7 +408,7 @@ namespace Tkl.Jumbo.Jet
         /// <summary>
         /// Creates a <see cref="TaskExecutionUtility"/> instance for the specified task.
         /// </summary>
-        /// <param name="dfsClient">The DFS client.</param>
+        /// <param name="fileSystemClient">The DFS client.</param>
         /// <param name="jetClient">The jet client.</param>
         /// <param name="umbilical">The umbilical.</param>
         /// <param name="jobId">The job id.</param>
@@ -401,10 +417,10 @@ namespace Tkl.Jumbo.Jet
         /// <param name="dfsJobDirectory">The DFS job directory.</param>
         /// <param name="localJobDirectory">The local job directory.</param>
         /// <returns>A <see cref="TaskExecutionUtility"/>.</returns>
-        public static TaskExecutionUtility Create(DfsClient dfsClient, JetClient jetClient, ITaskServerUmbilicalProtocol umbilical, Guid jobId, JobConfiguration jobConfiguration, TaskAttemptId taskAttemptId, string dfsJobDirectory, string localJobDirectory)
+        public static TaskExecutionUtility Create(FileSystemClient fileSystemClient, JetClient jetClient, ITaskServerUmbilicalProtocol umbilical, Guid jobId, JobConfiguration jobConfiguration, TaskAttemptId taskAttemptId, string dfsJobDirectory, string localJobDirectory)
         {
-            if( dfsClient == null )
-                throw new ArgumentNullException("dfsClient");
+            if( fileSystemClient == null )
+                throw new ArgumentNullException("fileSystemClient");
             if( jetClient == null )
                 throw new ArgumentNullException("jetClient");
             if( umbilical == null )
@@ -420,8 +436,8 @@ namespace Tkl.Jumbo.Jet
 
             TaskContext configuration = new TaskContext(jobId, jobConfiguration, taskAttemptId, jobConfiguration.GetStage(taskAttemptId.TaskId.StageId), localJobDirectory, dfsJobDirectory);
             Type taskExecutionType = DetermineTaskExecutionType(configuration);
-            ConstructorInfo ctor = taskExecutionType.GetConstructor(new Type[] { typeof(DfsClient), typeof(JetClient), typeof(ITaskServerUmbilicalProtocol), typeof(TaskExecutionUtility), typeof(TaskContext) });
-            return (TaskExecutionUtility)ctor.Invoke(new object[] { dfsClient, jetClient, umbilical, null, configuration });
+            ConstructorInfo ctor = taskExecutionType.GetConstructor(new Type[] { typeof(FileSystemClient), typeof(JetClient), typeof(ITaskServerUmbilicalProtocol), typeof(TaskExecutionUtility), typeof(TaskContext) });
+            return (TaskExecutionUtility)ctor.Invoke(new object[] { fileSystemClient, jetClient, umbilical, null, configuration });
         }
 
         /// <summary>
@@ -532,14 +548,14 @@ namespace Tkl.Jumbo.Jet
 
             Type taskExecutionType = DetermineTaskExecutionType(configuration);
 
-            ConstructorInfo ctor = taskExecutionType.GetConstructor(new Type[] { typeof(DfsClient), typeof(JetClient), typeof(ITaskServerUmbilicalProtocol), typeof(TaskExecutionUtility), typeof(TaskContext) });
-            return (TaskExecutionUtility)ctor.Invoke(new object[] { DfsClient, JetClient, Umbilical, this, configuration });
+            ConstructorInfo ctor = taskExecutionType.GetConstructor(new Type[] { typeof(FileSystemClient), typeof(JetClient), typeof(ITaskServerUmbilicalProtocol), typeof(TaskExecutionUtility), typeof(TaskContext) });
+            return (TaskExecutionUtility)ctor.Invoke(new object[] { FileSystemClient, JetClient, Umbilical, this, configuration });
         }
 
         /// <summary>
         /// Creates the record writer that writes data to this child task.
         /// </summary>
-        /// <param name="partitioner">The partitioner to use for the <see cref="PrepartitionedRecordWriter{T}"/> if the child stage uses the <see cref="IPrepartitionedPushTask{TInput,TOutput}"/> interface. Otherwise, ignored.</param>
+        /// <param name="partitioner">The partitioner to use for the <see cref="PrepartitionedRecordWriter{T}"/> if the child stage uses the <see cref="PrepartitionedPushTask{TInput,TOutput}"/> interface. Otherwise, ignored.</param>
         /// <returns>A record writer.</returns>
         internal abstract IRecordWriter CreatePipelineRecordWriter(object partitioner);
 
@@ -572,13 +588,16 @@ namespace Tkl.Jumbo.Jet
 
         private IRecordReader CreateInputRecordReader()
         {
-            if( Context.StageConfiguration.DfsInput != null )
+            if( Context.StageConfiguration.HasDataInput )
             {
-                return Context.StageConfiguration.DfsInput.CreateRecordReader(this);
+                WarnIfNoRecordReuse();
+                IDataInput input = (IDataInput)JetActivator.CreateInstance(Context.StageConfiguration.DataInputType.ReferencedType, this);
+                TaskInput = TaskInputUtility.ReadTaskInput(new LocalFileSystemClient(), _context.LocalJobDirectory, _context.TaskAttemptId.TaskId.StageId, _context.TaskAttemptId.TaskId.TaskNumber - 1);
+                return input.CreateRecordReader(FileSystemClient, JetClient.Configuration, _context, TaskInput);
             }
             else if( _inputChannels != null )
             {
-                //_log.Debug("Creating input channel record reader.");
+                WarnIfNoRecordReuse();
                 IRecordReader result;
                 if( _inputChannels.Count == 1 )
                 {
@@ -589,12 +608,12 @@ namespace Tkl.Jumbo.Jet
                     Type multiInputRecordReaderType = Context.StageConfiguration.MultiInputRecordReaderType.ReferencedType;
                     int bufferSize = (multiInputRecordReaderType.IsGenericType && multiInputRecordReaderType.GetGenericTypeDefinition() == typeof(MergeRecordReader<>)) ? (int)JetClient.Configuration.MergeRecordReader.MergeStreamReadBufferSize : (int)JetClient.Configuration.FileChannel.ReadBufferSize;
                     CompressionType compressionType = Context.GetTypedSetting(FileOutputChannel.CompressionTypeSetting, JetClient.Configuration.FileChannel.CompressionType);
-                    IMultiInputRecordReader reader = (IMultiInputRecordReader)JetActivator.CreateInstance(multiInputRecordReaderType, this, new int[] { 0 }, _inputChannels.Count, AllowRecordReuse, bufferSize, compressionType);
+                    IMultiInputRecordReader reader = (IMultiInputRecordReader)JetActivator.CreateInstance(multiInputRecordReaderType, this, new int[] { 0 }, _inputChannels.Count, Context.StageConfiguration.AllowRecordReuse, bufferSize, compressionType);
                     foreach( IInputChannel inputChannel in _inputChannels )
                     {
                         IRecordReader channelReader = inputChannel.CreateRecordReader();
                         AddAdditionalProgressSource(channelReader);
-                        reader.AddInput(new[] { new RecordInput(channelReader, false) });
+                        reader.AddInput(new[] { new ReaderRecordInput(channelReader, false) });
                     }
                     result = reader;
                 }
@@ -603,6 +622,29 @@ namespace Tkl.Jumbo.Jet
             }
             else
                 return null;
+        }
+
+        /// <summary>
+        /// Writes a warning to the log if the task doesn't support record reuse.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        ///   Information about record reuse for each task in a compound is added to the log so that developers debugging tasks and record readers
+        ///   are aware of whether or not record reuse was allowed. This can help spot situations where a task or record reader was created
+        ///   with the wrong assumptions. Particularly note that if a child stage reports it does not support record reuse, it means that
+        ///   the parent task may not use output record reuse.
+        /// </para>
+        /// </remarks>
+        protected void WarnIfNoRecordReuse()
+        {
+            if( !_context.StageConfiguration.AllowRecordReuse )
+            {
+                // We don't warn for value types, since record reuse is irrelevant in that case.
+                if( !_context.StageConfiguration.TaskTypeInfo.InputRecordType.IsValueType )
+                    _log.WarnFormat("Input record reuse not allowed for task {0}.", Context.TaskId);
+            }
+            else
+                _log.InfoFormat("Input record reuse is allowed for task {0}.", Context.TaskId);
         }
 
         /// <summary>
@@ -616,7 +658,7 @@ namespace Tkl.Jumbo.Jet
         /// </summary>
         protected void FinishTask()
         {
-            RunTaskFinishMethod(false);
+            RunTaskFinishMethod();
 
             if( _associatedTasks != null )
             {
@@ -632,8 +674,6 @@ namespace Tkl.Jumbo.Jet
         /// </summary>
         protected void FinalizeTask(TaskMetrics metrics)
         {
-            RunTaskFinishMethod(true);
-
             if( _associatedTasks != null )
             {
                 foreach( TaskExecutionUtility associatedTask in _associatedTasks )
@@ -649,9 +689,14 @@ namespace Tkl.Jumbo.Jet
             if( fileOutputChannel != null )
                 fileOutputChannel.ReportFileSizesToTaskServer();
 
+            if( _inputReader != null )
+                _log.InfoFormat("{0} read time: {1}", Context.TaskAttemptId, _inputReader.ReadTime.TotalSeconds);
+            if( _outputWriter != null )
+                _log.InfoFormat("{0} write time: {1}", Context.TaskAttemptId, _outputWriter.WriteTime.TotalSeconds);
+
             CalculateMetrics(metrics);
 
-            if( Context.StageConfiguration.DfsOutput != null )
+            if( Context.StageConfiguration.HasDataOutput )
             {
                 if( _outputWriter != null )
                 {
@@ -659,16 +704,15 @@ namespace Tkl.Jumbo.Jet
                     // Not setting it to null so there's no chance it'll get recreated.
                 }
 
-                foreach( DfsOutputInfo output in _dfsOutputs )
-                    DfsClient.NameServer.Move(output.DfsOutputTempPath, output.DfsOutputPath);
+                foreach( IOutputCommitter output in _dataOutputs )
+                    output.Commit(FileSystemClient);
             }
         }
 
         /// <summary>
         /// Runs the task finish method if this task is a push task.
         /// </summary>
-        /// <param name="isFinalizing"><see langword="true"/> if the task is being finalized; otherwise, <see langword="false"/>.</param>
-        protected abstract void RunTaskFinishMethod(bool isFinalizing);
+        protected abstract void RunTaskFinishMethod();
 
         /// <summary>
         /// Throws an exception if this object was disposed.
@@ -785,6 +829,7 @@ namespace Tkl.Jumbo.Jet
             sources.Add(progressObj);
         }
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Reliability", "CA2000:Dispose objects before losing scope")]
         private List<IInputChannel> CreateInputChannels(IEnumerable<StageConfiguration> inputStages)
         {
             List<IInputChannel> result = null;
@@ -835,14 +880,16 @@ namespace Tkl.Jumbo.Jet
 
         internal IRecordWriter CreateDfsOutputWriter(int partition)
         {
-            string file = DfsPath.Combine(DfsPath.Combine(Context.DfsJobDirectory, "temp"), Context.TaskAttemptId + "_part" + partition.ToString(System.Globalization.CultureInfo.InvariantCulture));
+            string file = FileSystemClient.Path.Combine(FileSystemClient.Path.Combine(Context.DfsJobDirectory, "temp"), Context.TaskAttemptId + "_part" + partition.ToString(System.Globalization.CultureInfo.InvariantCulture));
             _log.DebugFormat("Opening output file {0}", file);
 
-            TaskDfsOutput output = Context.StageConfiguration.DfsOutput;
-            if( _dfsOutputs == null )
-                _dfsOutputs = new List<DfsOutputInfo>();
-            _dfsOutputs.Add(new DfsOutputInfo() { DfsOutputTempPath = file, DfsOutputPath = output.GetPath(partition) });
-            return output.CreateRecordWriter(this, file);
+            IDataOutput output = (IDataOutput)Activator.CreateInstance(Context.StageConfiguration.DataOutputType.ReferencedType);
+            if( _dataOutputs == null )
+                _dataOutputs = new List<IOutputCommitter>();
+
+            IOutputCommitter committer = output.CreateOutput(FileSystemClient, JetClient.Configuration, Context, partition);
+            _dataOutputs.Add(committer);
+            return committer.RecordWriter;
         }
 
         /// <summary>
@@ -975,7 +1022,7 @@ namespace Tkl.Jumbo.Jet
                     metrics.InputBytes += _inputReader.InputBytes;
                 }
 
-                if( Context.StageConfiguration.DfsInput != null )
+                if( Context.StageConfiguration.HasDataInput )
                 {
                     // It's currently not possible to have a multi input record reader with DFS inputs, so this is safe.
                     if( _inputReader != null )
@@ -998,11 +1045,12 @@ namespace Tkl.Jumbo.Jet
                 // This is the final stage of a compound stage (or it's not a compound stage), so we need to calculate output metrics.
                 if( _outputWriter != null )
                 {
+                    _outputWriter.FinishWriting();
                     metrics.OutputRecords += _outputWriter.RecordsWritten;
                     metrics.OutputBytes += _outputWriter.OutputBytes;
                 }
 
-                if( Context.StageConfiguration.DfsOutput != null )
+                if( Context.StageConfiguration.HasDataOutput )
                 {
                     metrics.DfsBytesWritten += _outputWriter.BytesWritten;
                 }

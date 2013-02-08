@@ -1,14 +1,12 @@
 ﻿// $Id$
 //
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Threading;
-using Tkl.Jumbo.Jet;
 using Tkl.Jumbo;
-using System.ComponentModel;
+using Tkl.Jumbo.Jet;
+using Tkl.Jumbo.Jet.Jobs;
 
 namespace TaskServerApplication
 {

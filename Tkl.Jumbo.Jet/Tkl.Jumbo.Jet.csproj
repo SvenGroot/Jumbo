@@ -56,13 +56,16 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <DocumentationFile>bin\Release\Tkl.Jumbo.Jet.XML</DocumentationFile>
-    <RunCodeAnalysis>true</RunCodeAnalysis>
+    <RunCodeAnalysis>false</RunCodeAnalysis>
     <CodeAnalysisRuleSet>AllRules.ruleset</CodeAnalysisRuleSet>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="log4net, Version=1.2.10.0, Culture=neutral, PublicKeyToken=1b44e1d426115821, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\lib\log4net.dll</HintPath>
+    </Reference>
+    <Reference Include="Ookii.CommandLine">
+      <HintPath>..\lib\Ookii.CommandLine.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.configuration" />
@@ -79,19 +82,27 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="..\Version.cs">
-      <Link>Properties\Version.cs</Link>
+    <Compile Include="..\AssemblyInfoCommon.cs">
+      <Link>Properties\AssemblyInfoCommon.cs</Link>
     </Compile>
-    <Compile Include="AdditionalProgressCounter.cs" />
+    <Compile Include="Channels\MemoryStorageFullEventArgs.cs" />
+    <Compile Include="IO\FileDataOutput.cs" />
+    <Compile Include="IO\FileOutputCommitter.cs" />
+    <Compile Include="IO\IDataOutput.cs" />
+    <Compile Include="IO\IOutputCommitter.cs" />
+    <Compile Include="Jobs\AdditionalProgressCounter.cs" />
     <Compile Include="AdditionalProgressCounterAttribute.cs" />
     <Compile Include="AdditionalProgressValue.cs" />
     <Compile Include="AllowRecordReuseAttribute.cs" />
     <Compile Include="ArchivedJob.cs" />
     <Compile Include="AssemblyResolver.cs" />
     <Compile Include="Channels\ChannelConfiguration.cs" />
-    <Compile Include="Channels\ChannelConnectivity.cs" />
-    <Compile Include="Channels\ChannelInputConfiguration.cs" />
     <Compile Include="Channels\ChannelType.cs" />
+    <Compile Include="Channels\ChecksumInputStream.cs" />
+    <Compile Include="Channels\ChecksumOutputStream.cs" />
+    <Compile Include="Channels\EmptyRecordInput.cs" />
+    <Compile Include="Channels\FileChannelOutputType.cs" />
+    <Compile Include="Channels\FileRecordInput.cs" />
     <Compile Include="Channels\InputChannel.cs" />
     <Compile Include="Channels\FileChannelMemoryStorageManager.cs" />
     <Compile Include="Channels\FileInputChannel.cs" />
@@ -99,18 +110,26 @@
     <Compile Include="Channels\IChannelMultiInputRecordReader.cs" />
     <Compile Include="Channels\IInputChannel.cs" />
     <Compile Include="Channels\IOutputChannel.cs" />
-    <Compile Include="Channels\NetworkRecordReader.cs" />
-    <Compile Include="Channels\NetworkRecordWriter.cs" />
+    <Compile Include="Channels\ITcpChannelRecordReader.cs" />
     <Compile Include="Channels\OutputChannel.cs" />
     <Compile Include="Channels\PartitionAssignmentMethod.cs" />
     <Compile Include="Channels\PartitionFileIndex.cs" />
     <Compile Include="Channels\PartitionFileIndexEntry.cs" />
+    <Compile Include="Channels\PartitionFileIndexEntryValueWriter.cs" />
+    <Compile Include="Channels\PartitionFileRecordInput.cs" />
     <Compile Include="Channels\PartitionFileStream.cs" />
     <Compile Include="Channels\PipelineOutputChannel.cs" />
     <Compile Include="Channels\PipelinePrepartitionedPushTaskRecordWriter.cs" />
     <Compile Include="Channels\PipelinePushTaskRecordWriter.cs" />
+    <Compile Include="Channels\SegmentedChecksumInputStream.cs" />
     <Compile Include="Channels\SingleFileMultiRecordWriter.cs" />
     <Compile Include="Channels\SizeRecordingStream.cs" />
+    <Compile Include="Channels\SortSpillRecordWriter.cs" />
+    <Compile Include="Channels\SpillRecordWriterOptions.cs" />
+    <Compile Include="Channels\SpillRecordWriter.cs" />
+    <Compile Include="Channels\TcpChannelConnectionFlags.cs" />
+    <Compile Include="Channels\ChannelException.cs" />
+    <Compile Include="Channels\TcpChannelRecordWriter.cs" />
     <Compile Include="Channels\TcpInputChannel.cs" />
     <Compile Include="Channels\TcpOutputChannel.cs" />
     <Compile Include="CleanupJobJetHeartbeatResponse.cs" />
@@ -122,28 +141,40 @@
     <Compile Include="IHasAdditionalProgress.cs" />
     <Compile Include="IHasMetrics.cs" />
     <Compile Include="IJobServerTaskProtocol.cs" />
-    <Compile Include="IPrepartitionedPushTask.cs" />
-    <Compile Include="Jobs\Channel.cs" />
-    <Compile Include="Jobs\DfsInput.cs" />
-    <Compile Include="Jobs\DfsOutput.cs" />
-    <Compile Include="Jobs\IStageInput.cs" />
-    <Compile Include="Jobs\IStageOutput.cs" />
-    <Compile Include="Jobs\JobBuilderCompiler.cs" />
-    <Compile Include="Jobs\JobBuilderJob.cs" />
+    <Compile Include="IO\FileDataInput.cs" />
+    <Compile Include="IO\FileTaskInput.cs" />
+    <Compile Include="IO\IDataInput.cs" />
+    <Compile Include="IO\ITaskInput.cs" />
+    <Compile Include="IO\TaskInputUtility.cs" />
+    <Compile Include="Jobs\Builder\Channel.cs" />
+    <Compile Include="Jobs\Builder\FileInput.cs" />
+    <Compile Include="Jobs\Builder\FileOutput.cs" />
+    <Compile Include="Jobs\Builder\DynamicTaskBuilder.cs" />
+    <Compile Include="Jobs\Builder\IJobBuilderOperation.cs" />
+    <Compile Include="Jobs\Builder\IOperationInput.cs" />
+    <Compile Include="Jobs\Builder\IOperationOutput.cs" />
+    <Compile Include="Jobs\Builder\JobBuilder.cs" />
+    <Compile Include="Jobs\Builder\JobBuilderCompiler.cs" />
+    <Compile Include="Jobs\Builder\JobBuilderJob.cs" />
+    <Compile Include="Jobs\Builder\JobBuilder_Generate.cs" />
+    <Compile Include="Jobs\Builder\JobBuilder_GroupAggregate.cs" />
+    <Compile Include="Jobs\Builder\JobBuilder_MapReduce.cs" />
+    <Compile Include="Jobs\Builder\JobBuilder_Sort.cs" />
+    <Compile Include="Jobs\Builder\SortOperation.cs" />
+    <Compile Include="Jobs\Builder\StageOperation.cs" />
+    <Compile Include="Jobs\Builder\TwoStepOperation.cs" />
     <Compile Include="Jobs\JobSettingAttribute.cs" />
-    <Compile Include="Jobs\JobBuilder.cs" />
-    <Compile Include="Jobs\PipelineCreationMethod.cs" />
-    <Compile Include="Jobs\StageBuilder.cs" />
-    <Compile Include="Jobs\StageSettingCategory.cs" />
+    <Compile Include="Jobs\Builder\RecordReuseMode.cs" />
+    <Compile Include="Jobs\TaskRecordReuse.cs" />
     <Compile Include="KillTaskJetHeartbeatResponse.cs" />
-    <Compile Include="MergePassHelper.cs" />
+    <Compile Include="MergeHelper.cs" />
     <Compile Include="MergeRecordReaderConfigurationElement.cs" />
+    <Compile Include="MergeResult.cs" />
+    <Compile Include="MergeResultRecord.cs" />
     <Compile Include="MultiPartitionRecordReader.cs" />
     <Compile Include="PartitionerConstants.cs" />
     <Compile Include="IConfigurable.cs" />
-    <Compile Include="InputStageInfo.cs" />
-    <Compile Include="IPullTask.cs" />
-    <Compile Include="IPushTask.cs" />
+    <Compile Include="Jobs\InputStageInfo.cs" />
     <Compile Include="ITaskServerClientProtocol.cs" />
     <Compile Include="IJobServerClientProtocol.cs" />
     <Compile Include="IJobServerHeartbeatProtocol.cs" />
@@ -156,34 +187,31 @@
     <Compile Include="JetHeartbeatResponse.cs" />
     <Compile Include="JetMetrics.cs" />
     <Compile Include="Job.cs" />
-    <Compile Include="JobConfiguration.cs" />
+    <Compile Include="Jobs\JobConfiguration.cs" />
     <Compile Include="JobServerConfigurationElement.cs" />
     <Compile Include="JobStatus.cs" />
-    <Compile Include="Jobs\AccumulatorJob.cs" />
     <Compile Include="Jobs\BaseJobRunner.cs" />
-    <Compile Include="Jobs\BasicJob.cs" />
     <Compile Include="Jobs\IJobRunner.cs" />
-    <Compile Include="Jobs\JobBuilderDelegates.cs" />
     <Compile Include="Jobs\JobRunnerInfo.cs" />
     <Compile Include="MergeRecordReader.cs" />
     <Compile Include="Channels\PipelinePullTaskRecordWriter.cs" />
+    <Compile Include="PartitionMerger.cs" />
     <Compile Include="PrepartitionedPartitioner.cs" />
+    <Compile Include="PrepartitionedPushTask.cs" />
     <Compile Include="PrepartitionedRecordWriter.cs" />
     <Compile Include="ProcessAllInputPartitionsAttribute.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="PushTask.cs" />
     <Compile Include="RunTaskJetHeartbeatResponse.cs" />
-    <Compile Include="SchedulerOptions.cs" />
+    <Compile Include="Jobs\SchedulerOptions.cs" />
     <Compile Include="SchedulingMode.cs" />
     <Compile Include="ServerShutdownException.cs" />
-    <Compile Include="SettingsDictionary.cs" />
-    <Compile Include="StageConfiguration.cs" />
-    <Compile Include="StageDfsInput.cs" />
+    <Compile Include="Jobs\SettingsDictionary.cs" />
+    <Compile Include="Jobs\StageConfiguration.cs" />
     <Compile Include="StageStatus.cs" />
     <Compile Include="InitialStatusJetHeartbeatData.cs" />
     <Compile Include="TaskContext.cs" />
     <Compile Include="TaskAttemptId.cs" />
-    <Compile Include="TaskDfsInput.cs" />
-    <Compile Include="TaskDfsOutput.cs" />
     <Compile Include="TaskExecutionUtility.cs" />
     <Compile Include="TaskExecutionUtilityGeneric.cs" />
     <Compile Include="TaskId.cs" />
@@ -198,11 +226,18 @@
     <Compile Include="TaskStatusChangedJetHeartbeatData.cs" />
     <Compile Include="Tasks\AccumulatorTask.cs" />
     <Compile Include="Tasks\GenerateInt32PairTask.cs" />
+    <Compile Include="Tasks\GeneratorTask.cs" />
+    <Compile Include="Tasks\NoInputTask.cs" />
+    <Compile Include="Tasks\ProgressContext.cs" />
+    <Compile Include="Tasks\ReduceTask.cs" />
     <Compile Include="Tasks\SumTask.cs" />
     <Compile Include="Tasks\EmptyTask.cs" />
     <Compile Include="MergeRecordReaderConstants.cs" />
     <Compile Include="Tasks\SortTask.cs" />
     <Compile Include="Tasks\TaskConstants.cs" />
+    <Compile Include="Channels\TcpChannelRecordReader.cs" />
+    <Compile Include="Jobs\TaskTypeInfo.cs" />
+    <Compile Include="TcpChannelConfigurationElement.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="jumbo.snk" />

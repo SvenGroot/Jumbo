@@ -16,10 +16,17 @@ namespace Tkl.Jumbo.Jet.Samples.IO
     {
         /// <summary>
         /// Gets or sets a string that identifies the fragments of the input 
-        /// that this record represents. These IDs must sort according to the order
+        /// that this record represents. These IDs together with <see cref="InputOffset"/> must sort according to the order
         /// of the input fragments.
         /// </summary>
         public string InputId { get; set; }
+        /// <summary>
+        /// Gets or sets the input offset.
+        /// </summary>
+        /// <value>
+        /// The input offset.
+        /// </value>
+        public long InputOffset { get; set; }
         /// <summary>
         /// Gets or sets the first key in the input range.
         /// </summary>
@@ -62,7 +69,10 @@ namespace Tkl.Jumbo.Jet.Samples.IO
         {
             if( other == null )
                 return 1;
-            return StringComparer.Ordinal.Compare(InputId, other.InputId);
+            int result = StringComparer.Ordinal.Compare(InputId, other.InputId);
+            if( result == 0 )
+                result = InputOffset.CompareTo(other.InputOffset);
+            return result;
         }
 
         #endregion

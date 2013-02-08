@@ -16,6 +16,7 @@ namespace Tkl.Jumbo.IO
     /// Because this object is mutable you must take care when using it scenarios where immutability is expected, e.g. as a key
     /// in a <see cref="Dictionary{TKey,TValue}"/>.
     /// </remarks>
+    [RawComparer(typeof(Utf8StringRawComparer))]
     public sealed class Utf8String : IWritable, IEquatable<Utf8String>, IComparable<Utf8String>, IComparable, ICloneable
     {
         private static readonly Encoding _encoding = Encoding.UTF8;
@@ -172,6 +173,17 @@ namespace Tkl.Jumbo.IO
         }
 
         /// <summary>
+        /// Appends the specified <see cref="Utf8String"/> to this instance..
+        /// </summary>
+        /// <param name="value">The <see cref="Utf8String"/> to append.</param>
+        public void Append(Utf8String value)
+        {
+            if( value == null )
+                throw new ArgumentNullException("value");
+            Append(value._utf8Bytes, 0, value.ByteLength);
+        }
+
+        /// <summary>
         /// Appends a byte array containing utf-8 encoded data to this string.
         /// </summary>
         /// <param name="value">A byte array containing the utf-8 encoded string to append.</param>
@@ -224,6 +236,17 @@ namespace Tkl.Jumbo.IO
                 throw new ArgumentNullException("stream");
 
             stream.Write(_utf8Bytes, 0, _byteLength);
+        }
+
+        /// <summary>
+        /// Gets the bytes of the utf-8 encoded string.
+        /// </summary>
+        /// <returns>The utf-8 encoded string.</returns>
+        public byte[] GetBytes()
+        {
+            byte[] result = new byte[_byteLength];
+            Buffer.BlockCopy(_utf8Bytes, 0, result, 0, _byteLength);
+            return result;
         }
 
         /// <summary>
@@ -301,15 +324,12 @@ namespace Tkl.Jumbo.IO
         /// <returns><see langword="true"/> if this instance is equal to <paramref name="other"/>; otherwise, <see langword="false"/>.</returns>
         public bool Equals(Utf8String other)
         {
-            if( other == null || other._byteLength != _byteLength )
+            if( (object)other == (object)this )
+                return true;
+            if( (object)other == null || other._byteLength != _byteLength )
                 return false;
 
-            for( int x = 0; x < _byteLength; ++x )
-            {
-                if( _utf8Bytes[x] != other._utf8Bytes[x] )
-                    return false;
-            }
-            return true;
+            return UnsafeCompare(_utf8Bytes, _byteLength, other._utf8Bytes, _byteLength) == 0;            
         }
 
         #endregion
@@ -325,20 +345,12 @@ namespace Tkl.Jumbo.IO
         /// <returns>A 32-bit signed integer that indicates the relative order of the objects being compared.</returns>
         public int CompareTo(Utf8String other)
         {
-            if( other == null )
+            if( (object)other == null )
                 return 1;
+            if( (object)other == (object)this )
+                return 0;
 
-            if( other._byteLength != _byteLength )
-                return _byteLength - other._byteLength;
-
-            for( int x = 0; x < _byteLength; ++x )
-            {
-                byte b1 = _utf8Bytes[x];
-                byte b2 = other._utf8Bytes[x];
-                if( b1 != b2 )
-                    return b1 - b2;
-            }
-            return 0;
+            return UnsafeCompare(_utf8Bytes, _byteLength, other._utf8Bytes, other._byteLength);
         }
 
         #endregion
@@ -419,6 +431,24 @@ namespace Tkl.Jumbo.IO
             unchecked
             {
                 return (size & (int)0xFFFFFFFC) + 4;
+            }
+        }
+
+        private static unsafe int UnsafeCompare(byte[] str1, int length1, byte[] str2, int length2)
+        {
+            fixed( byte* str1ptr = str1, str2ptr = str2 )
+            {
+                byte* left = str1ptr;
+                byte* end = left + Math.Min(length1, length2);
+                byte* right = str2ptr;
+                while( left < end )
+                {
+                    if( *left != *right )
+                        return *left - *right;
+                    ++left;
+                    ++right;
+                }
+                return length1 - length2;
             }
         }
     }

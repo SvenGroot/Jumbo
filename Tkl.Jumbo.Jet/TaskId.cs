@@ -12,7 +12,7 @@ namespace Tkl.Jumbo.Jet
     /// <summary>
     /// Represents a task identifier.
     /// </summary>
-    [Serializable]
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1036:OverrideMethodsOnComparableTypes"), Serializable]
     public sealed class TaskId : ISerializable, IEquatable<TaskId>, IComparable<TaskId>, IComparable
     {
         private readonly string _taskId;
@@ -216,7 +216,6 @@ namespace Tkl.Jumbo.Jet
         /// <exception cref="T:System.Security.SecurityException">
         /// The caller does not have the required permission.
         /// </exception>
-        [SecurityPermission(SecurityAction.LinkDemand, Flags = SecurityPermissionFlag.SerializationFormatter)]
         public void GetObjectData(SerializationInfo info, StreamingContext context)
         {
             if( info == null )
@@ -298,6 +297,31 @@ namespace Tkl.Jumbo.Jet
             return CompareTo(other);
         }
 
+        /// <summary>
+        /// Determines whether two specified instances have the same value.
+        /// </summary>
+        /// <param name="left">The first instance to compare, or <see langword="null"/>.</param>
+        /// <param name="right">The second instance to compare, or <see langword="null"/>.</param>
+        /// <returns>
+        /// <see langword="true"/> if the value of <paramref name="left"/> is the same as the value of <paramref name="right"/>; otherwise, <see langword="false"/>. 
+        /// </returns>
+        public static bool operator ==(TaskId left, TaskId right)
+        {
+            return EqualityComparer<TaskId>.Default.Equals(left, right);
+        }
+
+        /// <summary>
+        /// Determines whether two specified instances have different values.
+        /// </summary>
+        /// <param name="left">The first instance to compare, or <see langword="null"/>.</param>
+        /// <param name="right">The second instance to compare, or <see langword="null"/>.</param>
+        /// <returns>
+        /// <see langword="true"/> if the value of <paramref name="left"/> is different from the value of <paramref name="right"/>; otherwise, <see langword="false"/>. 
+        /// </returns>
+        public static bool operator !=(TaskId left, TaskId right)
+        {
+            return !EqualityComparer<TaskId>.Default.Equals(left, right);
+        }
 
         private static void ParseStageIdAndNumber(string localTaskId, out string stageId, out int taskNumber)
         {

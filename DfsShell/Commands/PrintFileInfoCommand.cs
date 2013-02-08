@@ -4,9 +4,10 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using Tkl.Jumbo.CommandLine;
+using Ookii.CommandLine;
 using System.ComponentModel;
 using Tkl.Jumbo.Dfs;
+using Tkl.Jumbo.Dfs.FileSystem;
 
 namespace DfsShell.Commands
 {
@@ -15,7 +16,7 @@ namespace DfsShell.Commands
     {
         private readonly string _path;
 
-        public PrintFileInfoCommand([Description("The path of the file on the DFS.")] string path)
+        public PrintFileInfoCommand([Description("The path of the file on the DFS."), ArgumentName("Path")] string path)
         {
             if( path == null )
                 throw new ArgumentNullException("path");
@@ -25,7 +26,7 @@ namespace DfsShell.Commands
 
         public override void Run()
         {
-            DfsFile file = Client.NameServer.GetFileInfo(_path);
+            JumboFile file = Client.GetFileInfo(_path);
             if( file == null )
                 Console.WriteLine("File not found.");
             else

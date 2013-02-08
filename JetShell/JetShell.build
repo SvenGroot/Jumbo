@@ -16,6 +16,7 @@
         <include name="System.Configuration.dll"/>
         <include name="System.Core.dll"/>
         <include name="../lib/log4net.dll"/>
+        <include name="../lib/Ookii.CommandLine.dll"/>
         <include name="../Tkl.Jumbo.Dfs/nantbin/Tkl.Jumbo.Dfs.dll"/>
         <include name="../Tkl.Jumbo.Jet/nantbin/Tkl.Jumbo.Jet.dll"/>
         <include name="../Tkl.Jumbo/nantbin/Tkl.Jumbo.dll"/>
@@ -24,13 +25,14 @@
         <include name="Properties/AssemblyInfo.cs"/>
         <include name="Commands/*.cs"/>
         <include name="*.cs"/>
-        <include name="../Version.cs"/>
+        <include name="../AssemblyInfoCommon.cs"/>
       </sources>
     </csc>
     <copy file="App.config" tofile="nantbin/JetShell.exe.config"/>
     <copy todir="nantbin">
       <fileset>
         <include name="../lib/log4net.dll"/>
+        <include name="../lib/Ookii.CommandLine.dll"/>
         <include name="../Tkl.Jumbo.Dfs/nantbin/*.*"/>
         <include name="../Tkl.Jumbo.Jet/nantbin/*.*"/>
         <include name="../Tkl.Jumbo/nantbin/*.*"/>

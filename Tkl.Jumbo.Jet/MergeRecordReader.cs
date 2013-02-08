@@ -18,7 +18,7 @@ namespace Tkl.Jumbo.Jet
     /// <remarks>
     /// <para>
     ///   If <see cref="Channel"/> is not <see langword="null"/>, the <see cref="MergeRecordReader{T}"/> will use the <see cref="Tasks.TaskConstants.ComparerSettingKey"/>
-    ///   on the <see cref="StageConfiguration.StageSettings"/> of the input stage to determine the comparer to use. Otherwise, it will use the 
+    ///   on the <see cref="Jobs.StageConfiguration.StageSettings"/> of the input stage to determine the comparer to use. Otherwise, it will use the 
     ///   <see cref="MergeRecordReaderConstants.ComparerSetting"/> of the current stage. If neither is specified, <see cref="Comparer{T}.Default"/> will be used.
     /// </para>
     /// </remarks>
@@ -27,21 +27,24 @@ namespace Tkl.Jumbo.Jet
     {
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(MergeRecordReader<T>));
 
-        private readonly ManualResetEvent _finalPassEvent = new ManualResetEvent(false);
-        private Thread _mergeThread;
-        private bool _started;
-        private string _mergeIntermediateOutputPath;
-        private int _maxMergeInputs;
+        private int _maxDiskInputsPerMergePass;
         private float _memoryStorageTriggerLevel;
-        private Dictionary<int, MergePassHelper<T>> _finalPassMergers;
-        private MergePassHelper<T> _currentFinalPassMerger;
-        private MergePassHelper<T>[] _partitionMergers;
-        private bool _memoryStorageLevelMode;
-        private volatile bool _nextPassIsFileOnly;
-        private volatile bool _needMergePass;
-        private volatile bool _mergePassInProgress;
-        private readonly object _mergePassLock = new object();
-        private volatile bool _disposed;
+        private string _mergeIntermediateOutputPath;
+        private bool _purgeMemoryBeforeFinalPass;
+        private bool _disposed;
+        private bool _configured;
+        private IInputChannel _channel;
+        private volatile bool _memoryStorageFull;
+
+        private readonly MergeHelper<T> _mergeHelper = new MergeHelper<T>();
+        private PartitionMerger<T>[] _partitionMergers;
+        private readonly Dictionary<int, PartitionMerger<T>> _finalPassMergers = new Dictionary<int, PartitionMerger<T>>();
+        private IEnumerator<MergeResultRecord<T>> _currentPartitionFinalPass;
+
+        private Thread _mergeThread;
+        private readonly ManualResetEvent _cancelEvent = new ManualResetEvent(false);
+        private readonly AutoResetEvent _inputAddedEvent = new AutoResetEvent(false);
+        private readonly object _finalPassLock = new object();
 
         /// <summary>
         /// Initializes a new instance of the <see cref="MergeRecordReader{T}"/> class.
@@ -64,14 +67,12 @@ namespace Tkl.Jumbo.Jet
         {
             get
             {
-                if( _finalPassMergers == null )
-                    return 0f;
-                else
+                lock( _finalPassLock )
                 {
-                    lock( _finalPassMergers )
-                    {
+                    if( _finalPassMergers.Count == 0 )
+                        return 0.0f;
+                    else
                         return _finalPassMergers.Values.Average(m => m.FinalPassProgress);
-                    }
                 }
             }
         }
@@ -91,9 +92,52 @@ namespace Tkl.Jumbo.Jet
             }
         }
 
-        internal int MaxFileInputs
+        /// <summary>
+        /// Gets or sets the input channel that this reader is reading from.
+        /// </summary>
+        /// <value>The channel.</value>
+        public IInputChannel Channel
         {
-            get { return _maxMergeInputs; }
+            get { return _channel; }
+            set
+            {
+                if( _channel != null )
+                    _channel.MemoryStorageFull -= _channel_MemoryStorageFull;
+                _channel = value;
+                if( _channel != null )
+                    _channel.MemoryStorageFull += _channel_MemoryStorageFull;
+            }
+        }
+
+        /// <summary>
+        /// Gets or sets the configuration used to access the Distributed File System.
+        /// </summary>
+        public Tkl.Jumbo.Dfs.DfsConfiguration DfsConfiguration { get; set; }
+
+        /// <summary>
+        /// Gets or sets the configuration used to access the Jet servers.
+        /// </summary>
+        public JetConfiguration JetConfiguration { get; set; }
+
+        /// <summary>
+        /// Gets or sets the configuration for the task attempt.
+        /// </summary>
+        public TaskContext TaskContext { get; set; }
+
+        /// <summary>
+        /// Gets the bytes read.
+        /// </summary>
+        public override long BytesRead
+        {
+            get
+            {
+                return base.BytesRead + _mergeHelper.BytesRead;
+            }
+        }
+
+        internal int MaxDiskInputsPerMergePass
+        {
+            get { return _maxDiskInputsPerMergePass; }
         }
 
         internal string IntermediateOutputPath
@@ -117,46 +161,17 @@ namespace Tkl.Jumbo.Jet
         /// </remarks>
         public override void AddInput(IList<RecordInput> partitions)
         {
+            if( partitions == null )
+                throw new ArgumentNullException("partitions");
+            CheckDisposed();
             base.AddInput(partitions);
 
-            bool needFileMergePass = false;
             for( int x = 0; x < partitions.Count; ++x )
             {
-                if( _partitionMergers[x].AddInput(partitions[x], !_memoryStorageLevelMode) )
-                    needFileMergePass = true;
+                _partitionMergers[x].AddInput(partitions[x]);
             }
 
-            lock( _mergePassLock )
-            {
-                if( !_mergePassInProgress )
-                {
-                    bool needMergePass = false;
-                    float level; // I want to avoid calling MemoryStorageLevel twice because it involves locking
-                    // Channel cannot be null is _memoryStorageLevelMode is true; no need to check
-                    if( _memoryStorageLevelMode && (level = Channel.MemoryStorageLevel) >= _memoryStorageTriggerLevel )
-                    {
-                        _log.DebugFormat("Memory storage reached level {0}, exceeding the trigger level.", level);
-                        needMergePass = true;
-                    }
-                    else if( CurrentInputCount == TotalInputCount )
-                    {
-                        _log.DebugFormat("All inputs have been received, merge pass will be triggered.");
-                        needMergePass = true;
-                    }
-                    else if( needFileMergePass )
-                    {
-                        _log.DebugFormat("One or more of the partitions requires a merge pass due to the number of inputs it has.");
-                        needMergePass = true;
-                    }
-
-                    if( needMergePass )
-                    {
-                        _needMergePass = true;
-                        _nextPassIsFileOnly = _memoryStorageLevelMode && Channel.MemoryStorageLevel < _memoryStorageTriggerLevel;
-                        Monitor.Pulse(_mergePassLock);
-                    }
-                }
-            }
+            _inputAddedEvent.Set();
         }
 
         /// <summary>
@@ -170,14 +185,45 @@ namespace Tkl.Jumbo.Jet
         /// </remarks>
         public override void AssignAdditionalPartitions(IList<int> newPartitions)
         {
+            CheckDisposed();
             // Have to check both because _partitionMergers can be null before NotifyConfigurationChanged is called.
-            if( _finalPassMergers == null || _partitionMergers != null )
-                throw new InvalidOperationException("You cannot assign additional partitions until the final pass has started on the current partitions.");
+            lock( _finalPassLock )
+            {
+                if( _finalPassMergers.Count == 0 || _partitionMergers != null )
+                    throw new InvalidOperationException("You cannot assign additional partitions until the final pass has started on the current partitions.");
+            }
 
             base.AssignAdditionalPartitions(newPartitions);
 
-            _finalPassEvent.Reset();
             StartMergeThread(newPartitions);
+        }
+
+        /// <summary>
+        /// Indicates the configuration has been changed. <see cref="JetActivator.ApplyConfiguration"/> calls this method
+        /// after setting the configuration.
+        /// </summary>
+        public void NotifyConfigurationChanged()
+        {
+            if( _configured )
+                throw new InvalidOperationException("MergeRecordReader is already configured.");
+
+            _configured = true;
+
+            _mergeIntermediateOutputPath = Path.Combine(TaskContext.LocalJobDirectory, TaskContext.TaskAttemptId.ToString());
+            if( !Directory.Exists(_mergeIntermediateOutputPath) )
+                Directory.CreateDirectory(_mergeIntermediateOutputPath);
+
+            _maxDiskInputsPerMergePass = TaskContext.GetTypedSetting(MergeRecordReaderConstants.MaxFileInputsSetting, JetConfiguration.MergeRecordReader.MaxFileInputs);
+            if( _maxDiskInputsPerMergePass <= 1 )
+                throw new InvalidOperationException("The maximum number of file inputs per pass must be larger than one.");
+
+            _memoryStorageTriggerLevel = TaskContext.GetTypedSetting(MergeRecordReaderConstants.MemoryStorageTriggerLevelSetting, JetConfiguration.MergeRecordReader.MemoryStorageTriggerLevel);
+            if( _memoryStorageTriggerLevel < 0 || _memoryStorageTriggerLevel > 1 )
+                throw new InvalidOperationException("The memory storage trigger level must be between 0 and 1.");
+
+            _purgeMemoryBeforeFinalPass = TaskContext.GetTypedSetting(MergeRecordReaderConstants.PurgeMemorySettingKey, JetConfiguration.MergeRecordReader.PurgeMemoryBeforeFinalPass);
+
+            StartMergeThread(PartitionNumbers);
         }
 
         /// <summary>
@@ -188,37 +234,38 @@ namespace Tkl.Jumbo.Jet
         {
             CheckDisposed();
 
-            if( _finalPassMergers == null )
-                _finalPassEvent.WaitOne();
-
-            if( _currentFinalPassMerger == null )
+            // If this is not null, is can only become null if the current partition changes, and that has to happen on the same thread as ReadRecord.
+            if( _currentPartitionFinalPass == null )
             {
-                bool needWait;
-                do
+                lock( _finalPassLock )
                 {
-                    lock( _finalPassMergers )
+                    while( _currentPartitionFinalPass == null )
                     {
-                        needWait = !_finalPassMergers.TryGetValue(CurrentPartition, out _currentFinalPassMerger);
+                        Monitor.Wait(_finalPassLock);
+                        CheckDisposed();
                     }
-
-                    if( needWait )
-                        _finalPassEvent.WaitOne();
-                } while( needWait );
+                }
             }
 
-            T record;
-            bool result = _currentFinalPassMerger.ReadFinalPassRecord(out record);
-            CurrentRecord = record;
+            bool result = _currentPartitionFinalPass.MoveNext();
+            if( result )
+                CurrentRecord = _currentPartitionFinalPass.Current.GetValue();
+            else
+                CurrentRecord = default(T);
+
             return result;
         }
 
         /// <summary>
-        /// Overrides <see cref="MultiInputRecordReader{T}.OnCurrentPartitionChanged"/>.
+        /// Raises the <see cref="E:CurrentPartitionChanged"/> event.
         /// </summary>
-        /// <param name="e"></param>
+        /// <param name="e">The <see cref="System.EventArgs"/> instance containing the event data.</param>
         protected override void OnCurrentPartitionChanged(EventArgs e)
         {
-            _currentFinalPassMerger = null;
+            lock( _finalPassLock )
+            {
+                _currentPartitionFinalPass = GetCurrentPartitionFinalPass();
+            }
             base.OnCurrentPartitionChanged(e);
         }
 
@@ -228,176 +275,23 @@ namespace Tkl.Jumbo.Jet
         /// <param name="disposing"><see langword="true"/> to release both managed and unmanaged resources; <see langword="false"/> to release only unmanaged resources.</param>
         protected override void Dispose(bool disposing)
         {
-            lock( _mergePassLock )
+            try
             {
-                _disposed = true;
-                Monitor.Pulse(_mergePassLock);
-            }
-            if( _mergeThread != null )
-                _mergeThread.Join();
-
-            base.Dispose(disposing);
-        }
-
-        private void MergeThread()
-        {
-            _log.InfoFormat("Merging {0} inputs with trigger level {1} and max {2} file inputs per pass.", TotalInputCount, _memoryStorageTriggerLevel, _maxMergeInputs);
-
-            bool allPartitionsReadyForFinalPass = false;
-
-            while( !(_disposed || allPartitionsReadyForFinalPass) )
-            {
-                bool fileOnlyPass;
-                lock( _mergePassLock )
+                if( !_disposed )
                 {
-                    _mergePassInProgress = false;
-                    if( !_needMergePass && CurrentInputCount < TotalInputCount )
-                    {
-                        _log.DebugFormat("Waiting for data for the next merge pass.");
-                        Monitor.Wait(_mergePassLock);
-                        _log.DebugFormat("Received signal for the start of the next pass.");
-                    }
+                    _disposed = true;
+                    _cancelEvent.Set();
+                    if( _mergeThread != null )
+                        _mergeThread.Join();
 
-                    if( _disposed )
-                        break;
-
-                    Debug.Assert(_needMergePass || CurrentInputCount == TotalInputCount);
-                    fileOnlyPass = _nextPassIsFileOnly;
-                    _needMergePass = false;
-                    _nextPassIsFileOnly = false;
-                    _mergePassInProgress = true;
-                }
-
-                allPartitionsReadyForFinalPass = true;
-                foreach( MergePassHelper<T> merger in _partitionMergers )
-                {
-                    MergePassResult result;
-                    do
-                    {
-                        result = merger.RunMergePass(fileOnlyPass);
-                        if( _memoryStorageLevelMode && result == MergePassResult.InsufficientData )
-                        {
-                            _log.Warn("Using memory storage levels to determine when to merge has yielded insufficient inputs; switching to waiting for input counts.");
-                            _memoryStorageLevelMode = false;
-                        }
-                    } while( result == MergePassResult.MorePassesNeeded );
-
-                    if( result != MergePassResult.ReadyForFinalPass )
-                        allPartitionsReadyForFinalPass = false;
+                    // Dispose shouldn't get called on a thread different from the one that calls ReadRecord, but just to be safe.
+                    lock( _finalPassLock )
+                        Monitor.PulseAll(_finalPassLock);
                 }
             }
-
-            if( _disposed )
-                _log.Info("Merge thread aborted because the object was disposed.");
-            else
+            finally
             {
-                _log.Info("All partitions are ready for the final pass.");
-                if( _finalPassMergers == null )
-                    _finalPassMergers = new Dictionary<int, MergePassHelper<T>>();
-                lock( _finalPassMergers )
-                {
-                    foreach( MergePassHelper<T> merger in _partitionMergers )
-                    {
-                        _finalPassMergers.Add(merger.PartitionNumber, merger);
-                    }
-                }
-                _partitionMergers = null;
-                _finalPassEvent.Set();
-            }
-        }
-
-        private IComparer<T> GetComparer()
-        {
-            IComparer<T> recordComparer;
-
-            string comparerTypeName;
-            if( Channel == null || Channel.InputStage == null )
-                comparerTypeName = TaskContext.StageConfiguration.GetSetting(MergeRecordReaderConstants.ComparerSetting, null);
-            else
-                comparerTypeName = Channel.InputStage.GetSetting(Tasks.TaskConstants.ComparerSettingKey, null);
-
-            if( !string.IsNullOrEmpty(comparerTypeName) )
-            {
-                _log.DebugFormat("Using specified comparer {0}.", comparerTypeName);
-                recordComparer = (IComparer<T>)JetActivator.CreateInstance(Type.GetType(comparerTypeName, true), DfsConfiguration, JetConfiguration, TaskContext);
-            }
-            else
-            {
-                _log.DebugFormat("Using the default comparer for type {0}.", typeof(T));
-                recordComparer = Comparer<T>.Default;
-            }
-
-            return recordComparer;
-        }
-
-        private List<RecordReader<T>> CreateMergeInputList(int partition, int firstInputIndex, out int fileInputs)
-        {
-            fileInputs = 0;
-            int inputIndex = firstInputIndex;
-            int inputCount = CurrentInputCount;
-
-            if( inputIndex == inputCount )
-                return null; // Already processed all inputs.
-
-            List<RecordReader<T>> result = new List<RecordReader<T>>();
-            while( inputIndex < inputCount && fileInputs < _maxMergeInputs )
-            {
-                RecordInput input = GetInput(partition, inputIndex, false);
-                if( input == null )
-                    break;
-                if( !input.IsMemoryBased )
-                    ++fileInputs;
-
-                RecordReader<T> reader = (RecordReader<T>)input.Reader;
-                if( reader.ReadRecord() )
-                    result.Add(reader);
-
-                ++inputIndex;
-            }
-
-            return result;
-        }
-
-        #region IConfigurable Members
-
-        /// <summary>
-        /// Gets or sets the configuration used to access the Distributed File System.
-        /// </summary>
-        public Tkl.Jumbo.Dfs.DfsConfiguration DfsConfiguration { get; set; }
-
-        /// <summary>
-        /// Gets or sets the configuration used to access the Jet servers.
-        /// </summary>
-        public JetConfiguration JetConfiguration { get; set; }
-
-        /// <summary>
-        /// Gets or sets the configuration for the task attempt.
-        /// </summary>
-        public TaskContext TaskContext { get; set; }
-
-        /// <summary>
-        /// Indicates the configuration has been changed. <see cref="JetActivator.ApplyConfiguration"/> calls this method
-        /// after setting the configuration.
-        /// </summary>
-        public void NotifyConfigurationChanged()
-        {
-            if( !_started )
-            {
-                _started = true;
-
-                _mergeIntermediateOutputPath = Path.Combine(TaskContext.LocalJobDirectory, TaskContext.TaskAttemptId.ToString());
-                if( !Directory.Exists(_mergeIntermediateOutputPath) )
-                    Directory.CreateDirectory(_mergeIntermediateOutputPath);
-
-                _maxMergeInputs = TaskContext.GetTypedSetting(MergeRecordReaderConstants.MaxFileInputsSetting, JetConfiguration.MergeRecordReader.MaxFileInputs);
-                if( _maxMergeInputs <= 1 )
-                    throw new InvalidOperationException("The maximum number of file inputs per pass must be larger than one.");
-
-                _memoryStorageTriggerLevel = TaskContext.GetTypedSetting(MergeRecordReaderConstants.MemoryStorageTriggerLevelSetting, JetConfiguration.MergeRecordReader.MemoryStorageTriggerLevel);
-                if( _memoryStorageTriggerLevel < 0 || _memoryStorageTriggerLevel > 1 )
-                    throw new InvalidOperationException("The memory storage trigger level must be between 0 and 1.");
-
-                StartMergeThread(PartitionNumbers);
+                base.Dispose(disposing);
             }
         }
 
@@ -405,32 +299,112 @@ namespace Tkl.Jumbo.Jet
         {
             IComparer<T> comparer = GetComparer();
 
-            _partitionMergers = new MergePassHelper<T>[partitionNumbers.Count];
+            Debug.Assert(_partitionMergers == null);
+            _partitionMergers = new PartitionMerger<T>[partitionNumbers.Count];
             for( int x = 0; x < _partitionMergers.Length; ++x )
             {
-                _partitionMergers[x] = new MergePassHelper<T>(this, partitionNumbers[x], comparer);
+                _partitionMergers[x] = new PartitionMerger<T>(this, partitionNumbers[x], comparer);
             }
-
-            _memoryStorageLevelMode = _memoryStorageTriggerLevel > 0 && Channel != null && Channel.UsesMemoryStorage;
 
             _mergeThread = new Thread(MergeThread)
             {
-                Name = "MergeThread",
+                Name = "MergeRecordReader.BackgroundMergeThread",
                 IsBackground = true
-            }; 
+            };
             _mergeThread.Start();
         }
 
-        #endregion
+        private void MergeThread()
+        {
+            _log.InfoFormat("Background merge thread started with trigger level {1} and max {2} disk inputs per pass.", TotalInputCount, _memoryStorageTriggerLevel, _maxDiskInputsPerMergePass);
 
-        #region IChannelMultiInputRecordReader Members
+            WaitHandle[] events = new WaitHandle[] { _inputAddedEvent, _cancelEvent };
 
-        /// <summary>
-        /// Gets or sets the input channel that this reader is reading from.
-        /// </summary>
-        /// <value>The channel.</value>
-        public IInputChannel Channel { get; set; }
+            while( CurrentInputCount < TotalInputCount )
+            {
+                if( Channel != null && Channel.UsesMemoryStorage && (_memoryStorageFull || Channel.MemoryStorageLevel >= _memoryStorageTriggerLevel) )
+                {
+                    foreach( PartitionMerger<T> merger in _partitionMergers )
+                        merger.RunMemoryPurgePass(_mergeHelper);
+                    _memoryStorageFull = false;
+                }
 
-        #endregion
+                foreach( PartitionMerger<T> merger in _partitionMergers )
+                    merger.RunDiskMergePassIfNeeded(_mergeHelper);
+
+                if( WaitHandle.WaitAny(events) == 1 )
+                    break;
+            }
+
+            if( _cancelEvent.WaitOne(0) )
+                _log.Info("Background merger was cancelled.");
+            else
+            {
+                if( _purgeMemoryBeforeFinalPass )
+                {
+                    foreach( PartitionMerger<T> merger in _partitionMergers )
+                        merger.RunMemoryPurgePass(_mergeHelper);
+                }
+
+                _log.Info("Preparing final merge");
+
+                foreach( PartitionMerger<T> merger in _partitionMergers )
+                    merger.PrepareFinalPass(_mergeHelper);
+
+                _log.Info("All partitions are ready for the final pass.");
+
+                lock( _finalPassLock )
+                {
+                    foreach( PartitionMerger<T> merger in _partitionMergers )
+                        _finalPassMergers.Add(merger.PartitionNumber, merger);
+
+                    // If it's already set, this is an additional set of partitions we're working on and the previous set hasn't finished processing yet.
+                    if( _currentPartitionFinalPass == null )
+                        _currentPartitionFinalPass = GetCurrentPartitionFinalPass();
+
+                    // This indicates that we're ready to receive new partitions
+                    _partitionMergers = null;
+
+                    HasRecords = true;
+
+                    Monitor.PulseAll(_finalPassLock);
+                }
+            }
+        }
+
+        private IComparer<T> GetComparer()
+        {
+            string comparerTypeName = TaskContext.StageConfiguration.GetSetting(MergeRecordReaderConstants.ComparerSetting, null);
+            if( comparerTypeName == null && !(Channel == null || Channel.InputStage == null) )
+                comparerTypeName = Channel.InputStage.GetSetting(Tasks.TaskConstants.ComparerSettingKey, null);                
+
+            if( !string.IsNullOrEmpty(comparerTypeName) )
+            {
+                _log.DebugFormat("Using specified comparer {0}.", comparerTypeName);
+                return (IComparer<T>)JetActivator.CreateInstance(Type.GetType(comparerTypeName, true), DfsConfiguration, JetConfiguration, TaskContext);
+            }
+            else
+            {
+                _log.DebugFormat("Using the default comparer for type {0}.", typeof(T));
+                return null;
+            }
+        }
+
+        private IEnumerator<MergeResultRecord<T>> GetCurrentPartitionFinalPass()
+        {
+            PartitionMerger<T> finalPassMerger;
+            if( _finalPassMergers != null && _finalPassMergers.TryGetValue(CurrentPartition, out finalPassMerger) )
+            {
+                return finalPassMerger.FinalPassResult.GetEnumerator();
+            }
+            return null;
+        }
+        
+        private void _channel_MemoryStorageFull(object sender, MemoryStorageFullEventArgs e)
+        {
+            e.CancelWaiting = false;
+            _memoryStorageFull = true;
+            _inputAddedEvent.Set();
+        }
     }
 }

@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text;
 using System.IO;
 using Tkl.Jumbo.Dfs;
+using Tkl.Jumbo.Dfs.FileSystem;
 
 namespace TaskServerApplication
 {
@@ -59,7 +60,7 @@ namespace TaskServerApplication
             localPath = Path.Combine(downloadDirectory, "file" + _downloadedFiles.Count.ToString());
 
             _log.DebugFormat("Downloading DFS file '{0}' to local file '{1}'.", dfsPath, localPath);
-            DfsClient client = new DfsClient(TaskServer.Instance.DfsConfiguration);
+            FileSystemClient client = FileSystemClient.Create(TaskServer.Instance.DfsConfiguration);
             client.DownloadFile(dfsPath, localPath);
 
             _downloadedFiles.Add(dfsPath, localPath);

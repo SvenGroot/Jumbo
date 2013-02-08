@@ -2,11 +2,9 @@
 //
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using Tkl.Jumbo.IO;
 using System.Collections.ObjectModel;
-using System.Diagnostics;
+using Tkl.Jumbo.IO;
+using Tkl.Jumbo.Jet.Jobs;
 
 namespace Tkl.Jumbo.Jet.Channels
 {
@@ -21,6 +19,22 @@ namespace Tkl.Jumbo.Jet.Channels
         private ReadOnlyCollection<string> _inputTaskIdsReadOnlyWrapper;
         private readonly List<int> _partitions = new List<int>();
         private readonly ReadOnlyCollection<int> _partitionsReadOnlyWrapper;
+
+        /// <summary>
+        /// Occurs when the input channel stalls waiting for space to become available in the memory storage.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        ///   If the channel consumer (e.g. a <see cref="MultiInputRecordReader{T}"/>) can free up the required amount of space,
+        ///   set the <see cref="MemoryStorageFullEventArgs.CancelWaiting"/> property to <see langword="false"/> so the memory
+        ///   storage manager will continue waiting for the request.
+        /// </para>
+        /// <para>
+        ///   If the <see cref="MemoryStorageFullEventArgs.CancelWaiting"/> property is left at its default value of <see langword="true"/>,
+        ///   the memory storage manager will immediately deny the request so the channel will store the input on disk instead.
+        /// </para>
+        /// </remarks>
+        public event EventHandler<MemoryStorageFullEventArgs> MemoryStorageFull;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="InputChannel"/> class.
@@ -47,18 +61,7 @@ namespace Tkl.Jumbo.Jet.Channels
             // in the case of a join it may not.
             InputRecordType = inputStage.TaskType.ReferencedType.FindGenericInterfaceType(typeof(ITask<,>)).GetGenericArguments()[1];
 
-            switch( inputStage.OutputChannel.Connectivity )
-            {
-            case ChannelConnectivity.Full:
-                IList<StageConfiguration> stages = taskExecution.Context.JobConfiguration.GetPipelinedStages(inputStage.CompoundStageId);
-                if( stages == null )
-                    throw new ArgumentException(string.Format(System.Globalization.CultureInfo.CurrentCulture, "Input stage ID {0} could not be found.", inputStage.StageId));
-                GetInputTaskIdsFull(stages);
-                break;
-            case ChannelConnectivity.PointToPoint:
-                _inputTaskIds.Add(GetInputTaskIdPointToPoint());
-                break;
-            }
+            GetInputTaskIdsFull();
         }
 
         /// <summary>
@@ -82,16 +85,6 @@ namespace Tkl.Jumbo.Jet.Channels
         protected TaskExecutionUtility TaskExecution { get; private set; }
 
         /// <summary>
-        /// Gets the compression type used by the channel.
-        /// </summary>
-        protected CompressionType CompressionType { get; private set; }
-
-        /// <summary>
-        /// Gets the type of the records create by the input task of this channel.
-        /// </summary>
-        protected Type InputRecordType { get; private set; }
-
-        /// <summary>
         /// Gets the last set of partitions assigned to this channel.
         /// </summary>
         /// <remarks>
@@ -108,21 +101,6 @@ namespace Tkl.Jumbo.Jet.Channels
                 return _partitionsReadOnlyWrapper;
             }
         }
-
-        /// <summary>
-        /// Gets a collection of input task IDs.
-        /// </summary>
-        protected ReadOnlyCollection<string> InputTaskIds
-        {
-            get
-            {
-                if( _inputTaskIdsReadOnlyWrapper == null )
-                    System.Threading.Interlocked.CompareExchange(ref _inputTaskIdsReadOnlyWrapper, _inputTaskIds.AsReadOnly(), null);
-                return _inputTaskIdsReadOnlyWrapper;
-            }
-        }
-
-        #region IInputChannel Members
 
         /// <summary>
         /// Gets a value indicating whether the input channel uses memory storage to store inputs.
@@ -146,6 +124,29 @@ namespace Tkl.Jumbo.Jet.Channels
         /// </para>
         /// </remarks>
         public abstract float MemoryStorageLevel { get; }
+
+        /// <summary>
+        /// Gets the compression type used by the channel.
+        /// </summary>
+        protected CompressionType CompressionType { get; private set; }
+
+        /// <summary>
+        /// Gets the type of the records create by the input task of this channel.
+        /// </summary>
+        protected Type InputRecordType { get; private set; }
+
+        /// <summary>
+        /// Gets a collection of input task IDs.
+        /// </summary>
+        protected ReadOnlyCollection<string> InputTaskIds
+        {
+            get
+            {
+                if( _inputTaskIdsReadOnlyWrapper == null )
+                    System.Threading.Interlocked.CompareExchange(ref _inputTaskIdsReadOnlyWrapper, _inputTaskIds.AsReadOnly(), null);
+                return _inputTaskIdsReadOnlyWrapper;
+            }
+        }
 
         /// <summary>
         /// Creates a <see cref="RecordReader{T}"/> from which the channel can read its input.
@@ -180,8 +181,6 @@ namespace Tkl.Jumbo.Jet.Channels
             _partitions.AddRange(additionalPartitions);
         }
 
-        #endregion
-
         /// <summary>
         /// Creates a record reader of the type indicated by the channel.
         /// </summary>
@@ -190,46 +189,39 @@ namespace Tkl.Jumbo.Jet.Channels
         protected IMultiInputRecordReader CreateChannelRecordReader()
         {
             Type multiInputRecordReaderType = InputStage.OutputChannel.MultiInputRecordReaderType.ReferencedType;
-            _log.InfoFormat(System.Globalization.CultureInfo.CurrentCulture, "Creating MultiRecordReader of type {3} for {0} inputs, allow record reuse = {1}, buffer size = {2}.", InputTaskIds.Count, TaskExecution.AllowRecordReuse, TaskExecution.JetClient.Configuration.FileChannel.ReadBufferSize, multiInputRecordReaderType);
+            _log.InfoFormat(System.Globalization.CultureInfo.CurrentCulture, "Creating MultiRecordReader of type {3} for {0} inputs, allow record reuse = {1}, buffer size = {2}.", InputTaskIds.Count, TaskExecution.Context.StageConfiguration.AllowRecordReuse, TaskExecution.JetClient.Configuration.FileChannel.ReadBufferSize, multiInputRecordReaderType);
             int bufferSize = (multiInputRecordReaderType.IsGenericType && multiInputRecordReaderType.GetGenericTypeDefinition() == typeof(MergeRecordReader<>)) ? (int)TaskExecution.JetClient.Configuration.MergeRecordReader.MergeStreamReadBufferSize : (int)TaskExecution.JetClient.Configuration.FileChannel.ReadBufferSize;
             // We're not using JetActivator to create the object because we need to delay calling NotifyConfigurationChanged until after InputStage was set.
             int[] partitions = TaskExecution.GetPartitions();
             _partitions.AddRange(partitions);
-            IMultiInputRecordReader reader = (IMultiInputRecordReader)Activator.CreateInstance(multiInputRecordReaderType, partitions, _inputTaskIds.Count, TaskExecution.AllowRecordReuse, bufferSize, CompressionType);
+            IMultiInputRecordReader reader = (IMultiInputRecordReader)Activator.CreateInstance(multiInputRecordReaderType, partitions, _inputTaskIds.Count, TaskExecution.Context.StageConfiguration.AllowRecordReuse, bufferSize, CompressionType);
             IChannelMultiInputRecordReader channelReader = reader as IChannelMultiInputRecordReader;
             if( channelReader != null )
                 channelReader.Channel = this;
-            JetActivator.ApplyConfiguration(reader, TaskExecution.DfsClient.Configuration, TaskExecution.JetClient.Configuration, TaskExecution.Context);
+            JetActivator.ApplyConfiguration(reader, TaskExecution.FileSystemClient.Configuration, TaskExecution.JetClient.Configuration, TaskExecution.Context);
             return reader;
         }
 
-        private void GetInputTaskIdsFull(IList<StageConfiguration> stages)
+        /// <summary>
+        /// Raises the <see cref="E:MemoryStorageFull" /> event.
+        /// </summary>
+        /// <param name="e">The <see cref="EventArgs"/> instance containing the event data.</param>
+        protected virtual void OnMemoryStorageFull(MemoryStorageFullEventArgs e)
+        {
+            EventHandler<MemoryStorageFullEventArgs> handler = MemoryStorageFull;
+            if( handler != null )
+                handler(this, e);
+        }
+
+        private void GetInputTaskIdsFull()
         {
             // We add only the root task IDs, we ignore child tasks.
-            StageConfiguration stage = stages[0];
+            StageConfiguration stage = InputStage.Root;
             for( int x = 1; x <= stage.TaskCount; ++x )
             {
                 TaskId taskId = new TaskId(stage.StageId, x);
                 _inputTaskIds.Add(taskId.ToString());
             }
-        }
-
-        private string GetInputTaskIdPointToPoint()
-        {
-            int outputTaskNumber = TaskExecution.Context.TaskId.TaskNumber;
-            IList<StageConfiguration> inputStages = TaskExecution.Context.JobConfiguration.GetPipelinedStages(InputStage.CompoundStageId);
-
-            int remainder = outputTaskNumber;
-            TaskId result = null;
-            for( int x = 0; x < inputStages.Count - 1; ++x )
-            {
-                int taskCount = JobConfiguration.GetTotalTaskCount(inputStages, x);
-                int inputTaskNumber = (remainder - 1) / taskCount + 1;
-                result = new TaskId(result, inputStages[x].StageId, inputTaskNumber);
-                remainder = (remainder - 1) % taskCount + 1;
-            }
-
-            return result.ToString();
         }
     }
 }
