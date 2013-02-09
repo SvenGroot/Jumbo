@@ -546,6 +546,18 @@ namespace Ookii.Jumbo.Jet.Channels
         }
 
         /// <summary>
+        /// Determines whether the current spill has data for the specified partition.
+        /// </summary>
+        /// <param name="partition">The partition number.</param>
+        /// <returns>
+        ///   <see langword="true" /> if the current spill has data for the specified partition; otherwise, <see langword="false" />.
+        /// </returns>
+        protected bool HasDataForPartition(int partition)
+        {
+            return _spillIndices[partition] != null;
+        }
+
+        /// <summary>
         /// When overridden in a derived class, prepares the partition for the spill.
         /// </summary>
         /// <param name="partition">The partition number.</param>

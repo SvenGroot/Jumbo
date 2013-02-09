@@ -66,9 +66,9 @@ namespace Ookii.Jumbo.Jet.Channels
             long result = 0;
             if( index != null )
             {
-                result = index.Sum(e => e.Count);
+                result = index.Sum(e => e.CompressedSize);
                 if( includeSegmentHeader )
-                    result += index.Count * sizeof(long);
+                    result += index.Count * sizeof(long) * 2;
             }
             return result;
         }

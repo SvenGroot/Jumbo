@@ -788,8 +788,8 @@ namespace Ookii.Jumbo.Jet.Channels
                     }
                     else
                     {
-                        LocalBytesRead += indexEntries.Sum(e => e.Count);
-                        inputs.Add(new PartitionFileRecordInput(_inputReaderType, fileName, indexEntries, task.TaskAttemptId.TaskId.ToString(), _channelInputType == FileChannelOutputType.SortSpill, _reader.AllowRecordReuse, _reader.BufferSize));
+                        LocalBytesRead += indexEntries.Sum(e => e.CompressedSize);
+                        inputs.Add(new PartitionFileRecordInput(_inputReaderType, fileName, indexEntries, task.TaskAttemptId.TaskId.ToString(), _channelInputType == FileChannelOutputType.SortSpill, _reader.AllowRecordReuse, _reader.BufferSize, CompressionType));
                     }
                 }
             }
@@ -860,11 +860,9 @@ namespace Ookii.Jumbo.Jet.Channels
             long size = connection.Reader.ReadInt64();
             if( size > 0 )
             {
-                long uncompressedSize = size;
                 int segmentCount = 0;
-                if( _channelInputType == FileChannelOutputType.MultiFile )
-                    uncompressedSize = connection.Reader.ReadInt64();
-                else
+                long uncompressedSize = connection.Reader.ReadInt64();
+                if( _channelInputType != FileChannelOutputType.MultiFile )
                     segmentCount = connection.Reader.ReadInt32();
                 string targetFile = null;
 
@@ -891,7 +889,7 @@ namespace Ookii.Jumbo.Jet.Channels
                     if( _channelInputType == FileChannelOutputType.MultiFile )
                         checksumStream = new ChecksumInputStream(memoryStream, true).CreateDecompressor(CompressionType, uncompressedSize);
                     else
-                        checksumStream = new SegmentedChecksumInputStream(memoryStream, segmentCount);
+                        checksumStream = new SegmentedChecksumInputStream(memoryStream, segmentCount, CompressionType, uncompressedSize);
                     downloadedFiles.Add(new StreamRecordInput(_inputReaderType, checksumStream, true, task.TaskAttemptId.TaskId.ToString(), _channelInputType == FileChannelOutputType.SortSpill, TaskExecution.Context.StageConfiguration.AllowRecordReuse));
                 }
                 NetworkBytesRead += size;

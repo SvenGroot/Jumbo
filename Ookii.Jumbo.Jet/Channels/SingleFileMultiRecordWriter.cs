@@ -18,14 +18,16 @@ namespace Ookii.Jumbo.Jet.Channels
         private int _partitions;
         private long _indexBytesWritten;
         private readonly bool _enableChecksum;
+        private readonly CompressionType _compressionType;
 
-        public SingleFileMultiRecordWriter(string outputPath, IPartitioner<T> partitioner, int bufferSize, int limit, int writeBufferSize, bool enableChecksum)
+        public SingleFileMultiRecordWriter(string outputPath, IPartitioner<T> partitioner, int bufferSize, int limit, int writeBufferSize, bool enableChecksum, CompressionType compressionType)
             : base(partitioner, bufferSize, limit, SpillRecordWriterOptions.AllowRecordWrapping | SpillRecordWriterOptions.AllowMultiRecordIndexEntries)
         {
             _outputPath = outputPath;
             _partitions = partitioner.Partitions;
             _writeBufferSize = writeBufferSize;
             _enableChecksum = enableChecksum;
+            _compressionType = compressionType;
             //_debugWriter = new StreamWriter(outputPath + ".debug.txt");
         }
 
@@ -46,21 +48,26 @@ namespace Ookii.Jumbo.Jet.Channels
                 if( indexStream.Length == 0 )
                 {
                     // Write a faux first entry indicating the number of partitions.
-                    indexWriter.WriteRecord(new PartitionFileIndexEntry(_partitions, 0L, 0L));
+                    indexWriter.WriteRecord(new PartitionFileIndexEntry(_partitions, 0L, 0L, 0L));
                 }
 
                 for( int partition = 0; partition < _partitions; ++partition )
                 {
-                    long startOffset = fileStream.Position;
-                    using( ChecksumOutputStream stream = new ChecksumOutputStream(fileStream, false, _enableChecksum) )
+                    if( HasDataForPartition(partition) )
                     {
-                        WritePartition(partition, stream);
-                    }
-                    if( indexWriter != null )
-                    {
-                        PartitionFileIndexEntry indexEntry = new PartitionFileIndexEntry(partition, startOffset, fileStream.Position - startOffset);
-                        if( indexEntry.Count > 0 )
-                            indexWriter.WriteRecord(indexEntry);
+                        long startOffset = fileStream.Position;
+                        long uncompressedSize;
+                        using( Stream stream = new ChecksumOutputStream(fileStream, false, _enableChecksum).CreateCompressor(_compressionType) )
+                        {
+                            WritePartition(partition, stream);
+                            ICompressor compressor = stream as ICompressor;
+                            uncompressedSize = compressor == null ? stream.Length : compressor.UncompressedBytesWritten;
+                        }
+                        long compressedSize = fileStream.Position - startOffset;
+                        Debug.Assert(uncompressedSize > 0 );
+
+                        PartitionFileIndexEntry indexEntry = new PartitionFileIndexEntry(partition, startOffset, compressedSize, uncompressedSize);
+                        indexWriter.WriteRecord(indexEntry);
                     }
                 }
                 _indexBytesWritten = indexStream.Length;

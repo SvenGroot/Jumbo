@@ -70,7 +70,19 @@ namespace Ookii.Jumbo.Test.Jet
             TestSpillRecordWriter(1, 0, 100 * 1024, 1, false);
         }
 
-        private void TestSpillRecordWriter(int partitionCount, int records, int bufferSize, int expectedSpillCount, bool useCombiner = false)
+        [Test]
+        public void TestCompression()
+        {
+            TestSpillRecordWriter(5, 110000, 100 * 1024, 6, false, CompressionType.GZip);
+        }
+
+        [Test]
+        public void TestCombinerCompression()
+        {
+            TestSpillRecordWriter(5, 110000, 100 * 1024, 6, true, CompressionType.GZip);
+        }
+
+        private void TestSpillRecordWriter(int partitionCount, int records, int bufferSize, int expectedSpillCount, bool useCombiner = false, CompressionType compressionType = CompressionType.None)
         {
             List<int> values;
             if( useCombiner )
@@ -95,7 +107,7 @@ namespace Ookii.Jumbo.Test.Jet
                 ITask<int, int> combiner = null;
                 if( useCombiner )
                     combiner = new DuplicateEliminationCombiner();
-                using( SortSpillRecordWriter<int> target = new SortSpillRecordWriter<int>(outputPath, partitioner, bufferSize, (int)(0.8 * bufferSize), 4096, true, 5, combiner, 1) )
+                using( SortSpillRecordWriter<int> target = new SortSpillRecordWriter<int>(outputPath, partitioner, bufferSize, (int)(0.8 * bufferSize), 4096, true, compressionType, 5, combiner, 1) )
                 {
                     foreach( int value in values )
                     {
@@ -116,7 +128,7 @@ namespace Ookii.Jumbo.Test.Jet
                     else
                     {
                         Assert.AreEqual(1, entries.Count());
-                        using( PartitionFileStream stream = new PartitionFileStream(outputPath, 4096, entries) )
+                        using( PartitionFileStream stream = new PartitionFileStream(outputPath, 4096, entries, compressionType) )
                         using( BinaryRecordReader<int> reader = new BinaryRecordReader<int>(stream, 0, stream.Length, true, true) )
                         {
                             List<int> actualPartition = reader.EnumerateRecords().ToList();

@@ -16,7 +16,11 @@ namespace Ookii.Jumbo.Jet.Tasks
     /// <remarks>
     /// <note>
     ///   The class that generates the input for this task (which can be either another task if a pipeline channel is used, or a <see cref="RecordReader{T}"/>)
-    ///   may not reuse the <see cref="IWritable"/> instances for the records.
+    ///   may not reuse the record instances for the records.
+    /// </note>
+    /// <note>
+    ///   This task performs an in-memory sort of all records. Use it to sort small amounts of records only. For large (or unknown) numbers of records, use the file channel with <see cref="Ookii.Jumbo.Jet.Channels.FileChannelOutputType.SortSpill"/>
+    ///   (e.g. using the <see cref="Ookii.Jumbo.Jet.Jobs.Builder.JobBuilder.SpillSort"/> function).
     /// </note>
     /// </remarks>
     public class SortTask<T> : PrepartitionedPushTask<T, T>

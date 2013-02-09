@@ -123,7 +123,7 @@ namespace Ookii.Jumbo
             case CompressionType.None:
                 return target;
             case CompressionType.GZip:
-                _log.Info("Creating GZipStream compressor.");
+                _log.Debug("Creating GZipStream compressor.");
                 return new GZipCompressionStream(target, CompressionMode.Compress, -1L);
             default:
                 throw new NotSupportedException("Unsupported compression type.");
@@ -148,7 +148,7 @@ namespace Ookii.Jumbo
             case CompressionType.None:
                 return source;
             case CompressionType.GZip:
-                _log.InfoFormat("Creating GZipStream decompressor, uncompressed size {0}.", uncompressedSize);
+                _log.DebugFormat("Creating GZipStream decompressor, uncompressed size {0}.", uncompressedSize);
                 return new GZipCompressionStream(source, CompressionMode.Decompress, uncompressedSize);
             default:
                 throw new NotSupportedException("Unsupported compression type.");

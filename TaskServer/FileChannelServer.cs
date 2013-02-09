@@ -170,15 +170,18 @@ namespace TaskServerApplication
                         else
                         {
                             int segmentCount = entries.Count();
-                            long partitionSize = entries.Sum(e => e.Count) + sizeof(long) * segmentCount;
+                            long partitionSize = entries.Sum(e => e.CompressedSize) + sizeof(long) * segmentCount * 2;
+                            long uncompressedPartitionSize = entries.Sum(e => e.UncompressedSize);
                             writer.Write(partitionSize);
+                            writer.Write(uncompressedPartitionSize);
                             writer.Write(segmentCount);
                             // No need for compressed size because compression is not supported for partition files currently.
                             foreach( PartitionFileIndexEntry entry in entries )
                             {
-                                writer.Write(entry.Count);
+                                writer.Write(entry.CompressedSize);
+                                writer.Write(entry.UncompressedSize);
                                 stream.Seek(entry.Offset, SeekOrigin.Begin);
-                                stream.CopySize(writer.BaseStream, entry.Count, 65536);
+                                stream.CopySize(writer.BaseStream, entry.CompressedSize, 65536);
                             }
                         }
                     }

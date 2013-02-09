@@ -22,7 +22,8 @@ namespace Ookii.Jumbo.Jet.Channels
                 throw new ArgumentNullException("writer");
             writer.Write(value.Partition);
             writer.Write(value.Offset);
-            writer.Write(value.Count);
+            writer.Write(value.CompressedSize);
+            writer.Write(value.UncompressedSize);
         }
 
         /// <summary>
@@ -34,7 +35,7 @@ namespace Ookii.Jumbo.Jet.Channels
         {
             if( reader == null )
                 throw new ArgumentNullException("reader");
-            return new PartitionFileIndexEntry(reader.ReadInt32(), reader.ReadInt64(), reader.ReadInt64());
+            return new PartitionFileIndexEntry(reader.ReadInt32(), reader.ReadInt64(), reader.ReadInt64(), reader.ReadInt64());
         }
     }
 }

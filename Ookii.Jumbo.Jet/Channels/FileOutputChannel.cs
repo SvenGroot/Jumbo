@@ -248,10 +248,10 @@ namespace Ookii.Jumbo.Jet.Channels
                 int maxDiskInputsPerMergePass = TaskExecution.Context.GetTypedSetting(MergeRecordReaderConstants.MaxFileInputsSetting, TaskExecution.JetClient.Configuration.MergeRecordReader.MaxFileInputs);
                 ITask<T, T> combiner = (ITask<T, T>)CreateCombiner();
                 int minSpillCountForCombineDuringMerge = TaskExecution.Context.GetTypedSetting(SpillSortMinSpillsForCombineDuringMergeSettingKey, TaskExecution.JetClient.Configuration.FileChannel.SpillSortMinSpillsForCombineDuringMerge);
-                result = new SortSpillRecordWriter<T>(Path.Combine(_localJobDirectory, _fileNames[0]), partitioner, (int)outputBufferSize.Value, outputBufferLimitSize, (int)writeBufferSize.Value, TaskExecution.JetClient.Configuration.FileChannel.EnableChecksum, maxDiskInputsPerMergePass, combiner, minSpillCountForCombineDuringMerge);
+                result = new SortSpillRecordWriter<T>(Path.Combine(_localJobDirectory, _fileNames[0]), partitioner, (int)outputBufferSize.Value, outputBufferLimitSize, (int)writeBufferSize.Value, TaskExecution.JetClient.Configuration.FileChannel.EnableChecksum, CompressionType, maxDiskInputsPerMergePass, combiner, minSpillCountForCombineDuringMerge);
             }
             else
-                result = new SingleFileMultiRecordWriter<T>(Path.Combine(_localJobDirectory, _fileNames[0]), partitioner, (int)outputBufferSize.Value, outputBufferLimitSize, (int)writeBufferSize.Value, TaskExecution.JetClient.Configuration.FileChannel.EnableChecksum);
+                result = new SingleFileMultiRecordWriter<T>(Path.Combine(_localJobDirectory, _fileNames[0]), partitioner, (int)outputBufferSize.Value, outputBufferLimitSize, (int)writeBufferSize.Value, TaskExecution.JetClient.Configuration.FileChannel.EnableChecksum, CompressionType);
             _writers = new[] { result };
             return result;
         }

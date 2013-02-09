@@ -11,21 +11,24 @@ namespace Ookii.Jumbo.Jet.Channels
     [ValueWriter(typeof(PartitionFileIndexEntryValueWriter))]
     public struct PartitionFileIndexEntry : IEquatable<PartitionFileIndexEntry>
     {
-        private int _partition;
-        private long _offset;
-        private long _count;
+        private readonly int _partition;
+        private readonly long _offset;
+        private readonly long _compressedSize;
+        private readonly long _uncompressedSize;
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="PartitionFileIndexEntry"/> struct.
+        /// Initializes a new instance of the <see cref="PartitionFileIndexEntry" /> struct.
         /// </summary>
         /// <param name="partition">The partition.</param>
         /// <param name="offset">The offset.</param>
-        /// <param name="count">The count.</param>
-        public PartitionFileIndexEntry(int partition, long offset, long count)
+        /// <param name="compressedSize">Size of the compressed data.</param>
+        /// <param name="uncompressedSize">Size of the uncompressed data.</param>
+        public PartitionFileIndexEntry(int partition, long offset, long compressedSize, long uncompressedSize)
         {
             _partition = partition;
             _offset = offset;
-            _count = count;
+            _compressedSize = compressedSize;
+            _uncompressedSize = uncompressedSize;
         }
 
         /// <summary>
@@ -48,12 +51,25 @@ namespace Ookii.Jumbo.Jet.Channels
         }
 
         /// <summary>
-        /// Gets or sets the count.
+        /// Gets the size of the compressed data.
         /// </summary>
-        /// <value>The count.</value>
-        public long Count
+        /// <value>
+        /// The size of the compressed data.
+        /// </value>
+        public long CompressedSize
         {
-            get { return _count; }
+            get { return _compressedSize; }
+        }
+
+        /// <summary>
+        /// Gets the size of the compressed data.
+        /// </summary>
+        /// <value>
+        /// The size of the compressed data.
+        /// </value>
+        public long UncompressedSize
+        {
+            get { return _uncompressedSize; }
         }
 
         /// <summary>
@@ -78,7 +94,7 @@ namespace Ookii.Jumbo.Jet.Channels
         /// <returns><see langword="true"/> if the current object is equal to the other parameter; otherwise, <see langword="false"/>.</returns>
         public bool Equals(PartitionFileIndexEntry other)
         {
-            return _partition == other._partition && _offset == other.Offset && _count == other._count;
+            return _partition == other._partition && _offset == other.Offset && _uncompressedSize == other._uncompressedSize && _compressedSize == other._compressedSize;
         }
 
         /// <summary>
@@ -89,7 +105,7 @@ namespace Ookii.Jumbo.Jet.Channels
         /// </returns>
         public override int GetHashCode()
         {
-            return _partition.GetHashCode() ^ _offset.GetHashCode() ^ _count.GetHashCode();
+            return _partition.GetHashCode() ^ _offset.GetHashCode() ^ _compressedSize.GetHashCode() ^ _uncompressedSize.GetHashCode();
         }
 
         /// <summary>

@@ -15,24 +15,23 @@ namespace Ookii.Jumbo.Jet.Channels
         private readonly string _fileName;
         private readonly IEnumerator<PartitionFileIndexEntry> _indexEntries;
         private PartitionFileIndexEntry _current;
-        private ChecksumInputStream _currentSegment;
+        private ChecksumInputStream _currentSegmentRaw;
+        private Stream _currentSegment;
         private readonly long _length;
         private long _position;
         private readonly int _bufferSize;
+        private readonly CompressionType _compressionType;
 
-        public PartitionFileStream(string fileName, int bufferSize, IEnumerable<PartitionFileIndexEntry> indexEntries)
+        public PartitionFileStream(string fileName, int bufferSize, IEnumerable<PartitionFileIndexEntry> indexEntries, CompressionType compressionType)
         {
             _fileName = fileName;
             _bufferSize = bufferSize;
             int segmentCount = indexEntries.Count();
-            _length = Math.Max(0, indexEntries.Sum(e => e.Count) - segmentCount);
+            _length = indexEntries.Sum(e => e.UncompressedSize);
             _indexEntries = indexEntries.GetEnumerator();
             _baseStream = new FileStream(_fileName, FileMode.Open, FileAccess.Read, FileShare.Read, _bufferSize);
-            if( NextSegment() )
-            {
-                if( _currentSegment.IsChecksumEnabled )
-                    _length -= (sizeof(uint) * segmentCount);
-            }
+            _compressionType = compressionType;
+            NextSegment();
         }
 
         public override bool CanRead
@@ -123,6 +122,8 @@ namespace Ookii.Jumbo.Jet.Channels
                 _indexEntries.Dispose();
                 if( _currentSegment != null )
                     _currentSegment.Dispose();
+                if( _currentSegmentRaw != null )
+                    _currentSegmentRaw.Dispose();
                 if( _baseStream != null )
                     _baseStream.Dispose();
             }
@@ -141,7 +142,8 @@ namespace Ookii.Jumbo.Jet.Channels
 
             _current = _indexEntries.Current;
             _baseStream.Seek(_current.Offset, SeekOrigin.Begin);
-            _currentSegment = new ChecksumInputStream(_baseStream, false, _current.Count);
+            _currentSegmentRaw = new ChecksumInputStream(_baseStream, false, _current.CompressedSize);
+            _currentSegment = _currentSegmentRaw.CreateDecompressor(_compressionType, _current.UncompressedSize);
             return true;
         }
     }

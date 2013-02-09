@@ -16,9 +16,10 @@ namespace Ookii.Jumbo.Jet.Channels
         private readonly bool _inputContainsRecordSizes;
         private readonly int _bufferSize;
         private readonly bool _allowRecordReuse;
+        private readonly CompressionType _compressionType;
         private readonly IEnumerable<PartitionFileIndexEntry> _indexEntries;
 
-        public PartitionFileRecordInput(Type recordReaderType, string fileName, IEnumerable<PartitionFileIndexEntry> indexEntries, string sourceName, bool inputContainsRecordSizes, bool allowRecordReuse, int bufferSize)
+        public PartitionFileRecordInput(Type recordReaderType, string fileName, IEnumerable<PartitionFileIndexEntry> indexEntries, string sourceName, bool inputContainsRecordSizes, bool allowRecordReuse, int bufferSize, CompressionType compressionType)
         {
             if( recordReaderType == null )
                 throw new ArgumentNullException("recordReaderType");
@@ -34,6 +35,7 @@ namespace Ookii.Jumbo.Jet.Channels
             _inputContainsRecordSizes = inputContainsRecordSizes;
             _bufferSize = bufferSize;
             _allowRecordReuse = allowRecordReuse;
+            _compressionType = compressionType;
         }
 
         public override bool IsMemoryBased
@@ -49,7 +51,7 @@ namespace Ookii.Jumbo.Jet.Channels
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Reliability", "CA2000:Dispose objects before losing scope")]
         protected override IRecordReader CreateReader()
         {
-            PartitionFileStream stream = new PartitionFileStream(_fileName, _bufferSize, _indexEntries);
+            PartitionFileStream stream = new PartitionFileStream(_fileName, _bufferSize, _indexEntries, _compressionType);
             IRecordReader reader = (IRecordReader)Activator.CreateInstance(_recordReaderType, stream, 0, stream.Length, _allowRecordReuse, _inputContainsRecordSizes);
             reader.SourceName = _sourceName;
             return reader;
@@ -61,7 +63,7 @@ namespace Ookii.Jumbo.Jet.Channels
             if( !_inputContainsRecordSizes )
                 throw new NotSupportedException("Cannot create a raw record reader for input without record size markers.");
 
-            PartitionFileStream stream = new PartitionFileStream(_fileName, _bufferSize, _indexEntries);
+            PartitionFileStream stream = new PartitionFileStream(_fileName, _bufferSize, _indexEntries, _compressionType);
             // We always allow record reuse for raw record readers. Don't specify that the input contains record sizes, because those are used by the records themselves here.
             return new BinaryRecordReader<RawRecord>(stream, true) { SourceName = _sourceName };
         }

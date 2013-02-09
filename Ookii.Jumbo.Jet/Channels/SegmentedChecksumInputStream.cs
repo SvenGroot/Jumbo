@@ -17,31 +17,30 @@ namespace Ookii.Jumbo.Jet.Channels
         private readonly string _fileName;
         private readonly bool _deleteFile;
         private readonly byte[] _sizeBuffer = new byte[sizeof(long)];
-        private ChecksumInputStream _currentSegment;
+        private readonly CompressionType _compressionType;
+        private Stream _currentSegment;
         private long _position;
         private bool _disposed;
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Reliability", "CA2000:Dispose objects before losing scope")]
-        public SegmentedChecksumInputStream(string fileName, int bufferSize, bool deleteFile, int segmentCount)
-            : this(new FileStream(fileName, FileMode.Open, FileAccess.Read, FileShare.Read, bufferSize), segmentCount)
+        public SegmentedChecksumInputStream(string fileName, int bufferSize, bool deleteFile, int segmentCount, CompressionType compressionType, long uncompressedSize)
+            : this(new FileStream(fileName, FileMode.Open, FileAccess.Read, FileShare.Read, bufferSize), segmentCount, compressionType, uncompressedSize)
         {
             _fileName = fileName;
             _deleteFile = deleteFile;
         }
 
-        public SegmentedChecksumInputStream(Stream baseStream, int segmentCount)
+        public SegmentedChecksumInputStream(Stream baseStream, int segmentCount, CompressionType compressionType, long uncompressedSize)
         {
             if( baseStream == null )
                 throw new ArgumentNullException("baseStream");
             if( segmentCount < 1 )
                 throw new ArgumentOutOfRangeException("segmentCount");
             _baseStream = baseStream;
-            _length = Math.Max(0, _baseStream.Length - (segmentCount * (sizeof(long) + 1)));
+            _length = uncompressedSize;
+            _compressionType = compressionType;
             NextSegment();
 
-            // We assume that if the checksum is enabled for one segment, it's enabled for all.
-            if( _currentSegment != null && _currentSegment.IsChecksumEnabled )
-                _length -= (sizeof(uint) * segmentCount);
         }
 
         public override bool CanRead
@@ -167,16 +166,22 @@ namespace Ookii.Jumbo.Jet.Channels
 
             if( _position < _length )
             {
-                int bytesRead = _baseStream.Read(_sizeBuffer, 0, _sizeBuffer.Length);
-                if( bytesRead < _sizeBuffer.Length )
-                    throw new IOException("Invalid segmented stream.");
-
-                long segmentLength = BitConverter.ToInt64(_sizeBuffer, 0);
-                _currentSegment = new ChecksumInputStream(_baseStream, false, segmentLength);
+                long segmentLength = ReadInt64();
+                long uncompressedLength = ReadInt64();
+                _currentSegment = new ChecksumInputStream(_baseStream, false, segmentLength).CreateDecompressor(_compressionType, uncompressedLength);
                 return true;
             }
             else
                 return false;
+        }
+
+        private long ReadInt64()
+        {
+            int bytesRead = _baseStream.Read(_sizeBuffer, 0, _sizeBuffer.Length);
+            if( bytesRead < _sizeBuffer.Length )
+                throw new IOException("Invalid segmented stream.");
+
+            return BitConverter.ToInt64(_sizeBuffer, 0);
         }
     }
 }

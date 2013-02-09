@@ -86,7 +86,7 @@ namespace Ookii.Jumbo.Jet.Channels
             if( _segmentCount == 0 )
                 stream = new ChecksumInputStream(_fileName,_bufferSize, _deleteFile).CreateDecompressor(_compressionType, _uncompressedSize);
             else
-                stream = new SegmentedChecksumInputStream(_fileName, _bufferSize, _deleteFile, _segmentCount);
+                stream = new SegmentedChecksumInputStream(_fileName, _bufferSize, _deleteFile, _segmentCount, _compressionType, _uncompressedSize);
             return stream;
         }
 
