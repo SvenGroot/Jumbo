@@ -5,13 +5,11 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Runtime.CompilerServices;
-using System.Runtime.Remoting.Channels;
-using System.Runtime.Remoting.Channels.Tcp;
-using System.Collections;
-using System.Runtime.Remoting;
+using System.Net.Sockets;
+using System.Net;
 using System.Threading;
 
-namespace Tkl.Jumbo
+namespace Tkl.Jumbo.Rpc
 {
     /// <summary>
     /// Provides functionality for registering remoting channels and services.
@@ -20,24 +18,8 @@ namespace Tkl.Jumbo
     {
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(RpcHelper));
 
-        private static bool _clientChannelsRegistered;
-        private static Dictionary<int, List<IChannel>> _serverChannels;
+        private static Dictionary<int, RpcServer> _serverChannels;
         private static volatile bool _abortRetries;
-
-        /// <summary>
-        /// Registers the client channel
-        /// </summary>
-        [MethodImpl(MethodImplOptions.Synchronized)]
-        public static void RegisterClientChannel()
-        {
-            if( !_clientChannelsRegistered )
-            {
-                ClientChannelSinkProvider provider = new ClientChannelSinkProvider();
-                provider.Next = new BinaryClientFormatterSinkProvider();
-                ChannelServices.RegisterChannel(new TcpClientChannel((string)null, provider), false);
-                _clientChannelsRegistered = true;
-            }
-        }
 
         /// <summary>
         /// Registers the server channels.
@@ -49,20 +31,25 @@ namespace Tkl.Jumbo
         public static void RegisterServerChannels(int port, bool listenIPv4AndIPv6)
         {
             if( _serverChannels == null )
-                _serverChannels = new Dictionary<int, List<IChannel>>();
-            
+                _serverChannels = new Dictionary<int, RpcServer>();
+
             if( !_serverChannels.ContainsKey(port) )
             {
-                List<IChannel> serverChannels = new List<IChannel>();
-                if( System.Net.Sockets.Socket.OSSupportsIPv6 )
+                IPAddress[] localAddresses;
+                if( Socket.OSSupportsIPv6 )
                 {
-                    RegisterChannel("[::]", port, "tcp6_" + port, serverChannels);
                     if( listenIPv4AndIPv6 )
-                        RegisterChannel("0.0.0.0", port, "tcp4_" + port, serverChannels);
+                        localAddresses = new[] { IPAddress.IPv6Any, IPAddress.Any };
+                    else
+                        localAddresses = new[] { IPAddress.IPv6Any };
                 }
                 else
-                    RegisterChannel(null, port, "tcp_" + port, serverChannels);
-                _serverChannels.Add(port, serverChannels);
+                    localAddresses = new[] { IPAddress.Any };
+
+                RpcServer server = new RpcServer(localAddresses, port);
+                server.StartListening();
+
+                _serverChannels.Add(port, server);
             }
         }
 
@@ -74,34 +61,44 @@ namespace Tkl.Jumbo
         {
             if( _serverChannels != null )
             {
-                List<IChannel> channels;
-                if( _serverChannels.TryGetValue(port, out channels) )
+                RpcServer server;
+                if( _serverChannels.TryGetValue(port, out server) )
                 {
-                    foreach( var channel in channels )
-                    {
-                        ((TcpServerChannel)channel).StopListening(null);
-                        ChannelServices.UnregisterChannel(channel);
-                    }
+                    server.StopListening();
                     _serverChannels.Remove(port);
                 }
             }
         }
 
         /// <summary>
-        /// Registers an object as a well-known service in singleton mode.
+        /// Registers an object as a well-known service.
         /// </summary>
-        /// <param name="type">The type of the object to register.</param>
-        /// <param name="objectUri">The uri at which the object will be accessible.</param>
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1054:UriParametersShouldNotBeStrings", MessageId = "1#")]
-        public static void RegisterService(Type type, string objectUri)
+        /// <param name="objectName">The object name of the service.</param>
+        /// <param name="server">The object implementing the service.</param>
+        public static void RegisterService(string objectName, object server)
         {
-            if( type == null )
-                throw new ArgumentNullException("type");
-            if( objectUri == null )
-                throw new ArgumentNullException("objectUri");
+            RpcRequestHandler.RegisterObject(objectName, server);
+        }
 
-            if( (from t in RemotingConfiguration.GetRegisteredWellKnownServiceTypes() where t.ObjectUri == objectUri select t).Count() == 0 )
-                RemotingConfiguration.RegisterWellKnownServiceType(type, objectUri, WellKnownObjectMode.Singleton);
+        /// <summary>
+        /// Creates a client for the specified RPC service.
+        /// </summary>
+        /// <typeparam name="T">The type of the RPC interface.</typeparam>
+        /// <param name="hostName">The host name of the RPC server.</param>
+        /// <param name="port">The port of the RPC server.</param>
+        /// <param name="objectName">The object name of the service.</param>
+        /// <returns>An object that implements the specified interface that forwards all calls to the specified service.</returns>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1004:GenericMethodsShouldProvideTypeParameter")]
+        public static T CreateClient<T>(string hostName, int port, string objectName)
+        {
+            if( hostName == null )
+                throw new ArgumentNullException("hostName");
+            if( port < 0 )
+                throw new ArgumentOutOfRangeException("port");
+            if( objectName == null )
+                throw new ArgumentNullException("objectName");
+
+            return (T)RpcProxyBuilder.GetProxy(typeof(T), hostName, port, objectName);
         }
 
         /// <summary>
@@ -110,9 +107,9 @@ namespace Tkl.Jumbo
         /// <param name="remotingAction">The <see cref="Action"/> that performs the remoting call.</param>
         /// <param name="retryInterval">The amount of time to wait, in milliseconds, before retrying after a failure.</param>
         /// <param name="maxRetries">The maximum amount of times to retry, or -1 to retry indefinitely.</param>
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1031:DoNotCatchGeneralExceptionTypes")]
         public static void TryRemotingCall(Action remotingAction, int retryInterval, int maxRetries)
         {
+            // TODO: This should be integrated into the RPC infrastructure.
             if( remotingAction == null )
                 throw new ArgumentNullException("remotingAction");
             if( retryInterval <= 0 )
@@ -126,10 +123,23 @@ namespace Tkl.Jumbo
                     remotingAction();
                     retry = false;
                 }
-                catch( Exception ex )
+                catch( RpcException ex )
                 {
-                    if( (ex is RemotingException || ex is System.Net.Sockets.SocketException) &&
-                        !_abortRetries && (maxRetries == -1 || maxRetries > 0) )
+                    if( !_abortRetries && (maxRetries == -1 || maxRetries > 0) )
+                    {
+                        _log.Error(string.Format(System.Globalization.CultureInfo.InvariantCulture, "An error occurred performing a remoting operation. Retrying in {0}.", retryInterval), ex);
+                        --maxRetries;
+                        Thread.Sleep(retryInterval);
+                    }
+                    else
+                    {
+                        _log.Error("An error occurred performing a remoting operation.", ex);
+                        throw;
+                    }
+                }
+                catch( System.Net.Sockets.SocketException ex )
+                {
+                    if( !_abortRetries && (maxRetries == -1 || maxRetries > 0) )
                     {
                         _log.Error(string.Format(System.Globalization.CultureInfo.InvariantCulture, "An error occurred performing a remoting operation. Retrying in {0}.", retryInterval), ex);
                         if( maxRetries > 0 )
@@ -139,6 +149,7 @@ namespace Tkl.Jumbo
                     else
                     {
                         _log.Error("An error occurred performing a remoting operation.", ex);
+                        throw;
                     }
                 }
             } while( retry );
@@ -156,20 +167,12 @@ namespace Tkl.Jumbo
             _abortRetries = true;
         }
 
-        private static void RegisterChannel(string bindTo, int port, string name, List<IChannel> channels)
+        /// <summary>
+        /// Closes all RPC client connections that are not currently being used.
+        /// </summary>
+        public static void CloseConnections()
         {
-            IDictionary properties = new Hashtable();
-            if( name != null )
-                properties["name"] = name;
-            properties["port"] = port;
-            if( bindTo != null )
-                properties["bindTo"] = bindTo;
-            BinaryServerFormatterSinkProvider formatter = new BinaryServerFormatterSinkProvider();
-            formatter.TypeFilterLevel = System.Runtime.Serialization.Formatters.TypeFilterLevel.Full;
-            formatter.Next = new ServerChannelSinkProvider();
-            TcpServerChannel channel = new TcpServerChannel(properties, formatter);
-            ChannelServices.RegisterChannel(channel, false);
-            channels.Add(channel);
+            RpcClient.CloseConnections();
         }
     }
 }

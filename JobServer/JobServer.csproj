@@ -82,7 +82,6 @@
     <Compile Include="JobServer.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="RpcServer.cs" />
     <Compile Include="Scheduling\IScheduler.cs" />
     <Compile Include="Scheduling\StagedScheduler.cs" />
     <Compile Include="StageInfo.cs" />

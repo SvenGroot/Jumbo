@@ -15,6 +15,7 @@ using Tkl.Jumbo.Dfs.FileSystem;
 using Tkl.Jumbo.IO;
 using Tkl.Jumbo.Jet;
 using Tkl.Jumbo.Jet.Jobs;
+using Tkl.Jumbo.Rpc;
 using Tkl.Jumbo.Topology;
 
 namespace JobServerApplication
@@ -110,7 +111,7 @@ namespace JobServerApplication
 
             Instance = new JobServer(jumboConfiguration, jetConfiguration, dfsConfiguration);
             RpcHelper.RegisterServerChannels(jetConfiguration.JobServer.Port, jetConfiguration.JobServer.ListenIPv4AndIPv6);
-            RpcHelper.RegisterService(typeof(RpcServer), "JobServer");
+            RpcHelper.RegisterService("JobServer", Instance);
 
             _log.Info("Rpc server started.");
         }
@@ -120,6 +121,8 @@ namespace JobServerApplication
         {
             _log.Info("-----Job server is shutting down-----");
             RpcHelper.UnregisterServerChannels(Instance.Configuration.JobServer.Port);
+            RpcHelper.AbortRetries();
+            RpcHelper.CloseConnections();
             Instance.ShutdownInternal();
             Instance = null;
         }

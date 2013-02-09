@@ -13,6 +13,7 @@ using Tkl.Jumbo.IO;
 using Tkl.Jumbo.Dfs.FileSystem;
 using System.Diagnostics;
 using System.Threading;
+using Tkl.Jumbo.Rpc;
 
 namespace Tkl.Jumbo.Dfs.FileSystem
 {
@@ -21,7 +22,7 @@ namespace Tkl.Jumbo.Dfs.FileSystem
     /// </summary>
     public class DfsClient : FileSystemClient
     {
-        private const string _nameServerUrlFormat = "tcp://{0}:{1}/NameServer";
+        private const string _nameServerObjectName = "NameServer";
 
         private readonly INameServerClientProtocol _nameServer;
         private static readonly DfsPathUtility _path = new DfsPathUtility(); // Thread-safe, so static is okay
@@ -29,7 +30,6 @@ namespace Tkl.Jumbo.Dfs.FileSystem
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1810:InitializeReferenceTypeStaticFieldsInline")]
         static DfsClient()
         {
-            RpcHelper.RegisterClientChannel();
         }
 
         internal DfsClient(DfsConfiguration config)
@@ -278,13 +278,12 @@ namespace Tkl.Jumbo.Dfs.FileSystem
                 Thread.Sleep(millisecondsInterval);
             }
 
-            return NameServer.SafeMode;
+            return !NameServer.SafeMode;
         }
 
         private static T CreateNameServerClientInternal<T>(string hostName, int port)
         {
-            string url = string.Format(System.Globalization.CultureInfo.InvariantCulture, _nameServerUrlFormat, hostName, port);
-            return (T)Activator.GetObject(typeof(T), url);
+            return RpcHelper.CreateClient<T>(hostName, port, _nameServerObjectName);
         }
     }
 }

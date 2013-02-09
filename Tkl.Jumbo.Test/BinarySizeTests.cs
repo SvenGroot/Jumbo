@@ -56,7 +56,7 @@ namespace Tkl.Jumbo.Test
             Assert.AreEqual("117737568867.05940055847167969M", target.ToString("M", CultureInfo.InvariantCulture)); // Rounded due to formatting
             Assert.AreEqual("114978094.59673769585788249969GB", target.ToString("GB", CultureInfo.InvariantCulture)); // Rounded due to formatting
             Assert.AreEqual("114978094.59673769585788249969GiB", target.ToString("GiB", CultureInfo.InvariantCulture)); // Rounded due to formatting
-            Assert.AreEqual("114978094.59673769585788249969G", target.ToString("G", CultureInfo.InvariantCulture)); // Rounded due to formatting
+            Assert.AreEqual("114978094.59673769585788249969G", target.ToString("GG", CultureInfo.InvariantCulture)); // Rounded due to formatting
             Assert.AreEqual("112283.29550462665611121337861TB", target.ToString("TB", CultureInfo.InvariantCulture)); // Rounded due to fommatting
             Assert.AreEqual("112283.29550462665611121337861TiB", target.ToString("TiB", CultureInfo.InvariantCulture)); // Rounded due to fommatting
             Assert.AreEqual("112283.29550462665611121337861T", target.ToString("T", CultureInfo.InvariantCulture)); // Rounded due to fommatting

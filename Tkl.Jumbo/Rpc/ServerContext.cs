@@ -4,8 +4,9 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Net;
 
-namespace Tkl.Jumbo
+namespace Tkl.Jumbo.Rpc
 {
     /// <summary>
     /// Provides context for a server RPC call.
@@ -14,7 +15,6 @@ namespace Tkl.Jumbo
     {
         [ThreadStatic]
         private static ServerContext _current;
-
         private static readonly string _localHostName = System.Net.Dns.GetHostName();
 
         /// <summary>
@@ -32,10 +32,14 @@ namespace Tkl.Jumbo
         public string ClientHostName { get; internal set; }
 
         /// <summary>
-        /// Gets the host name of the local machine.
+        /// Gets the IP address of the client that called the server.
         /// </summary>
-        /// <value>The host name of the local machine.</value>
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Naming", "CA1702:CompoundWordsShouldBeCasedCorrectly", MessageId = "LocalHost", Justification = "It's not localhost name, it's local host-name.")]
+        public IPAddress ClientHostAddress { get; set; }
+
+        /// <summary>
+        /// Gets the name of the local host.
+        /// </summary>
+        /// <value>The name of the local host.</value>
         public static string LocalHostName
         {
             get { return _localHostName; }

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Configuration;
+using Tkl.Jumbo.Rpc;
 using System.IO;
 
 namespace Tkl.Jumbo

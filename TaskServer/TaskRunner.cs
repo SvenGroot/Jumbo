@@ -32,6 +32,9 @@ namespace TaskServerApplication
             _taskServer = taskServer;
             _createProcessDelay = _taskServer.Configuration.TaskServer.ProcessCreationDelay;
             _fileSystemClient = FileSystemClient.Create(taskServer.DfsConfiguration);
+
+            SaveTaskHostConfig();
+
             _taskStarterThread = new Thread(TaskRunnerThread);
             _taskStarterThread.IsBackground = true;
             _taskStarterThread.Name = "TaskStarter";
@@ -270,21 +273,6 @@ namespace TaskServerApplication
                     IO.Directory.CreateDirectory(jobDirectory);
                     _fileSystemClient.DownloadDirectory(task.Job.Path, jobDirectory);
 
-                    if( ConfigurationManager.GetSection("tkl.jumbo.jet") != _taskServer.Configuration )
-                    {
-                        string configPath = IO.Path.Combine(jobDirectory, "config");
-                        IO.Directory.CreateDirectory(configPath);
-                        // Save if using custom configuration; this is used primarily for testing
-                        Configuration configToSave = ConfigurationManager.OpenExeConfiguration(ConfigurationUserLevel.None);
-                        if( configToSave.GetSection("tkl.jumbo.jet") != null )
-                            configToSave.Sections.Remove("tkl.jumbo.jet");
-                        configToSave.Sections.Add("tkl.jumbo.jet", _taskServer.Configuration);
-                        if( configToSave.GetSection("tkl.jumbo.dfs") != null )
-                            configToSave.Sections.Remove("tkl.jumbo.dfs");
-                        configToSave.Sections.Add("tkl.jumbo.dfs", _taskServer.DfsConfiguration);
-                        configToSave.SaveAs(IO.Path.Combine(configPath, "taskhost.config"), ConfigurationSaveMode.Minimal, true);
-                    }
-
                     config = JobConfiguration.LoadXml(IO.Path.Combine(jobDirectory, Job.JobConfigFileName));
                     _jobConfigurations.Add(task.Job.JobId, config);
                 }
@@ -305,6 +293,24 @@ namespace TaskServerApplication
                 _runningTasks.Add(runningTask.FullTaskAttemptId, runningTask);
             }
             runningTask.Run(_createProcessDelay);
+        }
+
+        private void SaveTaskHostConfig()
+        {
+            // Save if using custom configuration; this is used primarily for testing
+            if( ConfigurationManager.GetSection("tkl.jumbo.jet") != _taskServer.Configuration )
+            {
+                string configPath = IO.Path.Combine(_taskServer.Configuration.TaskServer.TaskDirectory, "config");
+                IO.Directory.CreateDirectory(configPath);
+                Configuration configToSave = ConfigurationManager.OpenExeConfiguration(ConfigurationUserLevel.None);
+                if( configToSave.GetSection("tkl.jumbo.jet") != null )
+                    configToSave.Sections.Remove("tkl.jumbo.jet");
+                configToSave.Sections.Add("tkl.jumbo.jet", _taskServer.Configuration);
+                if( configToSave.GetSection("tkl.jumbo.dfs") != null )
+                    configToSave.Sections.Remove("tkl.jumbo.dfs");
+                configToSave.Sections.Add("tkl.jumbo.dfs", _taskServer.DfsConfiguration);
+                configToSave.SaveAs(IO.Path.Combine(configPath, "taskhost.config"), ConfigurationSaveMode.Minimal, true);
+            }
         }
 
         private void RunningTask_ProcessExited(object sender, EventArgs e)

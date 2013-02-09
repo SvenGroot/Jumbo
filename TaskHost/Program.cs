@@ -13,6 +13,7 @@ using Tkl.Jumbo.IO;
 using System.Threading;
 using Tkl.Jumbo;
 using System.Diagnostics;
+using Tkl.Jumbo.Rpc;
 
 namespace TaskHost
 {
@@ -38,6 +39,8 @@ namespace TaskHost
             TaskAttemptId taskAttemptId = new TaskAttemptId(new TaskId(taskId), attempt);
 
             TaskExecutionUtility.RunTask(jobId, jobDirectory, dfsJobDirectory, taskAttemptId);
+
+            RpcHelper.CloseConnections(); // Cleanly close connections helps save server resources
             
             return 0;
         }

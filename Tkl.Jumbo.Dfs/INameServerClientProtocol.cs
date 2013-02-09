@@ -152,7 +152,7 @@ namespace Tkl.Jumbo.Dfs
         /// <param name="dataServer">The data server whose blocks to return.</param>
         /// <param name="blocks">The list of blocks to filter by.</param>
         /// <returns>The block IDs of all the blocks on that server.</returns>
-        Guid[] GetDataServerBlocks(ServerAddress dataServer, Guid[] blocks);
+        Guid[] GetDataServerBlocksFromList(ServerAddress dataServer, Guid[] blocks);
 
         /// <summary>
         /// Gets the contents of the diagnostic log file.

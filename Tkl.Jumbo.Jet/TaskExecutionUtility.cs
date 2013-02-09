@@ -332,7 +332,7 @@ namespace Tkl.Jumbo.Jet
                 _log.LogEnvironmentInformation();
 
                 _log.Info("Loading configuration.");
-                string configDirectory = Path.Combine(jobDirectory, "config");
+                string configDirectory = Path.Combine(Path.GetDirectoryName(jobDirectory), "config");
                 string appConfigFile = Path.Combine(configDirectory, "taskhost.config");
 
                 DfsConfiguration dfsConfig;

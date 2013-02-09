@@ -12,6 +12,7 @@ using Tkl.Jumbo;
 using Ookii.CommandLine;
 using System.Reflection;
 using DfsShell.Commands;
+using Tkl.Jumbo.Rpc;
 using Tkl.Jumbo.Dfs.FileSystem;
 using System.IO;
 
@@ -64,6 +65,8 @@ namespace DfsShell
             {
                 WriteError(null, ex.ToString());
             }
+
+            RpcHelper.CloseConnections();
 
             return 1;
 

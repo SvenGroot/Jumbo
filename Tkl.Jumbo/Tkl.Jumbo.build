@@ -25,6 +25,7 @@
         <include name="*.cs"/>
         <include name="IO/*.cs"/>
         <include name="Topology/*.cs" />
+	      <include name="Rpc/*.cs"/>
         <include name="../AssemblyInfoCommon.cs"/>
       </sources>
       <resources dynamicprefix="true" prefix="Tkl.Jumbo">

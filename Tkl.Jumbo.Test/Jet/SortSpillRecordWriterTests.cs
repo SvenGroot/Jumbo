@@ -111,16 +111,21 @@ namespace Tkl.Jumbo.Test.Jet
                 for( int partition = 0; partition < partitionCount; ++partition )
                 {
                     IEnumerable<PartitionFileIndexEntry> entries = index.GetEntriesForPartition(partition + 1);
-                    Assert.AreEqual(1, entries.Count());
-                    using( PartitionFileStream stream = new PartitionFileStream(outputPath, 4096, entries) )
-                    using( BinaryRecordReader<int> reader = new BinaryRecordReader<int>(stream, 0, stream.Length, true, true) )
+                    if( entries == null )
+                        CollectionAssert.IsEmpty(expectedPartitions[partition]);
+                    else
                     {
-                        List<int> actualPartition = reader.EnumerateRecords().ToList();
-                        expectedPartitions[partition].Sort();
-                        if( useCombiner )
-                            CollectionAssert.AreEqual(expectedPartitions[partition].Distinct().ToList(), actualPartition);
-                        else
-                            CollectionAssert.AreEqual(expectedPartitions[partition], actualPartition);
+                        Assert.AreEqual(1, entries.Count());
+                        using( PartitionFileStream stream = new PartitionFileStream(outputPath, 4096, entries) )
+                        using( BinaryRecordReader<int> reader = new BinaryRecordReader<int>(stream, 0, stream.Length, true, true) )
+                        {
+                            List<int> actualPartition = reader.EnumerateRecords().ToList();
+                            expectedPartitions[partition].Sort();
+                            if( useCombiner )
+                                CollectionAssert.AreEqual(expectedPartitions[partition].Distinct().ToList(), actualPartition);
+                            else
+                                CollectionAssert.AreEqual(expectedPartitions[partition], actualPartition);
+                        }
                     }
                 }
             }

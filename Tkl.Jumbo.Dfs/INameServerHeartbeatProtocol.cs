@@ -21,7 +21,7 @@ namespace Tkl.Jumbo.Dfs
         /// <remarks>
         /// The <paramref name="address"/> parameter is necessary because data servers are identified by their
         /// host name and the port number they use to listen for clients, not their host name alone, so the
-        /// name server cannot rely on <see cref="ServerContext.ClientHostName"/>.
+        /// name server cannot rely on <see cref="Tkl.Jumbo.Rpc.ServerContext.ClientHostName"/>.
         /// </remarks>
         HeartbeatResponse[] Heartbeat(ServerAddress address, HeartbeatData[] data);
     }

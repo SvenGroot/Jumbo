@@ -89,6 +89,7 @@ namespace Tkl.Jumbo.Test.Jet
             JobServer.Shutdown();
             if( _dfsCluster != null )
                 _dfsCluster.Shutdown();
+            Thread.Sleep(5000);
             Utilities.TraceLineAndFlush("Jet cluster shutdown complete.");
         }
 
