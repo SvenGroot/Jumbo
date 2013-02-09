@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<project name="Ookii.Jumbo.Test" default="build" xmlns="http://nant.sf.net/release/0.86-beta1/nant.xsd">
+  <property name="debug" value="false" overwrite="false"/>
+  <property name="rebuild" value="false" overwrite="false"/>
+  <property name="nunitpath" value="C:\Program Files (x86)\NUnit 2.4.8\" overwrite="false"/>
+  <property if="${debug}" name="define" value="DEBUG;TRACE"/>
+  <property if="${not debug}" name="define" value="TRACE"/>
+  <target name="clean">
+    <delete dir="nantbin" failonerror="false"/>
+  </target>
+  <target name="build">
+    <mkdir dir="nantbin"/>
+    <csc output="nantbin/Ookii.Jumbo.Test.dll" target="library" debug="${debug}" optimize="${not debug}"
+         define="${define}" keyfile="jumbo.snk" rebuild="${rebuild}">
+      <references>
+        <include name="System.dll"/>
+        <include name="System.Configuration.dll"/>
+        <include name="System.Core.dll"/>
+        <include name="../lib/log4net.dll"/>
+        <include name="${path::combine(nunitpath, 'bin/net-2.0/nunit.framework.dll')}"/>
+        <include name="../Ookii.Jumbo/nantbin/Ookii.Jumbo.dll"/>
+        <include name="../Ookii.Jumbo.Dfs/nantbin/Ookii.Jumbo.Dfs.dll"/>
+        <include name="../Ookii.Jumbo.Jet/nantbin/Ookii.Jumbo.Jet.dll"/>
+        <include name="../NameServer/nantbin/NameServer.exe"/>
+        <include name="../DataServer/nantbin/DataServer.exe"/>
+        <include name="../JobServer/nantbin/JobServer.exe"/>
+        <include name="../TaskServer/nantbin/TaskServer.exe"/>
+        <include name="../Ookii.Jumbo.Test.Tasks/nantbin/Ookii.Jumbo.Test.Tasks.dll"/>
+      </references>
+      <sources>
+        <include name="Properties/AssemblyInfo.cs"/>
+        <include name="*.cs"/>
+        <include name="Jet/*.cs"/>
+        <include name="Dfs/*.cs"/>
+        <include name="../AssemblyInfoCommon.cs"/>
+      </sources>
+    </csc>
+    <copy todir="nantbin">
+      <fileset>
+        <include name="../lib/log4net.dll"/>
+        <include name="${path::combine(nunitpath, 'bin/net-2.0/nunit.framework.dll')}"/>
+        <include name="../Ookii.Jumbo/nantbin/*.*"/>
+        <include name="../Ookii.Jumbo.Dfs/nantbin/*.*"/>
+        <include name="../Ookii.Jumbo.Jet/nantbin/*.*"/>
+        <include name="../NameServer/nantbin/*.*"/>
+        <include name="../DataServer/nantbin/*.*"/>
+        <include name="../JobServer/nantbin/*.*"/>
+        <include name="../TaskServer/nantbin/*.*"/>
+        <include name="../Ookii.Jumbo.Jet.Tasks/nantbin/*.*"/>
+        <include name="../TaskHost/nantbin/*.*"/>
+      </fileset>
+    </copy>
+  </target>
+</project>

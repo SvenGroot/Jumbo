@@ -6,11 +6,11 @@ using System.Collections.ObjectModel;
 using System.Globalization;
 using System.Linq;
 using System.Threading;
-using Tkl.Jumbo;
-using Tkl.Jumbo.Dfs.FileSystem;
-using Tkl.Jumbo.Jet;
-using Tkl.Jumbo.Jet.IO;
-using Tkl.Jumbo.Jet.Jobs;
+using Ookii.Jumbo;
+using Ookii.Jumbo.Dfs.FileSystem;
+using Ookii.Jumbo.Jet;
+using Ookii.Jumbo.Jet.IO;
+using Ookii.Jumbo.Jet.Jobs;
 
 namespace JobServerApplication
 {
@@ -64,7 +64,7 @@ namespace JobServerApplication
                 if( stage.TaskCount < 1 )
                     throw new ArgumentException(string.Format(CultureInfo.CurrentCulture, "Stage {0} has no tasks.", stage.StageId), "config");
                 // Don't allow failures for a job with a TCP channel.
-                if( stage.Leaf.OutputChannel != null && stage.Leaf.OutputChannel.ChannelType == Tkl.Jumbo.Jet.Channels.ChannelType.Tcp )
+                if( stage.Leaf.OutputChannel != null && stage.Leaf.OutputChannel.ChannelType == Ookii.Jumbo.Jet.Channels.ChannelType.Tcp )
                     _maxTaskFailures = 1;
                 bool nonInputStage = !stage.HasDataInput;
                 // Don't do the work trying to find the input stages if the stage has dfs inputs.

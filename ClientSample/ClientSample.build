@@ -17,10 +17,10 @@
         <include name="System.Core.dll"/>
         <include name="System.Runtime.Remoting.dll"/>
         <include name="../lib/log4net.dll"/>
-        <include name="../Tkl.Jumbo/nantbin/Tkl.Jumbo.dll"/>
-        <include name="../Tkl.Jumbo.Dfs/nantbin/Tkl.Jumbo.Dfs.dll"/>
-        <include name="../Tkl.Jumbo.Jet/nantbin/Tkl.Jumbo.Jet.dll"/>
-        <include name="../Tkl.Jumbo.Jet.Samples/nantbin/Tkl.Jumbo.Jet.Samples.dll" />
+        <include name="../Ookii.Jumbo/nantbin/Ookii.Jumbo.dll"/>
+        <include name="../Ookii.Jumbo.Dfs/nantbin/Ookii.Jumbo.Dfs.dll"/>
+        <include name="../Ookii.Jumbo.Jet/nantbin/Ookii.Jumbo.Jet.dll"/>
+        <include name="../Ookii.Jumbo.Jet.Samples/nantbin/Ookii.Jumbo.Jet.Samples.dll" />
       </references>
       <sources>
         <include name="Properties/AssemblyInfo.cs"/>
@@ -33,10 +33,10 @@
     <copy todir="nantbin">
       <fileset>
         <include name="../lib/log4net.dll"/>
-        <include name="../Tkl.Jumbo/nantbin/*.*"/>
-        <include name="../Tkl.Jumbo.Dfs/nantbin/*.*"/>
-        <include name="../Tkl.Jumbo.Jet/nantbin/*.*"/>
-        <include name="../Tkl.Jumbo.Jet.Samples/nantbin/*.*"/>
+        <include name="../Ookii.Jumbo/nantbin/*.*"/>
+        <include name="../Ookii.Jumbo.Dfs/nantbin/*.*"/>
+        <include name="../Ookii.Jumbo.Jet/nantbin/*.*"/>
+        <include name="../Ookii.Jumbo.Jet.Samples/nantbin/*.*"/>
         <include name="../dfs.config"/>
         <include name="../jet.config"/>
       </fileset>

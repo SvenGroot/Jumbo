@@ -3,9 +3,9 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Tkl.Jumbo;
-using Tkl.Jumbo.Jet.Channels;
-using Tkl.Jumbo.Jet.Jobs;
+using Ookii.Jumbo;
+using Ookii.Jumbo.Jet.Channels;
+using Ookii.Jumbo.Jet.Jobs;
 
 namespace JobServerApplication
 {

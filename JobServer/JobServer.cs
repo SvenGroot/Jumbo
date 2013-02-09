@@ -9,14 +9,14 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Xml.Linq;
-using Tkl.Jumbo;
-using Tkl.Jumbo.Dfs;
-using Tkl.Jumbo.Dfs.FileSystem;
-using Tkl.Jumbo.IO;
-using Tkl.Jumbo.Jet;
-using Tkl.Jumbo.Jet.Jobs;
-using Tkl.Jumbo.Rpc;
-using Tkl.Jumbo.Topology;
+using Ookii.Jumbo;
+using Ookii.Jumbo.Dfs;
+using Ookii.Jumbo.Dfs.FileSystem;
+using Ookii.Jumbo.IO;
+using Ookii.Jumbo.Jet;
+using Ookii.Jumbo.Jet.Jobs;
+using Ookii.Jumbo.Rpc;
+using Ookii.Jumbo.Topology;
 
 namespace JobServerApplication
 {
@@ -423,7 +423,7 @@ namespace JobServerApplication
 
         #region IJobServerHeartbeatProtocol Members
 
-        public JetHeartbeatResponse[] Heartbeat(Tkl.Jumbo.ServerAddress address, JetHeartbeatData[] data)
+        public JetHeartbeatResponse[] Heartbeat(Ookii.Jumbo.ServerAddress address, JetHeartbeatData[] data)
         {
             if( address == null )
                 throw new ArgumentNullException("address");

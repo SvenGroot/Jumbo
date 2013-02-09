@@ -6,12 +6,12 @@ using System.Configuration;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading;
-using Tkl.Jumbo;
-using Tkl.Jumbo.Dfs;
-using Tkl.Jumbo.IO;
-using Tkl.Jumbo.Rpc;
-using Tkl.Jumbo.Topology;
-using Tkl.Jumbo.Dfs.FileSystem;
+using Ookii.Jumbo;
+using Ookii.Jumbo.Dfs;
+using Ookii.Jumbo.IO;
+using Ookii.Jumbo.Rpc;
+using Ookii.Jumbo.Topology;
+using Ookii.Jumbo.Dfs.FileSystem;
 
 namespace NameServerApplication
 {

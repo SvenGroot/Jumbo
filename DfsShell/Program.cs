@@ -4,16 +4,16 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using Tkl.Jumbo.Dfs;
+using Ookii.Jumbo.Dfs;
 using System.Net.Sockets;
 using IO = System.IO;
 using System.Threading;
-using Tkl.Jumbo;
+using Ookii.Jumbo;
 using Ookii.CommandLine;
 using System.Reflection;
 using DfsShell.Commands;
-using Tkl.Jumbo.Rpc;
-using Tkl.Jumbo.Dfs.FileSystem;
+using Ookii.Jumbo.Rpc;
+using Ookii.Jumbo.Dfs.FileSystem;
 using System.IO;
 
 namespace DfsShell

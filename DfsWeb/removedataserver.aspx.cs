@@ -6,8 +6,8 @@ using System.Linq;
 using System.Web;
 using System.Web.UI;
 using System.Web.UI.WebControls;
-using Tkl.Jumbo.Dfs;
-using Tkl.Jumbo.Dfs.FileSystem;
+using Ookii.Jumbo.Dfs;
+using Ookii.Jumbo.Dfs.FileSystem;
 
 public partial class removedataserver : System.Web.UI.Page
 {
@@ -21,7 +21,7 @@ public partial class removedataserver : System.Web.UI.Page
         int port = Convert.ToInt32(Request.QueryString["port"]);
 
         DfsClient client = (DfsClient)FileSystemClient.Create();
-        client.NameServer.RemoveDataServer(new Tkl.Jumbo.ServerAddress(dataServer, port));
+        client.NameServer.RemoveDataServer(new Ookii.Jumbo.ServerAddress(dataServer, port));
         Response.Redirect("Default.aspx");
     }
 }

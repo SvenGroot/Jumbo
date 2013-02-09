@@ -6,10 +6,10 @@ using System.Linq;
 using System.Web;
 using System.Web.UI;
 using System.Web.UI.WebControls;
-using Tkl.Jumbo.Dfs;
+using Ookii.Jumbo.Dfs;
 using System.Web.UI.HtmlControls;
-using Tkl.Jumbo;
-using Tkl.Jumbo.Dfs.FileSystem;
+using Ookii.Jumbo;
+using Ookii.Jumbo.Dfs.FileSystem;
 
 public partial class blocklist : System.Web.UI.Page
 {
@@ -35,7 +35,7 @@ public partial class blocklist : System.Web.UI.Page
         else
         {
             int port = Convert.ToInt32(Request.QueryString["port"]);
-            ServerAddress address = new Tkl.Jumbo.ServerAddress(dataServer, port);
+            ServerAddress address = new Ookii.Jumbo.ServerAddress(dataServer, port);
             _pageTitle.InnerText = string.Format("Block list for {0}", address);
             Title = string.Format("Block list for {0} - Jumbo DFS", address);
             blocks = client.NameServer.GetDataServerBlocks(address);

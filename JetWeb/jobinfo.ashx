@@ -7,10 +7,10 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using ICSharpCode.SharpZipLib.Zip;
-using Tkl.Jumbo;
-using Tkl.Jumbo.Jet;
-using Tkl.Jumbo.Dfs;
-using Tkl.Jumbo.Dfs.FileSystem;
+using Ookii.Jumbo;
+using Ookii.Jumbo.Jet;
+using Ookii.Jumbo.Dfs;
+using Ookii.Jumbo.Dfs.FileSystem;
 
 public class jobinfo : IHttpHandler
 {

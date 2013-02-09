@@ -5,9 +5,9 @@ using System.Collections.Generic;
 using System.Configuration;
 using System.Linq;
 using System.Threading;
-using Tkl.Jumbo.Dfs.FileSystem;
-using Tkl.Jumbo.Jet;
-using Tkl.Jumbo.Jet.Jobs;
+using Ookii.Jumbo.Dfs.FileSystem;
+using Ookii.Jumbo.Jet;
+using Ookii.Jumbo.Jet.Jobs;
 using IO = System.IO;
 
 namespace TaskServerApplication
@@ -298,17 +298,17 @@ namespace TaskServerApplication
         private void SaveTaskHostConfig()
         {
             // Save if using custom configuration; this is used primarily for testing
-            if( ConfigurationManager.GetSection("tkl.jumbo.jet") != _taskServer.Configuration )
+            if( ConfigurationManager.GetSection("ookii.jumbo.jet") != _taskServer.Configuration )
             {
                 string configPath = IO.Path.Combine(_taskServer.Configuration.TaskServer.TaskDirectory, "config");
                 IO.Directory.CreateDirectory(configPath);
                 Configuration configToSave = ConfigurationManager.OpenExeConfiguration(ConfigurationUserLevel.None);
-                if( configToSave.GetSection("tkl.jumbo.jet") != null )
-                    configToSave.Sections.Remove("tkl.jumbo.jet");
-                configToSave.Sections.Add("tkl.jumbo.jet", _taskServer.Configuration);
-                if( configToSave.GetSection("tkl.jumbo.dfs") != null )
-                    configToSave.Sections.Remove("tkl.jumbo.dfs");
-                configToSave.Sections.Add("tkl.jumbo.dfs", _taskServer.DfsConfiguration);
+                if( configToSave.GetSection("ookii.jumbo.jet") != null )
+                    configToSave.Sections.Remove("ookii.jumbo.jet");
+                configToSave.Sections.Add("ookii.jumbo.jet", _taskServer.Configuration);
+                if( configToSave.GetSection("ookii.jumbo.dfs") != null )
+                    configToSave.Sections.Remove("ookii.jumbo.dfs");
+                configToSave.Sections.Add("ookii.jumbo.dfs", _taskServer.DfsConfiguration);
                 configToSave.SaveAs(IO.Path.Combine(configPath, "taskhost.config"), ConfigurationSaveMode.Minimal, true);
             }
         }

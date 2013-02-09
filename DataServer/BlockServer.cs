@@ -7,11 +7,11 @@ using System.Text;
 using System.Threading;
 using System.Net.Sockets;
 using System.Net;
-using Tkl.Jumbo.Dfs;
+using Ookii.Jumbo.Dfs;
 using System.Runtime.Serialization.Formatters.Binary;
 using System.IO;
 using System.Diagnostics;
-using Tkl.Jumbo;
+using Ookii.Jumbo;
 
 namespace DataServerApplication
 {
@@ -205,7 +205,7 @@ namespace DataServerApplication
             {
                 using( FileStream blockFile = _dataServer.OpenBlock(header.BlockId) )
                 using( BinaryReader blockReader = new BinaryReader(blockFile) )
-                using( Tkl.Jumbo.IO.WriteBufferedStream bufferedStream = new Tkl.Jumbo.IO.WriteBufferedStream(clientStream) )
+                using( Ookii.Jumbo.IO.WriteBufferedStream bufferedStream = new Ookii.Jumbo.IO.WriteBufferedStream(clientStream) )
                 using( BinaryWriter clientWriter = new BinaryWriter(bufferedStream) )
                 {
                     // Check if the requested offset is in range. To do this, we take the computed offset of the 

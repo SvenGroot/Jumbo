@@ -4,20 +4,20 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using Tkl.Jumbo.Dfs;
+using Ookii.Jumbo.Dfs;
 using System.Runtime.Remoting;
 using System.Net.Sockets;
 using System.Net;
 using System.Runtime.Serialization.Formatters.Binary;
 using System.IO;
 using System.Diagnostics;
-using Tkl.Jumbo.Jet;
+using Ookii.Jumbo.Jet;
 using System.Xml.Serialization;
 using System.Threading;
-using Tkl.Jumbo.IO;
-using Tkl.Jumbo.Jet.Channels;
-using Tkl.Jumbo.Jet.Samples.IO;
-using Tkl.Jumbo.Dfs.FileSystem;
+using Ookii.Jumbo.IO;
+using Ookii.Jumbo.Jet.Channels;
+using Ookii.Jumbo.Jet.Samples.IO;
+using Ookii.Jumbo.Dfs.FileSystem;
 
 namespace ClientSample
 {

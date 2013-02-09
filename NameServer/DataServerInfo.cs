@@ -4,9 +4,9 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using Tkl.Jumbo.Dfs;
-using Tkl.Jumbo;
-using Tkl.Jumbo.Topology;
+using Ookii.Jumbo.Dfs;
+using Ookii.Jumbo;
+using Ookii.Jumbo.Topology;
 
 namespace NameServerApplication
 {

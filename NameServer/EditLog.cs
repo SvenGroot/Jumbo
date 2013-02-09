@@ -5,8 +5,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.IO;
-using Tkl.Jumbo.IO;
-using Tkl.Jumbo.Dfs;
+using Ookii.Jumbo.IO;
+using Ookii.Jumbo.Dfs;
 
 namespace NameServerApplication
 {

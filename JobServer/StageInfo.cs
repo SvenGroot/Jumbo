@@ -3,9 +3,9 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
-using Tkl.Jumbo;
-using Tkl.Jumbo.Jet;
-using Tkl.Jumbo.Jet.Jobs;
+using Ookii.Jumbo;
+using Ookii.Jumbo.Jet;
+using Ookii.Jumbo.Jet.Jobs;
 
 namespace JobServerApplication
 {
@@ -50,7 +50,7 @@ namespace JobServerApplication
                 {
                     StageInfo stage = job.GetStage(inputStage.Root.StageId);
                     // Ignore scheduling threshold for TCP channels.
-                    if( !stage.IsReadyForScheduling || (_schedulingThreshold > 0 && inputStage.OutputChannel.ChannelType != Tkl.Jumbo.Jet.Channels.ChannelType.Tcp) )
+                    if( !stage.IsReadyForScheduling || (_schedulingThreshold > 0 && inputStage.OutputChannel.ChannelType != Ookii.Jumbo.Jet.Channels.ChannelType.Tcp) )
                     {
                         ++_remainingSchedulingDependencies;
                         if( stage._softDependentStages == null )

@@ -6,10 +6,10 @@ using System.Linq;
 using System.Text;
 using Ookii.CommandLine;
 using System.ComponentModel;
-using Tkl.Jumbo.Dfs;
+using Ookii.Jumbo.Dfs;
 using System.IO;
-using Tkl.Jumbo;
-using Tkl.Jumbo.IO;
+using Ookii.Jumbo;
+using Ookii.Jumbo.IO;
 
 namespace DfsShell.Commands
 {

@@ -4,14 +4,14 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using Tkl.Jumbo.Jet;
-using Tkl.Jumbo;
+using Ookii.Jumbo.Jet;
+using Ookii.Jumbo;
 using System.Net;
 using System.Threading;
-using Tkl.Jumbo.Dfs;
+using Ookii.Jumbo.Dfs;
 using System.Diagnostics;
 using System.IO;
-using Tkl.Jumbo.Rpc;
+using Ookii.Jumbo.Rpc;
 
 namespace TaskServerApplication
 {

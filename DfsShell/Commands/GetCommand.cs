@@ -7,9 +7,9 @@ using System.Text;
 using Ookii.CommandLine;
 using System.ComponentModel;
 using System.Runtime.InteropServices;
-using Tkl.Jumbo.Dfs;
+using Ookii.Jumbo.Dfs;
 using System.IO;
-using Tkl.Jumbo.Dfs.FileSystem;
+using Ookii.Jumbo.Dfs.FileSystem;
 
 namespace DfsShell.Commands
 {

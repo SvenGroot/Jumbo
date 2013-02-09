@@ -6,8 +6,8 @@ using System.Linq;
 using System.Web;
 using System.Web.UI;
 using System.Web.UI.WebControls;
-using Tkl.Jumbo.Dfs;
-using Tkl.Jumbo.Dfs.FileSystem;
+using Ookii.Jumbo.Dfs;
+using Ookii.Jumbo.Dfs.FileSystem;
 
 public partial class setsafemode : System.Web.UI.Page
 {

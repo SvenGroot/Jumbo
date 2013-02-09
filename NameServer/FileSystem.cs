@@ -4,11 +4,11 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using Tkl.Jumbo.Dfs;
+using Ookii.Jumbo.Dfs;
 using System.Runtime.Remoting.Messaging;
 using System.IO;
-using Tkl.Jumbo.IO;
-using Tkl.Jumbo.Dfs.FileSystem;
+using Ookii.Jumbo.IO;
+using Ookii.Jumbo.Dfs.FileSystem;
 
 namespace NameServerApplication
 {

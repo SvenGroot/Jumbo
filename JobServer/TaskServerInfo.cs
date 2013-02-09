@@ -4,10 +4,10 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using Tkl.Jumbo;
-using Tkl.Jumbo.Jet;
+using Ookii.Jumbo;
+using Ookii.Jumbo.Jet;
 using System.Threading;
-using Tkl.Jumbo.Topology;
+using Ookii.Jumbo.Topology;
 
 namespace JobServerApplication
 {

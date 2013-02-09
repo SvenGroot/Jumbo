@@ -1,0 +1,202 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProductVersion>9.0.30729</ProductVersion>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{6D59A812-DDDE-4682-98D7-FDDEF74AAF81}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>Tkl.Jumbo.Test</RootNamespace>
+    <AssemblyName>Tkl.Jumbo.Test</AssemblyName>
+    <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <SignAssembly>true</SignAssembly>
+    <AssemblyOriginatorKeyFile>jumbo.snk</AssemblyOriginatorKeyFile>
+    <FileUpgradeFlags>
+    </FileUpgradeFlags>
+    <OldToolsVersion>3.5</OldToolsVersion>
+    <UpgradeBackupLocation />
+    <PublishUrl>publish\</PublishUrl>
+    <Install>true</Install>
+    <InstallFrom>Disk</InstallFrom>
+    <UpdateEnabled>false</UpdateEnabled>
+    <UpdateMode>Foreground</UpdateMode>
+    <UpdateInterval>7</UpdateInterval>
+    <UpdateIntervalUnits>Days</UpdateIntervalUnits>
+    <UpdatePeriodically>false</UpdatePeriodically>
+    <UpdateRequired>false</UpdateRequired>
+    <MapFileExtensions>true</MapFileExtensions>
+    <ApplicationRevision>0</ApplicationRevision>
+    <ApplicationVersion>1.0.0.%2a</ApplicationVersion>
+    <IsWebBootstrapper>false</IsWebBootstrapper>
+    <UseApplicationTrust>false</UseApplicationTrust>
+    <BootstrapperEnabled>true</BootstrapperEnabled>
+    <TargetFrameworkProfile />
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <CodeAnalysisRuleSet>AllRules.ruleset</CodeAnalysisRuleSet>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <CodeAnalysisRuleSet>AllRules.ruleset</CodeAnalysisRuleSet>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="log4net, Version=1.2.10.0, Culture=neutral, PublicKeyToken=1b44e1d426115821, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\lib\log4net.dll</HintPath>
+    </Reference>
+    <Reference Include="nunit.framework, Version=2.6.1.12217, Culture=neutral, PublicKeyToken=96d09a1eb7f44a77, processorArchitecture=MSIL" />
+    <Reference Include="System" />
+    <Reference Include="System.Configuration" />
+    <Reference Include="System.Core">
+      <RequiredTargetFramework>3.5</RequiredTargetFramework>
+    </Reference>
+    <Reference Include="System.Data" />
+    <Reference Include="System.Xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="..\AssemblyInfoCommon.cs">
+      <Link>Properties\AssemblyInfoCommon.cs</Link>
+    </Compile>
+    <Compile Include="BinarySizeTests.cs" />
+    <Compile Include="Crc32Tests.cs" />
+    <Compile Include="Dfs\BlockAssignmentTests.cs" />
+    <Compile Include="Dfs\BlockReportHeartbeatDataTests.cs" />
+    <Compile Include="Dfs\DataBaseClientProtocolHeaderTests.cs" />
+    <Compile Include="Dfs\DataServerClientProtocolReadHeaderTests.cs" />
+    <Compile Include="Dfs\DataServerClientProtocolWriteHeaderTests.cs" />
+    <Compile Include="Dfs\DataServerConfigurationElementTests.cs" />
+    <Compile Include="Dfs\DataServerDeathTests.cs" />
+    <Compile Include="Dfs\DataServerTests.cs" />
+    <Compile Include="Dfs\DeleteBlocksHeartbeatResponseTests.cs" />
+    <Compile Include="Dfs\DfsClientTests.cs" />
+    <Compile Include="Dfs\DfsConfigurationTests.cs" />
+    <Compile Include="Dfs\DfsStreamTest.cs" />
+    <Compile Include="Dfs\DirectoryTests.cs" />
+    <Compile Include="Dfs\FileSystemEntryTests.cs" />
+    <Compile Include="Dfs\FileTests.cs" />
+    <Compile Include="Dfs\LocalFileSystemClientTests.cs" />
+    <Compile Include="Dfs\NameServerConfigurationElementTests.cs" />
+    <Compile Include="Dfs\NameServerRestartTests.cs" />
+    <Compile Include="Dfs\NameServerSafeModeTests.cs" />
+    <Compile Include="Dfs\NameServerTests.cs" />
+    <Compile Include="Dfs\NewBlockHeartbeatDataTests.cs" />
+    <Compile Include="Dfs\PacketTests.cs" />
+    <Compile Include="Dfs\RecordReaderWriterTests.cs" />
+    <Compile Include="Dfs\ReplicaPlacementTests.cs" />
+    <Compile Include="InnerJoinRecordReaderTests.cs" />
+    <Compile Include="Jet\DynamicTaskBuilderTests.cs" />
+    <Compile Include="Jet\FileChannelCompressionTests.cs" />
+    <Compile Include="Jet\JetClientTests.cs" />
+    <Compile Include="Jet\JobAndTaskServerLocalFileSystemTests.cs" />
+    <Compile Include="Jet\JobAndTaskServerTests.cs" />
+    <Compile Include="Jet\JobConfigurationTests.cs" />
+    <Compile Include="Jet\MergeHelperTests.cs" />
+    <Compile Include="Jet\MergeRecordReaderTests.cs" />
+    <Compile Include="Jet\JobBuilderTests.cs" />
+    <Compile Include="Jet\SortSpillRecordWriterTests.cs" />
+    <Compile Include="Jet\TaskIdTests.cs" />
+    <Compile Include="Jet\TaskTests.cs" />
+    <Compile Include="Jet\TestJetCluster.cs" />
+    <Compile Include="PriorityQueueTests.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Dfs\ServerAdressTests.cs" />
+    <Compile Include="Dfs\TestDfsCluster.cs" />
+    <Compile Include="Dfs\TestSetup.cs" />
+    <Compile Include="RangeExpressionTests.cs" />
+    <Compile Include="RawComparerTests.cs" />
+    <Compile Include="RecordFileTests.cs" />
+    <Compile Include="UnmanagedBufferTests.cs" />
+    <Compile Include="Utilities.cs" />
+    <Compile Include="ValueWriterTests.cs" />
+    <Compile Include="WritableUtilityTests.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\DataServer\DataServer.csproj">
+      <Project>{BFC1A761-6DB1-4C3D-8A0C-E5261B1202AC}</Project>
+      <Name>DataServer</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\JobServer\JobServer.csproj">
+      <Project>{F1489C9B-CF7F-4D98-9FBE-F827E521DE6F}</Project>
+      <Name>JobServer</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\NameServer\NameServer.csproj">
+      <Project>{EDAB2A7C-1894-428F-9B1C-3B33AC0E0F3B}</Project>
+      <Name>NameServer</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\TaskHost\TaskHost.csproj">
+      <Project>{975E0C3D-04C5-4CC5-8598-EDD715497FF0}</Project>
+      <Name>TaskHost</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\TaskServer\TaskServer.csproj">
+      <Project>{3C1C7194-F90F-4A3E-8887-947D1CD921D0}</Project>
+      <Name>TaskServer</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Tkl.Jumbo.Dfs\Tkl.Jumbo.Dfs.csproj">
+      <Project>{67D71A3A-4FDA-4136-8423-07A7C1592E65}</Project>
+      <Name>Tkl.Jumbo.Dfs</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Tkl.Jumbo.Jet\Tkl.Jumbo.Jet.csproj">
+      <Project>{E739829A-3507-42EA-A8B4-D8D41060DF95}</Project>
+      <Name>Tkl.Jumbo.Jet</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Tkl.Jumbo.Test.Tasks\Tkl.Jumbo.Test.Tasks.csproj">
+      <Project>{717C205E-0936-4061-9F50-E1EAB770E6D6}</Project>
+      <Name>Tkl.Jumbo.Test.Tasks</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Tkl.Jumbo\Tkl.Jumbo.csproj">
+      <Project>{17C7CE1A-4F9F-4173-8BA8-9C26A4F644C6}</Project>
+      <Name>Tkl.Jumbo</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="app.config" />
+    <Content Include="english-words.10">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <None Include="jumbo.snk" />
+    <None Include="Tkl.Jumbo.Test.build" />
+    <None Include="Tkl.Jumbo.Test.nunit">
+      <SubType>Designer</SubType>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <BootstrapperPackage Include="Microsoft.Net.Client.3.5">
+      <Visible>False</Visible>
+      <ProductName>.NET Framework 3.5 SP1 Client Profile</ProductName>
+      <Install>false</Install>
+    </BootstrapperPackage>
+    <BootstrapperPackage Include="Microsoft.Net.Framework.3.5.SP1">
+      <Visible>False</Visible>
+      <ProductName>.NET Framework 3.5 SP1</ProductName>
+      <Install>true</Install>
+    </BootstrapperPackage>
+    <BootstrapperPackage Include="Microsoft.Windows.Installer.3.1">
+      <Visible>False</Visible>
+      <ProductName>Windows Installer 3.1</ProductName>
+      <Install>true</Install>
+    </BootstrapperPackage>
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+</Project>

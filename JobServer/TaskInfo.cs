@@ -3,8 +3,8 @@
 using System;
 using System.Collections.Generic;
 using System.Threading;
-using Tkl.Jumbo.Jet;
-using Tkl.Jumbo.Jet.Jobs;
+using Ookii.Jumbo.Jet;
+using Ookii.Jumbo.Jet.Jobs;
 
 namespace JobServerApplication
 {
@@ -32,7 +32,7 @@ namespace JobServerApplication
                 throw new ArgumentNullException("job");
             _stage = stage;
             _taskId = new TaskId(stage.StageId, taskNumber);
-            _fullTaskId = Tkl.Jumbo.Jet.Job.CreateFullTaskId(job.Job.JobId, _taskId);
+            _fullTaskId = Ookii.Jumbo.Jet.Job.CreateFullTaskId(job.Job.JobId, _taskId);
             _job = job;
             _inputLocations = inputLocations;
 

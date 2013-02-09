@@ -7,8 +7,8 @@ using System.Web;
 using System.Web.UI;
 using System.Web.UI.WebControls;
 using System.IO;
-using Tkl.Jumbo;
-using Tkl.Jumbo.Jet;
+using Ookii.Jumbo;
+using Ookii.Jumbo.Jet;
 using System.Web.UI.HtmlControls;
 
 public partial class _Default : System.Web.UI.Page 

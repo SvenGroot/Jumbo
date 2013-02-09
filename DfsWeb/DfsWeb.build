@@ -10,8 +10,8 @@
     <mkdir dir="Bin"/>
     <copy todir="Bin">
       <fileset>
-        <include name="../Tkl.Jumbo.Dfs/nantbin/*.*"/>
-        <include name="../Tkl.Jumbo/nantbin/*.*"/>
+        <include name="../Ookii.Jumbo.Dfs/nantbin/*.*"/>
+        <include name="../Ookii.Jumbo/nantbin/*.*"/>
       </fileset>
     </copy>
   </target>

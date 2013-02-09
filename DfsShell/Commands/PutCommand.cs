@@ -8,10 +8,10 @@ using Ookii.CommandLine;
 using System.ComponentModel;
 using System.Runtime.InteropServices;
 using System.IO;
-using Tkl.Jumbo.Dfs;
-using Tkl.Jumbo;
-using Tkl.Jumbo.IO;
-using Tkl.Jumbo.Dfs.FileSystem;
+using Ookii.Jumbo.Dfs;
+using Ookii.Jumbo;
+using Ookii.Jumbo.IO;
+using Ookii.Jumbo.Dfs.FileSystem;
 
 namespace DfsShell.Commands
 {

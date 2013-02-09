@@ -5,8 +5,8 @@ using System.ComponentModel;
 using System.IO;
 using System.Reflection;
 using Ookii.CommandLine;
-using Tkl.Jumbo.Jet;
-using Tkl.Jumbo.Jet.Jobs;
+using Ookii.Jumbo.Jet;
+using Ookii.Jumbo.Jet.Jobs;
 
 namespace JetShell.Commands
 {

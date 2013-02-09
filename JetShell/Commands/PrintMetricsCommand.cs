@@ -6,7 +6,7 @@ using System.Linq;
 using System.Text;
 using Ookii.CommandLine;
 using System.ComponentModel;
-using Tkl.Jumbo.Jet;
+using Ookii.Jumbo.Jet;
 
 namespace JetShell.Commands
 {

@@ -4,10 +4,10 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using Tkl.Jumbo.Jet.Channels;
+using Ookii.Jumbo.Jet.Channels;
 using System.IO;
 using System.Collections;
-using Tkl.Jumbo.IO;
+using Ookii.Jumbo.IO;
 using System.Threading;
 using System.Reflection;
 

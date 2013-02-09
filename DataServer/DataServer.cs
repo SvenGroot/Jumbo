@@ -4,15 +4,15 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using Tkl.Jumbo.Dfs;
+using Ookii.Jumbo.Dfs;
 using System.Threading;
 using System.Configuration;
 using System.IO;
-using Tkl.Jumbo;
+using Ookii.Jumbo;
 using System.Net.Sockets;
 using System.Net;
-using Tkl.Jumbo.Rpc;
-using Tkl.Jumbo.Dfs.FileSystem;
+using Ookii.Jumbo.Rpc;
+using Ookii.Jumbo.Dfs.FileSystem;
 
 namespace DataServerApplication
 {

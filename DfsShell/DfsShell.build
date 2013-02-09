@@ -15,8 +15,8 @@
         <include name="System.dll"/>
         <include name="System.Configuration.dll"/>
         <include name="System.Core.dll"/>
-        <include name="../Tkl.Jumbo.Dfs/nantbin/Tkl.Jumbo.Dfs.dll"/>
-        <include name="../Tkl.Jumbo/nantbin/Tkl.Jumbo.dll"/>
+        <include name="../Ookii.Jumbo.Dfs/nantbin/Ookii.Jumbo.Dfs.dll"/>
+        <include name="../Ookii.Jumbo/nantbin/Ookii.Jumbo.dll"/>
         <include name="../lib/log4net.dll"/>
         <include name="../lib/Ookii.CommandLine.dll"/>
       </references>
@@ -31,8 +31,8 @@
     <copy todir="nantbin">
       <fileset>
         <include name="../lib/Ookii.CommandLine.dll"/>
-        <include name="../Tkl.Jumbo.Dfs/nantbin/*.*"/>
-        <include name="../Tkl.Jumbo/nantbin/*.*"/>
+        <include name="../Ookii.Jumbo.Dfs/nantbin/*.*"/>
+        <include name="../Ookii.Jumbo/nantbin/*.*"/>
         <include name="../dfs.config"/>
       </fileset>
     </copy>

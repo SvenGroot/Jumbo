@@ -1,6 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <project name="Jumbo" default="all" xmlns="http://nant.sf.net/release/0.86-beta1/nant.xsd">
-  <target name="all" depends="NameServer,DataServer,DfsShell,ClientSample,JobServer,TaskServer,TaskHost,Tkl.Jumbo.Test,JetShell,DfsWeb,JetWeb,Tkl.Jumbo.Jet.Samples">
+  <target name="all" depends="NameServer,DataServer,DfsShell,ClientSample,JobServer,TaskServer,TaskHost,Ookii.Jumbo.Test,JetShell,DfsWeb,JetWeb,Ookii.Jumbo.Jet.Samples">
     <copy todir="nantbin">
       <fileset>
         <include name="jumbo-config.sh"/>
@@ -16,70 +16,70 @@
     <delete dir="nantbin" failonerror="false"/>
   </target>
   <target name="cleanall" depends="clean">
-    <nant buildfile="Tkl.Jumbo.Dfs/Tkl.Jumbo.Dfs.build" target="clean"/>
+    <nant buildfile="Ookii.Jumbo.Dfs/Ookii.Jumbo.Dfs.build" target="clean"/>
     <nant buildfile="NameServer/NameServer.build" target="clean"/>
     <nant buildfile="DataServer/DataServer.build" target="clean"/>
     <nant buildfile="DfsShell/DfsShell.build" target="clean"/>
-    <nant buildfile="Tkl.Jumbo.Test/Tkl.Jumbo.Test.build" target="clean"/>
-    <nant buildfile="Tkl.Jumbo.Test.Tasks/Tkl.Jumbo.Test.Tasks.build" target="clean"/>
-    <nant buildfile="Tkl.Jumbo/Tkl.Jumbo.build" target="clean"/>
-    <nant buildfile="Tkl.Jumbo.Jet/Tkl.Jumbo.Jet.build" target="clean"/>
+    <nant buildfile="Ookii.Jumbo.Test/Ookii.Jumbo.Test.build" target="clean"/>
+    <nant buildfile="Ookii.Jumbo.Test.Tasks/Ookii.Jumbo.Test.Tasks.build" target="clean"/>
+    <nant buildfile="Ookii.Jumbo/Ookii.Jumbo.build" target="clean"/>
+    <nant buildfile="Ookii.Jumbo.Jet/Ookii.Jumbo.Jet.build" target="clean"/>
     <nant buildfile="ClientSample/ClientSample.build" target="clean"/>
     <nant buildfile="JobServer/JobServer.build" target="clean"/>
     <nant buildfile="TaskServer/TaskServer.build" target="clean"/>
     <nant buildfile="TaskHost/TaskHost.build" target="clean"/>
     <nant buildfile="JetShell/JetShell.build" target="clean"/>
-    <nant buildfile="Tkl.Jumbo.Native/Tkl.Jumbo.Native.build" target="clean" />
+    <nant buildfile="Ookii.Jumbo.Native/Ookii.Jumbo.Native.build" target="clean" />
   </target>
   <target name="Version.cs">
     <exec program="gen-version.sh"/>
   </target>
-  <target name="Tkl.Jumbo.Native">
+  <target name="Ookii.Jumbo.Native">
     <mkdir dir="nantbin"/>
-    <nant buildfile="Tkl.Jumbo.Native/Tkl.Jumbo.Native.build"/>
+    <nant buildfile="Ookii.Jumbo.Native/Ookii.Jumbo.Native.build"/>
     <copy todir="nantbin">
-      <fileset basedir="Tkl.Jumbo.Native/nantbin">
+      <fileset basedir="Ookii.Jumbo.Native/nantbin">
         <include name="*.*" />
       </fileset>
     </copy>
   </target>
-  <target name="Tkl.Jumbo" depends="Tkl.Jumbo.Native,Version.cs">
+  <target name="Ookii.Jumbo" depends="Ookii.Jumbo.Native,Version.cs">
     <mkdir dir="nantbin"/>
-    <nant buildfile="Tkl.Jumbo/Tkl.Jumbo.build" />
+    <nant buildfile="Ookii.Jumbo/Ookii.Jumbo.build" />
     <copy todir="nantbin">
-      <fileset basedir="Tkl.Jumbo/nantbin">
+      <fileset basedir="Ookii.Jumbo/nantbin">
         <include name="*.*"/>
       </fileset>
     </copy>
   </target>
-  <target name="Tkl.Jumbo.Dfs" depends="Tkl.Jumbo,Version.cs">
+  <target name="Ookii.Jumbo.Dfs" depends="Ookii.Jumbo,Version.cs">
     <mkdir dir="nantbin"/>
-    <nant buildfile="Tkl.Jumbo.Dfs/Tkl.Jumbo.Dfs.build" />
+    <nant buildfile="Ookii.Jumbo.Dfs/Ookii.Jumbo.Dfs.build" />
     <copy todir="nantbin">
-      <fileset basedir="Tkl.Jumbo.Dfs/nantbin">
+      <fileset basedir="Ookii.Jumbo.Dfs/nantbin">
         <include name="*.*"/>
       </fileset>
     </copy>
   </target>
-  <target name="Tkl.Jumbo.Jet" depends="Tkl.Jumbo,Tkl.Jumbo.Dfs,Version.cs">
+  <target name="Ookii.Jumbo.Jet" depends="Ookii.Jumbo,Ookii.Jumbo.Dfs,Version.cs">
     <mkdir dir="nantbin"/>
-    <nant buildfile="Tkl.Jumbo.Jet/Tkl.Jumbo.Jet.build" />
+    <nant buildfile="Ookii.Jumbo.Jet/Ookii.Jumbo.Jet.build" />
     <copy todir="nantbin">
-      <fileset basedir="Tkl.Jumbo.Jet/nantbin">
+      <fileset basedir="Ookii.Jumbo.Jet/nantbin">
         <include name="*.*"/>
       </fileset>
     </copy>
   </target>
-  <target name="Tkl.Jumbo.Jet.Samples" depends="Tkl.Jumbo,Tkl.Jumbo.Dfs,Tkl.Jumbo.Jet,Version.cs">
+  <target name="Ookii.Jumbo.Jet.Samples" depends="Ookii.Jumbo,Ookii.Jumbo.Dfs,Ookii.Jumbo.Jet,Version.cs">
     <mkdir dir="nantbin"/>
-    <nant buildfile="Tkl.Jumbo.Jet.Samples/Tkl.Jumbo.Jet.Samples.build" />
+    <nant buildfile="Ookii.Jumbo.Jet.Samples/Ookii.Jumbo.Jet.Samples.build" />
     <copy todir="nantbin">
-      <fileset basedir="Tkl.Jumbo.Jet.Samples/nantbin">
+      <fileset basedir="Ookii.Jumbo.Jet.Samples/nantbin">
         <include name="*.*"/>
       </fileset>
     </copy>
   </target>
-  <target name="NameServer" depends="Tkl.Jumbo.Dfs,Tkl.Jumbo,Version.cs">
+  <target name="NameServer" depends="Ookii.Jumbo.Dfs,Ookii.Jumbo,Version.cs">
     <mkdir dir="nantbin"/>
     <nant buildfile="NameServer/NameServer.build" />
     <copy todir="nantbin">
@@ -88,7 +88,7 @@
       </fileset>
     </copy>
   </target>
-  <target name="DataServer" depends="Tkl.Jumbo.Dfs,Tkl.Jumbo,Version.cs">
+  <target name="DataServer" depends="Ookii.Jumbo.Dfs,Ookii.Jumbo,Version.cs">
     <mkdir dir="nantbin"/>
     <nant buildfile="DataServer/DataServer.build" />
     <copy todir="nantbin">
@@ -97,7 +97,7 @@
       </fileset>
     </copy>
   </target>
-  <target name="DfsShell" depends="Tkl.Jumbo.Dfs,Tkl.Jumbo,Version.cs">
+  <target name="DfsShell" depends="Ookii.Jumbo.Dfs,Ookii.Jumbo,Version.cs">
     <mkdir dir="nantbin"/>
     <nant buildfile="DfsShell/DfsShell.build" />
     <copy todir="nantbin">
@@ -106,7 +106,7 @@
       </fileset>
     </copy>
   </target>
-  <target name="ClientSample" depends="Tkl.Jumbo.Dfs,Tkl.Jumbo.Jet,Tkl.Jumbo.Jet.Samples,Tkl.Jumbo,Version.cs">
+  <target name="ClientSample" depends="Ookii.Jumbo.Dfs,Ookii.Jumbo.Jet,Ookii.Jumbo.Jet.Samples,Ookii.Jumbo,Version.cs">
     <mkdir dir="nantbin"/>
     <nant buildfile="ClientSample/ClientSample.build" />
     <copy todir="nantbin">
@@ -115,7 +115,7 @@
       </fileset>
     </copy>
   </target>
-  <target name="JobServer" depends="Tkl.Jumbo.Dfs,Tkl.Jumbo.Jet,Tkl.Jumbo,Version.cs">
+  <target name="JobServer" depends="Ookii.Jumbo.Dfs,Ookii.Jumbo.Jet,Ookii.Jumbo,Version.cs">
     <mkdir dir="nantbin"/>
     <nant buildfile="JobServer/JobServer.build" />
     <copy todir="nantbin">
@@ -124,7 +124,7 @@
       </fileset>
     </copy>
   </target>
-  <target name="TaskServer" depends="Tkl.Jumbo.Dfs,Tkl.Jumbo.Jet,Tkl.Jumbo,TaskHost,Version.cs">
+  <target name="TaskServer" depends="Ookii.Jumbo.Dfs,Ookii.Jumbo.Jet,Ookii.Jumbo,TaskHost,Version.cs">
     <mkdir dir="nantbin"/>
     <nant buildfile="TaskServer/TaskServer.build" />
     <copy todir="nantbin">
@@ -133,7 +133,7 @@
       </fileset>
     </copy>
   </target>
-  <target name="TaskHost" depends="Tkl.Jumbo.Dfs,Tkl.Jumbo.Jet,Tkl.Jumbo,Version.cs">
+  <target name="TaskHost" depends="Ookii.Jumbo.Dfs,Ookii.Jumbo.Jet,Ookii.Jumbo,Version.cs">
     <mkdir dir="nantbin"/>
     <nant buildfile="TaskHost/TaskHost.build" />
     <copy todir="nantbin">
@@ -142,7 +142,7 @@
       </fileset>
     </copy>
   </target>
-  <target name="JetShell" depends="Tkl.Jumbo.Jet,Tkl.Jumbo,Version.cs">
+  <target name="JetShell" depends="Ookii.Jumbo.Jet,Ookii.Jumbo,Version.cs">
     <mkdir dir="nantbin"/>
     <nant buildfile="JetShell/JetShell.build" />
     <copy todir="nantbin">
@@ -151,25 +151,25 @@
       </fileset>
     </copy>
   </target>  
-  <target name="Tkl.Jumbo.Test.Tasks" depends="Tkl.Jumbo.Jet,Tkl.Jumbo,Version.cs">
+  <target name="Ookii.Jumbo.Test.Tasks" depends="Ookii.Jumbo.Jet,Ookii.Jumbo,Version.cs">
     <mkdir dir="nantbin"/>
-    <nant buildfile="Tkl.Jumbo.Test.Tasks/Tkl.Jumbo.Test.Tasks.build" />
+    <nant buildfile="Ookii.Jumbo.Test.Tasks/Ookii.Jumbo.Test.Tasks.build" />
     <copy todir="nantbin">
-      <fileset basedir="Tkl.Jumbo.Test.Tasks/nantbin">
+      <fileset basedir="Ookii.Jumbo.Test.Tasks/nantbin">
         <include name="*.*"/>
       </fileset>
     </copy>
   </target>
-  <target name="Tkl.Jumbo.Test" depends="Tkl.Jumbo,Tkl.Jumbo.Dfs,Tkl.Jumbo.Jet,NameServer,DataServer,JobServer,TaskServer,TaskHost,Tkl.Jumbo.Test.Tasks,Version.cs">
+  <target name="Ookii.Jumbo.Test" depends="Ookii.Jumbo,Ookii.Jumbo.Dfs,Ookii.Jumbo.Jet,NameServer,DataServer,JobServer,TaskServer,TaskHost,Ookii.Jumbo.Test.Tasks,Version.cs">
     <mkdir dir="nantbin"/>
-    <nant buildfile="Tkl.Jumbo.Test/Tkl.Jumbo.Test.build" />
+    <nant buildfile="Ookii.Jumbo.Test/Ookii.Jumbo.Test.build" />
     <copy todir="nantbin">
-      <fileset basedir="Tkl.Jumbo.Test/nantbin">
+      <fileset basedir="Ookii.Jumbo.Test/nantbin">
         <include name="*.*"/>
       </fileset>
     </copy>
   </target>
-  <target name="DfsWeb" depends="Tkl.Jumbo.Dfs,Tkl.Jumbo,Version.cs">
+  <target name="DfsWeb" depends="Ookii.Jumbo.Dfs,Ookii.Jumbo,Version.cs">
     <mkdir dir="nantbin/DfsWeb"/>
     <nant buildfile="DfsWeb/DfsWeb.build" />
     <copy todir="nantbin/DfsWeb">
@@ -178,7 +178,7 @@
       </fileset>
     </copy>
   </target>
-  <target name="JetWeb" depends="Tkl.Jumbo.Jet,Tkl.Jumbo,Version.cs">
+  <target name="JetWeb" depends="Ookii.Jumbo.Jet,Ookii.Jumbo,Version.cs">
     <mkdir dir="nantbin/JetWeb"/>
     <nant buildfile="JetWeb/JetWeb.build" />
     <copy todir="nantbin/JetWeb">

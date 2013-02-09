@@ -7,14 +7,14 @@ using System.Linq;
 using System.Net.Sockets;
 using System.Reflection;
 using System.Text;
-using Tkl.Jumbo;
-using Tkl.Jumbo.Jet;
-using Tkl.Jumbo.Jet.Jobs;
+using Ookii.Jumbo;
+using Ookii.Jumbo.Jet;
+using Ookii.Jumbo.Jet.Jobs;
 using System.Threading;
-using Tkl.Jumbo.Rpc;
+using Ookii.Jumbo.Rpc;
 using Ookii.CommandLine;
 using JetShell.Commands;
-using Tkl.Jumbo.Dfs;
+using Ookii.Jumbo.Dfs;
 
 namespace JetShell
 {
