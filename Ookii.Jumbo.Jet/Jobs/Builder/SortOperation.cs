@@ -132,7 +132,7 @@ namespace Ookii.Jumbo.Jet.Jobs.Builder
                 input.InputStage.AddTypedSetting(FileOutputChannel.OutputTypeSettingKey, FileChannelOutputType.SortSpill);
                 if( _combinerType != null )
                     input.InputStage.AddTypedSetting(FileOutputChannel.SpillSortCombinerTypeSettingKey, _combinerType.AssemblyQualifiedName);
-                return compiler.CreateStage("MergeStage", SecondStepTaskType.TaskType, InputChannel.TaskCount, input, Output, true);
+                return compiler.CreateStage("MergeStage", SecondStepTaskType.TaskType, InputChannel.TaskCount, input, Output, true, InputChannel.Settings);
             }
             else
             {

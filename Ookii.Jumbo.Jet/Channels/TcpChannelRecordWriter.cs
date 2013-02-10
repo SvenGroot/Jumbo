@@ -115,7 +115,6 @@ namespace Ookii.Jumbo.Jet.Channels
             TcpClient client = null;
             try
             {
-                // TODO: Although is built with support for multiple partitions per task in mind, the receiving side currently does not support it.
                 int[] partitions = _taskConnections[taskIndex].Partitions;
                 if( partitions == null )
                 {

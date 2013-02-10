@@ -17,6 +17,13 @@ namespace Ookii.Jumbo.Jet.Jobs.Builder
     /// <para>
     ///   Sorting is an example of a two step operation: first each input is locally sorted, and then the result is merged on the receiving side of the channel.
     /// </para>
+    /// <para>
+    ///   The additional step is only created when necessary. If the input is a channel with only one task in the sending stage (or a file input with only one split),
+    ///   or the channel type is explicitly set to pipeline no additional step is created.
+    /// </para>
+    /// <para>
+    ///   Any settings specified in the <see cref="Settings"/> property will be applied to both stages created for this step.
+    /// </para>
     /// </remarks>
     public class TwoStepOperation : StageOperation
     {
@@ -125,11 +132,12 @@ namespace Ookii.Jumbo.Jet.Jobs.Builder
                 string firstStepStageId = StageId;
                 if( SecondStepStageId == null )
                     firstStepStageId = "Local" + StageId;
-                FirstStepStage = compiler.CreateStage(firstStepStageId, TaskType.TaskType, taskCount, input, InputChannel, true);
+                FirstStepStage = compiler.CreateStage(firstStepStageId, TaskType.TaskType, taskCount, input, InputChannel, true, null);
+                // Settings are only automatically applied to the returned stage; manually apply them here.
                 FirstStepStage.AddSettings(Settings);
                 input = InputChannel.CreateInput(FirstStepStage);
                 Debug.Assert(input.ChannelType != ChannelType.Pipeline);
-                return compiler.CreateStage(SecondStepStageId ?? StageId, _secondStepTaskType.TaskType, InputChannel.TaskCount, input, Output, true);
+                return compiler.CreateStage(SecondStepStageId ?? StageId, _secondStepTaskType.TaskType, InputChannel.TaskCount, input, Output, true, InputChannel.Settings);
             }
             else
             {

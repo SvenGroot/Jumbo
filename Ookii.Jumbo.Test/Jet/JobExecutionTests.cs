@@ -91,9 +91,15 @@ namespace Ookii.Jumbo.Test.Jet
         }
 
         [Test]
-        public void TestWordCountNoOutput()
+        public void TestWordCountNoIntermediateData()
         {
             RunWordCountJob(null, TaskKind.NoOutput, ChannelType.File, false);
+        }
+
+        [Test]
+        public void TestWordCountNoIntermediateDataFileChannelDownload()
+        {
+            RunWordCountJob(null, TaskKind.NoOutput, ChannelType.File, true);
         }
 
         [Test]
@@ -117,15 +123,45 @@ namespace Ookii.Jumbo.Test.Jet
         [Test]
         public void TestMemorySort()
         {
-            RunMemorySortJob(null, ChannelType.File);
+            RunMemorySortJob(null, ChannelType.File, 1);
         }
 
         [Test]
         public void TestMemorySortTcpChannel()
         {
-            RunMemorySortJob(null, ChannelType.Tcp);
+            RunMemorySortJob(null, ChannelType.Tcp, 1);
         }
 
+        [Test]
+        public void TestMemorySortTcpChannelMultiplePartitionsPerTask()
+        {
+            RunMemorySortJob(null, ChannelType.Tcp, 3);
+        }
+
+        [Test]
+        public void TestSpillSort()
+        {
+            RunSpillSortJob(null, 1, false);
+        }
+
+        [Test]
+        public void TestSpillSortFileChannelDownload()
+        {
+            RunSpillSortJob(null, 1, true);
+        }
+
+        [Test]
+        public void TestSpillSortMultiplePartitionsPerTask()
+        {
+            RunSpillSortJob(null, 3, false);
+        }
+
+        [Test]
+        public void TestSpillSortFileChannelDownloadMultiplePartitionsPerTask()
+        {
+            RunSpillSortJob(null, 3, true);
+        }
+        
         private static JobStatus RunJob(FileSystemClient fileSystemClient, JobConfiguration config)
         {
             JetClient target = new JetClient(TestJetCluster.CreateClientConfig());
@@ -191,18 +227,17 @@ namespace Ookii.Jumbo.Test.Jet
             return config;
         }
 
-        private void RunMemorySortJob(string outputPath, ChannelType channelType)
+        private void RunMemorySortJob(string outputPath, ChannelType channelType, int partitionsPerTask)
         {
             FileSystemClient client = _cluster.CreateFileSystemClient();
-            JobConfiguration config = CreateMemorySortJob(client, outputPath, channelType);
+            JobConfiguration config = CreateMemorySortJob(client, outputPath, channelType, partitionsPerTask);
             RunJob(client, config);
             VerifySortOutput(client, config);
         }
 
-        private JobConfiguration CreateMemorySortJob(FileSystemClient client, string outputPath, ChannelType channelType)
+        private JobConfiguration CreateMemorySortJob(FileSystemClient client, string outputPath, ChannelType channelType, int partitionsPerTask)
         {
             // The primary purpose of the memory sort job here is to test internal partitioning for a compound task
-
             string inputFileName = GetSortInputFile(client);
 
             if( outputPath == null )
@@ -216,10 +251,58 @@ namespace Ookii.Jumbo.Test.Jet
             var input = job.Read(inputFileName, typeof(LineRecordReader));
             var converted = job.Process(input, typeof(StringConversionTask));
             var sorted = job.Sort(converted);
+            // Set spill buffer to ensure multiple spills
+            if( channelType == ChannelType.Tcp )
+                sorted.InputChannel.Settings.AddTypedSetting(TcpOutputChannel.SpillBufferSizeSettingKey, "1MB");
+            else
+                sorted.InputChannel.Settings.AddTypedSetting(FileOutputChannel.SpillBufferSizeSettingKey, "1MB");
             sorted.InputChannel.ChannelType = channelType;
+            sorted.InputChannel.PartitionsPerTask = partitionsPerTask;
             job.Write(sorted, outputPath, typeof(BinaryRecordWriter<>));
 
             return job.CreateJob();
+        }
+
+        private void RunSpillSortJob(string outputPath, int partitionsPerTask, bool forceFileDownload)
+        {
+            FileSystemClient client = _cluster.CreateFileSystemClient();
+            JobConfiguration config = CreateSpillSortJob(client, outputPath, partitionsPerTask, forceFileDownload);
+            RunJob(client, config);
+            VerifySortOutput(client, config);
+        }
+
+        private JobConfiguration CreateSpillSortJob(FileSystemClient client, string outputPath, int partitionsPerTask, bool forceFileDownload)
+        {
+            string inputFileName = GetSortInputFile(client);
+
+            if( outputPath == null )
+                outputPath = "/" + TestContext.CurrentContext.Test.Name;
+
+            client.CreateDirectory(outputPath);
+
+            JobBuilder job = new JobBuilder(_cluster.CreateFileSystemClient(), TestJetCluster.CreateJetClient());
+            job.JobName = "SpillSort";
+
+            var input = job.Read(inputFileName, typeof(LineRecordReader));
+            var converted = job.Process(input, typeof(StringConversionTask));
+            var sorted = job.SpillSort(converted);
+            // Set spill buffer to ensure multiple spills
+            sorted.InputChannel.Settings.AddTypedSetting(FileOutputChannel.SpillBufferSizeSettingKey, "1MB");
+            sorted.InputChannel.PartitionsPerTask = partitionsPerTask;
+            job.Write(sorted, outputPath, typeof(BinaryRecordWriter<>));
+
+            JobConfiguration config = job.CreateJob();
+
+            if( forceFileDownload )
+            {
+                foreach( ChannelConfiguration channel in config.GetAllChannels() )
+                {
+                    if( channel.ChannelType == ChannelType.File )
+                        channel.ForceFileDownload = true;
+                }
+            }
+
+            return config;
         }
 
         private void VerifyWordCountOutput(FileSystemClient client, JobConfiguration config)

@@ -91,20 +91,19 @@ namespace Ookii.Jumbo.Jet.Jobs.Builder
         /// <param name="stageId">The stage ID.</param>
         /// <param name="taskType">The type for the stage's tasks.</param>
         /// <param name="taskCount">The number of tasks in he stage, or zero to use the default.</param>
-        /// <param name="input">The input for the stage. May be <see langword="null"/>.</param>
-        /// <param name="output">The output for the stage. May be <see langword="null"/>.</param>
-        /// <param name="allowEmptyTaskReplacement">if set to <see langword="true"/>, empty task replacement is allowed.</param>
+        /// <param name="input">The input for the stage. May be <see langword="null" />.</param>
+        /// <param name="output">The output for the stage. May be <see langword="null" />.</param>
+        /// <param name="allowEmptyTaskReplacement">if set to <see langword="true" />, empty task replacement is allowed.</param>
+        /// <param name="channelSettings">The settings applied to the sending stage of the <paramref name="input"/> channel if <paramref name="input"/> is not <see langword="null"/>. Not used if empty task replacement is performed.</param>
         /// <returns>
-        /// The <see cref="StageConfiguration"/> for the stage.
+        /// The <see cref="StageConfiguration" /> for the stage.
         /// </returns>
         /// <remarks>
-        /// <para>
-        ///   If <paramref name="allowEmptyTaskReplacement"/> is <see langword="true"/>, the <paramref name="input"/> specifies a pipeline channel without
-        ///   internal partitioning (<paramref name="taskCount"/> must be 1), and the input stage uses <see cref="EmptyTask{T}"/> this method will not create a new stage, but will change the task type
-        ///   of that stage with the specified task, rename the stage, and return the configuration of that stage.
-        /// </para>
+        /// If <paramref name="allowEmptyTaskReplacement" /> is <see langword="true" />, the <paramref name="input" /> specifies a pipeline channel without
+        /// internal partitioning (<paramref name="taskCount" /> must be 1), and the input stage uses <see cref="EmptyTask{T}" /> this method will not create a new stage, but will change the task type
+        /// of that stage with the specified task, rename the stage, and return the configuration of that stage.
         /// </remarks>
-        public StageConfiguration CreateStage(string stageId, Type taskType, int taskCount, InputStageInfo input, IOperationOutput output, bool allowEmptyTaskReplacement)
+        public StageConfiguration CreateStage(string stageId, Type taskType, int taskCount, InputStageInfo input, IOperationOutput output, bool allowEmptyTaskReplacement, SettingsDictionary channelSettings)
         {
             StageConfiguration stage;
             if( input != null && allowEmptyTaskReplacement && taskCount <= 1 && input.ChannelType == Channels.ChannelType.Pipeline && IsEmptyTask(input.InputStage.TaskType.ReferencedType) )
@@ -127,6 +126,9 @@ namespace Ookii.Jumbo.Jet.Jobs.Builder
                 // Must ensure a unique name if not a child stage.
                 if( input == null || input.ChannelType != Channels.ChannelType.Pipeline )
                     stageId = CreateUniqueStageId(stageId);
+
+                if( input != null && channelSettings != null )
+                    input.InputStage.AddSettings(channelSettings);
 
                 stage = _job.AddStage(stageId, taskType, DetermineTaskCount(taskCount, input), input);
             }

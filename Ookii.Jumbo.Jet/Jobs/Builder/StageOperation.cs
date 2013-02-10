@@ -183,7 +183,7 @@ namespace Ookii.Jumbo.Jet.Jobs.Builder
             if( _dfsInput != null )
                 return compiler.CreateStage(StageId, _taskTypeInfo.TaskType, _dfsInput, _output);
             else
-                return compiler.CreateStage(StageId, _taskTypeInfo.TaskType, _inputChannel == null ? _noInputTaskCount : _inputChannel.TaskCount, _inputChannel == null ? null : _inputChannel.CreateInput(), _output, true);
+                return compiler.CreateStage(StageId, _taskTypeInfo.TaskType, _inputChannel == null ? _noInputTaskCount : _inputChannel.TaskCount, _inputChannel == null ? null : _inputChannel.CreateInput(), _output, true, _inputChannel == null ? null : _inputChannel.Settings);
         }
 
         private void ApplySchedulingDependencies()

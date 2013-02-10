@@ -21,6 +21,7 @@ namespace Ookii.Jumbo.Jet.Jobs.Builder
         private Type _multiInputRecordReaderType;
         private int _taskCount;
         private int _partitionsPerTask = 1;
+        private SettingsDictionary _settings;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="Channel"/> class.
@@ -203,6 +204,26 @@ namespace Ookii.Jumbo.Jet.Jobs.Builder
         /// One of the values of the <see cref="Ookii.Jumbo.Jet.Channels.PartitionAssignmentMethod"/> enumeration.
         /// </value>
         public PartitionAssignmentMethod PartitionAssignmentMethod { get; set; }
+
+        /// <summary>
+        /// Gets the settings for the channel's sending stage.
+        /// </summary>
+        /// <value>
+        /// A <see cref="SettingsDictionary"/> containing the settings.
+        /// </value>
+        /// <remarks>
+        /// <para>
+        ///   Channel settings are applied to the stage that writes to this channel (the sending stage). In the case of a two-step operation, this can
+        ///   either be the operation's original input stage (if no additional step is created), or the additionally created first step.
+        /// </para>
+        /// <para>
+        ///   If no actual channel is created (empty task replacement was used), these settings are not applied at all.
+        /// </para>
+        /// </remarks>
+        public SettingsDictionary Settings
+        {
+            get { return _settings ?? (_settings = new SettingsDictionary()); }
+        }
 
         /// <summary>
         /// Creates an <see cref="InputStageInfo"/> for this channel.

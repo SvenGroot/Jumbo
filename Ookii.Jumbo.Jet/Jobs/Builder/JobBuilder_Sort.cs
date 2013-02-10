@@ -11,7 +11,7 @@ namespace Ookii.Jumbo.Jet.Jobs.Builder
     public sealed partial class JobBuilder
     {
         /// <summary>
-        /// Sorts the specified input in memory using <see cref="SortTask{T}"/>.
+        /// Sorts the specified input in memory using <see cref="Ookii.Jumbo.Jet.Tasks.SortTask{T}"/>.
         /// </summary>
         /// <param name="input">The input.</param>
         /// <param name="comparerType">The type of <see cref="IComparer{T}"/> to use for this operation, or <see langword="null"/> to use the default comparer.</param>
