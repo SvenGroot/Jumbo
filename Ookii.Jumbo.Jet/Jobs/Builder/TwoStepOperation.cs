@@ -22,7 +22,7 @@ namespace Ookii.Jumbo.Jet.Jobs.Builder
     ///   or the channel type is explicitly set to pipeline no additional step is created.
     /// </para>
     /// <para>
-    ///   Any settings specified in the <see cref="Settings"/> property will be applied to both stages created for this step.
+    ///   Any settings specified in the <see cref="StageOperation.Settings"/> property will be applied to both stages created for this step.
     /// </para>
     /// </remarks>
     public class TwoStepOperation : StageOperation
