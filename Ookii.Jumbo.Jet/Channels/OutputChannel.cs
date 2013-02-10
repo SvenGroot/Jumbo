@@ -93,19 +93,6 @@ namespace Ookii.Jumbo.Jet.Channels
         protected CompressionType CompressionType { get; private set; }
 
         /// <summary>
-        /// Creates a multi record writer that partitions the output across the specified writers.
-        /// </summary>
-        /// <typeparam name="T">The type of the records.</typeparam>
-        /// <param name="writers">The writers to write the records to.</param>
-        /// <returns>A <see cref="MultiRecordWriter{T}"/> that serves as the record writer for the channel.</returns>
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1006:DoNotNestGenericTypesInMemberSignatures")]
-        protected MultiRecordWriter<T> CreateMultiRecordWriter<T>(IEnumerable<RecordWriter<T>> writers)
-        {
-            IPartitioner<T> partitioner = CreatePartitioner<T>();
-            return new MultiRecordWriter<T>(writers, partitioner);
-        }
-
-        /// <summary>
         /// Creates the partitioner for the output channel.
         /// </summary>
         /// <typeparam name="T">The type of the records.</typeparam>

@@ -57,77 +57,18 @@ namespace Ookii.Jumbo.Test.Jet
             _cluster.Shutdown();
         }
 
-        [Test]
-        public void TestJobAbort()
-        {
-            FileSystemClient fileSystemClient = _cluster.CreateFileSystemClient();
-            fileSystemClient.CreateDirectory("/abort");
-            JumboFile file = fileSystemClient.GetFileInfo(_fileName);
-            JobConfiguration config = CreateConfiguration(fileSystemClient, file, "/abort", false, typeof(LineCounterTask), typeof(LineAdderTask), ChannelType.File);
 
-            JetClient target = new JetClient(TestJetCluster.CreateClientConfig());
-            Job job = target.RunJob(config, fileSystemClient, typeof(LineCounterTask).Assembly.Location);
-
-            JobStatus status;
-            do
-            {
-                Thread.Sleep(1000);
-                status = target.JobServer.GetJobStatus(job.JobId);
-            } while( status.RunningTaskCount == 0 );
-            Thread.Sleep(1000);
-            target.JobServer.AbortJob(job.JobId);
-            bool finished = target.WaitForJobCompletion(job.JobId, Timeout.Infinite, 1000);
-            Assert.IsTrue(finished);
-            Assert.IsFalse(target.JobServer.GetJobStatus(job.JobId).IsSuccessful);
-            Thread.Sleep(5000);
-        }
-
-        [Test]
-        public void TestJobExecution()
-        {
-            RunJob(false, "/joboutput", TaskKind.Pull, ChannelType.File);
-        }
-
-        [Test]
-        public void TestJobExecutionTcpFileDownload()
-        {
-            RunJob(true, "/joboutput2", TaskKind.Pull, ChannelType.File);
-        }
-
-        [Test]
-        public void TestJobExecutionPushTask()
-        {
-            RunJob(false, "/joboutput3", TaskKind.Push, ChannelType.File);
-        }
-
-        [Test]
-        public void TestJobExecutionPipelineChannelPushTask()
-        {
-            RunJob(false, "/joboutput4", TaskKind.Push, ChannelType.Pipeline);
-        }
-
-        [Test]
-        public void TestJobExecutionPipelineChannelPullTask()
-        {
-            RunJob(false, "/joboutput6", TaskKind.Pull, ChannelType.Pipeline);
-        }
-
-        [Test]
-        public void TestJobExecutionTcpChannel()
-        {
-            RunJob(false, "/joboutput5", TaskKind.Pull, ChannelType.Tcp);
-        }
 
         [Test]
         public void TestJobExecutionTcpChannelSort()
         {
-            TestJobExecutionSort("/tcpchannelsort", _maxTasks, 1, false, FileChannelOutputType.MultiFile, ChannelType.Tcp);
+            TestJobExecutionSort("/tcpchannelsort", _maxTasks, 1, false, FileChannelOutputType.Spill, ChannelType.Tcp);
         }
 
         [Test]
         public void TestJobExecutionTcpChannelSortMultiplePartitionsPerTask()
         {
-            TestJobExecutionSort("/tcpchannelsort2", _maxTasks, 3, false, FileChannelOutputType.MultiFile, ChannelType.Tcp);
+            TestJobExecutionSort("/tcpchannelsort2", _maxTasks, 3, false, FileChannelOutputType.Spill, ChannelType.Tcp);
         }
 
         [Test]
@@ -145,19 +86,19 @@ namespace Ookii.Jumbo.Test.Jet
         [Test]
         public void TestJobExecutionSort()
         {
-            TestJobExecutionSort("/sortoutput1", 1, 1, false, FileChannelOutputType.MultiFile);
+            TestJobExecutionSort("/sortoutput1", 1, 1, false, FileChannelOutputType.Spill);
         }
 
         [Test]
         public void TestJobExecutionSortMultiplePartitionsPerTask()
         {
-            TestJobExecutionSort("/sortoutput2", 2, 3, false, FileChannelOutputType.MultiFile);
+            TestJobExecutionSort("/sortoutput2", 2, 3, false, FileChannelOutputType.Spill);
         }
 
         [Test]
         public void TestJobExecutionSortMultiplePartitionsPerTaskTcpFileDownload()
         {
-            TestJobExecutionSort("/sortoutput3", 2, 3, true, FileChannelOutputType.MultiFile);
+            TestJobExecutionSort("/sortoutput3", 2, 3, true, FileChannelOutputType.Spill);
         }
 
         [Test]

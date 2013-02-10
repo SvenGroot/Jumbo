@@ -105,6 +105,7 @@
     <Compile Include="Jet\JobAndTaskServerLocalFileSystemTests.cs" />
     <Compile Include="Jet\JobAndTaskServerTests.cs" />
     <Compile Include="Jet\JobConfigurationTests.cs" />
+    <Compile Include="Jet\JobExecutionTests.cs" />
     <Compile Include="Jet\MergeHelperTests.cs" />
     <Compile Include="Jet\MergeRecordReaderTests.cs" />
     <Compile Include="Jet\JobBuilderTests.cs" />

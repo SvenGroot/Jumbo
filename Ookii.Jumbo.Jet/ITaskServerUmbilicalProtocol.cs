@@ -37,22 +37,6 @@ namespace Ookii.Jumbo.Jet
         void ReportError(Guid jobId, TaskAttemptId taskAttemptId, string failureReason);
 
         /// <summary>
-        /// Informs the task server of the uncompressed size of a temporary file used by the file channel.
-        /// </summary>
-        /// <param name="jobId">The job ID of the job containing the task that generated the file.</param>
-        /// <param name="fileName">The name (without path) of the file.</param>
-        /// <param name="uncompressedSize">The uncompressed size of the file.</param>
-        void SetUncompressedTemporaryFileSize(Guid jobId, string fileName, long uncompressedSize);
-
-        /// <summary>
-        /// Gets the uncompressed size of a temporary file used by the file channel.
-        /// </summary>
-        /// <param name="jobId">The job ID of the job containing the task that generated the file.</param>
-        /// <param name="fileName">The name (without path) of the file.</param>
-        /// <returns>The uncompressed size of the file, or -1 if unknown.</returns>
-        long GetUncompressedTemporaryFileSize(Guid jobId, string fileName);
-
-        /// <summary>
         /// Registers the port number that the task host is listening on for TCP channel connections.
         /// </summary>
         /// <param name="jobId">The job ID of the job containing the task.</param>

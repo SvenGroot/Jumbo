@@ -11,11 +11,16 @@ namespace Ookii.Jumbo.Jet.Jobs.Builder
     public sealed partial class JobBuilder
     {
         /// <summary>
-        /// Sorts the specified input.
+        /// Sorts the specified input in memory using <see cref="SortTask{T}"/>.
         /// </summary>
         /// <param name="input">The input.</param>
         /// <param name="comparerType">The type of <see cref="IComparer{T}"/> to use for this operation, or <see langword="null"/> to use the default comparer.</param>
         /// <returns>A <see cref="SortOperation"/> instance that can be used to further customize the operation.</returns>
+        /// <remarks>
+        /// <para>
+        ///   This operation sorts all the records produced by a single task in memory. For large or unknown amounts of records, use <see cref="SpillSort"/> instead.
+        /// </para>
+        /// </remarks>
         public SortOperation Sort(IOperationInput input, Type comparerType = null)
         {
             if( input == null )

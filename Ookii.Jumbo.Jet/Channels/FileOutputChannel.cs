@@ -23,7 +23,7 @@ namespace Ookii.Jumbo.Jet.Channels
         /// </summary>
         public const string WriteBufferSizeSettingKey = "FileOutputChannel.WriteBufferSize";
         /// <summary>
-        /// The key to use in the job or stage settings to override the default output type specified in <see cref="FileChannelConfigurationElement.OutputType"/>.
+        /// The key to use in the job or stage settings to select between a sorting or non-sorting channel.
         /// Stage settings take precedence over job settings. The setting should have type <see cref="FileChannelOutputType"/>.
         /// </summary>
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Naming", "CA1702:CompoundWordsShouldBeCasedCorrectly", MessageId = "TypeSetting")]
@@ -52,8 +52,7 @@ namespace Ookii.Jumbo.Jet.Channels
         public const string SpillSortMinSpillsForCombineDuringMergeSettingKey = "FileOutputChannel.SpillSortMinSpillsForCombineDuringMerge";
 
         private readonly string _localJobDirectory;
-        private readonly List<string> _fileNames;
-        private IEnumerable<IRecordWriter> _writers;
+        private IRecordWriter _writer;
         private readonly FileChannelOutputType _outputType;
 
         /// <summary>
@@ -75,30 +74,8 @@ namespace Ookii.Jumbo.Jet.Channels
             if( !Directory.Exists(directory) )
                 Directory.CreateDirectory(directory);
 
-            _outputType = taskExecution.Context.GetTypedSetting(OutputTypeSettingKey, taskExecution.JetClient.Configuration.FileChannel.OutputType);
+            _outputType = taskExecution.Context.GetTypedSetting(OutputTypeSettingKey, FileChannelOutputType.Spill);
             _log.DebugFormat("File channel output type: {0}", _outputType);
-            switch( _outputType )
-            {
-            case FileChannelOutputType.MultiFile:
-                _fileNames = (from taskId in OutputPartitionIds
-                              select CreateChannelFileName(inputTaskAttemptId, taskId)).ToList();
-
-                if( _fileNames.Count == 0 )
-                {
-                    // This is allowed for debugging and testing purposes so you don't have to have an output task.
-                    _log.Warn("The file channel has no output tasks; writing channel output to a dummy file.");
-                    _fileNames.Add(CreateChannelFileName(inputTaskAttemptId, "DummyTask"));
-                }
-                break;
-            case FileChannelOutputType.Spill:
-            case FileChannelOutputType.SortSpill:
-                if( taskExecution.Context.StageConfiguration.InternalPartitionCount > 1 && !taskExecution.Context.StageConfiguration.IsOutputPrepartitioned )
-                    throw new NotSupportedException("Cannot use single file output with internal partitioning.");
-                _fileNames = new List<string>() { CreateChannelFileName(inputTaskAttemptId, null) };
-                break;
-            default:
-                throw new NotSupportedException("Invalid file channel output type.");
-            }
         }
 
         /// <summary>
@@ -121,10 +98,10 @@ namespace Ookii.Jumbo.Jet.Channels
         {
             get
             {
-                if( _writers == null )
+                if( _writer == null )
                     return 0;
                 else
-                    return _writers.Sum(w => w.BytesWritten);
+                    return _writer.BytesWritten;
             }
         }
 
@@ -149,20 +126,6 @@ namespace Ookii.Jumbo.Jet.Channels
         }
 
         /// <summary>
-        /// Creates the name of an intermediate file for the channel. For Jumbo internal use only.
-        /// </summary>
-        /// <param name="inputTaskAttemptId">The input task attempt id.</param>
-        /// <param name="outputTaskId">The output task id.</param>
-        /// <returns>The intermediate file name.</returns>
-        public static string CreateChannelFileName(string inputTaskAttemptId, string outputTaskId)
-        {
-            if( outputTaskId == null ) // for single-file output
-                return Path.Combine(inputTaskAttemptId, inputTaskAttemptId + ".output");
-            else
-                return Path.Combine(inputTaskAttemptId, outputTaskId + ".output");
-        }
-
-        /// <summary>
         /// Creates a <see cref="RecordWriter{T}"/> to which the channel can write its output.
         /// </summary>
         /// <typeparam name="T">The type of the records.</typeparam>
@@ -170,59 +133,22 @@ namespace Ookii.Jumbo.Jet.Channels
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Reliability", "CA2000:Dispose objects before losing scope"), System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1004:GenericMethodsShouldProvideTypeParameter")]
         public override RecordWriter<T> CreateRecordWriter<T>()
         {
-            if( _writers != null )
+            if( _writer != null )
                 throw new InvalidOperationException("The channel record writer has already been created.");
 
             BinarySize writeBufferSize = TaskExecution.Context.GetTypedSetting(WriteBufferSizeSettingKey, TaskExecution.JetClient.Configuration.FileChannel.WriteBufferSize);
 
-            switch( _outputType )
-            {
-            case FileChannelOutputType.MultiFile:
-                return CreateMultiFileRecordWriter<T>(writeBufferSize);
-            case FileChannelOutputType.Spill:
-            case FileChannelOutputType.SortSpill:
-                return CreateSpillRecordWriter<T>(writeBufferSize);
-            default:
-                throw new NotSupportedException("Invalid file channel output type."); // Can't happen; already validated in the ctor.
-            }
+            return CreateSpillRecordWriter<T>(writeBufferSize);
         }
 
-        internal void ReportFileSizesToTaskServer()
+        /// <summary>
+        /// Creates the name of an intermediate file for the channel. For Jumbo internal use only.
+        /// </summary>
+        /// <param name="inputTaskAttemptId">The input task attempt id.</param>
+        /// <returns>The intermediate file name.</returns>
+        public static string CreateChannelFileName(string inputTaskAttemptId)
         {
-            if( CompressionType != CompressionType.None )
-            {
-                int x = 0;
-                foreach( IRecordWriter writer in _writers )
-                {
-                    string fileName = _fileNames[x];
-                    TaskExecution.Umbilical.SetUncompressedTemporaryFileSize(TaskExecution.Context.JobId, fileName, writer.OutputBytes);
-
-                    ++x;
-                }
-                System.Diagnostics.Debug.Assert(x == _fileNames.Count);
-            }
-        }
-
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Reliability", "CA2000:Dispose objects before losing scope")]
-        private RecordWriter<T> CreateMultiFileRecordWriter<T>(BinarySize writeBufferSize)
-        {
-            if( _fileNames.Count == 1 )
-            {
-                Stream stream = File.Create(Path.Combine(_localJobDirectory, _fileNames[0]), (int)writeBufferSize.Value);
-                Stream checksumStream = new ChecksumOutputStream(stream, true, TaskExecution.JetClient.Configuration.FileChannel.EnableChecksum).CreateCompressor(CompressionType);
-                RecordWriter<T> result = new BinaryRecordWriter<T>(checksumStream);
-                _writers = new[] { result };
-                return result;
-            }
-            else
-            {
-                var writers = (from file in _fileNames
-                               let stream = File.Create(Path.Combine(_localJobDirectory, file), (int)writeBufferSize.Value)
-                               let checksumStream = new ChecksumOutputStream(stream, true, TaskExecution.JetClient.Configuration.FileChannel.EnableChecksum).CreateCompressor(CompressionType)
-                               select (RecordWriter<T>)new BinaryRecordWriter<T>(checksumStream)).ToArray();
-                _writers = writers.Cast<IRecordWriter>();
-                return CreateMultiRecordWriter<T>(writers);
-            }
+            return Path.Combine(inputTaskAttemptId, inputTaskAttemptId + ".output");
         }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Reliability", "CA2000:Dispose objects before losing scope")]
@@ -243,16 +169,17 @@ namespace Ookii.Jumbo.Jet.Channels
             IPartitioner<T> partitioner = CreatePartitioner<T>();
             partitioner.Partitions = OutputPartitionIds.Count;
             RecordWriter<T> result;
+            string fileName = CreateChannelFileName(TaskExecution.RootTask.Context.TaskAttemptId.ToString());
             if( _outputType == FileChannelOutputType.SortSpill )
             {
                 int maxDiskInputsPerMergePass = TaskExecution.Context.GetTypedSetting(MergeRecordReaderConstants.MaxFileInputsSetting, TaskExecution.JetClient.Configuration.MergeRecordReader.MaxFileInputs);
                 ITask<T, T> combiner = (ITask<T, T>)CreateCombiner();
                 int minSpillCountForCombineDuringMerge = TaskExecution.Context.GetTypedSetting(SpillSortMinSpillsForCombineDuringMergeSettingKey, TaskExecution.JetClient.Configuration.FileChannel.SpillSortMinSpillsForCombineDuringMerge);
-                result = new SortSpillRecordWriter<T>(Path.Combine(_localJobDirectory, _fileNames[0]), partitioner, (int)outputBufferSize.Value, outputBufferLimitSize, (int)writeBufferSize.Value, TaskExecution.JetClient.Configuration.FileChannel.EnableChecksum, CompressionType, maxDiskInputsPerMergePass, combiner, minSpillCountForCombineDuringMerge);
+                result = new SortSpillRecordWriter<T>(Path.Combine(_localJobDirectory, fileName), partitioner, (int)outputBufferSize.Value, outputBufferLimitSize, (int)writeBufferSize.Value, TaskExecution.JetClient.Configuration.FileChannel.EnableChecksum, CompressionType, maxDiskInputsPerMergePass, combiner, minSpillCountForCombineDuringMerge);
             }
             else
-                result = new SingleFileMultiRecordWriter<T>(Path.Combine(_localJobDirectory, _fileNames[0]), partitioner, (int)outputBufferSize.Value, outputBufferLimitSize, (int)writeBufferSize.Value, TaskExecution.JetClient.Configuration.FileChannel.EnableChecksum, CompressionType);
-            _writers = new[] { result };
+                result = new SingleFileMultiRecordWriter<T>(Path.Combine(_localJobDirectory, fileName), partitioner, (int)outputBufferSize.Value, outputBufferLimitSize, (int)writeBufferSize.Value, TaskExecution.JetClient.Configuration.FileChannel.EnableChecksum, CompressionType);
+            _writer = result;
             return result;
         }
 

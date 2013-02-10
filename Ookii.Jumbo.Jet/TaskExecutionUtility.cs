@@ -685,10 +685,6 @@ namespace Ookii.Jumbo.Jet
             _finished = true;
             _finishedEvent.Set();
 
-            FileOutputChannel fileOutputChannel = OutputChannel as FileOutputChannel;
-            if( fileOutputChannel != null )
-                fileOutputChannel.ReportFileSizesToTaskServer();
-
             if( _inputReader != null )
                 _log.InfoFormat("{0} read time: {1}", Context.TaskAttemptId, _inputReader.ReadTime.TotalSeconds);
             if( _outputWriter != null )

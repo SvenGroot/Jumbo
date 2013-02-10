@@ -91,6 +91,8 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="StringConversionTask.cs" />
     <Compile Include="DelayTask.cs" />
+    <Compile Include="WordCountNoOutputTask.cs" />
+    <Compile Include="WordCountPushTask.cs" />
     <Compile Include="WordCountReduceTask.cs" />
     <Compile Include="WordCountTask.cs" />
   </ItemGroup>

@@ -1,4 +1,6 @@
-﻿using System;
+﻿// $Id$
+//
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -11,12 +13,8 @@ namespace Ookii.Jumbo.Jet.Channels
     public enum FileChannelOutputType
     {
         /// <summary>
-        /// A file is created for each partition. This option may have bad performance if there are many partitions.
-        /// </summary>
-        MultiFile,
-        /// <summary>
         /// A <see cref="SpillRecordWriter{T}"/> is used to write the output. The intermediate data will be a single file
-        /// containing multiple regions for each partition. The data doesn't contain record size markers.
+        /// containing multiple regions for each partition. The data does not contain record size markers.
         /// </summary>
         Spill,
         /// <summary>

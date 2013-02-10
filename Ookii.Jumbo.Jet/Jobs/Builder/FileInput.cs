@@ -1,11 +1,8 @@
 ﻿// $Id$
-//
+
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using Ookii.Jumbo.IO;
 using Ookii.Jumbo.Dfs.FileSystem;
+using Ookii.Jumbo.IO;
 using Ookii.Jumbo.Jet.IO;
 
 namespace Ookii.Jumbo.Jet.Jobs.Builder
@@ -34,6 +31,9 @@ namespace Ookii.Jumbo.Jet.Jobs.Builder
             _recordReaderType = recordReaderType;
             if( !_recordReaderType.IsGenericTypeDefinition )
                 _recordType = recordReaderBaseType.GetGenericArguments()[0];
+
+            MinimumSplitSize = 1;
+            MaximumSplitSize = Int32.MaxValue;
         }
 
         /// <summary>
@@ -66,6 +66,22 @@ namespace Ookii.Jumbo.Jet.Jobs.Builder
         }
 
         /// <summary>
+        /// Gets or sets the minimum split size used to divide this input over multiple tasks.
+        /// </summary>
+        /// <value>
+        /// The minimum split size. The default value is 1.
+        /// </value>
+        public int MinimumSplitSize { get; set; }
+
+        /// <summary>
+        /// Gets or sets the maximum split size used to divide this input over multiple tasks.
+        /// </summary>
+        /// <value>
+        /// The maximum split size. The default value is <see cref="Int32.MaxValue"/>.
+        /// </value>
+        public int MaximumSplitSize { get; set; }
+
+        /// <summary>
         /// Creates an <see cref="IDataInput"/> for this input.
         /// </summary>
         /// <param name="fileSystem">The file system.</param>
@@ -74,7 +90,7 @@ namespace Ookii.Jumbo.Jet.Jobs.Builder
         {
             if( fileSystem == null )
                 throw new ArgumentNullException("fileSystem");
-            return FileDataInput.Create(RecordReaderType, fileSystem, fileSystem.GetFileSystemEntryInfo(Path));
+            return FileDataInput.Create(RecordReaderType, fileSystem, fileSystem.GetFileSystemEntryInfo(Path), MinimumSplitSize, MaximumSplitSize);
         }
     }
 }

@@ -15,30 +15,11 @@ namespace TaskServerApplication
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(JobInfo));
 
         private readonly Guid _jobId;
-        private Dictionary<string, long> _uncompressedTemporaryFileSizes;
         private Dictionary<string, string> _downloadedFiles;
 
         public JobInfo(Guid jobId)
         {
             _jobId = jobId;
-        }
-
-        public void SetUncompressedTemporaryFileSize(string fileName, long uncompressedSize)
-        {
-            if( _uncompressedTemporaryFileSizes == null )
-                _uncompressedTemporaryFileSizes = new Dictionary<string, long>();
-            _uncompressedTemporaryFileSizes[fileName] = uncompressedSize;
-        }
-
-        public long GetUncompressedTemporaryFileSize(string fileName)
-        {
-            if( _uncompressedTemporaryFileSizes != null )
-            {
-                long size;
-                if( _uncompressedTemporaryFileSizes.TryGetValue(fileName, out size) )
-                    return size;
-            }
-            return -1L;
         }
 
         public string DownloadDfsFile(string dfsPath)

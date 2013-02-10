@@ -217,15 +217,12 @@ namespace Ookii.Jumbo.Jet.Channels
                 }
 
                 _writer.Write(jobId.ToByteArray());
-                _writer.Write(channelType != FileChannelOutputType.MultiFile);
                 _writer.Write(partitions.Count);
                 foreach( int partition in partitions )
                     _writer.Write(partition);
                 _writer.Write(_server.TasksToDownloadCount - tasksToSkip);
                 foreach( CompletedTask task in _server.TasksToDownload.Skip(tasksToSkip) )
                     _writer.Write(task.TaskAttemptId.ToString());
-                if( channelType == FileChannelOutputType.MultiFile )
-                    _writer.Write(outputStageId);
 
                 _writer.Flush();
 
@@ -333,7 +330,7 @@ namespace Ookii.Jumbo.Jet.Channels
             _writeBufferSize = (int)taskExecution.JetClient.Configuration.FileChannel.WriteBufferSize;
 
             if( !inputStage.TryGetTypedSetting(FileOutputChannel.OutputTypeSettingKey, out _channelInputType) )
-                _channelInputType = taskExecution.Context.JobConfiguration.GetTypedSetting(FileOutputChannel.OutputTypeSettingKey, taskExecution.JetClient.Configuration.FileChannel.OutputType);
+                _channelInputType = taskExecution.Context.JobConfiguration.GetTypedSetting(FileOutputChannel.OutputTypeSettingKey, FileChannelOutputType.Spill);
 
             long memoryStorageSize = TaskExecution.Context.JobConfiguration.GetTypedSetting(MemoryStorageSizeSetting, (long)TaskExecution.JetClient.Configuration.FileChannel.MemoryStorageSize);
             if( memoryStorageSize > 0 )
@@ -735,46 +732,17 @@ namespace Ookii.Jumbo.Jet.Channels
                 string taskOutputDirectory = taskServer.GetOutputFileDirectory(task.JobId);
 
                 _log.InfoFormat("Using local input files from task {0} for {1} partitions.", task.TaskAttemptId, ActivePartitions.Count);
-                if( _channelInputType == FileChannelOutputType.MultiFile )
-                {
-                    UseLocalMultiFilesForInput(task, inputs, taskOutputDirectory);
-                }
-                else
-                {
-                    UseLocalPartitionFileForInput(task, inputs, taskOutputDirectory);
-                }
+                UseLocalPartitionFileForInput(task, inputs, taskOutputDirectory);
                 reader.AddInput(inputs);
             }
             return server.TasksToDownloadCount;
-        }
-
-        private void UseLocalMultiFilesForInput(CompletedTask task, IList<RecordInput> inputs, string taskOutputDirectory)
-        {
-            foreach( int partition in ActivePartitions )
-            {
-                string outputFileName = FileOutputChannel.CreateChannelFileName(task.TaskAttemptId.ToString(), TaskId.CreateTaskIdString(_outputStageId, partition));
-                string fileName = Path.Combine(taskOutputDirectory, outputFileName);
-                long size = new FileInfo(fileName).Length;
-                if( size == 0 )
-                {
-                    _log.DebugFormat("Local input file {0} is empty.", fileName);
-                    inputs.Add(new EmptyRecordInput(InputRecordType, task.TaskAttemptId.TaskId.ToString()));
-                }
-                else
-                {
-                    long uncompressedSize = TaskExecution.Umbilical.GetUncompressedTemporaryFileSize(task.JobId, outputFileName);
-                    LocalBytesRead += size;
-                    // We don't delete output files; if this task fails they might still be needed
-                    inputs.Add(new FileRecordInput(_inputReaderType, fileName, task.TaskAttemptId.TaskId.ToString(), uncompressedSize, false, _channelInputType == FileChannelOutputType.SortSpill, 0, _reader.AllowRecordReuse, _reader.BufferSize, _reader.CompressionType));
-                }
-            }
         }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Reliability", "CA2000:Dispose objects before losing scope")]
         private void UseLocalPartitionFileForInput(CompletedTask task, IList<RecordInput> inputs, string taskOutputDirectory)
         {
 
-            string outputFileName = FileOutputChannel.CreateChannelFileName(task.TaskAttemptId.ToString(), null);
+            string outputFileName = FileOutputChannel.CreateChannelFileName(task.TaskAttemptId.ToString());
             string fileName = Path.Combine(taskOutputDirectory, outputFileName);
             using( PartitionFileIndex index = new PartitionFileIndex(fileName) )
             {
@@ -862,8 +830,7 @@ namespace Ookii.Jumbo.Jet.Channels
             {
                 int segmentCount = 0;
                 long uncompressedSize = connection.Reader.ReadInt64();
-                if( _channelInputType != FileChannelOutputType.MultiFile )
-                    segmentCount = connection.Reader.ReadInt32();
+                segmentCount = connection.Reader.ReadInt32();
                 string targetFile = null;
 
                 if( reservation == null )
@@ -886,10 +853,7 @@ namespace Ookii.Jumbo.Jet.Channels
                     connection.Stream.CopySize(memoryStream, size);
                     memoryStream.Position = 0;
                     Stream checksumStream;
-                    if( _channelInputType == FileChannelOutputType.MultiFile )
-                        checksumStream = new ChecksumInputStream(memoryStream, true).CreateDecompressor(CompressionType, uncompressedSize);
-                    else
-                        checksumStream = new SegmentedChecksumInputStream(memoryStream, segmentCount, CompressionType, uncompressedSize);
+                    checksumStream = new SegmentedChecksumInputStream(memoryStream, segmentCount, CompressionType, uncompressedSize);
                     downloadedFiles.Add(new StreamRecordInput(_inputReaderType, checksumStream, true, task.TaskAttemptId.TaskId.ToString(), _channelInputType == FileChannelOutputType.SortSpill, TaskExecution.Context.StageConfiguration.AllowRecordReuse));
                 }
                 NetworkBytesRead += size;

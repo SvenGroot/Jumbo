@@ -125,30 +125,6 @@ namespace TaskServerApplication
             _taskRunner.ReportError(Job.CreateFullTaskId(jobId, taskAttemptId), failureReason);
         }
 
-        public void SetUncompressedTemporaryFileSize(Guid jobId, string fileName, long uncompressedSize)
-        {
-            _log.DebugFormat("Uncompressed file size of job {0} file {1} is {2}.", jobId, fileName, uncompressedSize);
-            JobInfo job = GetJobInfo(jobId, true);
-
-            lock( job )
-            {
-                job.SetUncompressedTemporaryFileSize(fileName, uncompressedSize);
-            }
-        }
-
-        public long GetUncompressedTemporaryFileSize(Guid jobId, string fileName)
-        {
-            JobInfo job = GetJobInfo(jobId, false);
-            if( job != null )
-            {
-                lock( job )
-                {
-                    return job.GetUncompressedTemporaryFileSize(fileName);
-                }
-            }
-            return -1L;
-        }
-
         public void RegisterTcpChannelPort(Guid jobId, TaskAttemptId taskAttemptId, int port)
         {
             if( taskAttemptId == null )

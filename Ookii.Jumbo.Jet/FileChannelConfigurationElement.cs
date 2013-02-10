@@ -84,20 +84,6 @@ namespace Ookii.Jumbo.Jet
             set { this["downloadThreads"] = value; }
         }
 
-
-        /// <summary>
-        /// Gets or sets the output type for the intermediate dta..
-        /// </summary>
-        /// <value>
-        /// One of the values of the <see cref="FileChannelOutputType"/> enumeration.
-        /// </value>
-        [ConfigurationProperty("outputType", DefaultValue = FileChannelOutputType.MultiFile, IsRequired = false, IsKey = false)]
-        public FileChannelOutputType OutputType
-        {
-            get { return (FileChannelOutputType)this["outputType"]; }
-            set { this["outputType"] = value; }
-        }
-
         /// <summary>
         /// Gets or sets the size of the spill buffer used for <see cref="FileChannelOutputType.Spill"/> and <see cref="FileChannelOutputType.SortSpill"/>.
         /// </summary>
