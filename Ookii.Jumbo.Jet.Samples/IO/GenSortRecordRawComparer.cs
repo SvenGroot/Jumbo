@@ -11,7 +11,7 @@ namespace Ookii.Jumbo.Jet.Samples.IO
     /// <summary>
     /// Raw comparer for the <see cref="GenSortRecord"/> class.
     /// </summary>
-    public sealed class GenSortRecordRawComparer : IRawComparer
+    public sealed class GenSortRecordRawComparer : IRawComparer<GenSortRecord>
     {
         /// <summary>
         /// Compares the binary representation of two objects and returns a value indicating whether one is less than, equal to, or greater than the other.
@@ -28,6 +28,19 @@ namespace Ookii.Jumbo.Jet.Samples.IO
         public int Compare(byte[] x, int xOffset, int xCount, byte[] y, int yOffset, int yCount)
         {
             return RawComparerHelper.CompareBytes(x, xOffset, GenSortRecord.KeySize, y, yOffset, GenSortRecord.KeySize);
+        }
+
+        /// <summary>
+        /// Compares two objects and returns a value indicating whether one is less than, equal to, or greater than the other.
+        /// </summary>
+        /// <param name="x">The first object to compare.</param>
+        /// <param name="y">The second object to compare.</param>
+        /// <returns>
+        /// A signed integer that indicates the relative values of the first and second object.
+        /// </returns>
+        public int Compare(GenSortRecord x, GenSortRecord y)
+        {
+            return Comparer<GenSortRecord>.Default.Compare(x, y);
         }
     }
 }

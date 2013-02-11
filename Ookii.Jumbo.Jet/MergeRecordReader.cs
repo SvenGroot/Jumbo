@@ -376,7 +376,12 @@ namespace Ookii.Jumbo.Jet
         {
             string comparerTypeName = TaskContext.StageConfiguration.GetSetting(MergeRecordReaderConstants.ComparerSetting, null);
             if( comparerTypeName == null && !(Channel == null || Channel.InputStage == null) )
-                comparerTypeName = Channel.InputStage.GetSetting(Tasks.TaskConstants.ComparerSettingKey, null);                
+            {
+                if( Channel.InputStage.GetTypedSetting(FileOutputChannel.OutputTypeSettingKey, FileChannelOutputType.Spill) == FileChannelOutputType.SortSpill )
+                    comparerTypeName = Channel.InputStage.GetSetting(FileOutputChannel.SpillSortComparerTypeSettingKey, null);
+                else
+                    comparerTypeName = Channel.InputStage.GetSetting(Tasks.TaskConstants.ComparerSettingKey, null);
+            }
 
             if( !string.IsNullOrEmpty(comparerTypeName) )
             {

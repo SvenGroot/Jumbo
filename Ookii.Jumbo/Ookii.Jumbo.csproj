@@ -92,6 +92,7 @@
     <Compile Include="CompressionType.cs" />
     <Compile Include="DriveSpaceInfo.cs" />
     <Compile Include="IndividualProcessorStatus.cs" />
+    <Compile Include="IO\IDeserializingRawComparer.cs" />
     <Compile Include="IO\IndexedQuickSort.cs" />
     <Compile Include="IO\MemoryBufferStream.cs" />
     <Compile Include="IO\ChildReaderException.cs" />
@@ -102,6 +103,7 @@
     <Compile Include="IO\IRawComparer.cs" />
     <Compile Include="IO\IRecordInputStream.cs" />
     <Compile Include="IO\IRecordOutputStream.cs" />
+    <Compile Include="IO\PairRawComparer.cs" />
     <Compile Include="IO\RawComparer.cs" />
     <Compile Include="IO\RawComparerAttribute.cs" />
     <Compile Include="IO\RawComparerHelper.cs" />

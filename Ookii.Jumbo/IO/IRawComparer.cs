@@ -10,7 +10,7 @@ namespace Ookii.Jumbo.IO
     /// <summary>
     /// Defines a method that a type implements to compare the raw binary representation of two objects.
     /// </summary>
-    public interface IRawComparer
+    public interface IRawComparer<T> : IComparer<T>
     {
         /// <summary>
         /// Compares the binary representation of two objects and returns a value indicating whether one is less than, equal to, or greater than the other.

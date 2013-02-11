@@ -173,6 +173,10 @@ namespace Ookii.Jumbo.Jet.IO
                 stage.AddSetting(InputPathSettingKey, _inputPath);
         }
 
+        /// <summary>
+        /// Indicates the configuration has been changed. <see cref="JetActivator.ApplyConfiguration" /> calls this method
+        /// after setting the configuration.
+        /// </summary>
         public override void NotifyConfigurationChanged()
         {
             base.NotifyConfigurationChanged();

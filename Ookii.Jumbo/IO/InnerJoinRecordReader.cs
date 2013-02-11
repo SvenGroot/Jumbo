@@ -22,16 +22,16 @@ namespace Ookii.Jumbo.IO
     /// </remarks>
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1005:AvoidExcessiveParametersOnGenericTypes")]
     public abstract class InnerJoinRecordReader<TOuter, TInner, TResult> : MultiInputRecordReader<TResult>
-        where TOuter : class
-        where TInner : class
         where TResult : new()
     {
         private RecordReader<TOuter> _outer;
         private RecordReader<TInner> _inner;
+        private bool _hasTempOuterObject;
         private TOuter _tempOuterObject;
         private readonly List<TInner> _tempInnerList = new List<TInner>();
         private int _tempInnerListIndex;
         private bool _started;
+        private bool _needOuterClone;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="InnerJoinRecordReader{TOuter, TInner, TResult}"/> class.
@@ -48,6 +48,7 @@ namespace Ookii.Jumbo.IO
                 throw new ArgumentOutOfRangeException("totalInputCount", "InnerJoinRecordReader must have exactly two input readers.");
             if( PartitionCount != 1 )
                 throw new NotSupportedException("You cannot use multiple partitions with the InnerJoinRecordReader.");
+            _needOuterClone = allowRecordReuse && !typeof(TOuter).IsValueType;
         }
 
         /// <summary>
@@ -67,7 +68,7 @@ namespace Ookii.Jumbo.IO
 
             TOuter outer;
 
-            while( _tempOuterObject == null )
+            while( !_hasTempOuterObject )
             {
                 if( _outer.HasFinished || _inner.HasFinished )
                 {
@@ -85,7 +86,8 @@ namespace Ookii.Jumbo.IO
                     _inner.ReadRecord();
                 else
                 {
-                    if( AllowRecordReuse )
+                    _hasTempOuterObject = true;
+                    if( _needOuterClone )
                         _tempOuterObject = (TOuter)((ICloneable)outer).Clone();
                     else
                         _tempOuterObject = outer;
@@ -115,13 +117,14 @@ namespace Ookii.Jumbo.IO
                 CurrentRecord = new TResult();
             if( _tempInnerList.Count > 0 )
             {
-                CreateJoinResult(CurrentRecord, _tempOuterObject, _tempInnerList[_tempInnerListIndex]);
+                CurrentRecord = CreateJoinResult(CurrentRecord, _tempOuterObject, _tempInnerList[_tempInnerListIndex]);
                 ++_tempInnerListIndex;
                 if( _tempInnerList.Count == _tempInnerListIndex )
                 {
                     _tempInnerListIndex = 0;
                     if( !_outer.HasFinished && Compare(_outer.CurrentRecord, _tempInnerList[0]) == 0 )
                     {
+                        _hasTempOuterObject = true;
                         if( AllowRecordReuse )
                             _tempOuterObject = (TOuter)((ICloneable)_outer.CurrentRecord).Clone();
                         else
@@ -130,17 +133,19 @@ namespace Ookii.Jumbo.IO
                     }
                     else
                     {
-                        _tempOuterObject = null;
+                        _tempOuterObject = default(TOuter);
+                        _hasTempOuterObject = false;
                         _tempInnerList.Clear();
                     }
                 }
             }
             else
             {
-                CreateJoinResult(CurrentRecord, _tempOuterObject, _inner.CurrentRecord);
+                CurrentRecord = CreateJoinResult(CurrentRecord, _tempOuterObject, _inner.CurrentRecord);
                 if( !(_inner.ReadRecord() && Compare(_tempOuterObject, _inner.CurrentRecord) == 0) )
                 {
-                    _tempOuterObject = null;
+                    _tempOuterObject = default(TOuter);
+                    _hasTempOuterObject = false;
                 }
             }
             return true;
@@ -210,16 +215,19 @@ namespace Ookii.Jumbo.IO
         /// <summary>
         /// When implemented in a derived class, creates an object of type <typeparamref name="TResult"/> that holds the result of the join.
         /// </summary>
-        /// <param name="result">The object that will hold the result.</param>
+        /// <param name="result">An object instance to hold the result.</param>
         /// <param name="outer">The outer relation's object.</param>
         /// <param name="inner">The inner relation's object.</param>
+        /// <returns>
+        ///   The new result object; this may be the value of <paramref name="result"/>.
+        /// </returns>
         /// <remarks>
         /// <para>
         ///   If <see cref="MultiInputRecordReader{TRecord}.AllowRecordReuse"/> is <see langword="true"/>, the value of <paramref name="result"/> will be the same every time this function
         ///   is called. It is therefore important that the implementation of this method always sets all relevant properties of the result object.
         /// </para>
         /// </remarks>
-        protected abstract void CreateJoinResult(TResult result, TOuter outer, TInner inner);
+        protected abstract TResult CreateJoinResult(TResult result, TOuter outer, TInner inner);
 
         private void RecordReader_HasRecordsChanged(object sender, EventArgs e)
         {

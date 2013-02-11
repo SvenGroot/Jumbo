@@ -202,6 +202,48 @@ namespace Ookii.Jumbo.Test.Jet
             CollectionAssert.AreEqual(expected, actual);
         }
 
+        [Test]
+        public void TestInnerJoin()
+        {
+            FileSystemClient client = _cluster.CreateFileSystemClient();
+            List<Customer> customers = new List<Customer>();
+            List<Order> orders = new List<Order>();
+
+            GenerateJoinData(client, customers, orders);
+
+            client.CreateDirectory("/testjoinoutput");
+
+            JobBuilder job = new JobBuilder(client, TestJetCluster.CreateJetClient());
+            var customerInput = job.Read("/testjoin/customers", typeof(RecordFileReader<Customer>));
+            var orderInput = job.Read("/testjoin/orders", typeof(RecordFileReader<Order>));
+            var joined = job.InnerJoin(customerInput, orderInput, typeof(CustomerOrderJoinRecordReader), null, typeof(OrderJoinComparer));
+            job.Write(joined, "/testjoinoutput", typeof(RecordFileWriter<>));
+
+            JobConfiguration config = job.CreateJob();
+
+            RunJob(client, config);
+
+            List<CustomerOrder> actual = new List<CustomerOrder>();
+            StageConfiguration stage = config.GetStage("JoinStage");
+            for( int x = 0; x < stage.TaskCount; ++x )
+            {
+                using( Stream stream = client.OpenFile(FileDataOutput.GetOutputPath(stage, x + 1)) )
+                using( RecordFileReader<CustomerOrder> reader = new RecordFileReader<CustomerOrder>(stream) )
+                {
+                    actual.AddRange(reader.EnumerateRecords());
+                }
+            }
+
+            List<CustomerOrder> expected = (from customer in customers
+                                            join order in orders on customer.Id equals order.CustomerId
+                                            select new CustomerOrder() { CustomerId = customer.Id, ItemId = order.ItemId, Name = customer.Name, OrderId = order.Id }).ToList();
+
+            // AreEquivalent is too slow.
+            expected.Sort();
+            actual.Sort();
+            CollectionAssert.AreEqual(expected, actual);
+        }
+
         private static JobStatus RunJob(FileSystemClient fileSystemClient, JobConfiguration config)
         {
             JetClient target = new JetClient(TestJetCluster.CreateClientConfig());
@@ -244,7 +286,7 @@ namespace Ookii.Jumbo.Test.Jet
             if( mapReduce )
             {
                 // Spill sort with combiner
-                var sorted = job.SpillSort(words, typeof(WordCountReduceTask));
+                var sorted = job.SpillSortCombine(words, typeof(WordCountReduceTask));
                 countedWords = job.Process(sorted, typeof(WordCountReduceTask));
             }
             else
@@ -463,6 +505,26 @@ namespace Ookii.Jumbo.Test.Jet
                 }
             }
             return fileName;
+        }
+
+        private void GenerateJoinData(FileSystemClient fileSystemClient, List<Customer> customers, List<Order> orders)
+        {
+            Utilities.GenerateJoinData(customers, orders, 30000, 3, 100);
+            customers.Randomize();
+            orders.Randomize();
+
+            fileSystemClient.CreateDirectory("/testjoin");
+            using( Stream stream = fileSystemClient.CreateFile("/testjoin/customers") )
+            using( RecordFileWriter<Customer> recordFile = new RecordFileWriter<Customer>(stream) )
+            {
+                recordFile.WriteRecords(customers);
+            }
+
+            using( Stream stream = fileSystemClient.CreateFile("/testjoin/orders") )
+            using( RecordFileWriter<Order> recordFile = new RecordFileWriter<Order>(stream) )
+            {
+                recordFile.WriteRecords(orders);
+            }
         }
     }
 }

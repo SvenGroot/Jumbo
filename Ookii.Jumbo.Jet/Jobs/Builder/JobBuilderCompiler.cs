@@ -105,6 +105,11 @@ namespace Ookii.Jumbo.Jet.Jobs.Builder
         /// </remarks>
         public StageConfiguration CreateStage(string stageId, Type taskType, int taskCount, InputStageInfo input, IOperationOutput output, bool allowEmptyTaskReplacement, SettingsDictionary channelSettings)
         {
+            if( stageId == null )
+                throw new ArgumentNullException("stageId");
+            if( taskType == null )
+                throw new ArgumentNullException("taskType");
+
             StageConfiguration stage;
             if( input != null && allowEmptyTaskReplacement && taskCount <= 1 && input.ChannelType == Channels.ChannelType.Pipeline && IsEmptyTask(input.InputStage.TaskType.ReferencedType) )
             {
@@ -132,6 +137,63 @@ namespace Ookii.Jumbo.Jet.Jobs.Builder
 
                 stage = _job.AddStage(stageId, taskType, DetermineTaskCount(taskCount, input), input);
             }
+
+            if( output != null )
+                output.ApplyOutput(_fileSystemClient, stage);
+
+            return stage;
+        }
+
+        /// <summary>
+        /// Creates a stage with more than one channel input.
+        /// </summary>
+        /// <param name="stageId">The stage ID.</param>
+        /// <param name="taskType">The type for the stage's tasks.</param>
+        /// <param name="taskCount">The number of tasks in he stage, or zero to use the default.</param>
+        /// <param name="input">The input for the stage. May be <see langword="null" />.</param>
+        /// <param name="output">The output for the stage. May be <see langword="null" />.</param>
+        /// <param name="channelSettings">The settings applied to the sending stage of the <paramref name="input"/> channel if <paramref name="input"/> is not <see langword="null"/>. Not used if empty task replacement is performed.</param>
+        /// <param name="stageMultiInputRecordReaderType">Type of the stage multi input record reader.</param>
+        /// <returns></returns>
+        /// <exception cref="System.ArgumentNullException">
+        /// stageId
+        /// or
+        /// taskType
+        /// or
+        /// input
+        /// or
+        /// channelSettings
+        /// </exception>
+        /// <exception cref="System.ArgumentException">
+        /// Empty input list.;input
+        /// or
+        /// Incorrect number of channel settings entries.
+        /// </exception>
+        public StageConfiguration CreateStage(string stageId, Type taskType, int taskCount, InputStageInfo[] input, IOperationOutput output, SettingsDictionary[] channelSettings, Type stageMultiInputRecordReaderType)
+        {
+            if( stageId == null )
+                throw new ArgumentNullException("stageId");
+            if( taskType == null )
+                throw new ArgumentNullException("taskType");
+            if( input == null )
+                throw new ArgumentNullException("input");
+            if( channelSettings == null )
+                throw new ArgumentNullException("channelSettings");
+            if( input.Length == 0 )
+                throw new ArgumentException("Empty input list.", "input");
+            if( input.Length != channelSettings.Length )
+                throw new ArgumentException("Incorrect number of channel settings entries.");
+            if( stageMultiInputRecordReaderType == null )
+                throw new ArgumentNullException("stageMultiInputRecordReaderType");
+
+            stageId = CreateUniqueStageId(stageId);
+            for( int x = 0; x < input.Length; ++x )
+            {
+                if( channelSettings[x] != null )
+                    input[x].InputStage.AddSettings(channelSettings[x]);
+            }
+
+            StageConfiguration stage = _job.AddStage(stageId, taskType, taskCount == 0 ? DefaultChannelInputTaskCount : taskCount, input, stageMultiInputRecordReaderType);
 
             if( output != null )
                 output.ApplyOutput(_fileSystemClient, stage);

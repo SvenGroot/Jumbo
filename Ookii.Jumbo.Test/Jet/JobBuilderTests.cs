@@ -51,9 +51,65 @@ namespace Ookii.Jumbo.Test.Jet
             }
         }
 
+        private class FakeJoinComparer<T> : IRawComparer<T>, IEqualityComparer<T>
+        {
+            public int Compare(T x, T y)
+            {
+                throw new NotImplementedException();
+            }
+
+            public int Compare(byte[] buffer1, int offset1, int count1, byte[] buffer2, int offset2, int count2)
+            {
+                throw new NotImplementedException();
+            }
+
+            public bool Equals(T x, T y)
+            {
+                throw new NotImplementedException();
+            }
+
+            public int GetHashCode(T obj)
+            {
+                throw new NotImplementedException();
+            }
+        }
+
+        private class FakeRawComparer<T> : IRawComparer<T>
+        {
+            public int Compare(byte[] buffer1, int offset1, int count1, byte[] buffer2, int offset2, int count2)
+            {
+                throw new NotImplementedException();
+            }
+
+            public int Compare(T x, T y)
+            {
+                throw new NotImplementedException();
+            }
+        }
+
+
         private class FakeCombiner<T> : ITask<T, T>
         {
             public void Run(RecordReader<T> input, RecordWriter<T> output)
+            {
+                throw new NotImplementedException();
+            }
+        }
+
+        [InputType(typeof(double)), InputType(typeof(int))]
+        private class FakeInnerJoinRecordReader : InnerJoinRecordReader<double, int, Utf8String>
+        {
+            public FakeInnerJoinRecordReader()
+                : base(null, 0, false, 0, CompressionType.None)
+            {
+            }
+
+            protected override int Compare(double outer, int inner)
+            {
+                throw new NotImplementedException();
+            }
+
+            protected override Utf8String CreateJoinResult(Utf8String result, double outer, int inner)
             {
                 throw new NotImplementedException();
             }
@@ -67,6 +123,7 @@ namespace Ookii.Jumbo.Test.Jet
         private JetClient _jetClient;
 
         private const string _inputPath = "/test.txt";
+        private const string _inputPath2 = "/test2.txt";
         private const string _outputPath = "/output";
         private const int _blockSize = 4194304;
 
@@ -81,6 +138,10 @@ namespace Ookii.Jumbo.Test.Jet
 
             // This file will purely be used so we have something to use as input when creating jobs, it won't be read so the contents don't matter.
             using( Stream stream = _fileSystemClient.CreateFile(_inputPath) )
+            {
+                Utilities.GenerateData(stream, 10000000);
+            }
+            using( Stream stream = _fileSystemClient.CreateFile(_inputPath2) )
             {
                 Utilities.GenerateData(stream, 10000000);
             }
@@ -346,6 +407,32 @@ namespace Ookii.Jumbo.Test.Jet
             VerifyStage(config.Stages[1], 2, "MergeStage", typeof(EmptyTask<Utf8String>));
             VerifyDfsOutput(config.Stages[1], typeof(TextRecordWriter<Utf8String>));
             VerifyStageSetting(config.Stages[0], FileOutputChannel.OutputTypeSettingKey, FileChannelOutputType.SortSpill.ToString());
+            VerifyStageSetting(config.Stages[0], FileOutputChannel.SpillSortComparerTypeSettingKey, null);
+            VerifyStageSetting(config.Stages[1], FileOutputChannel.OutputTypeSettingKey, null);
+            config.Validate();
+        }
+
+        [Test]
+        public void TestSpillSortCustomComparer()
+        {
+            JobBuilder builder = new JobBuilder(_fileSystemClient, _jetClient);
+
+            var input = builder.Read(_inputPath, typeof(LineRecordReader));
+            var sort = builder.SpillSort(input, typeof(FakeRawComparer<>));
+            builder.Write(sort, _outputPath, typeof(TextRecordWriter<>));
+
+            JobConfiguration config = builder.CreateJob();
+            Assert.AreEqual(8, config.AssemblyFileNames.Count);
+
+            Assert.AreEqual(2, config.Stages.Count);
+
+            VerifyDfsInput(config, config.Stages[0], typeof(LineRecordReader));
+            VerifyStage(config.Stages[0], 3, "ReadStage", typeof(EmptyTask<Utf8String>));
+            VerifyChannel(config.Stages[0], config.Stages[1], ChannelType.File, multiInputRecordReaderType: typeof(MergeRecordReader<Utf8String>));
+            VerifyStage(config.Stages[1], 2, "MergeStage", typeof(EmptyTask<Utf8String>));
+            VerifyDfsOutput(config.Stages[1], typeof(TextRecordWriter<Utf8String>));
+            VerifyStageSetting(config.Stages[0], FileOutputChannel.OutputTypeSettingKey, FileChannelOutputType.SortSpill.ToString());
+            VerifyStageSetting(config.Stages[0], FileOutputChannel.SpillSortComparerTypeSettingKey, typeof(FakeRawComparer<Utf8String>).AssemblyQualifiedName);
             VerifyStageSetting(config.Stages[1], FileOutputChannel.OutputTypeSettingKey, null);
             VerifyStageSetting(config.Stages[0], TaskConstants.ComparerSettingKey, null);
             VerifyStageSetting(config.Stages[1], TaskConstants.ComparerSettingKey, null);
@@ -358,7 +445,7 @@ namespace Ookii.Jumbo.Test.Jet
             JobBuilder builder = new JobBuilder(_fileSystemClient, _jetClient);
 
             var input = builder.Read(_inputPath, typeof(LineRecordReader));
-            var sort = builder.SpillSort(input, typeof(FakeCombiner<>));
+            var sort = builder.SpillSortCombine(input, typeof(FakeCombiner<>));
             builder.Write(sort, _outputPath, typeof(TextRecordWriter<>));
 
             JobConfiguration config = builder.CreateJob();
@@ -373,8 +460,7 @@ namespace Ookii.Jumbo.Test.Jet
             VerifyDfsOutput(config.Stages[1], typeof(TextRecordWriter<Utf8String>));
             VerifyStageSetting(config.Stages[0], FileOutputChannel.OutputTypeSettingKey, FileChannelOutputType.SortSpill.ToString());
             VerifyStageSetting(config.Stages[1], FileOutputChannel.OutputTypeSettingKey, null);
-            VerifyStageSetting(config.Stages[0], TaskConstants.ComparerSettingKey, null);
-            VerifyStageSetting(config.Stages[1], TaskConstants.ComparerSettingKey, null);
+            VerifyStageSetting(config.Stages[0], FileOutputChannel.SpillSortComparerTypeSettingKey, null);
             VerifyStageSetting(config.Stages[0], FileOutputChannel.SpillSortCombinerTypeSettingKey, typeof(FakeCombiner<Utf8String>).AssemblyQualifiedName);
             VerifyStageSetting(config.Stages[1], FileOutputChannel.SpillSortCombinerTypeSettingKey, null);
             config.Validate();
@@ -386,7 +472,7 @@ namespace Ookii.Jumbo.Test.Jet
             JobBuilder builder = new JobBuilder(_fileSystemClient, _jetClient);
 
             var input = builder.Read(_inputPath, typeof(RecordFileReader<Pair<Utf8String, int>>));
-            var sort = builder.SpillSort<Utf8String, int>(input, CombineRecords);
+            var sort = builder.SpillSortCombine<Utf8String, int>(input, CombineRecords);
             builder.Write(sort, _outputPath, typeof(TextRecordWriter<>));
 
             JobConfiguration config = builder.CreateJob();
@@ -403,8 +489,7 @@ namespace Ookii.Jumbo.Test.Jet
             VerifyDfsOutput(config.Stages[1], typeof(TextRecordWriter<Pair<Utf8String, int>>));
             VerifyStageSetting(config.Stages[0], FileOutputChannel.OutputTypeSettingKey, FileChannelOutputType.SortSpill.ToString());
             VerifyStageSetting(config.Stages[1], FileOutputChannel.OutputTypeSettingKey, null);
-            VerifyStageSetting(config.Stages[0], TaskConstants.ComparerSettingKey, null);
-            VerifyStageSetting(config.Stages[1], TaskConstants.ComparerSettingKey, null);
+            VerifyStageSetting(config.Stages[0], FileOutputChannel.SpillSortComparerTypeSettingKey, null);
             VerifyStageSetting(config.Stages[0], FileOutputChannel.SpillSortCombinerTypeSettingKey, sort.CombinerType.AssemblyQualifiedName);
             VerifyStageSetting(config.Stages[1], FileOutputChannel.SpillSortCombinerTypeSettingKey, null);
             config.Validate();
@@ -417,7 +502,7 @@ namespace Ookii.Jumbo.Test.Jet
             JobBuilder builder = new JobBuilder(_fileSystemClient, _jetClient);
 
             var input = builder.Read(_inputPath, typeof(RecordFileReader<Pair<Utf8String, int>>));
-            var sort = builder.SpillSort<Utf8String, int>(input, CombineRecordsNoContext);
+            var sort = builder.SpillSortCombine<Utf8String, int>(input, CombineRecordsNoContext);
             builder.Write(sort, _outputPath, typeof(TextRecordWriter<>));
 
             JobConfiguration config = builder.CreateJob();
@@ -434,8 +519,7 @@ namespace Ookii.Jumbo.Test.Jet
             VerifyDfsOutput(config.Stages[1], typeof(TextRecordWriter<Pair<Utf8String, int>>));
             VerifyStageSetting(config.Stages[0], FileOutputChannel.OutputTypeSettingKey, FileChannelOutputType.SortSpill.ToString());
             VerifyStageSetting(config.Stages[1], FileOutputChannel.OutputTypeSettingKey, null);
-            VerifyStageSetting(config.Stages[0], TaskConstants.ComparerSettingKey, null);
-            VerifyStageSetting(config.Stages[1], TaskConstants.ComparerSettingKey, null);
+            VerifyStageSetting(config.Stages[0], FileOutputChannel.SpillSortComparerTypeSettingKey, null);
             VerifyStageSetting(config.Stages[0], FileOutputChannel.SpillSortCombinerTypeSettingKey, sort.CombinerType.AssemblyQualifiedName);
             VerifyStageSetting(config.Stages[1], FileOutputChannel.SpillSortCombinerTypeSettingKey, null);
             config.Validate();
@@ -685,6 +769,41 @@ namespace Ookii.Jumbo.Test.Jet
             config.Validate();
             builder.TaskBuilder.DeleteAssembly();
         }
+
+        [Test]
+        public void TestInnerJoin()
+        {
+            JobBuilder builder = new JobBuilder(_fileSystemClient, _jetClient);
+
+            var outer = builder.Read(_inputPath, typeof(RecordFileReader<double>));
+            var inner = builder.Read(_inputPath2, typeof(RecordFileReader<int>));
+            var joined = builder.InnerJoin(outer, inner, typeof(FakeInnerJoinRecordReader), typeof(FakeJoinComparer<double>), typeof(FakeJoinComparer<int>));
+            builder.Write(joined, _outputPath, typeof(TextRecordWriter<>));
+
+            JobConfiguration config = builder.CreateJob();
+
+            Assert.AreEqual(8, config.AssemblyFileNames.Count);
+
+            Assert.AreEqual(3, config.Stages.Count);
+
+            VerifyDfsInput(config, config.Stages[0], typeof(RecordFileReader<double>));
+            VerifyStage(config.Stages[0], 3, "OuterReadStage", typeof(EmptyTask<double>));
+            VerifyChannel(config.Stages[0], config.Stages[2], ChannelType.File, multiInputRecordReaderType: typeof(MergeRecordReader<double>));
+            VerifyStageSetting(config.Stages[0], FileOutputChannel.OutputTypeSettingKey, FileChannelOutputType.SortSpill.ToString());
+            VerifyStageSetting(config.Stages[0], FileOutputChannel.SpillSortComparerTypeSettingKey, typeof(FakeJoinComparer<double>).AssemblyQualifiedName);
+            VerifyStageSetting(config.Stages[0], PartitionerConstants.EqualityComparerSetting, typeof(FakeJoinComparer<double>).AssemblyQualifiedName);
+
+            VerifyDfsInput(config, config.Stages[1], typeof(RecordFileReader<int>), _inputPath2);
+            VerifyStage(config.Stages[1], 3, "InnerReadStage", typeof(EmptyTask<int>));
+            VerifyChannel(config.Stages[1], config.Stages[2], ChannelType.File, multiInputRecordReaderType: typeof(MergeRecordReader<int>));
+            VerifyStageSetting(config.Stages[1], FileOutputChannel.OutputTypeSettingKey, FileChannelOutputType.SortSpill.ToString());
+            VerifyStageSetting(config.Stages[1], FileOutputChannel.SpillSortComparerTypeSettingKey, typeof(FakeJoinComparer<int>).AssemblyQualifiedName);
+            VerifyStageSetting(config.Stages[1], PartitionerConstants.EqualityComparerSetting, typeof(FakeJoinComparer<int>).AssemblyQualifiedName);
+
+            VerifyStage(config.Stages[2], 2, "JoinStage", typeof(EmptyTask<Utf8String>), typeof(FakeInnerJoinRecordReader));
+            VerifyDfsOutput(config.Stages[2], typeof(TextRecordWriter<Utf8String>));
+        }
+
         
         public static void ProcessRecords(RecordReader<Utf8String> input, RecordWriter<int> output, TaskContext context)
         {
@@ -748,7 +867,7 @@ namespace Ookii.Jumbo.Test.Jet
             Assert.AreEqual(stageMultiInputRecordReader, stage.MultiInputRecordReaderType.ReferencedType);
         }
 
-        private static void VerifyDfsInput(JobConfiguration job, StageConfiguration stage, Type recordReaderType)
+        private static void VerifyDfsInput(JobConfiguration job, StageConfiguration stage, Type recordReaderType, string inputPath = _inputPath)
         {
             Assert.IsNotNull(stage.DataInput);
             Assert.IsNull(stage.Parent);
@@ -756,11 +875,11 @@ namespace Ookii.Jumbo.Test.Jet
             Assert.AreEqual(stage.TaskCount, stage.DataInput.TaskInputs.Count);
             Assert.IsInstanceOf(typeof(FileDataInput), stage.DataInput);
             Assert.AreEqual(recordReaderType.AssemblyQualifiedName, stage.GetSetting(FileDataInput.RecordReaderTypeSettingKey, null));
-            for( int x = 0; x < 3; ++x )
+            for( int x = 0; x < stage.TaskCount; ++x )
             {
                 FileTaskInput input = (FileTaskInput)stage.DataInput.TaskInputs[x];
                 Assert.AreEqual(x * _blockSize, input.Offset);
-                Assert.AreEqual(_inputPath, input.Path);
+                Assert.AreEqual(inputPath, input.Path);
             }
         }
 

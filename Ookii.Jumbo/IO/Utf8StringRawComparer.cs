@@ -8,7 +8,7 @@ namespace Ookii.Jumbo.IO
     /// <summary>
     /// A raw comparer for <see cref="Utf8String"/> records.
     /// </summary>
-    public sealed class Utf8StringRawComparer : IRawComparer
+    public sealed class Utf8StringRawComparer : IRawComparer<Utf8String>
     {
         /// <summary>
         /// Compares the binary representation of two objects and returns a value indicating whether one is less than, equal to, or greater than the other.
@@ -31,6 +31,19 @@ namespace Ookii.Jumbo.IO
         public int Compare(byte[] buffer1, int offset1, int count1, byte[] buffer2, int offset2, int count2)
         {
             return RawComparerHelper.CompareBytesWith7BitEncodedLength(buffer1, offset1, count1, buffer2, offset2, count2);
+        }
+
+        /// <summary>
+        /// Compares two objects and returns a value indicating whether one is less than, equal to, or greater than the other.
+        /// </summary>
+        /// <param name="x">The first object to compare.</param>
+        /// <param name="y">The second object to compare.</param>
+        /// <returns>
+        /// A signed integer that indicates the relative values of the first and second object.
+        /// </returns>
+        public int Compare(Utf8String x, Utf8String y)
+        {
+            return Comparer<Utf8String>.Default.Compare(x, y);
         }
     }
 }

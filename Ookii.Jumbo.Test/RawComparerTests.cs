@@ -41,7 +41,7 @@ namespace Ookii.Jumbo.Test
 
 
             values.Sort();
-            index.Sort(buffer, RawComparer<int>.CreateComparer());
+            IndexedQuickSort<int>.Sort(index, buffer, RawComparer<int>.CreateComparer());
 
             var result = index.Select(e => LittleEndianBitConverter.ToInt32(buffer, e.Offset)).ToList();
             CollectionAssert.AreEqual(values, result);

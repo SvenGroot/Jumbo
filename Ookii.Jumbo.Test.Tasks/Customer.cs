@@ -8,6 +8,7 @@ using Ookii.Jumbo.IO;
 
 namespace Ookii.Jumbo.Test.Tasks
 {
+    [RawComparer(typeof(CustomerComparer))]
     public class Customer : Writable<Customer>, IComparable<Customer>, ICloneable
     {
         public int Id { get; set; }
@@ -39,7 +40,7 @@ namespace Ookii.Jumbo.Test.Tasks
 
         public int CompareTo(Customer other)
         {
-            return Id - other.Id;
+            return Id.CompareTo(other.Id);
         }
 
         #endregion

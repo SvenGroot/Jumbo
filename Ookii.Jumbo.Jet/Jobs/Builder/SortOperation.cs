@@ -21,9 +21,6 @@ namespace Ookii.Jumbo.Jet.Jobs.Builder
         {
             if( comparerType != null )
             {
-                if( useSpillSort )
-                    throw new NotSupportedException("Spill sorting doesn't support custom comparers.");
-
                 if( comparerType.IsGenericTypeDefinition )
                     comparerType = comparerType.MakeGenericType(input.RecordType);
                 if( comparerType.ContainsGenericParameters )
@@ -95,18 +92,21 @@ namespace Ookii.Jumbo.Jet.Jobs.Builder
         }
 
         /// <summary>
-        /// Creates a new instance of the <see cref="SortOperation"/> class for regular sorting.
+        /// Creates a new instance of the <see cref="SortOperation" /> class for regular sorting.
         /// </summary>
         /// <param name="builder">The job builder.</param>
         /// <param name="input">The input for this operation.</param>
-        /// <param name="combinerType">The type of the combiner task to use, or <see langword="null"/> to use no combiner. May be a generic type definition with a single type parameter.</param>
-        /// <returns>A <see cref="SortOperation"/> instance.</returns>
+        /// <param name="comparerType">Type of the comparer to use, or <see langword="null"/> to use the default. May be a generic type definition with a single type parameter. Both <see cref="IComparer{T}"/> and <see cref="Ookii.Jumbo.IO.IRawComparer{T}"/> are supported, but using <see cref="Ookii.Jumbo.IO.IRawComparer{T}"/> is strongly recommended.</param>
+        /// <param name="combinerType">The type of the combiner task to use, or <see langword="null" /> to use no combiner. May be a generic type definition with a single type parameter.</param>
+        /// <returns>
+        /// A <see cref="SortOperation" /> instance.
+        /// </returns>
         /// <remarks>
-        /// If <paramref name="combinerType"/> is a generic type definition with a singe type parameter, it will be constructed using the input's record type.
+        /// If <paramref name="combinerType" /> is a generic type definition with a singe type parameter, it will be constructed using the input's record type.
         /// </remarks>
-        public static SortOperation CreateSpillSortOperation(JobBuilder builder, IOperationInput input, Type combinerType)
+        public static SortOperation CreateSpillSortOperation(JobBuilder builder, IOperationInput input, Type comparerType, Type combinerType)
         {
-            return new SortOperation(builder, input, null, combinerType, true);
+            return new SortOperation(builder, input, comparerType, combinerType, true);
         }
 
         /// <summary>
@@ -130,8 +130,10 @@ namespace Ookii.Jumbo.Jet.Jobs.Builder
                     throw new NotSupportedException("Spill sort can only be used on file channels.");
 
                 input.InputStage.AddTypedSetting(FileOutputChannel.OutputTypeSettingKey, FileChannelOutputType.SortSpill);
+                if( _comparerType != null )
+                    input.InputStage.AddSetting(FileOutputChannel.SpillSortComparerTypeSettingKey, _comparerType.AssemblyQualifiedName);
                 if( _combinerType != null )
-                    input.InputStage.AddTypedSetting(FileOutputChannel.SpillSortCombinerTypeSettingKey, _combinerType.AssemblyQualifiedName);
+                    input.InputStage.AddSetting(FileOutputChannel.SpillSortCombinerTypeSettingKey, _combinerType.AssemblyQualifiedName);
                 return compiler.CreateStage("MergeStage", SecondStepTaskType.TaskType, InputChannel.TaskCount, input, Output, true, InputChannel.Settings);
             }
             else

@@ -15,7 +15,7 @@ namespace Ookii.Jumbo.IO
     {
         #region Nested types
 
-        private sealed class SByteComparer : IRawComparer
+        private sealed class SByteComparer : IRawComparer<SByte>
         {
             public int Compare(byte[] buffer1, int offset1, int count1, byte[] buffer2, int offset2, int count2)
             {
@@ -23,9 +23,14 @@ namespace Ookii.Jumbo.IO
                 SByte value2 = (SByte)buffer2[offset2];
                 return value1 < value2 ? -1 : (value1 == value2 ? 0 : 1);
             }
+
+            public int Compare(SByte x, SByte y)
+            {
+                return Comparer<SByte>.Default.Compare(x, y);
+            }
         }
 
-        private sealed class ByteComparer : IRawComparer
+        private sealed class ByteComparer : IRawComparer<Byte>
         {
             public int Compare(byte[] buffer1, int offset1, int count1, byte[] buffer2, int offset2, int count2)
             {
@@ -33,9 +38,14 @@ namespace Ookii.Jumbo.IO
                 Byte value2 = (Byte)buffer2[offset2];
                 return value1 < value2 ? -1 : (value1 == value2 ? 0 : 1);
             }
+
+            public int Compare(Byte x, Byte y)
+            {
+                return Comparer<Byte>.Default.Compare(x, y);
+            }
         }
 
-        private sealed class Int16Comparer : IRawComparer
+        private sealed class Int16Comparer : IRawComparer<Int16>
         {
             public int Compare(byte[] buffer1, int offset1, int count1, byte[] buffer2, int offset2, int count2)
             {
@@ -43,9 +53,14 @@ namespace Ookii.Jumbo.IO
                 Int16 value2 = LittleEndianBitConverter.ToInt16(buffer2, offset2);
                 return value1 < value2 ? -1 : (value1 == value2 ? 0 : 1);
             }
+
+            public int Compare(Int16 x, Int16 y)
+            {
+                return Comparer<Int16>.Default.Compare(x, y);
+            }
         }
 
-        private sealed class UInt16Comparer : IRawComparer
+        private sealed class UInt16Comparer : IRawComparer<UInt16>
         {
             public int Compare(byte[] buffer1, int offset1, int count1, byte[] buffer2, int offset2, int count2)
             {
@@ -53,9 +68,14 @@ namespace Ookii.Jumbo.IO
                 UInt16 value2 = LittleEndianBitConverter.ToUInt16(buffer2, offset2);
                 return value1 < value2 ? -1 : (value1 == value2 ? 0 : 1);
             }
+
+            public int Compare(UInt16 x, UInt16 y)
+            {
+                return Comparer<UInt16>.Default.Compare(x, y);
+            }
         }
 
-        private sealed class Int32Comparer : IRawComparer
+        private sealed class Int32Comparer : IRawComparer<Int32>
         {
             public int Compare(byte[] buffer1, int offset1, int count1, byte[] buffer2, int offset2, int count2)
             {
@@ -63,9 +83,14 @@ namespace Ookii.Jumbo.IO
                 Int32 value2 = LittleEndianBitConverter.ToInt32(buffer2, offset2);
                 return value1 < value2 ? -1 : (value1 == value2 ? 0 : 1);
             }
+
+            public int Compare(Int32 x, Int32 y)
+            {
+                return Comparer<Int32>.Default.Compare(x, y);
+            }
         }
 
-        private sealed class UInt32Comparer : IRawComparer
+        private sealed class UInt32Comparer : IRawComparer<UInt32>
         {
             public int Compare(byte[] buffer1, int offset1, int count1, byte[] buffer2, int offset2, int count2)
             {
@@ -73,9 +98,14 @@ namespace Ookii.Jumbo.IO
                 UInt32 value2 = LittleEndianBitConverter.ToUInt32(buffer2, offset2);
                 return value1 < value2 ? -1 : (value1 == value2 ? 0 : 1);
             }
+
+            public int Compare(UInt32 x, UInt32 y)
+            {
+                return Comparer<UInt32>.Default.Compare(x, y);
+            }
         }
 
-        private sealed class Int64Comparer : IRawComparer
+        private sealed class Int64Comparer : IRawComparer<Int64>
         {
             public int Compare(byte[] buffer1, int offset1, int count1, byte[] buffer2, int offset2, int count2)
             {
@@ -83,9 +113,14 @@ namespace Ookii.Jumbo.IO
                 Int64 value2 = LittleEndianBitConverter.ToInt64(buffer2, offset2);
                 return value1 < value2 ? -1 : (value1 == value2 ? 0 : 1);
             }
+
+            public int Compare(Int64 x, Int64 y)
+            {
+                return Comparer<Int64>.Default.Compare(x, y);
+            }
         }
 
-        private sealed class UInt64Comparer : IRawComparer
+        private sealed class UInt64Comparer : IRawComparer<UInt64>
         {
             public int Compare(byte[] buffer1, int offset1, int count1, byte[] buffer2, int offset2, int count2)
             {
@@ -93,9 +128,14 @@ namespace Ookii.Jumbo.IO
                 UInt64 value2 = LittleEndianBitConverter.ToUInt64(buffer2, offset2);
                 return value1 < value2 ? -1 : (value1 == value2 ? 0 : 1);
             }
+
+            public int Compare(UInt64 x, UInt64 y)
+            {
+                return Comparer<UInt64>.Default.Compare(x, y);
+            }
         }
 
-        private sealed class DecimalComparer : IRawComparer
+        private sealed class DecimalComparer : IRawComparer<Decimal>
         {
             public int Compare(byte[] buffer1, int offset1, int count1, byte[] buffer2, int offset2, int count2)
             {
@@ -103,9 +143,14 @@ namespace Ookii.Jumbo.IO
                 Decimal value2 = LittleEndianBitConverter.ToDecimal(buffer2, offset2);
                 return value1 < value2 ? -1 : (value1 == value2 ? 0 : 1);
             }
+
+            public int Compare(Decimal x, Decimal y)
+            {
+                return Comparer<Decimal>.Default.Compare(x, y);
+            }
         }
 
-        private sealed class SingleComparer : IRawComparer
+        private sealed class SingleComparer : IRawComparer<Single>
         {
             public int Compare(byte[] buffer1, int offset1, int count1, byte[] buffer2, int offset2, int count2)
             {
@@ -113,9 +158,14 @@ namespace Ookii.Jumbo.IO
                 Single value2 = LittleEndianBitConverter.ToSingle(buffer2, offset2);
                 return value1 < value2 ? -1 : (value1 == value2 ? 0 : 1);
             }
+
+            public int Compare(Single x, Single y)
+            {
+                return Comparer<Single>.Default.Compare(x, y);
+            }
         }
 
-        private sealed class DoubleComparer : IRawComparer
+        private sealed class DoubleComparer : IRawComparer<Double>
         {
             public int Compare(byte[] buffer1, int offset1, int count1, byte[] buffer2, int offset2, int count2)
             {
@@ -123,9 +173,14 @@ namespace Ookii.Jumbo.IO
                 Double value2 = LittleEndianBitConverter.ToDouble(buffer2, offset2);
                 return value1 < value2 ? -1 : (value1 == value2 ? 0 : 1);
             }
+
+            public int Compare(Double x, Double y)
+            {
+                return Comparer<Double>.Default.Compare(x, y);
+            }
         }
 
-        private sealed class DateTimeComparer : IRawComparer
+        private sealed class DateTimeComparer : IRawComparer<DateTime>
         {
             public int Compare(byte[] buffer1, int offset1, int count1, byte[] buffer2, int offset2, int count2)
             {
@@ -133,13 +188,23 @@ namespace Ookii.Jumbo.IO
                 DateTime value2 = LittleEndianBitConverter.ToDateTime(buffer2, offset2);
                 return value1 < value2 ? -1 : (value1 == value2 ? 0 : 1);
             }
+
+            public int Compare(DateTime x, DateTime y)
+            {
+                return Comparer<DateTime>.Default.Compare(x, y);
+            }
         }
 
-        private sealed class StringComparer : IRawComparer
+        private sealed class StringRawComparer : IRawComparer<string>
         {
             public int Compare(byte[] buffer1, int offset1, int count1, byte[] buffer2, int offset2, int count2)
             {
                 return RawComparerHelper.CompareBytesWith7BitEncodedLength(buffer1, offset1, count1, buffer2, offset2, count2);
+            }
+
+            public int Compare(string x, string y)
+            {
+                return StringComparer.Ordinal.Compare(x, y);
             }
         }
 
@@ -172,7 +237,7 @@ namespace Ookii.Jumbo.IO
             else if( type == typeof(DateTime) )
                 return new DateTimeComparer();
             else if( type == typeof(String) )
-                return new StringComparer();
+                return new StringRawComparer();
 
             return null;
         }

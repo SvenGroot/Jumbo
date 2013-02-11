@@ -151,6 +151,7 @@
     <Compile Include="Jobs\Builder\FileOutput.cs" />
     <Compile Include="Jobs\Builder\DynamicTaskBuilder.cs" />
     <Compile Include="Jobs\Builder\IJobBuilderOperation.cs" />
+    <Compile Include="Jobs\Builder\InnerJoinOperation.cs" />
     <Compile Include="Jobs\Builder\IOperationInput.cs" />
     <Compile Include="Jobs\Builder\IOperationOutput.cs" />
     <Compile Include="Jobs\Builder\JobBuilder.cs" />
@@ -162,7 +163,9 @@
     <Compile Include="Jobs\Builder\JobBuilder_Sort.cs" />
     <Compile Include="Jobs\Builder\SortOperation.cs" />
     <Compile Include="Jobs\Builder\StageOperation.cs" />
+    <Compile Include="Jobs\Builder\StageOperationBase.cs" />
     <Compile Include="Jobs\Builder\TwoStepOperation.cs" />
+    <Compile Include="Jobs\Builder\JobBuilder_Join.cs" />
     <Compile Include="Jobs\JobSettingAttribute.cs" />
     <Compile Include="Jobs\Builder\RecordReuseMode.cs" />
     <Compile Include="Jobs\TaskRecordReuse.cs" />

@@ -31,6 +31,20 @@ namespace Ookii.Jumbo.Test.Jet
             }
         }
 
+        private class ReverseComparer : IRawComparer<int>
+        {
+            public int Compare(byte[] buffer1, int offset1, int count1, byte[] buffer2, int offset2, int count2)
+            {
+                return -RawComparer<int>.Comparer.Compare(buffer1, offset1, count1, buffer2, offset2, count2);
+            }
+
+            public int Compare(int x, int y)
+            {
+                return -RawComparer<int>.Comparer.Compare(x, y);
+            }
+        }
+
+
         #endregion
 
         [TestFixtureSetUp]
@@ -82,7 +96,13 @@ namespace Ookii.Jumbo.Test.Jet
             TestSpillRecordWriter(5, 110000, 100 * 1024, 6, true, CompressionType.GZip);
         }
 
-        private void TestSpillRecordWriter(int partitionCount, int records, int bufferSize, int expectedSpillCount, bool useCombiner = false, CompressionType compressionType = CompressionType.None)
+        [Test]
+        public void TestCustomComparer()
+        {
+            TestSpillRecordWriter(5, 110000, 100 * 1024, 6, false, CompressionType.None, new ReverseComparer());
+        }
+
+        private void TestSpillRecordWriter(int partitionCount, int records, int bufferSize, int expectedSpillCount, bool useCombiner = false, CompressionType compressionType = CompressionType.None, IComparer<int> comparer = null)
         {
             List<int> values;
             if( useCombiner )
@@ -107,7 +127,7 @@ namespace Ookii.Jumbo.Test.Jet
                 ITask<int, int> combiner = null;
                 if( useCombiner )
                     combiner = new DuplicateEliminationCombiner();
-                using( SortSpillRecordWriter<int> target = new SortSpillRecordWriter<int>(outputPath, partitioner, bufferSize, (int)(0.8 * bufferSize), 4096, true, compressionType, 5, combiner, 1) )
+                using( SortSpillRecordWriter<int> target = new SortSpillRecordWriter<int>(outputPath, partitioner, bufferSize, (int)(0.8 * bufferSize), 4096, true, compressionType, 5, comparer, combiner, 1) )
                 {
                     foreach( int value in values )
                     {
@@ -132,7 +152,7 @@ namespace Ookii.Jumbo.Test.Jet
                         using( BinaryRecordReader<int> reader = new BinaryRecordReader<int>(stream, 0, stream.Length, true, true) )
                         {
                             List<int> actualPartition = reader.EnumerateRecords().ToList();
-                            expectedPartitions[partition].Sort();
+                            expectedPartitions[partition].Sort(comparer);
                             if( useCombiner )
                                 CollectionAssert.AreEqual(expectedPartitions[partition].Distinct().ToList(), actualPartition);
                             else

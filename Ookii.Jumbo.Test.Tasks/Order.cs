@@ -8,7 +8,7 @@ using Ookii.Jumbo.IO;
 
 namespace Ookii.Jumbo.Test.Tasks
 {
-    public class Order : Writable<Order>, ICloneable
+    public class Order : IWritable, ICloneable
     {
         public int Id { get; set; }
         public int CustomerId { get; set; }
@@ -27,13 +27,23 @@ namespace Ookii.Jumbo.Test.Tasks
             return Id.GetHashCode();
         }
 
-        #region ICloneable Members
-
         public object Clone()
         {
             return MemberwiseClone();
         }
 
-        #endregion
+        public void Write(System.IO.BinaryWriter writer)
+        {
+            writer.Write(Id);
+            writer.Write(CustomerId);
+            writer.Write(ItemId);
+        }
+
+        public void Read(System.IO.BinaryReader reader)
+        {
+            Id = reader.ReadInt32();
+            CustomerId = reader.ReadInt32();
+            ItemId = reader.ReadInt32();
+        }
     }
 }

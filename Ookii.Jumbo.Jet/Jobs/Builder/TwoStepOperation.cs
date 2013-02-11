@@ -22,7 +22,7 @@ namespace Ookii.Jumbo.Jet.Jobs.Builder
     ///   or the channel type is explicitly set to pipeline no additional step is created.
     /// </para>
     /// <para>
-    ///   Any settings specified in the <see cref="StageOperation.Settings"/> property will be applied to both stages created for this step.
+    ///   Any settings specified in the <see cref="StageOperationBase.Settings"/> property will be applied to both stages created for this step.
     /// </para>
     /// </remarks>
     public class TwoStepOperation : StageOperation
@@ -73,7 +73,7 @@ namespace Ookii.Jumbo.Jet.Jobs.Builder
         /// Gets or sets the stage ID for the second step, if one is created.
         /// </summary>
         /// <value>
-        /// The second step stage ID, or <see langword="null"/> to use <see cref="StageOperation.StageId"/>.
+        /// The second step stage ID, or <see langword="null"/> to use <see cref="StageOperationBase.StageId"/>.
         /// </value>
         public string SecondStepStageId { get; set; }
 

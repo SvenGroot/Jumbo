@@ -98,7 +98,7 @@ namespace Ookii.Jumbo.Jet.Jobs.Builder
         /// <remarks>
         /// <note>
         ///   Reduce tasks require that their input is already grouped by key. The <see cref="JobBuilder"/> class doesn't guarantee or verify this. To group the
-        ///   records in the same way other common MapReduce implementation do, use the <see cref="SpillSort"/> function.
+        ///   records in the same way other common MapReduce implementation do, use the <see cref="SpillSortCombine"/> function.
         /// </note>
         /// <note>
         ///   There is no non-delegate version of this method. To use an existing map task class, simply use the <see cref="Process(IOperationInput,Type)"/> function.
@@ -141,7 +141,7 @@ namespace Ookii.Jumbo.Jet.Jobs.Builder
         /// <remarks>
         /// <note>
         ///   Reduce tasks require that their input is already grouped by key. The <see cref="JobBuilder"/> class doesn't guarantee or verify this. To group the
-        ///   records in the same way other common MapReduce implementation do, use the <see cref="SpillSort"/> function.
+        ///   records in the same way other common MapReduce implementation do, use the <see cref="SpillSortCombine"/> function.
         /// </note>
         /// <note>
         ///   There is no non-delegate version of this method. To use an existing map task class, simply use the <see cref="Process(IOperationInput,Type)"/> function.

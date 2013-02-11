@@ -18,7 +18,7 @@ namespace Ookii.Jumbo.Jet.Jobs.Builder
         /// <returns>A <see cref="SortOperation"/> instance that can be used to further customize the operation.</returns>
         /// <remarks>
         /// <para>
-        ///   This operation sorts all the records produced by a single task in memory. For large or unknown amounts of records, use <see cref="SpillSort"/> instead.
+        ///   This operation sorts all the records produced by a single task in memory. For large or unknown amounts of records, use <see cref="SpillSortCombine"/> instead.
         /// </para>
         /// </remarks>
         public SortOperation Sort(IOperationInput input, Type comparerType = null)
@@ -30,19 +30,36 @@ namespace Ookii.Jumbo.Jet.Jobs.Builder
         }
 
         /// <summary>
-        /// Sorts the specified input by using a file channel with an output type of <see cref="Channels.FileChannelOutputType.SortSpill"/>.
+        /// Sorts the specified input by using a file channel with an output type of <see cref="Channels.FileChannelOutputType.SortSpill" />.
         /// </summary>
         /// <param name="input">The input.</param>
-        /// <param name="combinerType">Type of the combiner task. May be <see langword="null"/>. May be a generic type definition with a single type parameter.</param>
+        /// <param name="comparerType">Type of the comparer to use. May be <see langword="null"/>. May be a generic type definition with a single type parameter. Both <see cref="IComparer{T}"/> and <see cref="IRawComparer{T}"/> are supported, but using <see cref="IRawComparer{T}"/> is strongly recommended.</param>
         /// <returns>
-        /// A <see cref="SortOperation"/> instance that can be used to further customize the operation.
+        /// A <see cref="SortOperation" /> instance that can be used to further customize the operation.
         /// </returns>
-        public SortOperation SpillSort(IOperationInput input, Type combinerType = null)
+        public SortOperation SpillSort(IOperationInput input, Type comparerType = null)
         {
             if( input == null )
                 throw new ArgumentNullException("input");
             CheckIfInputBelongsToJobBuilder(input);
-            return SortOperation.CreateSpillSortOperation(this, input, combinerType);
+            return SortOperation.CreateSpillSortOperation(this, input, comparerType, null);
+        }
+
+        /// <summary>
+        /// Sorts the specified input by using a file channel with an output type of <see cref="Channels.FileChannelOutputType.SortSpill"/>.
+        /// </summary>
+        /// <param name="input">The input.</param>
+        /// <param name="combinerType">Type of the combiner task. May be <see langword="null"/>. May be a generic type definition with a single type parameter.</param>
+        /// <param name="comparerType">Type of the comparer to use. May be <see langword="null"/>. May be a generic type definition with a single type parameter. Both <see cref="IComparer{T}"/> and <see cref="IRawComparer{T}"/> are supported, but using <see cref="IRawComparer{T}"/> is strongly recommended.</param>
+        /// <returns>
+        /// A <see cref="SortOperation"/> instance that can be used to further customize the operation.
+        /// </returns>
+        public SortOperation SpillSortCombine(IOperationInput input, Type combinerType, Type comparerType = null)
+        {
+            if( input == null )
+                throw new ArgumentNullException("input");
+            CheckIfInputBelongsToJobBuilder(input);
+            return SortOperation.CreateSpillSortOperation(this, input, comparerType, combinerType);
         }
 
         /// <summary>
@@ -53,6 +70,7 @@ namespace Ookii.Jumbo.Jet.Jobs.Builder
         /// <typeparam name="TValue">The type of the value.</typeparam>
         /// <param name="input">The input.</param>
         /// <param name="combiner">The combiner function.</param>
+        /// <param name="comparerType">Type of the comparer to use. May be <see langword="null"/>. May be a generic type definition with a single type parameter. Both <see cref="IComparer{T}"/> and <see cref="IRawComparer{T}"/> are supported, but using <see cref="IRawComparer{T}"/> is strongly recommended.</param>
         /// <param name="recordReuse">The record reuse mode.</param>
         /// <returns>
         /// A <see cref="SortOperation"/> instance that can be used to further customize the operation.
@@ -77,10 +95,10 @@ namespace Ookii.Jumbo.Jet.Jobs.Builder
         ///   serialized as well (this class must have the <see cref="SerializableAttribute"/> attribute).
         /// </para>
         /// </remarks>
-        public SortOperation SpillSort<TKey, TValue>(IOperationInput input, Action<TKey, IEnumerable<TValue>, RecordWriter<Pair<TKey, TValue>>, TaskContext> combiner, RecordReuseMode recordReuse = RecordReuseMode.Default)
+        public SortOperation SpillSortCombine<TKey, TValue>(IOperationInput input, Action<TKey, IEnumerable<TValue>, RecordWriter<Pair<TKey, TValue>>, TaskContext> combiner, Type comparerType = null, RecordReuseMode recordReuse = RecordReuseMode.Default)
             where TKey : IComparable<TKey>
         {
-            return SpillSortCore<TKey, TValue>(input, combiner, recordReuse);
+            return SpillSortCombineCore<TKey, TValue>(input, combiner, comparerType, recordReuse);
         }
 
         /// <summary>
@@ -91,6 +109,7 @@ namespace Ookii.Jumbo.Jet.Jobs.Builder
         /// <typeparam name="TValue">The type of the value.</typeparam>
         /// <param name="input">The input.</param>
         /// <param name="combiner">The combiner function.</param>
+        /// <param name="comparerType">Type of the comparer to use. May be <see langword="null"/>. May be a generic type definition with a single type parameter. Both <see cref="IComparer{T}"/> and <see cref="IRawComparer{T}"/> are supported, but using <see cref="IRawComparer{T}"/> is strongly recommended.</param>
         /// <param name="recordReuse">The record reuse mode.</param>
         /// <returns>
         /// A <see cref="SortOperation"/> instance that can be used to further customize the operation.
@@ -115,13 +134,13 @@ namespace Ookii.Jumbo.Jet.Jobs.Builder
         ///   serialized as well (this class must have the <see cref="SerializableAttribute"/> attribute).
         /// </para>
         /// </remarks>
-        public SortOperation SpillSort<TKey, TValue>(IOperationInput input, Action<TKey, IEnumerable<TValue>, RecordWriter<Pair<TKey, TValue>>> combiner, RecordReuseMode recordReuse = RecordReuseMode.Default)
+        public SortOperation SpillSortCombine<TKey, TValue>(IOperationInput input, Action<TKey, IEnumerable<TValue>, RecordWriter<Pair<TKey, TValue>>> combiner, Type comparerType = null, RecordReuseMode recordReuse = RecordReuseMode.Default)
             where TKey : IComparable<TKey>
         {
-            return SpillSortCore<TKey, TValue>(input, combiner, recordReuse);
+            return SpillSortCombineCore<TKey, TValue>(input, combiner, comparerType, recordReuse);
         }
 
-        private SortOperation SpillSortCore<TKey, TValue>(IOperationInput input, Delegate combiner, RecordReuseMode recordReuse)
+        private SortOperation SpillSortCombineCore<TKey, TValue>(IOperationInput input, Delegate combiner, Type comparerType, RecordReuseMode recordReuse)
             where TKey : IComparable<TKey>
         {
             if( input == null )
@@ -132,7 +151,7 @@ namespace Ookii.Jumbo.Jet.Jobs.Builder
 
             Type combinerType = CreateReduceTask<TKey, TValue, Pair<TKey, TValue>>(combiner, recordReuse);
             
-            SortOperation result = SpillSort(input, combinerType);
+            SortOperation result = SpillSortCombine(input, combinerType, comparerType);
             AddAssemblyAndSerializeDelegateIfNeeded(combiner, result);
             return result;
         }

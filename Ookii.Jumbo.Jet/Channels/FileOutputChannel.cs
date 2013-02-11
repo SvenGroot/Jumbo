@@ -39,6 +39,11 @@ namespace Ookii.Jumbo.Jet.Channels
         /// </summary>
         public const string SpillBufferLimitSettingKey = "FileOutputChannel.SpillBufferLimit";
         /// <summary>
+        /// The key to use in the stage settings to specify the type of a <see cref="IRawComparer{T}"/> or <see cref="IComparer{T}"/> to use when the output type is <see cref="FileChannelOutputType.SortSpill"/>. It's ignored
+        /// for other output types. The setting should be an assembly-qualified type name of a type implementing <see cref="IRawComparer{T}"/> or <see cref="IComparer{T}"/>. Using a <see cref="IRawComparer{T}"/> is strongly recommended.
+        /// </summary>
+        public const string SpillSortComparerTypeSettingKey = "FileOutputChannel.SpillSortComparer";
+        /// <summary>
         /// The key to use in the stage settings to specify the type of a combiner to use when the output type is <see cref="FileChannelOutputType.SortSpill"/>. It's ignored
         /// for other output types. The setting should be an assembly-qualified type name of a type implementing <see cref="ITask{TInput,TOutput}"/>.
         /// </summary>
@@ -174,8 +179,9 @@ namespace Ookii.Jumbo.Jet.Channels
             {
                 int maxDiskInputsPerMergePass = TaskExecution.Context.GetTypedSetting(MergeRecordReaderConstants.MaxFileInputsSetting, TaskExecution.JetClient.Configuration.MergeRecordReader.MaxFileInputs);
                 ITask<T, T> combiner = (ITask<T, T>)CreateCombiner();
+                IComparer<T> comparer = (IComparer<T>)CreateComparer();
                 int minSpillCountForCombineDuringMerge = TaskExecution.Context.GetTypedSetting(SpillSortMinSpillsForCombineDuringMergeSettingKey, TaskExecution.JetClient.Configuration.FileChannel.SpillSortMinSpillsForCombineDuringMerge);
-                result = new SortSpillRecordWriter<T>(Path.Combine(_localJobDirectory, fileName), partitioner, (int)outputBufferSize.Value, outputBufferLimitSize, (int)writeBufferSize.Value, TaskExecution.JetClient.Configuration.FileChannel.EnableChecksum, CompressionType, maxDiskInputsPerMergePass, combiner, minSpillCountForCombineDuringMerge);
+                result = new SortSpillRecordWriter<T>(Path.Combine(_localJobDirectory, fileName), partitioner, (int)outputBufferSize.Value, outputBufferLimitSize, (int)writeBufferSize.Value, TaskExecution.JetClient.Configuration.FileChannel.EnableChecksum, CompressionType, maxDiskInputsPerMergePass, comparer, combiner, minSpillCountForCombineDuringMerge);
             }
             else
                 result = new SingleFileMultiRecordWriter<T>(Path.Combine(_localJobDirectory, fileName), partitioner, (int)outputBufferSize.Value, outputBufferLimitSize, (int)writeBufferSize.Value, TaskExecution.JetClient.Configuration.FileChannel.EnableChecksum, CompressionType);
@@ -191,6 +197,16 @@ namespace Ookii.Jumbo.Jet.Channels
 
             Type combinerType = Type.GetType(combinerTypeName, true);
             return JetActivator.CreateInstance(combinerType, TaskExecution);
+        }
+
+        private object CreateComparer()
+        {
+            string comparerTypeName = TaskExecution.Context.StageConfiguration.GetSetting(SpillSortComparerTypeSettingKey, null);
+            if( comparerTypeName == null )
+                return null;
+
+            Type comparerType = Type.GetType(comparerTypeName, true);
+            return JetActivator.CreateInstance(comparerType, TaskExecution);
         }
     }
 }

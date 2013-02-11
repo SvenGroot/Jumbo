@@ -16,12 +16,13 @@ namespace Ookii.Jumbo.Test.Tasks
         {
         }
 
-        protected override void CreateJoinResult(CustomerOrder result, Customer outer, Order inner)
+        protected override CustomerOrder CreateJoinResult(CustomerOrder result, Customer outer, Order inner)
         {
             result.CustomerId = outer.Id;
             result.OrderId = inner.Id;
             result.Name = outer.Name;
             result.ItemId = inner.ItemId;
+            return result;
         }
 
         protected override int Compare(Customer outer, Order inner)

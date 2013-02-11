@@ -70,12 +70,12 @@ namespace Ookii.Jumbo.Jet
 
         private sealed class MergeInputComparer : IComparer<MergeInput>
         {
-            private readonly IRawComparer _rawComparer;
+            private readonly IRawComparer<T> _rawComparer;
             private readonly IComparer<T> _comparer;
 
-            public MergeInputComparer()
+            public MergeInputComparer(IRawComparer<T> rawComparer)
             {
-                _rawComparer = RawComparer<T>.CreateComparer();
+                _rawComparer = rawComparer ?? RawComparer<T>.CreateComparer();
             }
 
             public MergeInputComparer(IComparer<T> comparer)
@@ -165,7 +165,7 @@ namespace Ookii.Jumbo.Jet
         /// <param name="diskInputs">The disk inputs.</param>
         /// <param name="memoryInputs">The memory inputs.</param>
         /// <param name="maxDiskInputsPerPass">The maximum number of disk inputs per merge pass.</param>
-        /// <param name="comparer">The <see cref="IComparer{T}"/> to use, or <see langword="null"/> to use the default. Do not pass <see cref="Comparer{T}.Default"/>.</param>
+        /// <param name="comparer">The <see cref="IComparer{T}"/> or <see cref="IRawComparer{T}"/> to use, or <see langword="null"/> to use the default. Do not manually pass <see cref="Comparer{T}.Default"/>.</param>
         /// <param name="allowRecordReuse">if set to <see langword="true"/>, the result of the pass will reuse the same instance of <typeparamref name="T"/> for each pass.</param>
         /// <param name="forceDeserialization">if set to <see langword="true"/>, don't use raw comparisons for the final pass, but force deserialization.</param>
         /// <param name="intermediateOutputPath">The path to store intermediate passes.</param>
@@ -185,7 +185,11 @@ namespace Ookii.Jumbo.Jet
             if( passFilePrefix == null )
                 throw new ArgumentNullException("passFilePrefix");
 
-            bool rawReaderSupported = comparer == null && (memoryInputs == null || memoryInputs.All(i => i.IsRawReaderSupported)) && (diskInputs == null || diskInputs.All(i => i.IsRawReaderSupported));
+            // When the specified comparer is not a raw comparer or some of the inputs don't support raw records, we must use deserialization.
+            // When the comparer is a raw comparer uses deserialization, we deserialize in the merger and use regular comparisons rather than raw comparisons, since that's more
+            // efficient than deserializing inside the raw comparer.
+            IDeserializingRawComparer deserializingComparer = comparer as IDeserializingRawComparer;
+            bool rawReaderSupported = (comparer == null || comparer is IRawComparer<T>) && (deserializingComparer == null || !deserializingComparer.UsesDeserialization) && (memoryInputs == null || memoryInputs.All(i => i.IsRawReaderSupported)) && (diskInputs == null || diskInputs.All(i => i.IsRawReaderSupported));
 
             int diskInputsProcessed = 0;
             if( diskInputs != null && diskInputs.Count > maxDiskInputsPerPass )
@@ -342,7 +346,8 @@ namespace Ookii.Jumbo.Jet
             readers = null;
             if( rawReaderSupported )
             {
-                mergeComparer = new MergeInputComparer();
+                IRawComparer<T> rawComparer = (IRawComparer<T>)comparer; // Caller makes sure that rawReaderSupported is only true if comparer is a raw comparer or null.
+                mergeComparer = new MergeInputComparer(rawComparer ?? RawComparer<T>.CreateComparer());
                 mergeInputs = inputs.Select(i => new MergeInput(i.GetRawReader(), i.IsMemoryBased)).Where(i => i.RawRecordReader.ReadRecord());
                 if( returnReaders )
                 {

@@ -21,7 +21,7 @@ namespace Ookii.Jumbo.IO
         /// <returns>
         /// A signed integer that indicates the relative values of the first and second object.
         /// </returns>
-        public static int Compare(this IRawComparer self, RawRecord record1, RawRecord record2)
+        public static int Compare<T>(this IRawComparer<T> self, RawRecord record1, RawRecord record2)
         {
             if( self == null )
                 throw new ArgumentNullException("self");
@@ -115,23 +115,19 @@ namespace Ookii.Jumbo.IO
             return result;
         }
 
-        internal static IRawComparer GetComparer(Type type)
+        internal static IRawComparer<T> GetComparer<T>()
         {
+            Type type = typeof(T);
             RawComparerAttribute attribute = (RawComparerAttribute)Attribute.GetCustomAttribute(type, typeof(RawComparerAttribute));
             if( attribute != null && !string.IsNullOrEmpty(attribute.RawComparerTypeName) )
             {
                 Type comparerType = Type.GetType(attribute.RawComparerTypeName);
                 if( comparerType.IsGenericTypeDefinition && type.IsGenericType )
                     comparerType = comparerType.MakeGenericType(type.GetGenericArguments());
-                return (IRawComparer)Activator.CreateInstance(comparerType);
-            }
-            else if( type.IsGenericType && type.GetGenericTypeDefinition() == typeof(Pair<,>) )
-            {
-                Type keyType = type.GetGenericArguments()[0];
-                return GetComparer(keyType);
+                return (IRawComparer<T>)Activator.CreateInstance(comparerType);
             }
 
-            return (IRawComparer)DefaultRawComparer.GetComparer(type);
+            return (IRawComparer<T>)DefaultRawComparer.GetComparer(type);
         }
 
     }

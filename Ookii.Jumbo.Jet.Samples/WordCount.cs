@@ -138,7 +138,7 @@ namespace Ookii.Jumbo.Jet.Samples
             var pairs = job.Process<Utf8String, Pair<Utf8String, int>>(input, SplitLines);
             pairs.StageId = "WordCount";
             // Need two functions to work around the fact that the dynamic task builder currently can't handle the same function twice.
-            var sorted = job.SpillSort<Utf8String, int>(pairs, ReduceWordCount);
+            var sorted = job.SpillSortCombine<Utf8String, int>(pairs, ReduceWordCount);
             sorted.InputChannel.PartitionCount = Partitions;
             var counted = job.Reduce<Utf8String, int, Pair<Utf8String, int>>(sorted, ReduceWordCount2);
             counted.StageId = "WordCountAggregation";

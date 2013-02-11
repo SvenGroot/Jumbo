@@ -8,7 +8,7 @@ using System.Text;
 namespace Ookii.Jumbo.IO
 {
     /// <summary>
-    /// Specifies the <see cref="IRawComparer"/> implementation for a type.
+    /// Specifies the <see cref="IRawComparer{T}"/> implementation for a type.
     /// </summary>
     [AttributeUsage(AttributeTargets.Class | AttributeTargets.Struct, Inherited = false, AllowMultiple = false)]
     public sealed class RawComparerAttribute : Attribute
@@ -18,7 +18,7 @@ namespace Ookii.Jumbo.IO
         /// <summary>
         /// Initializes a new instance of the <see cref="RawComparerAttribute"/> class.
         /// </summary>
-        /// <param name="rawComparerTypeName">The type name of the type implementing <see cref="IRawComparer"/>.</param>
+        /// <param name="rawComparerTypeName">The type name of the type implementing <see cref="IRawComparer{T}"/>.</param>
         public RawComparerAttribute(string rawComparerTypeName)
         {
             _rawComparerTypeName = rawComparerTypeName;
@@ -27,7 +27,7 @@ namespace Ookii.Jumbo.IO
         /// <summary>
         /// Initializes a new instance of the <see cref="RawComparerAttribute"/> class.
         /// </summary>
-        /// <param name="rawComparerTypeName">The type that implements <see cref="IRawComparer"/>.</param>
+        /// <param name="rawComparerTypeName">The type that implements <see cref="IRawComparer{T}"/>.</param>
         public RawComparerAttribute(Type rawComparerTypeName)
         {
             if( rawComparerTypeName == null )
@@ -36,10 +36,10 @@ namespace Ookii.Jumbo.IO
         }
 
         /// <summary>
-        /// Gets the name of the type that implements <see cref="IRawComparer"/>.
+        /// Gets the name of the type that implements <see cref="IRawComparer{T}"/>.
         /// </summary>
         /// <value>
-        /// The name of a type that implements <see cref="IRawComparer"/>.
+        /// The name of a type that implements <see cref="IRawComparer{T}"/>.
         /// </value>
         public string RawComparerTypeName
         {

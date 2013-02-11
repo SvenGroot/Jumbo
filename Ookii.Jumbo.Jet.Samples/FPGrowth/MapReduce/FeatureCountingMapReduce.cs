@@ -81,7 +81,7 @@ namespace Ookii.Jumbo.Jet.Samples.FPGrowth.MapReduce
 
             var mapped = job.Process<Utf8String, Pair<Utf8String, int>>(input, MapRecords);
             mapped.StageId = "Map";
-            var sorted = job.SpillSort<Utf8String, int>(mapped, CombineRecords);
+            var sorted = job.SpillSortCombine<Utf8String, int>(mapped, CombineRecords);
             sorted.InputChannel.TaskCount = ReduceTaskCount;
             sorted.InputChannel.PartitionsPerTask = PartitionsPerTask;
             var reduced = job.Reduce<Utf8String, int, Pair<Utf8String, int>>(sorted, ReduceRecords);
