@@ -6,6 +6,8 @@ using System.Linq;
 using System.Text;
 using System.IO;
 using Ookii.Jumbo.IO;
+using System.Globalization;
+using System.Collections.Concurrent;
 
 namespace Ookii.Jumbo.Dfs.FileSystem
 {
@@ -14,6 +16,8 @@ namespace Ookii.Jumbo.Dfs.FileSystem
     /// </summary>
     public abstract class FileSystemClient
     {
+        private static readonly ConcurrentDictionary<string, Type> _fileSystemTypes = new ConcurrentDictionary<string,Type>(StringComparer.OrdinalIgnoreCase);
+
         private readonly DfsConfiguration _configuration;
 
         /// <summary>
@@ -54,6 +58,28 @@ namespace Ookii.Jumbo.Dfs.FileSystem
         }
 
         /// <summary>
+        /// Registers a file system for the specified scheme.
+        /// </summary>
+        /// <param name="scheme">The URL scheme.</param>
+        /// <param name="fileSystemClientType">Type of the file system client.</param>
+        public static void RegisterFileSystem(string scheme, Type fileSystemClientType)
+        {
+            if( scheme == null )
+                throw new ArgumentNullException("scheme");
+            if( fileSystemClientType == null )
+                throw new ArgumentNullException("fileSystemClientType");
+            if( string.IsNullOrWhiteSpace(scheme) )
+                throw new ArgumentException("The scheme may not be empty.", "scheme");
+            scheme = scheme.ToLower(CultureInfo.InvariantCulture);
+            if( scheme == "jdfs" || scheme == "file" )
+                throw new ArgumentException("You cannot replace the jdfs or file schemes.", "scheme");
+            if( !fileSystemClientType.IsSubclassOf(typeof(FileSystemClient)) )
+                throw new ArgumentException("The specified type does not derive from FileSystemClient.", "fileSystemClientType");
+
+            _fileSystemTypes[scheme] = fileSystemClientType;
+        }
+
+        /// <summary>
         /// Creates a <see cref="FileSystemClient"/> instance with the specified configuration.
         /// </summary>
         /// <param name="configuration">The configuration.</param>
@@ -63,11 +89,16 @@ namespace Ookii.Jumbo.Dfs.FileSystem
             if( configuration == null )
                 throw new ArgumentNullException("configuration");
 
-            // TODO: Other file systems.
-            if( configuration.NameServer.HostName.StartsWith("file://", StringComparison.Ordinal) )
+            if( configuration.FileSystem.Url.Scheme == "file" )
                 return new LocalFileSystemClient(configuration);
-            else
+            else if( configuration.FileSystem.Url.Scheme == "jdfs" )
                 return new DfsClient(configuration);
+            else
+            {
+                Type type = _fileSystemTypes[configuration.FileSystem.Url.Scheme];
+
+                return (FileSystemClient)Activator.CreateInstance(type, configuration);
+            }
         }
 
         /// <summary>

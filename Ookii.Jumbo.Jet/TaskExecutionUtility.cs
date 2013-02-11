@@ -593,7 +593,7 @@ namespace Ookii.Jumbo.Jet
                 WarnIfNoRecordReuse();
                 IDataInput input = (IDataInput)JetActivator.CreateInstance(Context.StageConfiguration.DataInputType.ReferencedType, this);
                 TaskInput = TaskInputUtility.ReadTaskInput(new LocalFileSystemClient(), _context.LocalJobDirectory, _context.TaskAttemptId.TaskId.StageId, _context.TaskAttemptId.TaskId.TaskNumber - 1);
-                return input.CreateRecordReader(FileSystemClient, JetClient.Configuration, _context, TaskInput);
+                return input.CreateRecordReader(TaskInput);
             }
             else if( _inputChannels != null )
             {
@@ -879,11 +879,11 @@ namespace Ookii.Jumbo.Jet
             string file = FileSystemClient.Path.Combine(FileSystemClient.Path.Combine(Context.DfsJobDirectory, "temp"), Context.TaskAttemptId + "_part" + partition.ToString(System.Globalization.CultureInfo.InvariantCulture));
             _log.DebugFormat("Opening output file {0}", file);
 
-            IDataOutput output = (IDataOutput)Activator.CreateInstance(Context.StageConfiguration.DataOutputType.ReferencedType);
+            IDataOutput output = (IDataOutput)JetActivator.CreateInstance(Context.StageConfiguration.DataOutputType.ReferencedType, this);
             if( _dataOutputs == null )
                 _dataOutputs = new List<IOutputCommitter>();
 
-            IOutputCommitter committer = output.CreateOutput(FileSystemClient, JetClient.Configuration, Context, partition);
+            IOutputCommitter committer = output.CreateOutput(partition);
             _dataOutputs.Add(committer);
             return committer.RecordWriter;
         }

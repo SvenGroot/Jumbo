@@ -12,6 +12,24 @@ using System.Diagnostics;
 namespace Ookii.Jumbo.IO
 {
     /// <summary>
+    /// Provides methods for inspecting record writers.
+    /// </summary>
+    public static class RecordWriter
+    {
+        /// <summary>
+        /// Gets the type of the records for the specified record writer.
+        /// </summary>
+        /// <param name="recordWriterType">The type of the record writer.</param>
+        /// <returns>The record type</returns>
+        public static Type GetRecordType(Type recordWriterType)
+        {
+            if( recordWriterType == null )
+                throw new ArgumentNullException("recordReaderType");
+            Type baseType = recordWriterType.FindGenericBaseType(typeof(RecordWriter<>), true);
+            return baseType.GetGenericArguments()[0];
+        }
+    }
+    /// <summary>
     /// Abstract base class for classes that write records.
     /// </summary>
     /// <typeparam name="T">The type of the record.</typeparam>

@@ -4,93 +4,63 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using Ookii.Jumbo.Dfs;
 using Ookii.Jumbo.Dfs.FileSystem;
 using Ookii.Jumbo.IO;
 
 namespace Ookii.Jumbo.Jet.IO
 {
     /// <summary>
-    /// Provides methods to create <see cref="FileDataInput{TRecordReader}"/> instances.
+    /// Provides a stage with input from a file system.
     /// </summary>
-    public static class FileDataInput
+    /// <para>
+    ///   This type inherits from <see cref="Configurable"/>, but the configuration is only used during task execution.
+    ///   If you are creating a job configuration, there is no need to configure this type other than specifying
+    ///   the <see cref="DfsConfiguration"/> to the <see cref="FileDataOutput.FileDataOutput(DfsConfiguration,Type,string,int,int,RecordStreamOptions)"/> constructor.
+    /// </para>
+    public class FileDataInput : Configurable, IDataInput
     {
         /// <summary>
         /// The key of the setting in the stage settings that holds the input path.
         /// </summary>
         /// <remarks>
         /// <para>
-        ///   The input path setting is informational only; it is not used by the <see cref="FileDataInput{TRecordReader}"/> class. Changing this setting does not affect the job.
+        ///   The input path setting is informational only; it is not used by the <see cref="FileDataInput"/> class. Changing this setting does not affect the job.
         /// </para>
         /// <para>
-        ///   This setting will only be set if the <see cref="FileDataInput{TRecordReader}"/> was created from a single file or directory.
+        ///   This setting will only be set if the <see cref="FileDataInput"/> was created from a single file or directory.
         /// </para>
         /// </remarks>
         public const string InputPathSettingKey = "FileDataInput.InputPath";
 
         /// <summary>
-        /// Creates a <see cref="FileDataInput{TRecordReader}"/> for the specified record reader type.
+        /// The key of the setting in the stage settings that holds the record reader type.
         /// </summary>
-        /// <param name="recordReaderType">Type of the record reader.</param>
-        /// <param name="fileSystem">The file system containing the files.</param>
-        /// <param name="fileOrDirectory">The input file or directory.</param>
-        /// <param name="minSplitSize">The minimum split size.</param>
-        /// <param name="maxSplitSize">The maximum split size.</param>
-        /// <returns>The <see cref="FileDataInput{TRecordReader}"/></returns>
-        public static IDataInput Create(Type recordReaderType, FileSystemClient fileSystem, JumboFileSystemEntry fileOrDirectory, int minSplitSize = 1, int maxSplitSize = Int32.MaxValue)
-        {
-            if( recordReaderType == null )
-                throw new ArgumentNullException("recordReaderType");
-            if( fileOrDirectory == null )
-                throw new ArgumentNullException("fileOrDirectory");
-            return (IDataInput)Activator.CreateInstance(typeof(FileDataInput<>).MakeGenericType(recordReaderType), fileSystem, fileOrDirectory, minSplitSize, maxSplitSize);
-        }
-
-        /// <summary>
-        /// Creates a <see cref="FileDataInput{TRecordReader}"/> for the specified record reader type.
-        /// </summary>
-        /// <param name="recordReaderType">Type of the record reader.</param>
-        /// <param name="fileSystem">The file system containing the files.</param>
-        /// <param name="inputFiles">The input files.</param>
-        /// <param name="minSplitSize">The minimum split size.</param>
-        /// <param name="maxSplitSize">The maximum split size.</param>
-        /// <returns>The <see cref="FileDataInput{TRecordReader}"/></returns>
-        public static IDataInput Create(Type recordReaderType, FileSystemClient fileSystem, IEnumerable<JumboFile> inputFiles, int minSplitSize = 1, int maxSplitSize = Int32.MaxValue)
-        {
-            if( recordReaderType == null )
-                throw new ArgumentNullException("recordReaderType");
-            if( inputFiles == null )
-                throw new ArgumentNullException("inputFiles");
-            return (IDataInput)Activator.CreateInstance(typeof(FileDataInput<>).MakeGenericType(recordReaderType), fileSystem, inputFiles, minSplitSize, maxSplitSize);
-        }
-    }
-
-    /// <summary>
-    /// Provides a stage with input from a file system.
-    /// </summary>
-    /// <typeparam name="TRecordReader">The type of the record reader.</typeparam>
-    public class FileDataInput<TRecordReader> : IDataInput
-        where TRecordReader : IRecordReader
-    {
+        public const string RecordReaderTypeSettingKey = "FileDataInput.RecordReader";
+        
         private readonly List<ITaskInput> _taskInputs;
         private const double _splitSlack = 1.1;
         private readonly string _inputPath;
+        private Type _recordReaderType;
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="FileDataInput&lt;TRecordReader&gt;"/> class.
+        /// Initializes a new instance of the <see cref="FileDataInput"/> class.
         /// </summary>
         public FileDataInput()
         {
         }
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="FileDataInput&lt;TRecordReader&gt;"/> class.
+        /// Initializes a new instance of the <see cref="FileDataInput" /> class.
         /// </summary>
-        /// <param name="fileSystem">The file system containing the files.</param>
+        /// <param name="dfsConfiguration">The DFS configuration.</param>
+        /// <param name="recordReaderType">Type of the record reader.</param>
         /// <param name="fileOrDirectory">The input file or directory.</param>
         /// <param name="minSplitSize">The minimum split size.</param>
         /// <param name="maxSplitSize">The maximum split size.</param>
-        public FileDataInput(FileSystemClient fileSystem, JumboFileSystemEntry fileOrDirectory, int minSplitSize = 1, int maxSplitSize = Int32.MaxValue)
-            : this(fileSystem, EnumerateFiles(fileOrDirectory), minSplitSize, maxSplitSize)
+        /// <exception cref="System.ArgumentNullException">fileOrDirectory</exception>
+        public FileDataInput(DfsConfiguration dfsConfiguration, Type recordReaderType, JumboFileSystemEntry fileOrDirectory, int minSplitSize = 1, int maxSplitSize = Int32.MaxValue)
+            : this(dfsConfiguration, recordReaderType, EnumerateFiles(fileOrDirectory), minSplitSize, maxSplitSize)
         {
             if( fileOrDirectory == null )
                 throw new ArgumentNullException("fileOrDirectory");
@@ -98,16 +68,19 @@ namespace Ookii.Jumbo.Jet.IO
         }
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="FileDataInput&lt;TRecordReader&gt;"/> class.
+        /// Initializes a new instance of the <see cref="FileDataInput"/> class.
         /// </summary>
-        /// <param name="fileSystem">The file system containing the files.</param>
+        /// <param name="dfsConfiguration">The DFS configuration.</param>
+        /// <param name="recordReaderType">Type of the record reader.</param>
         /// <param name="inputFiles">The input files.</param>
         /// <param name="minSplitSize">The minimum split size.</param>
         /// <param name="maxSplitSize">The maximum split size.</param>
-        public FileDataInput(FileSystemClient fileSystem, IEnumerable<JumboFile> inputFiles, int minSplitSize = 1, int maxSplitSize = Int32.MaxValue)
+        public FileDataInput(DfsConfiguration dfsConfiguration, Type recordReaderType, IEnumerable<JumboFile> inputFiles, int minSplitSize = 1, int maxSplitSize = Int32.MaxValue)
         {
-            if( fileSystem == null )
-                throw new ArgumentNullException("fileSystem");
+            if( dfsConfiguration == null )
+                throw new ArgumentNullException("dfsConfiguration");
+            if( recordReaderType == null )
+                throw new ArgumentNullException("recordReaderType");
             if( inputFiles == null )
                 throw new ArgumentNullException("inputFiles");
             if( maxSplitSize <= 0 )
@@ -116,7 +89,10 @@ namespace Ookii.Jumbo.Jet.IO
                 throw new ArgumentOutOfRangeException("minSplitSize");
             if( minSplitSize > maxSplitSize )
                 throw new ArgumentException("Minimum split size must be less than or equal to maximum split size.");
+            if( recordReaderType.FindGenericBaseType(typeof(RecordReader<>), false) == null )
+                throw new ArgumentException("The type is not a record reader.", "recordReaderType");
 
+            FileSystemClient fileSystem = FileSystemClient.Create(dfsConfiguration);
             DfsClient dfsClient = fileSystem as DfsClient;
             List<FileTaskInput> taskInputs = new List<FileTaskInput>();
             foreach( JumboFile file in inputFiles )
@@ -139,6 +115,8 @@ namespace Ookii.Jumbo.Jet.IO
                 throw new ArgumentException("The specified input path contains no non-empty splits.", "inputFiles");
             // Sort by descending split size, so biggest splits are done first. Using OrderBy because that does a stable sort.
             _taskInputs = taskInputs.OrderByDescending(input => input.Size).Cast<ITaskInput>().ToList();
+            _recordReaderType = recordReaderType;
+            DfsConfiguration = dfsConfiguration;
         }
 
         /// <summary>
@@ -149,7 +127,7 @@ namespace Ookii.Jumbo.Jet.IO
         /// </value>
         public Type RecordType
         {
-            get { return typeof(TRecordReader).FindGenericBaseType(typeof(RecordReader<>), true).GetGenericArguments()[0]; } 
+            get { return RecordReader.GetRecordType(_recordReaderType); } 
         }
 
         /// <summary>
@@ -166,22 +144,17 @@ namespace Ookii.Jumbo.Jet.IO
         /// <summary>
         /// Creates the record reader for the specified task.
         /// </summary>
-        /// <param name="fileSystem">The file system.</param>
-        /// <param name="jetConfiguration">The Jumbo Jet configuration. May be <see langword="null"/>.</param>
-        /// <param name="context">The task context. May be <see langword="null"/>.</param>
         /// <param name="input">The task input.</param>
         /// <returns>
         /// The record reader.
         /// </returns>
-        public IRecordReader CreateRecordReader(FileSystemClient fileSystem, JetConfiguration jetConfiguration, TaskContext context, ITaskInput input)
+        public IRecordReader CreateRecordReader(ITaskInput input)
         {
-            if( fileSystem == null )
-                throw new ArgumentNullException("fileSystem");
             if( input == null )
                 throw new ArgumentNullException("input");
 
             FileTaskInput fileInput = (FileTaskInput)input;
-            return (IRecordReader)JetActivator.CreateInstance(typeof(TRecordReader), fileSystem.Configuration, jetConfiguration, context, fileSystem.OpenFile(fileInput.Path), fileInput.Offset, fileInput.Size, context == null ? false : context.StageConfiguration.AllowRecordReuse);
+            return (IRecordReader)JetActivator.CreateInstance(_recordReaderType, DfsConfiguration, JetConfiguration, TaskContext, FileSystemClient.Create(DfsConfiguration).OpenFile(fileInput.Path), fileInput.Offset, fileInput.Size, TaskContext == null ? false : TaskContext.StageConfiguration.AllowRecordReuse);
         }
 
         /// <summary>
@@ -192,10 +165,21 @@ namespace Ookii.Jumbo.Jet.IO
         {
             if( stage == null )
                 throw new ArgumentNullException("stage");
+
+            stage.AddSetting(RecordReaderTypeSettingKey, _recordReaderType.AssemblyQualifiedName);
             // This setting is added for informational purposes only (so someone reading the job config can see what the input path was).
             // It is not used at all after setting it.
             if( _inputPath != null )
-                stage.AddSetting(FileDataInput.InputPathSettingKey, _inputPath);
+                stage.AddSetting(InputPathSettingKey, _inputPath);
+        }
+
+        public override void NotifyConfigurationChanged()
+        {
+            base.NotifyConfigurationChanged();
+            if( TaskContext != null )
+            {
+                _recordReaderType = Type.GetType(TaskContext.StageConfiguration.GetSetting(RecordReaderTypeSettingKey, null), true);
+            }
         }
         
         private static IEnumerable<string> GetSplitLocations(DfsClient dfsClient, JumboFile file, long offset)

@@ -11,32 +11,8 @@ namespace Ookii.Jumbo.Dfs
     /// <summary>
     /// Provides configuration information about the name server.
     /// </summary>
-    /// <remarks>
-    /// In a client application, you only need to specify the hostName and port attributes, the rest is ignored (those
-    /// are only used by the NameServer itself).
-    /// </remarks>
     public class NameServerConfigurationElement : ConfigurationElement
     {
-        /// <summary>
-        /// Gets or sets the host name of the NameServer.
-        /// </summary>
-        [ConfigurationProperty("hostName", DefaultValue = "localhost", IsRequired = true, IsKey = false)]
-        public string HostName
-        {
-            get { return (string)this["hostName"]; }
-            set { this["hostName"] = value; }
-        }
-
-        /// <summary>
-        /// Gets or sets the port number on which the NameServer's RPC server listens.
-        /// </summary>
-        [ConfigurationProperty("port", DefaultValue = 9000, IsRequired = true, IsKey = false)]
-        public int Port
-        {
-            get { return (int)this["port"]; }
-            set { this["port"] = value; }
-        }
-
         /// <summary>
         /// Gets or sets the default size of a block in a file.
         /// </summary>

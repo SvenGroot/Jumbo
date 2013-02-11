@@ -9,6 +9,7 @@ using Ookii.Jumbo.IO;
 
 namespace Ookii.Jumbo.Test.Tasks
 {
+    [AllowRecordReuse]
     public class MultiplierTask : Configurable, ITask<Utf8String, int>
     {
         #region ITask<Utf8StringWritable,int> Members

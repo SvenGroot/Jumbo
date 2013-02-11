@@ -39,8 +39,7 @@ namespace Ookii.Jumbo.Test.Dfs
                 log4net.LogManager.ResetConfiguration();
                 log4net.Config.BasicConfigurator.Configure();
                 DfsConfiguration config = new DfsConfiguration();
-                config.NameServer.HostName = "localhost";
-                config.NameServer.Port = NameServerPort; // Pick a different port so the tests can run even when a regular cluster is running
+                config.FileSystem.Url = new Uri("jdfs://localhost:" + NameServerPort);
                 config.NameServer.ReplicationFactor = replicationFactor;
                 config.NameServer.EditLogDirectory = editLogPath;
                 if( blockSize != null )
@@ -95,8 +94,7 @@ namespace Ookii.Jumbo.Test.Dfs
             private void RunDataServer(string path, int port)
             {
                 DfsConfiguration config = new DfsConfiguration();
-                config.NameServer.HostName = "localhost";
-                config.NameServer.Port = NameServerPort;
+                config.FileSystem.Url = new Uri("jdfs://localhost:" + NameServerPort);
                 config.DataServer.Port = port;
                 config.DataServer.BlockStoragePath = path;
                 if( Environment.OSVersion.Platform == PlatformID.Unix )
@@ -167,8 +165,7 @@ namespace Ookii.Jumbo.Test.Dfs
         public static DfsConfiguration CreateClientConfig()
         {
             DfsConfiguration config = new DfsConfiguration();
-            config.NameServer.HostName = "localhost";
-            config.NameServer.Port = TestDfsCluster.NameServerPort;
+            config.FileSystem.Url = new Uri("jdfs://localhost:" + NameServerPort);
             return config;
         }
 

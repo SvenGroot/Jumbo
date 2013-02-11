@@ -84,7 +84,7 @@ namespace Ookii.Jumbo.Jet.Jobs.Builder
             if( stage == null )
                 throw new ArgumentNullException("stage");
 
-            stage.DataOutput = FileDataOutput.Create(RecordWriterType, fileSystem, Path, BlockSize, ReplicationFactor, RecordOptions);
+            stage.DataOutput = new FileDataOutput(fileSystem.Configuration, RecordWriterType, Path, BlockSize, ReplicationFactor, RecordOptions);
         }
     }
 }

@@ -50,9 +50,8 @@ namespace Ookii.Jumbo.Dfs.FileSystem
             : base(configuration)
         {
             // HostName is always a file:// URI when this method is used.
-            Uri uri = new Uri(configuration.NameServer.HostName);
-            if( uri.AbsolutePath != "/" )
-                _rootPath = System.IO.Path.GetFullPath(Uri.UnescapeDataString(uri.AbsolutePath));
+            if( configuration.FileSystem.Url.AbsolutePath != "/" )
+                _rootPath = System.IO.Path.GetFullPath(Uri.UnescapeDataString(configuration.FileSystem.Url.AbsolutePath));
         }
 
         /// <summary>
@@ -227,8 +226,7 @@ namespace Ookii.Jumbo.Dfs.FileSystem
         private static DfsConfiguration CreateLocalConfiguration(string rootPath)
         {
             DfsConfiguration config = new DfsConfiguration();
-            config.NameServer.HostName = rootPath == null ? "file:///" : new Uri(new Uri("file:///"), rootPath).ToString();
-            config.NameServer.Port = 0;
+            config.FileSystem.Url = rootPath == null ? new Uri("file:///") : new Uri(new Uri("file:///"), rootPath);
             return config;
         }
 

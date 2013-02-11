@@ -40,14 +40,14 @@ namespace Ookii.Jumbo.Test.Dfs
         public void TestCreateFromConfiguration()
         {
             DfsConfiguration config = new DfsConfiguration();
-            config.NameServer.HostName = "file://";
+            config.FileSystem.Url = new Uri("file://");
             FileSystemClient client = FileSystemClient.Create(config);
             Assert.IsInstanceOf<LocalFileSystemClient>(client);
             LocalFileSystemClient localClient = (LocalFileSystemClient)client;
             Assert.IsNull(localClient.RootPath);
 
             Uri rootUri = new Uri(new Uri("file://"), _testPath);
-            config.NameServer.HostName = rootUri.ToString();
+            config.FileSystem.Url = rootUri;
             client = FileSystemClient.Create(config);
             Assert.IsInstanceOf<LocalFileSystemClient>(client);
             localClient = (LocalFileSystemClient)client;
@@ -58,7 +58,7 @@ namespace Ookii.Jumbo.Test.Dfs
         public void TestConfiguration()
         {
             LocalFileSystemClient target = new LocalFileSystemClient();
-            Assert.AreEqual("file:///", target.Configuration.NameServer.HostName);
+            Assert.AreEqual(new Uri("file:///"), target.Configuration.FileSystem.Url);
         }
 
         [Test]

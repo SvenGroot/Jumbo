@@ -55,11 +55,11 @@ namespace Ookii.Jumbo.Jet.Samples
             JobConfiguration jobConfig = new JobConfiguration(typeof(PricingSummaryTask).Assembly);
             jobConfig.JobName = GetType().Name; // Use the class name as the job's friendly name.
             JumboFileSystemEntry input = FileSystemClient.GetFileSystemEntryInfo(_inputPath);
-            StageConfiguration inputStage = jobConfig.AddInputStage("PricingSummaryTask", new FileDataInput<RecordFileReader<LineItem>>(FileSystemClient, input), typeof(PricingSummaryTask));
+            StageConfiguration inputStage = jobConfig.AddInputStage("PricingSummaryTask", new FileDataInput(FileSystemClient.Configuration, typeof(RecordFileReader<LineItem>), input), typeof(PricingSummaryTask));
             StageConfiguration accumulatorPipelineStage = jobConfig.AddStage("Accumulator", typeof(PricingSummaryAccumulatorTask), 1, new InputStageInfo(inputStage) { ChannelType = Channels.ChannelType.Pipeline });
             StageConfiguration accumulatorStage = jobConfig.AddStage("PricingSummary", typeof(PricingSummaryAccumulatorTask), 1, new InputStageInfo(accumulatorPipelineStage));
             StageConfiguration outputStage = jobConfig.AddStage("Sort", typeof(SortTask<Pair<PricingSummaryKey, PricingSummaryValue>>), 1, new InputStageInfo(accumulatorStage) { ChannelType = Channels.ChannelType.Pipeline });
-            outputStage.DataOutput = FileDataOutput.Create(typeof(TextRecordWriter<Pair<PricingSummaryKey, PricingSummaryValue>>), FileSystemClient, _outputPath, (int)BlockSize, ReplicationFactor);
+            outputStage.DataOutput = new FileDataOutput(FileSystemClient.Configuration, typeof(TextRecordWriter<Pair<PricingSummaryKey, PricingSummaryValue>>), _outputPath, (int)BlockSize, ReplicationFactor);
             jobConfig.AddTypedSetting(PricingSummaryTask.DeltaSettingName, _delta);
 
             return jetClient.RunJob(jobConfig, FileSystemClient, typeof(PricingSummaryTask).Assembly.Location).JobId;

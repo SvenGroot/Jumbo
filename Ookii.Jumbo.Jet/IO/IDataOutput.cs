@@ -26,17 +26,11 @@ namespace Ookii.Jumbo.Jet.IO
         /// <summary>
         /// Creates the output for the specified partition.
         /// </summary>
-        /// <param name="fileSystem">The file system.</param>
-        /// <param name="jetConfiguration">The Jumbo Jet configuration. May be <see langword="null"/>.</param>
-        /// <param name="context">The task context.</param>
         /// <param name="partitionNumber">The partition number for this output.</param>
         /// <returns>
         /// The record writer.
         /// </returns>
-        /// <remarks>
-        /// Don't assume you have any state when this method is called. Instead, read any state necessary using the specified <paramref name="context"/>.
-        /// </remarks>
-        IOutputCommitter CreateOutput(FileSystemClient fileSystem, JetConfiguration jetConfiguration, TaskContext context, int partitionNumber);
+        IOutputCommitter CreateOutput(int partitionNumber);
 
         /// <summary>
         /// Notifies the data input that it has been added to a stage.

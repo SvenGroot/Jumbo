@@ -22,8 +22,8 @@ namespace Ookii.Jumbo.Test.Jet
 
         private sealed class FakeFileSystemClient : FileSystemClient
         {
-            public FakeFileSystemClient()
-                : base(new DfsConfiguration())
+            public FakeFileSystemClient(DfsConfiguration configuration)
+                : base(configuration)
             {
             }
 
@@ -85,7 +85,14 @@ namespace Ookii.Jumbo.Test.Jet
         #endregion
 
         private const int _blockSize = 16 * 1024 * 1024;
-        private readonly FakeFileSystemClient _fileSystem = new FakeFileSystemClient();
+        private DfsConfiguration _fakeConfiguration = CreateFakeConfiguration();
+        private FakeFileSystemClient _fileSystem;
+
+        [TestFixtureSetUp]
+        public void SetUp()
+        {
+            _fileSystem = new FakeFileSystemClient(_fakeConfiguration);
+        }
 
         [Test]
         public void TestConstructor()
@@ -128,7 +135,7 @@ namespace Ookii.Jumbo.Test.Jet
             JumboFile file = CreateFakeTestFile("test");
             const int splitsPerBlock = 2;
 
-            StageConfiguration stage = target.AddInputStage("InputStage", new FileDataInput<LineRecordReader>(_fileSystem, file, maxSplitSize: _blockSize / splitsPerBlock), typeof(Tasks.LineCounterTask));
+            StageConfiguration stage = target.AddInputStage("InputStage", new FileDataInput(_fakeConfiguration, typeof(LineRecordReader), file, maxSplitSize: _blockSize / splitsPerBlock), typeof(Tasks.LineCounterTask));
 
             Assert.IsNotNull(stage.DataInput);
             Assert.IsTrue(stage.HasDataInput);
@@ -138,9 +145,10 @@ namespace Ookii.Jumbo.Test.Jet
             Assert.AreEqual(stage, target.Stages[0]);
             Assert.AreEqual("InputStage", stage.StageId);
             Assert.AreEqual(file.Blocks.Count * splitsPerBlock, stage.DataInput.TaskInputs.Count);
-            Assert.IsInstanceOf<FileDataInput<LineRecordReader>>(stage.DataInput);
-            Assert.AreEqual(typeof(FileDataInput<LineRecordReader>), stage.DataInputType.ReferencedType);
-            Assert.AreEqual(typeof(FileDataInput<LineRecordReader>).AssemblyQualifiedName, stage.DataInputType.TypeName);
+            Assert.IsInstanceOf<FileDataInput>(stage.DataInput);
+            Assert.AreEqual(typeof(FileDataInput), stage.DataInputType.ReferencedType);
+            Assert.AreEqual(typeof(FileDataInput).AssemblyQualifiedName, stage.DataInputType.TypeName);
+            Assert.AreEqual(typeof(LineRecordReader).AssemblyQualifiedName, stage.GetSetting(FileDataInput.RecordReaderTypeSettingKey, null));
             Assert.AreEqual(file.FullPath, stage.GetSetting(FileDataInput.InputPathSettingKey, null));
             int x = 0;
             foreach( FileTaskInput input in stage.DataInput.TaskInputs )
@@ -175,7 +183,7 @@ namespace Ookii.Jumbo.Test.Jet
             JobConfiguration target = new JobConfiguration(typeof(Tasks.LineCounterTask).Assembly);
             JumboFile file = CreateFakeTestFile("test1");
 
-            StageConfiguration expected = target.AddInputStage("InputStage", new FileDataInput<LineRecordReader>(_fileSystem, file), typeof(Tasks.LineCounterTask));
+            StageConfiguration expected = target.AddInputStage("InputStage", new FileDataInput(_fakeConfiguration, typeof(LineRecordReader), file), typeof(Tasks.LineCounterTask));
 
             StageConfiguration stage = target.GetStage("InputStage");
             Assert.IsNotNull(stage);
@@ -192,13 +200,13 @@ namespace Ookii.Jumbo.Test.Jet
             JumboFile file1 = CreateFakeTestFile("test1");
             JumboFile file2 = CreateFakeTestFile("test2");
 
-            StageConfiguration inputStage1 = target.AddInputStage("InputStage1", new FileDataInput<LineRecordReader>(_fileSystem, file1), typeof(Tasks.LineCounterTask));
-            StageConfiguration inputStage2 = target.AddInputStage("InputStage2", new FileDataInput<LineRecordReader>(_fileSystem, file2), typeof(Tasks.LineCounterTask));
+            StageConfiguration inputStage1 = target.AddInputStage("InputStage1", new FileDataInput(_fakeConfiguration, typeof(LineRecordReader), file1), typeof(Tasks.LineCounterTask));
+            StageConfiguration inputStage2 = target.AddInputStage("InputStage2", new FileDataInput(_fakeConfiguration, typeof(LineRecordReader), file2), typeof(Tasks.LineCounterTask));
 
             const int taskCount = 3;
             const string outputPath = "/output";
             var stage = target.AddStage("SecondStage", typeof(Tasks.LineAdderTask), taskCount, new[] { new InputStageInfo(inputStage1), new InputStageInfo(inputStage2) }, typeof(MultiRecordReader<int>));
-            stage.DataOutput = new FileDataOutput<TextRecordWriter<int>>(_fileSystem, outputPath);
+            stage.DataOutput = new FileDataOutput(_fakeConfiguration, typeof(TextRecordWriter<int>), outputPath);
 
             
             List<StageConfiguration> stages = target.GetInputStagesForStage("SecondStage").ToList();
@@ -216,13 +224,13 @@ namespace Ookii.Jumbo.Test.Jet
             JobConfiguration target = new JobConfiguration();
             JumboFile file1 = CreateFakeTestFile("test1");
 
-            StageConfiguration inputStage = target.AddInputStage("InputStage", new FileDataInput<LineRecordReader>(_fileSystem, file1), typeof(SortTask<Utf8String>));
+            StageConfiguration inputStage = target.AddInputStage("InputStage", new FileDataInput(_fakeConfiguration, typeof(LineRecordReader), file1), typeof(SortTask<Utf8String>));
 
             const int taskCount = 3;
             const int partitionsPerTask = 5;
 
             StageConfiguration stage = target.AddStage("SecondStage", typeof(EmptyTask<Utf8String>), taskCount, new InputStageInfo(inputStage) { PartitionsPerTask = partitionsPerTask });
-            stage.DataOutput = new FileDataOutput<TextRecordWriter<Utf8String>>(_fileSystem, "/output");
+            stage.DataOutput = new FileDataOutput(_fakeConfiguration, typeof(TextRecordWriter<Utf8String>), "/output");
 
             ChannelConfiguration channel = inputStage.OutputChannel;
             Assert.AreEqual(ChannelType.File, channel.ChannelType);
@@ -245,11 +253,11 @@ namespace Ookii.Jumbo.Test.Jet
             const int taskCount = 3;
             const int partitionsPerTask = 5;
 
-            StageConfiguration inputStage = target.AddInputStage("InputStage", new FileDataInput<LineRecordReader>(_fileSystem, file1), typeof(EmptyTask<Utf8String>));
+            StageConfiguration inputStage = target.AddInputStage("InputStage", new FileDataInput(_fakeConfiguration, typeof(LineRecordReader), file1), typeof(EmptyTask<Utf8String>));
             StageConfiguration sortStage = target.AddStage("SortStage", typeof(SortTask<Utf8String>), taskCount * partitionsPerTask, new InputStageInfo(inputStage) { ChannelType = ChannelType.Pipeline });
 
             StageConfiguration stage = target.AddStage("SecondStage", typeof(EmptyTask<Utf8String>), taskCount, new InputStageInfo(sortStage) { PartitionsPerTask = partitionsPerTask });
-            stage.DataOutput = new FileDataOutput<TextRecordWriter<Utf8String>>(_fileSystem, "/output");
+            stage.DataOutput = new FileDataOutput(_fakeConfiguration, typeof(TextRecordWriter<Utf8String>), "/output");
 
             ChannelConfiguration channel = sortStage.OutputChannel;
             Assert.AreEqual(ChannelType.File, channel.ChannelType);
@@ -270,14 +278,14 @@ namespace Ookii.Jumbo.Test.Jet
             JumboFile file1 = CreateFakeTestFile("test1");
             JumboFile file2 = CreateFakeTestFile("test2");
 
-            StageConfiguration inputStage1 = target.AddInputStage("InputStage1", new FileDataInput<LineRecordReader>(_fileSystem, file1), typeof(Tasks.LineCounterTask));
-            StageConfiguration inputStage2 = target.AddInputStage("InputStage2", new FileDataInput<LineRecordReader>(_fileSystem, file2), typeof(Tasks.LineCounterTask));
+            StageConfiguration inputStage1 = target.AddInputStage("InputStage1", new FileDataInput(_fakeConfiguration, typeof(LineRecordReader), file1), typeof(Tasks.LineCounterTask));
+            StageConfiguration inputStage2 = target.AddInputStage("InputStage2", new FileDataInput(_fakeConfiguration, typeof(LineRecordReader), file2), typeof(Tasks.LineCounterTask));
 
             const int taskCount = 3;
             const string outputPath = "/output";
             StageConfiguration stage = target.AddStage("SecondStage", typeof(Tasks.LineAdderTask), taskCount, new[] { new InputStageInfo(inputStage1), new InputStageInfo(inputStage2) }, typeof(MultiRecordReader<int>));
             if( useOutput )
-                stage.DataOutput = new FileDataOutput<TextRecordWriter<int>>(_fileSystem, outputPath);
+                stage.DataOutput = new FileDataOutput(_fakeConfiguration, typeof(TextRecordWriter<int>), outputPath);
 
             Assert.AreEqual(taskCount, stage.TaskCount);
             Assert.AreEqual(3, target.Stages.Count);
@@ -291,10 +299,11 @@ namespace Ookii.Jumbo.Test.Jet
             {
                 Assert.IsNotNull(stage.DataOutput);
                 Assert.IsTrue(stage.HasDataOutput);
-                Type outputType = typeof(FileDataOutput<>).MakeGenericType(typeof(TextRecordWriter<int>));
+                Type outputType = typeof(FileDataOutput);
                 Assert.IsInstanceOf(outputType, stage.DataOutput);
                 Assert.AreEqual(outputType, stage.DataOutputType.ReferencedType);
                 Assert.AreEqual(outputType.AssemblyQualifiedName, stage.DataOutputType.TypeName);
+                Assert.AreEqual(typeof(TextRecordWriter<int>).AssemblyQualifiedName, stage.GetSetting(FileDataOutput.RecordWriterTypeSettingKey, null));
                 Assert.AreEqual(DfsPath.Combine(outputPath, stage.StageId + "-{0:00000}"), stage.GetSetting(FileDataOutput.OutputPathFormatSettingKey, null));
                 Assert.AreEqual(0, stage.GetTypedSetting(FileDataOutput.BlockSizeSettingKey, 0));
                 Assert.AreEqual(0, stage.GetTypedSetting(FileDataOutput.ReplicationFactorSettingKey, 0));
@@ -335,5 +344,12 @@ namespace Ookii.Jumbo.Test.Jet
             return _fileSystem.GetFileInfo("/" + name);
         }
 
+        private static DfsConfiguration CreateFakeConfiguration()
+        {
+            FileSystemClient.RegisterFileSystem("fake", typeof(FakeFileSystemClient));
+            DfsConfiguration config = new DfsConfiguration();
+            config.FileSystem.Url = new Uri("fake://");
+            return config;
+        }
     }
 }

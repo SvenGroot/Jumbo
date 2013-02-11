@@ -61,10 +61,10 @@ namespace Ookii.Jumbo.Test.Jet
 
 
             JobConfiguration config = new JobConfiguration(typeof(StringConversionTask).Assembly);
-            StageConfiguration conversionStage = config.AddInputStage("ConversionStage", new FileDataInput<LineRecordReader>(fileSystemClient, fileSystemClient.GetFileInfo(_fileName)), typeof(StringConversionTask));
+            StageConfiguration conversionStage = config.AddInputStage("ConversionStage", new FileDataInput(fileSystemClient.Configuration, typeof(LineRecordReader), fileSystemClient.GetFileInfo(_fileName)), typeof(StringConversionTask));
             StageConfiguration sortStage = config.AddStage("SortStage", typeof(SortTask<int>), 1, new InputStageInfo(conversionStage) { ChannelType = ChannelType.Pipeline });
             var stage = config.AddStage("MergeStage", typeof(EmptyTask<int>), 1, new InputStageInfo(sortStage) { MultiInputRecordReaderType = typeof(MergeRecordReader<int>) });
-            stage.DataOutput = new FileDataOutput<BinaryRecordWriter<int>>(fileSystemClient, outputPath);
+            stage.DataOutput = new FileDataOutput(fileSystemClient.Configuration, typeof(BinaryRecordWriter<int>), outputPath);
 
             RunJob(fileSystemClient, config);
 
@@ -82,9 +82,9 @@ namespace Ookii.Jumbo.Test.Jet
 
 
             JobConfiguration config = new JobConfiguration(typeof(StringConversionTask).Assembly);
-            StageConfiguration conversionStage = config.AddInputStage("ConversionStage", new FileDataInput<LineRecordReader>(fileSystemClient, fileSystemClient.GetFileInfo(_fileName)), typeof(StringConversionTask));
+            StageConfiguration conversionStage = config.AddInputStage("ConversionStage", new FileDataInput(fileSystemClient.Configuration, typeof(LineRecordReader), fileSystemClient.GetFileInfo(_fileName)), typeof(StringConversionTask));
             var stage = config.AddStage("SortStage", typeof(SortTask<int>), 1, new InputStageInfo(conversionStage));
-            stage.DataOutput = new FileDataOutput<BinaryRecordWriter<int>>(fileSystemClient, outputPath);
+            stage.DataOutput = new FileDataOutput(fileSystemClient.Configuration, typeof(BinaryRecordWriter<int>), outputPath);
 
             RunJob(fileSystemClient, config);
 
@@ -102,9 +102,9 @@ namespace Ookii.Jumbo.Test.Jet
 
 
             JobConfiguration config = new JobConfiguration(typeof(StringConversionTask).Assembly);
-            StageConfiguration conversionStage = config.AddInputStage("ConversionStage", new FileDataInput<LineRecordReader>(fileSystemClient, fileSystemClient.GetFileInfo(_fileName)), typeof(StringConversionTask));
+            StageConfiguration conversionStage = config.AddInputStage("ConversionStage", new FileDataInput(fileSystemClient.Configuration, typeof(LineRecordReader), fileSystemClient.GetFileInfo(_fileName)), typeof(StringConversionTask));
             var stage = config.AddStage("SortStage", typeof(SortTask<int>), 1, new InputStageInfo(conversionStage));
-            stage.DataOutput = new FileDataOutput<BinaryRecordWriter<int>>(fileSystemClient, outputPath);
+            stage.DataOutput = new FileDataOutput(fileSystemClient.Configuration, typeof(BinaryRecordWriter<int>), outputPath);
             foreach( ChannelConfiguration channel in config.GetAllChannels() )
             {
                 if( channel.ChannelType == ChannelType.File )
@@ -127,9 +127,9 @@ namespace Ookii.Jumbo.Test.Jet
 
 
             JobConfiguration config = new JobConfiguration(typeof(StringConversionTask).Assembly);
-            StageConfiguration conversionStage = config.AddInputStage("ConversionStage", new FileDataInput<LineRecordReader>(fileSystemClient, fileSystemClient.GetFileInfo(_fileName)), typeof(StringConversionTask));
+            StageConfiguration conversionStage = config.AddInputStage("ConversionStage", new FileDataInput(fileSystemClient.Configuration, typeof(LineRecordReader), fileSystemClient.GetFileInfo(_fileName)), typeof(StringConversionTask));
             var stage = config.AddStage("SortStage", typeof(SortTask<int>), 1, new InputStageInfo(conversionStage));
-            stage.DataOutput = new FileDataOutput<BinaryRecordWriter<int>>(fileSystemClient, outputPath);
+            stage.DataOutput = new FileDataOutput(fileSystemClient.Configuration, typeof(BinaryRecordWriter<int>), outputPath);
             config.AddTypedSetting(FileInputChannel.MemoryStorageSizeSetting, 0L);
             foreach( ChannelConfiguration channel in config.GetAllChannels() )
             {
@@ -155,11 +155,11 @@ namespace Ookii.Jumbo.Test.Jet
             JobConfiguration config = new JobConfiguration(typeof(StringConversionTask).Assembly);
             config.AddTypedSetting(FileOutputChannel.OutputTypeSettingKey, FileChannelOutputType.Spill);
             config.AddSetting(FileOutputChannel.SpillBufferSizeSettingKey, "3MB");
-            StageConfiguration conversionStage = config.AddInputStage("ConversionStage", new FileDataInput<LineRecordReader>(fileSystemClient, fileSystemClient.GetFileInfo(_fileName)), typeof(StringConversionTask));
+            StageConfiguration conversionStage = config.AddInputStage("ConversionStage", new FileDataInput(fileSystemClient.Configuration, typeof(LineRecordReader), fileSystemClient.GetFileInfo(_fileName)), typeof(StringConversionTask));
             StageConfiguration sortStage = config.AddStage("SortStage", typeof(SortTask<int>), 2, new InputStageInfo(conversionStage) { ChannelType = ChannelType.Pipeline });
 
             var stage = config.AddStage("MergeStage", typeof(EmptyTask<int>), 2, new InputStageInfo(sortStage) { MultiInputRecordReaderType = typeof(MergeRecordReader<int>) });
-            stage.DataOutput = new FileDataOutput<BinaryRecordWriter<int>>(fileSystemClient, outputPath);
+            stage.DataOutput = new FileDataOutput(fileSystemClient.Configuration, typeof(BinaryRecordWriter<int>), outputPath);
 
             RunJob(fileSystemClient, config);
 
@@ -178,10 +178,10 @@ namespace Ookii.Jumbo.Test.Jet
             JobConfiguration config = new JobConfiguration(typeof(StringConversionTask).Assembly);
             config.AddTypedSetting(FileOutputChannel.OutputTypeSettingKey, FileChannelOutputType.SortSpill);
             config.AddSetting(FileOutputChannel.SpillBufferSizeSettingKey, "3MB");
-            StageConfiguration conversionStage = config.AddInputStage("ConversionStage", new FileDataInput<LineRecordReader>(fileSystemClient, fileSystemClient.GetFileInfo(_fileName)), typeof(StringConversionTask));
+            StageConfiguration conversionStage = config.AddInputStage("ConversionStage", new FileDataInput(fileSystemClient.Configuration, typeof(LineRecordReader), fileSystemClient.GetFileInfo(_fileName)), typeof(StringConversionTask));
 
             var stage = config.AddStage("MergeStage", typeof(EmptyTask<int>), 2, new InputStageInfo(conversionStage) { MultiInputRecordReaderType = typeof(MergeRecordReader<int>) });
-            stage.DataOutput = new FileDataOutput<BinaryRecordWriter<int>>(fileSystemClient, outputPath);
+            stage.DataOutput = new FileDataOutput(fileSystemClient.Configuration, typeof(BinaryRecordWriter<int>), outputPath);
 
             RunJob(fileSystemClient, config);
 
@@ -201,10 +201,10 @@ namespace Ookii.Jumbo.Test.Jet
             config.AddTypedSetting(FileOutputChannel.OutputTypeSettingKey, FileChannelOutputType.SortSpill);
             config.AddSetting(FileOutputChannel.SpillBufferSizeSettingKey, "3MB");
             config.AddTypedSetting(MergeRecordReaderConstants.PurgeMemorySettingKey, true);
-            StageConfiguration conversionStage = config.AddInputStage("ConversionStage", new FileDataInput<LineRecordReader>(fileSystemClient, fileSystemClient.GetFileInfo(_fileName)), typeof(StringConversionTask));
+            StageConfiguration conversionStage = config.AddInputStage("ConversionStage", new FileDataInput(fileSystemClient.Configuration, typeof(LineRecordReader), fileSystemClient.GetFileInfo(_fileName)), typeof(StringConversionTask));
 
             var stage = config.AddStage("MergeStage", typeof(EmptyTask<int>), 2, new InputStageInfo(conversionStage) { MultiInputRecordReaderType = typeof(MergeRecordReader<int>) });
-            stage.DataOutput = new FileDataOutput<BinaryRecordWriter<int>>(fileSystemClient, outputPath);
+            stage.DataOutput = new FileDataOutput(fileSystemClient.Configuration, typeof(BinaryRecordWriter<int>), outputPath);
 
             foreach( ChannelConfiguration channel in config.GetAllChannels() )
             {
@@ -231,10 +231,10 @@ namespace Ookii.Jumbo.Test.Jet
             config.AddSetting(FileOutputChannel.SpillBufferSizeSettingKey, "3MB");
             config.AddTypedSetting(MergeRecordReaderConstants.PurgeMemorySettingKey, true);
             config.AddTypedSetting(FileInputChannel.MemoryStorageSizeSetting, 0L);
-            StageConfiguration conversionStage = config.AddInputStage("ConversionStage", new FileDataInput<LineRecordReader>(fileSystemClient, fileSystemClient.GetFileInfo(_fileName)), typeof(StringConversionTask));
+            StageConfiguration conversionStage = config.AddInputStage("ConversionStage", new FileDataInput(fileSystemClient.Configuration, typeof(LineRecordReader), fileSystemClient.GetFileInfo(_fileName)), typeof(StringConversionTask));
 
             var stage = config.AddStage("MergeStage", typeof(EmptyTask<int>), 2, new InputStageInfo(conversionStage) { MultiInputRecordReaderType = typeof(MergeRecordReader<int>) });
-            stage.DataOutput = new FileDataOutput<BinaryRecordWriter<int>>(fileSystemClient, outputPath);
+            stage.DataOutput = new FileDataOutput(fileSystemClient.Configuration, typeof(BinaryRecordWriter<int>), outputPath);
 
             foreach( ChannelConfiguration channel in config.GetAllChannels() )
             {

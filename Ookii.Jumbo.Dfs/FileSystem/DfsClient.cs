@@ -89,7 +89,7 @@ namespace Ookii.Jumbo.Dfs.FileSystem
             if( config == null )
                 throw new ArgumentNullException("config");
 
-            return CreateNameServerClientInternal<INameServerClientProtocol>(config.NameServer.HostName, config.NameServer.Port);
+            return CreateNameServerClientInternal<INameServerClientProtocol>(config.FileSystem.Url.Host, config.FileSystem.Url.Port);
         }
 
         /// <summary>
@@ -114,7 +114,7 @@ namespace Ookii.Jumbo.Dfs.FileSystem
             if( config == null )
                 throw new ArgumentNullException("config");
 
-            return CreateNameServerClientInternal<INameServerHeartbeatProtocol>(config.NameServer.HostName, config.NameServer.Port);
+            return CreateNameServerClientInternal<INameServerHeartbeatProtocol>(config.FileSystem.Url.Host, config.FileSystem.Url.Port);
         }
 
         /// <summary>

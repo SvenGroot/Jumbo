@@ -74,7 +74,7 @@ namespace Ookii.Jumbo.Jet.Samples
             JobConfiguration jobConfig = new JobConfiguration(typeof(TpcHTableGenTask).Assembly);
             jobConfig.JobName = GetType().Name; // Use the class name as the job's friendly name.
             StageConfiguration lineItemStage = jobConfig.AddStage("LineItem", typeof(TpcHTableGenTask), _taskCount, null);
-            lineItemStage.DataOutput = FileDataOutput.Create(typeof(RecordFileWriter<LineItem>), FileSystemClient, _outputPath, (int)BlockSize, ReplicationFactor);
+            lineItemStage.DataOutput = new FileDataOutput(FileSystemClient.Configuration, typeof(RecordFileWriter<LineItem>), _outputPath, (int)BlockSize, ReplicationFactor);
             jobConfig.AddSetting(TpcHTableGenTask.DbGenFileNameSetting, Path.GetFileName(_dbGenPath));
             jobConfig.AddTypedSetting(TpcHTableGenTask.ScaleFactorSetting, _scaleFactor);
 

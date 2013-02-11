@@ -51,7 +51,7 @@ namespace NameServerApplication
                 throw new ArgumentNullException("config");
 
             Configuration = dfsConfig;
-            _localAddress = new ServerAddress(ServerContext.LocalHostName, dfsConfig.NameServer.Port);
+            _localAddress = new ServerAddress(ServerContext.LocalHostName, dfsConfig.FileSystem.Url.Port);
             _topology = new NetworkTopology(jumboConfig);
             _replicaPlacement = new ReplicaPlacement(Configuration, _topology);
             _replicationFactor = dfsConfig.NameServer.ReplicationFactor;
@@ -100,7 +100,7 @@ namespace NameServerApplication
         [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.Synchronized)]
         public static void Shutdown()
         {
-            RpcHelper.UnregisterServerChannels(Instance.Configuration.NameServer.Port);
+            RpcHelper.UnregisterServerChannels(Instance.Configuration.FileSystem.Url.Port);
             Instance.ShutdownInternal();
             Instance = null;
             _log.Info("---- NameServer has shut down ----");
@@ -822,7 +822,7 @@ namespace NameServerApplication
 
         private static void ConfigureRemoting(DfsConfiguration config)
         {
-            RpcHelper.RegisterServerChannels(config.NameServer.Port, config.NameServer.ListenIPv4AndIPv6);
+            RpcHelper.RegisterServerChannels(config.FileSystem.Url.Port, config.NameServer.ListenIPv4AndIPv6);
             RpcHelper.RegisterService("NameServer", Instance);
             _log.Info("RPC server started.");
         }

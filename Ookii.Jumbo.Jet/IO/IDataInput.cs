@@ -34,14 +34,11 @@ namespace Ookii.Jumbo.Jet.IO
         /// <summary>
         /// Creates the record reader for the specified task.
         /// </summary>
-        /// <param name="fileSystem">The file system.</param>
-        /// <param name="jetConfiguration">The Jumbo Jet configuration. May be <see langword="null"/>.</param>
-        /// <param name="context">The task context. May be <see langword="null"/>.</param>
         /// <param name="input">The task input.</param>
         /// <returns>
         /// The record reader.
         /// </returns>
-        IRecordReader CreateRecordReader(FileSystemClient fileSystem, JetConfiguration jetConfiguration, TaskContext context, ITaskInput input);
+        IRecordReader CreateRecordReader(ITaskInput input);
 
         /// <summary>
         /// Notifies the data input that it has been added to a stage.

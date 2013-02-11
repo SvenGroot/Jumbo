@@ -7,7 +7,7 @@ using System.IO;
 namespace Ookii.Jumbo.Jet.IO
 {
     /// <summary>
-    /// Represents a task input for a stage using <see cref="FileDataInput{TRecordReader}"/>.
+    /// Represents a task input for a stage using <see cref="FileDataInput"/>.
     /// </summary>
     public class FileTaskInput : ITaskInput
     {

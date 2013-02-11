@@ -34,7 +34,7 @@ namespace Ookii.Jumbo.Jet.Jobs
         /// Gets or sets the replication factor of the job's output files.
         /// </summary>
         /// <remarks>
-        /// Derived classes should use this value with the <see cref="IO.FileDataOutput{TRecordWriter}"/> items of the job configuration.
+        /// Derived classes should use this value with the <see cref="IO.FileDataOutput"/> items of the job configuration.
         /// </remarks>
         [CommandLineArgument(), Description("Replication factor of the job's output files.")]
         public int ReplicationFactor { get; set; }
@@ -43,7 +43,7 @@ namespace Ookii.Jumbo.Jet.Jobs
         /// Gets or sets the block size of the job's output files.
         /// </summary>
         /// <remarks>
-        /// Derived classes should use this value with the <see cref="IO.FileDataOutput{TRecordWriter}"/> items of the job configuration.
+        /// Derived classes should use this value with the <see cref="IO.FileDataOutput"/> items of the job configuration.
         /// </remarks>
         [CommandLineArgument(), Description("Block size of the job's output files.")]
         public BinarySize BlockSize { get; set; }

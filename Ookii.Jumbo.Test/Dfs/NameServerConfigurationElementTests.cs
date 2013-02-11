@@ -16,30 +16,10 @@ namespace Ookii.Jumbo.Test.Dfs
         public void TestConstructor()
         {
             NameServerConfigurationElement target = new NameServerConfigurationElement();
-            Assert.AreEqual("localhost", target.HostName);
-            Assert.AreEqual(9000, target.Port);
             Assert.AreEqual(67108864, (int)target.BlockSize);
             Assert.AreEqual(1, target.ReplicationFactor);
             Assert.IsTrue(target.ListenIPv4AndIPv6);
             Assert.AreEqual(string.Empty, target.EditLogDirectory);
-        }
-
-        [Test]
-        public void TestHostName()
-        {
-            NameServerConfigurationElement target = new NameServerConfigurationElement();
-            string expected = "foo";
-            target.HostName = expected;
-            Assert.AreEqual(expected, target.HostName);
-        }
-
-        [Test]
-        public void TestPort()
-        {
-            NameServerConfigurationElement target = new NameServerConfigurationElement();
-            int expected = 500;
-            target.Port = expected;
-            Assert.AreEqual(expected, target.Port);
         }
 
         [Test]

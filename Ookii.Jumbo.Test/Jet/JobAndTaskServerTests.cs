@@ -58,72 +58,6 @@ namespace Ookii.Jumbo.Test.Jet
         }
 
         [Test]
-        public void TestJobExecutionSpillSortCombiner()
-        {
-            const string inputPath = "/wordcountinput";
-            const string outputPath = "/wordcountoutput";
-            FileSystemClient fileSystemClient = _cluster.CreateFileSystemClient();
-            List<string> words;
-            using( StreamWriter writer = new StreamWriter(fileSystemClient.CreateFile(inputPath)) )
-            {
-                words = Utilities.GenerateDataWords(writer, 200000, 10);
-            }
-            fileSystemClient.CreateDirectory(outputPath);
-
-            JobConfiguration job = new JobConfiguration(typeof(WordCountTask).Assembly);
-            StageConfiguration stage = job.AddInputStage("WordCountStage", new FileDataInput<LineRecordReader>(fileSystemClient, fileSystemClient.GetFileInfo(inputPath)), typeof(WordCountTask));
-            stage.AddTypedSetting(FileOutputChannel.OutputTypeSettingKey, FileChannelOutputType.SortSpill);
-            stage.AddSetting(FileOutputChannel.SpillSortCombinerTypeSettingKey, typeof(WordCountReduceTask).AssemblyQualifiedName);
-            stage.AddSetting(FileOutputChannel.SpillBufferSizeSettingKey, "5MB");
-
-            var stage2 = job.AddStage("WordCountReduceStage", typeof(WordCountReduceTask), 1, new InputStageInfo(stage) { MultiInputRecordReaderType = typeof(MergeRecordReader<Pair<Utf8String, int>>) });
-            stage2.DataOutput = new FileDataOutput<BinaryRecordWriter<Pair<Utf8String, int>>>(fileSystemClient, outputPath);
-
-            JobStatus status = RunJob(fileSystemClient, job);
-
-            string outputFileName = fileSystemClient.Path.Combine(outputPath, "WordCountReduceStage-00001");
-            List<KeyValuePair<string, int>> actual;
-            using( BinaryRecordReader<Pair<string, int>> reader = new BinaryRecordReader<Pair<string, int>>(fileSystemClient.OpenFile(outputFileName)) )
-            {
-                actual = reader.EnumerateRecords().Select(r => new KeyValuePair<string, int>(r.Key, r.Value)).ToList();
-            }
-
-            List<KeyValuePair<string, int>> expected = (from word in words
-                                                        group word by word into g
-                                                        select new KeyValuePair<string, int>(g.Key, g.Count())).OrderBy(r => r.Key, StringComparer.Ordinal).ToList();
-
-            CollectionAssert.AreEqual(expected, actual);
-            // The tests below verify whether the combiner was actually executed.
-            // This might fails if either of the input blocks doesn't contain all the words. Pretty unlikely, though.
-            // It's 3x and not 2x because one of the tasks should've had only 2 spills and therefore didn't re-run the combiner.
-            Assert.AreEqual(3 * expected.Count, status.Stages[1].Metrics.InputRecords);
-            Assert.AreEqual(words.Count, status.Stages[0].Metrics.OutputRecords);
-            Assert.Less(status.Stages[0].Metrics.LocalBytesWritten, status.Stages[0].Metrics.OutputBytes);
-        }
-
-        [Test]
-        public void TestJobSettings()
-        {
-            string outputPath = "/settingsoutput";
-            FileSystemClient fileSystemClient = _cluster.CreateFileSystemClient();
-            fileSystemClient.CreateDirectory(outputPath);
-
-            List<int> expected = CreateNumberListInputFile(10000, "/settingsinput", fileSystemClient);
-
-            JobConfiguration config = new JobConfiguration(typeof(MultiplierTask).Assembly);
-            var stage = config.AddInputStage("MultiplyStage", new FileDataInput<LineRecordReader>(fileSystemClient, fileSystemClient.GetFileInfo("/settingsinput")), typeof(MultiplierTask));
-            stage.DataOutput = new FileDataOutput<BinaryRecordWriter<int>>(fileSystemClient, outputPath);
-            int factor = new Random().Next(2, 100);
-            config.AddTypedSetting("factor", factor);
-
-            RunJob(fileSystemClient, config);
-
-            var multiplied = (from item in expected
-                             select item * factor).ToList();
-            CheckOutput(fileSystemClient, multiplied, fileSystemClient.Path.Combine(outputPath, "MultiplyStage-00001"));
-        }
-
-        [Test]
         public void TestJobExecutionJoin()
         {
             List<Customer> customers = new List<Customer>();
@@ -151,9 +85,9 @@ namespace Ookii.Jumbo.Test.Jet
              
             const int joinTasks = 2;
             JobConfiguration config = new JobConfiguration(typeof(CustomerOrderJoinRecordReader).Assembly);
-            StageConfiguration customerInput = config.AddInputStage("CustomerInput", new FileDataInput<RecordFileReader<Customer>>(fileSystemClient, fileSystemClient.GetFileInfo("/testjoin/customers")), typeof(EmptyTask<Customer>));
+            StageConfiguration customerInput = config.AddInputStage("CustomerInput", new FileDataInput(fileSystemClient.Configuration, typeof(RecordFileReader<Customer>), fileSystemClient.GetFileInfo("/testjoin/customers")), typeof(EmptyTask<Customer>));
             StageConfiguration customerSort = config.AddStage("CustomerSort", typeof(SortTask<Customer>), joinTasks, new InputStageInfo(customerInput) { ChannelType = ChannelType.Pipeline });
-            StageConfiguration orderInput = config.AddInputStage("OrderInput", new FileDataInput<RecordFileReader<Order>>(fileSystemClient, fileSystemClient.GetFileInfo("/testjoin/orders")), typeof(EmptyTask<Order>));
+            StageConfiguration orderInput = config.AddInputStage("OrderInput", new FileDataInput(fileSystemClient.Configuration, typeof(RecordFileReader<Order>), fileSystemClient.GetFileInfo("/testjoin/orders")), typeof(EmptyTask<Order>));
             StageConfiguration orderSort = config.AddStage("OrderSort", typeof(SortTask<Order>), joinTasks, new InputStageInfo(orderInput) { ChannelType = ChannelType.Pipeline });
 
             orderInput.AddSetting(PartitionerConstants.EqualityComparerSetting, typeof(OrderJoinComparer).AssemblyQualifiedName);
@@ -170,7 +104,7 @@ namespace Ookii.Jumbo.Test.Jet
                 MultiInputRecordReaderType = typeof(MergeRecordReader<Order>)
             };
             var stage = config.AddStage("Join", typeof(EmptyTask<CustomerOrder>), joinTasks, new[] { customerSortInfo, orderSortInfo }, typeof(CustomerOrderJoinRecordReader));
-            stage.DataOutput = new FileDataOutput<RecordFileWriter<CustomerOrder>>(fileSystemClient, outputPath);
+            stage.DataOutput = new FileDataOutput(fileSystemClient.Configuration, typeof(RecordFileWriter<CustomerOrder>), outputPath);
 
             RunJob(fileSystemClient, config);
 
@@ -279,8 +213,8 @@ namespace Ookii.Jumbo.Test.Jet
             }
 
             JobConfiguration config = CreateConfiguration(fileSystemClient, fileSystemClient.GetFileInfo(_fileName), outputPath, false, typeof(LineCounterTask), typeof(LineAdderTask), ChannelType.File);
-            StageConfiguration stage = config.AddInputStage("VerificationStage", new FileDataInput<RecordFileReader<int>>(fileSystemClient, fileSystemClient.GetFileInfo(lineCountPath)), typeof(LineVerifierTask));
-            stage.DataOutput = new FileDataOutput<TextRecordWriter<bool>>(fileSystemClient, outputPath);
+            StageConfiguration stage = config.AddInputStage("VerificationStage", new FileDataInput(fileSystemClient.Configuration, typeof(RecordFileReader<int>), fileSystemClient.GetFileInfo(lineCountPath)), typeof(LineVerifierTask));
+            stage.DataOutput = new FileDataOutput(fileSystemClient.Configuration, typeof(TextRecordWriter<bool>), outputPath);
             stage.AddSetting("ActualOutputPath", fileSystemClient.Path.Combine(outputPath, "OutputTask-00001"));
             config.GetStage("OutputTask").DependentStages.Add(stage.StageId);
 
@@ -351,7 +285,7 @@ namespace Ookii.Jumbo.Test.Jet
             }
 
             JobConfiguration config = new JobConfiguration(typeof(StringConversionTask).Assembly);
-            StageConfiguration conversionStage = config.AddInputStage("ConversionStage", new FileDataInput<LineRecordReader>(fileSystemClient, fileSystemClient.GetFileInfo(_sortInput)), typeof(StringConversionTask));
+            StageConfiguration conversionStage = config.AddInputStage("ConversionStage", new FileDataInput(fileSystemClient.Configuration, typeof(LineRecordReader), fileSystemClient.GetFileInfo(_sortInput)), typeof(StringConversionTask));
             StageConfiguration sortStage;
             if( outputType == FileChannelOutputType.SortSpill )
                 sortStage = conversionStage;
@@ -365,7 +299,7 @@ namespace Ookii.Jumbo.Test.Jet
                 sortStage.AddTypedSetting(FileOutputChannel.SpillBufferSizeSettingKey, "1MB");
             }
             var stage = config.AddStage("MergeStage", typeof(EmptyTask<int>), mergeTasks, new InputStageInfo(sortStage) { MultiInputRecordReaderType = typeof(MergeRecordReader<int>), PartitionsPerTask = partitionsPerTask, ChannelType = channelType });
-            stage.DataOutput = new FileDataOutput<BinaryRecordWriter<int>>(fileSystemClient, outputPath);
+            stage.DataOutput = new FileDataOutput(fileSystemClient.Configuration, typeof(BinaryRecordWriter<int>), outputPath);
             sortStage.OutputChannel.ForceFileDownload = forceFileDownload;
 
             RunJob(fileSystemClient, config);
@@ -529,7 +463,7 @@ namespace Ookii.Jumbo.Test.Jet
 
             JobConfiguration config = new JobConfiguration(System.IO.Path.GetFileName(typeof(LineCounterTask).Assembly.Location));
 
-            StageConfiguration stage = config.AddInputStage("Task", new FileDataInput<LineRecordReader>(fileSystemClient, file, maxSplitSize: (int)(file.BlockSize / splitsPerBlock)), counterTask);
+            StageConfiguration stage = config.AddInputStage("Task", new FileDataInput(fileSystemClient.Configuration, typeof(LineRecordReader), file, maxSplitSize: (int)(file.BlockSize / splitsPerBlock)), counterTask);
             if( channelType == ChannelType.Pipeline )
             {
                 // Pipeline channel cannot merge so we will add another stage in between.
@@ -537,7 +471,7 @@ namespace Ookii.Jumbo.Test.Jet
                 channelType = ChannelType.File;
             }
             var stage2 = config.AddStage("OutputTask", adderTask, 1, new InputStageInfo(stage) { ChannelType = channelType });
-            stage2.DataOutput = new FileDataOutput<TextRecordWriter<int>>(fileSystemClient, outputPath);
+            stage2.DataOutput = new FileDataOutput(fileSystemClient.Configuration, typeof(TextRecordWriter<int>), outputPath);
             if( forceFileDownload )
                 config.AddTypedSetting(FileInputChannel.MemoryStorageSizeSetting, 0L);
             foreach( ChannelConfiguration channel in config.GetAllChannels() )

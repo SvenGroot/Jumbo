@@ -15,6 +15,18 @@ namespace Ookii.Jumbo.Dfs
     public class DfsConfiguration : ConfigurationSection
     {
         /// <summary>
+        /// Gets configuration for the file system.
+        /// </summary>
+        /// <value>
+        /// Configuration for the file system.
+        /// </value>
+        [ConfigurationProperty("fileSystem", IsRequired = true, IsKey = false)]
+        public FileSystemConfigurationElement FileSystem
+        {
+            get { return (FileSystemConfigurationElement)this["fileSystem"]; }
+        }
+
+        /// <summary>
         /// Gets configuration for the name server.
         /// </summary>
         [ConfigurationProperty("nameServer", IsRequired = true, IsKey = false)]

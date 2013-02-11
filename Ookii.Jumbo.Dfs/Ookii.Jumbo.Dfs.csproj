@@ -95,6 +95,7 @@
     <Compile Include="DfsMetrics.cs" />
     <Compile Include="DfsOutputStream.cs" />
     <Compile Include="DfsPath.cs" />
+    <Compile Include="FileSystemConfigurationElement.cs" />
     <Compile Include="FileSystem\DfsClient.cs" />
     <Compile Include="FileSystem\DfsPathUtility.cs" />
     <Compile Include="FileSystem\FileSystemClient.cs" />

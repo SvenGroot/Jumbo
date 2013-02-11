@@ -754,7 +754,8 @@ namespace Ookii.Jumbo.Test.Jet
             Assert.IsNull(stage.Parent);
             CollectionAssert.IsEmpty(job.GetInputStagesForStage(stage.StageId));
             Assert.AreEqual(stage.TaskCount, stage.DataInput.TaskInputs.Count);
-            Assert.IsInstanceOf(typeof(FileDataInput<>).MakeGenericType(recordReaderType), stage.DataInput);
+            Assert.IsInstanceOf(typeof(FileDataInput), stage.DataInput);
+            Assert.AreEqual(recordReaderType.AssemblyQualifiedName, stage.GetSetting(FileDataInput.RecordReaderTypeSettingKey, null));
             for( int x = 0; x < 3; ++x )
             {
                 FileTaskInput input = (FileTaskInput)stage.DataInput.TaskInputs[x];
@@ -769,10 +770,11 @@ namespace Ookii.Jumbo.Test.Jet
             Assert.IsNull(stage.OutputChannel);
             Assert.IsNotNull(stage.DataOutput);
             Assert.IsTrue(stage.HasDataOutput);
-            Type outputType = typeof(FileDataOutput<>).MakeGenericType(recordWriterType);
+            Type outputType = typeof(FileDataOutput);
             Assert.IsInstanceOf(outputType, stage.DataOutput);
             Assert.AreEqual(outputType, stage.DataOutputType.ReferencedType);
             Assert.AreEqual(outputType.AssemblyQualifiedName, stage.DataOutputType.TypeName);
+            Assert.AreEqual(recordWriterType.AssemblyQualifiedName, stage.GetSetting(FileDataOutput.RecordWriterTypeSettingKey, null));
             Assert.AreEqual(_fileSystemClient.Path.Combine(_outputPath, stage.StageId + "-{0:00000}"), stage.GetSetting(FileDataOutput.OutputPathFormatSettingKey, null));
             Assert.AreEqual(blockSize, stage.GetTypedSetting(FileDataOutput.BlockSizeSettingKey, 0));
             Assert.AreEqual(replicationFactor, stage.GetTypedSetting(FileDataOutput.ReplicationFactorSettingKey, 0));

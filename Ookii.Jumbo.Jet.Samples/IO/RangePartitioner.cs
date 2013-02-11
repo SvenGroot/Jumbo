@@ -147,7 +147,7 @@ namespace Ookii.Jumbo.Jet.Samples.IO
 
             for( int sample = 0; sample < samples; ++sample )
             {
-                using( RecordReader<GenSortRecord> reader = (RecordReader<GenSortRecord>)input.CreateRecordReader(fileSystemClient, null, null, input.TaskInputs[sample * sampleStep]) )
+                using( RecordReader<GenSortRecord> reader = (RecordReader<GenSortRecord>)input.CreateRecordReader(input.TaskInputs[sample * sampleStep]) )
                 {
                     int records = 0;
                     while( records++ < recordsPerSample && reader.ReadRecord() )

@@ -91,7 +91,7 @@ namespace Ookii.Jumbo.Jet.Samples
         /// <param name="jobConfiguration"></param>
         protected override void OnJobCreated(Job job, JobConfiguration jobConfiguration)
         {
-            _outputFile = ((FileDataOutput<TextRecordWriter<ValSortRecord>>)jobConfiguration.GetStage("SortStage").ChildStage.DataOutput).GetOutputPath(jobConfiguration.GetStage("SortStage").ChildStage, 1);
+            _outputFile = FileDataOutput.GetOutputPath(jobConfiguration.GetStage("SortStage").ChildStage, 1);
         }
 
         /// <summary>

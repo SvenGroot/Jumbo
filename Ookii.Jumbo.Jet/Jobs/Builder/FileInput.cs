@@ -90,7 +90,7 @@ namespace Ookii.Jumbo.Jet.Jobs.Builder
         {
             if( fileSystem == null )
                 throw new ArgumentNullException("fileSystem");
-            return FileDataInput.Create(RecordReaderType, fileSystem, fileSystem.GetFileSystemEntryInfo(Path), MinimumSplitSize, MaximumSplitSize);
+            return new FileDataInput(fileSystem.Configuration, RecordReaderType, fileSystem.GetFileSystemEntryInfo(Path), MinimumSplitSize, MaximumSplitSize);
         }
     }
 }
