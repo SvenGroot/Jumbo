@@ -23,7 +23,7 @@ namespace Ookii.Jumbo.Test.Dfs
             try
             {
                 cluster = new TestDfsCluster(1, 1);
-                DfsClient client = TestDfsCluster.CreateClient();
+                DfsClient client = cluster.Client;
                 INameServerClientProtocol nameServer = client.NameServer;
                 client.WaitForSafeModeOff(Timeout.Infinite);
                 DateTime rootCreatedDate = nameServer.GetDirectoryInfo("/").DateCreated;
@@ -62,7 +62,7 @@ namespace Ookii.Jumbo.Test.Dfs
                     Thread.Sleep(1000);
                     cluster = new TestDfsCluster(1, 1, null, false);
                     nameServer = DfsClient.CreateNameServerClient(TestDfsCluster.CreateClientConfig());
-                    TestDfsCluster.CreateClient().WaitForSafeModeOff(Timeout.Infinite);
+                    cluster.Client.WaitForSafeModeOff(Timeout.Infinite);
 
                     Assert.AreEqual(rootCreatedDate, nameServer.GetDirectoryInfo("/").DateCreated);
 
@@ -123,7 +123,7 @@ namespace Ookii.Jumbo.Test.Dfs
             {
                 cluster = new TestDfsCluster(1, 1);
                 INameServerClientProtocol nameServer = DfsClient.CreateNameServerClient(TestDfsCluster.CreateClientConfig());
-                TestDfsCluster.CreateClient().WaitForSafeModeOff(Timeout.Infinite);
+                cluster.Client.WaitForSafeModeOff(Timeout.Infinite);
                 DateTime rootCreatedDate = nameServer.GetDirectoryInfo("/").DateCreated;
                 nameServer.CreateDirectory("/test1");
                 nameServer.CreateDirectory("/test2");
@@ -167,7 +167,7 @@ namespace Ookii.Jumbo.Test.Dfs
                 Thread.Sleep(1000);
                 cluster = new TestDfsCluster(1, 1, null, false);
                 nameServer = DfsClient.CreateNameServerClient(TestDfsCluster.CreateClientConfig());
-                TestDfsCluster.CreateClient().WaitForSafeModeOff(Timeout.Infinite);
+                cluster.Client.WaitForSafeModeOff(Timeout.Infinite);
 
                 Assert.AreEqual(rootCreatedDate, nameServer.GetDirectoryInfo("/").DateCreated);
 

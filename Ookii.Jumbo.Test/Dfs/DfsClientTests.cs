@@ -21,7 +21,7 @@ namespace Ookii.Jumbo.Test.Dfs
         public void Setup()
         {
             _cluster = new TestDfsCluster(1, 1);
-            DfsClient client = TestDfsCluster.CreateClient();
+            DfsClient client = _cluster.Client;
             client.WaitForSafeModeOff(Timeout.Infinite);
         }
 
@@ -55,7 +55,7 @@ namespace Ookii.Jumbo.Test.Dfs
         public void TestUploadStream()
         {
             const int size = 1000000;
-            FileSystemClient target = TestDfsCluster.CreateClient();
+            FileSystemClient target = _cluster.Client;
             using( System.IO.MemoryStream stream = new System.IO.MemoryStream() )
             {
                 Utilities.GenerateData(stream, size);
@@ -76,7 +76,7 @@ namespace Ookii.Jumbo.Test.Dfs
             {
                 const int size = 1000000;
                 Utilities.GenerateFile(tempFile, size);
-                FileSystemClient target = TestDfsCluster.CreateClient();
+                FileSystemClient target = _cluster.Client;
                 target.UploadFile(tempFile, "/uploadfile");
                 JumboFile file = target.GetFileInfo("/uploadfile");
                 Assert.IsNotNull(file);
@@ -98,7 +98,7 @@ namespace Ookii.Jumbo.Test.Dfs
             {
                 const int size = 1000000;
                 Utilities.GenerateFile(tempFile, size);
-                FileSystemClient target = TestDfsCluster.CreateClient();
+                FileSystemClient target = _cluster.Client;
                 target.CreateDirectory("/uploadfiledir");
                 target.UploadFile(tempFile, "/uploadfiledir");
                 string fileName = System.IO.Path.GetFileName(tempFile);
@@ -118,7 +118,7 @@ namespace Ookii.Jumbo.Test.Dfs
         public void TestDownloadStream()
         {
             const int size = 1000000;
-            FileSystemClient target = TestDfsCluster.CreateClient();
+            FileSystemClient target = _cluster.Client;
             using( System.IO.MemoryStream stream = new System.IO.MemoryStream() )
             {
                 Utilities.GenerateData(stream, size);

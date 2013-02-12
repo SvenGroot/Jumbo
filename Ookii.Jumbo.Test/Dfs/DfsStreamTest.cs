@@ -27,7 +27,7 @@ namespace Ookii.Jumbo.Test.Dfs
             Trace.WriteLine("Starting nameserver.");
             DfsConfiguration config = TestDfsCluster.CreateClientConfig();
             _nameServer = DfsClient.CreateNameServerClient(config);
-            TestDfsCluster.CreateClient().WaitForSafeModeOff(Timeout.Infinite);
+            _cluster.Client.WaitForSafeModeOff(Timeout.Infinite);
             Trace.WriteLine("Name server running.");
             Trace.Flush();
         }

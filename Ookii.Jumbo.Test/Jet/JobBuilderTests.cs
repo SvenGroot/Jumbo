@@ -132,7 +132,7 @@ namespace Ookii.Jumbo.Test.Jet
         public void SetUp()
         {
             _cluster = new TestJetCluster(_blockSize, true, 2, CompressionType.None);
-            _fileSystemClient = _cluster.CreateFileSystemClient();
+            _fileSystemClient = _cluster.FileSystemClient;
             _jetClient = new JetClient(TestJetCluster.CreateClientConfig());
             Trace.WriteLine("Cluster running.");
 

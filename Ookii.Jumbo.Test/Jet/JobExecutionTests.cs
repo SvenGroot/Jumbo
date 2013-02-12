@@ -20,44 +20,12 @@ namespace Ookii.Jumbo.Test.Jet
 {
     [TestFixture]
     [Category("JetClusterTests")]
-    public class JobExecutionTests
+    public class JobExecutionTests : JobExecutionTestsBase
     {
-        #region Nested types
-
-        private enum TaskKind
-        {
-            Pull,
-            Push,
-            NoOutput
-        }
-
-        #endregion
-
-        private TestJetCluster _cluster;
-        private const int _blockSize = 16777216;
-
-        private List<string> _words;
-        private List<Pair<Utf8String, int>>[] _expectedWordCountPartitions;
-
-        private List<int> _sortData;
-
-        [TestFixtureSetUp]
-        public void Setup()
-        {
-            _cluster = new TestJetCluster(_blockSize, true, 2, CompressionType.None);
-        }
-
-
-        [TestFixtureTearDown]
-        public void TearDown()
-        {
-            _cluster.Shutdown();
-        }
-
         [Test]
         public void TestJobAbort()
         {
-            FileSystemClient fileSystemClient = _cluster.CreateFileSystemClient();
+            FileSystemClient fileSystemClient = Cluster.FileSystemClient;
 
             JobConfiguration config = CreateWordCountJob(fileSystemClient, null, TaskKind.Pull, ChannelType.File, false);
 
@@ -77,7 +45,7 @@ namespace Ookii.Jumbo.Test.Jet
             Assert.IsFalse(target.JobServer.GetJobStatus(job.JobId).IsSuccessful);
             Thread.Sleep(5000);
         }
-        
+
         [Test]
         public void TestWordCount()
         {
@@ -117,7 +85,7 @@ namespace Ookii.Jumbo.Test.Jet
         [Test]
         public void TestWordCountMaxSplitSize()
         {
-            RunWordCountJob(null, TaskKind.Pull, ChannelType.File, false, _blockSize / 2);
+            RunWordCountJob(null, TaskKind.Pull, ChannelType.File, false, Cluster.FileSystemClient.DefaultBlockSize.Value / 2);
         }
 
         [Test]
@@ -163,6 +131,16 @@ namespace Ookii.Jumbo.Test.Jet
         }
 
         [Test]
+        public void TestSpillSortDynamicPartitionAssignment()
+        {
+            // The skewed partitioner will assign most data to the first partition. This will cause task 2 to take over most of task 1's partitions.
+            JobStatus status = RunSpillSortJob(null, 10, true, typeof(SkewedPartitioner<int>));
+            StageStatus stage = status.Stages.Where(s => s.StageId == "MergeStage").Single();
+            Assert.Greater(stage.Metrics.DynamicallyAssignedPartitions, 0);
+            Assert.Greater(stage.Metrics.DiscardedPartitions, 0);
+        }
+
+        [Test]
         public void TestSpillSortFileChannelDownloadMultiplePartitionsPerTask()
         {
             RunSpillSortJob(null, 3, true);
@@ -171,12 +149,12 @@ namespace Ookii.Jumbo.Test.Jet
         [Test]
         public void TestJobSettings()
         {
-            FileSystemClient client = _cluster.CreateFileSystemClient();
+            FileSystemClient client = Cluster.FileSystemClient;
 
             string inputFile = GetSortInputFile(client);
             string outputPath = CreateOutputPath(client, null);
-            
-            JobBuilder job = new JobBuilder(client, TestJetCluster.CreateJetClient());
+
+            JobBuilder job = new JobBuilder(client, Cluster.JetClient);
             var input = job.Read(inputFile, typeof(LineRecordReader));
             var multiplied = job.Process(input, typeof(MultiplierTask));
             job.Write(multiplied, outputPath, typeof(TextRecordWriter<>));
@@ -205,7 +183,7 @@ namespace Ookii.Jumbo.Test.Jet
         [Test]
         public void TestInnerJoin()
         {
-            FileSystemClient client = _cluster.CreateFileSystemClient();
+            FileSystemClient client = Cluster.FileSystemClient;
             List<Customer> customers = new List<Customer>();
             List<Order> orders = new List<Order>();
 
@@ -213,7 +191,7 @@ namespace Ookii.Jumbo.Test.Jet
 
             client.CreateDirectory("/testjoinoutput");
 
-            JobBuilder job = new JobBuilder(client, TestJetCluster.CreateJetClient());
+            JobBuilder job = new JobBuilder(client, Cluster.JetClient);
             var customerInput = job.Read("/testjoin/customers", typeof(RecordFileReader<Customer>));
             var orderInput = job.Read("/testjoin/orders", typeof(RecordFileReader<Order>));
             var joined = job.InnerJoin(customerInput, orderInput, typeof(CustomerOrderJoinRecordReader), null, typeof(OrderJoinComparer));
@@ -244,268 +222,100 @@ namespace Ookii.Jumbo.Test.Jet
             CollectionAssert.AreEqual(expected, actual);
         }
 
-        private static JobStatus RunJob(FileSystemClient fileSystemClient, JobConfiguration config)
+        [Test]
+        public void TestTaskTimeout()
         {
-            JetClient target = new JetClient(TestJetCluster.CreateClientConfig());
-            Job job = target.RunJob(config, fileSystemClient, typeof(StringConversionTask).Assembly.Location);
+            FileSystemClient client = Cluster.FileSystemClient;
+            JobConfiguration config = CreateWordCountJob(client, null, TaskKind.Pull, ChannelType.File, false);
+            // Only the first task attempt will delay, so that will be killed. The job should still succeed afterwards
+            config.AddTypedSetting(WordCountTask.DelayTimeSettingKey, 6000000);
+            config.AddTypedSetting(TaskServerConfigurationElement.TaskTimeoutJobSettingKey, 20000); // Set timeout to 20 seconds.
 
-            bool complete = target.WaitForJobCompletion(job.JobId, Timeout.Infinite, 1000);
-            Assert.IsTrue(complete);
-            JobStatus status = target.JobServer.GetJobStatus(job.JobId);
-            Assert.IsTrue(status.IsSuccessful);
-            Assert.AreEqual(0, status.ErrorTaskCount);
-            Assert.AreEqual(config.Stages.Sum(s => s.TaskCount), status.FinishedTaskCount);
+            JobStatus status = RunJob(client, config, 1);
 
-            return status;
+            Assert.AreEqual(2, status.Stages.Where(s => s.StageId == "WordCount").Single().Tasks[0].Attempts);
+
+            VerifyWordCountOutput(client, config);
         }
 
-        private void RunWordCountJob(string outputPath, TaskKind taskKind, ChannelType channelType, bool forceFileDownload, int maxSplitSize = Int32.MaxValue, bool mapReduce = false)
+        [Test]
+        public void TestHardDependency()
         {
-            FileSystemClient client = _cluster.CreateFileSystemClient();
-            JobConfiguration config = CreateWordCountJob(client, outputPath, taskKind, channelType, forceFileDownload, maxSplitSize, mapReduce);
-            RunJob(client, config);
-            if( taskKind == TaskKind.NoOutput )
-                VerifyEmptyWordCountOutput(client, config);
-            else
-                VerifyWordCountOutput(client, config);
-        }
-        
-        private JobConfiguration CreateWordCountJob(FileSystemClient client, string outputPath, TaskKind taskKind, ChannelType channelType, bool forceFileDownload, int maxSplitSize = Int32.MaxValue, bool mapReduce = false)
-        {
+            FileSystemClient client = Cluster.FileSystemClient;
             string inputFileName = GetTextInputFile();
+            string outputPath = CreateOutputPath(client, null);
+            string verificationOutputPath = outputPath + "Verify";
+            client.CreateDirectory(verificationOutputPath);
 
-            outputPath = CreateOutputPath(client, outputPath);
-
-            JobBuilder job = new JobBuilder(_cluster.CreateFileSystemClient(), TestJetCluster.CreateJetClient());
+            JobBuilder job = new JobBuilder(Cluster.FileSystemClient, Cluster.JetClient);
             job.JobName = "WordCount";
+
+            // Creating this operation first; it should not get scheduled first because of the dependency
+            // The OutputVerificationTask will write true to the output only if all the output of the dependent stage already exists.
+            var verification = job.Generate(1, typeof(OutputVerificationTask));
+            job.Write(verification, verificationOutputPath, typeof(BinaryRecordWriter<>));
+
             var input = job.Read(inputFileName, typeof(LineRecordReader));
-            input.MaximumSplitSize = maxSplitSize;
-            var words = job.Process(input, taskKind == TaskKind.NoOutput ? typeof(WordCountNoOutputTask) : (taskKind == TaskKind.Push ? typeof(WordCountPushTask) : typeof(WordCountTask)));
+            var words = job.Process(input, typeof(WordCountTask));
             words.StageId = "WordCount";
-            StageOperation countedWords;
-            if( mapReduce )
-            {
-                // Spill sort with combiner
-                var sorted = job.SpillSortCombine(words, typeof(WordCountReduceTask));
-                countedWords = job.Process(sorted, typeof(WordCountReduceTask));
-            }
-            else
-            {
-                countedWords = job.GroupAggregate(words, typeof(SumTask<Utf8String>));
-                countedWords.InputChannel.ChannelType = channelType;
-            }
+            var countedWords = job.GroupAggregate(words, typeof(SumTask<Utf8String>));
             countedWords.StageId = "WordCountAggregate";
             job.Write(countedWords, outputPath, typeof(BinaryRecordWriter<>));
 
-            JobConfiguration config = job.CreateJob();
-
-            if( maxSplitSize < _blockSize )
-                Assert.Greater(config.GetStage("WordCount").TaskCount, client.GetFileInfo(inputFileName).Blocks.Count);
-            else
-                Assert.AreEqual(client.GetFileInfo(inputFileName).Blocks.Count, config.GetStage("WordCount").TaskCount);
-
-            if( forceFileDownload )
-            {
-                foreach( ChannelConfiguration channel in config.GetAllChannels() )
-                {
-                    if( channel.ChannelType == ChannelType.File )
-                        channel.ForceFileDownload = true;
-                }
-            }
-
-            return config;
-        }
-
-        private void RunMemorySortJob(string outputPath, ChannelType channelType, int partitionsPerTask)
-        {
-            FileSystemClient client = _cluster.CreateFileSystemClient();
-            JobConfiguration config = CreateMemorySortJob(client, outputPath, channelType, partitionsPerTask);
-            RunJob(client, config);
-            VerifySortOutput(client, config);
-        }
-
-        private JobConfiguration CreateMemorySortJob(FileSystemClient client, string outputPath, ChannelType channelType, int partitionsPerTask)
-        {
-            // The primary purpose of the memory sort job here is to test internal partitioning for a compound task
-            string inputFileName = GetSortInputFile(client);
-
-            outputPath = CreateOutputPath(client, outputPath);
-
-            JobBuilder job = new JobBuilder(_cluster.CreateFileSystemClient(), TestJetCluster.CreateJetClient());
-            job.JobName = "MemorySort";
-
-            var input = job.Read(inputFileName, typeof(LineRecordReader));
-            var converted = job.Process(input, typeof(StringConversionTask));
-            var sorted = job.Sort(converted);
-            // Set spill buffer to ensure multiple spills
-            if( channelType == ChannelType.Tcp )
-                sorted.InputChannel.Settings.AddTypedSetting(TcpOutputChannel.SpillBufferSizeSettingKey, "1MB");
-            else
-                sorted.InputChannel.Settings.AddTypedSetting(FileOutputChannel.SpillBufferSizeSettingKey, "1MB");
-            sorted.InputChannel.ChannelType = channelType;
-            sorted.InputChannel.PartitionsPerTask = partitionsPerTask;
-            job.Write(sorted, outputPath, typeof(BinaryRecordWriter<>));
-
-            return job.CreateJob();
-        }
-
-        private static string CreateOutputPath(FileSystemClient client, string outputPath)
-        {
-            if( outputPath == null )
-                outputPath = "/" + TestContext.CurrentContext.Test.Name;
-
-            client.CreateDirectory(outputPath);
-            return outputPath;
-        }
-
-        private void RunSpillSortJob(string outputPath, int partitionsPerTask, bool forceFileDownload)
-        {
-            FileSystemClient client = _cluster.CreateFileSystemClient();
-            JobConfiguration config = CreateSpillSortJob(client, outputPath, partitionsPerTask, forceFileDownload);
-            RunJob(client, config);
-            VerifySortOutput(client, config);
-        }
-
-        private JobConfiguration CreateSpillSortJob(FileSystemClient client, string outputPath, int partitionsPerTask, bool forceFileDownload)
-        {
-            string inputFileName = GetSortInputFile(client);
-
-            outputPath = CreateOutputPath(client, outputPath);
-
-            JobBuilder job = new JobBuilder(_cluster.CreateFileSystemClient(), TestJetCluster.CreateJetClient());
-            job.JobName = "SpillSort";
-
-            var input = job.Read(inputFileName, typeof(LineRecordReader));
-            var converted = job.Process(input, typeof(StringConversionTask));
-            var sorted = job.SpillSort(converted);
-            // Set spill buffer to ensure multiple spills
-            sorted.InputChannel.Settings.AddTypedSetting(FileOutputChannel.SpillBufferSizeSettingKey, "1MB");
-            sorted.InputChannel.PartitionsPerTask = partitionsPerTask;
-            job.Write(sorted, outputPath, typeof(BinaryRecordWriter<>));
+            verification.AddSchedulingDependency(countedWords);
 
             JobConfiguration config = job.CreateJob();
 
-            if( forceFileDownload )
-            {
-                foreach( ChannelConfiguration channel in config.GetAllChannels() )
-                {
-                    if( channel.ChannelType == ChannelType.File )
-                        channel.ForceFileDownload = true;
-                }
-            }
+            config.AddSetting(OutputVerificationTask.StageToVerifySettingName, "WordCountAggregate");
 
-            return config;
+            RunJob(client, config);
+
+            VerifyWordCountOutput(client, config);
+
+            using( Stream stream = client.OpenFile(FileDataOutput.GetOutputPath(config.GetStage("OutputVerificationTaskStage"), 1)) )
+            using( BinaryRecordReader<bool> reader = new BinaryRecordReader<bool>(stream) )
+            {
+                bool actual = false;
+                if( reader.ReadRecord() )
+                    actual = reader.CurrentRecord;
+                Assert.IsTrue(actual);
+            }
         }
 
-        private void VerifyWordCountOutput(FileSystemClient client, JobConfiguration config)
+        [Test]
+        public void TestMultipleSimultaneousJobs()
         {
-            StageConfiguration stage = config.GetStage("WordCountAggregate");
+            const string outputPath1 = "/multiple1";
+            const string outputPath2 = "/multiple2";
+            FileSystemClient fileSystemClient = Cluster.FileSystemClient;
 
-            if( _expectedWordCountPartitions == null )
-            {
-                IPartitioner<Pair<Utf8String, int>> partitioner = new HashPartitioner<Pair<Utf8String, int>>() { Partitions = stage.TaskCount };
-                _expectedWordCountPartitions = new List<Pair<Utf8String, int>>[stage.TaskCount];
-                for( int x = 0; x < _expectedWordCountPartitions.Length; ++x )
-                    _expectedWordCountPartitions[x] = new List<Pair<Utf8String, int>>();
-                var words = from w in _words
-                            group w by w into g
-                            select Pair.MakePair(new Utf8String(g.Key), g.Count());
-                foreach( var word in words )
-                {
-                    _expectedWordCountPartitions[partitioner.GetPartition(word)].Add(word);
-                }
-            }
+            JobConfiguration config1 = CreateWordCountJob(fileSystemClient, outputPath1, TaskKind.Pull, ChannelType.File, false);
+            JobConfiguration config2 = CreateWordCountJob(fileSystemClient, outputPath2, TaskKind.Pull, ChannelType.File, false);
 
-            for( int partition = 0; partition < stage.TaskCount; ++partition )
-            {
-                string outputFileName = FileDataOutput.GetOutputPath(stage, partition + 1);
-                using( Stream stream = client.OpenFile(outputFileName) )
-                using( BinaryRecordReader<Pair<Utf8String, int>> reader = new BinaryRecordReader<Pair<Utf8String, int>>(stream) )
-                {
-                    List<Pair<Utf8String, int>> actual = reader.EnumerateRecords().ToList();
-                    CollectionAssert.AreEquivalent(_expectedWordCountPartitions[partition], actual);
-                }
-            }
+            JetClient target = Cluster.JetClient;
+            Job job1 = target.RunJob(config1, fileSystemClient, typeof(WordCountTask).Assembly.Location);
+            Job job2 = target.RunJob(config2, fileSystemClient, typeof(WordCountTask).Assembly.Location);
+
+            bool complete1 = target.WaitForJobCompletion(job1.JobId, Timeout.Infinite, 1000);
+            bool complete2 = target.WaitForJobCompletion(job2.JobId, Timeout.Infinite, 1000);
+            Assert.IsTrue(complete1);
+            Assert.IsTrue(complete2);
+            JobStatus status = target.JobServer.GetJobStatus(job1.JobId);
+            Assert.IsTrue(status.IsSuccessful);
+            Assert.AreEqual(0, status.ErrorTaskCount);
+            status = target.JobServer.GetJobStatus(job2.JobId);
+            Assert.IsTrue(status.IsSuccessful);
+            Assert.AreEqual(0, status.ErrorTaskCount);
+
+            VerifyWordCountOutput(fileSystemClient, config1);
+            VerifyWordCountOutput(fileSystemClient, config2);
         }
 
-        private void VerifyEmptyWordCountOutput(FileSystemClient client, JobConfiguration config)
+        protected override TestJetCluster CreateCluster()
         {
-            StageConfiguration stage = config.GetStage("WordCountAggregate");
-            for( int partition = 0; partition < stage.TaskCount; ++partition )
-            {
-                string outputFileName = FileDataOutput.GetOutputPath(stage, partition + 1);
-                Assert.AreEqual(0L, client.GetFileInfo(outputFileName).Size);
-            }
+            return new TestJetCluster(16777216, true, 2, CompressionType.None);
         }
 
-        private void VerifySortOutput(FileSystemClient client, JobConfiguration config)
-        {
-            StageConfiguration stage = config.GetStage("MergeStage");
-            int partitions = stage.TaskCount * config.GetInputStagesForStage("MergeStage").Single().OutputChannel.PartitionsPerTask;
-
-            // Can't cache the results because the number of partitions isn't the same in each test (unlike the WordCount tests).
-            IPartitioner<int> partitioner = new HashPartitioner<int>() { Partitions = partitions };
-            List<int>[] expectedSortPartitions = new List<int>[partitions];
-            for( int x = 0; x < partitions; ++x )
-                expectedSortPartitions[x] = new List<int>();
-
-            foreach( int value in _sortData )
-            {
-                expectedSortPartitions[partitioner.GetPartition(value)].Add(value);
-            }
-
-            for( int x = 0; x < partitions; ++x )
-            {
-                expectedSortPartitions[x].Sort();
-
-                using( Stream stream = client.OpenFile(FileDataOutput.GetOutputPath(stage, x + 1)) )
-                using( BinaryRecordReader<int> reader = new BinaryRecordReader<int>(stream) )
-                {
-                    CollectionAssert.AreEqual(expectedSortPartitions[x], reader.EnumerateRecords());
-                }
-            }
-        }
-
-        private string GetTextInputFile()
-        {
-            const string fileName = "/input.txt";
-
-            if( _words == null )
-            {
-                FileSystemClient fileSystemClient = _cluster.CreateFileSystemClient();
-                using( Stream stream = fileSystemClient.CreateFile(fileName) )
-                using( StreamWriter writer = new StreamWriter(stream) )
-                {
-                    _words = Utilities.GenerateDataWords(writer, 200000, 10);
-                }
-                Utilities.TraceLineAndFlush("File generation complete.");
-            }
-
-            return fileName;
-        }
-
-        private string GetSortInputFile(FileSystemClient client)
-        {
-            const int recordCount = 2500000;
-            const string fileName = "/sort.txt";
-            if( _sortData == null )
-            {
-                Random rnd = new Random();
-
-                _sortData = new List<int>();
-                using( Stream stream = client.CreateFile(fileName) )
-                using( TextRecordWriter<int> writer = new TextRecordWriter<int>(stream) )
-                {
-                    for( int x = 0; x < recordCount; ++x )
-                    {
-                        int record = rnd.Next();
-                        _sortData.Add(record);
-                        writer.WriteRecord(record);
-                    }
-                }
-            }
-            return fileName;
-        }
 
         private void GenerateJoinData(FileSystemClient fileSystemClient, List<Customer> customers, List<Order> orders)
         {

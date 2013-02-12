@@ -29,7 +29,7 @@ namespace Ookii.Jumbo.Test.Dfs
             Trace.AutoFlush = true;
             _cluster = new TestDfsCluster(1, 1, _blockSize);
             Trace.WriteLine("Starting nameserver.");
-            _dfsClient = TestDfsCluster.CreateClient();
+            _dfsClient = _cluster.Client;
             _dfsClient.WaitForSafeModeOff(Timeout.Infinite);
             Trace.WriteLine("Name server running.");
             _records = Utilities.GenerateUtf8TextData(100000, 1000).ToList();

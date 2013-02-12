@@ -15,11 +15,14 @@ using Ookii.Jumbo.Dfs.FileSystem;
 
 namespace Ookii.Jumbo.Test.Jet
 {
-    class TestJetCluster
+    public class TestJetCluster
     {
         public const int JobServerPort = 11000;
         public const int TaskServerPort = 11001;
         public const int TaskServerFileServerPort = 11002;
+
+        private readonly FileSystemClient _fileSystemClient;
+        private readonly JetClient _jetClient;
 
         private string _path;
         private string _localFsRoot;
@@ -33,7 +36,8 @@ namespace Ookii.Jumbo.Test.Jet
             if( !localFs )
             {
                 _dfsCluster = new Ookii.Jumbo.Test.Dfs.TestDfsCluster(1, 1, blockSize, eraseExistingData);
-                Dfs.TestDfsCluster.CreateClient().WaitForSafeModeOff(Timeout.Infinite);
+                _dfsCluster.Client.WaitForSafeModeOff(Timeout.Infinite);
+                _fileSystemClient = _dfsCluster.Client;                
             }
             else
             {
@@ -50,6 +54,7 @@ namespace Ookii.Jumbo.Test.Jet
                 System.IO.Directory.CreateDirectory(_path);
                 _localFsRoot = Path.Combine(_path, "FileSystem");
                 Directory.CreateDirectory(_localFsRoot);
+                _fileSystemClient = new LocalFileSystemClient(_localFsRoot);
             }
 
             JetConfiguration jetConfig = new JetConfiguration();
@@ -79,6 +84,18 @@ namespace Ookii.Jumbo.Test.Jet
 
             Thread.Sleep(1000);
             Utilities.TraceLineAndFlush("Jet cluster started.");
+            _jetClient = new JetClient(CreateClientConfig());
+        }
+
+        public FileSystemClient FileSystemClient
+        {
+            get { return _fileSystemClient; }
+        }
+
+
+        public JetClient JetClient
+        {
+            get { return _jetClient; }
         }
 
         public void Shutdown()
@@ -100,19 +117,6 @@ namespace Ookii.Jumbo.Test.Jet
             config.JobServer.Port = JobServerPort;
             config.TaskServer.Port = TaskServerPort;
             return config;
-        }
-
-        public FileSystemClient CreateFileSystemClient()
-        {
-            if( _dfsCluster == null )
-                return new LocalFileSystemClient(_localFsRoot);
-            else
-                return Dfs.TestDfsCluster.CreateClient();
-        }
-
-        public static JetClient CreateJetClient()
-        {
-            return new JetClient(CreateClientConfig());
         }
 
         private void TaskServerThread(JetConfiguration jetConfig, DfsConfiguration dfsConfig)

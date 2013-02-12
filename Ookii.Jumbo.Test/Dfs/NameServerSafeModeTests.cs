@@ -25,11 +25,11 @@ namespace Ookii.Jumbo.Test.Dfs
                 INameServerClientProtocol nameServer = DfsClient.CreateNameServerClient(TestDfsCluster.CreateClientConfig());
                 Utilities.TraceLineAndFlush("Cluster started");
                 Assert.IsTrue(nameServer.SafeMode);
-                Assert.IsFalse(TestDfsCluster.CreateClient().WaitForSafeModeOff(500));
+                Assert.IsFalse(cluster.Client.WaitForSafeModeOff(500));
                 Utilities.TraceLineAndFlush("Starting data servers");
                 cluster.StartDataServers(1);
                 Utilities.TraceLineAndFlush("Data servers started");
-                Assert.IsTrue(TestDfsCluster.CreateClient().WaitForSafeModeOff(Timeout.Infinite));
+                Assert.IsTrue(cluster.Client.WaitForSafeModeOff(Timeout.Infinite));
                 Utilities.TraceLineAndFlush("Safe mode off");
                 Assert.IsFalse(nameServer.SafeMode);
             }

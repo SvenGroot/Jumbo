@@ -60,6 +60,7 @@
       <HintPath>..\lib\log4net.dll</HintPath>
     </Reference>
     <Reference Include="System" />
+    <Reference Include="System.configuration" />
     <Reference Include="System.Core">
       <RequiredTargetFramework>3.5</RequiredTargetFramework>
     </Reference>
@@ -80,24 +81,25 @@
     <Compile Include="CustomerComparer.cs" />
     <Compile Include="CustomerOrder.cs" />
     <Compile Include="CustomerOrderJoinRecordReader.cs" />
-    <Compile Include="LineAdderPushTask.cs" />
     <Compile Include="LineAdderTask.cs" />
-    <Compile Include="LineCounterPushTask.cs" />
     <Compile Include="LineCounterTask.cs" />
-    <Compile Include="LineVerifierTask.cs" />
     <Compile Include="MultiplierTask.cs" />
-    <Compile Include="NoOutputTask.cs" />
     <Compile Include="Order.cs" />
     <Compile Include="OrderJoinComparer.cs" />
+    <Compile Include="OutputVerificationTask.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="SkewedPartitioner.cs" />
     <Compile Include="StringConversionTask.cs" />
-    <Compile Include="DelayTask.cs" />
     <Compile Include="WordCountNoOutputTask.cs" />
     <Compile Include="WordCountPushTask.cs" />
     <Compile Include="WordCountReduceTask.cs" />
     <Compile Include="WordCountTask.cs" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\Ookii.Jumbo.Dfs\Ookii.Jumbo.Dfs.csproj">
+      <Project>{67d71a3a-4fda-4136-8423-07a7c1592e65}</Project>
+      <Name>Ookii.Jumbo.Dfs</Name>
+    </ProjectReference>
     <ProjectReference Include="..\Ookii.Jumbo.Jet\Ookii.Jumbo.Jet.csproj">
       <Project>{E739829A-3507-42EA-A8B4-D8D41060DF95}</Project>
       <Name>Ookii.Jumbo.Jet</Name>

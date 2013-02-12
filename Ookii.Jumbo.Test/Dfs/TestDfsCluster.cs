@@ -117,6 +117,8 @@ namespace Ookii.Jumbo.Test.Dfs
             }
         }
 
+        private readonly DfsClient _client;
+
         public TestDfsCluster(int dataServers, int replicationFactor)
             : this(dataServers, replicationFactor, null)
         {
@@ -136,7 +138,12 @@ namespace Ookii.Jumbo.Test.Dfs
 
             _clusterRunner = new ClusterRunner();
             _clusterRunner.Run(path, replicationFactor, dataServers, blockSize);
+            _client = (DfsClient)FileSystemClient.Create(CreateClientConfig());
+        }
 
+        public DfsClient Client
+        {
+            get { return _client; }
         }
 
         public void Shutdown()
@@ -167,11 +174,6 @@ namespace Ookii.Jumbo.Test.Dfs
             DfsConfiguration config = new DfsConfiguration();
             config.FileSystem.Url = new Uri("jdfs://localhost:" + NameServerPort);
             return config;
-        }
-
-        public static DfsClient CreateClient()
-        {
-            return (DfsClient)FileSystemClient.Create(CreateClientConfig());
         }
 
     }
