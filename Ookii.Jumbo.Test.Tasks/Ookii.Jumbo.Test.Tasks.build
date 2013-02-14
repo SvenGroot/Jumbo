@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8" ?>
+<?xml version="1.0" encoding="utf-8" ?>
 <project name="Ookii.Jumbo.Test.Tasks" default="build" xmlns="http://nant.sf.net/release/0.86-beta1/nant.xsd">
   <property name="debug" value="false" overwrite="false"/>
   <property name="rebuild" value="false" overwrite="false"/>
@@ -19,6 +19,7 @@
         <include name="../lib/log4net.dll"/>
         <include name="../Ookii.Jumbo/nantbin/Ookii.Jumbo.dll"/>
         <include name="../Ookii.Jumbo.Jet/nantbin/Ookii.Jumbo.Jet.dll"/>
+	<include name="../Ookii.Jumbo.Dfs/nantbin/Ookii.Jumbo.Dfs.dll"/>
       </references>
       <sources>
         <include name="Properties/AssemblyInfo.cs"/>

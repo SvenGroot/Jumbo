@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8" ?>
+<?xml version="1.0" encoding="utf-8" ?>
 <project name="TaskHost" default="build" xmlns="http://nant.sf.net/release/0.86-beta1/nant.xsd">
   <property name="debug" value="false" overwrite="false"/>
   <property name="rebuild" value="false" overwrite="false"/>
@@ -27,6 +27,7 @@
         <include name="../AssemblyInfoCommon.cs"/>
       </sources>
     </csc>
+    <copy file="app.config" tofile="nantbin/TaskHost.exe.config"/>
     <copy todir="nantbin">
       <fileset>
         <include name="../lib/log4net.dll"/>

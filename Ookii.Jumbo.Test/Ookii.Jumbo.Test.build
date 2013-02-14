@@ -17,7 +17,8 @@
         <include name="System.Configuration.dll"/>
         <include name="System.Core.dll"/>
         <include name="../lib/log4net.dll"/>
-        <include name="${path::combine(nunitpath, 'bin/net-2.0/nunit.framework.dll')}"/>
+        <include name="${path::combine(nunitpath, 'bin/framework/nunit.framework.dll')}"/>
+        <include name="${path::combine(nunitpath, 'bin/lib/nunit.core.dll')}"/>
         <include name="../Ookii.Jumbo/nantbin/Ookii.Jumbo.dll"/>
         <include name="../Ookii.Jumbo.Dfs/nantbin/Ookii.Jumbo.Dfs.dll"/>
         <include name="../Ookii.Jumbo.Jet/nantbin/Ookii.Jumbo.Jet.dll"/>
@@ -38,7 +39,8 @@
     <copy todir="nantbin">
       <fileset>
         <include name="../lib/log4net.dll"/>
-        <include name="${path::combine(nunitpath, 'bin/net-2.0/nunit.framework.dll')}"/>
+        <include name="${path::combine(nunitpath, 'bin/nunit.framework.dll')}"/>
+        <include name="${path::combine(nunitpath, 'bin/lib/nunit.core.dll')}"/>
         <include name="../Ookii.Jumbo/nantbin/*.*"/>
         <include name="../Ookii.Jumbo.Dfs/nantbin/*.*"/>
         <include name="../Ookii.Jumbo.Jet/nantbin/*.*"/>

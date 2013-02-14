@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8" ?>
+<?xml version="1.0" encoding="utf-8" ?>
 <project name="Ookii.Jumbo.Jet" default="build" xmlns="http://nant.sf.net/release/0.86-beta1/nant.xsd">
   <property name="debug" value="false" overwrite="false"/>
   <property name="rebuild" value="false" overwrite="false"/>
@@ -49,6 +49,6 @@
         <include name="../Ookii.Jumbo.Dfs/nantbin/*.*"/>
       </fileset>
     </copy>
-    <exec program="sgen" commandline="/force /type:Ookii.Jumbo.Jet.JobConfiguration /assembly:nantbin/Ookii.Jumbo.Jet.dll /reference:nantbin/Ookii.Jumbo.dll /compiler:/keyfile:jumbo.snk" />
+    <exec program="sgen" commandline="/force /type:Ookii.Jumbo.Jet.Jobs.JobConfiguration /assembly:nantbin/Ookii.Jumbo.Jet.dll /reference:nantbin/Ookii.Jumbo.dll /compiler:/keyfile:jumbo.snk" />
   </target>
 </project>
