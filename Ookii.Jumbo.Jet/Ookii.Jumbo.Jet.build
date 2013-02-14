@@ -29,7 +29,8 @@
 	      <include name="Tasks/*.cs"/>
 	      <include name="Jobs/*.cs"/>
         <include name="Jobs/Builder/*.cs" />
-        <include name="IP/*.cs"/>
+        <include name="IO/*.cs"/>
+        <include name="Scheduling/*.cs" />
         <include name="../AssemblyInfoCommon.cs"/>
       </sources>
       <nowarn>

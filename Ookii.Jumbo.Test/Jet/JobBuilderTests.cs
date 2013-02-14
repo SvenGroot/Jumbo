@@ -173,8 +173,8 @@ namespace Ookii.Jumbo.Test.Jet
             Assert.AreEqual(1, config.Stages.Count);
             StageConfiguration stage = config.Stages[0];
             VerifyStage(stage, 3, typeof(LineCounterTask).Name + "Stage", typeof(LineCounterTask));
-            VerifyDfsInput(config, stage, typeof(LineRecordReader));
-            VerifyDfsOutput(stage, typeof(TextRecordWriter<int>));
+            VerifyDataInput(config, stage, typeof(LineRecordReader));
+            VerifyDataOutput(stage, typeof(TextRecordWriter<int>));
             config.Validate();
         }
 
@@ -194,11 +194,11 @@ namespace Ookii.Jumbo.Test.Jet
 
             Assert.AreEqual(2, config.Stages.Count);
 
-            VerifyDfsInput(config, config.Stages[0], typeof(LineRecordReader));
+            VerifyDataInput(config, config.Stages[0], typeof(LineRecordReader));
             VerifyStage(config.Stages[0], 3, typeof(LineCounterTask).Name + "Stage", typeof(LineCounterTask));
             VerifyChannel(config.Stages[0], config.Stages[1], ChannelType.File);
             VerifyStage(config.Stages[1], 2, typeof(LineAdderTask).Name + "Stage", typeof(LineAdderTask));
-            VerifyDfsOutput(config.Stages[1], typeof(TextRecordWriter<int>));
+            VerifyDataOutput(config.Stages[1], typeof(TextRecordWriter<int>));
             config.Validate();
         }
 
@@ -219,8 +219,8 @@ namespace Ookii.Jumbo.Test.Jet
             Assert.AreEqual(1, config.Stages.Count);
             StageConfiguration stage = config.Stages[0];
             VerifyStage(stage, 3, "ProcessRecordsTaskStage", operation.TaskType.TaskType);
-            VerifyDfsInput(config, stage, typeof(LineRecordReader));
-            VerifyDfsOutput(stage, typeof(TextRecordWriter<int>));
+            VerifyDataInput(config, stage, typeof(LineRecordReader));
+            VerifyDataOutput(stage, typeof(TextRecordWriter<int>));
             config.Validate();
             builder.TaskBuilder.DeleteAssembly();
         }
@@ -242,14 +242,14 @@ namespace Ookii.Jumbo.Test.Jet
             Assert.AreEqual(1, config.Stages.Count);
             StageConfiguration stage = config.Stages[0];
             VerifyStage(stage, 3, "ProcessRecordsNoContextTaskStage", operation.TaskType.TaskType);
-            VerifyDfsInput(config, stage, typeof(LineRecordReader));
-            VerifyDfsOutput(stage, typeof(TextRecordWriter<int>));
+            VerifyDataInput(config, stage, typeof(LineRecordReader));
+            VerifyDataOutput(stage, typeof(TextRecordWriter<int>));
             config.Validate();
             builder.TaskBuilder.DeleteAssembly();
         }
 
         [Test]
-        public void TestCustomDfsOutput()
+        public void TestCustomDataOutput()
         {
             JobBuilder builder = new JobBuilder(_fileSystemClient, _jetClient);
 
@@ -260,7 +260,7 @@ namespace Ookii.Jumbo.Test.Jet
             output.ReplicationFactor = 2;
 
             JobConfiguration config = builder.CreateJob();
-            VerifyDfsOutput(config.Stages[0], typeof(TextRecordWriter<int>), 256 << 20, 2);
+            VerifyDataOutput(config.Stages[0], typeof(TextRecordWriter<int>), 256 << 20, 2);
             config.Validate();
         }
 
@@ -287,7 +287,7 @@ namespace Ookii.Jumbo.Test.Jet
         }
 
         [Test]
-        public void TestSortDfsInputOutput()
+        public void TestSortDataInputOutput()
         {
             JobBuilder builder = new JobBuilder(_fileSystemClient, _jetClient);
 
@@ -300,20 +300,20 @@ namespace Ookii.Jumbo.Test.Jet
 
             Assert.AreEqual(2, config.Stages.Count);
 
-            VerifyDfsInput(config, config.Stages[0], typeof(LineRecordReader));
+            VerifyDataInput(config, config.Stages[0], typeof(LineRecordReader));
             VerifyStage(config.Stages[0], 3, "ReadStage", typeof(EmptyTask<Utf8String>));
             VerifyChannel(config.Stages[0], config.Stages[0].ChildStage, ChannelType.Pipeline);
             VerifyStage(config.Stages[0].ChildStage, 2, "SortStage", typeof(SortTask<Utf8String>));
             VerifyChannel(config.Stages[0].ChildStage, config.Stages[1], ChannelType.File, multiInputRecordReaderType: typeof(MergeRecordReader<Utf8String>));
             VerifyStage(config.Stages[1], 2, "MergeStage", typeof(EmptyTask<Utf8String>));
-            VerifyDfsOutput(config.Stages[1], typeof(TextRecordWriter<Utf8String>));
+            VerifyDataOutput(config.Stages[1], typeof(TextRecordWriter<Utf8String>));
             VerifyStageSetting(config.Stages[0].ChildStage, TaskConstants.ComparerSettingKey, null);
             VerifyStageSetting(config.Stages[1], TaskConstants.ComparerSettingKey, null);
             config.Validate();
         }
 
         [Test]
-        public void TestSortDfsInputOutputSinglePartition()
+        public void TestSortDataInputOutputSinglePartition()
         {
             JobBuilder builder = new JobBuilder(_fileSystemClient, _jetClient);
 
@@ -327,12 +327,12 @@ namespace Ookii.Jumbo.Test.Jet
 
             Assert.AreEqual(2, config.Stages.Count);
 
-            VerifyDfsInput(config, config.Stages[0], typeof(LineRecordReader));
+            VerifyDataInput(config, config.Stages[0], typeof(LineRecordReader));
             // EmptyTask will have been replaced because there is only one partition.
             VerifyStage(config.Stages[0], 3, "SortStage", typeof(SortTask<Utf8String>));
             VerifyChannel(config.Stages[0], config.Stages[1], ChannelType.File, multiInputRecordReaderType: typeof(MergeRecordReader<Utf8String>));
             VerifyStage(config.Stages[1], 1, "MergeStage", typeof(EmptyTask<Utf8String>));
-            VerifyDfsOutput(config.Stages[1], typeof(TextRecordWriter<Utf8String>));
+            VerifyDataOutput(config.Stages[1], typeof(TextRecordWriter<Utf8String>));
             VerifyStageSetting(config.Stages[0], TaskConstants.ComparerSettingKey, null);
             VerifyStageSetting(config.Stages[1], TaskConstants.ComparerSettingKey, null);
             config.Validate();
@@ -356,14 +356,14 @@ namespace Ookii.Jumbo.Test.Jet
 
             Assert.AreEqual(2, config.Stages.Count);
 
-            VerifyDfsInput(config, config.Stages[0], typeof(LineRecordReader));
+            VerifyDataInput(config, config.Stages[0], typeof(LineRecordReader));
             VerifyStage(config.Stages[0], 3, typeof(StringConversionTask).Name + "Stage", typeof(StringConversionTask));
             VerifyChannel(config.Stages[0], config.Stages[0].ChildStage, ChannelType.Pipeline);
             VerifyStage(config.Stages[0].ChildStage, 2, "SortStage", typeof(SortTask<int>));
             VerifyChannel(config.Stages[0].ChildStage, config.Stages[1], ChannelType.File, multiInputRecordReaderType: typeof(MergeRecordReader<int>));
             // EmptyTask on second step replaced with LineAdderTask.
             VerifyStage(config.Stages[1], 2, typeof(LineAdderTask).Name + "Stage", typeof(LineAdderTask));
-            VerifyDfsOutput(config.Stages[1], typeof(TextRecordWriter<int>));
+            VerifyDataOutput(config.Stages[1], typeof(TextRecordWriter<int>));
             VerifyStageSetting(config.Stages[0].ChildStage, TaskConstants.ComparerSettingKey, null);
             VerifyStageSetting(config.Stages[1], TaskConstants.ComparerSettingKey, null);
             config.Validate();
@@ -401,11 +401,11 @@ namespace Ookii.Jumbo.Test.Jet
 
             Assert.AreEqual(2, config.Stages.Count);
 
-            VerifyDfsInput(config, config.Stages[0], typeof(LineRecordReader));
+            VerifyDataInput(config, config.Stages[0], typeof(LineRecordReader));
             VerifyStage(config.Stages[0], 3, "ReadStage", typeof(EmptyTask<Utf8String>));
             VerifyChannel(config.Stages[0], config.Stages[1], ChannelType.File, multiInputRecordReaderType: typeof(MergeRecordReader<Utf8String>));
             VerifyStage(config.Stages[1], 2, "MergeStage", typeof(EmptyTask<Utf8String>));
-            VerifyDfsOutput(config.Stages[1], typeof(TextRecordWriter<Utf8String>));
+            VerifyDataOutput(config.Stages[1], typeof(TextRecordWriter<Utf8String>));
             VerifyStageSetting(config.Stages[0], FileOutputChannel.OutputTypeSettingKey, FileChannelOutputType.SortSpill.ToString());
             VerifyStageSetting(config.Stages[0], FileOutputChannel.SpillSortComparerTypeSettingKey, null);
             VerifyStageSetting(config.Stages[1], FileOutputChannel.OutputTypeSettingKey, null);
@@ -426,11 +426,11 @@ namespace Ookii.Jumbo.Test.Jet
 
             Assert.AreEqual(2, config.Stages.Count);
 
-            VerifyDfsInput(config, config.Stages[0], typeof(LineRecordReader));
+            VerifyDataInput(config, config.Stages[0], typeof(LineRecordReader));
             VerifyStage(config.Stages[0], 3, "ReadStage", typeof(EmptyTask<Utf8String>));
             VerifyChannel(config.Stages[0], config.Stages[1], ChannelType.File, multiInputRecordReaderType: typeof(MergeRecordReader<Utf8String>));
             VerifyStage(config.Stages[1], 2, "MergeStage", typeof(EmptyTask<Utf8String>));
-            VerifyDfsOutput(config.Stages[1], typeof(TextRecordWriter<Utf8String>));
+            VerifyDataOutput(config.Stages[1], typeof(TextRecordWriter<Utf8String>));
             VerifyStageSetting(config.Stages[0], FileOutputChannel.OutputTypeSettingKey, FileChannelOutputType.SortSpill.ToString());
             VerifyStageSetting(config.Stages[0], FileOutputChannel.SpillSortComparerTypeSettingKey, typeof(FakeRawComparer<Utf8String>).AssemblyQualifiedName);
             VerifyStageSetting(config.Stages[1], FileOutputChannel.OutputTypeSettingKey, null);
@@ -453,11 +453,11 @@ namespace Ookii.Jumbo.Test.Jet
 
             Assert.AreEqual(2, config.Stages.Count);
 
-            VerifyDfsInput(config, config.Stages[0], typeof(LineRecordReader));
+            VerifyDataInput(config, config.Stages[0], typeof(LineRecordReader));
             VerifyStage(config.Stages[0], 3, "ReadStage", typeof(EmptyTask<Utf8String>));
             VerifyChannel(config.Stages[0], config.Stages[1], ChannelType.File, multiInputRecordReaderType: typeof(MergeRecordReader<Utf8String>));
             VerifyStage(config.Stages[1], 2, "MergeStage", typeof(EmptyTask<Utf8String>));
-            VerifyDfsOutput(config.Stages[1], typeof(TextRecordWriter<Utf8String>));
+            VerifyDataOutput(config.Stages[1], typeof(TextRecordWriter<Utf8String>));
             VerifyStageSetting(config.Stages[0], FileOutputChannel.OutputTypeSettingKey, FileChannelOutputType.SortSpill.ToString());
             VerifyStageSetting(config.Stages[1], FileOutputChannel.OutputTypeSettingKey, null);
             VerifyStageSetting(config.Stages[0], FileOutputChannel.SpillSortComparerTypeSettingKey, null);
@@ -482,11 +482,11 @@ namespace Ookii.Jumbo.Test.Jet
 
             Assert.AreEqual(2, config.Stages.Count);
 
-            VerifyDfsInput(config, config.Stages[0], typeof(RecordFileReader<Pair<Utf8String, int>>));
+            VerifyDataInput(config, config.Stages[0], typeof(RecordFileReader<Pair<Utf8String, int>>));
             VerifyStage(config.Stages[0], 3, "ReadStage", typeof(EmptyTask<Pair<Utf8String, int>>));
             VerifyChannel(config.Stages[0], config.Stages[1], ChannelType.File, multiInputRecordReaderType: typeof(MergeRecordReader<Pair<Utf8String, int>>));
             VerifyStage(config.Stages[1], 2, "MergeStage", typeof(EmptyTask<Pair<Utf8String, int>>));
-            VerifyDfsOutput(config.Stages[1], typeof(TextRecordWriter<Pair<Utf8String, int>>));
+            VerifyDataOutput(config.Stages[1], typeof(TextRecordWriter<Pair<Utf8String, int>>));
             VerifyStageSetting(config.Stages[0], FileOutputChannel.OutputTypeSettingKey, FileChannelOutputType.SortSpill.ToString());
             VerifyStageSetting(config.Stages[1], FileOutputChannel.OutputTypeSettingKey, null);
             VerifyStageSetting(config.Stages[0], FileOutputChannel.SpillSortComparerTypeSettingKey, null);
@@ -512,11 +512,11 @@ namespace Ookii.Jumbo.Test.Jet
 
             Assert.AreEqual(2, config.Stages.Count);
 
-            VerifyDfsInput(config, config.Stages[0], typeof(RecordFileReader<Pair<Utf8String, int>>));
+            VerifyDataInput(config, config.Stages[0], typeof(RecordFileReader<Pair<Utf8String, int>>));
             VerifyStage(config.Stages[0], 3, "ReadStage", typeof(EmptyTask<Pair<Utf8String, int>>));
             VerifyChannel(config.Stages[0], config.Stages[1], ChannelType.File, multiInputRecordReaderType: typeof(MergeRecordReader<Pair<Utf8String, int>>));
             VerifyStage(config.Stages[1], 2, "MergeStage", typeof(EmptyTask<Pair<Utf8String, int>>));
-            VerifyDfsOutput(config.Stages[1], typeof(TextRecordWriter<Pair<Utf8String, int>>));
+            VerifyDataOutput(config.Stages[1], typeof(TextRecordWriter<Pair<Utf8String, int>>));
             VerifyStageSetting(config.Stages[0], FileOutputChannel.OutputTypeSettingKey, FileChannelOutputType.SortSpill.ToString());
             VerifyStageSetting(config.Stages[1], FileOutputChannel.OutputTypeSettingKey, null);
             VerifyStageSetting(config.Stages[0], FileOutputChannel.SpillSortComparerTypeSettingKey, null);
@@ -527,7 +527,7 @@ namespace Ookii.Jumbo.Test.Jet
         }
 
         [Test]
-        public void TestGroupAggregateDfsInputOutput()
+        public void TestGroupAggregateDataInputOutput()
         {
             JobBuilder builder = new JobBuilder(_fileSystemClient, _jetClient);
 
@@ -540,11 +540,11 @@ namespace Ookii.Jumbo.Test.Jet
 
             Assert.AreEqual(2, config.Stages.Count);
 
-            VerifyDfsInput(config, config.Stages[0], typeof(RecordFileReader<Pair<Utf8String, int>>));
+            VerifyDataInput(config, config.Stages[0], typeof(RecordFileReader<Pair<Utf8String, int>>));
             VerifyStage(config.Stages[0], 3, "Local" + typeof(SumTask<Utf8String>).Name + "Stage", typeof(SumTask<Utf8String>));
             VerifyChannel(config.Stages[0], config.Stages[1], ChannelType.File);
             VerifyStage(config.Stages[1], 2, typeof(SumTask<Utf8String>).Name + "Stage", typeof(SumTask<Utf8String>));
-            VerifyDfsOutput(config.Stages[1], typeof(TextRecordWriter<Pair<Utf8String, int>>));
+            VerifyDataOutput(config.Stages[1], typeof(TextRecordWriter<Pair<Utf8String, int>>));
             config.Validate();
         }
 
@@ -563,13 +563,13 @@ namespace Ookii.Jumbo.Test.Jet
 
             Assert.AreEqual(2, config.Stages.Count);
 
-            VerifyDfsInput(config, config.Stages[0], typeof(LineRecordReader));
+            VerifyDataInput(config, config.Stages[0], typeof(LineRecordReader));
             VerifyStage(config.Stages[0], 3, typeof(GenerateInt32PairTask<Utf8String>).Name + "Stage", typeof(GenerateInt32PairTask<Utf8String>));
             VerifyChannel(config.Stages[0], config.Stages[0].ChildStage, ChannelType.Pipeline);
             VerifyStage(config.Stages[0].ChildStage, 1, "Local" + typeof(SumTask<Utf8String>).Name + "Stage", typeof(SumTask<Utf8String>));
             VerifyChannel(config.Stages[0].ChildStage, config.Stages[1], ChannelType.File);
             VerifyStage(config.Stages[1], 2, typeof(SumTask<Utf8String>).Name + "Stage", typeof(SumTask<Utf8String>));
-            VerifyDfsOutput(config.Stages[1], typeof(TextRecordWriter<Pair<Utf8String, int>>));
+            VerifyDataOutput(config.Stages[1], typeof(TextRecordWriter<Pair<Utf8String, int>>));
             config.Validate();
         }
 
@@ -589,11 +589,11 @@ namespace Ookii.Jumbo.Test.Jet
 
             Assert.AreEqual(2, config.Stages.Count);
 
-            VerifyDfsInput(config, config.Stages[0], typeof(RecordFileReader<Pair<Utf8String, int>>));
+            VerifyDataInput(config, config.Stages[0], typeof(RecordFileReader<Pair<Utf8String, int>>));
             VerifyStage(config.Stages[0], 3, "LocalAccumulateRecordsTaskStage", aggregated.TaskType.TaskType);
             VerifyChannel(config.Stages[0], config.Stages[1], ChannelType.File);
             VerifyStage(config.Stages[1], 2, "AccumulateRecordsTaskStage", aggregated.TaskType.TaskType);
-            VerifyDfsOutput(config.Stages[1], typeof(TextRecordWriter<Pair<Utf8String, int>>));
+            VerifyDataOutput(config.Stages[1], typeof(TextRecordWriter<Pair<Utf8String, int>>));
             config.Validate();
             builder.TaskBuilder.DeleteAssembly();
         }
@@ -614,11 +614,11 @@ namespace Ookii.Jumbo.Test.Jet
 
             Assert.AreEqual(2, config.Stages.Count);
 
-            VerifyDfsInput(config, config.Stages[0], typeof(RecordFileReader<Pair<Utf8String, int>>));
+            VerifyDataInput(config, config.Stages[0], typeof(RecordFileReader<Pair<Utf8String, int>>));
             VerifyStage(config.Stages[0], 3, "LocalAccumulateRecordsNoContextTaskStage", aggregated.TaskType.TaskType);
             VerifyChannel(config.Stages[0], config.Stages[1], ChannelType.File);
             VerifyStage(config.Stages[1], 2, "AccumulateRecordsNoContextTaskStage", aggregated.TaskType.TaskType);
-            VerifyDfsOutput(config.Stages[1], typeof(TextRecordWriter<Pair<Utf8String, int>>));
+            VerifyDataOutput(config.Stages[1], typeof(TextRecordWriter<Pair<Utf8String, int>>));
             config.Validate();
             builder.TaskBuilder.DeleteAssembly();
         }
@@ -642,12 +642,12 @@ namespace Ookii.Jumbo.Test.Jet
             Assert.AreEqual("ReduceRecordsTask", reduced.TaskType.TaskType.Name);
 
             Assert.AreEqual(2, config.Stages.Count);
-            VerifyDfsInput(config, config.Stages[0], typeof(LineRecordReader));
+            VerifyDataInput(config, config.Stages[0], typeof(LineRecordReader));
             VerifyStage(config.Stages[0], 3, "MapRecordsTaskStage", mapped.TaskType.TaskType);
             VerifyChannel(config.Stages[0], config.Stages[1], ChannelType.File, multiInputRecordReaderType: typeof(MergeRecordReader<Pair<Utf8String, int>>));
             VerifyStageSetting(config.Stages[0], FileOutputChannel.OutputTypeSettingKey, FileChannelOutputType.SortSpill.ToString());
             VerifyStage(config.Stages[1], 2, "ReduceRecordsTaskStage", reduced.TaskType.TaskType);
-            VerifyDfsOutput(config.Stages[1], typeof(TextRecordWriter<int>));
+            VerifyDataOutput(config.Stages[1], typeof(TextRecordWriter<int>));
             config.Validate();
             builder.TaskBuilder.DeleteAssembly();
         }
@@ -670,12 +670,12 @@ namespace Ookii.Jumbo.Test.Jet
             Assert.AreEqual("ReduceRecordsNoContextTask", reduced.TaskType.TaskType.Name);
 
             Assert.AreEqual(2, config.Stages.Count);
-            VerifyDfsInput(config, config.Stages[0], typeof(LineRecordReader));
+            VerifyDataInput(config, config.Stages[0], typeof(LineRecordReader));
             VerifyStage(config.Stages[0], 3, "MapRecordsNoContextTaskStage", mapped.TaskType.TaskType);
             VerifyChannel(config.Stages[0], config.Stages[1], ChannelType.File, multiInputRecordReaderType: typeof(MergeRecordReader<Pair<Utf8String, int>>));
             VerifyStageSetting(config.Stages[0], FileOutputChannel.OutputTypeSettingKey, FileChannelOutputType.SortSpill.ToString());
             VerifyStage(config.Stages[1], 2, "ReduceRecordsNoContextTaskStage", reduced.TaskType.TaskType);
-            VerifyDfsOutput(config.Stages[1], typeof(TextRecordWriter<int>));
+            VerifyDataOutput(config.Stages[1], typeof(TextRecordWriter<int>));
             config.Validate();
             builder.TaskBuilder.DeleteAssembly();
         }
@@ -697,7 +697,7 @@ namespace Ookii.Jumbo.Test.Jet
             Assert.IsNull(stage.DataInput);
             CollectionAssert.IsEmpty(config.GetInputStagesForStage(stage.StageId));
             VerifyStage(stage, 5, typeof(LineCounterTask).Name + "Stage", typeof(LineCounterTask));
-            VerifyDfsOutput(stage, typeof(TextRecordWriter<int>));
+            VerifyDataOutput(stage, typeof(TextRecordWriter<int>));
             config.Validate();
         }
         
@@ -719,7 +719,7 @@ namespace Ookii.Jumbo.Test.Jet
             Assert.IsNull(stage.DataInput);
             CollectionAssert.IsEmpty(config.GetInputStagesForStage(stage.StageId));
             VerifyStage(stage, 5, "GenerateRecordsTaskStage", operation.TaskType.TaskType);
-            VerifyDfsOutput(stage, typeof(TextRecordWriter<int>));
+            VerifyDataOutput(stage, typeof(TextRecordWriter<int>));
             config.Validate();
             builder.TaskBuilder.DeleteAssembly();
         }
@@ -742,7 +742,7 @@ namespace Ookii.Jumbo.Test.Jet
             Assert.IsNull(stage.DataInput);
             CollectionAssert.IsEmpty(config.GetInputStagesForStage(stage.StageId));
             VerifyStage(stage, 5, "GenerateRecordsProgressContextTaskStage", operation.TaskType.TaskType);
-            VerifyDfsOutput(stage, typeof(TextRecordWriter<int>));
+            VerifyDataOutput(stage, typeof(TextRecordWriter<int>));
             config.Validate();
             builder.TaskBuilder.DeleteAssembly();
         }
@@ -765,7 +765,7 @@ namespace Ookii.Jumbo.Test.Jet
             Assert.IsNull(stage.DataInput);
             CollectionAssert.IsEmpty(config.GetInputStagesForStage(stage.StageId));
             VerifyStage(stage, 5, "GenerateRecordsNoContextTaskStage", operation.TaskType.TaskType);
-            VerifyDfsOutput(stage, typeof(TextRecordWriter<int>));
+            VerifyDataOutput(stage, typeof(TextRecordWriter<int>));
             config.Validate();
             builder.TaskBuilder.DeleteAssembly();
         }
@@ -786,14 +786,14 @@ namespace Ookii.Jumbo.Test.Jet
 
             Assert.AreEqual(3, config.Stages.Count);
 
-            VerifyDfsInput(config, config.Stages[0], typeof(RecordFileReader<double>));
+            VerifyDataInput(config, config.Stages[0], typeof(RecordFileReader<double>));
             VerifyStage(config.Stages[0], 3, "OuterReadStage", typeof(EmptyTask<double>));
             VerifyChannel(config.Stages[0], config.Stages[2], ChannelType.File, multiInputRecordReaderType: typeof(MergeRecordReader<double>));
             VerifyStageSetting(config.Stages[0], FileOutputChannel.OutputTypeSettingKey, FileChannelOutputType.SortSpill.ToString());
             VerifyStageSetting(config.Stages[0], FileOutputChannel.SpillSortComparerTypeSettingKey, typeof(FakeJoinComparer<double>).AssemblyQualifiedName);
             VerifyStageSetting(config.Stages[0], PartitionerConstants.EqualityComparerSetting, typeof(FakeJoinComparer<double>).AssemblyQualifiedName);
 
-            VerifyDfsInput(config, config.Stages[1], typeof(RecordFileReader<int>), _inputPath2);
+            VerifyDataInput(config, config.Stages[1], typeof(RecordFileReader<int>), _inputPath2);
             VerifyStage(config.Stages[1], 3, "InnerReadStage", typeof(EmptyTask<int>));
             VerifyChannel(config.Stages[1], config.Stages[2], ChannelType.File, multiInputRecordReaderType: typeof(MergeRecordReader<int>));
             VerifyStageSetting(config.Stages[1], FileOutputChannel.OutputTypeSettingKey, FileChannelOutputType.SortSpill.ToString());
@@ -801,7 +801,7 @@ namespace Ookii.Jumbo.Test.Jet
             VerifyStageSetting(config.Stages[1], PartitionerConstants.EqualityComparerSetting, typeof(FakeJoinComparer<int>).AssemblyQualifiedName);
 
             VerifyStage(config.Stages[2], 2, "JoinStage", typeof(EmptyTask<Utf8String>), typeof(FakeInnerJoinRecordReader));
-            VerifyDfsOutput(config.Stages[2], typeof(TextRecordWriter<Utf8String>));
+            VerifyDataOutput(config.Stages[2], typeof(TextRecordWriter<Utf8String>));
         }
 
         
@@ -867,7 +867,7 @@ namespace Ookii.Jumbo.Test.Jet
             Assert.AreEqual(stageMultiInputRecordReader, stage.MultiInputRecordReaderType.ReferencedType);
         }
 
-        private static void VerifyDfsInput(JobConfiguration job, StageConfiguration stage, Type recordReaderType, string inputPath = _inputPath)
+        private static void VerifyDataInput(JobConfiguration job, StageConfiguration stage, Type recordReaderType, string inputPath = _inputPath)
         {
             Assert.IsNotNull(stage.DataInput);
             Assert.IsNull(stage.Parent);
@@ -883,7 +883,7 @@ namespace Ookii.Jumbo.Test.Jet
             }
         }
 
-        private void VerifyDfsOutput(StageConfiguration stage, Type recordWriterType, int blockSize = 0, int replicationFactor = 0)
+        private void VerifyDataOutput(StageConfiguration stage, Type recordWriterType, int blockSize = 0, int replicationFactor = 0)
         {
             Assert.IsNull(stage.ChildStage);
             Assert.IsNull(stage.OutputChannel);
@@ -935,66 +935,6 @@ namespace Ookii.Jumbo.Test.Jet
         {
             Assert.AreEqual(value, stage.GetSetting(settingName, null));
         }
-
-        //private static void VerifyStage(JobConfiguration config, StageConfiguration stage, int taskCount, int partitionsPerTask, string stageId, Type taskType, Type stageMultiInputRecordReader, Type recordReaderType, Type recordWriterType, ChannelType channelType, ChannelConnectivity channelConnectivity, Type partitionerType, Type multiInputRecordReader, string outputStageId)
-        //{
-        //    Assert.AreEqual(stageId, stage.StageId);
-        //    Assert.AreEqual(taskCount, stage.TaskCount);
-        //    Assert.AreEqual(taskType, stage.TaskType.ReferencedType);
-        //    Assert.AreEqual(stageMultiInputRecordReader, stage.MultiInputRecordReaderType.ReferencedType);
-        //    if( recordReaderType != null )
-        //    {
-        //        Assert.IsNull(stage.Parent);
-        //        Assert.IsNotNull(stage.DfsInput);
-        //        Assert.AreEqual(3, stage.DfsInput.TaskInputs.Count);
-        //        Assert.AreEqual(recordReaderType, stage.DfsInput.RecordReaderType.ReferencedType);
-        //        for( int x = 0; x < 3; ++x )
-        //        {
-        //            TaskDfsInput input = stage.DfsInput.TaskInputs[x];
-        //            Assert.AreEqual(x, input.Block);
-        //            Assert.AreEqual(_inputPath, input.Path);
-        //        }
-        //    }
-        //    else
-        //    {
-        //        var inputStages = config.GetInputStagesForStage(stage.StageId);
-        //        foreach( StageConfiguration inputStage in inputStages )
-        //            Assert.AreEqual(partitionsPerTask, inputStage.OutputChannel.PartitionsPerTask);
-
-        //        Assert.IsNull(stage.DfsInput);
-        //    }
-
-        //    if( recordWriterType != null )
-        //    {
-        //        Assert.IsNull(stage.ChildStage);
-        //        Assert.IsNull(stage.OutputChannel);
-        //        Assert.IsNotNull(stage.DfsOutput);
-        //        Assert.AreEqual(DfsPath.Combine(_outputPath, stageId + "-{0:00000}"), stage.DfsOutput.PathFormat);
-        //        Assert.AreEqual(0, stage.DfsOutput.ReplicationFactor);
-        //        Assert.AreEqual(0, stage.DfsOutput.BlockSize);
-        //        Assert.AreEqual(recordWriterType, stage.DfsOutput.RecordWriterType.ReferencedType);
-        //    }
-        //    else
-        //    {
-        //        Assert.IsNull(stage.DfsOutput);
-        //        if( channelType == ChannelType.Pipeline )
-        //        {
-        //            Assert.IsNull(stage.OutputChannel);
-        //            Assert.IsNotNull(stage.ChildStage);
-        //            Assert.IsNotNull(stage.GetNamedChildStage(outputStageId));
-        //            Assert.AreEqual(partitionerType, stage.ChildStagePartitionerType.ReferencedType);
-        //        }
-        //        else
-        //        {
-        //            Assert.IsNotNull(stage.OutputChannel);
-        //            Assert.AreEqual(channelType, stage.OutputChannel.ChannelType);
-        //            Assert.AreEqual(outputStageId, stage.OutputChannel.OutputStage);
-        //            Assert.AreEqual(channelConnectivity, stage.OutputChannel.Connectivity);
-        //            Assert.AreEqual(partitionerType, stage.OutputChannel.PartitionerType.ReferencedType);
-        //            Assert.AreEqual(multiInputRecordReader, stage.OutputChannel.MultiInputRecordReaderType.ReferencedType);
-        //        }
-        //    }
-        //}
 
     }
 }

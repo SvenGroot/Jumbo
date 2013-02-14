@@ -133,7 +133,7 @@ namespace Ookii.Jumbo.Jet.Jobs
         /// The new stage will contain as many tasks are there are blocks in the input file.
         ///   </para>
         /// </remarks>
-        public StageConfiguration AddInputStage(string stageId, IDataInput input, Type taskType)
+        public StageConfiguration AddDataInputStage(string stageId, IDataInput input, Type taskType)
         {
             if( stageId == null )
                 throw new ArgumentNullException("stageId");
@@ -423,10 +423,10 @@ namespace Ookii.Jumbo.Jet.Jobs
         }
 
         /// <summary>
-        /// Gets the output channel configuration for a specific stage.
+        /// Gets the sending stages for the specified stage's input channel.
         /// </summary>
         /// <param name="stageId">The stage ID. This may not be a compound stage ID.</param>
-        /// <returns>A list of root stages whose <see cref="StageConfiguration.Leaf"/> child stage has an <see cref="OutputChannel"/> connected to the stage with the specified <paramref name="stageId"/>.</returns>
+        /// <returns>A list of stages whose <see cref="OutputChannel"/> is connected to the stage with the specified <paramref name="stageId"/>, or an empty list if the specified stage does not have an input channel or does not exist.</returns>
         public IEnumerable<StageConfiguration> GetInputStagesForStage(string stageId)
         {
             if( stageId == null )
@@ -511,12 +511,12 @@ namespace Ookii.Jumbo.Jet.Jobs
         {
             List<StageConfiguration> result = new List<StageConfiguration>(Stages.Count);
 
-            // Start with the DFS input stages.
-            var inputStages = from stage in Stages
+            // Start with the stages that have no dependencies and no channel input.
+            var dataInputStages = from stage in Stages
                               where GetExplicitDependenciesForStage(stage.StageId).Count() == 0 && GetInputStagesForStage(stage.StageId).Count() == 0
                               select stage;
 
-            Queue<StageConfiguration> nextStages = new Queue<StageConfiguration>(inputStages);
+            Queue<StageConfiguration> nextStages = new Queue<StageConfiguration>(dataInputStages);
 
             while( nextStages.Count > 0 )
             {
@@ -524,7 +524,16 @@ namespace Ookii.Jumbo.Jet.Jobs
 
                 // If a stage has multiple input stages it might already be in the list. In that case we must remove it and re-add it at the end.
                 result.Remove(nextStage);
-                result.Add(nextStage);
+
+                // A stage with a TCP channel as input must be scheduled before its sending stage, so it must be inserted into the list before the first of its inputs.
+                int tcpChannelInputStageIndex = (from stage in GetInputStagesForStage(nextStage.StageId)
+                                                 where stage.OutputChannel.ChannelType == ChannelType.Tcp
+                                                 select result.IndexOf(stage.Root)).DefaultIfEmpty(-1).Min();
+
+                if( tcpChannelInputStageIndex >= 0 )
+                    result.Insert(tcpChannelInputStageIndex, nextStage);
+                else
+                    result.Add(nextStage);
 
                 nextStage = nextStage.Leaf;
 

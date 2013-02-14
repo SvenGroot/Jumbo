@@ -1020,7 +1020,7 @@ namespace Ookii.Jumbo.Jet
 
                 if( Context.StageConfiguration.HasDataInput )
                 {
-                    // It's currently not possible to have a multi input record reader with DFS inputs, so this is safe.
+                    // It's currently not possible to have a multi input record reader with data inputs, so this is safe.
                     if( _inputReader != null )
                         metrics.DfsBytesRead += _inputReader.BytesRead;
                 }

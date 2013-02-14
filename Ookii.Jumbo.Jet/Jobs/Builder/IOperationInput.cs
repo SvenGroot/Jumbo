@@ -8,11 +8,11 @@ using System.Text;
 namespace Ookii.Jumbo.Jet.Jobs.Builder
 {
     /// <summary>
-    /// Represents the input to an operation, which is either a DFS input or another operation.
+    /// Represents the input to an operation, which is either a data input or another operation.
     /// </summary>
     /// <remarks>
     /// <para>
-    ///   Only implement this interface if you're also implementing <see cref="IJobBuilderOperation"/>. DFS inputs
+    ///   Only implement this interface if you're also implementing <see cref="IJobBuilderOperation"/>. Data inputs
     ///   are the only non-operation inputs.
     /// </para>
     /// </remarks>

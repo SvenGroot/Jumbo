@@ -20,7 +20,7 @@ namespace Ookii.Jumbo.Dfs.FileSystem
     /// <summary>
     /// Provides client access to the Distributed File System.
     /// </summary>
-    public class DfsClient : FileSystemClient
+    public class DfsClient : FileSystemClient, IFileSystemWithLocality
     {
         private const string _nameServerObjectName = "NameServer";
 
@@ -279,6 +279,26 @@ namespace Ookii.Jumbo.Dfs.FileSystem
             }
 
             return !NameServer.SafeMode;
+        }
+
+        /// <summary>
+        /// Gets the location where the part of the file beginning with the specified offset is stored.
+        /// </summary>
+        /// <param name="file">The file.</param>
+        /// <param name="offset">The offset.</param>
+        /// <returns>
+        /// The host name of the location.
+        /// </returns>
+        public IEnumerable<string> GetLocationsForOffset(JumboFile file, long offset)
+        {
+            if( file == null )
+                throw new ArgumentNullException("file");
+            if( offset < 0 || offset >= file.Size )
+                throw new ArgumentOutOfRangeException("offset");
+
+            int blockIndex = (int)(offset / file.BlockSize);
+            Guid blockId = file.Blocks[blockIndex];
+            return NameServer.GetDataServersForBlock(blockId).Select(server => server.HostName);
         }
 
         private static T CreateNameServerClientInternal<T>(string hostName, int port)

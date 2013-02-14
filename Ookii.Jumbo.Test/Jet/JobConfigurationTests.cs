@@ -135,7 +135,7 @@ namespace Ookii.Jumbo.Test.Jet
             JumboFile file = CreateFakeTestFile("test");
             const int splitsPerBlock = 2;
 
-            StageConfiguration stage = target.AddInputStage("InputStage", new FileDataInput(_fakeConfiguration, typeof(LineRecordReader), file, maxSplitSize: _blockSize / splitsPerBlock), typeof(Tasks.LineCounterTask));
+            StageConfiguration stage = target.AddDataInputStage("InputStage", new FileDataInput(_fakeConfiguration, typeof(LineRecordReader), file, maxSplitSize: _blockSize / splitsPerBlock), typeof(Tasks.LineCounterTask));
 
             Assert.IsNotNull(stage.DataInput);
             Assert.IsTrue(stage.HasDataInput);
@@ -183,7 +183,7 @@ namespace Ookii.Jumbo.Test.Jet
             JobConfiguration target = new JobConfiguration(typeof(Tasks.LineCounterTask).Assembly);
             JumboFile file = CreateFakeTestFile("test1");
 
-            StageConfiguration expected = target.AddInputStage("InputStage", new FileDataInput(_fakeConfiguration, typeof(LineRecordReader), file), typeof(Tasks.LineCounterTask));
+            StageConfiguration expected = target.AddDataInputStage("InputStage", new FileDataInput(_fakeConfiguration, typeof(LineRecordReader), file), typeof(Tasks.LineCounterTask));
 
             StageConfiguration stage = target.GetStage("InputStage");
             Assert.IsNotNull(stage);
@@ -200,8 +200,8 @@ namespace Ookii.Jumbo.Test.Jet
             JumboFile file1 = CreateFakeTestFile("test1");
             JumboFile file2 = CreateFakeTestFile("test2");
 
-            StageConfiguration inputStage1 = target.AddInputStage("InputStage1", new FileDataInput(_fakeConfiguration, typeof(LineRecordReader), file1), typeof(Tasks.LineCounterTask));
-            StageConfiguration inputStage2 = target.AddInputStage("InputStage2", new FileDataInput(_fakeConfiguration, typeof(LineRecordReader), file2), typeof(Tasks.LineCounterTask));
+            StageConfiguration inputStage1 = target.AddDataInputStage("InputStage1", new FileDataInput(_fakeConfiguration, typeof(LineRecordReader), file1), typeof(Tasks.LineCounterTask));
+            StageConfiguration inputStage2 = target.AddDataInputStage("InputStage2", new FileDataInput(_fakeConfiguration, typeof(LineRecordReader), file2), typeof(Tasks.LineCounterTask));
 
             const int taskCount = 3;
             const string outputPath = "/output";
@@ -224,7 +224,7 @@ namespace Ookii.Jumbo.Test.Jet
             JobConfiguration target = new JobConfiguration();
             JumboFile file1 = CreateFakeTestFile("test1");
 
-            StageConfiguration inputStage = target.AddInputStage("InputStage", new FileDataInput(_fakeConfiguration, typeof(LineRecordReader), file1), typeof(SortTask<Utf8String>));
+            StageConfiguration inputStage = target.AddDataInputStage("InputStage", new FileDataInput(_fakeConfiguration, typeof(LineRecordReader), file1), typeof(SortTask<Utf8String>));
 
             const int taskCount = 3;
             const int partitionsPerTask = 5;
@@ -253,7 +253,7 @@ namespace Ookii.Jumbo.Test.Jet
             const int taskCount = 3;
             const int partitionsPerTask = 5;
 
-            StageConfiguration inputStage = target.AddInputStage("InputStage", new FileDataInput(_fakeConfiguration, typeof(LineRecordReader), file1), typeof(EmptyTask<Utf8String>));
+            StageConfiguration inputStage = target.AddDataInputStage("InputStage", new FileDataInput(_fakeConfiguration, typeof(LineRecordReader), file1), typeof(EmptyTask<Utf8String>));
             StageConfiguration sortStage = target.AddStage("SortStage", typeof(SortTask<Utf8String>), taskCount * partitionsPerTask, new InputStageInfo(inputStage) { ChannelType = ChannelType.Pipeline });
 
             StageConfiguration stage = target.AddStage("SecondStage", typeof(EmptyTask<Utf8String>), taskCount, new InputStageInfo(sortStage) { PartitionsPerTask = partitionsPerTask });
@@ -278,8 +278,8 @@ namespace Ookii.Jumbo.Test.Jet
             JumboFile file1 = CreateFakeTestFile("test1");
             JumboFile file2 = CreateFakeTestFile("test2");
 
-            StageConfiguration inputStage1 = target.AddInputStage("InputStage1", new FileDataInput(_fakeConfiguration, typeof(LineRecordReader), file1), typeof(Tasks.LineCounterTask));
-            StageConfiguration inputStage2 = target.AddInputStage("InputStage2", new FileDataInput(_fakeConfiguration, typeof(LineRecordReader), file2), typeof(Tasks.LineCounterTask));
+            StageConfiguration inputStage1 = target.AddDataInputStage("InputStage1", new FileDataInput(_fakeConfiguration, typeof(LineRecordReader), file1), typeof(Tasks.LineCounterTask));
+            StageConfiguration inputStage2 = target.AddDataInputStage("InputStage2", new FileDataInput(_fakeConfiguration, typeof(LineRecordReader), file2), typeof(Tasks.LineCounterTask));
 
             const int taskCount = 3;
             const string outputPath = "/output";

@@ -49,7 +49,7 @@ namespace Ookii.Jumbo.Jet.Jobs.Builder
         /// </para>
         /// </remarks>
         public TwoStepOperation(JobBuilder builder, IOperationInput input, Type taskType, Type secondStepTaskType, bool usePrePartitioning)
-            : base(builder, CreateExtraStepForDfsInput(builder, input), taskType)
+            : base(builder, CreateExtraStepForDataInput(builder, input), taskType)
         {
             if( input == null )
                 throw new ArgumentNullException("input");
@@ -123,7 +123,11 @@ namespace Ookii.Jumbo.Jet.Jobs.Builder
                 // Second step needed
                 int taskCount = (_usePrePartitioning && InputChannel.Sender.Stage.InternalPartitionCount == 1) ? InputChannel.PartitionCount : 1;
                 if( taskCount == 0 )
+                {
                     taskCount = InputChannel.PartitionsPerTask * compiler.DefaultChannelInputTaskCount;
+                    if( InputChannel.ChannelType == ChannelType.Tcp )
+                        taskCount /= 2;
+                }
                 InputStageInfo input = new InputStageInfo(InputChannel.Sender.Stage)
                 {
                     ChannelType = ChannelType.Pipeline,
@@ -146,10 +150,10 @@ namespace Ookii.Jumbo.Jet.Jobs.Builder
             }
         }
 
-        private static IOperationInput CreateExtraStepForDfsInput(JobBuilder builder, IOperationInput input)
+        private static IOperationInput CreateExtraStepForDataInput(JobBuilder builder, IOperationInput input)
         {
-            FileInput dfsInput = input as FileInput;
-            if( dfsInput != null )
+            FileInput dataInput = input as FileInput;
+            if( dataInput != null )
             {
                 // If the input is DFS, we want to create a channel around which our first and second step are created.
                 // Here's the fun bit: if the input has only one split (so there is only one task), the compiler will

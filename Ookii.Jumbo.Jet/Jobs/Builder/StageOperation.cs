@@ -14,7 +14,7 @@ namespace Ookii.Jumbo.Jet.Jobs.Builder
     public class StageOperation : StageOperationBase
     {
         private readonly Channel _inputChannel;
-        private readonly FileInput _dfsInput;
+        private readonly FileInput _dataInput;
         private readonly int _noInputTaskCount;
 
         /// <summary>
@@ -67,8 +67,8 @@ namespace Ookii.Jumbo.Jet.Jobs.Builder
                 if( TaskType.InputRecordType != input.RecordType )
                     throw new ArgumentException(string.Format(CultureInfo.CurrentCulture, "The input record type {0} of the task {1} doesn't match the record type {2} of the input.", TaskType.InputRecordType, taskType, input.RecordType));
 
-                _dfsInput = input as FileInput;
-                if( _dfsInput == null )
+                _dataInput = input as FileInput;
+                if( _dataInput == null )
                     _inputChannel = new Channel((IJobBuilderOperation)input, this);
             }
 
@@ -98,8 +98,8 @@ namespace Ookii.Jumbo.Jet.Jobs.Builder
         {
             if( compiler == null )
                 throw new ArgumentNullException("compiler");
-            if( _dfsInput != null )
-                return compiler.CreateStage(StageId, TaskType.TaskType, _dfsInput, Output);
+            if( _dataInput != null )
+                return compiler.CreateStage(StageId, TaskType.TaskType, _dataInput, Output);
             else
                 return compiler.CreateStage(StageId, TaskType.TaskType, _inputChannel == null ? _noInputTaskCount : _inputChannel.TaskCount, _inputChannel == null ? null : _inputChannel.CreateInput(), Output, true, _inputChannel == null ? null : _inputChannel.Settings);
         }

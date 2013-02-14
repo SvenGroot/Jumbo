@@ -65,8 +65,8 @@ namespace Ookii.Jumbo.Jet.Jobs.Builder
             if( innerInput.RecordType != innerRecordType )
                 throw new ArgumentException("The record type of the inner input does not match the join's inner type.");
 
-            IJobBuilderOperation outer = CreateExtraStepForDfsInput(builder, outerInput, "OuterReadStage");
-            IJobBuilderOperation inner = CreateExtraStepForDfsInput(builder, innerInput, "InnerReadStage");
+            IJobBuilderOperation outer = CreateExtraStepForDataInput(builder, outerInput, "OuterReadStage");
+            IJobBuilderOperation inner = CreateExtraStepForDataInput(builder, innerInput, "InnerReadStage");
 
             _outerInputChannel = CreateChannel(builder, outer, outerComparerType);
             _innerInputChannel = CreateChannel(builder, inner, innerComparerType);
@@ -105,7 +105,7 @@ namespace Ookii.Jumbo.Jet.Jobs.Builder
             return typeof(EmptyTask<>).MakeGenericType(RecordReader.GetRecordType(innerJoinRecordReaderType));
         }
 
-        private static IJobBuilderOperation CreateExtraStepForDfsInput(JobBuilder builder, IOperationInput input, string stageId)
+        private static IJobBuilderOperation CreateExtraStepForDataInput(JobBuilder builder, IOperationInput input, string stageId)
         {
             IJobBuilderOperation operation = input as IJobBuilderOperation;
             if( operation  == null )

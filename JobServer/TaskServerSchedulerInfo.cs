@@ -15,40 +15,25 @@ namespace JobServerApplication
     {
         private readonly TaskServerInfo _taskServer;
         private readonly List<TaskInfo> _assignedTasks = new List<TaskInfo>();
-        private readonly List<TaskInfo> _assignedNonInputTasks = new List<TaskInfo>();
 
         public TaskServerSchedulerInfo(TaskServerInfo taskServer)
         {
             _taskServer = taskServer;
         }
 
-        public int AvailableTasks
+        public int AvailableTaskSlots
         {
-            get { return _taskServer.MaxTasks - _assignedTasks.Count; }
+            get { return _taskServer.TaskSlots - _assignedTasks.Count; }
         }
-
-        public int AvailableNonInputTasks
-        {
-            get { return _taskServer.MaxNonInputTasks - _assignedNonInputTasks.Count; }
-        }
-
 
         public List<TaskInfo> AssignedTasks
         {
             get { return _assignedTasks; }
         }
 
-        public List<TaskInfo> AssignedNonInputTasks
-        {
-            get { return _assignedNonInputTasks; }
-        }
-
         public void AssignTask(JobInfo job, TaskInfo task)
         {
-            if( task.Stage.Configuration.HasDataInput )
-                AssignedTasks.Add(task);
-            else
-                AssignedNonInputTasks.Add(task);
+            AssignedTasks.Add(task);
             task.SchedulerInfo.Server = _taskServer;
             task.SchedulerInfo.State = TaskState.Scheduled;
             --job.SchedulerInfo.UnscheduledTasks;
@@ -59,7 +44,6 @@ namespace JobServerApplication
         {
             // This is used if a task has failed and needs to be rescheduled.
             AssignedTasks.Remove(task);
-            AssignedNonInputTasks.Remove(task);
             task.SchedulerInfo.Server = null;
             task.SchedulerInfo.BadServers.Add(_taskServer);
             task.SchedulerInfo.State = TaskState.Created;
@@ -69,7 +53,7 @@ namespace JobServerApplication
         public void UnassignAllTasks()
         {
             // This is used if a task server is restarted.
-            foreach( TaskInfo task in AssignedTasks.Concat(AssignedNonInputTasks) )
+            foreach( TaskInfo task in AssignedTasks )
             {
                 task.SchedulerInfo.Server = null;
                 task.SchedulerInfo.BadServers.Add(_taskServer);
@@ -79,7 +63,6 @@ namespace JobServerApplication
             }
 
             AssignedTasks.Clear();
-            AssignedNonInputTasks.Clear();
         }
     }
 }

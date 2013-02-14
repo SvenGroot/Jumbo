@@ -6,10 +6,11 @@ using System.Threading;
 using Ookii.Jumbo;
 using Ookii.Jumbo.Jet;
 using Ookii.Jumbo.Jet.Jobs;
+using Ookii.Jumbo.Jet.Scheduling;
 
 namespace JobServerApplication
 {
-    sealed class StageInfo
+    sealed class StageInfo : IStageInfo
     {
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(StageInfo));
 
@@ -46,18 +47,6 @@ namespace JobServerApplication
                         stage._hardDependentStages = new List<StageInfo>();
                     stage._hardDependentStages.Add(this);
                 }
-                foreach( StageConfiguration inputStage in job.Configuration.GetInputStagesForStage(configuration.StageId) )
-                {
-                    StageInfo stage = job.GetStage(inputStage.Root.StageId);
-                    // Ignore scheduling threshold for TCP channels.
-                    if( !stage.IsReadyForScheduling || (_schedulingThreshold > 0 && inputStage.OutputChannel.ChannelType != Ookii.Jumbo.Jet.Channels.ChannelType.Tcp) )
-                    {
-                        ++_remainingSchedulingDependencies;
-                        if( stage._softDependentStages == null )
-                            stage._softDependentStages = new List<StageInfo>();
-                        stage._softDependentStages.Add(this);
-                    }
-                }
             }
         }
 
@@ -79,6 +68,22 @@ namespace JobServerApplication
         public bool IsReadyForScheduling
         {
             get { return _remainingSchedulingDependencies == 0; }
+        }
+
+        public void SetupSoftDependencies(JobInfo job)
+        {
+            foreach( StageConfiguration inputStage in job.Configuration.GetInputStagesForStage(_configuration.StageId) )
+            {
+                StageInfo stage = job.GetStage(inputStage.Root.StageId);
+                // Ignore scheduling threshold for TCP channels.
+                if( !stage.IsReadyForScheduling || (_schedulingThreshold > 0 && inputStage.OutputChannel.ChannelType != Ookii.Jumbo.Jet.Channels.ChannelType.Tcp) )
+                {
+                    ++_remainingSchedulingDependencies;
+                    if( stage._softDependentStages == null )
+                        stage._softDependentStages = new List<StageInfo>();
+                    stage._softDependentStages.Add(this);
+                }
+            }
         }
 
         /// <summary>
@@ -141,6 +146,17 @@ namespace JobServerApplication
                 return true;
             }
             return false;
+        }
+
+
+        IEnumerable<ITaskInfo> IStageInfo.Tasks
+        {
+            get { return _tasks; }
+        }
+
+        public int UnscheduledTaskCount
+        {
+            get { return _tasks.Where(task => !task.IsAssignedToServer).Count(); }
         }
     }
 }

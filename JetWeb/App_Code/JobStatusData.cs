@@ -89,9 +89,6 @@ public class JobStatusData
     /// <summary>
     /// Gets or sets the number of tasks that were not scheduled data local.
     /// </summary>
-    /// <remarks>
-    /// This only includes DFS input tasks; tasks that do not read from the DFS are never data local, and are not counted here.
-    /// </remarks>
     public int NonDataLocalTaskCount { get; set; }
 
     /// <summary>

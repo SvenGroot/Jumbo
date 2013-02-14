@@ -29,8 +29,7 @@ namespace JobServerApplication
         public bool HasReportedStatus { get; set; }
 
         // Atomicity of setting int values is guaranteed by ECMA spec; no locking needed since we never increment etc. those values, we always outright replcae them
-        public int MaxTasks { get; set; }
-        public int MaxNonInputTasks { get; set; }
+        public int TaskSlots { get; set; }
         public int FileServerPort { get; set; }
 
         // Setting a DateTime isn't atomic so we keep the value as a long so we can use Interlocked.Exchange to make it atomic.

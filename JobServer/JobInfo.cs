@@ -11,6 +11,7 @@ using Ookii.Jumbo.Dfs.FileSystem;
 using Ookii.Jumbo.Jet;
 using Ookii.Jumbo.Jet.IO;
 using Ookii.Jumbo.Jet.Jobs;
+using Ookii.Jumbo.Jet.Scheduling;
 
 namespace JobServerApplication
 {
@@ -25,13 +26,11 @@ namespace JobServerApplication
     /// Information about a running, finished or failed job. All mutable properties of this class may be read without locking, but must be set only inside the scheduler lock. Access the <see cref="TaskServers"/>
     /// property only inside the scheduler lock. For modifying any <see cref="TaskInfo"/> instances belonging to that job refer to the locking rules for that class.
     /// </summary>
-    class JobInfo
+    class JobInfo : IJobInfo
     {
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(JobInfo));
 
         private readonly Dictionary<string, TaskInfo> _schedulingTasksById = new Dictionary<string, TaskInfo>();
-        private readonly List<TaskInfo> _orderedSchedulingDfsInputTasks = new List<TaskInfo>();
-        private readonly List<TaskInfo> _orderedSchedulingNonInputTasks = new List<TaskInfo>();
         private readonly ReadOnlyCollection<StageInfo> _stages;
         private readonly Job _job;
         private readonly DateTime _startTimeUtc;
@@ -66,39 +65,39 @@ namespace JobServerApplication
                 // Don't allow failures for a job with a TCP channel.
                 if( stage.Leaf.OutputChannel != null && stage.Leaf.OutputChannel.ChannelType == Ookii.Jumbo.Jet.Channels.ChannelType.Tcp )
                     _maxTaskFailures = 1;
-                bool nonInputStage = !stage.HasDataInput;
-                // Don't do the work trying to find the input stages if the stage has dfs inputs.
-                StageConfiguration[] inputStages = nonInputStage ? config.GetInputStagesForStage(stage.StageId).ToArray() : null;
+                bool nonDataInputStage = !stage.HasDataInput;
+                // Don't do the work trying to find the input stages if the stage has data inputs.
+                StageConfiguration[] inputStages = nonDataInputStage ? config.GetInputStagesForStage(stage.StageId).ToArray() : null;
                 StageInfo stageInfo = new StageInfo(this, stage);
-                IList<string[]> inputLocations = nonInputStage ? null : TaskInputUtility.ReadTaskInputLocations(fileSystem, job.Path, stage.StageId);
+                IList<string[]> inputLocations = nonDataInputStage ? null : TaskInputUtility.ReadTaskInputLocations(fileSystem, job.Path, stage.StageId);
                 if( inputLocations != null && inputLocations.Count != stage.TaskCount )
                     throw new ArgumentException(string.Format(CultureInfo.InvariantCulture, "The number of input splits for stage {0} doesn't match the stage's task count.", stage.StageId));
                 for( int x = 1; x <= stage.TaskCount; ++x )
                 {
                     TaskInfo taskInfo;
 
-                    taskInfo = new TaskInfo(this, stageInfo, inputStages, x, nonInputStage ? null : inputLocations[x-1]);
+                    taskInfo = new TaskInfo(this, stageInfo, inputStages, x, nonDataInputStage ? null : inputLocations[x-1]);
                     _schedulingTasksById.Add(taskInfo.TaskId.ToString(), taskInfo);
-                    if( nonInputStage )
-                        _orderedSchedulingNonInputTasks.Add(taskInfo);
-                    else
-                        _orderedSchedulingDfsInputTasks.Add(taskInfo);
 
                     stageInfo.Tasks.Add(taskInfo);
                 }
                 stages.Add(stageInfo);
             }
+
+            // This must be done afterwards because stages using TCP channels can appear in the depenency ordered list in reverse order
+            // and we must be sure both are already in the list before soft dependencies can be set up.
+            foreach( StageInfo stage in stages )
+                stage.SetupSoftDependencies(this);
+
             if( stages.Count == 0 )
                 throw new ArgumentException("The job configuration has no stages.", "config");
 
-            if( _config.SchedulerOptions.DfsInputSchedulingMode == SchedulingMode.Default )
-                _config.SchedulerOptions.DfsInputSchedulingMode = JobServer.Instance.Configuration.JobServer.DfsInputSchedulingMode;
-            if( _config.SchedulerOptions.NonInputSchedulingMode == SchedulingMode.Default || _config.SchedulerOptions.NonInputSchedulingMode == SchedulingMode.OptimalLocality )
-                _config.SchedulerOptions.NonInputSchedulingMode = JobServer.Instance.Configuration.JobServer.NonInputSchedulingMode;
+            if( _config.SchedulerOptions.DataInputSchedulingMode == SchedulingMode.Default )
+                _config.SchedulerOptions.DataInputSchedulingMode = JobServer.Instance.Configuration.JobServer.DataInputSchedulingMode;
+            if( _config.SchedulerOptions.NonDataInputSchedulingMode == SchedulingMode.Default || _config.SchedulerOptions.NonDataInputSchedulingMode == SchedulingMode.OptimalLocality )
+                _config.SchedulerOptions.NonDataInputSchedulingMode = JobServer.Instance.Configuration.JobServer.NonDataInputSchedulingMode;
 
-            _log.InfoFormat("Job {0:B} is using DFS input scheduling mode {1} and non-input scheduling mode {1}.", job.JobId, _config.SchedulerOptions.DfsInputSchedulingMode, _config.SchedulerOptions.NonInputSchedulingMode);
-
-            _orderedSchedulingNonInputTasks.Reverse(); // HACK: Reverse the list because the StagedScheduler searches backwards.
+            _log.InfoFormat("Job {0:B} is using data input scheduling mode {1} and non-data input scheduling mode {1}.", job.JobId, _config.SchedulerOptions.DataInputSchedulingMode, _config.SchedulerOptions.NonDataInputSchedulingMode);
 
             _startTimeUtc = DateTime.UtcNow;
             _schedulerInfo = new JobSchedulerInfo(this)
@@ -141,17 +140,17 @@ namespace JobServerApplication
             get { return _schedulerInfo.State; }
         }
 
-        public int UnscheduledTasks
+        public int UnscheduledTaskCount
         {
             get { return _schedulerInfo.UnscheduledTasks; }
         }
 
-        public int FinishedTasks
+        public int FinishedTaskCount
         {
             get { return _schedulerInfo.FinishedTasks; }
         }
 
-        public int Errors
+        public int ErrorCount
         {
             get { return _schedulerInfo.Errors; }
         }
@@ -194,55 +193,9 @@ namespace JobServerApplication
             return _schedulingTasksById[taskId];
         }
 
-        public TaskInfo GetSchedulingTask(string taskId)
-        {
-            return _schedulingTasksById[taskId];
-        }
-
         public StageInfo GetStage(string stageId)
         {
-            foreach( StageInfo stage in _stages )
-            {
-                if( stage.StageId == stageId )
-                    return stage;
-            }
-            return null;
-        }
-
-        /// <summary>
-        /// Gets those DFS input tasks that are ready for scheduling.
-        /// </summary>
-        /// <returns></returns>
-        public IEnumerable<TaskInfo> GetDfsInputTasks()
-        {
-            return _orderedSchedulingDfsInputTasks.Where(t => t.Stage.IsReadyForScheduling);
-        }
-
-        /// <summary>
-        /// Gets all DFS input tasks, including those that are not yet ready for scheduling.
-        /// </summary>
-        /// <returns></returns>
-        public IEnumerable<TaskInfo> GetAllDfsInputTasks()
-        {
-            return _orderedSchedulingDfsInputTasks;
-        }
-
-        /// <summary>
-        /// Gets the non input scheduling tasks that are ready for scheduling.
-        /// </summary>
-        /// <returns></returns>
-        public IEnumerable<TaskInfo> GetNonInputSchedulingTasks()
-        {
-            return _orderedSchedulingNonInputTasks.Where(t => t.Stage.IsReadyForScheduling);
-        }
-
-        /// <summary>
-        /// Gets all non input scheduling tasks, including those that are not ready for scheduling.
-        /// </summary>
-        /// <returns></returns>
-        public IEnumerable<TaskInfo> GetAllNonInputSchedulingTasks()
-        {
-            return _orderedSchedulingNonInputTasks;
+            return _stages.Where(stage => stage.StageId == stageId).SingleOrDefault();
         }
 
         /// <summary>
@@ -255,7 +208,6 @@ namespace JobServerApplication
             {
                 // No need to use the scheduler lock for a job in _jobsNeedingCleanup
                 server.SchedulerInfo.AssignedTasks.Remove(task);
-                server.SchedulerInfo.AssignedNonInputTasks.Remove(task);
             }
         }
 
@@ -287,8 +239,8 @@ namespace JobServerApplication
                 JobName = JobName,
                 IsFinished = State > JobState.Running,
                 RunningTaskCount = RunningTaskCount,
-                UnscheduledTaskCount = UnscheduledTasks,
-                FinishedTaskCount = FinishedTasks,
+                UnscheduledTaskCount = UnscheduledTaskCount,
+                FinishedTaskCount = FinishedTaskCount,
                 StartTime = StartTimeUtc,
                 EndTime = EndTimeUtc,
                 FailureReason = FailureReason
@@ -306,6 +258,21 @@ namespace JobServerApplication
                 result.AdditionalProgressCounters.AddRange(_config.AdditionalProgressCounters);
             }
             return result;
-        }  
+        }
+
+        Guid IJobInfo.JobId
+        {
+            get { return Job.JobId; }
+        }
+
+        IEnumerable<IStageInfo> IJobInfo.Stages
+        {
+            get { return _stages; }
+        }
+
+        IEnumerable<ITaskServerJobInfo> IJobInfo.TaskServers
+        {
+            get { return SchedulerInfo.TaskServers; }
+        }
     }
 }

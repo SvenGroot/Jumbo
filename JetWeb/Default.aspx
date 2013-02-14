@@ -23,10 +23,6 @@
             <td id="CapacityColumn" runat="server"></td>
         </tr>
         <tr>
-            <th scope="row">Non-input task capacity</th>
-            <td id="NonInputTaskCapacityColumn" runat="server"></td>
-        </tr>
-        <tr>
             <th scope="row">Scheduler</th>
             <td id="SchedulerColumn" runat="server"></td>
         </tr>
@@ -46,8 +42,7 @@
             <th scope="col">Port</th>
             <th scope="col">Rack</th>
             <th scope="col">Last contact</th>
-            <th scope="col">Max tasks</th>
-            <th scope="col">Max non-input tasks</th>
+            <th scope="col">Task slots</th>
             <th scope="col">Log file</th>
         </tr>
     </table>

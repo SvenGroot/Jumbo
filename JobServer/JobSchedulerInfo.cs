@@ -100,7 +100,7 @@ namespace JobServerApplication
 
         public void AbortTasks()
         {
-            foreach( TaskInfo jobTask in _job.GetAllDfsInputTasks().Concat(_job.GetAllNonInputSchedulingTasks()) )
+            foreach( TaskInfo jobTask in _job.Stages.SelectMany(stage => stage.Tasks) )
             {
                 if( jobTask.State <= TaskState.Running )
                     jobTask.SchedulerInfo.State = TaskState.Aborted;

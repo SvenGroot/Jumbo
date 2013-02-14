@@ -111,7 +111,7 @@ namespace Ookii.Jumbo.Jet.Jobs
         ///   Instead, the type of this property will be saved in <see cref="DataInputType"/>.
         /// </note>
         /// <note>
-        ///   Don't set this property manually while constructing a job. Instead, use the <see cref="JobConfiguration.AddInputStage"/> method.
+        ///   Don't set this property manually while constructing a job. Instead, use the <see cref="JobConfiguration.AddDataInputStage"/> method.
         /// </note>
         /// </remarks>
         [XmlIgnore]
@@ -138,7 +138,7 @@ namespace Ookii.Jumbo.Jet.Jobs
         /// </value>
         /// <remarks>
         /// <note>
-        ///   Don't set this property manually while constructing a job. Instead, use the <see cref="JobConfiguration.AddInputStage"/> method.
+        ///   Don't set this property manually while constructing a job. Instead, use the <see cref="JobConfiguration.AddDataInputStage"/> method.
         /// </note>
         /// </remarks>
         public TypeReference DataInputType { get; set; }

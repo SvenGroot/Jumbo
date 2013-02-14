@@ -57,15 +57,15 @@ namespace Ookii.Jumbo.Jet.Jobs.Builder
         /// </value>
         public int DefaultChannelInputTaskCount
         {
-            get { return _jetClient.JobServer.GetMetrics().NonInputTaskCapacity; }
+            get { return _jetClient.JobServer.GetMetrics().Capacity; }
         }
 
         /// <summary>
-        /// Creates a stage with DFS input and adds it to the job.
+        /// Creates a stage with data input and adds it to the job.
         /// </summary>
         /// <param name="stageId">The stage ID.</param>
         /// <param name="taskType">The type for the stage's tasks.</param>
-        /// <param name="input">The DFS input for the stage.</param>
+        /// <param name="input">The data input for the stage.</param>
         /// <param name="output">The output for the stage. May be <see langword="null"/>.</param>
         /// <returns>The <see cref="StageConfiguration"/> for the stage.</returns>
         public StageConfiguration CreateStage(string stageId, Type taskType, FileInput input, IOperationOutput output)
@@ -79,7 +79,7 @@ namespace Ookii.Jumbo.Jet.Jobs.Builder
 
             stageId = CreateUniqueStageId(stageId);
             
-            StageConfiguration stage = _job.AddInputStage(stageId, input.CreateStageInput(_fileSystemClient), taskType);
+            StageConfiguration stage = _job.AddDataInputStage(stageId, input.CreateStageInput(_fileSystemClient), taskType);
             if( output != null )
                 output.ApplyOutput(_fileSystemClient, stage);
             return stage;
@@ -154,21 +154,7 @@ namespace Ookii.Jumbo.Jet.Jobs.Builder
         /// <param name="output">The output for the stage. May be <see langword="null" />.</param>
         /// <param name="channelSettings">The settings applied to the sending stage of the <paramref name="input"/> channel if <paramref name="input"/> is not <see langword="null"/>. Not used if empty task replacement is performed.</param>
         /// <param name="stageMultiInputRecordReaderType">Type of the stage multi input record reader.</param>
-        /// <returns></returns>
-        /// <exception cref="System.ArgumentNullException">
-        /// stageId
-        /// or
-        /// taskType
-        /// or
-        /// input
-        /// or
-        /// channelSettings
-        /// </exception>
-        /// <exception cref="System.ArgumentException">
-        /// Empty input list.;input
-        /// or
-        /// Incorrect number of channel settings entries.
-        /// </exception>
+        /// <returns>The stage configuration.</returns>
         public StageConfiguration CreateStage(string stageId, Type taskType, int taskCount, InputStageInfo[] input, IOperationOutput output, SettingsDictionary[] channelSettings, Type stageMultiInputRecordReaderType)
         {
             if( stageId == null )
@@ -224,6 +210,8 @@ namespace Ookii.Jumbo.Jet.Jobs.Builder
                 return taskCount;
             else if( input == null || input.ChannelType == ChannelType.Pipeline )
                 return 1;
+            else if( input != null && input.ChannelType == ChannelType.Tcp )
+                return DefaultChannelInputTaskCount / 2; // Don't use full capacity for TCP channel receiving stage because all must be scheduled simultaneously while still running sending stage tasks too.
             else
                 return DefaultChannelInputTaskCount;
         }

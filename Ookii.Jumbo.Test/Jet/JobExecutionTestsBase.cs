@@ -35,7 +35,7 @@ namespace Ookii.Jumbo.Test.Jet
         private TestJetCluster _cluster;
 
         private List<string> _words;
-        private List<Pair<Utf8String, int>>[] _expectedWordCountPartitions;
+        private List<Pair<Utf8String, int>> _expectedWordCountOutput;
 
         protected List<int> _sortData;
 
@@ -219,19 +219,20 @@ namespace Ookii.Jumbo.Test.Jet
         {
             StageConfiguration stage = config.GetStage("WordCountAggregate");
 
-            if( _expectedWordCountPartitions == null )
+            List<Pair<Utf8String, int>>[] expectedPartitions = new List<Pair<Utf8String,int>>[stage.TaskCount];
+            IPartitioner<Pair<Utf8String, int>> partitioner = new HashPartitioner<Pair<Utf8String, int>>() { Partitions = stage.TaskCount };
+            expectedPartitions = new List<Pair<Utf8String, int>>[stage.TaskCount];
+            for( int x = 0; x < expectedPartitions.Length; ++x )
+                expectedPartitions[x] = new List<Pair<Utf8String, int>>();
+            if( _expectedWordCountOutput == null )
             {
-                IPartitioner<Pair<Utf8String, int>> partitioner = new HashPartitioner<Pair<Utf8String, int>>() { Partitions = stage.TaskCount };
-                _expectedWordCountPartitions = new List<Pair<Utf8String, int>>[stage.TaskCount];
-                for( int x = 0; x < _expectedWordCountPartitions.Length; ++x )
-                    _expectedWordCountPartitions[x] = new List<Pair<Utf8String, int>>();
-                var words = from w in _words
-                            group w by w into g
-                            select Pair.MakePair(new Utf8String(g.Key), g.Count());
-                foreach( var word in words )
-                {
-                    _expectedWordCountPartitions[partitioner.GetPartition(word)].Add(word);
-                }
+                _expectedWordCountOutput = (from w in _words
+                                            group w by w into g
+                                            select Pair.MakePair(new Utf8String(g.Key), g.Count())).ToList();
+            }
+            foreach( var word in _expectedWordCountOutput )
+            {
+                expectedPartitions[partitioner.GetPartition(word)].Add(word);
             }
 
             for( int partition = 0; partition < stage.TaskCount; ++partition )
@@ -241,7 +242,7 @@ namespace Ookii.Jumbo.Test.Jet
                 using( BinaryRecordReader<Pair<Utf8String, int>> reader = new BinaryRecordReader<Pair<Utf8String, int>>(stream) )
                 {
                     List<Pair<Utf8String, int>> actual = reader.EnumerateRecords().ToList();
-                    CollectionAssert.AreEquivalent(_expectedWordCountPartitions[partition], actual);
+                    CollectionAssert.AreEquivalent(expectedPartitions[partition], actual);
                 }
             }
         }

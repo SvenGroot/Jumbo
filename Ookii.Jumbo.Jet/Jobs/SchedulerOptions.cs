@@ -21,7 +21,7 @@ namespace Ookii.Jumbo.Jet.Jobs
         }
 
         /// <summary>
-        /// Gets or sets the maximum distance from the input data for a DFS input task.
+        /// Gets or sets the maximum distance from the input data for a data input task.
         /// </summary>
         /// <value>Zero to allow only data-local tasks, one to also allow rack-local tasks, two or higher to also allow non-local tasks. The default value is two.</value>
         [XmlAttribute("maximumDataDistance")]
@@ -54,11 +54,11 @@ namespace Ookii.Jumbo.Jet.Jobs
         ///   number of non-local tasks, without looking at the number of available tasks on the server.
         /// </para>
         /// </remarks>
-        [XmlAttribute("dfsInputSchedulingMode")]
-        public SchedulingMode DfsInputSchedulingMode { get; set; }
+        [XmlAttribute("dataInputSchedulingMode")]
+        public SchedulingMode DataInputSchedulingMode { get; set; }
 
         /// <summary>
-        /// Gets or sets a value indicating how the server will assign tasks that do not have DFS input to task servers.
+        /// Gets or sets a value indicating how the server will assign tasks that do not have data input to task servers.
         /// </summary>
         /// <value>
         /// 	One of the values of the <see cref="SchedulingMode"/> enumeration.
@@ -72,7 +72,7 @@ namespace Ookii.Jumbo.Jet.Jobs
         ///   The value of <see cref="SchedulingMode.OptimalLocality"/> is not valid for this property; it will be treated as <see cref="SchedulingMode.Default"/>.
         /// </para>
         /// </remarks>
-        [XmlAttribute("nonInputSchedulingMode")]
-        public SchedulingMode NonInputSchedulingMode { get; set; }
+        [XmlAttribute("nonDataInputSchedulingMode")]
+        public SchedulingMode NonDataInputSchedulingMode { get; set; }
     }
 }

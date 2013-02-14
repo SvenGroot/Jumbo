@@ -30,7 +30,7 @@ namespace Ookii.Jumbo.Test.Jet
 
         private Thread _taskServerThread;
 
-        public TestJetCluster(int? blockSize, bool eraseExistingData, int maxTasks, CompressionType compressionType, bool localFs = false)
+        public TestJetCluster(int? blockSize, bool eraseExistingData, int taskSlots, CompressionType compressionType, bool localFs = false)
         {
             // We can't run more than one TaskServer because they are single instance.
             if( !localFs )
@@ -64,8 +64,7 @@ namespace Ookii.Jumbo.Test.Jet
                 jetConfig.JobServer.ListenIPv4AndIPv6 = false;
             jetConfig.TaskServer.Port = TaskServerPort;
             jetConfig.TaskServer.TaskDirectory = Path.Combine(_path, "TaskServer");
-            jetConfig.TaskServer.MaxTasks = maxTasks;
-            jetConfig.TaskServer.MaxNonInputTasks = maxTasks;
+            jetConfig.TaskServer.TaskSlots = taskSlots;
             jetConfig.TaskServer.FileServerPort = TaskServerFileServerPort;
             jetConfig.FileChannel.CompressionType = compressionType;
             jetConfig.FileChannel.DownloadThreads = 2;

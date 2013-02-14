@@ -100,6 +100,7 @@
     <Compile Include="FileSystem\DfsPathUtility.cs" />
     <Compile Include="FileSystem\FileSystemClient.cs" />
     <Compile Include="FileSystem\IFileSystemPathUtility.cs" />
+    <Compile Include="FileSystem\IFileSystemWithLocality.cs" />
     <Compile Include="FileSystem\JumboDirectory.cs" />
     <Compile Include="FileSystem\JumboFile.cs" />
     <Compile Include="FileSystem\JumboFileSystemEntry.cs" />

@@ -23,7 +23,6 @@ public partial class _Default : System.Web.UI.Page
         FinishedJobsColumn.InnerText = metrics.FinishedJobs.Count.ToString();
         FailedJobsColumn.InnerText = metrics.FailedJobs.Count.ToString();
         CapacityColumn.InnerText = metrics.Capacity.ToString();
-        NonInputTaskCapacityColumn.InnerText = metrics.NonInputTaskCapacity.ToString();
         SchedulerColumn.InnerText = metrics.Scheduler;
         TaskServersColumn.InnerText = metrics.TaskServers.Count.ToString();
 
@@ -39,8 +38,7 @@ public partial class _Default : System.Web.UI.Page
             row.Cells.Add(new HtmlTableCell() { InnerText = server.Address.Port.ToString() });
             row.Cells.Add(new HtmlTableCell() { InnerText = server.RackId ?? "(unknown)" });
             row.Cells.Add(new HtmlTableCell() { InnerText = string.Format("{0:0.0}s ago", lastContact.TotalSeconds) });
-            row.Cells.Add(new HtmlTableCell() { InnerText = server.MaxTasks.ToString() });
-            row.Cells.Add(new HtmlTableCell() { InnerText = server.MaxNonInputTasks.ToString() });
+            row.Cells.Add(new HtmlTableCell() { InnerText = server.TaskSlots.ToString() });
             row.Cells.Add(new HtmlTableCell() { InnerHtml = string.Format("<a href=\"logfile.aspx?taskServer={0}&amp;port={1}&amp;maxSize=100KB\">Last 100KB</a>, <a href=\"logfile.aspx?taskServer={0}&amp;port={1}&amp;maxSize=0\">all</a>", Server.HtmlEncode(server.Address.HostName), server.Address.Port) });
             DataServerTable.Rows.Add(row);
         }

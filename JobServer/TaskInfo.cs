@@ -5,13 +5,14 @@ using System.Collections.Generic;
 using System.Threading;
 using Ookii.Jumbo.Jet;
 using Ookii.Jumbo.Jet.Jobs;
+using Ookii.Jumbo.Jet.Scheduling;
 
 namespace JobServerApplication
 {
     /// <summary>
     /// Information about a task of a running job.
     /// </summary>
-    sealed class TaskInfo
+    sealed class TaskInfo : ITaskInfo
     {
         private readonly StageInfo _stage;
         private readonly TaskId _taskId;
@@ -167,6 +168,18 @@ namespace JobServerApplication
                 Metrics = Metrics,
                 DataDistance = CurrentAttemptDataDistance
             };
+        }
+
+
+        public bool IsAssignedToServer
+        {
+            get { return Server != null; }
+        }
+
+        // Explicitly implemented because it requires scheduler lock
+        bool ITaskInfo.IsBadServer(ITaskServerJobInfo server)
+        {
+            return SchedulerInfo.BadServers.Contains(((TaskServerJobInfo)server).TaskServer);
         }
     }
 }

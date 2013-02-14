@@ -88,7 +88,7 @@ namespace Ookii.Jumbo.Jet
         public int FinishedTaskCount { get; set; }
 
         /// <summary>
-        /// Gets or sets the number of DFS input tasks that were scheduled on the same rack as their input data, but not the same server.
+        /// Gets or sets the number of data input tasks that were scheduled on the same rack as their input data, but not the same server.
         /// </summary>
         /// <value>The rack local task count.</value>
         public int RackLocalTaskCount
@@ -97,11 +97,11 @@ namespace Ookii.Jumbo.Jet
         }
 
         /// <summary>
-        /// Gets or sets the number of tasks that were not scheduled on the same server or rack as their input data.
+        /// Gets or sets the number of data input tasks that were not scheduled on the same server or rack as their input data.
         /// </summary>
-        /// <remarks>
-        /// This only includes DFS input tasks; tasks that do not read from the DFS are never data local, and are not counted here.
-        /// </remarks>
+        /// <value>
+        /// The non data local task count.
+        /// </value>
         public int NonDataLocalTaskCount
         {
             get { return _nonDataLocalTaskCount >= 0 ? _nonDataLocalTaskCount : GetTasksWithDistance(2); }

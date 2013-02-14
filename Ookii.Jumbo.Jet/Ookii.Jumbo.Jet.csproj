@@ -208,6 +208,12 @@
     <Compile Include="RunTaskJetHeartbeatResponse.cs" />
     <Compile Include="Jobs\SchedulerOptions.cs" />
     <Compile Include="SchedulingMode.cs" />
+    <Compile Include="Scheduling\DefaultScheduler.cs" />
+    <Compile Include="Scheduling\IJobInfo.cs" />
+    <Compile Include="Scheduling\ITaskScheduler.cs" />
+    <Compile Include="Scheduling\IStageInfo.cs" />
+    <Compile Include="Scheduling\ITaskInfo.cs" />
+    <Compile Include="Scheduling\ITaskServerJobInfo.cs" />
     <Compile Include="ServerShutdownException.cs" />
     <Compile Include="Jobs\SettingsDictionary.cs" />
     <Compile Include="Jobs\StageConfiguration.cs" />

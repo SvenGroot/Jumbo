@@ -93,7 +93,7 @@ namespace Ookii.Jumbo.Jet.IO
                 throw new ArgumentException("The type is not a record reader.", "recordReaderType");
 
             FileSystemClient fileSystem = FileSystemClient.Create(dfsConfiguration);
-            DfsClient dfsClient = fileSystem as DfsClient;
+            IFileSystemWithLocality localityFileSystem = fileSystem as IFileSystemWithLocality;
             List<FileTaskInput> taskInputs = new List<FileTaskInput>();
             foreach( JumboFile file in inputFiles )
             {
@@ -104,10 +104,10 @@ namespace Ookii.Jumbo.Jet.IO
                     long offset;
                     for( offset = 0; offset + (splitSize * _splitSlack) < file.Size; offset += splitSize )
                     {
-                        taskInputs.Add(new FileTaskInput(file.FullPath, offset, splitSize, GetSplitLocations(dfsClient, file, offset)));
+                        taskInputs.Add(new FileTaskInput(file.FullPath, offset, splitSize, GetSplitLocations(localityFileSystem, file, offset)));
                     }
 
-                    taskInputs.Add(new FileTaskInput(file.FullPath, offset, file.Size - offset, GetSplitLocations(dfsClient, file, offset)));
+                    taskInputs.Add(new FileTaskInput(file.FullPath, offset, file.Size - offset, GetSplitLocations(localityFileSystem, file, offset)));
                 }
             }
 
@@ -186,13 +186,11 @@ namespace Ookii.Jumbo.Jet.IO
             }
         }
         
-        private static IEnumerable<string> GetSplitLocations(DfsClient dfsClient, JumboFile file, long offset)
+        private static IEnumerable<string> GetSplitLocations(IFileSystemWithLocality localityFileSystem, JumboFile file, long offset)
         {
-            if( dfsClient != null )
+            if( localityFileSystem != null )
             {
-                int blockIndex = (int)(offset / file.BlockSize);
-                Guid blockId = file.Blocks[blockIndex];
-                return dfsClient.NameServer.GetDataServersForBlock(blockId).Select(server => server.HostName);
+                return localityFileSystem.GetLocationsForOffset(file, offset);
             }
 
             return null;

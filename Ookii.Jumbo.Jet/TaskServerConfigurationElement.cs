@@ -56,21 +56,11 @@ namespace Ookii.Jumbo.Jet
         /// <summary>
         /// Gets or sets the maximum number of tasks to schedule on this server.
         /// </summary>
-        [ConfigurationProperty("maxTasks", DefaultValue = 4, IsRequired = false, IsKey = false)]
-        public int MaxTasks
+        [ConfigurationProperty("taskSlots", DefaultValue = 2, IsRequired = false, IsKey = false)]
+        public int TaskSlots
         {
-            get { return (int)this["maxTasks"]; }
-            set { this["maxTasks"] = value; }
-        }
-
-        /// <summary>
-        /// Gets or sets the maximum number of non-input tasks.
-        /// </summary>
-        [ConfigurationProperty("maxNonInputTasks", DefaultValue = 2, IsRequired = false, IsKey = false)]
-        public int MaxNonInputTasks
-        {
-            get { return (int)this["maxNonInputTasks"]; }
-            set { this["maxNonInputTasks"] = value; }
+            get { return (int)this["taskSlots"]; }
+            set { this["taskSlots"] = value; }
         }
 
         /// <summary>

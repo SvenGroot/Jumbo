@@ -82,8 +82,6 @@
     <Compile Include="JobServer.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="Scheduling\IScheduler.cs" />
-    <Compile Include="Scheduling\StagedScheduler.cs" />
     <Compile Include="StageInfo.cs" />
     <Compile Include="TaskCompletionBroadcaster.cs" />
     <Compile Include="TaskInfo.cs" />

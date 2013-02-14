@@ -104,7 +104,7 @@ namespace Ookii.Jumbo.Jet.Samples.FPGrowth
         {
             // Need to determine this now because we need it to validate the number of groups.
             if( FPGrowthTaskCount == 0 )
-                FPGrowthTaskCount = JetClient.JobServer.GetMetrics().NonInputTaskCapacity;
+                FPGrowthTaskCount = JetClient.JobServer.GetMetrics().Capacity;
 
             // Interesting observation: if the number of groups equals or is smaller than the number of partitions, we don't need to sort, because each
             // partition will get exactly one group.

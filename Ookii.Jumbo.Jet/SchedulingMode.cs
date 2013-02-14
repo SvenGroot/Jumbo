@@ -23,7 +23,7 @@ namespace Ookii.Jumbo.Jet
         /// </summary>
         FewerServers,
         /// <summary>
-        /// The scheduler will attempt to minimize the number of non-local tasks. This value is not valid for tasks that do not read DFS input.
+        /// The scheduler will attempt to minimize the number of non-local tasks. This value is not valid for tasks that do not read data input.
         /// </summary>
         OptimalLocality
     }

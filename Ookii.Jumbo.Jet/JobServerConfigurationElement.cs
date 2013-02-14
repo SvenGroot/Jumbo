@@ -74,9 +74,12 @@ namespace Ookii.Jumbo.Jet
         }
 
         /// <summary>
-        /// Gets or sets the scheduler to use for scheduling task.
+        /// Gets or sets the assembly qualified type name of the scheduler to use for scheduling task.
         /// </summary>
-        [ConfigurationProperty("scheduler", DefaultValue = "StagedScheduler", IsRequired = false, IsKey = false)]
+        /// <value>
+        /// The scheduler type.
+        /// </value>
+        [ConfigurationProperty("scheduler", DefaultValue = "Ookii.Jumbo.Jet.Scheduling.DefaultScheduler, Ookii.Jumbo.Jet", IsRequired = false, IsKey = false)]
         public string Scheduler
         {
             get { return (string)this["scheduler"]; }
@@ -133,35 +136,35 @@ namespace Ookii.Jumbo.Jet
         }
 
         /// <summary>
-        /// Gets or sets the default scheduling mode for tasks with DFS input.
+        /// Gets or sets the default scheduling mode for tasks that have data input.
         /// </summary>
-        /// <value>The DFS input scheduling mode.</value>
+        /// <value>The scheduling mode for tasks that have data input.</value>
         /// <remarks>
         /// <para>
         ///   If the value of this property is set to <see cref="SchedulingMode.Default"/>, it will be treated as <see cref="SchedulingMode.MoreServers"/>.
         /// </para>
         /// </remarks>
-        [ConfigurationProperty("dfsInputSchedulingMode", DefaultValue = SchedulingMode.MoreServers, IsRequired = false, IsKey = false)]
-        public SchedulingMode DfsInputSchedulingMode
+        [ConfigurationProperty("dataInputSchedulingMode", DefaultValue = SchedulingMode.MoreServers, IsRequired = false, IsKey = false)]
+        public SchedulingMode DataInputSchedulingMode
         {
-            get { return (SchedulingMode)this["dfsInputSchedulingMode"]; }
-            set { this["dfsInputSchedulingMode"] = value; }
+            get { return (SchedulingMode)this["dataInputSchedulingMode"]; }
+            set { this["dataInputSchedulingMode"] = value; }
         }
 
         /// <summary>
-        /// Gets or sets the default scheduling mode for tasks without DFS input.
+        /// Gets or sets the default scheduling mode for tasks that do not have data input.
         /// </summary>
-        /// <value>The DFS input scheduling mode.</value>
+        /// <value>The scheduling mode for tasks without data input.</value>
         /// <remarks>
         /// <para>
         ///   If the value of this property is set to <see cref="SchedulingMode.Default"/> or <see cref="SchedulingMode.OptimalLocality"/>, it will be treated as <see cref="SchedulingMode.MoreServers"/>.
         /// </para>
         /// </remarks>
-        [ConfigurationProperty("nonInputSchedulingMode", DefaultValue = SchedulingMode.MoreServers, IsRequired = false, IsKey = false)]
-        public SchedulingMode NonInputSchedulingMode
+        [ConfigurationProperty("nonDataInputSchedulingMode", DefaultValue = SchedulingMode.MoreServers, IsRequired = false, IsKey = false)]
+        public SchedulingMode NonDataInputSchedulingMode
         {
-            get { return (SchedulingMode)this["nonInputSchedulingMode"]; }
-            set { this["nonInputSchedulingMode"] = value; }
+            get { return (SchedulingMode)this["nonDataInputSchedulingMode"]; }
+            set { this["nonDataInputSchedulingMode"] = value; }
         }
 
         /// <summary>

@@ -388,13 +388,13 @@
         <tr>
           <th scope="row">DFS input task scheduling mode:</th>
           <td>
-            <xsl:value-of select="@dfsInputSchedulingMode"/>
+            <xsl:value-of select="@dataInputSchedulingMode"/>
           </td>
         </tr>
         <tr>
           <th scope="row">Non-input task scheduling mode:</th>
           <td>
-            <xsl:value-of select="@nonInputSchedulingMode"/>
+            <xsl:value-of select="@nonDataInputSchedulingMode"/>
           </td>
         </tr>
       </tbody>

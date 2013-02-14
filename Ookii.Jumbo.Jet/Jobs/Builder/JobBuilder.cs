@@ -288,7 +288,7 @@ namespace Ookii.Jumbo.Jet.Jobs.Builder
         /// </summary>
         /// <param name="input">The input.</param>
         /// <exception cref="ArgumentException">
-        ///   The input is not an operation belonging to this job builder or a DFS input.
+        ///   The input is an operation that does not belong to this job builder.
         /// </exception>
         public void CheckIfInputBelongsToJobBuilder(IOperationInput input)
         {

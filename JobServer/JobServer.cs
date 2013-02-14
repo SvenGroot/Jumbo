@@ -15,6 +15,7 @@ using Ookii.Jumbo.Dfs.FileSystem;
 using Ookii.Jumbo.IO;
 using Ookii.Jumbo.Jet;
 using Ookii.Jumbo.Jet.Jobs;
+using Ookii.Jumbo.Jet.Scheduling;
 using Ookii.Jumbo.Rpc;
 using Ookii.Jumbo.Topology;
 
@@ -33,7 +34,7 @@ namespace JobServerApplication
         private readonly Dictionary<Guid, JobInfo> _finishedJobs = new Dictionary<Guid, JobInfo>();
         private readonly List<JobInfo> _jobsNeedingCleanup = new List<JobInfo>();
         private readonly FileSystemClient _fileSystemClient;
-        private readonly Scheduling.IScheduler _scheduler;
+        private readonly ITaskScheduler _scheduler;
         private readonly object _schedulerLock = new object();
         private readonly ServerAddress _localAddress;
         private readonly BlockingCollection<ManualResetEventSlim> _schedulerRequests = new BlockingCollection<ManualResetEventSlim>();
@@ -59,17 +60,17 @@ namespace JobServerApplication
             _fileSystemClient = FileSystemClient.Create(dfsConfiguration);
             _localAddress = new ServerAddress(ServerContext.LocalHostName, jetConfiguration.JobServer.Port);
 
-            _scheduler = (Scheduling.IScheduler)Activator.CreateInstance(Type.GetType("JobServerApplication.Scheduling." + jetConfiguration.JobServer.Scheduler));
+            _scheduler = (ITaskScheduler)JetActivator.CreateInstance(Type.GetType(jetConfiguration.JobServer.Scheduler), dfsConfiguration, jetConfiguration, null);
 
-            if( Configuration.JobServer.DfsInputSchedulingMode == SchedulingMode.Default )
+            if( Configuration.JobServer.DataInputSchedulingMode == SchedulingMode.Default )
             {
-                _log.Warn("DfsInputSchedulingMode was set to SchedulingMode.Default; SchedulingMode.MoreServers will be used instead.");
-                Configuration.JobServer.DfsInputSchedulingMode = SchedulingMode.MoreServers;
+                _log.Warn("DataInputSchedulingMode was set to SchedulingMode.Default; SchedulingMode.MoreServers will be used instead.");
+                Configuration.JobServer.DataInputSchedulingMode = SchedulingMode.MoreServers;
             }
-            if( Configuration.JobServer.NonInputSchedulingMode == SchedulingMode.Default || Configuration.JobServer.NonInputSchedulingMode == SchedulingMode.OptimalLocality )
+            if( Configuration.JobServer.NonDataInputSchedulingMode == SchedulingMode.Default || Configuration.JobServer.NonDataInputSchedulingMode == SchedulingMode.OptimalLocality )
             {
-                _log.WarnFormat("NonInputSchedulingMode was set to SchedulingMode.{0}; SchedulingMode.MoreServers will be used instead.", Configuration.JobServer.NonInputSchedulingMode);
-                Configuration.JobServer.NonInputSchedulingMode = SchedulingMode.MoreServers;
+                _log.WarnFormat("NonDataInputSchedulingMode was set to SchedulingMode.{0}; SchedulingMode.MoreServers will be used instead.", Configuration.JobServer.NonDataInputSchedulingMode);
+                Configuration.JobServer.NonDataInputSchedulingMode = SchedulingMode.MoreServers;
             }
             if( Configuration.JobServer.BroadcastPort > 0 )
             {
@@ -184,7 +185,7 @@ namespace JobServerApplication
                 _orderedJobs.Add(jobInfo);
             }
 
-            _log.InfoFormat("Job {0} has entered the running state. Number of tasks: {1}.", jobId, jobInfo.UnscheduledTasks);
+            _log.InfoFormat("Job {0} has entered the running state. Number of tasks: {1}.", jobId, jobInfo.UnscheduledTaskCount);
 
             RunScheduler();
         }
@@ -303,11 +304,9 @@ namespace JobServerApplication
                                             Address = server.Address,
                                             RackId = server.Rack == null ? null : server.Rack.RackId,
                                             LastContactUtc = server.LastContactUtc,
-                                            MaxTasks = server.MaxTasks,
-                                            MaxNonInputTasks = server.MaxNonInputTasks
+                                            TaskSlots = server.TaskSlots,
                                         });
-            result.Capacity = result.TaskServers.Sum(s => s.MaxTasks);
-            result.NonInputTaskCapacity = result.TaskServers.Sum(s => s.MaxNonInputTasks);
+            result.Capacity = result.TaskServers.Sum(s => s.TaskSlots);
             result.Scheduler = _scheduler.GetType().Name;
             return result;
         }
@@ -470,23 +469,22 @@ namespace JobServerApplication
             bool hasAvailableTasks;
             lock( _schedulerLock )
             {
-                hasAvailableTasks = server.SchedulerInfo.AvailableTasks > 0 || server.SchedulerInfo.AvailableNonInputTasks > 0;
+                hasAvailableTasks = server.SchedulerInfo.AvailableTaskSlots > 0;
             }
 
             if( hasAvailableTasks )
             {
                 // If this is a new task server and there are running jobs, we want to run the scheduler to see if we can assign any tasks to the new server.
                 // At this point we know we've gotten the StatusHeartbeat because this function would've returned above if the new server didn't send one.
-                // Locking jobs because we're enumerating
-                if( _jobs.Values.Any(j => j.UnscheduledTasks > 0) )
+                if( _jobs.Values.Any(j => j.UnscheduledTaskCount > 0) )
                     RunScheduler();
             }
 
             lock( _schedulerLock )
             {
-                if( server.SchedulerInfo.AssignedTasks.Count > 0 || server.SchedulerInfo.AssignedNonInputTasks.Count > 0 )
+                if( server.SchedulerInfo.AssignedTasks.Count > 0 )
                 {
-                    var tasks = server.SchedulerInfo.AssignedTasks.Concat(server.SchedulerInfo.AssignedNonInputTasks);
+                    var tasks = server.SchedulerInfo.AssignedTasks;
                     foreach( TaskInfo task in tasks )
                     {
                         if( task.State == TaskState.Scheduled )
@@ -571,9 +569,8 @@ namespace JobServerApplication
             }
 
             server.HasReportedStatus = true;
-            _log.InfoFormat("Task server {0} reported initial status: MaxTasks = {1}, MaxNonInputTasks = {2}, FileServerPort = {3}", server.Address, data.MaxTasks, data.MaxNonInputTasks, data.FileServerPort);
-            server.MaxTasks = data.MaxTasks;
-            server.MaxNonInputTasks = data.MaxNonInputTasks;
+            _log.InfoFormat("Task server {0} reported initial status: TaskSlots = {1}, FileServerPort = {3}", server.Address, data.TaskSlots, data.FileServerPort);
+            server.TaskSlots = data.TaskSlots;
             server.FileServerPort = data.FileServerPort;
 
         }
@@ -591,7 +588,7 @@ namespace JobServerApplication
                     else
                         return null;
                 }
-                TaskInfo task = job.GetSchedulingTask(data.TaskAttemptId.TaskId.ToString());
+                TaskInfo task = job.GetTask(data.TaskAttemptId.TaskId.ToString());
 
 
                 if( task.Server != server || task.CurrentAttempt == null || task.CurrentAttempt.Attempt != data.TaskAttemptId.Attempt )
@@ -623,7 +620,6 @@ namespace JobServerApplication
                     lock( _schedulerLock )
                     {
                         server.SchedulerInfo.AssignedTasks.Remove(task);
-                        server.SchedulerInfo.AssignedNonInputTasks.Remove(task);
                         // We don't set task.Server to null because output tasks can still query that information!
 
                         switch( data.Status )
@@ -694,7 +690,7 @@ namespace JobServerApplication
                             break;
                         }
 
-                        if( job.FinishedTasks == job.SchedulingTaskCount || job.State == JobState.Failed )
+                        if( job.FinishedTaskCount == job.SchedulingTaskCount || job.State == JobState.Failed )
                         {
                             FinishOrFailJob(job);
                         }
@@ -927,7 +923,7 @@ namespace JobServerApplication
                 
                 try
                 {
-                    _scheduler.ScheduleTasks(jobs, _fileSystemClient);
+                    _scheduler.ScheduleTasks(jobs);
                 }
                 catch( Exception ex )
                 {
