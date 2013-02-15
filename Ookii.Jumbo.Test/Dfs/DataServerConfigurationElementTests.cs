@@ -18,7 +18,7 @@ namespace Ookii.Jumbo.Test.Dfs
             DataServerConfigurationElement elt = new DataServerConfigurationElement();
             Assert.AreEqual(9001, elt.Port);
             Assert.AreEqual(string.Empty, elt.BlockStoragePath);
-            Assert.IsTrue(elt.ListenIPv4AndIPv6);
+            Assert.IsFalse(elt.ListenIPv4AndIPv6.HasValue);
         }
 
         [Test]

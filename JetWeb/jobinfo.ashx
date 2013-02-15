@@ -92,7 +92,7 @@ public class jobinfo : IHttpHandler
             stream.PutNextEntry(new ZipEntry("config.xml"));
             if( archived )
             {
-                byte[] buffer = System.Text.Encoding.UTF8.GetBytes(client.JobServer.GetArchivedJobConfiguration(jobId));
+                byte[] buffer = System.Text.Encoding.UTF8.GetBytes(client.JobServer.GetJobConfigurationFile(jobId, true));
                 stream.Write(buffer, 0, buffer.Length);
             }
             else

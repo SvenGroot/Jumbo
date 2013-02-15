@@ -68,18 +68,7 @@ namespace DataServerApplication
 
             if( _running )
             {
-                IPAddress[] addresses;
-                if( System.Net.Sockets.Socket.OSSupportsIPv6 )
-                {
-                    if (_config.DataServer.ListenIPv4AndIPv6)
-                        addresses = new[] { IPAddress.IPv6Any, IPAddress.Any };
-                    else
-                        addresses = new[] { IPAddress.IPv6Any };
-                }
-                else
-                {
-                    addresses = new[] { IPAddress.IPv6Any };
-                }
+                IPAddress[] addresses = TcpServer.GetDefaultListenerAddresses(_config.DataServer.ListenIPv4AndIPv6);
                 _blockServer = new BlockServer(this, addresses, _config.DataServer.Port);
                 _blockServer.Start();
 

@@ -96,10 +96,13 @@ namespace Ookii.Jumbo.Jet
         JobStatus GetArchivedJobStatus(Guid jobId);
 
         /// <summary>
-        /// Gets the job configuration for an archived job.
+        /// Gets the contents of a job configuration file.
         /// </summary>
         /// <param name="jobId">The job ID.</param>
-        /// <returns>The raw XML of the archived job's configuration, or <see langword="null"/> if the job wasn't found.</returns>
-        string GetArchivedJobConfiguration(Guid jobId);
+        /// <param name="archived">If set to <see langword="true" />, search the archived job directory instead of the active jobs.</param>
+        /// <returns>
+        /// The raw XML of the archived job's configuration, or <see langword="null" /> if the job wasn't found.
+        /// </returns>
+        string GetJobConfigurationFile(Guid jobId, bool archived);
     }
 }

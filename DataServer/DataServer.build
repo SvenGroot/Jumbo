@@ -5,11 +5,11 @@
   <property if="${debug}" name="define" value="DEBUG;TRACE"/>
   <property if="${not debug}" name="define" value="TRACE"/>
   <target name="clean">
-    <delete dir="nantbin" failonerror="false"/>
+    <delete dir="build" failonerror="false"/>
   </target>
   <target name="build">
-    <mkdir dir="nantbin"/>
-    <csc output="nantbin/DataServer.exe" target="exe" debug="${debug}" optimize="${not debug}"
+    <mkdir dir="build"/>
+    <csc output="build/DataServer.exe" target="exe" debug="${debug}" optimize="${not debug}"
          define="${define}" keyfile="jumbo.snk" rebuild="${rebuild}">
       <references>
         <include name="System.dll"/>
@@ -17,8 +17,8 @@
         <include name="System.Core.dll"/>
         <include name="System.Runtime.Remoting.dll"/>
         <include name="../lib/log4net.dll"/>
-        <include name="../Ookii.Jumbo/nantbin/Ookii.Jumbo.dll"/>
-        <include name="../Ookii.Jumbo.Dfs/nantbin/Ookii.Jumbo.Dfs.dll"/>
+        <include name="../Ookii.Jumbo/build/Ookii.Jumbo.dll"/>
+        <include name="../Ookii.Jumbo.Dfs/build/Ookii.Jumbo.Dfs.dll"/>
       </references>
       <sources>
         <include name="Properties/AssemblyInfo.cs"/>
@@ -26,12 +26,12 @@
         <include name="../AssemblyInfoCommon.cs"/>
       </sources>
     </csc>
-    <copy file="App.config" tofile="nantbin/DataServer.exe.config"/>
-    <copy file="../lib/log4net.dll" todir="nantbin"/>
-    <copy todir="nantbin">
+    <copy file="App.config" tofile="build/DataServer.exe.config"/>
+    <copy file="../lib/log4net.dll" todir="build"/>
+    <copy todir="build">
       <fileset>
-        <include name="../Ookii.Jumbo/nantbin/*.*"/>
-        <include name="../Ookii.Jumbo.Dfs/nantbin/*.*"/>
+        <include name="../Ookii.Jumbo/build/*.*"/>
+        <include name="../Ookii.Jumbo.Dfs/build/*.*"/>
         <include name="../dfs.config"/>
       </fileset>
     </copy>

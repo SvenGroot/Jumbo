@@ -11,8 +11,9 @@
     <copy todir="Bin">
       <fileset>
         <include name="../lib/ICSharpCode.SharpZipLib.dll" />
-        <include name="../Ookii.Jumbo.Jet/nantbin/*.*"/>
-        <include name="../Ookii.Jumbo/nantbin/*.*"/>
+        <include name="../Ookii.Jumbo.Jet/build/*.*"/>
+        <include name="../Ookii.Jumbo.Dfs/build/*.*"/>
+        <include name="../Ookii.Jumbo/build/*.*"/>
       </fileset>
     </copy>
   </target>

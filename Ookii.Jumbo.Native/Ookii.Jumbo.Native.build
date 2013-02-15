@@ -4,12 +4,12 @@
   <property if="${debug}" name="gcc.flags" value="-ggdb"/>
   <property if="${not debug}" name="gcc.flags" value="-O3"/>
   <target name="clean">
-    <delete dir="nantbin" failonerror="false"/>
+    <delete dir="build" failonerror="false"/>
   </target>
   <target name="build">
-    <mkdir dir="nantbin" />
+    <mkdir dir="build" />
     <property name="sourcefiles" value="crc32.cpp" />
-    <property name="gcc.cmd" value="-o nantbin/libjumbo.so ${sourcefiles} -std=c++0x ${gcc.flags} -march=native -mtune=native -shared -fPIC" />
+    <property name="gcc.cmd" value="-o build/libjumbo.so ${sourcefiles} -std=c++0x ${gcc.flags} -march=native -mtune=native -shared -fPIC" />
 
     <exec program="g++" commandline="${gcc.cmd}" failonerror="true" verbose="true" />
   </target>

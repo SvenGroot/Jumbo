@@ -5,12 +5,12 @@
   <property if="${debug}" name="define" value="DEBUG;TRACE"/>
   <property if="${not debug}" name="define" value="TRACE"/>
   <target name="clean">
-    <delete dir="nantbin" failonerror="false"/>
+    <delete dir="build" failonerror="false"/>
   </target>
   <target name="build">
-    <mkdir dir="nantbin"/>
-    <csc output="nantbin/Ookii.Jumbo.Jet.Samples.dll" target="library" debug="${debug}" optimize="${not debug}"
-         define="${define}" doc="nantbin/Ookii.Jumbo.Jet.xml" unsafe="true" keyfile="jumbo.snk" rebuild="${rebuild}">
+    <mkdir dir="build"/>
+    <csc output="build/Ookii.Jumbo.Jet.Samples.dll" target="library" debug="${debug}" optimize="${not debug}"
+         define="${define}" doc="build/Ookii.Jumbo.Jet.xml" unsafe="true" keyfile="jumbo.snk" rebuild="${rebuild}">
       <references>
         <include name="System.dll"/>
         <include name="System.Configuration.dll"/>
@@ -18,9 +18,9 @@
         <include name="System.Runtime.Remoting.dll"/>
         <include name="../lib/log4net.dll"/>
         <include name="../lib/Ookii.CommandLine.dll"/>
-        <include name="../Ookii.Jumbo/nantbin/Ookii.Jumbo.dll"/>
-        <include name="../Ookii.Jumbo.Dfs/nantbin/Ookii.Jumbo.Dfs.dll"/>
-        <include name="../Ookii.Jumbo.Jet/nantbin/Ookii.Jumbo.Jet.dll"/>
+        <include name="../Ookii.Jumbo/build/Ookii.Jumbo.dll"/>
+        <include name="../Ookii.Jumbo.Dfs/build/Ookii.Jumbo.Dfs.dll"/>
+        <include name="../Ookii.Jumbo.Jet/build/Ookii.Jumbo.Jet.dll"/>
       </references>
       <sources>
         <include name="Properties/AssemblyInfo.cs"/>
@@ -42,13 +42,13 @@
         <warning number="0419" />
       </nowarn>
     </csc>
-    <copy todir="nantbin">
+    <copy todir="build">
       <fileset>
         <include name="../lib/log4net.dll"/>
         <include name="../lib/Ookii.CommandLine.dll"/>
-        <include name="../Ookii.Jumbo/nantbin/*.*"/>
-        <include name="../Ookii.Jumbo.Dfs/nantbin/*.*"/>
-        <include name="../Ookii.Jumbo.Jet/nantbin/*.*"/>
+        <include name="../Ookii.Jumbo/build/*.*"/>
+        <include name="../Ookii.Jumbo.Dfs/build/*.*"/>
+        <include name="../Ookii.Jumbo.Jet/build/*.*"/>
       </fileset>
     </copy>
   </target>

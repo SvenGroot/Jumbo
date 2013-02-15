@@ -222,7 +222,7 @@ namespace Ookii.Jumbo.Jet.Channels
         {
             _reader = CreateChannelRecordReader();
 
-            IPAddress[] addresses = GetListenerAddresses();
+            IPAddress[] addresses = TcpServer.GetDefaultListenerAddresses(TaskExecution.JetClient.Configuration.TaskServer.ListenIPv4AndIPv6);
 
             _listeners = new TcpListener[addresses.Length];
 
@@ -317,21 +317,6 @@ namespace Ookii.Jumbo.Jet.Channels
                         reader.CompleteAdding();
                 }
             }
-        }
-
-        private IPAddress[] GetListenerAddresses()
-        {
-            IPAddress[] addresses;
-            if( Socket.OSSupportsIPv6 )
-            {
-                if( TaskExecution.JetClient.Configuration.TaskServer.ListenIPv4AndIPv6 )
-                    addresses = new[] { IPAddress.IPv6Any, IPAddress.Any };
-                else
-                    addresses = new[] { IPAddress.IPv6Any };
-            }
-            else
-                addresses = new[] { IPAddress.Any };
-            return addresses;
         }
 
         /// <summary>

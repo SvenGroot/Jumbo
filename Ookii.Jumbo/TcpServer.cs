@@ -70,6 +70,36 @@ namespace Ookii.Jumbo
         }
 
         /// <summary>
+        /// Gets the default addresses to listen on.
+        /// </summary>
+        /// <param name="listenIPv4AndIPv6">If <see langword="true"/>, return both IPv6 and IPv4 "Any" addresses; if <see langword="false"/>,
+        /// use only IPv6 if the OS supports it or only IPv4 if not; otherwise, use a default value appropriate for the OS platform.</param>
+        /// <remarks>
+        /// <para>
+        ///   On Linux, if a socket binds to an IPv6 port it automatically also binds to an associated IPv4 port. Therefore,
+        ///   <paramref name="listenIPv4AndIPv6"/> should be <see langword="false"/> (an exception will be thrown if it's not).
+        /// </para>
+        /// <para>
+        ///   If <paramref name="listenIPv4AndIPv6"/> is <see langword="null"/>, it will default to <see langword="true"/> on Windows and <see langword="false"/> on Unix
+        ///   (which is correct for Linux, but may not be appropriate for other Unix operating systems).
+        /// </para>
+        /// </remarks>
+        public static IPAddress[] GetDefaultListenerAddresses(bool? listenIPv4AndIPv6)
+        {
+            if( System.Net.Sockets.Socket.OSSupportsIPv6 )
+            {
+                if( listenIPv4AndIPv6 ?? Environment.OSVersion.Platform != PlatformID.Unix )
+                    return new[] { IPAddress.IPv6Any, IPAddress.Any };
+                else
+                    return new[] { IPAddress.IPv6Any };
+            }
+            else
+            {
+                return new[] { IPAddress.Any };
+            }
+        }
+
+        /// <summary>
         /// Starts listening for incoming connections.
         /// </summary>
         /// <remarks>

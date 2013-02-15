@@ -267,18 +267,7 @@ namespace TaskServerApplication
 
             AddDataForNextHeartbeat(new InitialStatusJetHeartbeatData() { TaskSlots = Configuration.TaskServer.TaskSlots, FileServerPort = Configuration.TaskServer.FileServerPort });
 
-            IPAddress[] addresses;
-            if( System.Net.Sockets.Socket.OSSupportsIPv6 )
-            {
-                if (Configuration.TaskServer.ListenIPv4AndIPv6)
-                    addresses = new[] { IPAddress.IPv6Any, IPAddress.Any };
-                else
-                    addresses = new[] { IPAddress.IPv6Any };
-            }
-            else
-            {
-                addresses = new[] { IPAddress.IPv6Any };
-            }
+            IPAddress[] addresses = TcpServer.GetDefaultListenerAddresses(Configuration.TaskServer.ListenIPv4AndIPv6);
 
             _fileServer = new FileChannelServer(this, addresses, Configuration.TaskServer.FileServerPort, Configuration.TaskServer.FileServerMaxConnections, Configuration.TaskServer.FileServerMaxIndexCacheSize);
             _fileServer.Start();

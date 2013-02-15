@@ -21,19 +21,8 @@ public class jobconfig : IHttpHandler
         context.Response.ContentType = "text/xml";
         context.Response.Charset = "utf-8";
 
-        if( context.Request.QueryString["archived"] == "true" )
-        {
-            JetClient client = new JetClient();
-            context.Response.Write(client.JobServer.GetArchivedJobConfiguration(jobId));
-        }
-        else
-        {
-            FileSystemClient fileSystemClient = FileSystemClient.Create();
-            string configFilePath = fileSystemClient.Path.Combine(fileSystemClient.Path.Combine(JetConfiguration.GetConfiguration().JobServer.JetDfsPath, "job_" + jobId.ToString("B")), Job.JobConfigFileName);
-            using( System.IO.Stream configStream = fileSystemClient.OpenFile(configFilePath) )
-            {
-                configStream.CopyTo(context.Response.OutputStream);
-            }
-        }
+        bool archived = context.Request.QueryString["archived"] == "true";
+        JetClient client = new JetClient();
+        context.Response.Write(client.JobServer.GetJobConfigurationFile(jobId, archived));
     }
 }

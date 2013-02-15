@@ -353,15 +353,30 @@ namespace JobServerApplication
             return null;
         }
 
-        public string GetArchivedJobConfiguration(Guid jobId)
+        public string GetJobConfigurationFile(Guid jobId, bool archived)
         {
-            string archiveDir = Configuration.JobServer.ArchiveDirectory;
-            if( archiveDir != null )
+            if( archived )
             {
-                string configPath = Path.Combine(archiveDir, jobId.ToString() + "_config.xml");
-                if( File.Exists(configPath) )
+                string archiveDir = Configuration.JobServer.ArchiveDirectory;
+                if( archiveDir != null )
                 {
-                    return File.ReadAllText(configPath);
+                    string configPath = Path.Combine(archiveDir, jobId.ToString() + "_config.xml");
+                    if( File.Exists(configPath) )
+                    {
+                        return File.ReadAllText(configPath);
+                    }
+                }
+            }
+            else
+            {
+                JobInfo job;
+                if( _jobs.TryGetValue(jobId, out job) )
+                {
+                    using( Stream stream = _fileSystemClient.OpenFile(job.Job.GetJobConfigurationFilePath(_fileSystemClient)) )
+                    using( StreamReader reader = new StreamReader(stream) )
+                    {
+                        return reader.ReadToEnd();
+                    }
                 }
             }
 

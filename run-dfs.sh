@@ -1,19 +1,29 @@
-#!/bin/bash
+#!/bin/sh
 scriptDir=$(dirname $0)
 . $scriptDir/jumbo-config.sh
 startStop=$1
 
-if [ $startStop = "start" ]; then
-    $scriptDir/run-server.sh $startStop NameServer
-    $scriptDir/run-server.sh $startStop DfsWeb
+if [ "$startStop" != "start" -a "$startStop" != "stop" ]; then
+    echo "Usage: run-dfs.sh (start|stop)"
+fi
+
+if [ "$startStop" == "start" ]; then
+    ssh $JUMBO_NAMESERVER $JUMBO_HOME/run-server.sh $startStop NameServer 2>&1 | sed "s/^/$JUMBO_NAMESERVER: /"
+    ssh $JUMBO_NAMESERVER $JUMBO_HOME/run-server.sh $startStop DfsWeb 2>&1 | sed "s/^/$JUMBO_NAMESERVER: /"
     sleep 1
 fi
-for slave in `cat $scriptDir/slaves`; do
-    ssh $slave $jumboDir/run-server.sh $startStop DataServer 2>&1 | sed "s/^/$slave: /" &
+
+for group in $(cat $scriptDir/groups); do
+    if [ "$group" != "masters" ]; then
+        for slave in $(cat $scriptDir/$group); do
+            ssh $slave $JUMBO_HOME/run-server.sh $startStop DataServer 2>&1 | sed "s/^/$slave: /" &
+        done
+    fi
 done
 wait
-if [ $startStop = "stop" ]; then
+
+if [ "$startStop" == "stop" ]; then
     sleep 1
-    $scriptDir/run-server.sh $startStop DfsWeb
-    $scriptDir/run-server.sh $startStop NameServer
+    ssh $JUMBO_NAMESERVER $JUMBO_HOME/run-server.sh $startStop DfsWeb 2>&1 | sed "s/^/$JUMBO_NAMESERVER: /"
+    ssh $JUMBO_NAMESERVER $JUMBO_HOME/run-server.sh $startStop NameServer 2>&1 | sed "s/^/$JUMBO_NAMESERVER: /"
 fi

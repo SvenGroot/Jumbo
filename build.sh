@@ -1,10 +1,13 @@
-#!/bin/bash
-if [ ! $NANT_PATH ]; then
-    NANT_PATH=~/nant
+#!/bin/sh
+# NAnt building is only for use on Linux.
+# On Windows, please use MSBuild or Visual Studio.
+scriptDir=$(dirname $0)
+cd $scriptDir
+if pkgconfig mono --atleast-version 3.0; then
+	# The regular mono-4.0 target in NAnt 0.92 does not work for Mono 3.0 because gmcs is no longer an executable, but an alias for mcs.exe
+	# Therefore, I have defined a new target (mono-4.5) that works properly in NAnt.exe.config
+	echo "Building for Mono 3.0 or newer."
+	mono tools/nant/bin/NAnt.exe -t:mono-4.5 -l:build.log $@
+else
+	mono $NANT_PATH/bin/NAnt.exe -t:mono-4.0 -l:build.log $@
 fi
-if [ ! $NUNIT_PATH ]; then
-    NUNIT_PATH=~/nunit
-fi
-
-# NAnt itself doesn't run right under .Net 4.0, so we use 2.0 even though the target framework is 4.0
-mono --runtime=v2.0.50727 $NANT_PATH/bin/NAnt.exe -t:mono-4.0 -D:nunitpath=$NUNIT_PATH -l:build.log $@
