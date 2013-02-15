@@ -17,14 +17,14 @@ case $startStop in
         fi
 
         echo starting $command
-        if [ "$command" == "DfsWeb" ]; then
-            cd $JUMBO_DIR/DfsWeb
+        if [ "$command" = "DfsWeb" ]; then
+            cd $JUMBO_HOME/bin/DfsWeb
             nohup $XSP --port $JUMBO_DFSWEB_PORT --nonstop --pidfile $pid > $JUMBO_LOG/out-$command-$(hostname).txt 2> $JUMBO_LOG/err-$command-$(hostname).txt < /dev/null &
-        elif [ "$command" == "JetWeb" ]; then
-            cd $JUMBO_DIR/JetWeb
-            nohup $XSP --port $jetWebPort --nonstop --pidfile $pid > $JUMBO_LOG/out-$command-$(hostname).txt 2> $JUMBO_LOG/err-$command-$(hostname).txt < /dev/null &
+        elif [ "$command" = "JetWeb" ]; then
+            cd $JUMBO_HOME/bin/JetWeb
+            nohup $XSP --port $JUMBO_JETWEB_PORT --nonstop --pidfile $pid > $JUMBO_LOG/out-$command-$(hostname).txt 2> $JUMBO_LOG/err-$command-$(hostname).txt < /dev/null &
         else
-            cd $JUMBO_DIR/bin
+            cd $JUMBO_HOME/bin
             nohup $MONO $command.exe > $JUMBO_LOG/out-$command-$(hostname).txt 2> $JUMBO_LOG/err-$command-$(hostname).txt < /dev/null &
             echo $! > $pid
         fi

@@ -7,7 +7,7 @@ if [ "$startStop" != "start" -a "$startStop" != "stop" ]; then
     echo "Usage: run-dfs.sh (start|stop)"
 fi
 
-if [ "$startStop" == "start" ]; then
+if [ "$startStop" = "start" ]; then
     ssh $JUMBO_JOBSERVER $JUMBO_HOME/run-server.sh $startStop JobServer 2>&1 | sed "s/^/$JUMBO_JOBSERVER: /"
     ssh $JUMBO_JOBSERVER $JUMBO_HOME/run-server.sh $startStop JetWeb 2>&1 | sed "s/^/$JUMBO_JOBSERVER: /"
     sleep 1
@@ -22,7 +22,7 @@ for group in $(cat $scriptDir/groups); do
 done
 wait
 
-if [ "$startStop" == "stop" ]; then
+if [ "$startStop" = "stop" ]; then
     sleep 1
     ssh $JUMBO_JOBSERVER $JUMBO_HOME/run-server.sh $startStop JetWeb 2>&1 | sed "s/^/$JUMBO_JOBSERVER: /"
     ssh $JUMBO_JOBSERVER $JUMBO_HOME/run-server.sh $startStop JobServer 2>&1 | sed "s/^/$JUMBO_JOBSERVER: /"

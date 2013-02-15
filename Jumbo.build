@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <project name="Jumbo" default="compile" xmlns="http://nant.sf.net/release/0.86-beta1/nant.xsd">
   <target name="compile" depends="NameServer,DataServer,DfsShell,ClientSample,JobServer,TaskServer,TaskHost,JetShell,DfsWeb,JetWeb,Ookii.Jumbo.Jet.Samples">
     <copy todir="build">
@@ -27,6 +27,7 @@
     <nant buildfile="Ookii.Jumbo.Test.Tasks/Ookii.Jumbo.Test.Tasks.build" target="clean"/>
     <nant buildfile="Ookii.Jumbo/Ookii.Jumbo.build" target="clean"/>
     <nant buildfile="Ookii.Jumbo.Jet/Ookii.Jumbo.Jet.build" target="clean"/>
+    <nant buildfile="Ookii.Jumbo.Jet.Samples/Ookii.Jumbo.Jet.build" target="clean"/>
     <nant buildfile="ClientSample/ClientSample.build" target="clean"/>
     <nant buildfile="JobServer/JobServer.build" target="clean"/>
     <nant buildfile="TaskServer/TaskServer.build" target="clean"/>
@@ -41,7 +42,7 @@
     <mkdir dir="build/bin"/>
     <nant buildfile="Ookii.Jumbo.Native/Ookii.Jumbo.Native.build"/>
     <copy todir="build/bin">
-      <fileset basedir="Ookii.Jumbo.Native/build/bin">
+      <fileset basedir="Ookii.Jumbo.Native/build">
         <include name="*.*" />
       </fileset>
     </copy>
@@ -173,18 +174,18 @@
     </copy>
   </target>
   <target name="DfsWeb" depends="Ookii.Jumbo.Dfs,Ookii.Jumbo,Version.cs">
-    <mkdir dir="build/DfsWeb"/>
+    <mkdir dir="build/bin/DfsWeb"/>
     <nant buildfile="DfsWeb/DfsWeb.build" />
-    <copy todir="build/DfsWeb">
+    <copy todir="build/bin/DfsWeb">
       <fileset basedir="DfsWeb">
         <include name="**"/>
       </fileset>
     </copy>
   </target>
   <target name="JetWeb" depends="Ookii.Jumbo.Jet,Ookii.Jumbo,Version.cs">
-    <mkdir dir="build/JetWeb"/>
+    <mkdir dir="build/bin/JetWeb"/>
     <nant buildfile="JetWeb/JetWeb.build" />
-    <copy todir="build/JetWeb">
+    <copy todir="build/bin/JetWeb">
       <fileset basedir="JetWeb">
         <include name="**"/>
       </fileset>

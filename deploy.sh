@@ -29,7 +29,7 @@ deployConfig()
 scriptDir=$(dirname $0)
 . $scriptDir/jumbo-config.sh
 mode=$1
-if [ "$mode" == "" ]; then
+if [ "$mode" = "" ]; then
     mode="all"
 fi
 
@@ -42,16 +42,16 @@ for group in $(cat $scriptDir/groups); do
     for slave in $(cat $scriptDir/$group); do
         echo $group/$slave: deploying $mode
         {
-            if [ "$mode" == "all" ]; then
+            if [ "$mode" = "all" ]; then
                 ssh $slave mkdir -p $JUMBO_HOME
                 scp -r $scriptDir/* $slave:$JUMBO_HOME > /dev/null
             fi
 
-            if [ "$mode" == "all" ] || [ "$mode" == "config" ]; then
+            if [ "$mode" = "all" -o "$mode" = "config" ]; then
                 scp $scriptDir/jumbo-config.sh $slave:$JUMBO_HOME > /dev/null
-                deployConfig $commonConfigFile common
-                deployConfig $dfsConfigFile dfs
-                deployConfig $jetConfigFile jet
+                deployConfig $groupCommonConfigFile common
+                deployConfig $groupDfsConfigFile dfs
+                deployConfig $groupJetConfigFile jet
             fi
         } 2>&1 | sed "s/^/$group\/$slave: /" &
     done
