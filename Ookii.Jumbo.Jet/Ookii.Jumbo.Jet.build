@@ -8,8 +8,10 @@
     <delete dir="build" failonerror="false"/>
   </target>
   <target name="build">
+    <property name="outputfile" value="build/Ookii.Jumbo.Jet.dll" />
+    <property name="xmlserializerfile" value="build/Ookii.Jumbo.Jet.XmlSerializers.dll" />
     <mkdir dir="build"/>
-    <csc output="build/Ookii.Jumbo.Jet.dll" target="library" debug="${debug}" optimize="${not debug}"
+    <csc output="${outputfile}" target="library" debug="${debug}" optimize="${not debug}"
          define="${define}" doc="build/Ookii.Jumbo.Jet.xml" keyfile="jumbo.snk" rebuild="${rebuild}">
       <references>
         <include name="System.dll"/>
@@ -49,6 +51,12 @@
         <include name="../Ookii.Jumbo.Dfs/build/*.*"/>
       </fileset>
     </copy>
-    <exec program="sgen" commandline="/force /type:Ookii.Jumbo.Jet.Jobs.JobConfiguration /assembly:build/Ookii.Jumbo.Jet.dll /reference:build/Ookii.Jumbo.dll /compiler:/keyfile:jumbo.snk" />
+    <exec program="sgen" failonerror="true" verbose="true" unless="${file::up-to-date(outputfile,xmlserializerfile)}">
+      <arg value="--assembly:build/Ookii.Jumbo.Jet.dll" />
+      <arg value="--type:Ookii.Jumbo.Jet.Jobs.JobConfiguration" />
+      <arg value="--force" />
+      <arg value="--reference:build/Ookii.Jumbo.dll" />
+      <arg value="--compiler:/keyfile:jumbo.snk" />
+    </exec>
   </target>
 </project>

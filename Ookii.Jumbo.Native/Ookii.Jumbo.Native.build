@@ -1,16 +1,23 @@
 <?xml version="1.0" encoding="utf-8"?>
 <project name="Ookii.Jumbo.Native" default="build" xmlns="http://nant.sf.net/release/0.86-beta1/nant.xsd">
   <property name="debug" value="false" overwrite="false"/>
-  <property if="${debug}" name="gcc.flags" value="-ggdb"/>
-  <property if="${not debug}" name="gcc.flags" value="-O3"/>
   <target name="clean">
     <delete dir="build" failonerror="false"/>
   </target>
   <target name="build">
     <mkdir dir="build" />
-    <property name="sourcefiles" value="crc32.c" />
-    <property name="gcc.cmd" value="-o build/libjumbo.so ${sourcefiles} ${gcc.flags} -march=native -mtune=native -shared -fPIC" />
-
-    <exec program="gcc" commandline="${gcc.cmd}" failonerror="true" verbose="true" />
+    <property name="sourcefile" value="crc32.c" />
+    <property name="outputfile" value="build/libjumbo.so" />
+    <exec program="gcc" failonerror="true" verbose="true" unless="${file::up-to-date(sourcefile, outputfile)}">
+      <arg value="-o" />
+      <arg path="${outputfile}" />
+      <arg path="${sourcefile}" />
+      <arg value="-ggdb" if="${debug}" />
+      <arg value="-O3" unless="${debug}" />
+      <arg value="-march=native" />
+      <arg value="-mtune=native" />
+      <arg value="-shared" />
+      <arg value="-fPIC" />
+    </exec>
   </target>
 </project>
