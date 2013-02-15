@@ -34,8 +34,9 @@
     <nant buildfile="TaskHost/TaskHost.build" target="clean"/>
     <nant buildfile="JetShell/JetShell.build" target="clean"/>
     <nant buildfile="Ookii.Jumbo.Native/Ookii.Jumbo.Native.build" target="clean" />
+    <delete file="AssemblyInfoCommon.cs" failonerror="false" />
   </target>
-  <target name="Version.cs">
+  <target name="AssemblyInfoCommon">
     <exec program="gen-version.sh"/>
   </target>
   <target name="Ookii.Jumbo.Native">
@@ -47,7 +48,7 @@
       </fileset>
     </copy>
   </target>
-  <target name="Ookii.Jumbo" depends="Ookii.Jumbo.Native,Version.cs">
+  <target name="Ookii.Jumbo" depends="Ookii.Jumbo.Native,AssemblyInfoCommon">
     <mkdir dir="build/bin"/>
     <nant buildfile="Ookii.Jumbo/Ookii.Jumbo.build" />
     <copy todir="build/bin">
@@ -56,7 +57,7 @@
       </fileset>
     </copy>
   </target>
-  <target name="Ookii.Jumbo.Dfs" depends="Ookii.Jumbo,Version.cs">
+  <target name="Ookii.Jumbo.Dfs" depends="Ookii.Jumbo,AssemblyInfoCommon">
     <mkdir dir="build/bin"/>
     <nant buildfile="Ookii.Jumbo.Dfs/Ookii.Jumbo.Dfs.build" />
     <copy todir="build/bin">
@@ -65,7 +66,7 @@
       </fileset>
     </copy>
   </target>
-  <target name="Ookii.Jumbo.Jet" depends="Ookii.Jumbo,Ookii.Jumbo.Dfs,Version.cs">
+  <target name="Ookii.Jumbo.Jet" depends="Ookii.Jumbo,Ookii.Jumbo.Dfs,AssemblyInfoCommon">
     <mkdir dir="build/bin"/>
     <nant buildfile="Ookii.Jumbo.Jet/Ookii.Jumbo.Jet.build" />
     <copy todir="build/bin">
@@ -74,7 +75,7 @@
       </fileset>
     </copy>
   </target>
-  <target name="Ookii.Jumbo.Jet.Samples" depends="Ookii.Jumbo,Ookii.Jumbo.Dfs,Ookii.Jumbo.Jet,Version.cs">
+  <target name="Ookii.Jumbo.Jet.Samples" depends="Ookii.Jumbo,Ookii.Jumbo.Dfs,Ookii.Jumbo.Jet,AssemblyInfoCommon">
     <mkdir dir="build/bin"/>
     <nant buildfile="Ookii.Jumbo.Jet.Samples/Ookii.Jumbo.Jet.Samples.build" />
     <copy todir="build/bin">
@@ -83,7 +84,7 @@
       </fileset>
     </copy>
   </target>
-  <target name="NameServer" depends="Ookii.Jumbo.Dfs,Ookii.Jumbo,Version.cs">
+  <target name="NameServer" depends="Ookii.Jumbo.Dfs,Ookii.Jumbo,AssemblyInfoCommon">
     <mkdir dir="build/bin"/>
     <nant buildfile="NameServer/NameServer.build" />
     <copy todir="build/bin">
@@ -92,7 +93,7 @@
       </fileset>
     </copy>
   </target>
-  <target name="DataServer" depends="Ookii.Jumbo.Dfs,Ookii.Jumbo,Version.cs">
+  <target name="DataServer" depends="Ookii.Jumbo.Dfs,Ookii.Jumbo,AssemblyInfoCommon">
     <mkdir dir="build/bin"/>
     <nant buildfile="DataServer/DataServer.build" />
     <copy todir="build/bin">
@@ -101,7 +102,7 @@
       </fileset>
     </copy>
   </target>
-  <target name="DfsShell" depends="Ookii.Jumbo.Dfs,Ookii.Jumbo,Version.cs">
+  <target name="DfsShell" depends="Ookii.Jumbo.Dfs,Ookii.Jumbo,AssemblyInfoCommon">
     <mkdir dir="build/bin"/>
     <nant buildfile="DfsShell/DfsShell.build" />
     <copy todir="build/bin">
@@ -110,7 +111,7 @@
       </fileset>
     </copy>
   </target>
-  <target name="ClientSample" depends="Ookii.Jumbo.Dfs,Ookii.Jumbo.Jet,Ookii.Jumbo.Jet.Samples,Ookii.Jumbo,Version.cs">
+  <target name="ClientSample" depends="Ookii.Jumbo.Dfs,Ookii.Jumbo.Jet,Ookii.Jumbo.Jet.Samples,Ookii.Jumbo,AssemblyInfoCommon">
     <mkdir dir="build/bin"/>
     <nant buildfile="ClientSample/ClientSample.build" />
     <copy todir="build/bin">
@@ -119,7 +120,7 @@
       </fileset>
     </copy>
   </target>
-  <target name="JobServer" depends="Ookii.Jumbo.Dfs,Ookii.Jumbo.Jet,Ookii.Jumbo,Version.cs">
+  <target name="JobServer" depends="Ookii.Jumbo.Dfs,Ookii.Jumbo.Jet,Ookii.Jumbo,AssemblyInfoCommon">
     <mkdir dir="build/bin"/>
     <nant buildfile="JobServer/JobServer.build" />
     <copy todir="build/bin">
@@ -128,7 +129,7 @@
       </fileset>
     </copy>
   </target>
-  <target name="TaskServer" depends="Ookii.Jumbo.Dfs,Ookii.Jumbo.Jet,Ookii.Jumbo,TaskHost,Version.cs">
+  <target name="TaskServer" depends="Ookii.Jumbo.Dfs,Ookii.Jumbo.Jet,Ookii.Jumbo,TaskHost,AssemblyInfoCommon">
     <mkdir dir="build/bin"/>
     <nant buildfile="TaskServer/TaskServer.build" />
     <copy todir="build/bin">
@@ -137,7 +138,7 @@
       </fileset>
     </copy>
   </target>
-  <target name="TaskHost" depends="Ookii.Jumbo.Dfs,Ookii.Jumbo.Jet,Ookii.Jumbo,Version.cs">
+  <target name="TaskHost" depends="Ookii.Jumbo.Dfs,Ookii.Jumbo.Jet,Ookii.Jumbo,AssemblyInfoCommon">
     <mkdir dir="build/bin"/>
     <nant buildfile="TaskHost/TaskHost.build" />
     <copy todir="build/bin">
@@ -146,7 +147,7 @@
       </fileset>
     </copy>
   </target>
-  <target name="JetShell" depends="Ookii.Jumbo.Jet,Ookii.Jumbo,Version.cs">
+  <target name="JetShell" depends="Ookii.Jumbo.Jet,Ookii.Jumbo,AssemblyInfoCommon">
     <mkdir dir="build/bin"/>
     <nant buildfile="JetShell/JetShell.build" />
     <copy todir="build/bin">
@@ -155,7 +156,7 @@
       </fileset>
     </copy>
   </target>  
-  <target name="Ookii.Jumbo.Test.Tasks" depends="Ookii.Jumbo.Jet,Ookii.Jumbo,Version.cs">
+  <target name="Ookii.Jumbo.Test.Tasks" depends="Ookii.Jumbo.Jet,Ookii.Jumbo,AssemblyInfoCommon">
     <mkdir dir="build/bin"/>
     <nant buildfile="Ookii.Jumbo.Test.Tasks/Ookii.Jumbo.Test.Tasks.build" />
     <copy todir="build/bin">
@@ -164,7 +165,7 @@
       </fileset>
     </copy>
   </target>
-  <target name="Ookii.Jumbo.Test" depends="Ookii.Jumbo,Ookii.Jumbo.Dfs,Ookii.Jumbo.Jet,NameServer,DataServer,JobServer,TaskServer,TaskHost,Ookii.Jumbo.Test.Tasks,Version.cs">
+  <target name="Ookii.Jumbo.Test" depends="Ookii.Jumbo,Ookii.Jumbo.Dfs,Ookii.Jumbo.Jet,NameServer,DataServer,JobServer,TaskServer,TaskHost,Ookii.Jumbo.Test.Tasks,AssemblyInfoCommon">
     <mkdir dir="build/bin"/>
     <nant buildfile="Ookii.Jumbo.Test/Ookii.Jumbo.Test.build" />
     <copy todir="build/bin">
@@ -173,7 +174,7 @@
       </fileset>
     </copy>
   </target>
-  <target name="DfsWeb" depends="Ookii.Jumbo.Dfs,Ookii.Jumbo,Version.cs">
+  <target name="DfsWeb" depends="Ookii.Jumbo.Dfs,Ookii.Jumbo,AssemblyInfoCommon">
     <mkdir dir="build/bin/DfsWeb"/>
     <nant buildfile="DfsWeb/DfsWeb.build" />
     <copy todir="build/bin/DfsWeb">
@@ -182,7 +183,7 @@
       </fileset>
     </copy>
   </target>
-  <target name="JetWeb" depends="Ookii.Jumbo.Jet,Ookii.Jumbo,Version.cs">
+  <target name="JetWeb" depends="Ookii.Jumbo.Jet,Ookii.Jumbo,AssemblyInfoCommon">
     <mkdir dir="build/bin/JetWeb"/>
     <nant buildfile="JetWeb/JetWeb.build" />
     <copy todir="build/bin/JetWeb">

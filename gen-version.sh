@@ -17,11 +17,11 @@ echo "Build $build, revision $revision, branch $branch"
 if [ -f $outputFile ]; then
     diff $outputFile $tempFile > /dev/null
     if [ $? -eq 1 ]; then
-	echo Updating $outputFile
-	rm $outputFile
-	mv $tempFile $outputFile
+        echo Updating $outputFile
+        rm $outputFile
+        mv $tempFile $outputFile
     else
-	rm $tempFile
+	    rm $tempFile
     fi
 else
     echo Creating $outputFile

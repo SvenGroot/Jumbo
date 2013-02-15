@@ -1,6 +1,7 @@
 $scriptPath = Split-Path $MyInvocation.MyCommand.Path
-$inputFile = Join-Path $scriptPath AssemblyInfoCommon.cs.template
-$outputFile = Join-Path $scriptPath AssemblyInfoCommon.cs
+$outputName = "AssemblyInfoCommon.cs"
+$inputFile = Join-Path $scriptPath "$outputName.template"
+$outputFile = Join-Path $scriptPath $outputName
 
 $year = ([DateTime]::Today.Year - 2000) % 6
 $build = "$year" + [DateTime]::Today.ToString("MMdd")
@@ -13,31 +14,20 @@ $revision = $wcrev.Revision
 $branch = ([System.Uri]$wcrev.Url).Segments[-1]
 Write-Host "Revision number is $revision on branch $branch"
 
-$newContent = Get-Content $inputFile | foreach { (($_ -replace "\`$BUILD", $build) -replace "\`$REVISION", $revision) -replace "\`$BRANCH", $branch }
+$newContent = Get-Content $inputFile | ForEach-Object { (($_ -replace "\`$BUILD", $build) -replace "\`$REVISION", $revision) -replace "\`$BRANCH", $branch }
 $needUpdate = $true
 if( Test-Path $outputFile )
 {
     # Only update the file if the contents have changed so we don't cause unnecessary rebuilds
     $needUpdate = $false
     $oldContent = Get-Content $outputFile
-    if( $newContent.Length -ne $oldContent.Length )
+    if( Compare-Object $oldContent $newContent )
         { $needUpdate = $true }
-    else
-    {
-        for( $x = 0; $x -lt $newContent.Length; $x++ )
-        {
-            if( $oldContent[$x] -ne $newContent[$x] )
-            {
-                $needUpdate = $true
-                break
-            }
-        }
-    }
 }
 
 if( $needUpdate )
 {
-    Write-Host "Updating AssemblyInfoCommon.cs"
+    Write-Host "Updating $outputName"
     $newContent | sc $outputFile
 }
 
