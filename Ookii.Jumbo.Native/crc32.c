@@ -1,18 +1,18 @@
 // $Id$
 //
-#include <cstdint>
-using namespace std;
+#include <stdint.h>
 
 extern const uint32_t crc32Lookup[4][256];
 
 // CRC32 algorithm based on the "slicing-by-4" technique introduced by Intel. Code adapted from http://create.stephan-brumme.com/crc32
-extern "C" uint32_t JumboCrc32(const uint8_t *data, uint32_t offset, size_t count, uint32_t previousCrc32)
+uint32_t JumboCrc32(const uint8_t *data, uint32_t offset, uint32_t count, uint32_t previousCrc32)
 {
-    const uint32_t *current = reinterpret_cast<const uint32_t*>(data + offset);
+    const uint32_t *current = (const uint32_t*)(data + offset);
+	const uint8_t *currentChar;
     uint32_t crc = ~previousCrc32; // same as previousCrc32 ^ 0xFFFFFFFF
 
     // process four bytes at once
-    while (count >= 4)
+    while( count >= 4 )
     {
         crc ^= *current++;
         crc = crc32Lookup[3][crc & 0xFF] ^
@@ -20,9 +20,9 @@ extern "C" uint32_t JumboCrc32(const uint8_t *data, uint32_t offset, size_t coun
               crc32Lookup[1][(crc>>16) & 0xFF] ^
               crc32Lookup[0][crc>>24];
         count -= 4;
-    }
+	}
 
-    const uint8_t* currentChar = reinterpret_cast<const uint8_t*>(current);
+    currentChar = (const uint8_t*)current;
     // remaining 1 to 3 bytes (standard CRC table-based algorithm)
     while( count-- )
         crc = (crc >> 8) ^ crc32Lookup[0][(crc & 0xFF) ^ *currentChar++];

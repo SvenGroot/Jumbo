@@ -8,9 +8,9 @@
   </target>
   <target name="build">
     <mkdir dir="build" />
-    <property name="sourcefiles" value="crc32.cpp" />
-    <property name="gcc.cmd" value="-o build/libjumbo.so ${sourcefiles} -std=c++0x ${gcc.flags} -march=native -mtune=native -shared -fPIC" />
+    <property name="sourcefiles" value="crc32.c" />
+    <property name="gcc.cmd" value="-o build/libjumbo.so ${sourcefiles} ${gcc.flags} -march=native -mtune=native -shared -fPIC" />
 
-    <exec program="g++" commandline="${gcc.cmd}" failonerror="true" verbose="true" />
+    <exec program="gcc" commandline="${gcc.cmd}" failonerror="true" verbose="true" />
   </target>
 </project>

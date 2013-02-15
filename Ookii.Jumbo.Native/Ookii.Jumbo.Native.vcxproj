@@ -156,8 +156,8 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="crc32.cpp" />
-    <ClCompile Include="DllMain.cpp" />
+    <ClCompile Include="crc32.c" />
+    <ClCompile Include="DllMain.c" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Ookii.Jumbo.Native.build" />
