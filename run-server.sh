@@ -1,4 +1,5 @@
 #!/bin/sh
+# You should not run this script directly; use run-dfs.sh and run-jet.sh instead
 scriptDir=$(dirname $0)
 . $scriptDir/jumbo-config.sh
 startStop=$1
@@ -10,10 +11,10 @@ case $startStop in
     (start)
         mkdir -p "$JUMBO_PID"
         if [ -f $pid ]; then
-        if kill -0 $(cat $pid) > /dev/null 2>&1; then
-            echo "$command running as process $(cat $pid). Stop it first."
-            exit 1
-        fi
+            if kill -0 $(cat $pid) > /dev/null 2>&1; then
+                echo "$command running as process $(cat $pid). Stop it first."
+                exit 1
+            fi
         fi
 
         echo starting $command

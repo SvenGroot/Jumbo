@@ -165,7 +165,7 @@
   </Target>
   -->
   <PropertyGroup>
-    <PostBuildEvent>copy /Y "$(SolutionDir)dfs.config" "$(SolutionDir)JetWeb"
-copy /Y "$(SolutionDir)jet.config" "$(SolutionDir)JetWeb"</PostBuildEvent>
+    <PostBuildEvent>
+    </PostBuildEvent>
   </PropertyGroup>
 </Project>
