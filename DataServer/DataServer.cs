@@ -48,6 +48,8 @@ namespace DataServerApplication
 
             _config = config;
             _blockStorageDirectory = config.DataServer.BlockStoragePath;
+            if( string.IsNullOrWhiteSpace(_blockStorageDirectory) )
+                throw new InvalidOperationException("DataServer block storage path is not configured.");
             _temporaryBlockStorageDirectory = Path.Combine(_blockStorageDirectory, "temp");
             System.IO.Directory.CreateDirectory(_temporaryBlockStorageDirectory);
             _port = config.DataServer.Port;

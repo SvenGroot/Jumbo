@@ -43,6 +43,9 @@ namespace TaskServerApplication
             Configuration = config;
             DfsConfiguration = dfsConfiguration;
 
+            if( string.IsNullOrWhiteSpace(config.TaskServer.TaskDirectory) )
+                throw new InvalidOperationException("TaskServer task directory is not configured.");
+
             if( !System.IO.Directory.Exists(config.TaskServer.TaskDirectory) )
                 System.IO.Directory.CreateDirectory(config.TaskServer.TaskDirectory);
 
