@@ -584,7 +584,7 @@ namespace JobServerApplication
             }
 
             server.HasReportedStatus = true;
-            _log.InfoFormat("Task server {0} reported initial status: TaskSlots = {1}, FileServerPort = {3}", server.Address, data.TaskSlots, data.FileServerPort);
+            _log.InfoFormat("Task server {0} reported initial status: TaskSlots = {1}, FileServerPort = {2}", server.Address, data.TaskSlots, data.FileServerPort);
             server.TaskSlots = data.TaskSlots;
             server.FileServerPort = data.FileServerPort;
 

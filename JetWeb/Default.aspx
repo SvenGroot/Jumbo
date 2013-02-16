@@ -1,6 +1,7 @@
 ﻿<%@ Page Title="Jumbo Jet" Language="C#" MasterPageFile="~/Jumbo.master" AutoEventWireup="true" CodeFile="Default.aspx.cs" Inherits="_Default" %>
 <asp:Content ID="Content1" ContentPlaceHolderID="MainContentPlaceHolder" Runat="Server">
     <h2>Job server status</h2>
+    <p class="error" id="ErrorMessage" runat="server" visible="false"></p>
     <table>
         <tr>
             <th scope="row">Job server</th>

@@ -92,9 +92,9 @@ public partial class logfile : System.Web.UI.Page
             while( (line = reader.ReadLine()) != null )
             {
                 if( line.Contains(" WARN ") )
-                    result.AppendFormat("<span class=\"warning\">{0}</span>", Server.HtmlEncode(line));
+                    result.AppendFormat("<span class=\"logWarning\">{0}</span>", Server.HtmlEncode(line));
                 else if( line.Contains(" ERROR ") )
-                    result.AppendFormat("<span class=\"error\">{0}</span>", Server.HtmlEncode(line));
+                    result.AppendFormat("<span class=\"logError\">{0}</span>", Server.HtmlEncode(line));
                 else
                     result.Append(Server.HtmlEncode(line));
                 result.AppendLine();

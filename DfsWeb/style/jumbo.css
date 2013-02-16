@@ -137,11 +137,18 @@ ul.blockList
     font-family: Consolas, monospace;
     font-size: 100%;
 }
-.warning
+.error
+{
+    background-color: white;
+    border: solid 1px red;
+    color: red;
+    padding: 0.5em;
+}
+.logWarning
 {
     background-color: yellow;
 }
-.error
+.logError
 {
     background-color: orange;
 }

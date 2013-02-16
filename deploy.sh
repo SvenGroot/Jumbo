@@ -49,9 +49,9 @@ for group in $(cat $scriptDir/groups); do
 
             if [ "$mode" = "all" -o "$mode" = "config" ]; then
                 scp $scriptDir/jumbo-config.sh $slave:$JUMBO_HOME > /dev/null
-                deployConfig $groupCommonConfigFile common
-                deployConfig $groupDfsConfigFile dfs
-                deployConfig $groupJetConfigFile jet
+                deployConfig $groupCommonConfig common
+                deployConfig $groupDfsConfig dfs
+                deployConfig $groupJetConfi jet
             fi
         } 2>&1 | sed "s/^/$group\/$slave: /" &
     done
