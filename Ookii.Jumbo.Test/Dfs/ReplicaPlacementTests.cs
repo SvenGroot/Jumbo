@@ -180,7 +180,7 @@ namespace Ookii.Jumbo.Test.Dfs
             {
                 for( int node = 0; node < nodesPerRack; ++node )
                 {
-                    DataServerInfo server = new DataServerInfo(new ServerAddress(string.Format("rack{0}_{1}", rack + 1, node + 1), 9000));
+                    DataServerInfo server = new DataServerInfo(new ServerAddress(string.Format("rack{0}_{1}", rack + 1, node + 1), 9000), Guid.Empty);
                     server.DiskSpaceTotal = 100L * 1024 * 1024 * 1024;
                     server.DiskSpaceFree = 100L * 1024 * 1024 * 1024;
                     server.HasReportedBlocks = true;

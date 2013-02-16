@@ -16,8 +16,10 @@ namespace Ookii.Jumbo.Test.Dfs
         public void TestConstructor()
         {
             Guid blockID = Guid.NewGuid();
+            Guid fsID = Guid.NewGuid();
             List<Guid> blocks = new List<Guid>() { blockID };
-            DeleteBlocksHeartbeatResponse target = new DeleteBlocksHeartbeatResponse(blocks);
+            DeleteBlocksHeartbeatResponse target = new DeleteBlocksHeartbeatResponse(fsID, blocks);
+            Assert.AreEqual(fsID, target.FileSystemId);
             Assert.AreEqual(DataServerHeartbeatCommand.DeleteBlocks, target.Command);
             Assert.AreEqual(1, target.Blocks.Count());
             foreach( var id in target.Blocks )

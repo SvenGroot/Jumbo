@@ -14,11 +14,12 @@ namespace Ookii.Jumbo.Dfs
     public class DeleteBlocksHeartbeatResponse : HeartbeatResponse
     {
         /// <summary>
-        /// Initializes a new instance of the <see cref="DeleteBlocksHeartbeatResponse"/> class.
+        /// Initializes a new instance of the <see cref="DeleteBlocksHeartbeatResponse" /> class.
         /// </summary>
+        /// <param name="fileSystemId">The file system id.</param>
         /// <param name="blocks">A list of the identifiers of the blocks to delete.</param>
-        public DeleteBlocksHeartbeatResponse(IEnumerable<Guid> blocks)
-            : base(DataServerHeartbeatCommand.DeleteBlocks)
+        public DeleteBlocksHeartbeatResponse(Guid fileSystemId, IEnumerable<Guid> blocks)
+            : base(fileSystemId, DataServerHeartbeatCommand.DeleteBlocks)
         {
             if( blocks == null )
                 throw new ArgumentNullException("blocks");

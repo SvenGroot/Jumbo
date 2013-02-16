@@ -31,6 +31,10 @@ namespace Ookii.Jumbo.Dfs
         /// <summary>
         /// The name server wants the data server to replicate a block to a different data server.
         /// </summary>
-        ReplicateBlock
+        ReplicateBlock,
+        /// <summary>
+        /// The name server doesn't know this data server and needs an initial data heartbeat to verify the file system ID.
+        /// </summary>
+        SendInitialData
     }
 }

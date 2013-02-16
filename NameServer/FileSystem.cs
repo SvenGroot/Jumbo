@@ -20,9 +20,10 @@ namespace NameServerApplication
         public const string _fileSystemImageFileName = "FileSystem";
         public const string _fileSystemTempImageFileName = "FileSystem.tmp";
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(FileSystem));
-        private DfsDirectory _root;
+        private readonly DfsDirectory _root;
         private readonly EditLog _editLog;
         private readonly Dictionary<string, PendingFile> _pendingFiles = new Dictionary<string, PendingFile>();
+        private readonly Guid _fileSystemId;
         private long _totalSize;
         private readonly DfsConfiguration _configuration;
 
@@ -32,50 +33,110 @@ namespace NameServerApplication
          * 3: Custom file block size and replication factor.
          * 4: Checksummed format.
          * 5: Record options support.
+         * 6: File system ID and mandatory manual format
          */
-        public const int FileSystemFormatVersion = 5;
+        public const int FileSystemFormatVersion = 6;
 
         public event EventHandler<FileDeletedEventArgs> FileDeleted;
 
-        public FileSystem(DfsConfiguration configuration, bool replayLog)
-            : this(configuration, replayLog, false)
-        {
-        }
-
-        public FileSystem(DfsConfiguration configuration, bool replayLog, bool readOnly)
+        private FileSystem(DfsConfiguration configuration, bool readExistingFileSystem, bool readOnly)
         {
             if( configuration == null )
                 throw new ArgumentNullException("configuration");
+
+            if( string.IsNullOrWhiteSpace(configuration.NameServer.ImageDirectory) )
+                throw new InvalidOperationException("NameServer image directory not configured.");
+
+            if( !readExistingFileSystem && Directory.GetFiles(configuration.NameServer.ImageDirectory).Length > 0 )
+                throw new InvalidOperationException("Cannot format the file system because the image directory is not empty.");
+
             _configuration = configuration;
-            _log.Info("++++ FileSystem created.");
+
             // TODO: Automatic recovery from this.
-            string tempImageFileName = Path.Combine(configuration.NameServer.EditLogDirectory, _fileSystemTempImageFileName);
-            if( File.Exists(tempImageFileName) || File.Exists(tempImageFileName + ".crc") )
-                throw new DfsException("The nameserver was previously interruped while making a checkpoint; please resolve the situation and restart.");
-            string imageFile = Path.Combine(configuration.NameServer.EditLogDirectory, _fileSystemImageFileName);
-            if( File.Exists(imageFile) )
-                LoadFromFileSystemImage(imageFile);
-            _editLog = new EditLog(configuration.NameServer.EditLogDirectory);
-            _editLog.InitializeFileSystem(replayLog, readOnly, this);
+            string tempImageFile = Path.Combine(configuration.NameServer.ImageDirectory, _fileSystemTempImageFileName);
+            if( File.Exists(tempImageFile) || File.Exists(tempImageFile + ".crc") )
+                throw new DfsException("The nameserver was previously interrupted while making a checkpoint; please resolve the situation and restart.");
+
+            string imageFile = Path.Combine(configuration.NameServer.ImageDirectory, _fileSystemImageFileName);
+
+            if( readExistingFileSystem && !File.Exists(imageFile) )
+                throw new DfsException("File system is not formatted.");
+            else if( !readExistingFileSystem && File.Exists(imageFile) )
+                throw new DfsException("File system is already formatted.");
+
+            if( readExistingFileSystem )
+            {
+                _log.InfoFormat("Loading file system image from '{0}'.", imageFile);
+
+                ChecksumOutputStream.CheckCrc(imageFile);
+
+                using( FileStream stream = File.OpenRead(imageFile) )
+                using( BinaryReader reader = new BinaryReader(stream) )
+                {
+                    int version = reader.ReadInt32();
+                    if( version != FileSystemFormatVersion )
+                        throw new NotSupportedException("The file system image uses an unsupported file system version.");
+                    _fileSystemId = new Guid(reader.ReadBytes(16));
+
+                    _root = (DfsDirectory)DfsFileSystemEntry.LoadFromFileSystemImage(reader, null, NotifyFileSizeCallback);
+                    LoadPendingFiles(reader);
+                }
+                _log.InfoFormat("File system loaded.");
+            }
+            else
+            {
+                _root = new DfsDirectory(null, "", DateTime.UtcNow);
+                _fileSystemId = Guid.NewGuid();
+            }
+
+            _editLog = new EditLog(configuration.NameServer.ImageDirectory);
+            if( readExistingFileSystem )
+                _editLog.LoadFileSystemFromLog(readOnly, this);
+            else
+                _editLog.CreateLog(readOnly, this);
+                
             if( _editLog.IsUsingNewLogFile )
             {
+                if( !readExistingFileSystem )
+                    throw new DfsException("An existing checkpoint log file was found while creating a new file system.");
+
                 _log.Warn("The name server was previously interrupted while making a checkpoint; finishing checkpoint generation now.");
                 SaveToFileSystemImage();
             }
-            if( replayLog )
-            {
-                foreach( var file in _pendingFiles.Keys )
-                {
-                    _log.WarnFormat("File {0} was not committed before previous name server shutdown and is still open.", file);
-                }
-            }
+
             if( _root == null )
                 throw new DfsException("The root directory was not created. This usually indicates a corrupt file system image or log file.");
+
+            _log.InfoFormat("++++ FileSystem initialized; file system ID: {0:B}.", _fileSystemId);
+        }
+
+        public Guid FileSystemId
+        {
+            get { return _fileSystemId; }
         }
 
         public long TotalSize
         {
             get { return _totalSize; }
+        }
+
+        public static FileSystem Load(DfsConfiguration configuration)
+        {
+            return new FileSystem(configuration, true, false);
+        }
+
+        public static FileSystem LoadReadOnly(DfsConfiguration configuration)
+        {
+            return new FileSystem(configuration, true, true);
+        }
+
+        public static void Format(DfsConfiguration configuration)
+        {
+            using( FileSystem fs = new FileSystem(configuration, false, false) )
+            {
+                string imageFile = Path.Combine(configuration.NameServer.ImageDirectory, _fileSystemImageFileName);
+                fs.SaveToFileSystemImage(imageFile);
+            }
         }
 
         /// <summary>
@@ -454,9 +515,9 @@ namespace NameServerApplication
         public void SaveToFileSystemImage()
         {
             _log.Info("Creating file system image.");
-            string tempFileName = Path.Combine(_configuration.NameServer.EditLogDirectory, _fileSystemTempImageFileName);
+            string tempFileName = Path.Combine(_configuration.NameServer.ImageDirectory, _fileSystemTempImageFileName);
             _editLog.SwitchToNewLogFile();
-            using( FileSystem tempFileSystem = new FileSystem(_configuration, true, true) )
+            using( FileSystem tempFileSystem = FileSystem.LoadReadOnly(_configuration) )
             {
                 tempFileSystem.SaveToFileSystemImage(tempFileName);
             }
@@ -464,7 +525,7 @@ namespace NameServerApplication
             // The last thing we do is rename the temp image; while the temp image file exists, the name server will not start
             // alerting the user something is wrong and they can correct it.
             // TODO: Automatic recovery.
-            string fileName = Path.Combine(_configuration.NameServer.EditLogDirectory, _fileSystemImageFileName);
+            string fileName = Path.Combine(_configuration.NameServer.ImageDirectory, _fileSystemImageFileName);
             if( File.Exists(fileName) )
                 File.Delete(fileName);
             string crcFileName = fileName + ".crc";
@@ -492,6 +553,27 @@ namespace NameServerApplication
             }
         }
 
+        private void LoadPendingFiles(BinaryReader reader)
+        {
+            _pendingFiles.Clear();
+            int pendingFileCount = reader.ReadInt32();
+            for( int x = 0; x < pendingFileCount; ++x )
+            {
+                string path = reader.ReadString();
+                bool hasPendingBlock = reader.ReadBoolean();
+                Guid? pendingBlock = null;
+                if( hasPendingBlock )
+                    pendingBlock = new Guid(reader.ReadBytes(16));
+                DfsFile file = GetFileInfoInternal(path);
+                if( file == null )
+                    throw new DfsException("Invalid file system image.");
+                PendingFile pendingFile = new PendingFile(file);
+                pendingFile.PendingBlock = pendingBlock;
+                _pendingFiles.Add(file.FullPath, pendingFile);
+                _log.WarnFormat("File {0} was not committed before previous name server shutdown and is still open.", file.FullPath);
+            }
+        }
+
         private void SaveToFileSystemImage(string fileName)
         {
             using( FileStream stream = File.Create(fileName) )
@@ -499,6 +581,7 @@ namespace NameServerApplication
             using( BinaryWriter writer = new BinaryWriter(crcStream) )
             {
                 writer.Write(FileSystemFormatVersion);
+                writer.Write(_fileSystemId.ToByteArray());
                 lock( _root )
                 {
                     _root.SaveToFileSystemImage(writer);
@@ -512,40 +595,6 @@ namespace NameServerApplication
 
                 writer.Flush();
             }
-        }
-
-        private void LoadFromFileSystemImage(string fileName)
-        {
-            _log.InfoFormat("Loading file system image from '{0}'.", fileName);
-
-            ChecksumOutputStream.CheckCrc(fileName);
-
-            using( FileStream stream = File.OpenRead(fileName) )
-            using( BinaryReader reader = new BinaryReader(stream) )
-            {
-                int version = reader.ReadInt32();
-                if( version != FileSystemFormatVersion )
-                    throw new NotSupportedException("The file system image uses an unsupported file system version.");
-
-                _root = (DfsDirectory)DfsFileSystemEntry.LoadFromFileSystemImage(reader, null, NotifyFileSizeCallback);
-                _pendingFiles.Clear();
-                int pendingFileCount = reader.ReadInt32();
-                for( int x = 0; x < pendingFileCount; ++x )
-                {
-                    string path = reader.ReadString();
-                    bool hasPendingBlock = reader.ReadBoolean();
-                    Guid? pendingBlock = null;
-                    if( hasPendingBlock )
-                        pendingBlock = new Guid(reader.ReadBytes(16));
-                    DfsFile file = GetFileInfoInternal(path);
-                    if( file == null )
-                        throw new DfsException("Invalid file system image.");
-                    PendingFile pendingFile = new PendingFile(file);
-                    pendingFile.PendingBlock = pendingBlock;
-                    _pendingFiles.Add(file.FullPath, pendingFile);
-                }
-            }
-            _log.InfoFormat("File system loaded.");
         }
 
         private void NotifyFileSizeCallback(long size)
@@ -653,18 +702,6 @@ namespace NameServerApplication
                 throw new ArgumentNullException("path");
             if( !path.StartsWith("/") )
                 throw new ArgumentException("Path is not an absolute path.", "path");
-
-            if( _root == null )
-            {
-                if( path == "/" && create )
-                {
-                    _root = new DfsDirectory(null, "", creationDate);
-                    _editLog.LogCreateDirectory(path, creationDate);
-                    return _root;
-                }
-                else
-                    throw new DfsException("The DFS root directory does not exist. This usually means the file system image or log file is corrupt.");
-            }
 
             string[] components = path.Split(DfsPath.DirectorySeparator);
 

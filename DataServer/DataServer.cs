@@ -24,6 +24,7 @@ namespace DataServerApplication
         private readonly string _temporaryBlockStorageDirectory;
         private readonly int _port;
         private readonly DfsConfiguration _config;
+        private Guid _fileSystemId;
 
         private INameServerHeartbeatProtocol _nameServer;
         private List<HeartbeatData> _pendingHeartbeatData = new List<HeartbeatData>();
@@ -74,7 +75,7 @@ namespace DataServerApplication
 
                 _replicateBlocksThread.Start();
 
-                AddDataForNextHeartbeat(new InitialHeartbeatData());
+                AddDataForNextHeartbeat(new InitialHeartbeatData(_fileSystemId));
 
                 while( _running )
                 {
@@ -200,6 +201,8 @@ namespace DataServerApplication
 
         private void ProcessResponse(HeartbeatResponse response)
         {
+            CheckFileSystemId(response);
+
             switch( response.Command )
             {
             case DataServerHeartbeatCommand.ReportBlocks:
@@ -227,6 +230,20 @@ namespace DataServerApplication
             }
         }
 
+        private void CheckFileSystemId(HeartbeatResponse response)
+        {
+            if( _fileSystemId == Guid.Empty )
+            {
+                _fileSystemId = response.FileSystemId;
+                File.WriteAllBytes(Path.Combine(_config.DataServer.BlockStoragePath, "fsid"), _fileSystemId.ToByteArray());
+                _log.InfoFormat("File system ID set to {0:B}.", _fileSystemId);
+            }
+            else if( _fileSystemId != response.FileSystemId )
+            {
+                throw new InvalidOperationException(string.Format("NameServer reported file system ID {0:B}; expecting {1:B}.", response.FileSystemId, _fileSystemId));
+            }
+        }
+
         private void AddDataForNextHeartbeat(HeartbeatData data)
         {
             lock( _pendingHeartbeatData )
@@ -241,21 +258,38 @@ namespace DataServerApplication
             // It doesn't hurt though.
             lock( _blocks )
             {
-                _log.InfoFormat("Loading blocks...");
                 string[] files = System.IO.Directory.GetFiles(_blockStorageDirectory);
-                foreach( string file in files )
+                string fsIdFile = Path.Combine(_blockStorageDirectory, "fsid");
+                if( File.Exists(fsIdFile) )
                 {
-                    string fileName = Path.GetFileName(file);
-                    try
+                    _fileSystemId = new Guid(File.ReadAllBytes(fsIdFile));
+                    _log.InfoFormat("File system ID: {0:B}.", _fileSystemId);
+                    _log.InfoFormat("Loading block list...");
+
+                    foreach( string file in files )
                     {
-                        Guid blockID = new Guid(fileName);
-                        _log.DebugFormat("- Block ID: {0}", blockID);
-                        _blocks.Add(blockID);
+                        string fileName = Path.GetFileName(file);
+                        if( fileName != "fsid" )
+                        {
+                            try
+                            {
+                                Guid blockID = new Guid(fileName);
+                                _log.DebugFormat("- Block ID: {0}", blockID);
+                                _blocks.Add(blockID);
+                            }
+                            catch( FormatException )
+                            {
+                                _log.WarnFormat("The name of file '{0}' in the block storage directory is not a valid GUID.", fileName);
+                            }
+                        }
                     }
-                    catch( FormatException )
-                    {
-                        _log.WarnFormat("The name of file '{0}' in the block storage directory is not a valid GUID.", fileName);
-                    }
+                }
+                else
+                {
+                    if( files.Length > 0 )
+                        throw new InvalidOperationException("DataServer is not part of a file system but block directory is not empty.");
+                    _log.InfoFormat("DataServer is not yet part of a file system.");
+                    _fileSystemId = Guid.Empty;
                 }
             }
         }

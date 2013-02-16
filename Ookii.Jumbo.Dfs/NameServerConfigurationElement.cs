@@ -59,13 +59,13 @@ namespace Ookii.Jumbo.Dfs
         }
 
         /// <summary>
-        /// Gets or sets the directory in which the file system edit log is stored.
+        /// Gets or sets the directory in which the file system image and edit log are stored.
         /// </summary>
-        [ConfigurationProperty("editLogDirectory", DefaultValue = "", IsRequired = false, IsKey = false)]
-        public string EditLogDirectory
+        [ConfigurationProperty("imageDirectory", DefaultValue = "", IsRequired = false, IsKey = false)]
+        public string ImageDirectory
         {
-            get { return (string)this["editLogDirectory"]; }
-            set { this["editLogDirectory"] = value; }
+            get { return (string)this["imageDirectory"]; }
+            set { this["imageDirectory"] = value; }
         }
 
         /// <summary>

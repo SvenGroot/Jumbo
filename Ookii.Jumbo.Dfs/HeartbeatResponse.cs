@@ -14,16 +14,13 @@ namespace Ookii.Jumbo.Dfs
     public class HeartbeatResponse
     {
         /// <summary>
-        /// Initializes a new instance of the <see cref="HeartbeatResponse"/> class.
+        /// Initializes a new innstance of the <see cref="HeartbeatResponse" /> class with the specified command.
         /// </summary>
-        public HeartbeatResponse() : this(DataServerHeartbeatCommand.None) { }
-
-        /// <summary>
-        /// Initializes a new innstance of the <see cref="HeartbeatResponse"/> class with the specified command.
-        /// </summary>
-        /// <param name="command">The <see cref="DataServerHeartbeatCommand"/> to send to the server.</param>
-        public HeartbeatResponse(DataServerHeartbeatCommand command)
+        /// <param name="fileSystemId">The file system id.</param>
+        /// <param name="command">The <see cref="DataServerHeartbeatCommand" /> to send to the server.</param>
+        public HeartbeatResponse(Guid fileSystemId, DataServerHeartbeatCommand command)
         {
+            FileSystemId = fileSystemId;
             Command = command;
         }
 
@@ -32,5 +29,13 @@ namespace Ookii.Jumbo.Dfs
         /// Gets the command that the NameServer is giving to the DataServer.
         /// </summary>
         public DataServerHeartbeatCommand Command { get; private set; }
+
+        /// <summary>
+        /// Gets the file system id.
+        /// </summary>
+        /// <value>
+        /// The file system id.
+        /// </value>
+        public Guid FileSystemId { get; private set; }
     }
 }

@@ -312,43 +312,41 @@ namespace NameServerApplication
             get { return _logFilePath == Path.Combine(_logFileDirectory, _newLogFileName); }
         }
 
-        public void InitializeFileSystem(bool replayLog, bool readOnly, FileSystem fileSystem)
+        public void LoadFileSystemFromLog(bool readOnly, FileSystem fileSystem)
         {
-            if( replayLog && File.Exists(_logFilePath) )
+            if( !File.Exists(_logFilePath) )
+                throw new DfsException("The file system edit log file is missing.");
+            _log.Info("Replaying log file.");
+
+            long oldCrc = ChecksumOutputStream.CheckCrc(_logFilePath);
+
+            ReplayLog(fileSystem);
+            // A read only file system is used to create a checkpoint, and doesn't need to read the new log file.
+            if( !readOnly )
             {
-                _log.Info("Replaying log file.");
-
-                long oldCrc = ChecksumOutputStream.CheckCrc(_logFilePath);
-
-                ReplayLog(fileSystem);
-                // A read only file system is used to create a checkpoint, and doesn't need to read the new log file.
-                if( !readOnly )
+                string newLogFilePath = Path.Combine(_logFileDirectory, _newLogFileName);
+                // We don't need to check for this if _logFilePath doesn't exist; if _logFilePath doesn't exist and newLogFilePath does,
+                // it means that there's also a temp image file which the name server will catch while restarting.
+                if( File.Exists(newLogFilePath) )
                 {
-                    string newLogFilePath = Path.Combine(_logFileDirectory, _newLogFileName);
-                    // We don't need to check for this if _logFilePath doesn't exist; if _logFilePath doesn't exist and newLogFilePath does,
-                    // it means that there's also a temp image file which the name server will catch while restarting.
-                    if( File.Exists(newLogFilePath) )
-                    {
-                        _logFilePath = newLogFilePath;
-                        _log.Info("Replaying new log file.");
+                    _logFilePath = newLogFilePath;
+                    _log.Info("Replaying new log file.");
 
-                        oldCrc = ChecksumOutputStream.CheckCrc(_logFilePath);
+                    oldCrc = ChecksumOutputStream.CheckCrc(_logFilePath);
 
-                        ReplayLog(fileSystem);
-                    }
+                    ReplayLog(fileSystem);
                 }
-                _log.Info("Replaying log file finished.");
-                _loggingEnabled = !readOnly;
-                if( !readOnly )
-                    OpenExistingLogFile(oldCrc);
             }
-            else
-            {
-                if( !readOnly )
-                    InitializeLogFile();
-                _loggingEnabled = !readOnly;
-                fileSystem.CreateDirectory("/", DateTime.UtcNow);
-            }
+            _log.Info("Replaying log file finished.");
+            _loggingEnabled = !readOnly;
+            if( !readOnly )
+                OpenExistingLogFile(oldCrc);
+        }
+
+        public void CreateLog(bool readOnly, FileSystem fileSystem)
+        {
+            long crc = CreateLogFile(_logFilePath);
+            LoadFileSystemFromLog(readOnly, fileSystem);
         }
 
         public void LogCreateDirectory(string path, DateTime date)
@@ -420,8 +418,9 @@ namespace NameServerApplication
                 {
                     _log.Info("Switching to new edit log file.");
                     CloseLogFile();
+                    long crc = CreateLogFile(newLogFileName);
                     _logFilePath = newLogFileName;
-                    InitializeLogFile();
+                    OpenExistingLogFile(crc);
                 }
             }
         }
@@ -459,6 +458,18 @@ namespace NameServerApplication
         }
 
         #endregion
+
+        private static long CreateLogFile(string logFilePath)
+        {
+            _log.InfoFormat("Initializing new edit log file at '{0}'.", logFilePath);
+            using( ChecksumOutputStream logFileStream = new ChecksumOutputStream(File.Open(logFilePath, FileMode.CreateNew, FileAccess.Write, FileShare.None), logFilePath + ".crc", 0L) )
+            using( BinaryWriter logFileWriter = new BinaryWriter(logFileStream) )
+            {
+                logFileWriter.Write(FileSystem.FileSystemFormatVersion);
+                logFileWriter.Flush();
+                return logFileStream.Crc;
+            }
+        }
 
         private void ReplayLog(FileSystem fileSystem)
         {
@@ -509,15 +520,6 @@ namespace NameServerApplication
                     throw;
                 }
             }
-        }
-
-        private void InitializeLogFile()
-        {
-            _log.InfoFormat("Initializing new edit log file at '{0}'.", _logFilePath);
-            _logFileStream = new ChecksumOutputStream(File.Open(_logFilePath, FileMode.Create, FileAccess.Write, FileShare.None), _logFilePath + ".crc", 0L);
-            _logFileWriter = new BinaryWriter(_logFileStream);
-            _logFileWriter.Write(FileSystem.FileSystemFormatVersion);
-            _logFileWriter.Flush();
         }
 
         private void OpenExistingLogFile(long oldCrc)

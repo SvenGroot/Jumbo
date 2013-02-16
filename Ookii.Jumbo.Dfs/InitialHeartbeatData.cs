@@ -13,6 +13,21 @@ namespace Ookii.Jumbo.Dfs
     [Serializable]
     public class InitialHeartbeatData : HeartbeatData
     {
-        // TODO: I probably want this to inherit from whatever HeartbeatData class I will use to submit changed statistics (disk free etc.)
+        /// <summary>
+        /// Initializes a new instance of the <see cref="InitialHeartbeatData"/> class.
+        /// </summary>
+        /// <param name="fileSystemId">The file system id.</param>
+        public InitialHeartbeatData(Guid fileSystemId)
+        {
+            FileSystemId = fileSystemId;
+        }
+
+        /// <summary>
+        /// Gets the file system id.
+        /// </summary>
+        /// <value>
+        /// The file system id.
+        /// </value>
+        public Guid FileSystemId { get; private set; }
     }
 }

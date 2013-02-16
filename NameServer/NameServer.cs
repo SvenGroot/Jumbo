@@ -43,7 +43,7 @@ namespace NameServerApplication
         private readonly ServerAddress _localAddress;
 
 
-        private NameServer(JumboConfiguration jumboConfig, DfsConfiguration dfsConfig, bool replayLog)
+        private NameServer(JumboConfiguration jumboConfig, DfsConfiguration dfsConfig)
         {
             if( jumboConfig == null )
                 throw new ArgumentNullException("jumboConfig");
@@ -56,7 +56,7 @@ namespace NameServerApplication
             _replicaPlacement = new ReplicaPlacement(Configuration, _topology);
             _replicationFactor = dfsConfig.NameServer.ReplicationFactor;
             _blockSize = (int)dfsConfig.NameServer.BlockSize;
-            _fileSystem = new FileSystem(dfsConfig, replayLog);
+            _fileSystem = FileSystem.Load(dfsConfig);
             _fileSystem.FileDeleted += new EventHandler<FileDeletedEventArgs>(_fileSystem_FileDeleted);
             _fileSystem.GetBlocks(_blocks, _pendingBlocks);
             foreach( BlockInfo block in _blocks.Values )
@@ -93,7 +93,7 @@ namespace NameServerApplication
             _log.Info("---- NameServer is starting ----");
             _log.LogEnvironmentInformation();
             
-            Instance = new NameServer(jumboConfig, dfsConfig, true);
+            Instance = new NameServer(jumboConfig, dfsConfig);
             ConfigureRemoting(dfsConfig);
         }
 
@@ -487,24 +487,33 @@ namespace NameServerApplication
             List<HeartbeatResponse> responseList = null;
             lock( _dataServers )
             {
-                bool initialContact = data != null && data.Length > 0 && data[0] is InitialHeartbeatData;
+                InitialHeartbeatData initialData = data != null && data.Length > 0 ? data[0] as InitialHeartbeatData : null;
                 bool serverKnown = _dataServers.TryGetValue(address, out dataServer);
-                if( initialContact || !serverKnown )
+                if( initialData != null || !serverKnown )
                 {
-                    if( serverKnown && initialContact )
+                    if( serverKnown && initialData != null )
                     {
                         _log.WarnFormat("Data server {0} sent initial contact data but was already known; deleting previous data.", address);
-                        // TODO: Once re-replication gets implemented I have to make sure it's done in such a way that it isn't
-                        // possible for a block to be re-replicated before the new block report is processed.
                         RemoveDataServer(dataServer);
                     }
-                    else if( !initialContact )
+                    else if( initialData == null )
+                    {
                         _log.WarnFormat("A new data server has reported in at {0} but didn't send initial data.", address);
+                        // Tell the server to send initial data. Don't add it yet because we don't know if it belongs to this file system.
+                        return new[] { new HeartbeatResponse(_fileSystem.FileSystemId, DataServerHeartbeatCommand.SendInitialData) };
+                    }
                     else
-                        _log.InfoFormat("A new data server has reported in at {0}", address);
+                        _log.InfoFormat("A new data server has reported in at {0}.", address);
+
+                    if( initialData.FileSystemId != Guid.Empty && initialData.FileSystemId != _fileSystem.FileSystemId )
+                    {
+                        _log.WarnFormat("Data server {0} has incorrect file system ID {1:B}.", address, initialData.FileSystemId);
+                        throw new ArgumentException("Invalid file system ID."); // Will make the data server crash, which is good.
+                    }
+
                     if( address.HostName != ServerContext.Current.ClientHostName )
                         _log.Warn("The data server reported a different hostname than is indicated in the ServerContext.");
-                    dataServer = new DataServerInfo(address);
+                    dataServer = new DataServerInfo(address, _fileSystem.FileSystemId);
                     _topology.AddNode(dataServer);
                     _dataServers.Add(address, dataServer);
                 }
@@ -528,7 +537,7 @@ namespace NameServerApplication
                 if( !dataServer.HasReportedBlocks )
                 {
                     Debug.Assert(responseList == null);
-                    return new[] { new HeartbeatResponse(DataServerHeartbeatCommand.ReportBlocks) };
+                    return new[] { new HeartbeatResponse(_fileSystem.FileSystemId, DataServerHeartbeatCommand.ReportBlocks) };
                 }
 
                 HeartbeatResponse[] pendingResponses = dataServer.GetAndClearPendingResponses();
@@ -698,7 +707,7 @@ namespace NameServerApplication
                         else
                         {
                             _log.WarnFormat("Block {0} is not pending and not underreplicated.", newBlock.BlockId);
-                            response = new DeleteBlocksHeartbeatResponse(new Guid[] { newBlock.BlockId });
+                            response = new DeleteBlocksHeartbeatResponse(_fileSystem.FileSystemId, new Guid[] { newBlock.BlockId });
                         }
                     }
                 }
@@ -784,7 +793,7 @@ namespace NameServerApplication
                 }
                 CheckDisableSafeMode();
                 if( invalidBlocks != null )
-                    return new DeleteBlocksHeartbeatResponse(invalidBlocks);
+                    return new DeleteBlocksHeartbeatResponse(_fileSystem.FileSystemId, invalidBlocks);
             }
             return null;
         }
@@ -816,7 +825,7 @@ namespace NameServerApplication
 
                 DataServerInfo source = block.DataServers[0];
 
-                source.AddResponseForNextHeartbeat(new ReplicateBlockHeartbeatResponse(assignment));
+                source.AddResponseForNextHeartbeat(new ReplicateBlockHeartbeatResponse(_fileSystem.FileSystemId, assignment));
             }
         }
 

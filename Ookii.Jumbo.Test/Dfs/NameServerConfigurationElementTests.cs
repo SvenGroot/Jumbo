@@ -19,7 +19,7 @@ namespace Ookii.Jumbo.Test.Dfs
             Assert.AreEqual(67108864, (int)target.BlockSize);
             Assert.AreEqual(1, target.ReplicationFactor);
             Assert.IsFalse(target.ListenIPv4AndIPv6.HasValue);
-            Assert.AreEqual(string.Empty, target.EditLogDirectory);
+            Assert.AreEqual(string.Empty, target.ImageDirectory);
         }
 
         [Test]
@@ -54,8 +54,8 @@ namespace Ookii.Jumbo.Test.Dfs
         {
             NameServerConfigurationElement target = new NameServerConfigurationElement();
             string expected = "c:\\log" ;
-            target.EditLogDirectory = expected;
-            Assert.AreEqual(expected, target.EditLogDirectory);
+            target.ImageDirectory = expected;
+            Assert.AreEqual(expected, target.ImageDirectory);
         }
     }
 }

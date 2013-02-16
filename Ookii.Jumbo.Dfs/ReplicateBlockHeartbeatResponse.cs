@@ -14,11 +14,13 @@ namespace Ookii.Jumbo.Dfs
     public class ReplicateBlockHeartbeatResponse : HeartbeatResponse
     {
         /// <summary>
-        /// Initializes a new instance of the <see cref="ReplicateBlockHeartbeatResponse"/> class.
+        /// Initializes a new instance of the <see cref="ReplicateBlockHeartbeatResponse" /> class.
         /// </summary>
+        /// <param name="fileSystemId">The file system id.</param>
         /// <param name="blockAssignment">The assignment information for the block to replicate.</param>
-        public ReplicateBlockHeartbeatResponse(BlockAssignment blockAssignment)
-            : base(DataServerHeartbeatCommand.ReplicateBlock)
+        /// <exception cref="System.ArgumentNullException">blockAssignment</exception>
+        public ReplicateBlockHeartbeatResponse(Guid fileSystemId, BlockAssignment blockAssignment)
+            : base(fileSystemId, DataServerHeartbeatCommand.ReplicateBlock)
         {
             if( blockAssignment == null )
                 throw new ArgumentNullException("blockAssignment");

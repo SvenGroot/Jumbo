@@ -15,10 +15,12 @@ namespace NameServerApplication
         private readonly List<HeartbeatResponse> _pendingResponses = new List<HeartbeatResponse>();
         private readonly HashSet<Guid> _blocks = new HashSet<Guid>();
         private readonly HashSet<Guid> _pendingBlocks = new HashSet<Guid>();
+        private readonly Guid _fileSystemId;
 
-        public DataServerInfo(ServerAddress address)
+        public DataServerInfo(ServerAddress address, Guid fileSystemId)
             : base(address)
         {
+            _fileSystemId = fileSystemId;
         }
 
         public bool HasReportedBlocks { get; set; }
@@ -54,7 +56,7 @@ namespace NameServerApplication
                                                           select dr).SingleOrDefault();
                 if( response == null )
                 {
-                    _pendingResponses.Add(new DeleteBlocksHeartbeatResponse(new[] { blockID }));
+                    _pendingResponses.Add(new DeleteBlocksHeartbeatResponse(_fileSystemId, new[] { blockID }));
                 }
                 else
                 {

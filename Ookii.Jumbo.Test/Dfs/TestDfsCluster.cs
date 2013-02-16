@@ -34,20 +34,22 @@ namespace Ookii.Jumbo.Test.Dfs
             private string _path;
             List<DataServerInfo> _dataServers = new List<DataServerInfo>();
 
-            public void Run(string editLogPath, int replicationFactor, int dataServers, int? blockSize)
+            public void Run(string imagePath, int replicationFactor, int dataServers, int? blockSize, bool format)
             {
                 log4net.LogManager.ResetConfiguration();
                 log4net.Config.BasicConfigurator.Configure();
                 DfsConfiguration config = new DfsConfiguration();
                 config.FileSystem.Url = new Uri("jdfs://localhost:" + NameServerPort);
                 config.NameServer.ReplicationFactor = replicationFactor;
-                config.NameServer.EditLogDirectory = editLogPath;
+                config.NameServer.ImageDirectory = imagePath;
                 if( blockSize != null )
                     config.NameServer.BlockSize = blockSize.Value;
-                if( Environment.OSVersion.Platform == PlatformID.Unix )
-                    config.NameServer.ListenIPv4AndIPv6 = false;
+
+                if( format )
+                    FileSystem.Format(config);
+
                 NameServer.Run(new JumboConfiguration(), config);
-                _path = editLogPath;
+                _path = imagePath;
                 StartDataServers(dataServers);
             }
 
@@ -137,7 +139,7 @@ namespace Ookii.Jumbo.Test.Dfs
             System.IO.Directory.CreateDirectory(path);
 
             _clusterRunner = new ClusterRunner();
-            _clusterRunner.Run(path, replicationFactor, dataServers, blockSize);
+            _clusterRunner.Run(path, replicationFactor, dataServers, blockSize, eraseExistingData);
             _client = (DfsClient)FileSystemClient.Create(CreateClientConfig());
         }
 
