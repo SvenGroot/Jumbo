@@ -47,7 +47,7 @@ namespace DataServerApplication
                 throw new ArgumentNullException("config");
 
             _config = config;
-            _blockStorageDirectory = config.DataServer.BlockStoragePath;
+            _blockStorageDirectory = config.DataServer.BlockStorageDirectory;
             if( string.IsNullOrWhiteSpace(_blockStorageDirectory) )
                 throw new InvalidOperationException("DataServer block storage path is not configured.");
             _temporaryBlockStorageDirectory = Path.Combine(_blockStorageDirectory, "temp");
@@ -237,7 +237,7 @@ namespace DataServerApplication
             if( _fileSystemId == Guid.Empty )
             {
                 _fileSystemId = response.FileSystemId;
-                File.WriteAllBytes(Path.Combine(_config.DataServer.BlockStoragePath, "fsid"), _fileSystemId.ToByteArray());
+                File.WriteAllBytes(Path.Combine(_config.DataServer.BlockStorageDirectory, "fsid"), _fileSystemId.ToByteArray());
                 _log.InfoFormat("File system ID set to {0:B}.", _fileSystemId);
             }
             else if( _fileSystemId != response.FileSystemId )

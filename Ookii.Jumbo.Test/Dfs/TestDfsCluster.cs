@@ -98,7 +98,7 @@ namespace Ookii.Jumbo.Test.Dfs
                 DfsConfiguration config = new DfsConfiguration();
                 config.FileSystem.Url = new Uri("jdfs://localhost:" + NameServerPort);
                 config.DataServer.Port = port;
-                config.DataServer.BlockStoragePath = path;
+                config.DataServer.BlockStorageDirectory = path;
                 if( Environment.OSVersion.Platform == PlatformID.Unix )
                     config.DataServer.ListenIPv4AndIPv6 = false;
                 Thread t = new Thread(RunDataServerThread);

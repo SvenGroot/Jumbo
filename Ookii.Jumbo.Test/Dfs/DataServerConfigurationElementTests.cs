@@ -17,7 +17,7 @@ namespace Ookii.Jumbo.Test.Dfs
         {
             DataServerConfigurationElement elt = new DataServerConfigurationElement();
             Assert.AreEqual(9001, elt.Port);
-            Assert.AreEqual(string.Empty, elt.BlockStoragePath);
+            Assert.AreEqual(string.Empty, elt.BlockStorageDirectory);
             Assert.IsFalse(elt.ListenIPv4AndIPv6.HasValue);
         }
 
@@ -35,8 +35,8 @@ namespace Ookii.Jumbo.Test.Dfs
         {
             DataServerConfigurationElement target = new DataServerConfigurationElement();
             string expected = "foo";
-            target.BlockStoragePath = expected;
-            Assert.AreEqual(expected, target.BlockStoragePath);
+            target.BlockStorageDirectory = expected;
+            Assert.AreEqual(expected, target.BlockStorageDirectory);
         }
 
         [Test]

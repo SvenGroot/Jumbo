@@ -26,11 +26,11 @@ namespace Ookii.Jumbo.Dfs
         /// <summary>
         /// Gets or sets the path to the directory where the data server stores block files.
         /// </summary>
-        [ConfigurationProperty("blockStoragePath", DefaultValue = "", IsRequired = true, IsKey = false)]
-        public string BlockStoragePath
+        [ConfigurationProperty("blockStorageDirectory", DefaultValue = "", IsRequired = true, IsKey = false)]
+        public string BlockStorageDirectory
         {
-            get { return (string)this["blockStoragePath"]; }
-            set { this["blockStoragePath"] = value; }
+            get { return (string)this["blockStorageDirectory"]; }
+            set { this["blockStorageDirectory"] = value; }
         }
 
         /// <summary>
