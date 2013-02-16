@@ -56,7 +56,7 @@ switch( $StartStop )
             $commandArguments = "fake" # Start-Process won't accept empty arguments, and all Jumbo servers ignore arguments anyway
         }
 
-        $process = Start-Process -FilePath $commandFile -ArgumentList $commandArguments -NoNewWindow -PassThru -RedirectStandardOutput "$JUMBO_LOG\out-$Command-$hostname.log" -RedirectStandardError "$JUMBO_LOG\err-$Command-$hostname.log"
+        $process = Start-Process -FilePath $commandFile -ArgumentList $commandArguments -WindowStyle Hidden -PassThru -RedirectStandardOutput "$JUMBO_LOG\out-$Command-$hostname.log" -RedirectStandardError "$JUMBO_LOG\err-$Command-$hostname.log"
         Set-Content $pidFile $process.Id
     }
     stop

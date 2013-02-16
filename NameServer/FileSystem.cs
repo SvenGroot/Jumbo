@@ -132,11 +132,14 @@ namespace NameServerApplication
 
         public static void Format(DfsConfiguration configuration)
         {
+            _log.InfoFormat("Formatting file system {0}", configuration.NameServer.ImageDirectory);
+            Directory.CreateDirectory(configuration.NameServer.ImageDirectory);
             using( FileSystem fs = new FileSystem(configuration, false, false) )
             {
                 string imageFile = Path.Combine(configuration.NameServer.ImageDirectory, _fileSystemImageFileName);
                 fs.SaveToFileSystemImage(imageFile);
             }
+            _log.InfoFormat("File system successfully formatted.");
         }
 
         /// <summary>

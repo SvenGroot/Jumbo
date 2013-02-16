@@ -9,6 +9,7 @@ pid=$JUMBO_PID/jumbo-$command-$(hostname).pid
 
 case $startStop in
     (start)
+        mkdir -p "$JUMBO_LOG"
         mkdir -p "$JUMBO_PID"
         if [ -f $pid ]; then
             if kill -0 $(cat $pid) > /dev/null 2>&1; then

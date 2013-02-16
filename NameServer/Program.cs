@@ -23,14 +23,22 @@ namespace NameServerApplication
 
         static void Main(string[] args)
         {
-            JumboConfiguration.GetConfiguration().Log.ConfigureLogger();
-            AppDomain.CurrentDomain.UnhandledException += new UnhandledExceptionEventHandler(CurrentDomain_UnhandledException);
-            System.Threading.Thread.CurrentThread.Name = "main";
+            if( args.Length > 0 && args[0].Equals("format", StringComparison.OrdinalIgnoreCase) )
+            {
+                log4net.Config.BasicConfigurator.Configure();
+                FileSystem.Format(DfsConfiguration.GetConfiguration());
+            }
+            else
+            {
+                JumboConfiguration.GetConfiguration().Log.ConfigureLogger();
+                AppDomain.CurrentDomain.UnhandledException += new UnhandledExceptionEventHandler(CurrentDomain_UnhandledException);
+                System.Threading.Thread.CurrentThread.Name = "main";
 
-            NameServer.Run();
+                NameServer.Run();
 
-            Console.CancelKeyPress += new ConsoleCancelEventHandler(Console_CancelKeyPress);
-            Thread.Sleep(Timeout.Infinite);
+                Console.CancelKeyPress += new ConsoleCancelEventHandler(Console_CancelKeyPress);
+                Thread.Sleep(Timeout.Infinite);
+            }
         }
 
         static void Console_CancelKeyPress(object sender, ConsoleCancelEventArgs e)
