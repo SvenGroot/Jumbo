@@ -51,7 +51,7 @@ for group in $(cat $scriptDir/groups); do
                 scp $scriptDir/jumbo-config.sh $slave:$JUMBO_HOME > /dev/null
                 deployConfig $groupCommonConfig common
                 deployConfig $groupDfsConfig dfs
-                deployConfig $groupJetConfi jet
+                deployConfig $groupJetConfig jet
             fi
         } 2>&1 | sed "s/^/$group\/$slave: /" &
     done

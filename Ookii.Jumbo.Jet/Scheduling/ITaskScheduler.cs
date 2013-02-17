@@ -1,4 +1,4 @@
-﻿// $Id: IScheduler.cs 865 2013-02-09 05:31:05Z sgroot $
+﻿// $Id$
 //
 using System;
 using System.Collections.Generic;
