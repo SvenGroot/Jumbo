@@ -170,33 +170,41 @@ namespace Ookii.Jumbo.Test.Jet
             DynamicTaskBuilder target = new DynamicTaskBuilder();
             MethodInfo runMethod = typeof(ITask<int, int>).GetMethod("Run");
             // From attribute
-            target = new DynamicTaskBuilder();
             Type type = target.CreateDynamicTask(runMethod, (Action<RecordReader<int>, RecordWriter<int>>)TaskMethodAllowRecordReuse, 0, RecordReuseMode.Default);
             VerifyRecordReuse(type, true);
             // With passthrough
-            target = new DynamicTaskBuilder();
             type = target.CreateDynamicTask(runMethod, (Action<RecordReader<int>, RecordWriter<int>>)TaskMethodAllowRecordReusePassThrough, 0, RecordReuseMode.Default);
             VerifyRecordReuse(type, true, true);
             // Not allowed despite attribute
-            target = new DynamicTaskBuilder();
             type = target.CreateDynamicTask(runMethod, (Action<RecordReader<int>, RecordWriter<int>>)TaskMethodAllowRecordReuse, 0, RecordReuseMode.DoNotAllow);
             VerifyRecordReuse(type, false);
             // No attribute
-            target = new DynamicTaskBuilder();
             type = target.CreateDynamicTask(runMethod, (Action<RecordReader<int>, RecordWriter<int>>)TaskMethodNoContext, 0, RecordReuseMode.Default);
             VerifyRecordReuse(type, false);
             // No attribute with mode
-            target = new DynamicTaskBuilder();
             type = target.CreateDynamicTask(runMethod, (Action<RecordReader<int>, RecordWriter<int>>)TaskMethodNoContext, 0, RecordReuseMode.Allow);
             VerifyRecordReuse(type, true);
             // No attribute with mode (passthrough)
-            target = new DynamicTaskBuilder();
             type = target.CreateDynamicTask(runMethod, (Action<RecordReader<int>, RecordWriter<int>>)TaskMethodNoContext, 0, RecordReuseMode.PassThrough);
             VerifyRecordReuse(type, true, true);
             // Mode used for lambda
-            target = new DynamicTaskBuilder();
             type = target.CreateDynamicTask(runMethod, (Action<RecordReader<int>, RecordWriter<int>>)((input, output) => { }), 0, RecordReuseMode.Allow);
             VerifyRecordReuse(type, true);
+        }
+
+        [Test]
+        public void TestCreateDynamicTaskCache()
+        {
+            DynamicTaskBuilder target = new DynamicTaskBuilder();
+            MethodInfo runMethod = typeof(ITask<int, int>).GetMethod("Run");
+            Type type1 = target.CreateDynamicTask(runMethod, (Action<RecordReader<int>, RecordWriter<int>>)TaskMethodNoContext, 0, RecordReuseMode.DoNotAllow);
+            Type type2 = target.CreateDynamicTask(runMethod, (Action<RecordReader<int>, RecordWriter<int>>)TaskMethodNoContext, 0, RecordReuseMode.DoNotAllow);
+            Type type3 = target.CreateDynamicTask(runMethod, (Action<RecordReader<int>, RecordWriter<int>>)TaskMethodNoContext, 0, RecordReuseMode.Allow);
+
+            Assert.AreEqual("TaskMethodNoContextTask", type1.Name);
+            Assert.AreEqual("TaskMethodNoContextTask2", type3.Name);
+            Assert.AreEqual(type1, type2);
+            Assert.AreNotEqual(type2, type3);
         }
         
         public static void TaskMethod(RecordReader<int> input, RecordWriter<int> output, TaskContext context)

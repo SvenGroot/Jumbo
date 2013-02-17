@@ -137,10 +137,9 @@ namespace Ookii.Jumbo.Jet.Samples
             var input = job.Read(InputPath, typeof(LineRecordReader));
             var pairs = job.Process<Utf8String, Pair<Utf8String, int>>(input, SplitLines);
             pairs.StageId = "WordCount";
-            // Need two functions to work around the fact that the dynamic task builder currently can't handle the same function twice.
             var sorted = job.SpillSortCombine<Utf8String, int>(pairs, ReduceWordCount);
             sorted.InputChannel.PartitionCount = Partitions;
-            var counted = job.Reduce<Utf8String, int, Pair<Utf8String, int>>(sorted, ReduceWordCount2);
+            var counted = job.Reduce<Utf8String, int, Pair<Utf8String, int>>(sorted, ReduceWordCount);
             counted.StageId = "WordCountAggregation";
             WriteOutput(counted, OutputPath, typeof(TextRecordWriter<>));
         }
@@ -174,18 +173,6 @@ namespace Ookii.Jumbo.Jet.Samples
         /// <param name="output">The output.</param>
         [AllowRecordReuse(PassThrough = true)]
         public static void ReduceWordCount(Utf8String key, IEnumerable<int> values, RecordWriter<Pair<Utf8String, int>> output)
-        {
-            output.WriteRecord(Pair.MakePair(key, values.Sum()));
-        }
-
-        /// <summary>
-        /// Reduces the word count.
-        /// </summary>
-        /// <param name="key">The key.</param>
-        /// <param name="values">The values.</param>
-        /// <param name="output">The output.</param>
-        [AllowRecordReuse(PassThrough = true)]
-        public static void ReduceWordCount2(Utf8String key, IEnumerable<int> values, RecordWriter<Pair<Utf8String, int>> output)
         {
             output.WriteRecord(Pair.MakePair(key, values.Sum()));
         }

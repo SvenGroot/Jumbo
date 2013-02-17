@@ -20,6 +20,8 @@ namespace Ookii.Jumbo.Jet.Jobs.Builder
         private AssemblyBuilder _assembly;
         private ModuleBuilder _module;
         private string _dynamicAssemblyDirectory;
+        private readonly Dictionary<Tuple<MethodInfo, Delegate, int, RecordReuseMode>, Type> _taskTypeCache = new Dictionary<Tuple<MethodInfo,Delegate,int,RecordReuseMode>,Type>();
+        private readonly HashSet<string> _usedTypeNames = new HashSet<string>();
 
         /// <summary>
         /// Gets a value indicating whether a dynamic assembly has been created.
@@ -91,6 +93,11 @@ namespace Ookii.Jumbo.Jet.Jobs.Builder
             if( taskMethodDelegate == null )
                 throw new ArgumentNullException("taskMethodDelegate");
 
+            var cacheKey = Tuple.Create(methodToOverride, taskMethodDelegate, skipParameters, recordReuseMode);
+            Type cachedTask;
+            if( _taskTypeCache.TryGetValue(cacheKey, out cachedTask) )
+                return cachedTask;
+
             ParameterInfo[] parameters = methodToOverride.GetParameters();
             ParameterInfo[] delegateParameters = taskMethodDelegate.Method.GetParameters();
             if( methodToOverride.ReturnType != taskMethodDelegate.Method.ReturnType )
@@ -122,7 +129,11 @@ namespace Ookii.Jumbo.Jet.Jobs.Builder
                 generator.Emit(OpCodes.Callvirt, taskMethodDelegate.GetType().GetMethod("Invoke"));
             generator.Emit(OpCodes.Ret);
 
-            return taskType.CreateType();
+            Type result = taskType.CreateType();
+
+            _taskTypeCache.Add(cacheKey, result);
+
+            return result;
         }
 
         /// <summary>
@@ -278,7 +289,16 @@ namespace Ookii.Jumbo.Jet.Jobs.Builder
                 baseOrInterfaceType = typeof(Configurable);
             }
 
-            TypeBuilder taskTypeBuilder = _module.DefineType(_assembly.GetName().Name + "." + taskDelegate.Method.Name + "Task", TypeAttributes.Class | TypeAttributes.Public | TypeAttributes.Sealed, baseOrInterfaceType, interfaces);
+            string typeName = taskDelegate.Method.Name + "Task";
+            int suffix = 1;
+            while( _usedTypeNames.Contains(typeName) )
+            {
+                typeName = taskDelegate.Method.Name + "Task" + suffix;
+                suffix++;
+            }
+            _usedTypeNames.Add(typeName);
+
+            TypeBuilder taskTypeBuilder = _module.DefineType(_assembly.GetName().Name + "." + typeName, TypeAttributes.Class | TypeAttributes.Public | TypeAttributes.Sealed, baseOrInterfaceType, interfaces);
 
             SetTaskAttributes(taskDelegate.Method, recordReuseMode, taskTypeBuilder);
 
