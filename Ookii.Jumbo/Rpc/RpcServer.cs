@@ -47,7 +47,7 @@ namespace Ookii.Jumbo.Rpc
             }
         }
 
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1031:DoNotCatchGeneralExceptionTypes")]
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Reliability", "CA2000:Dispose objects before losing scope"), System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1031:DoNotCatchGeneralExceptionTypes")]
         private void AcceptSocketCallback(IAsyncResult ar)
         {
             TcpListener listener = (TcpListener)ar.AsyncState;
@@ -70,6 +70,7 @@ namespace Ookii.Jumbo.Rpc
                 if( handler != null )
                 {
                     handler.TrySendError(ex);
+                    handler.Dispose();
                 }
                 if( socket != null )
                     socket.Close();

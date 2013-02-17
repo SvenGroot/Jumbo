@@ -11,6 +11,7 @@ namespace Ookii.Jumbo.Jet.Samples.IO
     /// <summary>
     /// Value writer for <see cref="UInt128"/>.
     /// </summary>
+    [CLSCompliant(false)]
     public class UInt128Writer : IValueWriter<UInt128>
     {
         /// <summary>

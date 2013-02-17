@@ -184,11 +184,6 @@ namespace Ookii.Jumbo.Jet.Channels
                 get { return _reader; }
             }
 
-            public BinaryWriter Writer
-            {
-                get { return _writer; }
-            }
-
             public NetworkStream Stream
             {
                 get { return _stream; }
@@ -199,7 +194,7 @@ namespace Ookii.Jumbo.Jet.Channels
                 _server = server;
             }
 
-            public bool Connect(Guid jobId, FileChannelOutputType channelType, ReadOnlyCollection<int> partitions, string outputStageId, int tasksToSkip)
+            public bool Connect(Guid jobId, ReadOnlyCollection<int> partitions, int tasksToSkip)
             {
                 _client = new TcpClient(_server.TaskServer.HostName, _server.FileServerPort);
                 _stream = _client.GetStream();
@@ -285,7 +280,6 @@ namespace Ookii.Jumbo.Jet.Channels
         private Thread _downloadThread;
         private IJobServerClientProtocol _jobServer;
         private readonly string _inputDirectory;
-        private string _outputStageId;
         private bool _isReady;
         private readonly ManualResetEvent _readyEvent = new ManualResetEvent(false);
         private bool _disposed;
@@ -323,7 +317,6 @@ namespace Ookii.Jumbo.Jet.Channels
             _inputDirectory = Path.Combine(_jobDirectory, taskExecution.Context.TaskAttemptId.ToString());
             if( !Directory.Exists(_inputDirectory) )
                 Directory.CreateDirectory(_inputDirectory);
-            _outputStageId = taskExecution.Context.StageConfiguration.StageId;
             // The type of the records in the intermediate files will be the output type of the input stage, which usually matches the input type of the output stage but
             // in the case of a join it may not.
             _inputReaderType = typeof(BinaryRecordReader<>).MakeGenericType(InputRecordType);
@@ -775,7 +768,7 @@ namespace Ookii.Jumbo.Jet.Channels
             {
                 using( ServerConnection connection = new ServerConnection(server) )
                 {
-                    if( !connection.Connect(_jobID, _channelInputType, ActivePartitions, _outputStageId, 0) )
+                    if( !connection.Connect(_jobID, ActivePartitions, 0) )
                         return downloadedTaskCount;
 
                     foreach( CompletedTask task in server.TasksToDownload )
@@ -785,7 +778,7 @@ namespace Ookii.Jumbo.Jet.Channels
                         {
                             if( reservation != null && reservation.Waited )
                             {
-                                if( !connection.Connect(_jobID, _channelInputType, ActivePartitions, _outputStageId, downloadedTaskCount) )
+                                if( !connection.Connect(_jobID, ActivePartitions, downloadedTaskCount) )
                                     return downloadedTaskCount;
                                 if( size != connection.Reader.ReadInt64() )
                                     throw new InvalidOperationException("Task output size changed after reconnect.");

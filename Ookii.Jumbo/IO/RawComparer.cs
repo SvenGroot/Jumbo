@@ -92,6 +92,7 @@ namespace Ookii.Jumbo.IO
         /// </summary>
         /// <param name="comparer">The comparer.</param>
         /// <returns>A comparer that deserializes in order to compare if the type.</returns>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1000:DoNotDeclareStaticMembersOnGenericTypes")]
         public static IRawComparer<T> CreateDeserializingComparer(IComparer<T> comparer)
         {
             return new DeserializingComparer(comparer);

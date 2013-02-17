@@ -29,7 +29,6 @@ namespace Ookii.Jumbo.IO
         /// </para>
         /// </remarks>
         public static Pair<TKey, TValue> MakePair<TKey, TValue>(TKey key, TValue value)
-            where TKey : IComparable<TKey>
         {
             return new Pair<TKey, TValue>(key, value);
         }
@@ -51,7 +50,6 @@ namespace Ookii.Jumbo.IO
     /// </remarks>
     [RawComparer(typeof(PairRawComparer<,>))]
     public sealed class Pair<TKey, TValue> : IWritable, IComparable<Pair<TKey, TValue>>, IEquatable<Pair<TKey, TValue>>, ICloneable
-        where TKey : IComparable<TKey>
     {
         private static readonly IComparer<TKey> _keyComparer = Comparer<TKey>.Default;
         private static readonly IValueWriter<TKey> _keyWriter = ValueWriter<TKey>.Writer;

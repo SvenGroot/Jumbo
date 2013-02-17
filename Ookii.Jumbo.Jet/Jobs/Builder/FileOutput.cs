@@ -81,6 +81,8 @@ namespace Ookii.Jumbo.Jet.Jobs.Builder
 
         void IOperationOutput.ApplyOutput(FileSystemClient fileSystem, StageConfiguration stage)
         {
+            if( fileSystem == null )
+                throw new ArgumentNullException("fileSystem");
             if( stage == null )
                 throw new ArgumentNullException("stage");
 

@@ -18,6 +18,9 @@ namespace Ookii.Jumbo.Jet.Jobs
     /// </summary>
     public abstract class BaseJobRunner : Configurable, IJobRunner
     {
+        private Dictionary<string, string> _jobOrStageProperties;
+        private Dictionary<string, string> _jobOrStageSettings;
+
         /// <summary>
         /// Gets or sets a value that indicates whether the output directory should be deleted, if it exists, before the job is executed.
         /// </summary>
@@ -79,7 +82,10 @@ namespace Ookii.Jumbo.Jet.Jobs
         /// </para>
         /// </remarks>
         [CommandLineArgument("Property", ValueDescription = "[Stage:]Property=Value"), AllowDuplicateDictionaryKeys, Description("Modifies the value of one of the properties in the job configuration after the job has been created. Uses the format \"PropertyName=value\" or \"CompoundStageId:PropertyName=value\". You can access properties more than one level deep, e.g. \"MyStage:OutputChannel.PartitionsPerTask=2\". Can be specified more than once.")]
-        public Dictionary<string, string> JobOrStageProperties { get; set; }
+        public Dictionary<string, string> JobOrStageProperties
+        {
+            get { return _jobOrStageProperties ?? (_jobOrStageProperties = new Dictionary<string, string>()); }
+        }
 
         /// <summary>
         /// Gets or sets additional job or stage settings that will be defined in the job configuration.
@@ -104,7 +110,10 @@ namespace Ookii.Jumbo.Jet.Jobs
         /// </para>
         /// </remarks>
         [CommandLineArgument("Setting", ValueDescription = "[Stage:]Setting=Value"), AllowDuplicateDictionaryKeys, Description("Defines or overrides a job or stage setting in the job configuration. Uses the format \"SettingName=value\" or \"CompoundStageId:SettingName=value\". Can be specified more than once.")]
-        public Dictionary<string, string> JobOrStageSettings { get; set; }
+        public Dictionary<string, string> JobOrStageSettings
+        {
+            get { return _jobOrStageSettings ?? (_jobOrStageSettings = new Dictionary<string, string>()); }
+        }
 
         /// <summary>
         /// Gets the DFS client.
@@ -242,9 +251,9 @@ namespace Ookii.Jumbo.Jet.Jobs
 
         private void ApplyJobOrStageSettings(JobConfiguration jobConfiguration)
         {
-            if( JobOrStageSettings != null )
+            if( _jobOrStageSettings != null )
             {
-                foreach( KeyValuePair<string, string> setting in JobOrStageSettings )
+                foreach( KeyValuePair<string, string> setting in _jobOrStageSettings )
                 {
                     string compoundStageId;
                     string settingName;
@@ -274,9 +283,9 @@ namespace Ookii.Jumbo.Jet.Jobs
 
         private void ApplyJobProperties(JobConfiguration jobConfiguration)
         {
-            if( JobOrStageProperties != null )
+            if( _jobOrStageProperties != null )
             {
-                foreach( KeyValuePair<string, string> property in JobOrStageProperties )
+                foreach( KeyValuePair<string, string> property in _jobOrStageProperties )
                 {
                     ApplyJobProperty(jobConfiguration, property);
                 }

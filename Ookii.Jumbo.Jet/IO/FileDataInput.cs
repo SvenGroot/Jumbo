@@ -36,6 +36,7 @@ namespace Ookii.Jumbo.Jet.IO
         /// <summary>
         /// The key of the setting in the stage settings that holds the record reader type.
         /// </summary>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Naming", "CA1702:CompoundWordsShouldBeCasedCorrectly", MessageId = "TypeSetting")]
         public const string RecordReaderTypeSettingKey = "FileDataInput.RecordReader";
         
         private readonly List<ITaskInput> _taskInputs;

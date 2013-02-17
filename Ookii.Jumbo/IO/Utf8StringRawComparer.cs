@@ -8,6 +8,10 @@ namespace Ookii.Jumbo.IO
     /// <summary>
     /// A raw comparer for <see cref="Utf8String"/> records.
     /// </summary>
+    /// <note>
+    ///   Instances of the <see cref="Utf8String"/> class will not compare in proper lexicographical order if the string contains multi-byte characters.
+    ///   All that is guaranteed is that the ordering is deterministic.
+    /// </note>
     public sealed class Utf8StringRawComparer : IRawComparer<Utf8String>
     {
         /// <summary>

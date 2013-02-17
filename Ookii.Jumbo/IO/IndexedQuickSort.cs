@@ -11,7 +11,7 @@ namespace Ookii.Jumbo.IO
     /// <summary>
     /// Quicksort implementation for indexed binary buffers.
     /// </summary>
-    public static class IndexedQuickSort<T>
+    public static class IndexedQuicksort
     {
         /// <summary>
         /// Sorts the specified indexed data.
@@ -19,7 +19,7 @@ namespace Ookii.Jumbo.IO
         /// <param name="index">The index.</param>
         /// <param name="buffer">The buffer containing the data.</param>
         /// <param name="comparer">The <see cref="IRawComparer{T}"/> for the records in the buffer.</param>
-        public static void Sort(RecordIndexEntry[] index, byte[] buffer, IRawComparer<T> comparer)
+        public static void Sort<T>(RecordIndexEntry[] index, byte[] buffer, IRawComparer<T> comparer)
         {
             if( index == null )
                 throw new ArgumentNullException("index");
@@ -34,7 +34,7 @@ namespace Ookii.Jumbo.IO
         /// <param name="comparer">The <see cref="IRawComparer{T}"/> for the records in the buffer.</param>
         /// <param name="offset">The offset into <paramref name="index"/> of the first item to sort.</param>
         /// <param name="count">The number of items in <paramref name="index"/> starting at <paramref name="offset"/> to sort.</param>
-        public static void Sort(RecordIndexEntry[] index, byte[] buffer, IRawComparer<T> comparer, int offset, int count)
+        public static void Sort<T>(RecordIndexEntry[] index, byte[] buffer, IRawComparer<T> comparer, int offset, int count)
         {
             if( index == null )
                 throw new ArgumentNullException("index");
@@ -51,7 +51,7 @@ namespace Ookii.Jumbo.IO
             SortCore(buffer, index, comparer, offset, offset + count);
         }
 
-        private static void SortCore(byte[] buffer, RecordIndexEntry[] index, IRawComparer<T> comparer, int left, int right)
+        private static void SortCore<T>(byte[] buffer, RecordIndexEntry[] index, IRawComparer<T> comparer, int left, int right)
         {
             while( true )
             {
@@ -124,7 +124,7 @@ namespace Ookii.Jumbo.IO
             }
         }
 
-        private static int Compare(byte[] buffer, RecordIndexEntry[] s, IRawComparer<T> comparer, int p, int r)
+        private static int Compare<T>(byte[] buffer, RecordIndexEntry[] s, IRawComparer<T> comparer, int p, int r)
         {
             return comparer.Compare(buffer, s[p].Offset, s[p].Count, buffer, s[r].Offset, s[r].Count);
         }
@@ -136,7 +136,7 @@ namespace Ookii.Jumbo.IO
             s[r] = temp;
         }
 
-        private static void Order(byte[] buffer, RecordIndexEntry[] s, IRawComparer<T> comparer, int p, int r)
+        private static void Order<T>(byte[] buffer, RecordIndexEntry[] s, IRawComparer<T> comparer, int p, int r)
         {
             if( Compare(buffer, s, comparer, p, r) > 0 )
                 Swap(s, p, r);

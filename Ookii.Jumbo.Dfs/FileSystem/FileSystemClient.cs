@@ -70,8 +70,7 @@ namespace Ookii.Jumbo.Dfs.FileSystem
                 throw new ArgumentNullException("fileSystemClientType");
             if( string.IsNullOrWhiteSpace(scheme) )
                 throw new ArgumentException("The scheme may not be empty.", "scheme");
-            scheme = scheme.ToLower(CultureInfo.InvariantCulture);
-            if( scheme == "jdfs" || scheme == "file" )
+            if( scheme.Equals("jdfs", StringComparison.OrdinalIgnoreCase) || scheme.Equals("file", StringComparison.OrdinalIgnoreCase) )
                 throw new ArgumentException("You cannot replace the jdfs or file schemes.", "scheme");
             if( !fileSystemClientType.IsSubclassOf(typeof(FileSystemClient)) )
                 throw new ArgumentException("The specified type does not derive from FileSystemClient.", "fileSystemClientType");

@@ -18,7 +18,7 @@ namespace Ookii.Jumbo.Jet.Channels
     /// <typeparam name="T">The type of the records.</typeparam>
     /// <remarks>
     /// <para>
-    ///   Each spill is written to its own file, and each partition is sorted using <see cref="IndexedQuickSort{T}"/> before being spilled. When <see cref="FinishWriting"/>
+    ///   Each spill is written to its own file, and each partition is sorted using <see cref="IndexedQuicksort"/> before being spilled. When <see cref="FinishWriting"/>
     ///   is called, the individual spills are merged using <see cref="MergeHelper{T}"/> into the final output file.
     /// </para>
     /// <para>
@@ -283,7 +283,7 @@ namespace Ookii.Jumbo.Jet.Channels
         {
             base.PreparePartition(partition, index, buffer);
             _log.DebugFormat("Sorting partition {0}.", partition);
-            IndexedQuickSort<T>.Sort(index, buffer, _comparer);
+            IndexedQuicksort.Sort(index, buffer, _comparer);
             _log.Debug("Sort complete.");
         }
 
@@ -316,85 +316,99 @@ namespace Ookii.Jumbo.Jet.Channels
         {
             if( _spillFiles.Count == 1 )
             {
-                File.Move(_spillFiles[0], _outputPath);
-                using( FileStream indexStream = File.Create(_outputPath + ".index", _writeBufferSize) )
-                using( BinaryRecordWriter<PartitionFileIndexEntry> indexWriter = new BinaryRecordWriter<PartitionFileIndexEntry>(indexStream) )
-                {
-                    // Write a faux first entry indicating the number of partitions.
-                    indexWriter.WriteRecord(new PartitionFileIndexEntry(_partitions, 0L, 0L, 0L));
-
-                    for( int partition = 0; partition < _partitions; ++partition )
-                    {
-                        if( _spillPartitionIndices[partition][0].UncompressedSize > 0 )
-                            indexWriter.WriteRecord(_spillPartitionIndices[partition][0]);
-                    }
-
-                    _bytesWritten += indexStream.Length;
-                }
-                
+                UseSingleSpillAsOutput();     
             }
             else
             {
-                string intermediateOutputPath = Path.GetDirectoryName(_outputPath);
-                List<RecordInput> diskInputs = new List<RecordInput>(_spillFiles.Count);
-                MergeHelper<T> merger = new MergeHelper<T>();
-                using( FileStream fileStream = File.Create(_outputPath, _writeBufferSize) )
-                using( FileStream indexStream = File.Create(_outputPath + ".index", _writeBufferSize) )
-                using( BinaryRecordWriter<PartitionFileIndexEntry> indexWriter = new BinaryRecordWriter<PartitionFileIndexEntry>(indexStream) )
+                MergeMultipleSpills();
+            }
+        }
+
+        private void MergeMultipleSpills()
+        {
+            string intermediateOutputPath = Path.GetDirectoryName(_outputPath);
+            List<RecordInput> diskInputs = new List<RecordInput>(_spillFiles.Count);
+            MergeHelper<T> merger = new MergeHelper<T>();
+            using( FileStream fileStream = File.Create(_outputPath, _writeBufferSize) )
+            using( FileStream indexStream = File.Create(_outputPath + ".index", _writeBufferSize) )
+            using( BinaryRecordWriter<PartitionFileIndexEntry> indexWriter = new BinaryRecordWriter<PartitionFileIndexEntry>(indexStream) )
+            {
+                // Write a faux first entry indicating the number of partitions.
+                indexWriter.WriteRecord(new PartitionFileIndexEntry(_partitions, 0L, 0L, 0L));
+
+                for( int partition = 0; partition < _partitions; ++partition )
                 {
-                    // Write a faux first entry indicating the number of partitions.
-                    indexWriter.WriteRecord(new PartitionFileIndexEntry(_partitions, 0L, 0L, 0L));
+                    MergePartition(intermediateOutputPath, diskInputs, merger, fileStream, indexWriter, partition);
+                }
+                _bytesWritten += fileStream.Length + indexStream.Length + merger.BytesWritten;
+                _bytesRead = merger.BytesRead;
+            }
 
-                    for( int partition = 0; partition < _partitions; ++partition )
+            DeleteTempFiles();
+            _log.Info("Merge complete.");
+        }
+
+        private void MergePartition(string intermediateOutputPath, List<RecordInput> diskInputs, MergeHelper<T> merger, FileStream fileStream, BinaryRecordWriter<PartitionFileIndexEntry> indexWriter, int partition)
+        {
+            if( _spillPartitionIndices[partition].Any(i => i.UncompressedSize > 0) )
+            {
+                _log.InfoFormat("Merging partition {0}", partition);
+                long startOffset = fileStream.Position;
+                long uncompressedSize;
+                using( Stream stream = new ChecksumOutputStream(fileStream, false, _enableChecksum).CreateCompressor(_compressionType) )
+                using( BinaryRecordWriter<RawRecord> writer = new BinaryRecordWriter<RawRecord>(stream) )
+                {
+                    diskInputs.Clear();
+                    for( int x = 0; x < _spillFiles.Count; ++x )
                     {
-                        if( _spillPartitionIndices[partition].Any(i => i.UncompressedSize > 0) )
+                        if( _spillPartitionIndices[partition][x].UncompressedSize > 0 )
+                            diskInputs.Add(new PartitionFileRecordInput(typeof(BinaryRecordReader<T>), _spillFiles[x], new[] { _spillPartitionIndices[partition][x] }, null, true, true, _writeBufferSize, _compressionType));
+                    }
+
+                    bool runCombiner = !(_combiner == null || _minSpillsForCombineDuringMerge == 0 || SpillCount < _minSpillsForCombineDuringMerge);
+                    bool allowRecordReuse = !runCombiner || _combinerAllowsRecordReuse;
+                    MergeResult<T> mergeResult = merger.Merge(diskInputs, null, _maxDiskInputsPerMergePass, _comparer, allowRecordReuse, runCombiner, intermediateOutputPath, "", CompressionType.None, _writeBufferSize, _enableChecksum);
+                    if( runCombiner )
+                    {
+                        using( EnumerableRecordReader<T> combineInput = new EnumerableRecordReader<T>(mergeResult.Select(r => r.GetValue()), 0) )
+                        using( CombineRecordWriter combineOutput = new CombineRecordWriter(writer) )
                         {
-                            _log.InfoFormat("Merging partition {0}", partition);
-                            long startOffset = fileStream.Position;
-                            long uncompressedSize;
-                            using( Stream stream = new ChecksumOutputStream(fileStream, false, _enableChecksum).CreateCompressor(_compressionType) )
-                            using( BinaryRecordWriter<RawRecord> writer = new BinaryRecordWriter<RawRecord>(stream) )
-                            {
-                                diskInputs.Clear();
-                                for( int x = 0; x < _spillFiles.Count; ++x )
-                                {
-                                    if( _spillPartitionIndices[partition][x].UncompressedSize > 0 )
-                                        diskInputs.Add(new PartitionFileRecordInput(typeof(BinaryRecordReader<T>), _spillFiles[x], new[] { _spillPartitionIndices[partition][x] }, null, true, true, _writeBufferSize, _compressionType));
-                                }
-
-                                bool runCombiner = !(_combiner == null || _minSpillsForCombineDuringMerge == 0 || SpillCount < _minSpillsForCombineDuringMerge);
-                                bool allowRecordReuse = !runCombiner || _combinerAllowsRecordReuse;
-                                MergeResult<T> mergeResult = merger.Merge(diskInputs, null, _maxDiskInputsPerMergePass, _comparer, allowRecordReuse, runCombiner, intermediateOutputPath, "", CompressionType.None, _writeBufferSize, _enableChecksum);
-                                if( runCombiner )
-                                {
-                                    using( EnumerableRecordReader<T> combineInput = new EnumerableRecordReader<T>(mergeResult.Select(r => r.GetValue()), 0) )
-                                    using( CombineRecordWriter combineOutput = new CombineRecordWriter(writer) )
-                                    {
-                                        _combiner.Run(combineInput, combineOutput);
-                                    }
-                                }
-                                else
-                                {
-                                    foreach( MergeResultRecord<T> record in mergeResult )
-                                    {
-                                        record.WriteRawRecord(writer);
-                                    }
-                                }
-
-                                ICompressor compressor = stream as ICompressor;
-                                uncompressedSize = compressor == null ? stream.Length : compressor.UncompressedBytesWritten;
-                            }
-                            PartitionFileIndexEntry indexEntry = new PartitionFileIndexEntry(partition, startOffset, fileStream.Position - startOffset, uncompressedSize);
-                            Debug.Assert(indexEntry.UncompressedSize > 0);
-                            indexWriter.WriteRecord(indexEntry);
+                            _combiner.Run(combineInput, combineOutput);
                         }
                     }
-                    _bytesWritten += fileStream.Length + indexStream.Length + merger.BytesWritten;
-                    _bytesRead = merger.BytesRead;
+                    else
+                    {
+                        foreach( MergeResultRecord<T> record in mergeResult )
+                        {
+                            record.WriteRawRecord(writer);
+                        }
+                    }
+
+                    ICompressor compressor = stream as ICompressor;
+                    uncompressedSize = compressor == null ? stream.Length : compressor.UncompressedBytesWritten;
+                }
+                PartitionFileIndexEntry indexEntry = new PartitionFileIndexEntry(partition, startOffset, fileStream.Position - startOffset, uncompressedSize);
+                Debug.Assert(indexEntry.UncompressedSize > 0);
+                indexWriter.WriteRecord(indexEntry);
+            }
+        }
+
+        private void UseSingleSpillAsOutput()
+        {
+            File.Move(_spillFiles[0], _outputPath);
+            using( FileStream indexStream = File.Create(_outputPath + ".index", _writeBufferSize) )
+            using( BinaryRecordWriter<PartitionFileIndexEntry> indexWriter = new BinaryRecordWriter<PartitionFileIndexEntry>(indexStream) )
+            {
+                // Write a faux first entry indicating the number of partitions.
+                indexWriter.WriteRecord(new PartitionFileIndexEntry(_partitions, 0L, 0L, 0L));
+
+                for( int partition = 0; partition < _partitions; ++partition )
+                {
+                    if( _spillPartitionIndices[partition][0].UncompressedSize > 0 )
+                        indexWriter.WriteRecord(_spillPartitionIndices[partition][0]);
                 }
 
-                DeleteTempFiles();
-                _log.Info("Merge complete.");
+                _bytesWritten += indexStream.Length;
             }
         }
 

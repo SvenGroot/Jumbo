@@ -462,7 +462,8 @@ namespace NameServerApplication
         private static long CreateLogFile(string logFilePath)
         {
             _log.InfoFormat("Initializing new edit log file at '{0}'.", logFilePath);
-            using( ChecksumOutputStream logFileStream = new ChecksumOutputStream(File.Open(logFilePath, FileMode.CreateNew, FileAccess.Write, FileShare.None), logFilePath + ".crc", 0L) )
+            using( Stream stream = File.Open(logFilePath, FileMode.CreateNew, FileAccess.Write, FileShare.None) )
+            using( ChecksumOutputStream logFileStream = new ChecksumOutputStream(stream, logFilePath + ".crc", 0L) )
             using( BinaryWriter logFileWriter = new BinaryWriter(logFileStream) )
             {
                 logFileWriter.Write(FileSystem.FileSystemFormatVersion);
@@ -524,6 +525,7 @@ namespace NameServerApplication
 
         private void OpenExistingLogFile(long oldCrc)
         {
+            CloseLogFile();
             _log.InfoFormat("Opening existing edit log file '{0}' for writing.", _logFilePath);
             _logFileStream = new ChecksumOutputStream(File.Open(_logFilePath, FileMode.Append, FileAccess.Write, FileShare.None), _logFilePath + ".crc", oldCrc);
             _logFileWriter = new BinaryWriter(_logFileStream);
@@ -535,6 +537,8 @@ namespace NameServerApplication
                 ((IDisposable)_logFileWriter).Dispose();
             if( _logFileStream != null )
                 _logFileStream.Dispose();
+            _logFileWriter = null;
+            _logFileStream = null;
         }
 
         private static Func<EditLogEntry>[] CreateEntryTypeMap()

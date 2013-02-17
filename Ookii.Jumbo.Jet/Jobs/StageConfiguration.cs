@@ -346,7 +346,7 @@ namespace Ookii.Jumbo.Jet.Jobs
                 {
                 case TaskRecordReuse.Allowed:
                     return true;
-                case TaskRecordReuse.Passthrough:
+                case TaskRecordReuse.PassThrough:
                     return AllowOutputRecordReuse;
                 default:
                     return false;

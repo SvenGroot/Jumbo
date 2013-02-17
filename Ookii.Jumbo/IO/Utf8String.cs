@@ -13,8 +13,14 @@ namespace Ookii.Jumbo.IO
     /// A mutable string stored and serialized in utf-8 format.
     /// </summary>
     /// <remarks>
-    /// Because this object is mutable you must take care when using it scenarios where immutability is expected, e.g. as a key
-    /// in a <see cref="Dictionary{TKey,TValue}"/>.
+    /// <note>
+    ///   Instances of the <see cref="Utf8String"/> class will not compare in proper lexicographical order if the string contains multi-byte characters.
+    ///   All that is guaranteed is that the ordering is deterministic.
+    /// </note>
+    /// <para>
+    ///   Because this object is mutable you must take care when using it scenarios where immutability is expected, e.g. as a key
+    ///   in a <see cref="Dictionary{TKey,TValue}"/>.
+    /// </para>
     /// </remarks>
     [RawComparer(typeof(Utf8StringRawComparer))]
     public sealed class Utf8String : IWritable, IEquatable<Utf8String>, IComparable<Utf8String>, IComparable, ICloneable
@@ -269,6 +275,24 @@ namespace Ookii.Jumbo.IO
         public override bool Equals(object obj)
         {
             return Equals(obj as Utf8String);
+        }
+
+        /// <summary>
+        /// Gets the length of a Utf8String stored in a byte array.
+        /// </summary>
+        /// <param name="buffer">The buffer containing the string.</param>
+        /// <param name="index">The index at which the string starts.</param>
+        /// <returns>The length of the entire Utf8String object, including the length header.</returns>
+        public static int GetLength(byte[] buffer, int index)
+        {
+            if( buffer == null )
+                throw new ArgumentNullException("buffer");
+            if( index < 0 || index >= buffer.Length )
+                throw new ArgumentOutOfRangeException("index");
+
+            int offset = index;
+            int length = LittleEndianBitConverter.ToInt32From7BitEncoding(buffer, ref offset);
+            return length + (offset - index);
         }
 
         /// <summary>

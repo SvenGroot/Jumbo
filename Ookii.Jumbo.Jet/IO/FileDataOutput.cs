@@ -32,6 +32,7 @@ namespace Ookii.Jumbo.Jet.IO
         /// <summary>
         /// The key of the setting in the stage settings that stores the record writer type. You should not normally change this setting.
         /// </summary>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Naming", "CA1702:CompoundWordsShouldBeCasedCorrectly", MessageId = "TypeSetting")]
         public const string RecordWriterTypeSettingKey = "FileDataOutput.RecordWriterType";
         /// <summary>
         /// The key of the setting in the stage settings that stores the block size. You should not normally change this setting.
@@ -81,7 +82,7 @@ namespace Ookii.Jumbo.Jet.IO
             if( replicationFactor < 0 )
                 throw new ArgumentOutOfRangeException("replicationFactor");
             if( recordWriterType.FindGenericBaseType(typeof(RecordWriter<>), false) == null )
-                throw new ArgumentException("recordWriterType", "The type is not a record writer.");
+                throw new ArgumentException("The type is not a record writer.", "recordWriterType");
             if( FileSystemClient.Create(dfsConfiguration).GetDirectoryInfo(outputPath) == null )
                 throw new DirectoryNotFoundException(string.Format(CultureInfo.CurrentCulture, "The directory '{0}' does not exist.", outputPath));
 

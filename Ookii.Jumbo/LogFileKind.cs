@@ -19,10 +19,12 @@ namespace Ookii.Jumbo
         /// <summary>
         /// The standard output.
         /// </summary>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Naming", "CA1704:IdentifiersShouldBeSpelledCorrectly", MessageId = "Std")]
         StdOut,
         /// <summary>
         /// The standard error.
         /// </summary>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Naming", "CA1704:IdentifiersShouldBeSpelledCorrectly", MessageId = "Std")]
         StdErr
     }
 }

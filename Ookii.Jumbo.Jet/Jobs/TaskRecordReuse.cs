@@ -23,6 +23,6 @@ namespace Ookii.Jumbo.Jet.Jobs
         /// <summary>
         /// The task allows record reuse only if its output allows record reuse.
         /// </summary>
-        Passthrough
+        PassThrough
     }
 }

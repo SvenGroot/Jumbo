@@ -43,11 +43,21 @@ namespace Ookii.Jumbo.Jet.Channels
                 if( size > Size )
                     throw new ArgumentOutOfRangeException("size", "Stream size exceeds reservation.");
 
-                UnmanagedBufferMemoryStream stream = new UnmanagedBufferMemoryStream(size);
-                _manager.RegisterStream(stream);
+                UnmanagedBufferMemoryStream stream = null;
+                try
+                {
+                    stream = new UnmanagedBufferMemoryStream(size);
+                    _manager.RegisterStream(stream);
 
-                Size -= size;
-                return stream;
+                    Size -= size;
+                    return stream;
+                }
+                catch
+                {
+                    if( stream != null )
+                        stream.Dispose();
+                    throw;
+                }
             }
 
             public void Dispose()

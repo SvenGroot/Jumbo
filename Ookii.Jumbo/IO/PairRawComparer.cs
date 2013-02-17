@@ -67,6 +67,15 @@ namespace Ookii.Jumbo.IO
         /// </returns>
         public int Compare(Pair<TKey, TValue> x, Pair<TKey, TValue> y)
         {
+            if( x == null )
+            {
+                if( y == null )
+                    return 0;
+                else
+                    return -1;
+            }
+            else if( y == null )
+                return 1;
             return _comparer.Compare(x.Key, y.Key);
         }
 

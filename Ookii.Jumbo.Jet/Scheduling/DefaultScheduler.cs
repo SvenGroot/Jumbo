@@ -23,6 +23,7 @@ namespace Ookii.Jumbo.Jet.Scheduling
         {
             public bool Invert { get; set; }
 
+            [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1062:Validate arguments of public methods", MessageId = "0"), System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1062:Validate arguments of public methods", MessageId = "1")]
             public int Compare(ITaskServerJobInfo x, ITaskServerJobInfo y)
             {
                 if( x.AvailableTaskSlots < y.AvailableTaskSlots )
@@ -43,6 +44,7 @@ namespace Ookii.Jumbo.Jet.Scheduling
                 _stage = stage;
             }
 
+            [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1062:Validate arguments of public methods", MessageId = "1"), System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1062:Validate arguments of public methods", MessageId = "0")]
             public int Compare(ITaskServerJobInfo x, ITaskServerJobInfo y)
             {
                 if( x == y )
@@ -70,6 +72,8 @@ namespace Ookii.Jumbo.Jet.Scheduling
         /// <param name="jobs">The current active jobs.</param>
         public void ScheduleTasks(IEnumerable<IJobInfo> jobs)
         {
+            if( jobs == null )
+                throw new ArgumentNullException("jobs");
             // Schedule with increasing data distance or until we run out of capacity or tasks
             // If the cluster has only one rack, distance 1 is the same as distance 2, and the cluster must run out of either tasks or capacity
             // for distance 1 so there's no need to check and short-circuit the loop.
@@ -80,7 +84,7 @@ namespace Ookii.Jumbo.Jet.Scheduling
             }
         }
 
-        private bool ScheduleJob(IJobInfo job)
+        private static bool ScheduleJob(IJobInfo job)
         {
             foreach( IStageInfo stage in job.Stages )
             {
@@ -104,7 +108,7 @@ namespace Ookii.Jumbo.Jet.Scheduling
             return true;
         }
 
-        private bool ScheduleDataInputTasks(IJobInfo job, IStageInfo stage)
+        private static bool ScheduleDataInputTasks(IJobInfo job, IStageInfo stage)
         {
             IComparer<ITaskServerJobInfo> comparer;
 
@@ -134,7 +138,7 @@ namespace Ookii.Jumbo.Jet.Scheduling
             return job.TaskServers.Any(server => server.IsActive && server.AvailableTaskSlots > 0);
         }
 
-        private bool ScheduleDataInputTasks(PriorityQueue<ITaskServerJobInfo> taskServers, IStageInfo stage, int distance)
+        private static bool ScheduleDataInputTasks(PriorityQueue<ITaskServerJobInfo> taskServers, IStageInfo stage, int distance)
         {
             int unscheduledTasks = stage.UnscheduledTaskCount; // Tasks that can be scheduled but haven't been scheduled yet.
             bool capacityRemaining = false;
@@ -168,7 +172,7 @@ namespace Ookii.Jumbo.Jet.Scheduling
             return unscheduledTasks > 0 && capacityRemaining;
         }
 
-        private bool ScheduleNonDataInputTasks(IJobInfo job, IStageInfo stage)
+        private static bool ScheduleNonDataInputTasks(IJobInfo job, IStageInfo stage)
         {
             List<ITaskInfo> unscheduledTasks = stage.Tasks.Where(t => !t.IsAssignedToServer).ToList();
             Debug.Assert(unscheduledTasks.Count > 0);

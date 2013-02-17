@@ -11,7 +11,7 @@ namespace Ookii.Jumbo.Jet.Samples.IO
     /// <summary>
     /// A 128 bit unsigned integer, based on the code provided with gensort, see http://www.hpl.hp.com/hosted/sortbenchmark/.
     /// </summary>
-    [ValueWriter(typeof(UInt128Writer))]
+    [ValueWriter(typeof(UInt128Writer)), CLSCompliant(false)]
     public struct UInt128
     {
         private readonly ulong _high64;

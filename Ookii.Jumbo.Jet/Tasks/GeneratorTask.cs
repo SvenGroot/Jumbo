@@ -20,7 +20,7 @@ namespace Ookii.Jumbo.Jet.Tasks
         /// <summary>
         /// Initializes a new instance of the <see cref="GeneratorTask&lt;T&gt;"/> class.
         /// </summary>
-        public GeneratorTask()
+        protected GeneratorTask()
         {
             _progressContext = new ProgressContext(this);
         }

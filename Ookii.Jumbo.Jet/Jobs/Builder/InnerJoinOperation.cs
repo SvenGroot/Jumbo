@@ -122,7 +122,7 @@ namespace Ookii.Jumbo.Jet.Jobs.Builder
                     comparerType = comparerType.MakeGenericType(recordType);
                 Type interfaceType = comparerType.FindGenericInterfaceType(typeof(IComparer<>), true);
                 if( interfaceType.GetGenericArguments()[0] != recordType )
-                    throw new ArgumentException(string.Format(CultureInfo.CurrentCulture, "Comparer {0} is not valid for type {0}.", comparerType, recordType));
+                    throw new ArgumentException(string.Format(CultureInfo.CurrentCulture, "Comparer {0} is not valid for type {1}.", comparerType, recordType));
             }
 
             return comparerType;

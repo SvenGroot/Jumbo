@@ -57,7 +57,7 @@
     <DocumentationFile>bin\Release\Ookii.Jumbo.xml</DocumentationFile>
     <RunCodeAnalysis>false</RunCodeAnalysis>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <CodeAnalysisRuleSet>AllRules.ruleset</CodeAnalysisRuleSet>
+    <CodeAnalysisRuleSet>..\Jumbo.ruleset</CodeAnalysisRuleSet>
   </PropertyGroup>
   <PropertyGroup />
   <ItemGroup>
@@ -94,6 +94,7 @@
     <Compile Include="IndividualProcessorStatus.cs" />
     <Compile Include="IO\IDeserializingRawComparer.cs" />
     <Compile Include="IO\IndexedQuickSort.cs" />
+    <Compile Include="IO\InvertedRawComparer.cs" />
     <Compile Include="IO\MemoryBufferStream.cs" />
     <Compile Include="IO\ChildReaderException.cs" />
     <Compile Include="IO\CurrentPartitionChangingEventArgs.cs" />

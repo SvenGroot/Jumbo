@@ -15,6 +15,7 @@ namespace Ookii.Jumbo.Jet.Samples.Tasks
     /// <summary>
     /// Task that validates the sort order in its input.
     /// </summary>
+    [CLSCompliant(false)]
     public class ValSortTask : Configurable, ITask<GenSortRecord, ValSortRecord>
     {
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(ValSortTask));

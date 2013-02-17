@@ -26,7 +26,7 @@ namespace Ookii.Jumbo.Jet.Samples
     ///   C version can be found at http://www.ordinal.com/gensort.html.
     /// </para>
     /// </remarks>
-    [Description("Generates input records for the GraySort job.")]
+    [Description("Generates input records for the GraySort job."), CLSCompliant(false)]
     public class GenSort : JobBuilderJob
     {
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(GenSort));

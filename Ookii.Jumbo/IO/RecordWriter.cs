@@ -24,7 +24,7 @@ namespace Ookii.Jumbo.IO
         public static Type GetRecordType(Type recordWriterType)
         {
             if( recordWriterType == null )
-                throw new ArgumentNullException("recordReaderType");
+                throw new ArgumentNullException("recordWriterType");
             Type baseType = recordWriterType.FindGenericBaseType(typeof(RecordWriter<>), true);
             return baseType.GetGenericArguments()[0];
         }

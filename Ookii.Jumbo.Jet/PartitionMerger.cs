@@ -97,7 +97,7 @@ namespace Ookii.Jumbo.Jet
 
                 long uncompressedSize = merger.WriteMerge(outputFileName, null, passInputs, _reader.MaxDiskInputsPerMergePass, _comparer, _reader.AllowRecordReuse, _reader.IntermediateOutputPath, _intermediateFilePrefix, _reader.CompressionType, _reader.BufferSize, _reader.JetConfiguration.FileChannel.EnableChecksum);
 
-                _log.InfoFormat("Background merge complete");
+                _log.Info("Background merge complete");
 
                 lock( _diskInputs )
                     _diskInputs.Add(new FileRecordInput(typeof(BinaryRecordReader<T>), outputFileName, null, uncompressedSize, true, merger.IsUsingRawRecords, 0, _reader.AllowRecordReuse, _reader.BufferSize, _reader.CompressionType));
@@ -116,7 +116,7 @@ namespace Ookii.Jumbo.Jet
 
                 long uncompressedSize = merger.WriteMerge(outputFileName, passInputs, null, _reader.MaxDiskInputsPerMergePass, _comparer, _reader.AllowRecordReuse, _reader.IntermediateOutputPath, _intermediateFilePrefix, _reader.CompressionType, _reader.BufferSize, _reader.JetConfiguration.FileChannel.EnableChecksum);
 
-                _log.InfoFormat("Background merge complete");
+                _log.Info("Background merge complete");
 
                 lock( _diskInputs )
                     _diskInputs.Add(new FileRecordInput(typeof(BinaryRecordReader<T>), outputFileName, null, uncompressedSize, true, merger.IsUsingRawRecords, 0, _reader.AllowRecordReuse, _reader.BufferSize, _reader.CompressionType));

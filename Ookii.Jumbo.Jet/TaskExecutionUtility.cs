@@ -315,7 +315,7 @@ namespace Ookii.Jumbo.Jet
         ///   This method should only be invoked by the TaskHost, and by the TaskServer when using AppDomain mode.
         /// </para>
         /// </remarks>
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Reliability", "CA2001:AvoidCallingProblematicMethods", MessageId = "System.Reflection.Assembly.LoadFrom"), System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1031:DoNotCatchGeneralExceptionTypes")]
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1031:DoNotCatchGeneralExceptionTypes")]
         public static void RunTask(Guid jobId, string jobDirectory, string dfsJobDirectory, TaskAttemptId taskAttemptId)
         {
             AssemblyResolver.Register();
@@ -324,31 +324,11 @@ namespace Ookii.Jumbo.Jet
             {
                 Stopwatch sw = new Stopwatch();
                 sw.Start();
-                string logFile = Path.Combine(jobDirectory, taskAttemptId.ToString() + ".log");
-                ConfigureLog(logFile);
-
-                _log.InfoFormat(CultureInfo.InvariantCulture, "Running task; job ID = \"{0}\", job directory = \"{1}\", task attempt ID = \"{2}\", DFS job directory = \"{3}\"", jobId, jobDirectory, taskAttemptId, dfsJobDirectory);
-                _log.DebugFormat(CultureInfo.InvariantCulture, "Command line: {0}", Environment.CommandLine);
-                _log.LogEnvironmentInformation();
-
-                _log.Info("Loading configuration.");
-                string configDirectory = Path.Combine(Path.GetDirectoryName(jobDirectory), "config");
-                string appConfigFile = Path.Combine(configDirectory, "taskhost.config");
+                InitializeTaskLog(jobId, jobDirectory, dfsJobDirectory, taskAttemptId);
 
                 DfsConfiguration dfsConfig;
                 JetConfiguration jetConfig;
-                if( File.Exists(appConfigFile) )
-                {
-                    Configuration appConfig = ConfigurationManager.OpenMappedExeConfiguration(new ExeConfigurationFileMap() { ExeConfigFilename = appConfigFile }, ConfigurationUserLevel.None);
-
-                    dfsConfig = DfsConfiguration.GetConfiguration(appConfig);
-                    jetConfig = JetConfiguration.GetConfiguration(appConfig);
-                }
-                else
-                {
-                    dfsConfig = DfsConfiguration.GetConfiguration();
-                    jetConfig = JetConfiguration.GetConfiguration();
-                }
+                LoadAssemblyConfiguration(jobDirectory, out dfsConfig, out jetConfig);
 
                 _log.Info("Creating RPC clients.");
                 ITaskServerUmbilicalProtocol umbilical = JetClient.CreateTaskServerUmbilicalClient(jetConfig.TaskServer.Port);
@@ -360,20 +340,7 @@ namespace Ookii.Jumbo.Jet
                     FileSystemClient fileSystemClient = FileSystemClient.Create(dfsConfig);
                     JetClient jetClient = new JetClient(jetConfig);
 
-
-                    string xmlConfigPath = Path.Combine(jobDirectory, Job.JobConfigFileName);
-                    _log.DebugFormat("Loading job configuration from local file {0}.", xmlConfigPath);
-                    JobConfiguration config = JobConfiguration.LoadXml(xmlConfigPath);
-                    _log.Debug("Job configuration loaded.");
-
-                    if( config.AssemblyFileNames != null )
-                    {
-                        foreach( string assemblyFileName in config.AssemblyFileNames )
-                        {
-                            _log.DebugFormat("Loading assembly {0}.", assemblyFileName);
-                            Assembly.LoadFrom(Path.Combine(jobDirectory, assemblyFileName));
-                        }
-                    }
+                    JobConfiguration config = LoadJobConfiguration(jobDirectory);
 
                     TaskMetrics metrics;
                     using( TaskExecutionUtility taskExecution = TaskExecutionUtility.Create(fileSystemClient, jetClient, umbilical, jobId, config, taskAttemptId, dfsJobDirectory, jobDirectory) )
@@ -403,7 +370,6 @@ namespace Ookii.Jumbo.Jet
                 _log.Info(processorStatus.Total);
             }
         }
-
 
         /// <summary>
         /// Creates a <see cref="TaskExecutionUtility"/> instance for the specified task.
@@ -900,6 +866,58 @@ namespace Ookii.Jumbo.Jet
             }
         }
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Reliability", "CA2001:AvoidCallingProblematicMethods", MessageId = "System.Reflection.Assembly.LoadFrom")]
+        private static JobConfiguration LoadJobConfiguration(string jobDirectory)
+        {
+            string xmlConfigPath = Path.Combine(jobDirectory, Job.JobConfigFileName);
+            _log.DebugFormat("Loading job configuration from local file {0}.", xmlConfigPath);
+            JobConfiguration config = JobConfiguration.LoadXml(xmlConfigPath);
+            _log.Debug("Job configuration loaded.");
+
+            if( config.AssemblyFileNames != null )
+            {
+                foreach( string assemblyFileName in config.AssemblyFileNames )
+                {
+                    _log.DebugFormat("Loading assembly {0}.", assemblyFileName);
+                    Assembly.LoadFrom(Path.Combine(jobDirectory, assemblyFileName));
+                }
+            }
+            return config;
+        }
+
+        private static void InitializeTaskLog(Guid jobId, string jobDirectory, string dfsJobDirectory, TaskAttemptId taskAttemptId)
+        {
+            string logFile = Path.Combine(jobDirectory, taskAttemptId.ToString() + ".log");
+            ConfigureLog(logFile);
+
+            _log.InfoFormat(CultureInfo.InvariantCulture, "Running task; job ID = \"{0}\", job directory = \"{1}\", task attempt ID = \"{2}\", DFS job directory = \"{3}\"", jobId, jobDirectory, taskAttemptId, dfsJobDirectory);
+            _log.DebugFormat(CultureInfo.InvariantCulture, "Command line: {0}", Environment.CommandLine);
+            _log.LogEnvironmentInformation();
+        }
+
+        private static void LoadAssemblyConfiguration(string jobDirectory, out DfsConfiguration dfsConfig, out JetConfiguration jetConfig)
+        {
+            _log.Info("Loading configuration.");
+            string configDirectory = Path.Combine(Path.GetDirectoryName(jobDirectory), "config");
+            string appConfigFile = Path.Combine(configDirectory, "taskhost.config");
+
+
+
+            if( File.Exists(appConfigFile) )
+            {
+                Configuration appConfig = ConfigurationManager.OpenMappedExeConfiguration(new ExeConfigurationFileMap() { ExeConfigFilename = appConfigFile }, ConfigurationUserLevel.None);
+
+                dfsConfig = DfsConfiguration.GetConfiguration(appConfig);
+                jetConfig = JetConfiguration.GetConfiguration(appConfig);
+            }
+            else
+            {
+                dfsConfig = DfsConfiguration.GetConfiguration();
+                jetConfig = JetConfiguration.GetConfiguration();
+            }
+        }
+
+        // Code Analysis warns about the two objects even though they're in using statements, because they're creating with ?:
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Reliability", "CA2000:Dispose objects before losing scope")]
         private void ProgressThread()
         {

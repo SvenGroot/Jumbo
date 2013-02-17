@@ -290,7 +290,7 @@ namespace Ookii.Jumbo.Jet.Jobs.Builder
             }
 
             string typeName = taskDelegate.Method.Name + "Task";
-            int suffix = 1;
+            int suffix = 2;
             while( _usedTypeNames.Contains(typeName) )
             {
                 typeName = taskDelegate.Method.Name + "Task" + suffix;

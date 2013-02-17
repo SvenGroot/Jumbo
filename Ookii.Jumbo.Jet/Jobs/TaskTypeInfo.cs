@@ -35,7 +35,7 @@ namespace Ookii.Jumbo.Jet.Jobs
             _outputRecordType = arguments[1];
             AllowRecordReuseAttribute recordReuseAttribute = (AllowRecordReuseAttribute)Attribute.GetCustomAttribute(taskType, typeof(AllowRecordReuseAttribute));
             if( recordReuseAttribute != null )
-                _recordReuse = recordReuseAttribute.PassThrough ? TaskRecordReuse.Passthrough : TaskRecordReuse.Allowed;
+                _recordReuse = recordReuseAttribute.PassThrough ? TaskRecordReuse.PassThrough : TaskRecordReuse.Allowed;
         }
 
         /// <summary>

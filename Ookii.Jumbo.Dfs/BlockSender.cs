@@ -39,6 +39,7 @@ namespace Ookii.Jumbo.Dfs
         /// Initializes a new instance of the <see cref="BlockSender"/> class.
         /// </summary>
         /// <param name="assignment">The block assignment.</param>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1062:Validate arguments of public methods", MessageId = "0")]
         public BlockSender(BlockAssignment assignment)
             : this(assignment.BlockId, assignment.DataServers, null)
         {

@@ -25,17 +25,16 @@ namespace Ookii.Jumbo.Rpc
         /// Registers the server channels.
         /// </summary>
         /// <param name="port">The port on which to listen.</param>
-        /// <param name="listenIPv4AndIPv6">When IPv6 is available, <see langword="true"/> to listen on IPv4 as well as 
+        /// <param name="listen4And6">When IPv6 is available, <see langword="true"/> to listen on IPv4 as well as 
         /// IPv6; <see langword="false"/> to listen on IPv6 only. When IPv6 is not available, this parameter has no effect.</param>
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Naming", "CA1709:IdentifiersShouldBeCasedCorrectly", MessageId = "Pv"), MethodImpl(MethodImplOptions.Synchronized)]
-        public static void RegisterServerChannels(int port, bool? listenIPv4AndIPv6)
+        public static void RegisterServerChannels(int port, bool? listen4And6)
         {
             if( _serverChannels == null )
                 _serverChannels = new Dictionary<int, RpcServer>();
 
             if( !_serverChannels.ContainsKey(port) )
             {
-                IPAddress[] localAddresses = TcpServer.GetDefaultListenerAddresses(listenIPv4AndIPv6);
+                IPAddress[] localAddresses = TcpServer.GetDefaultListenerAddresses(listen4And6);
 
                 RpcServer server = new RpcServer(localAddresses, port);
                 server.StartListening();

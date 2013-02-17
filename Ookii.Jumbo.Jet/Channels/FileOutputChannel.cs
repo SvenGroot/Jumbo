@@ -42,6 +42,7 @@ namespace Ookii.Jumbo.Jet.Channels
         /// The key to use in the stage settings to specify the type of a <see cref="IRawComparer{T}"/> or <see cref="IComparer{T}"/> to use when the output type is <see cref="FileChannelOutputType.SortSpill"/>. It's ignored
         /// for other output types. The setting should be an assembly-qualified type name of a type implementing <see cref="IRawComparer{T}"/> or <see cref="IComparer{T}"/>. Using a <see cref="IRawComparer{T}"/> is strongly recommended.
         /// </summary>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Naming", "CA1702:CompoundWordsShouldBeCasedCorrectly", MessageId = "TypeSetting")]
         public const string SpillSortComparerTypeSettingKey = "FileOutputChannel.SpillSortComparer";
         /// <summary>
         /// The key to use in the stage settings to specify the type of a combiner to use when the output type is <see cref="FileChannelOutputType.SortSpill"/>. It's ignored

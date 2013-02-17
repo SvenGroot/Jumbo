@@ -52,6 +52,15 @@ namespace TaskServerApplication
             _jobServer = JetClient.CreateJobServerHeartbeatClient(config);
             _heartbeatInterval = config.TaskServer.HeartbeatInterval;
             _immediateCompletedTaskNotification = config.TaskServer.ImmediateCompletedTaskNotification;
+
+            _taskRunner = new TaskRunner(this);
+
+            LocalAddress = new ServerAddress(Dns.GetHostName(), Configuration.TaskServer.Port);
+
+            IPAddress[] addresses = TcpServer.GetDefaultListenerAddresses(Configuration.TaskServer.ListenIPv4AndIPv6);
+
+            _fileServer = new FileChannelServer(this, addresses, Configuration.TaskServer.FileServerPort, Configuration.TaskServer.FileServerMaxConnections, Configuration.TaskServer.FileServerMaxIndexCacheSize);
+            _fileServer.Start();
         }
 
         public static TaskServer Instance { get; private set; }
@@ -67,6 +76,8 @@ namespace TaskServerApplication
 
         public static void Run(JetConfiguration jetConfig, DfsConfiguration dfsConfig)
         {
+            _log.Info("-----Task server is starting-----");
+            _log.LogEnvironmentInformation();
             // Prevent type references in job configurations from loading assemblies into the task server.
             TypeReference.ResolveTypes = false;
 
@@ -261,20 +272,7 @@ namespace TaskServerApplication
         
         private void RunInternal()
         {
-            _log.Info("-----Task server is starting-----");
-            _log.LogEnvironmentInformation();
-
-            _taskRunner = new TaskRunner(this);
-
-            LocalAddress = new ServerAddress(Dns.GetHostName(), Configuration.TaskServer.Port);
-
             AddDataForNextHeartbeat(new InitialStatusJetHeartbeatData() { TaskSlots = Configuration.TaskServer.TaskSlots, FileServerPort = Configuration.TaskServer.FileServerPort });
-
-            IPAddress[] addresses = TcpServer.GetDefaultListenerAddresses(Configuration.TaskServer.ListenIPv4AndIPv6);
-
-            _fileServer = new FileChannelServer(this, addresses, Configuration.TaskServer.FileServerPort, Configuration.TaskServer.FileServerMaxConnections, Configuration.TaskServer.FileServerMaxIndexCacheSize);
-            _fileServer.Start();
-
             WaitHandle[] handles = new WaitHandle[] { _heartbeatEvent, _shutdownEvent };
 
             do

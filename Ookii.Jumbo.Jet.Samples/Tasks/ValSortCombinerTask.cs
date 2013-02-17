@@ -17,6 +17,7 @@ namespace Ookii.Jumbo.Jet.Samples.Tasks
     /// <remarks>
     /// The input <see cref="ValSortRecord"/> records need to be sorted.
     /// </remarks>
+    [CLSCompliant(false)]
     public class ValSortCombinerTask : PushTask<ValSortRecord, string>
     {
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(ValSortCombinerTask));
