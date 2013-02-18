@@ -25,26 +25,34 @@ namespace Ookii.Jumbo.Jet.Samples
     /// </para>
     /// </remarks>
     [Description("Sorts the input file or files containing data in the gensort format.")]
-    public class GraySort : JobBuilderJob
+    public class TeraSort : JobBuilderJob
     {
-        private readonly string _inputPath;
-        private readonly string _outputPath;
-        private readonly int _mergeTasks;
+        /// <summary>
+        /// Gets or sets the input path.
+        /// </summary>
+        /// <value>
+        /// The input path.
+        /// </value>
+        [CommandLineArgument(IsRequired = true, Position = 0), Description("The input file or directory containing the data to be sorted.")]
+        public string InputPath { get; set; }
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="GraySort"/> class.
+        /// Gets or sets the output path.
         /// </summary>
-        /// <param name="inputPath">The input file or directory containing the data to be sorted.</param>
-        /// <param name="outputPath">The output directory where the sorted data will be written.</param>
-        /// <param name="mergeTasks">The number of merge tasks to use.</param>
-        public GraySort([Description("The input file or directory on the Jumbo DFS containing the data to be sorted.")] string inputPath,
-                        [Description("The output directory on the Jumbo DFS where the sorted data will be written.")] string outputPath,
-                        [Description("The number of merge tasks to use. The default value is the cluster capacity."), Optional, DefaultParameterValue(0)] int mergeTasks)
-        {
-            _inputPath = inputPath;
-            _outputPath = outputPath;
-            _mergeTasks = mergeTasks;
-        }
+        /// <value>
+        /// The output path.
+        /// </value>
+        [CommandLineArgument(IsRequired = true, Position = 1), Description("The output directory where the sorted data will be written.")]
+        public string OutputPath { get; set; }
+
+        /// <summary>
+        /// Gets or sets the merge tasks.
+        /// </summary>
+        /// <value>
+        /// The merge tasks.
+        /// </value>
+        [CommandLineArgument(Position = 2, DefaultValue = 0), Description("The number of merge tasks to use. The default value is the cluster capacity.")]
+        public int MergeTasks { get; set; }
 
         /// <summary>
         /// Gets or sets the sample size used to determine the partitioner's split points.
@@ -67,26 +75,19 @@ namespace Ookii.Jumbo.Jet.Samples
         public int PartitionsPerTask { get; set; }
 
         /// <summary>
-        /// Gets or sets a value indicating whether the sort task is used instead of spill sort.
-        /// </summary>
-        /// <value>
-        /// 	<see langword="true"/> if the sort task is used; otherwise, <see langword="false"/>.
-        /// </value>
-        [CommandLineArgument, Description("Use the SortTask<GenSortRecord> to sort the records instead of a spill sort. Note: this may require significantly more memory.")]
-        public bool UseSortTask { get; set; }
-
-        /// <summary>
         /// Constructs the job configuration using the specified job builder.
         /// </summary>
         /// <param name="job">The <see cref="JobBuilder"/> used to create the job.</param>
         protected override void BuildJob(JobBuilder job)
         {
-            var input = job.Read(_inputPath, typeof(GenSortRecordReader));
-            var sorted = UseSortTask ? job.Sort(input) : job.SpillSort(input);
+            var input = job.Read(InputPath, typeof(GenSortRecordReader));
+
+            var sorted = job.SpillSort(input);
             sorted.InputChannel.PartitionerType = typeof(RangePartitioner);
-            sorted.InputChannel.TaskCount = _mergeTasks;
+            sorted.InputChannel.TaskCount = MergeTasks;
             sorted.InputChannel.PartitionsPerTask = PartitionsPerTask;
-            WriteOutput(sorted, _outputPath, typeof(GenSortRecordWriter));
+
+            WriteOutput(sorted, OutputPath, typeof(GenSortRecordWriter));
         }
 
         /// <summary>
@@ -101,7 +102,7 @@ namespace Ookii.Jumbo.Jet.Samples
             var input = (from stage in jobConfiguration.Stages
                             where stage.DataInput != null
                             select stage.DataInput).SingleOrDefault();
-            RangePartitioner.CreatePartitionFile(FileSystemClient, partitionFileName, input, _mergeTasks, SampleSize);
+            RangePartitioner.CreatePartitionFile(FileSystemClient, partitionFileName, input, MergeTasks, SampleSize);
         }
     }
 }

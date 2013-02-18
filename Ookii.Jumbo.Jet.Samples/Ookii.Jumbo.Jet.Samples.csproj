@@ -106,9 +106,9 @@
     <Compile Include="FPGrowth\TransactionMiningTask.cs" />
     <Compile Include="FPGrowth\WeightedTransaction.cs" />
     <Compile Include="GenerateText.cs" />
-    <Compile Include="GraySort.cs" />
+    <Compile Include="IO\ValSortRecordRawComparer.cs" />
+    <Compile Include="TeraSort.cs" />
     <Compile Include="IO\GenSortRecordRawComparer.cs" />
-    <Compile Include="IO\StringPairComparer.cs" />
     <Compile Include="IO\UInt128Writer.cs" />
     <Compile Include="WordCount.cs" />
     <Compile Include="Properties\Resources.Designer.cs">
@@ -118,30 +118,16 @@
     </Compile>
     <Compile Include="ValSort.cs" />
     <Compile Include="GenSort.cs" />
-    <Compile Include="DbGen.cs" />
     <Compile Include="IO\GenSortRecord.cs" />
     <Compile Include="IO\GenSortRecordReader.cs" />
     <Compile Include="IO\GenSortRecordWriter.cs" />
-    <Compile Include="IO\LineItem.cs" />
-    <Compile Include="IO\PricingSummaryKey.cs" />
-    <Compile Include="IO\PricingSummaryValue.cs" />
-    <Compile Include="IO\WordRecordReader.cs" />
-    <Compile Include="Tasks\GenSortTask.cs" />
     <Compile Include="Tasks\GenSortGenerator.cs" />
     <Compile Include="IO\Random128.cs" />
     <Compile Include="IO\UInt128.cs" />
     <Compile Include="LineCount.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="IO\RangePartitioner.cs" />
-    <Compile Include="Tasks\PricingSummaryTask.cs" />
-    <Compile Include="Tasks\PricingSummaryAccumulatorTask.cs" />
-    <Compile Include="Tasks\RecordCountCombinerTask.cs" />
-    <Compile Include="Tasks\RecordCountTask.cs" />
-    <Compile Include="Tasks\TpcHTableGenTask.cs" />
-    <Compile Include="Tasks\ValSortCombinerTask.cs" />
     <Compile Include="IO\ValSortRecord.cs" />
-    <Compile Include="Tasks\ValSortTask.cs" />
-    <Compile Include="TpcHQuery1.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="jumbo.snk" />

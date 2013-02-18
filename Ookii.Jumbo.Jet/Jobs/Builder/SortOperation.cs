@@ -140,7 +140,7 @@ namespace Ookii.Jumbo.Jet.Jobs.Builder
             {
                 StageConfiguration result = base.CreateConfiguration(compiler);
                 if( _comparerType != null )
-                    FirstStepStage.AddSetting(TaskConstants.ComparerSettingKey, _comparerType.AssemblyQualifiedName);
+                    FirstStepStage.AddSetting(TaskConstants.SortTaskComparerSettingKey, _comparerType.AssemblyQualifiedName);
                 return result;
             }
         }

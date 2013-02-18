@@ -51,6 +51,19 @@ namespace Ookii.Jumbo.Test.Jet
             }
         }
 
+        private class FakeEqualityComparer<T> : IEqualityComparer<T>
+        {
+            public bool Equals(T x, T y)
+            {
+                throw new NotImplementedException();
+            }
+
+            public int GetHashCode(T obj)
+            {
+                throw new NotImplementedException();
+            }
+        }
+
         private class FakeJoinComparer<T> : IRawComparer<T>, IEqualityComparer<T>
         {
             public int Compare(T x, T y)
@@ -307,8 +320,8 @@ namespace Ookii.Jumbo.Test.Jet
             VerifyChannel(config.Stages[0].ChildStage, config.Stages[1], ChannelType.File, multiInputRecordReaderType: typeof(MergeRecordReader<Utf8String>));
             VerifyStage(config.Stages[1], 2, "MergeStage", typeof(EmptyTask<Utf8String>));
             VerifyDataOutput(config.Stages[1], typeof(TextRecordWriter<Utf8String>));
-            VerifyStageSetting(config.Stages[0].ChildStage, TaskConstants.ComparerSettingKey, null);
-            VerifyStageSetting(config.Stages[1], TaskConstants.ComparerSettingKey, null);
+            VerifyStageSetting(config.Stages[0].ChildStage, TaskConstants.SortTaskComparerSettingKey, null);
+            VerifyStageSetting(config.Stages[1], TaskConstants.SortTaskComparerSettingKey, null);
             config.Validate();
         }
 
@@ -333,8 +346,8 @@ namespace Ookii.Jumbo.Test.Jet
             VerifyChannel(config.Stages[0], config.Stages[1], ChannelType.File, multiInputRecordReaderType: typeof(MergeRecordReader<Utf8String>));
             VerifyStage(config.Stages[1], 1, "MergeStage", typeof(EmptyTask<Utf8String>));
             VerifyDataOutput(config.Stages[1], typeof(TextRecordWriter<Utf8String>));
-            VerifyStageSetting(config.Stages[0], TaskConstants.ComparerSettingKey, null);
-            VerifyStageSetting(config.Stages[1], TaskConstants.ComparerSettingKey, null);
+            VerifyStageSetting(config.Stages[0], TaskConstants.SortTaskComparerSettingKey, null);
+            VerifyStageSetting(config.Stages[1], TaskConstants.SortTaskComparerSettingKey, null);
             config.Validate();
         }
 
@@ -364,8 +377,8 @@ namespace Ookii.Jumbo.Test.Jet
             // EmptyTask on second step replaced with LineAdderTask.
             VerifyStage(config.Stages[1], 2, typeof(LineAdderTask).Name + "Stage", typeof(LineAdderTask));
             VerifyDataOutput(config.Stages[1], typeof(TextRecordWriter<int>));
-            VerifyStageSetting(config.Stages[0].ChildStage, TaskConstants.ComparerSettingKey, null);
-            VerifyStageSetting(config.Stages[1], TaskConstants.ComparerSettingKey, null);
+            VerifyStageSetting(config.Stages[0].ChildStage, TaskConstants.SortTaskComparerSettingKey, null);
+            VerifyStageSetting(config.Stages[1], TaskConstants.SortTaskComparerSettingKey, null);
             config.Validate();
         }
 
@@ -382,8 +395,8 @@ namespace Ookii.Jumbo.Test.Jet
             Assert.AreNotEqual(0, config.AssemblyFileNames.Count); // Will contain lots of stuff because FakeComparer is in the test assembly, not the test tasks assembly.
             Assert.AreEqual(2, config.Stages.Count);
 
-            VerifyStageSetting(config.Stages[0].ChildStage, TaskConstants.ComparerSettingKey, typeof(FakeComparer<Utf8String>).AssemblyQualifiedName);
-            VerifyStageSetting(config.Stages[1], TaskConstants.ComparerSettingKey, null);
+            VerifyStageSetting(config.Stages[0].ChildStage, TaskConstants.SortTaskComparerSettingKey, typeof(FakeComparer<Utf8String>).AssemblyQualifiedName);
+            VerifyStageSetting(config.Stages[1], TaskConstants.SortTaskComparerSettingKey, null);
             config.Validate();
         }
 
@@ -434,8 +447,8 @@ namespace Ookii.Jumbo.Test.Jet
             VerifyStageSetting(config.Stages[0], FileOutputChannel.OutputTypeSettingKey, FileChannelOutputType.SortSpill.ToString());
             VerifyStageSetting(config.Stages[0], FileOutputChannel.SpillSortComparerTypeSettingKey, typeof(FakeRawComparer<Utf8String>).AssemblyQualifiedName);
             VerifyStageSetting(config.Stages[1], FileOutputChannel.OutputTypeSettingKey, null);
-            VerifyStageSetting(config.Stages[0], TaskConstants.ComparerSettingKey, null);
-            VerifyStageSetting(config.Stages[1], TaskConstants.ComparerSettingKey, null);
+            VerifyStageSetting(config.Stages[0], TaskConstants.SortTaskComparerSettingKey, null);
+            VerifyStageSetting(config.Stages[1], TaskConstants.SortTaskComparerSettingKey, null);
             config.Validate();
         }
 
@@ -570,6 +583,39 @@ namespace Ookii.Jumbo.Test.Jet
             VerifyChannel(config.Stages[0].ChildStage, config.Stages[1], ChannelType.File);
             VerifyStage(config.Stages[1], 2, typeof(SumTask<Utf8String>).Name + "Stage", typeof(SumTask<Utf8String>));
             VerifyDataOutput(config.Stages[1], typeof(TextRecordWriter<Pair<Utf8String, int>>));
+            config.Validate();
+        }
+
+        [Test]
+        public void TestGroupAggregateCustomComparer()
+        {
+            JobBuilder builder = new JobBuilder(_fileSystemClient, _jetClient);
+
+            var input = builder.Read(_inputPath, typeof(LineRecordReader));
+            var paired = builder.Process(input, typeof(GenerateInt32PairTask<>));
+            var aggregated = builder.GroupAggregate(paired, typeof(SumTask<>), typeof(FakeEqualityComparer<>));
+            builder.Write(aggregated, _outputPath, typeof(TextRecordWriter<>));
+
+            JobConfiguration config = builder.CreateJob();
+            Assert.AreEqual(0, config.AssemblyFileNames.Count);
+
+            Assert.AreEqual(2, config.Stages.Count);
+
+            VerifyDataInput(config, config.Stages[0], typeof(LineRecordReader));
+            VerifyStage(config.Stages[0], 3, typeof(GenerateInt32PairTask<Utf8String>).Name + "Stage", typeof(GenerateInt32PairTask<Utf8String>));
+            VerifyChannel(config.Stages[0], config.Stages[0].ChildStage, ChannelType.Pipeline);
+            VerifyStageSetting(config.Stages[0], TaskConstants.AccumulatorTaskKeyComparerSettingKey, null);
+            VerifyStageSetting(config.Stages[0], PartitionerConstants.EqualityComparerSetting, null);
+
+            VerifyStage(config.Stages[0].ChildStage, 1, "Local" + typeof(SumTask<Utf8String>).Name + "Stage", typeof(SumTask<Utf8String>));
+            VerifyChannel(config.Stages[0].ChildStage, config.Stages[1], ChannelType.File);
+            VerifyStageSetting(config.Stages[0].ChildStage, TaskConstants.AccumulatorTaskKeyComparerSettingKey, typeof(FakeEqualityComparer<Utf8String>).AssemblyQualifiedName);
+            VerifyStageSetting(config.Stages[0].ChildStage, PartitionerConstants.EqualityComparerSetting, typeof(FakeEqualityComparer<Utf8String>).AssemblyQualifiedName);
+
+            VerifyStage(config.Stages[1], 2, typeof(SumTask<Utf8String>).Name + "Stage", typeof(SumTask<Utf8String>));
+            VerifyDataOutput(config.Stages[1], typeof(TextRecordWriter<Pair<Utf8String, int>>));
+            VerifyStageSetting(config.Stages[1], TaskConstants.AccumulatorTaskKeyComparerSettingKey, typeof(FakeEqualityComparer<Utf8String>).AssemblyQualifiedName);
+            VerifyStageSetting(config.Stages[1], PartitionerConstants.EqualityComparerSetting, null);
             config.Validate();
         }
 

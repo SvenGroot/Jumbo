@@ -12,7 +12,7 @@ namespace Ookii.Jumbo.Jet.Samples.IO
     /// <summary>
     /// Represents an intermediate record used by the ValSort job.
     /// </summary>
-    [CLSCompliant(false)]
+    [CLSCompliant(false), RawComparer(typeof(ValSortRecordRawComparer))]
     public sealed class ValSortRecord : Writable<ValSortRecord>, IComparable<ValSortRecord>
     {
         /// <summary>

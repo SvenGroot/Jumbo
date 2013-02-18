@@ -17,17 +17,13 @@ namespace Ookii.Jumbo.Jet.Samples
     public enum WordCountKind
     {
         /// <summary>
-        /// Optimized with WordRecordReader
+        /// Optimized version
         /// </summary>
         Optimized,
         /// <summary>
-        /// Optimized with LineRecordReader
+        /// Implementation using lambdas
         /// </summary>
-        OptimizedLineRecordReader,
-        /// <summary>
-        /// Naive implementation
-        /// </summary>
-        Naive,
+        Lambda,
         /// <summary>
         /// MapReduce implementation
         /// </summary>
@@ -37,7 +33,7 @@ namespace Ookii.Jumbo.Jet.Samples
     /// <summary>
     /// Job runner for word count.
     /// </summary>
-    [Description("Counts the number of occurrences of each word in the input file or files. This version uses JobBuilder.")]
+    [Description("Counts the number of occurrences of each word in the input file or files.")]
     public sealed class WordCount : JobBuilderJob
     {
         /// <summary>
@@ -73,7 +69,7 @@ namespace Ookii.Jumbo.Jet.Samples
         /// <value>
         /// The kind.
         /// </value>
-        [CommandLineArgument, Description("The kind of implementation to use.")]
+        [CommandLineArgument, Description("The kind of implementation to use: Optimized (default), Lambda, or MapReduce.")]
         public WordCountKind Kind { get; set; }
 
         /// <summary>
@@ -87,11 +83,8 @@ namespace Ookii.Jumbo.Jet.Samples
             case WordCountKind.Optimized:
                 BuildJobOptimized(job);
                 break;
-            case WordCountKind.OptimizedLineRecordReader:
-                BuildJobOptimizedLineRecordReader(job);
-                break;
-            case WordCountKind.Naive:
-                BuildJobNaive(job);
+            case WordCountKind.Lambda:
+                BuildJobLambda(job);
                 break;
             case WordCountKind.MapReduce:
                 BuildJobMapReduce(job);
@@ -100,17 +93,6 @@ namespace Ookii.Jumbo.Jet.Samples
         }
 
         private void BuildJobOptimized(JobBuilder job)
-        {
-            var input = job.Read(InputPath, typeof(WordRecordReader));
-            var pairs = job.Process(input, typeof(GenerateInt32PairTask<>));
-            pairs.StageId = "WordCount";
-            var counted = job.GroupAggregate(pairs, typeof(SumTask<>));
-            counted.StageId = "WordCountAggregation";
-            counted.InputChannel.PartitionCount = Partitions;
-            WriteOutput(counted, OutputPath, typeof(TextRecordWriter<>));
-        }
-
-        private void BuildJobOptimizedLineRecordReader(JobBuilder job)
         {
             var input = job.Read(InputPath, typeof(LineRecordReader));
             var pairs = job.Process<Utf8String, Pair<Utf8String, int>>(input, SplitLines);
@@ -121,7 +103,7 @@ namespace Ookii.Jumbo.Jet.Samples
             WriteOutput(counted, OutputPath, typeof(TextRecordWriter<>));
         }
 
-        private void BuildJobNaive(JobBuilder job)
+        private void BuildJobLambda(JobBuilder job)
         {
             var input = job.Read(InputPath, typeof(LineRecordReader));
             var pairs = job.Map<Utf8String, Pair<Utf8String, int>>(input, (record, output) => output.WriteRecords(record.ToString().Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries).Select(word => Pair.MakePair(new Utf8String(word), 1))), RecordReuseMode.Allow);

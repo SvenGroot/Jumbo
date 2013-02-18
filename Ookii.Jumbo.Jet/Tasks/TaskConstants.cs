@@ -17,14 +17,14 @@ namespace Ookii.Jumbo.Jet.Tasks
         /// to use for the <see cref="SortTask{T}"/>. The value of the setting is a <see cref="String"/> that specifies the assembly-qualified type name of the comparer.
         /// The default value is <see langword="null"/>, indicating the <see cref="Comparer{T}.Default"/> will be used.
         /// </summary>
-        public const string ComparerSettingKey = "SortTask.Comparer";
+        public const string SortTaskComparerSettingKey = "SortTask.Comparer";
 
         /// <summary>
         /// The name of the setting in the <see cref="Jobs.StageConfiguration.StageSettings"/> or <see cref="Jobs.JobConfiguration.JobSettings"/> that specifies whether to use
         /// parallel sorting in the <see cref="SortTask{T}"/>. The type of the setting is <see cref="Boolean"/>. The default value is <see langword="true"/>. Stage settings take precedence over
         /// job settings.
         /// </summary>
-        public const string UseParallelSortSettingKey = "SortTask.UseParallelSort";
+        public const string SortTaskUseParallelSortSettingKey = "SortTask.UseParallelSort";
 
         /// <summary>
         /// The name of the setting in the <see cref="Jobs.StageConfiguration.StageSettings"/> that determines the default value assigned to every key/value pair by
@@ -39,6 +39,13 @@ namespace Ookii.Jumbo.Jet.Tasks
         /// The default value is <see langword="null"/>, indicating the <see cref="EqualityComparer{T}.Default"/> will be used.
         /// </summary>
         public const string ReduceTaskKeyComparerSettingKey = "ReduceTask.KeyComparer";
+
+        /// <summary>
+        /// The name of the setting in <see cref="Jobs.StageConfiguration.StageSettings"/> that specifies the <see cref="IEqualityComparer{T}"/>
+        /// to use for the <see cref="AccumulatorTask{TKey,TValue}"/>. The value of the setting is a <see cref="String"/> that specifies the assembly-qualified type name of the comparer.
+        /// The default value is <see langword="null"/>, indicating the <see cref="EqualityComparer{T}.Default"/> will be used.
+        /// </summary>
+        public const string AccumulatorTaskKeyComparerSettingKey = "AccumulatorTask.KeyComparer";
 
         /// <summary>
         /// The name of the setting in <see cref="Jobs.StageConfiguration.StageSettings"/> that specifies the delegate to

@@ -33,29 +33,30 @@ namespace Ookii.Jumbo.Jet.Samples
     ///   convenience, the job runner will print this message to the console.
     /// </para>
     /// </remarks>
-    [Description("Validates whether the input is correctly sorted.")]
+    [Description("Validates whether the input, using GenSort records, is correctly sorted."), CLSCompliant(false)]
     public class ValSort : JobBuilderJob
     {
-        private readonly string _inputPath;
-        private readonly string _outputPath;
+        private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(ValSort));
+
         private string _outputFile;
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="ValSort"/> class.
+        /// Gets or sets the input path.
         /// </summary>
-        /// <param name="inputPath">The input file or directory for the job.</param>
-        /// <param name="outputPath">The output directory for the job.</param>
-        public ValSort([Description("The input file or directory on the Jumbo DFS containing the data to validate.")] string inputPath,
-                       [Description("The output directory on the Jumbo DFS where the results of the validation will be written.")] string outputPath)
-        {
-            if( inputPath == null )
-                throw new ArgumentNullException("inputPath");
-            if( outputPath == null )
-                throw new ArgumentNullException("outputPath");
+        /// <value>
+        /// The input path.
+        /// </value>
+        [CommandLineArgument(IsRequired = true, Position = 0), Description("The input file or directory containing the data to validate.")]
+        public string InputPath { get; set; }
 
-            _inputPath = inputPath;
-            _outputPath = outputPath;
-        }
+        /// <summary>
+        /// Gets or sets the output path.
+        /// </summary>
+        /// <value>
+        /// The output path.
+        /// </value>
+        [CommandLineArgument(IsRequired = true, Position = 1), Description("The output directory where the results of the validation will be written.")]
+        public string OutputPath { get; set; }
 
         /// <summary>
         /// Gets or sets a value indicating whether verbose logging of unsorted record locations is enabled in the combiner task.
@@ -63,7 +64,7 @@ namespace Ookii.Jumbo.Jet.Samples
         /// <value>
         /// 	<see langword="true"/> if verbose logging is enabled in the combiner task; otherwise, <see langword="false"/>. The default value is <see langword="false"/>.
         /// </value>
-        [CommandLineArgument("Verbose"), Jobs.JobSetting, Description("Enables verbose logging of where unsorted records occured in the combiner task.")]
+        [CommandLineArgument, JobSetting, Description("Enables verbose logging of where unsorted records occured in the combiner task.")]
         public bool VerboseLogging { get; set; }
 
         /// <summary>
@@ -72,16 +73,13 @@ namespace Ookii.Jumbo.Jet.Samples
         /// <param name="job">The <see cref="JobBuilder"/> used to create the job.</param>
         protected override void BuildJob(JobBuilder job)
         {
-            var input = job.Read(_inputPath, typeof(GenSortRecordReader));
-            var validatedSegments = job.Process(input, typeof(ValSortTask));
-            // Not using Sort because each ValSortTask produces only one output record, so there's no sense to using the merge sort strategy.
-            var sorted = job.Process(validatedSegments, typeof(SortTask<>));
-            sorted.StageId = "SortStage";
+            var input = job.Read(InputPath, typeof(GenSortRecordReader));
+            var validatedSegments = job.Process<GenSortRecord, ValSortRecord>(input, ValidateRecords);
+            var sorted = job.SpillSort(validatedSegments);
             sorted.InputChannel.PartitionCount = 1;
-            var validated = job.Process(sorted, typeof(ValSortCombinerTask));
-            WriteOutput(validated, _outputPath, typeof(TextRecordWriter<>));
-            validated.StageId = "CombinerStage";
-
+            var validated = job.Process<ValSortRecord, string>(sorted, ValidateResults);
+            validated.InputChannel.ChannelType = ChannelType.Pipeline;
+            WriteOutput(validated, OutputPath, typeof(TextRecordWriter<>));
         }
 
         /// <summary>
@@ -91,7 +89,7 @@ namespace Ookii.Jumbo.Jet.Samples
         /// <param name="jobConfiguration"></param>
         protected override void OnJobCreated(Job job, JobConfiguration jobConfiguration)
         {
-            _outputFile = FileDataOutput.GetOutputPath(jobConfiguration.GetStage("SortStage").ChildStage, 1);
+            _outputFile = FileDataOutput.GetOutputPath(jobConfiguration.GetStage("ValidateResultsTaskStage"), 1);
         }
 
         /// <summary>
@@ -117,6 +115,138 @@ namespace Ookii.Jumbo.Jet.Samples
                 }
             }
             base.FinishJob(success);
+        }
+
+        /// <summary>
+        /// Validates the records.
+        /// </summary>
+        /// <param name="input">The input.</param>
+        /// <param name="output">The output.</param>
+        /// <param name="context">The context.</param>
+        [AllowRecordReuse]
+        public static void ValidateRecords(RecordReader<GenSortRecord> input, RecordWriter<ValSortRecord> output, TaskContext context)
+        {
+            Crc32 crc = new Crc32();
+            long recordCrc;
+            UInt128 checksum = UInt128.Zero;
+            UInt128 duplicates = UInt128.Zero;
+            UInt128 unsorted = UInt128.Zero;
+            UInt128 count = UInt128.Zero;
+            GenSortRecord first = null;
+            GenSortRecord prev = null;
+            UInt128? firstUnordered = null;
+            foreach( GenSortRecord record in input.EnumerateRecords() )
+            {
+                crc.Reset();
+                crc.Update(record.RecordBuffer);
+                recordCrc = crc.Value;
+                checksum += new UInt128(0, (ulong)recordCrc);
+                if( prev == null )
+                {
+                    first = record;
+                }
+                else
+                {
+                    int diff = prev.CompareTo(record);
+                    if( diff == 0 )
+                        ++duplicates;
+                    else if( diff > 0 )
+                    {
+                        if( firstUnordered == null )
+                            firstUnordered = count;
+                        ++unsorted;
+                    }
+                }
+                prev = record;
+                ++count;
+            }
+
+            FileTaskInput taskInput = (FileTaskInput)context.TaskInput;
+            _log.InfoFormat("Input file {0} split offset {1} size {2} contains {3} unordered records.", taskInput.Path, taskInput.Offset, taskInput.Size, unsorted);
+
+            ValSortRecord result = new ValSortRecord()
+            {
+                InputId = taskInput.Path,
+                InputOffset = taskInput.Offset,
+                FirstKey = first.ExtractKeyBytes(),
+                LastKey = prev.ExtractKeyBytes(),
+                Records = count,
+                UnsortedRecords = unsorted,
+                FirstUnsorted = firstUnordered != null ? firstUnordered.Value : UInt128.Zero,
+                Checksum = checksum,
+                Duplicates = duplicates
+            };
+            output.WriteRecord(result);
+        }
+
+        /// <summary>
+        /// Validates the results.
+        /// </summary>
+        /// <param name="input">The input.</param>
+        /// <param name="output">The output.</param>
+        /// <param name="context">The context.</param>
+        /// <remarks>
+        ///   Does not allow record reuse; the function stores the previous instance.
+        /// </remarks>
+        public static void ValidateResults(RecordReader<ValSortRecord> input, RecordWriter<string> output, TaskContext context)
+        {
+            ValSortRecord prev = null;
+            UInt128 checksum = UInt128.Zero;
+            UInt128 unsortedRecords = UInt128.Zero;
+            UInt128 duplicates = UInt128.Zero;
+            UInt128 records = UInt128.Zero;
+            UInt128? firstUnsorted = null;
+
+            foreach( ValSortRecord record in input.EnumerateRecords() )
+            {
+                bool verbose = context.GetTypedSetting("ValSort.VerboseLogging", false);
+
+                if( prev != null )
+                {
+                    int diff = GenSortRecord.CompareKeys(prev.LastKey, record.FirstKey);
+                    if( diff == 0 )
+                        ++duplicates;
+                    else if( diff > 0 )
+                    {
+                        if( verbose )
+                            _log.InfoFormat("Input parts {0}-{1} and {2}-{3} are not sorted in relation to each other.", prev.InputId, prev.InputOffset, record.InputId, record.InputOffset);
+
+                        if( firstUnsorted == null )
+                            firstUnsorted = records;
+                        ++unsortedRecords;
+                    }
+                }
+
+                if( verbose && record.UnsortedRecords.High64 > 0 || record.UnsortedRecords.Low64 > 0 )
+                    _log.InfoFormat("Input part {0}-{1} has {2} unsorted records.", prev.InputId, prev.InputOffset, record.UnsortedRecords);
+
+                unsortedRecords += record.UnsortedRecords;
+                checksum += record.Checksum;
+                duplicates += record.Duplicates;
+                if( firstUnsorted == null && record.UnsortedRecords != UInt128.Zero )
+                {
+                    firstUnsorted = records + record.FirstUnsorted;
+                }
+                records += record.Records;
+
+                prev = record;
+            }
+
+            if( unsortedRecords != UInt128.Zero )
+            {
+                output.WriteRecord(string.Format("First unordered record is record {0}", firstUnsorted.Value));
+            }
+            output.WriteRecord(string.Format("Records: {0}", records));
+            output.WriteRecord(string.Format("Checksum: {0}", checksum.ToHexString()));
+            if( unsortedRecords == UInt128.Zero )
+            {
+                output.WriteRecord(string.Format("Duplicate keys: {0}", duplicates));
+                output.WriteRecord("SUCCESS - all records are in order");
+            }
+            else
+            {
+                output.WriteRecord(string.Format("ERROR - there are {0} unordered records", unsortedRecords));
+            }
         }
     }
 }

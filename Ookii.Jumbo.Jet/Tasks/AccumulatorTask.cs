@@ -17,12 +17,13 @@ namespace Ookii.Jumbo.Jet.Tasks
     /// <para>
     ///   It is safe to reuse the same <see cref="Pair{TKey,TValue}"/> in every call to
     ///   <see cref="ProcessRecord"/> if the key and value are either value types or 
+    ///   implement <see cref="ICloneable"/>. Therefore, if you specify the <see cref="AllowRecordReuseAttribute"/> on a class
+    ///   deriving from this class, the key and value must either be value types or
     ///   implement <see cref="ICloneable"/>.
     /// </para>
     /// <para>
-    ///   Therefore, if you specify the <see cref="AllowRecordReuseAttribute"/> on a class
-    ///   deriving from this class, the key and value must either be value types or
-    ///   implement <see cref="ICloneable"/>.
+    ///   You can specify a custom key comparer using the <see cref="TaskConstants.AccumulatorTaskKeyComparerSetting"/> key
+    ///   in the stage settings. Note that it is recommended to also use that has the comparer type for the <see cref="HashPartitioner{T}"/> in that case.
     /// </para>
     /// </remarks>
     public abstract class AccumulatorTask<TKey, TValue> : PushTask<Pair<TKey, TValue>, Pair<TKey, TValue>>
@@ -37,7 +38,7 @@ namespace Ookii.Jumbo.Jet.Tasks
 
         #endregion
 
-        private readonly Dictionary<TKey, ValueContainer> _acculumatedValues = new Dictionary<TKey, ValueContainer>();
+        private Dictionary<TKey, ValueContainer> _acculumatedValues;
 
         private readonly bool _cloneKey;
         private readonly bool _cloneValue;
@@ -62,6 +63,9 @@ namespace Ookii.Jumbo.Jet.Tasks
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1062:Validate arguments of public methods", MessageId = "0")]
         public override void ProcessRecord(Pair<TKey, TValue> record, RecordWriter<Pair<TKey, TValue>> output)
         {
+            if( _acculumatedValues == null )
+                _acculumatedValues = new Dictionary<TKey, ValueContainer>();
+
             ValueContainer value;
             if( _acculumatedValues.TryGetValue(record.Key, out value) )
                 value.Value = Accumulate(record.Key, value.Value, record.Value);
@@ -122,5 +126,29 @@ namespace Ookii.Jumbo.Jet.Tasks
         /// </para>
         /// </remarks>
         protected abstract TValue Accumulate(TKey key, TValue currentValue, TValue newValue);
+
+        /// <summary>
+        /// Indicates the configuration has been changed. <see cref="JetActivator.ApplyConfiguration" /> calls this method
+        /// after setting the configuration.
+        /// </summary>
+        /// <exception cref="System.InvalidOperationException">Cannot change configuration after accumulation has started.</exception>
+        public override void NotifyConfigurationChanged()
+        {
+            base.NotifyConfigurationChanged();
+            if( TaskContext != null )
+            {
+                if( _acculumatedValues != null && _acculumatedValues.Count > 0 )
+                    throw new InvalidOperationException("Cannot change configuration after accumulation has started.");
+
+                string comparerTypeName = TaskContext.StageConfiguration.GetSetting(TaskConstants.AccumulatorTaskKeyComparerSettingKey, null);
+                IEqualityComparer<TKey> comparer = null;
+                if( comparerTypeName != null )
+                {
+                    Type comparerType = Type.GetType(comparerTypeName, true);
+                    comparer = (IEqualityComparer<TKey>)JetActivator.CreateInstance(comparerType, DfsConfiguration, JetConfiguration, TaskContext);
+                }
+                _acculumatedValues = new Dictionary<TKey, ValueContainer>(comparer);
+            }
+        }
     }
 }

@@ -38,7 +38,7 @@ namespace Ookii.Jumbo.Jet.Tasks
             _comparer = null;
             if( TaskContext != null )
             {
-                string comparerTypeName = TaskContext.StageConfiguration.GetSetting(TaskConstants.ComparerSettingKey, null);
+                string comparerTypeName = TaskContext.StageConfiguration.GetSetting(TaskConstants.SortTaskComparerSettingKey, null);
                 if( !string.IsNullOrEmpty(comparerTypeName) )
                     _comparer = (IComparer<T>)JetActivator.CreateInstance(Type.GetType(comparerTypeName, true), DfsConfiguration, JetConfiguration, TaskContext);
                 _partitions = new List<T>[TaskContext.StageConfiguration.InternalPartitionCount];
@@ -73,7 +73,7 @@ namespace Ookii.Jumbo.Jet.Tasks
             if( output == null )
                 throw new ArgumentNullException("output");
 
-            bool parallelSort = TaskContext == null ? true : TaskContext.GetTypedSetting(TaskConstants.UseParallelSortSettingKey, true);
+            bool parallelSort = TaskContext == null ? true : TaskContext.GetTypedSetting(TaskConstants.SortTaskUseParallelSortSettingKey, true);
 
             // Don't do parallel sort if we've been told not do, or if it doesn't make sense (1 partition or 1 CPU).
             if( parallelSort && _partitions.Length > 1 && Environment.ProcessorCount > 1 )

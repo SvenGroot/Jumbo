@@ -370,12 +370,15 @@ namespace JobServerApplication
             else
             {
                 JobInfo job;
-                if( _jobs.TryGetValue(jobId, out job) )
+                lock( _finishedJobs )
                 {
-                    using( Stream stream = _fileSystemClient.OpenFile(job.Job.GetJobConfigurationFilePath(_fileSystemClient)) )
-                    using( StreamReader reader = new StreamReader(stream) )
+                    if( _jobs.TryGetValue(jobId, out job) || _finishedJobs.TryGetValue(jobId, out job) )
                     {
-                        return reader.ReadToEnd();
+                        using( Stream stream = _fileSystemClient.OpenFile(job.Job.GetJobConfigurationFilePath(_fileSystemClient)) )
+                        using( StreamReader reader = new StreamReader(stream) )
+                        {
+                            return reader.ReadToEnd();
+                        }
                     }
                 }
             }

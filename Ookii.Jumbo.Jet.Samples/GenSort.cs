@@ -10,6 +10,8 @@ using Ookii.Jumbo.Jet.Samples.IO;
 using Ookii.Jumbo.Jet.Samples.Tasks;
 using Ookii.Jumbo.Jet.Jobs.Builder;
 using Ookii.CommandLine;
+using Ookii.Jumbo.IO;
+using Ookii.Jumbo.Jet.Tasks;
 
 namespace Ookii.Jumbo.Jet.Samples
 {
@@ -26,7 +28,7 @@ namespace Ookii.Jumbo.Jet.Samples
     ///   C version can be found at http://www.ordinal.com/gensort.html.
     /// </para>
     /// </remarks>
-    [Description("Generates input records for the GraySort job."), CLSCompliant(false)]
+    [Description("Generates input records for the TeraSort job."), CLSCompliant(false)]
     public class GenSort : JobBuilderJob
     {
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(GenSort));
@@ -82,8 +84,38 @@ namespace Ookii.Jumbo.Jet.Samples
             ulong remainder = RecordCount % (ulong)TaskCount;
             _log.InfoFormat("Generating {0} records with {1} tasks, {2} records per task, remainder {3}.", RecordCount, TaskCount, countPerTask, remainder);
 
-            var generated = job.Generate(TaskCount, typeof(GenSortTask));
+            var generated = job.Generate<GenSortRecord>(TaskCount, Generate);
             WriteOutput(generated, OutputPath, typeof(GenSortRecordWriter));
+        }
+
+        /// <summary>
+        /// Generates records.
+        /// </summary>
+        /// <param name="output">The output.</param>
+        /// <param name="context">The context.</param>
+        public static void Generate(RecordWriter<GenSortRecord> output, ProgressContext context)
+        {
+            ulong startRecord = context.TaskContext.GetTypedSetting("GenSort.StartRecord", 0UL);
+            ulong count = context.TaskContext.GetTypedSetting("GenSort.RecordCount", 0UL);
+
+            ulong countPerTask = count / (ulong)context.TaskContext.StageConfiguration.TaskCount;
+            int taskNum = context.TaskContext.TaskId.TaskNumber;
+            startRecord += (countPerTask * (ulong)(taskNum - 1));
+            if( taskNum == context.TaskContext.StageConfiguration.TaskCount )
+                count = countPerTask + count % (ulong)context.TaskContext.StageConfiguration.TaskCount;
+            else
+                count = countPerTask;
+
+            _log.InfoFormat("Generating {0} records starting at number {1}.", count, startRecord);
+
+            GenSortGenerator generator = new GenSortGenerator();
+            ulong generated = 0;
+            foreach( GenSortRecord record in generator.GenerateRecords(new UInt128(0, startRecord), count) )
+            {
+                output.WriteRecord(record);
+                ++generated;
+                context.Progress = (float)generated / (float)count;
+            }
         }
     }
 }

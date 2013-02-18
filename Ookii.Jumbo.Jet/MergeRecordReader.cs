@@ -17,7 +17,7 @@ namespace Ookii.Jumbo.Jet
     /// <typeparam name="T">The type of the records.</typeparam>
     /// <remarks>
     /// <para>
-    ///   If <see cref="Channel"/> is not <see langword="null"/>, the <see cref="MergeRecordReader{T}"/> will use the <see cref="Tasks.TaskConstants.ComparerSettingKey"/>
+    ///   If <see cref="Channel"/> is not <see langword="null"/>, the <see cref="MergeRecordReader{T}"/> will use the <see cref="Tasks.TaskConstants.SortTaskComparerSettingKey"/>
     ///   on the <see cref="Jobs.StageConfiguration.StageSettings"/> of the input stage to determine the comparer to use. Otherwise, it will use the 
     ///   <see cref="MergeRecordReaderConstants.ComparerSetting"/> of the current stage. If neither is specified, <see cref="Comparer{T}.Default"/> will be used.
     /// </para>
@@ -380,7 +380,7 @@ namespace Ookii.Jumbo.Jet
                 if( Channel.InputStage.GetTypedSetting(FileOutputChannel.OutputTypeSettingKey, FileChannelOutputType.Spill) == FileChannelOutputType.SortSpill )
                     comparerTypeName = Channel.InputStage.GetSetting(FileOutputChannel.SpillSortComparerTypeSettingKey, null);
                 else
-                    comparerTypeName = Channel.InputStage.GetSetting(Tasks.TaskConstants.ComparerSettingKey, null);
+                    comparerTypeName = Channel.InputStage.GetSetting(Tasks.TaskConstants.SortTaskComparerSettingKey, null);
             }
 
             if( !string.IsNullOrEmpty(comparerTypeName) )

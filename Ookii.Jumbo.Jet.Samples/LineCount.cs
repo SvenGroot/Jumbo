@@ -43,10 +43,21 @@ namespace Ookii.Jumbo.Jet.Samples
         protected override void BuildJob(JobBuilder job)
         {
             var input = job.Read(InputPath, typeof(LineRecordReader));
-            var counted = job.Process(input, typeof(RecordCountTask<>));
-            var summed = job.Process<int, int>(input, SumLineCount); // Record reuse irrelevant because type is int.
+            var counted = job.Process<Utf8String, long>(input, CountLines);
+            var summed = job.Process<long, long>(input, SumLineCount);
             summed.InputChannel.PartitionCount = 1;
             WriteOutput(summed, OutputPath, typeof(TextRecordWriter<>));
+        }
+
+        /// <summary>
+        /// Counts the number of lines.
+        /// </summary>
+        /// <param name="input">The input.</param>
+        /// <param name="output">The output.</param>
+        [AllowRecordReuse]
+        public static void CountLines(RecordReader<Utf8String> input, RecordWriter<long> output)
+        {
+            output.WriteRecord(input.EnumerateRecords().Count());
         }
 
         /// <summary>
@@ -54,7 +65,8 @@ namespace Ookii.Jumbo.Jet.Samples
         /// </summary>
         /// <param name="input">The input.</param>
         /// <param name="output">The output.</param>
-        public static void SumLineCount(RecordReader<int> input, RecordWriter<int> output)
+        [AllowRecordReuse]
+        public static void SumLineCount(RecordReader<long> input, RecordWriter<long> output)
         {
             output.WriteRecord(input.EnumerateRecords().Sum());
         }

@@ -8,6 +8,7 @@ using Ookii.Jumbo.IO;
 using Ookii.CommandLine;
 using System.IO;
 using Ookii.Jumbo.Jet.Tasks;
+using Ookii.Jumbo.Jet.Jobs;
 
 namespace Ookii.Jumbo.Jet.Samples
 {
@@ -15,7 +16,6 @@ namespace Ookii.Jumbo.Jet.Samples
     /// Generates random text data.
     /// </summary>
     [Description("Generates random text data of the specified size.")]
-    [Serializable]
     public class GenerateText : JobBuilderJob
     {
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(GenerateText));
@@ -46,7 +46,7 @@ namespace Ookii.Jumbo.Jet.Samples
         /// <value>
         /// The size per task.
         /// </value>
-        [CommandLineArgument(Position = 2), Description("The size of the data to generate per task. Specify zero to use the DFS block size."), Ookii.Jumbo.Jet.Jobs.JobSetting]
+        [CommandLineArgument(Position = 2), Description("The size of the data to generate per task. Specify zero to use the DFS block size."), JobSetting]
         public BinarySize SizePerTask { get; set; }
 
         /// <summary>
@@ -55,7 +55,7 @@ namespace Ookii.Jumbo.Jet.Samples
         /// <value>
         /// The words per line.
         /// </value>
-        [CommandLineArgument(DefaultValue = 10), Description("The number of words per line"), Ookii.Jumbo.Jet.Jobs.JobSetting]
+        [CommandLineArgument(DefaultValue = 10), Description("The number of words per line."), JobSetting]
         public int WordsPerLine { get; set; }
 
         /// <summary>
@@ -64,7 +64,7 @@ namespace Ookii.Jumbo.Jet.Samples
         /// <value>
         /// The words per line randomization.
         /// </value>
-        [CommandLineArgument(DefaultValue = 5), Description("The amount by which the number of words per line will be varied."), Ookii.Jumbo.Jet.Jobs.JobSetting]
+        [CommandLineArgument(DefaultValue = 5), Description("The amount by which the number of words per line will be varied."), JobSetting]
         public int WordsPerLineRandomization { get; set; }
 
         /// <summary>
@@ -116,7 +116,6 @@ namespace Ookii.Jumbo.Jet.Samples
         private static void GenerateLine(Random rnd, Utf8String line, Utf8String[] words, int numWords)
         {
             line.ByteLength = 0;
-            //int numWords = WordsPerLine + rnd.Next(WordsPerLineRandomization);
             for( int x = 0; x < numWords; ++x )
             {
                 if( x > 0 )
