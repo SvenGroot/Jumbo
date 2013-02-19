@@ -138,7 +138,7 @@ namespace Ookii.Jumbo.Jet.Samples
             char[] separator = new[] { ' ' };
             foreach( Utf8String line in input.EnumerateRecords() )
             {
-                string[] words = line.ToString().Split(separator);
+                string[] words = line.ToString().Split(separator, StringSplitOptions.RemoveEmptyEntries);
                 foreach( string word in words )
                 {
                     record.Key.Set(word);
