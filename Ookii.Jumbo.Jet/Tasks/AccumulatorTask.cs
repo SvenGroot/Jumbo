@@ -22,7 +22,7 @@ namespace Ookii.Jumbo.Jet.Tasks
     ///   implement <see cref="ICloneable"/>.
     /// </para>
     /// <para>
-    ///   You can specify a custom key comparer using the <see cref="TaskConstants.AccumulatorTaskKeyComparerSetting"/> key
+    ///   You can specify a custom key comparer using the <see cref="TaskConstants.AccumulatorTaskKeyComparerSettingKey"/> key
     ///   in the stage settings. Note that it is recommended to also use that has the comparer type for the <see cref="HashPartitioner{T}"/> in that case.
     /// </para>
     /// </remarks>

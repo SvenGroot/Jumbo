@@ -84,6 +84,7 @@
     <Compile Include="..\AssemblyInfoCommon.cs">
       <Link>Properties\AssemblyInfoCommon.cs</Link>
     </Compile>
+    <Compile Include="AdvancedWordCount.cs" />
     <Compile Include="FPGrowth\FeatureFilterTask.cs" />
     <Compile Include="FPGrowth\FeatureGroupTask.cs" />
     <Compile Include="FPGrowth\FGListItem.cs" />
@@ -94,12 +95,6 @@
     <Compile Include="FPGrowth\FrequentPatternCollector.cs" />
     <Compile Include="FPGrowth\FrequentPatternMaxHeap.cs" />
     <Compile Include="FPGrowth\ITransaction.cs" />
-    <Compile Include="FPGrowth\MapReduce\AggregationReduceTask.cs" />
-    <Compile Include="FPGrowth\MapReduce\FeatureCountingMapReduce.cs" />
-    <Compile Include="FPGrowth\MapReduce\ParallelFPGrowthMapTask.cs" />
-    <Compile Include="FPGrowth\MapReduce\ParallelFPGrowthReduceTask.cs" />
-    <Compile Include="FPGrowth\MapReduce\PatternAggregationMapReduce.cs" />
-    <Compile Include="FPGrowth\MapReduce\PFPGrowthMapReduce.cs" />
     <Compile Include="FPGrowth\NodeChildList.cs" />
     <Compile Include="FPGrowth\PFPGrowth.cs" />
     <Compile Include="FPGrowth\Transaction.cs" />
@@ -107,6 +102,7 @@
     <Compile Include="FPGrowth\WeightedTransaction.cs" />
     <Compile Include="GenerateText.cs" />
     <Compile Include="IO\ValSortRecordRawComparer.cs" />
+    <Compile Include="OrdinalIgnoreCaseStringComparer.cs" />
     <Compile Include="TeraSort.cs" />
     <Compile Include="IO\GenSortRecordRawComparer.cs" />
     <Compile Include="IO\UInt128Writer.cs" />
@@ -121,7 +117,7 @@
     <Compile Include="IO\GenSortRecord.cs" />
     <Compile Include="IO\GenSortRecordReader.cs" />
     <Compile Include="IO\GenSortRecordWriter.cs" />
-    <Compile Include="Tasks\GenSortGenerator.cs" />
+    <Compile Include="GenSortGenerator.cs" />
     <Compile Include="IO\Random128.cs" />
     <Compile Include="IO\UInt128.cs" />
     <Compile Include="LineCount.cs" />

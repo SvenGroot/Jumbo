@@ -8,6 +8,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Libraries", "Libraries", "{
 		lib\log4net-license.txt = lib\log4net-license.txt
 		lib\log4net.dll = lib\log4net.dll
 		lib\log4net.xml = lib\log4net.xml
+		lib\Ookii.CommandLine-license.txt = lib\Ookii.CommandLine-license.txt
 		lib\Ookii.CommandLine.dll = lib\Ookii.CommandLine.dll
 		lib\Ookii.CommandLine.XML = lib\Ookii.CommandLine.XML
 	EndProjectSection

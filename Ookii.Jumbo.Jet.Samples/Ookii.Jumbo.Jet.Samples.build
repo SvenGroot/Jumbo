@@ -25,7 +25,6 @@
       <sources>
         <include name="Properties/AssemblyInfo.cs"/>
 	<include name="Properties/Resources.Designer.cs"/>
-        <include name="Tasks/*.cs"/>
         <include name="IO/*.cs"/>
         <include name="FPGrowth/*.cs" />
         <include name="FPGrowth/MapReduce/*.cs" />

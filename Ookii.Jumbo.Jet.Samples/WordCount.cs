@@ -42,7 +42,7 @@ namespace Ookii.Jumbo.Jet.Samples
         /// <value>
         /// The input path.
         /// </value>
-        [CommandLineArgument(Position = 0, IsRequired = true), Description("The input file or directory on the Jumbo DFS containing the text to perform the word count on.")]
+        [CommandLineArgument(Position = 0, IsRequired = true), Description("The input file or directory containing the text to perform the word count on (must be utf-8).")]
         public string InputPath { get; set; }
 
         /// <summary>
@@ -51,7 +51,7 @@ namespace Ookii.Jumbo.Jet.Samples
         /// <value>
         /// The output path.
         /// </value>
-        [CommandLineArgument(Position = 1, IsRequired = true), Description("The output directory on the Jumbo DFS where the results of the word count will be written.")]
+        [CommandLineArgument(Position = 1, IsRequired = true), Description("The output directory where the results of the word count will be written.")]
         public string OutputPath { get; set; }
 
         /// <summary>

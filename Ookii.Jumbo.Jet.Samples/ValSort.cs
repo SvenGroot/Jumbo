@@ -1,21 +1,15 @@
 ﻿// $Id$
-//
+
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.ComponentModel;
+using System.IO;
+using Ookii.CommandLine;
+using Ookii.Jumbo.IO;
+using Ookii.Jumbo.Jet.Channels;
+using Ookii.Jumbo.Jet.IO;
 using Ookii.Jumbo.Jet.Jobs;
 using Ookii.Jumbo.Jet.Jobs.Builder;
-using Ookii.Jumbo.Dfs;
-using Ookii.Jumbo.Jet.Samples.Tasks;
 using Ookii.Jumbo.Jet.Samples.IO;
-using Ookii.Jumbo.Jet.Tasks;
-using Ookii.Jumbo.Jet.Channels;
-using Ookii.Jumbo.IO;
-using Ookii.CommandLine;
-using System.IO;
-using Ookii.Jumbo.Jet.IO;
 
 namespace Ookii.Jumbo.Jet.Samples
 {

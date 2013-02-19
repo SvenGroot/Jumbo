@@ -6,7 +6,7 @@ using System.Linq;
 using System.Text;
 using Ookii.Jumbo.Jet.Samples.IO;
 
-namespace Ookii.Jumbo.Jet.Samples.Tasks
+namespace Ookii.Jumbo.Jet.Samples
 {
     class GenSortGenerator
     {

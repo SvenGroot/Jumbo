@@ -19,24 +19,58 @@ namespace Ookii.Jumbo.Jet.Samples.FPGrowth
     /// <summary>
     /// JobRunner for the Parallel FP-growth algorithm.
     /// </summary>
+    /// <remarks>
+    /// <para>
+    ///   This job is an implementation of the Parallel FP Growth algorithm described in the paper
+    ///   "PFP: Parallel FP-Growth for Query Recommendation" by Li et al., 2008.
+    /// </para>
+    /// <para>
+    ///   This algorithm calculates the top-K frequent patterns for each item in the database, only
+    ///   regarding patterns that have the specified minimum support.
+    /// </para>
+    /// <para>
+    ///   The algorithm has three steps: first, it counts how often each item occurs in the input database,
+    ///   filters out the infrequent features, and divides the resulting feature list into groups. Next,
+    ///   it generates group-dependent transactions from the input and runs the FP-Growth algorithm on
+    ///   each group. Finally, the results from each group are aggregated to form the final result.
+    /// </para>
+    /// <para>
+    ///   The number of groups should be carefully selected so that the number of items per group it
+    ///   not too large. Ideally, each group should have 5-10 items at most for a large database.
+    /// </para>
+    /// <para>
+    ///   The input for this job should be a plain text file (or files) where each line represents
+    ///   a transaction containing a space-delimited list of transactions.
+    /// </para>
+    /// <para>
+    ///   This example demonstrates a more complicated Jumbo job, with several stages including
+    ///   more than one stage with file input. It uses scheduling dependencies, group aggregation,
+    ///   partition-based grouping using multiple partitions per task, dynamic partition assignment,
+    ///   and custom progress providers.
+    /// </para>
+    /// </remarks>
     [Description("Runs the parallel FP-growth algorithm against a database of transactions.")]
     public class PFPGrowth : JobBuilderJob
     {
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(PFPGrowth));
-        private readonly string _inputPath;
-        private readonly string _outputPath;
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="PFPGrowth"/> class.
+        /// Gets or sets the input path.
         /// </summary>
-        /// <param name="inputPath">The input path.</param>
-        /// <param name="outputPath">The output path.</param>
-        public PFPGrowth([Description("The input file or directory on the DFS containing the transaction database.")] string inputPath,
-                         [Description("The output directory on the DFS where the result will be written.")] string outputPath)
-        {
-            _inputPath = inputPath;
-            _outputPath = outputPath;
-        }
+        /// <value>
+        /// The input path.
+        /// </value>
+        [CommandLineArgument(IsRequired = true, Position = 0), Description("The input file or directory containing the transaction database. The database should be a plain text file where each line is a transaction containing a space-separated list of items.")]
+        public string InputPath { get; set; }
+
+        /// <summary>
+        /// Gets or sets the output path.
+        /// </summary>
+        /// <value>
+        /// The output path.
+        /// </value>
+        [CommandLineArgument(IsRequired = true, Position = 1), Description("The output directory where the result will be written.")]
+        public string OutputPath { get; set; }
 
         /// <summary>
         /// Gets or sets the min support.
@@ -106,15 +140,15 @@ namespace Ookii.Jumbo.Jet.Samples.FPGrowth
             if( FPGrowthTaskCount == 0 )
                 FPGrowthTaskCount = JetClient.JobServer.GetMetrics().Capacity;
 
-            // Interesting observation: if the number of groups equals or is smaller than the number of partitions, we don't need to sort, because each
+            // If the number of groups equals or is smaller than the number of partitions, we don't need to sort, because each
             // partition will get exactly one group.
             if( FPGrowthTaskCount * PartitionsPerTask < Groups )
-                throw new NotSupportedException("The number of groups must be less then or equal to the number of partitions.");
+                throw new NotSupportedException("The number of groups must be less than or equal to the number of partitions.");
 
-            string fglistDirectory = FileSystemClient.Path.Combine(_outputPath, "fglist");
-            string resultDirectory = FileSystemClient.Path.Combine(_outputPath, "output");
+            string fglistDirectory = FileSystemClient.Path.Combine(OutputPath, "fglist");
+            string resultDirectory = FileSystemClient.Path.Combine(OutputPath, "output");
 
-            var input = job.Read(_inputPath, typeof(LineRecordReader));
+            var input = job.Read(InputPath, typeof(LineRecordReader));
             // Generate (feature,1) pairs for each feature in the transaction DB
             var countedFeatures = job.Process<Utf8String, Pair<Utf8String, int>>(input, CountFeatures);
             // Count the frequency of each feature.
@@ -136,7 +170,6 @@ namespace Ookii.Jumbo.Jet.Samples.FPGrowth
             var patterns = job.Process(groupedTransactions, typeof(TransactionMiningTask));
             patterns.InputChannel.TaskCount = FPGrowthTaskCount;
             patterns.InputChannel.PartitionsPerTask = PartitionsPerTask;
-            patterns.InputChannel.PartitionAssignmentMethod = PartitionAssignmentMethod.Striped;
             
             // Aggregate frequent patterns.
             var aggregatedPatterns = job.Process<Pair<int, WritableCollection<MappedFrequentPattern>>, Pair<Utf8String, WritableCollection<FrequentPattern>>>(patterns, AggregatePatterns);

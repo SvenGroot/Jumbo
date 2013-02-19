@@ -167,12 +167,27 @@ namespace Ookii.Jumbo.Jet
         }
 
         /// <summary>
+        /// Gets a setting's string value with the specified default value, checking first in the stage settings and then in the job settings.
+        /// </summary>
+        /// <param name="key">The name of the setting.</param>
+        /// <param name="defaultValue">The value to use if the setting is not present in the <see cref="SettingsDictionary"/>.</param>
+        /// <returns>The value of the setting, or <paramref name="defaultValue"/> if the setting was not present in either the stage or job settings.</returns>
+        public string GetSetting(string key, string defaultValue)
+        {
+            string value = StageConfiguration.GetSetting(key, null);
+            if( value == null )
+                value = JobConfiguration.GetSetting(key, defaultValue);
+
+            return value;
+        }        
+        
+        /// <summary>
         /// Gets a setting with the specified type and default value, checking first in the stage settings and then in the job settings.
         /// </summary>
         /// <typeparam name="T">The type of the setting.</typeparam>
         /// <param name="key">The name of the setting.</param>
         /// <param name="defaultValue">The value to use if the setting is not present in the <see cref="SettingsDictionary"/>.</param>
-        /// <returns>The value of the setting, or <paramref name="defaultValue"/> if the setting was not present in the <see cref="SettingsDictionary"/>.</returns>
+        /// <returns>The value of the setting, or <paramref name="defaultValue"/> if the setting was not present in either the stage or job settings.</returns>
         public T GetTypedSetting<T>(string key, T defaultValue)
         {
             T value;
