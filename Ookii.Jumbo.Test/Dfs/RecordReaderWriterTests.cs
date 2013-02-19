@@ -62,38 +62,7 @@ namespace Ookii.Jumbo.Test.Dfs
                 Assert.AreEqual(writer.OutputBytes, stream.Length);
             }
 
-            int recordIndex = 0;
-            JumboFile file = _dfsClient.NameServer.GetFileInfo(fileName);
-            int blocks = file.Blocks.Count;
-            int totalRecordsRead = 0;
-            for( int block = 0; block < blocks; ++block )
-            {
-                int offset = block * _blockSize;
-                int size = Math.Min((int)(file.Size - offset), _blockSize);
-                using( Stream stream = _dfsClient.OpenFile(fileName) )
-                using( LineRecordReader reader = new LineRecordReader(stream, block * _blockSize, size, true) )
-                {
-                    foreach( Utf8String record in reader.EnumerateRecords() )
-                    {
-                        Assert.AreEqual(_records[recordIndex], record);
-                        ++recordIndex;
-                    }
-
-                    totalRecordsRead += reader.RecordsRead;
-                    int firstRecord = offset == 0 ? 0 : (offset / recordSize) + 1;
-                    int lastRecord = ((offset + size) / recordSize);
-                    if( offset + size < file.Size )
-                        ++lastRecord;
-                    int recordCount = lastRecord - firstRecord;
-                    Assert.AreEqual(recordCount, reader.RecordsRead);
-                    Assert.AreEqual(recordCount * recordSize, reader.InputBytes);
-                    Assert.GreaterOrEqual(reader.BytesRead, recordCount * recordSize + (recordSize - offset % recordSize));
-                    Assert.AreEqual(stream.Position - offset, reader.BytesRead);
-                    Assert.AreEqual(block == blocks - 1 ? 1 : 2, ((DfsInputStream)stream).BlocksRead);
-                }
-            }
-
-            Assert.AreEqual(_records.Count, totalRecordsRead);
+            TestLineRecordReader(fileName);
         }
 
         [Test]
@@ -116,34 +85,23 @@ namespace Ookii.Jumbo.Test.Dfs
                 Assert.AreEqual(writer.BytesWritten, stream.Length);
             }
 
-            int recordIndex = 0;
-            JumboFile file = _dfsClient.NameServer.GetFileInfo(fileName);
-            int blocks = file.Blocks.Count;
-            int totalRecordsRead = 0;
-            for( int block = 0; block < blocks; ++block )
-            {
-                int offset = block * _blockSize;
-                int size = Math.Min((int)(file.Size - offset), _blockSize);
-                using( Stream stream = _dfsClient.OpenFile(fileName) )
-                using( LineRecordReader reader = new LineRecordReader(stream, block * _blockSize, size, true) )
-                {
-                    foreach( Utf8String record in reader.EnumerateRecords() )
-                    {
-                        Assert.AreEqual(_records[recordIndex], record);
-                        ++recordIndex;
-                    }
+            TestLineRecordReader(fileName);
+        }
 
-                    totalRecordsRead += reader.RecordsRead;
-                    int recordCount = size / recordSize;
-                    Assert.AreEqual(recordCount, reader.RecordsRead);
-                    Assert.AreEqual(recordCount * recordSize, reader.InputBytes);
-                    Assert.GreaterOrEqual(reader.BytesRead, recordCount * recordSize);
-                    Assert.AreEqual(size, reader.BytesRead);
-                    Assert.AreEqual(1, ((DfsInputStream)stream).BlocksRead);
-                }
+
+        [Test]
+        public void TestLineRecordReaderByteOrderMark()
+        {
+            const string fileName = "/linesbom";
+
+            using( Stream stream = _dfsClient.CreateFile(fileName) )
+            using( StreamWriter writer = new StreamWriter(stream, new UTF8Encoding(true)) )
+            {
+                foreach( Utf8String record in _records )
+                    writer.WriteLine(record);
             }
 
-            Assert.AreEqual(_records.Count, totalRecordsRead);
+            TestLineRecordReader(fileName);
         }
 
         [Test]
@@ -193,6 +151,50 @@ namespace Ookii.Jumbo.Test.Dfs
                 }
             }
 
+            Assert.AreEqual(_records.Count, totalRecordsRead);
+        }
+
+        private void TestLineRecordReader(string fileName, bool bom = false)
+        {
+            int recordSize = _records[0].ByteLength + Environment.NewLine.Length;
+            int recordIndex = 0;
+            JumboFile file = _dfsClient.NameServer.GetFileInfo(fileName);
+            int blocks = file.Blocks.Count;
+            int totalRecordsRead = 0;
+            for( int block = 0; block < blocks; ++block )
+            {
+                int offset = block * _blockSize;
+                int size = Math.Min((int)(file.Size - offset), _blockSize);
+                using( Stream stream = _dfsClient.OpenFile(fileName) )
+                using( LineRecordReader reader = new LineRecordReader(stream, block * _blockSize, size, true) )
+                {
+                    foreach( Utf8String record in reader.EnumerateRecords() )
+                    {
+                        Assert.AreEqual(_records[recordIndex], record);
+                        ++recordIndex;
+                    }
+
+                    totalRecordsRead += reader.RecordsRead;
+                    int recordCount;
+                    if( file.RecordOptions == RecordStreamOptions.DoNotCrossBoundary )
+                    {
+                        recordCount = size / recordSize;
+                    }
+                    else
+                    {
+                        int firstRecord = offset == 0 ? 0 : (offset / recordSize) + 1;
+                        int lastRecord = ((offset + size) / recordSize);
+                        if( offset + size < file.Size )
+                            ++lastRecord;
+                        recordCount = lastRecord - firstRecord;
+                    }
+                    Assert.AreEqual(recordCount, reader.RecordsRead);
+                    Assert.AreEqual(recordCount * recordSize, reader.InputBytes);
+                    Assert.GreaterOrEqual(reader.BytesRead, recordCount * recordSize + (file.RecordOptions == RecordStreamOptions.DoNotCrossBoundary ? 0 : (recordSize - offset % recordSize)));
+                    Assert.AreEqual(stream.Position - offset, reader.BytesRead);
+                    Assert.AreEqual((file.RecordOptions == RecordStreamOptions.DoNotCrossBoundary || block == blocks - 1) ? 1 : 2, ((DfsInputStream)stream).BlocksRead);
+                }
+            }
             Assert.AreEqual(_records.Count, totalRecordsRead);
         }
     }

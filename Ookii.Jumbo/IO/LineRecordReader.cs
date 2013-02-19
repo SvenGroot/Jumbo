@@ -1,11 +1,7 @@
 ﻿// $Id$
-//
+
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.IO;
-using Ookii.Jumbo.IO;
 
 namespace Ookii.Jumbo.IO
 {
@@ -28,6 +24,8 @@ namespace Ookii.Jumbo.IO
 
             public LineReader(Stream stream, int bufferSize)
             {
+                if( bufferSize < 3 )
+                    bufferSize = 3; // Needed to check BOM
                 _stream = stream;
                 _buffer = new byte[bufferSize];
              }
@@ -37,11 +35,25 @@ namespace Ookii.Jumbo.IO
                 get { return _line; }
             }
 
+            public bool CheckByteOrderMark()
+            {
+                if( _bufferPos == _bufferLength && !ReadBuffer() )
+                    return false;
+
+                if( _bufferLength - _bufferPos > 2 && _buffer[_bufferPos] == 0xEF && _buffer[_bufferPos + 1] == 0xBB && _buffer[_bufferPos + 2] == 0xBF )
+                {
+                    _bufferPos += 3;
+                    return true;
+                }
+
+                return false;
+            }
+
             private bool ReadBuffer()
             {
                 _bufferPos = 0;
                 _bufferLength = _stream.Read(_buffer, 0, _buffer.Length);
-                return _bufferLength > 0;
+                return _bufferLength - _bufferPos > 0;
             }
 
             public void ReadLine(out int bytesProcessed)
@@ -144,7 +156,15 @@ namespace Ookii.Jumbo.IO
             _allowRecordReuse = allowRecordReuse;
             if( _end == stream.Length )
                 --_end;
-            if( offset != 0 )
+            if( offset == 0 )
+            {
+                if( _reader.CheckByteOrderMark() )
+                {
+                    _position += 3;
+                    FirstRecordOffset = _position;
+                }
+            }
+            else
             {
                 if( RecordInputStream == null || (RecordInputStream.RecordOptions & RecordStreamOptions.DoNotCrossBoundary) != RecordStreamOptions.DoNotCrossBoundary ||
                     RecordInputStream.OffsetFromBoundary(offset) != 0 )

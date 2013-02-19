@@ -202,7 +202,7 @@ namespace Ookii.Jumbo.IO
 
             if( Capacity == 0 )
             {
-                Set(value, 0, count);
+                Set(value, index, count);
             }
             else
             {
