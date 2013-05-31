@@ -305,7 +305,7 @@ namespace Ookii.Jumbo.Test.Jet
             JobBuilder builder = new JobBuilder(_fileSystemClient, _jetClient);
 
             var input = builder.Read(_inputPath, typeof(LineRecordReader));
-            var sort = builder.Sort(input);
+            var sort = builder.MemorySort(input);
             builder.Write(sort, _outputPath, typeof(TextRecordWriter<>));
 
             JobConfiguration config = builder.CreateJob();
@@ -331,7 +331,7 @@ namespace Ookii.Jumbo.Test.Jet
             JobBuilder builder = new JobBuilder(_fileSystemClient, _jetClient);
 
             var input = builder.Read(_inputPath, typeof(LineRecordReader));
-            var sort = builder.Sort(input);
+            var sort = builder.MemorySort(input);
             sort.InputChannel.PartitionCount = 1;
             builder.Write(sort, _outputPath, typeof(TextRecordWriter<>));
 
@@ -359,7 +359,7 @@ namespace Ookii.Jumbo.Test.Jet
 
             var input = builder.Read(_inputPath, typeof(LineRecordReader));
             var converted = builder.Process(input, typeof(StringConversionTask));
-            var sorted = builder.Sort(converted);
+            var sorted = builder.MemorySort(converted);
             var added = builder.Process(sorted, typeof(LineAdderTask)); // Yeah, this is not a sensible job, so what?
             builder.Write(added, _outputPath, typeof(TextRecordWriter<>));
 
@@ -388,7 +388,7 @@ namespace Ookii.Jumbo.Test.Jet
             JobBuilder builder = new JobBuilder(_fileSystemClient, _jetClient);
 
             var input = builder.Read(_inputPath, typeof(LineRecordReader));
-            var sort = builder.Sort(input, typeof(FakeComparer<>));
+            var sort = builder.MemorySort(input, typeof(FakeComparer<>));
             builder.Write(sort, _outputPath, typeof(TextRecordWriter<>));
 
             JobConfiguration config = builder.CreateJob();

@@ -152,7 +152,7 @@ namespace Ookii.Jumbo.Test.Jet
 
             var input = job.Read(inputFileName, typeof(LineRecordReader));
             var converted = job.Process(input, typeof(StringConversionTask));
-            var sorted = job.Sort(converted);
+            var sorted = job.MemorySort(converted);
             // Set spill buffer to ensure multiple spills
             if( channelType == ChannelType.Tcp )
                 sorted.InputChannel.Settings.AddTypedSetting(TcpOutputChannel.SpillBufferSizeSettingKey, "1MB");

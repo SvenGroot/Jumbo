@@ -86,7 +86,7 @@ namespace Ookii.Jumbo.Jet.Jobs.Builder
         /// <remarks>
         /// If <paramref name="comparerType"/> is a generic type definition with a singe type parameter, it will be constructed using the input's record type.
         /// </remarks>
-        public static SortOperation CreateSortOperation(JobBuilder builder, IOperationInput input, Type comparerType)
+        public static SortOperation CreateMemorySortOperation(JobBuilder builder, IOperationInput input, Type comparerType)
         {
             return new SortOperation(builder, input, comparerType, null, false);
         }

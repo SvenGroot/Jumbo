@@ -21,12 +21,12 @@ namespace Ookii.Jumbo.Jet.Jobs.Builder
         ///   This operation sorts all the records produced by a single task in memory. For large or unknown amounts of records, use <see cref="SpillSortCombine"/> instead.
         /// </para>
         /// </remarks>
-        public SortOperation Sort(IOperationInput input, Type comparerType = null)
+        public SortOperation MemorySort(IOperationInput input, Type comparerType = null)
         {
             if( input == null )
                 throw new ArgumentNullException("input");
             CheckIfInputBelongsToJobBuilder(input);
-            return SortOperation.CreateSortOperation(this, input, comparerType);
+            return SortOperation.CreateMemorySortOperation(this, input, comparerType);
         }
 
         /// <summary>
