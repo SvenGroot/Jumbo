@@ -13,6 +13,12 @@ namespace Ookii.Jumbo.Jet
     /// </summary>
     /// <typeparam name="TInput">The input type of the task.</typeparam>
     /// <typeparam name="TOutput">The output type of the task.</typeparam>
+    /// <remarks>
+    /// <para>
+    ///   When a task inheriting from <see cref="PushTask{TInput, TOutput}"/> is used for the receiving stage of a
+    ///   pipeline channel, the <see cref="Run"/> method will not be called.
+    /// </para>
+    /// </remarks>
     public abstract class PushTask<TInput, TOutput> : Configurable, ITask<TInput, TOutput>
     {
         /// <summary>
