@@ -11,6 +11,9 @@ namespace Ookii.Jumbo
     /// <summary>
     /// Provides information about the free disk space of a drive.
     /// </summary>
+    /// <remarks>
+    /// This class uses <see cref="DriveInfo"/> on .Net, and <strong>Mono.Unix.UnixDriveInfo</strong> on Mono.
+    /// </remarks>
     public class DriveSpaceInfo
     {
         /// <summary>
@@ -31,14 +34,31 @@ namespace Ookii.Jumbo
         /// <summary>
         /// Gets the amount of available free space.
         /// </summary>
+        /// <value>
+        /// The available free space, in bytes.
+        /// </value>
+        /// <remarks>
+        /// This property may be different from <see cref="AvailableFreeSpace"/> because this property takes into account disk quotas.
+        /// </remarks>
         public long AvailableFreeSpace { get; private set; }
+
         /// <summary>
         /// Gets the total amount of free space.
         /// </summary>
+        /// <value>
+        /// The total free space, in bytes.
+        /// </value>
+        /// <remarks>
+        /// This property indicates the total amount of free space available on the drive, not just what is available to the current user.
+        /// </remarks>
         public long TotalFreeSpace { get; private set; }
+
         /// <summary>
         /// Gets the total size of the drive.
         /// </summary>
+        /// <value>
+        /// The total size of the drive, in bytes.
+        /// </value>
         public long TotalSize { get; private set; }
 
         private void GetDriveSpace(string drivePath)

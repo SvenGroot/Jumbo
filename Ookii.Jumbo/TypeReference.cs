@@ -18,7 +18,7 @@ namespace Ookii.Jumbo
         private Type _type;
 
         /// <summary>
-        /// A <see cref="TypeReference"/> instance that doesn't reference any type.
+        /// A <see cref="TypeReference" /> instance that doesn't reference any type.
         /// </summary>
         public static readonly TypeReference Empty = new TypeReference();
 
@@ -63,8 +63,12 @@ namespace Ookii.Jumbo
         }
 
         /// <summary>
-        /// Gets or sets the type that this <see cref="TypeReference"/> references.
+        /// Gets or sets the type that this <see cref="TypeReference" /> references.
         /// </summary>
+        /// <value>
+        /// The <see cref="Type"/> that this <see cref="TypeReference"/> references.
+        /// </value>
+        /// <exception cref="System.InvalidOperationException">Resolving type references is disabled.</exception>
         public Type ReferencedType
         {
             get
@@ -81,8 +85,11 @@ namespace Ookii.Jumbo
         }
 
         /// <summary>
-        /// Gets or sets the name of the type that this <see cref="TypeReference"/> references.
+        /// Gets or sets the name of the type that this <see cref="TypeReference" /> references.
         /// </summary>
+        /// <value>
+        /// The assembly qualified name of the referenced type.
+        /// </value>
         public string TypeName
         {
             get

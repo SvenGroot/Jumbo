@@ -26,6 +26,9 @@ namespace Ookii.Jumbo
         /// <summary>
         /// Gets a value that indicates what runtime the application is running on.
         /// </summary>
+        /// <value>
+        /// One of the <see cref="RuntimeEnvironmentType"/> values indicating the type of the Common Language Runtime (.Net or Mono).
+        /// </value>
         public static RuntimeEnvironmentType RuntimeType
         {
             get
@@ -37,6 +40,9 @@ namespace Ookii.Jumbo
         /// <summary>
         /// Gets a description of the runtime environment, including the version number.
         /// </summary>
+        /// <value>
+        /// A string value that describes the runtime environment, including the version number.
+        /// </value>
         public static string Description
         {
             get
@@ -57,6 +63,9 @@ namespace Ookii.Jumbo
         /// <summary>
         /// Gets a description of the operating system, including the version number.
         /// </summary>
+        /// <value>
+        /// A string value that describes the operating system, including the version number.
+        /// </value>
         public static string OperatingSystemDescription
         {
             [MethodImpl(MethodImplOptions.Synchronized)]
@@ -87,6 +96,9 @@ namespace Ookii.Jumbo
         /// <summary>
         /// Gets the name of the system's processor.
         /// </summary>
+        /// <value>
+        /// A string value containing the name of the system's processor.
+        /// </value>
         public static string ProcessorName
         {
             [MethodImpl(MethodImplOptions.Synchronized)]
@@ -113,6 +125,9 @@ namespace Ookii.Jumbo
         /// <summary>
         /// Gets the version of Jumbo.
         /// </summary>
+        /// <value>
+        /// A <see cref="Version"/> value for the Jumbo version.
+        /// </value>
         /// <remarks>
         /// The value returned is actually the version of the Ookii.Jumbo assembly.
         /// </remarks>
@@ -129,8 +144,11 @@ namespace Ookii.Jumbo
         }
 
         /// <summary>
-        /// Gets the Jumbo build configuration, typiclly the branch name.
+        /// Gets the Jumbo build configuration, typically the branch name.
         /// </summary>
+        /// <value>
+        /// A string describing the build configuration.
+        /// </value>
         /// <remarks>
         /// This is typically the subversion branch from which Jumbo was built.
         /// </remarks>
@@ -167,16 +185,13 @@ namespace Ookii.Jumbo
         {
             if( startInfo == null )
                 throw new ArgumentNullException("startInfo");
-            if( RuntimeType == RuntimeEnvironmentType.Mono )
+            if( RuntimeType == RuntimeEnvironmentType.Mono && profileOutputFile != null )
             {
                 startInfo.Arguments = startInfo.FileName + " " + startInfo.Arguments;
-                if( !string.IsNullOrEmpty(profileOutputFile) )
-                {
-                    if( !string.IsNullOrEmpty(profileOptions) )
-                        profileOptions += ",";
+                if( !string.IsNullOrEmpty(profileOptions) )
+                    profileOptions += ",";
 
-                    startInfo.Arguments = string.Format(System.Globalization.CultureInfo.InvariantCulture, "--profile=default:{0}file={1} {2}", profileOptions, profileOutputFile, startInfo.Arguments);
-                }
+                startInfo.Arguments = string.Format(System.Globalization.CultureInfo.InvariantCulture, "--profile=default:{0}file={1} {2}", profileOptions, profileOutputFile, startInfo.Arguments);
                 startInfo.FileName = "mono";
             }
         }

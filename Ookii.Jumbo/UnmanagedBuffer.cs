@@ -18,7 +18,8 @@ namespace Ookii.Jumbo
     /// </para>
     /// <para>
     ///   The main reason for the existence of this class is Mono's reluctance to release memory from the managed heap
-    ///   back to the OS which can lead to pagefile thrashing if you're dealing with many large buffers.
+    ///   back to the OS which can lead to pagefile thrashing if you're dealing with many large buffers. This problem
+    ///   may not apply to the sgen garbage collector, but this has not been tested.
     /// </para>
     /// </remarks>
     public unsafe sealed class UnmanagedBuffer : IDisposable
@@ -54,13 +55,19 @@ namespace Ookii.Jumbo
         }
 
         /// <summary>
-        /// Gets the size of the buffer, in bytes.
+        /// Gets the size of the buffer.
         /// </summary>
+        /// <value>
+        /// The size of the buffer, in bytes.
+        /// </value>
         public long Size { get; private set; }
 
         /// <summary>
         /// Gets a pointer to the first byte of the buffer.
         /// </summary>
+        /// <value>
+        /// An unsafe pointer to the first byte of the buffer
+        /// </value>
         [CLSCompliant(false)]
         public byte* Buffer
         {
@@ -182,6 +189,7 @@ namespace Ookii.Jumbo
         /// <param name="destination">The managed byte array to copy the data to.</param>
         /// <param name="destinationIndex">The index in <paramref name="destination"/> to start copying at.</param>
         /// <param name="count">The number of bytes to copy.</param>
+        /// <returns>The next index position after writing the data.</returns>
         public static long CopyCircular(UnmanagedBuffer source, long sourceIndex, byte[] destination, int destinationIndex, int count)
         {
             if( source == null )

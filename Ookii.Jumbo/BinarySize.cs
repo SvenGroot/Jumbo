@@ -89,6 +89,9 @@ namespace Ookii.Jumbo
         /// <summary>
         /// Gets the value of this instance, in bytes.
         /// </summary>
+        /// <value>
+        /// The value of this instance, in bytes.
+        /// </value>
         public long Value
         {
             get { return _value; }
@@ -97,6 +100,9 @@ namespace Ookii.Jumbo
         /// <summary>
         /// Gets the value of this instance in kilobytes.
         /// </summary>
+        /// <value>
+        /// The value of this instance in whole and fractional kilobytes (<see cref="Value"/> / <see cref="Kilobyte"/>).
+        /// </value>
         public double InKilobytes
         {
             get { return _value / (double)Kilobyte; }
@@ -105,6 +111,9 @@ namespace Ookii.Jumbo
         /// <summary>
         /// Gets the value of this instance in megabytes.
         /// </summary>
+        /// <value>
+        /// The value of this instance in whole and fractional megabytes (<see cref="Value"/> / <see cref="Megabyte"/>)
+        /// </value>
         public double InMegabytes
         {
             get { return _value / (double)Megabyte; }
@@ -113,6 +122,9 @@ namespace Ookii.Jumbo
         /// <summary>
         /// Gets the value of this instance in gigabytes.
         /// </summary>
+        /// <value>
+        /// The value of this instance in whole and fractional gigabytes (<see cref="Value"/> / <see cref="Gigabyte"/>)
+        /// </value>
         public double InGigabytes
         {
             get { return _value / (double)Gigabyte; }
@@ -121,6 +133,9 @@ namespace Ookii.Jumbo
         /// <summary>
         /// Gets the value of this instance in terabytes.
         /// </summary>
+        /// <value>
+        /// The value of this instance in whole and fractional terabytes (<see cref="Value"/> / <see cref="Terabyte"/>)
+        /// </value>
         public double InTerabytes
         {
             get { return _value / (double)Terabyte; }
@@ -129,6 +144,9 @@ namespace Ookii.Jumbo
         /// <summary>
         /// Gets the value of this instance in petabytes.
         /// </summary>
+        /// <value>
+        /// The value of this instance in whole and fractional petabytes (<see cref="Value"/> / <see cref="Petabyte"/>)
+        /// </value>
         public double InPetabytes
         {
             get { return _value / (double)Petabyte; }

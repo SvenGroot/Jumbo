@@ -26,28 +26,51 @@ namespace Ookii.Jumbo
         }
 
         /// <summary>
-        /// Gets the identifier for this processor, or -1 if this instance represents the combined statistics for all processors.
+        /// Gets the identifier for this processor.
         /// </summary>
+        /// <value>
+        /// The CPU identifier, or -1 if this instance represents the combined statistics for all processors.
+        /// </value>
         public int CpuId { get; private set; }
+
         /// <summary>
         /// Gets the percentage of time the processor was idle.
         /// </summary>
+        /// <value>
+        /// A value between 0 and 100 indicating the percentage of time the processor was idle.
+        /// </value>
         public float PercentIdleTime { get; internal set; }
+
         /// <summary>
         /// Gets the percentage of time spent executing user code.
         /// </summary>
+        /// <value>
+        /// A value between 0 and 100 indicating the percentage of time the processor spent executing user code.
+        /// </value>
         public float PercentUserTime { get; internal set; }
+
         /// <summary>
-        /// Gets the percentage of time spent executing system code.
+        /// Gets the percentage of time spent executing system (kernel) code.
         /// </summary>
+        /// <value>
+        /// A value between 0 and 100 indicating the percentage of time the processor spent executing system (kernel) code.
+        /// </value>
         public float PercentSystemTime { get; internal set; }
+
         /// <summary>
         /// Gets the percentage of time spent processing hardware and software interrupts.
         /// </summary>
+        /// <value>
+        /// A value between 0 and 100 indicating the percentage of time the processor spent processing hardware and software interrupts.
+        /// </value>
         public float PercentInterruptTime { get; internal set; }
+
         /// <summary>
         /// Gets the percentage of time spent waiting for I/O.
         /// </summary>
+        /// <value>
+        /// A value between 0 and 100 indicating the percentage of time the processor spent waiting for I/O.
+        /// </value>
         public float PercentIOWaitTime { get; internal set; }
 
         /// <summary>

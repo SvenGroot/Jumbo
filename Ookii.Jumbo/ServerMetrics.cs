@@ -16,16 +16,25 @@ namespace Ookii.Jumbo
         /// <summary>
         /// Gets or sets the address of the server.
         /// </summary>
+        /// <value>
+        /// The address of the server.
+        /// </value>
         public ServerAddress Address { get; set; }
 
         /// <summary>
         /// Gets or sets the ID of the rack of the server.
         /// </summary>
+        /// <value>
+        /// The rack ID of the server, or <see langword="null"/> if rack-awareness isn't used or this server is in the default rack.
+        /// </value>
         public string RackId { get; set; }
 
         /// <summary>
         /// Gets or sets the time of the last heartbeat sent to the name server (for data servers) or job server (for task servers).
         /// </summary>
+        /// <value>
+        /// The UTC date and time of the last heartbeat sent.
+        /// </value>
         public DateTime LastContactUtc { get; set; }
 
         /// <summary>

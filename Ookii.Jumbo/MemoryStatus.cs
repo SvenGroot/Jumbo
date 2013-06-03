@@ -34,6 +34,9 @@ namespace Ookii.Jumbo
         /// <summary>
         /// Gets the total size of the physical memory.
         /// </summary>
+        /// <value>
+        /// The total physical memory, in bytes.
+        /// </value>
         public long TotalPhysicalMemory
         {
             get { return _totalPhysicalMemory; }
@@ -42,6 +45,9 @@ namespace Ookii.Jumbo
         /// <summary>
         /// Gets the amount of available physical memory.
         /// </summary>
+        /// <value>
+        /// The available physical memory, in bytes.
+        /// </value>
         /// <remarks>
         /// This is not the same as free physical memory. Cached memory is considered available.
         /// </remarks>
@@ -53,6 +59,9 @@ namespace Ookii.Jumbo
         /// <summary>
         /// Gets the amount of memory that is used as cache. This value is not available on Windows.
         /// </summary>
+        /// <value>
+        /// The amount of memory that is used as cache, in bytes.
+        /// </value>
         public long CachedMemory
         {
             get { return _cachedMemory; }
@@ -61,6 +70,9 @@ namespace Ookii.Jumbo
         /// <summary>
         /// Gets the amount of memory that is used as buffers. This value is not available on Windows.
         /// </summary>
+        /// <value>
+        /// The amount of memory that is used as buffers, in bytes.
+        /// </value>
         public long BufferedMemory
         {
             get { return _bufferedMemory; }
@@ -69,6 +81,9 @@ namespace Ookii.Jumbo
         /// <summary>
         /// Gets the total size of the swap space.
         /// </summary>
+        /// <value>
+        /// The total size of the swap space, bytes.
+        /// </value>
         public long TotalSwap
         {
             get { return _totalSwap; }
@@ -77,6 +92,9 @@ namespace Ookii.Jumbo
         /// <summary>
         /// Gets the amount of swap space available.
         /// </summary>
+        /// <value>
+        /// The available swap space, in bytes.
+        /// </value>
         public long AvailableSwap
         {
             get { return _availableSwap; }

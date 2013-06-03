@@ -30,7 +30,7 @@ namespace Ookii.Jumbo.Jet.Jobs
         /// <summary>
         /// Gets or sets a value that indicates whether the job runner should wait for user input before starting the job and before exitting.
         /// </summary>
-        [CommandLineArgument("Interactive"), Description("Wait for user confirmation before starting the job and before exitting.")]
+        [CommandLineArgument("Interactive"), Description("Wait for user confirmation before starting the job and before exiting.")]
         public bool IsInteractive { get; set; }
 
         /// <summary>

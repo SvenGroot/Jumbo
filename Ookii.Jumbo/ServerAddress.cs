@@ -63,6 +63,9 @@ namespace Ookii.Jumbo
         /// <summary>
         /// Gets the host name of the server.
         /// </summary>
+        /// <value>
+        /// The host name of the server.
+        /// </value>
         public string HostName
         {
             get { return _hostName; }
@@ -70,6 +73,9 @@ namespace Ookii.Jumbo
         /// <summary>
         /// Gets the port number of the server.
         /// </summary>
+        /// <value>
+        /// The port number of the server.
+        /// </value>
         public int Port
         {
             get { return _port; }

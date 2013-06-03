@@ -9,8 +9,9 @@ using System.Collections.ObjectModel;
 namespace Ookii.Jumbo
 {
     /// <summary>
-    /// Provides additional functionality for <see cref="Collection{T}"/>.
+    /// Provides additional functionality for <see cref="Collection{T}" />.
     /// </summary>
+    /// <typeparam name="T">The type of the items in the collection</typeparam>
     [Serializable]
     public class ExtendedCollection<T> : Collection<T>
     {

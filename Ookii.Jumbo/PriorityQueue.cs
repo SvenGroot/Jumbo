@@ -434,7 +434,7 @@ namespace Ookii.Jumbo
         /// <summary>
         /// Checks the heap. Used for debug purposes.
         /// </summary>
-        /// <returns></returns>
+        /// <returns><see langword="true"/> if the heap is valid; otherwise, <see langword="false" />.</returns>
         public bool CheckHeap()
         {
             for( int x = 0; x < _heap.Count; ++x )

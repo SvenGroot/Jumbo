@@ -82,7 +82,6 @@
     <Compile Include="BinarySize.cs" />
     <Compile Include="BinarySizeConverter.cs" />
     <Compile Include="BinarySizeFormatter.cs" />
-    <Compile Include="ChildCollection.cs" />
     <Compile Include="CollectionExtensions.cs" />
     <Compile Include="CountdownEvent.cs" />
     <Compile Include="Crc32.cs" />
@@ -151,8 +150,6 @@
     <Compile Include="Rpc\RpcStream.cs" />
     <Compile Include="Rpc\ServerConnectionCache.cs" />
     <Compile Include="Rpc\ServerContext.cs" />
-    <Compile Include="SpinLock.cs" />
-    <Compile Include="SpinWait.cs" />
     <Compile Include="Topology\NetworkTopology.cs" />
     <Compile Include="Topology\NetworkTopologyConfigurationElement.cs" />
     <Compile Include="Topology\PatternType.cs" />
@@ -164,7 +161,6 @@
     <Compile Include="Topology\TopologyNode.cs" />
     <Compile Include="Topology\ITopologyResolver.cs" />
     <Compile Include="Topology\Rack.cs" />
-    <Compile Include="ObjectWithParent.cs" />
     <Compile Include="IO\MultiInputRecordReader.cs" />
     <Compile Include="IO\RecordFile.cs" />
     <Compile Include="IO\RecordFileHeader.cs" />
@@ -202,7 +198,6 @@
     <Compile Include="RuntimeEnvironmentType.cs" />
     <Compile Include="ServerAddress.cs" />
     <Compile Include="ServerMetrics.cs" />
-    <Compile Include="StringExtensions.cs" />
     <Compile Include="TcpServer.cs" />
     <Compile Include="TypeExtensions.cs" />
     <Compile Include="TypeReference.cs" />

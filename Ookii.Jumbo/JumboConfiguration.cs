@@ -14,8 +14,11 @@ namespace Ookii.Jumbo
     public class JumboConfiguration : ConfigurationSection
     {
         /// <summary>
-        /// Gets the configuration for the network topology support.
+        /// Gets the configuration element for the network topology support.
         /// </summary>
+        /// <value>
+        /// The configuration element for the network topology support.
+        /// </value>
         [ConfigurationProperty("networkTopology", IsRequired = false, IsKey = false)]
         public Topology.NetworkTopologyConfigurationElement NetworkTopology
         {
@@ -23,8 +26,11 @@ namespace Ookii.Jumbo
         }
 
         /// <summary>
-        /// Gets the configuration for the <see cref="Ookii.Jumbo.Topology.PatternTopologyResolver"/> class.
+        /// Gets the configuration element that configures topology support using the <see cref="Ookii.Jumbo.Topology.PatternTopologyResolver" /> class.
         /// </summary>
+        /// <value>
+        /// The configuration element that configures topology support using the <see cref="Ookii.Jumbo.Topology.PatternTopologyResolver" /> class.
+        /// </value>
         [ConfigurationProperty("patternTopologyResolver", IsRequired = false, IsKey = false)]
         public Topology.PatternTopologyResolverConfigurationElement PatternTopologyResolver
         {
@@ -32,9 +38,9 @@ namespace Ookii.Jumbo
         }
 
         /// <summary>
-        /// Gets the global logger configuration.
+        /// Gets the configuration element that controls global logging settings.
         /// </summary>
-        /// <value>The global logger configuration.B</value>
+        /// <value>The configuration element that controls global logging settings.</value>
         [ConfigurationProperty("log", IsRequired = false, IsKey = false)]
         public LogConfigurationElement Log
         {
