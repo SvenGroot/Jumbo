@@ -60,7 +60,7 @@ namespace Ookii.Jumbo
         /// Gets the usage data for each individual processor in the system.
         /// </summary>
         /// <value>
-        /// A collection of <see cref="IndividualProcessStatus"/> object for each processor.
+        /// A collection of <see cref="IndividualProcessorStatus"/> object for each processor.
         /// </value>
         public ReadOnlyCollection<IndividualProcessorStatus> Processors
         {

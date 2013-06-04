@@ -29,6 +29,9 @@ namespace Ookii.Jumbo.Dfs
         /// <summary>
         /// Gets a list with the identifiers of the blocks to delete.
         /// </summary>
+        /// <value>
+        /// A list of <see cref="Guid"/> values that identiy the blocks to delete.
+        /// </value>
         public IList<Guid> Blocks { get; private set; }
     }
 }

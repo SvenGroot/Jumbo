@@ -16,6 +16,9 @@ namespace Ookii.Jumbo.Dfs
         /// <summary>
         /// Gets or sets the port number on which the data server listens for client connections.
         /// </summary>
+        /// <value>
+        /// The port number on which the data server listens for client connections. The default value is 9001.
+        /// </value>
         [ConfigurationProperty("port", DefaultValue = 9001, IsRequired = true, IsKey = false)]
         public int Port
         {
@@ -26,6 +29,9 @@ namespace Ookii.Jumbo.Dfs
         /// <summary>
         /// Gets or sets the path to the directory where the data server stores block files.
         /// </summary>
+        /// <value>
+        /// The path to the directory where the data server stores block files.
+        /// </value>
         [ConfigurationProperty("blockStorageDirectory", DefaultValue = "", IsRequired = true, IsKey = false)]
         public string BlockStorageDirectory
         {
@@ -38,7 +44,8 @@ namespace Ookii.Jumbo.Dfs
         /// </summary>
         /// <value>
         /// <see langword="true"/> if the server should listen on both IPv6 and IPv4; <see langword="false"/>
-        /// if the server should listen only on IPv6 if it's available, and otherwise on IPv4.
+        /// if the server should listen only on IPv6 if it's available, and otherwise on IPv4; <see langword="null"/>
+        /// if this should be decided based on the king of operating system. The default value is <see langword="null"/>.
         /// </value>
         /// <remarks>
         /// <para>
@@ -58,9 +65,12 @@ namespace Ookii.Jumbo.Dfs
         }
 
         /// <summary>
-        /// Gets or sets the interval, in seconds, at which the data server should send status updates
+        /// Gets or sets the interval at which the data server should send status updates
         /// (including disk space reports) to the name server.
         /// </summary>
+        /// <value>
+        /// The interval at which the data server should send status updates, in seconds. The default value is 60.
+        /// </value>
         /// <remarks>
         /// Disk space status updates are always sent after blocks are received or deleted, regardless
         /// of this value.
@@ -75,7 +85,9 @@ namespace Ookii.Jumbo.Dfs
         /// <summary>
         /// Gets or sets the size of the write buffer for block files.
         /// </summary>
-        /// <value>The size of the write buffer for block files.</value>
+        /// <value>
+        /// The size of the write buffer for block files. The default value is 128 kilobytes.
+        /// </value>
         [ConfigurationProperty("writeBufferSize", DefaultValue = "128KB", IsRequired = false, IsKey = false)]
         public BinarySize WriteBufferSize
         {
@@ -86,7 +98,9 @@ namespace Ookii.Jumbo.Dfs
         /// <summary>
         /// Gets or sets the size of the read buffer for block files.
         /// </summary>
-        /// <value>The size of the read buffer for block files.</value>
+        /// <value>
+        /// The size of the read buffer for block files. The default value is 128 kilobytes.
+        /// </value>
         [ConfigurationProperty("readBufferSize", DefaultValue = "128KB", IsRequired = false, IsKey = false)]
         public BinarySize ReadBufferSize
         {

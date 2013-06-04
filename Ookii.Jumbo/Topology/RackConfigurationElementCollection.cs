@@ -11,6 +11,7 @@ namespace Ookii.Jumbo.Topology
     /// <summary>
     /// Represents a collection of <see cref="RackConfigurationElement"/> objects in a configuration file.
     /// </summary>
+    [ConfigurationCollection(typeof(RackConfigurationElement), AddItemName = "rack")]
     public class RackConfigurationElementCollection : ConfigurationElementCollection
     {
         /// <summary>

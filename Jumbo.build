@@ -9,6 +9,9 @@
         <include name="run-jet.sh"/>
         <include name="deploy.sh"/>
         <include name="server-deploy.sh"/>
+        <include name="groups" />
+        <include name="masters" />
+        <include name="slaves" />
       </fileset>
     </copy>
     <copy file="DfsShell-script" tofile="build/DfsShell"/>

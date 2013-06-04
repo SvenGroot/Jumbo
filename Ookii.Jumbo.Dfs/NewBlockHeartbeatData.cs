@@ -15,12 +15,20 @@ namespace Ookii.Jumbo.Dfs
     public class NewBlockHeartbeatData : StatusHeartbeatData
     {
         /// <summary>
-        /// Gets or sets the <see cref="Guid"/> identifying the block.
+        /// Gets or sets the block ID.
         /// </summary>
+        /// <value>
+        /// A <see cref="Guid"/> that uniquely identifies the block.
+        /// </value>
+        /// 
         public Guid BlockId { get; set; }
+
         /// <summary>
-        /// Gets or sets the size in bytes of the block.
+        /// Gets or sets the size of the block.
         /// </summary>
+        /// <value>
+        /// The size of the block, in bytes.
+        /// </value>
         public int Size { get; set; }
     }
 }

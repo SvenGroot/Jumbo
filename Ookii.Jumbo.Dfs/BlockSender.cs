@@ -81,7 +81,7 @@ namespace Ookii.Jumbo.Dfs
         /// Gets a value indicating whether this instance only sends responses, and doesn't send the data to any server.
         /// </summary>
         /// <value>
-        /// 	<see langword="true"/> if this instance is reponse only; otherwise, <see langword="false"/>.
+        /// <see langword="true" /> if this instance only sends responses; otherwise, <see langword="false" />.
         /// </value>
         public bool IsResponseOnly
         {
@@ -91,6 +91,9 @@ namespace Ookii.Jumbo.Dfs
         /// <summary>
         /// Gets the server status.
         /// </summary>
+        /// <value>
+        /// One of the <see cref="DataServerClientProtocolResult"/> values that indicates the server status.
+        /// </value>
         public DataServerClientProtocolResult ServerStatus
         {
             get { return _serverStatus; }

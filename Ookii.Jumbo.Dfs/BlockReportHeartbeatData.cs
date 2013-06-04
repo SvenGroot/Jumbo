@@ -28,8 +28,11 @@ namespace Ookii.Jumbo.Dfs
         }
 
         /// <summary>
-        /// Gets the the block IDs of the blocks that this data server has.
+        /// Gets the the blocks that are stored on this data server.
         /// </summary>
+        /// <value>
+        /// A list of block IDs for the blocks stored on this data server.
+        /// </value>
         public ReadOnlyCollection<Guid> Blocks
         {
             get { return _blocks; }

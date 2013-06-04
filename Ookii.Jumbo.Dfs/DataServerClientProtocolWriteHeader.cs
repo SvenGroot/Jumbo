@@ -31,6 +31,9 @@ namespace Ookii.Jumbo.Dfs
         /// <summary>
         /// Gets or sets the data servers that this block should be written to.
         /// </summary>
+        /// <value>
+        /// A list of <see cref="ServerAddress"/> objects for the data servers that this block should be written to.
+        /// </value>
         /// <remarks>
         /// The first server in the list should be the data server this header is sent to. The server
         /// will forward the block to the next server in the list.

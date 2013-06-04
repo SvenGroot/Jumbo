@@ -15,10 +15,10 @@ namespace Ookii.Jumbo.Dfs
     public class DfsConfiguration : ConfigurationSection
     {
         /// <summary>
-        /// Gets configuration for the file system.
+        /// Gets the configuration element that configures the file system.
         /// </summary>
         /// <value>
-        /// Configuration for the file system.
+        /// The configuration element for the file system.
         /// </value>
         [ConfigurationProperty("fileSystem", IsRequired = true, IsKey = false)]
         public FileSystemConfigurationElement FileSystem
@@ -27,8 +27,11 @@ namespace Ookii.Jumbo.Dfs
         }
 
         /// <summary>
-        /// Gets configuration for the name server.
+        /// Gets the configuration element that configures the name server.
         /// </summary>
+        /// <value>
+        /// The configuration element that configures the name server.
+        /// </value>
         [ConfigurationProperty("nameServer", IsRequired = true, IsKey = false)]
         public NameServerConfigurationElement NameServer
         {
@@ -36,8 +39,11 @@ namespace Ookii.Jumbo.Dfs
         }
 
         /// <summary>
-        /// Gets configuration for the data server.
+        /// Gets the configuration element that configures the data server.
         /// </summary>
+        /// <value>
+        /// The configuration element that configures the data server.
+        /// </value>
         [ConfigurationProperty("dataServer", IsRequired = false, IsKey = false)]
         public DataServerConfigurationElement DataServer
         {
@@ -45,8 +51,11 @@ namespace Ookii.Jumbo.Dfs
         }
 
         /// <summary>
-        /// Gets configuration for the checksums used by both the data servers and the clients.
+        /// Gets the configuration element for the checksums used by both the data servers and the clients.
         /// </summary>
+        /// <value>
+        /// The configuration element for the checksums used by both the data servers and the clients.
+        /// </value>
         [ConfigurationProperty("checksum", IsRequired = false, IsKey = false)]
         public ChecksumConfigurationElement Checksum
         {

@@ -21,8 +21,9 @@ namespace Ookii.Jumbo.Dfs.FileSystem
         private readonly DfsConfiguration _configuration;
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="FileSystemClient"/> class.
+        /// Initializes a new instance of the <see cref="FileSystemClient" /> class.
         /// </summary>
+        /// <param name="configuration">The <see cref="DfsConfiguration"/> for the file system.</param>
         protected FileSystemClient(DfsConfiguration configuration)
         {
             if( configuration == null )

@@ -27,6 +27,9 @@ namespace Ookii.Jumbo.Dfs
         /// <summary>
         /// Gets the maximum size of the log data to return.
         /// </summary>
+        /// <value>
+        /// The maximum size of the log data to return, in bytes.
+        /// </value>
         public int MaxSize { get; private set; }
 
         /// <summary>

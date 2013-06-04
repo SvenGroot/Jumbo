@@ -187,14 +187,24 @@ namespace Ookii.Jumbo.Dfs
         /// <summary>
         /// Gets or sets a value that indicates whether safe mode is on or off.
         /// </summary>
+        /// <value>
+        /// <see langword="true" /> if safe mode is on; otherwise, <see langword="false" />.
+        /// </value>
         /// <remarks>
         /// Disabling safe mode before full replication is achieved will cause an immediate replication check.
         /// </remarks>
         bool SafeMode { get; set; }
 
         /// <summary>
-        /// Gets the maximum size of a single block in a file.
+        /// Gets the default size of a single block in a file.
         /// </summary>
+        /// <value>
+        /// The default size of a single block in a file.
+        /// </value>
+        /// <remarks>
+        /// All blocks in a file except the last one will be exactly the block size. Individual files may override the
+        /// default block size.
+        /// </remarks>
         int BlockSize { get; }
     }
 }

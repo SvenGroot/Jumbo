@@ -122,8 +122,14 @@ namespace Ookii.Jumbo.Dfs
         }
 
         /// <summary>
-        /// Gets the size of the blocks used by the distributed file system.
+        /// Gets the size of the blocks of this file.
         /// </summary>
+        /// <value>
+        /// The size of the blocks of this file, in bytes.
+        /// </value>
+        /// <remarks>
+        /// This value doesn't need to be the same as the default block size specified by <see cref="NameServerConfigurationElement.BlockSize"/>
+        /// </remarks>
         public int BlockSize { get; private set; }
 
         /// <summary>
@@ -219,6 +225,12 @@ namespace Ookii.Jumbo.Dfs
         /// <summary>
         /// Not supported.
         /// </summary>
+        /// <param name="buffer">An array of bytes. When this method returns, the buffer contains the specified byte array with the values between <paramref name="offset" /> and (<paramref name="offset" /> + <paramref name="count" /> - 1) replaced by the bytes read from the current source.</param>
+        /// <param name="offset">The zero-based byte offset in <paramref name="buffer" /> at which to begin storing the data read from the current stream.</param>
+        /// <param name="count">The maximum number of bytes to be read from the current stream.</param>
+        /// <returns>
+        /// The total number of bytes read into the buffer. This can be less than the number of bytes requested if that many bytes are not currently available, or zero (0) if the end of the stream has been reached.
+        /// </returns>
         public override int Read(byte[] buffer, int offset, int count)
         {
             throw new NotSupportedException();
@@ -227,6 +239,11 @@ namespace Ookii.Jumbo.Dfs
         /// <summary>
         /// Not supported.
         /// </summary>
+        /// <param name="offset">A byte offset relative to the <paramref name="origin" /> parameter.</param>
+        /// <param name="origin">A value of type <see cref="T:System.IO.SeekOrigin" /> indicating the reference point used to obtain the new position.</param>
+        /// <returns>
+        /// The new position within the current stream.
+        /// </returns>
         public override long Seek(long offset, SeekOrigin origin)
         {
             throw new NotSupportedException();
@@ -235,6 +252,7 @@ namespace Ookii.Jumbo.Dfs
         /// <summary>
         /// Not supported.
         /// </summary>
+        /// <param name="value">The desired length of the current stream in bytes.</param>
         public override void SetLength(long value)
         {
             throw new NotSupportedException();

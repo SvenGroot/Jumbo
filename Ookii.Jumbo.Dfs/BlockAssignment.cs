@@ -33,11 +33,17 @@ namespace Ookii.Jumbo.Dfs
         /// <summary>
         /// Gets the unique identifier of this block.
         /// </summary>
+        /// <value>
+        /// A <see cref="Guid"/> that uniquely identifies this block.
+        /// </value>
         public Guid BlockId { get; private set; }
 
         /// <summary>
-        /// Gets the data servers that have this block.
+        /// Gets the data servers that have a replica of this block.
         /// </summary>
+        /// <value>
+        /// A collection of <see cref="ServerAddress"/> objects for the data servers that have this block.
+        /// </value>
         public ReadOnlyCollection<ServerAddress> DataServers
         {
             get { return _dataServers; }

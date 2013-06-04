@@ -50,20 +50,26 @@ namespace Ookii.Jumbo.Dfs
         /// <summary>
         /// Gets or sets a value that indicates whether this packet is the last packet being sent.
         /// </summary>
+        /// <value>
+        /// <see langword="true" /> if this packs is the last packet being sent; otherwise, <see langword="false" />.
+        /// </value>
         public bool IsLastPacket { get; set; }
 
         /// <summary>
         /// Gets or sets the size of the packet.
         /// </summary>
+        /// <value>
+        /// The size of the packet, in bytes.
+        /// </value>
         /// <remarks>
-        /// This value will always be less than or equal to <see cref="PacketSize"/>. If
-        /// <see cref="IsLastPacket"/> is <see langword="false"/>, it will be equal to
-        /// <see cref="PacketSize"/>.
+        /// This value will always be less than or equal to <see cref="PacketSize" />. If
+        /// <see cref="IsLastPacket" /> is <see langword="false" />, it will be equal to
+        /// <see cref="PacketSize" />.
         /// </remarks>
         public int Size { get; private set; }
 
         /// <summary>
-        /// Gets or sets the sequence number.
+        /// Gets or sets the sequence number of the packet.
         /// </summary>
         /// <value>
         /// The sequence number.
@@ -73,6 +79,9 @@ namespace Ookii.Jumbo.Dfs
         /// <summary>
         /// Gets or sets the checksum for the data in this packet.
         /// </summary>
+        /// <value>
+        /// The checksum for the data in this packet, or 0 if checksums are disabled.
+        /// </value>
         public long Checksum
         {
             get

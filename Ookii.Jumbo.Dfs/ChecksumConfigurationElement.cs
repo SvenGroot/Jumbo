@@ -16,6 +16,9 @@ namespace Ookii.Jumbo.Dfs
         /// <summary>
         /// Gets or sets a value that indicates whether checksums are enabled.
         /// </summary>
+        /// <value>
+        /// <see langword="true" /> if this checksums are enabled; otherwise, <see langword="false" />.
+        /// </value>
         /// <remarks>
         /// If you change this attribute on an existing file system it may prevent you from reading
         /// the existing files.

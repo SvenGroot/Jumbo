@@ -16,7 +16,7 @@ namespace Ookii.Jumbo.Topology
         /// <summary>
         /// Gets or sets the type name of the resolver to use.
         /// </summary>
-        [ConfigurationProperty("resolver", DefaultValue = "Ookii.Jumbo.Topology.PatternTopologyResolver, Ookii.Jumbo", IsRequired = true, IsKey = false)]
+        [ConfigurationProperty("resolver", DefaultValue = "Ookii.Jumbo.Topology.PatternTopologyResolver, Ookii.Jumbo", IsRequired = false, IsKey = false)]
         public string Resolver
         {
             get { return (string)this["resolver"]; }

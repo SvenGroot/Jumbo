@@ -39,8 +39,11 @@ namespace Ookii.Jumbo.Dfs.FileSystem
         }
 
         /// <summary>
-        /// Gets the <see cref="INameServerClientProtocol"/> used by this instance to communicate with the name server.
+        /// Gets the name server client protocol object used by this instance to communicate with the name server.
         /// </summary>
+        /// <value>
+        /// The <see cref="INameServerClientProtocol" /> object used by this instance to communicate with the name server.
+        /// </value>
         public INameServerClientProtocol NameServer
         {
             get { return _nameServer; }

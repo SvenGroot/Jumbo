@@ -73,8 +73,14 @@ namespace Ookii.Jumbo.Dfs
         }
 
         /// <summary>
-        /// Gets the size of the blocks used by the distributed file system.
+        /// Gets the size of the blocks of this file.
         /// </summary>
+        /// <value>
+        /// The size of the blocks of this file, in bytes.
+        /// </value>
+        /// <remarks>
+        /// This value doesn't need to be the same as the default block size specified by <see cref="NameServerConfigurationElement.BlockSize"/>
+        /// </remarks>
         public int BlockSize { get; private set; }
 
         /// <summary>
@@ -134,6 +140,7 @@ namespace Ookii.Jumbo.Dfs
         /// <summary>
         /// Gets or sets the current stream position.
         /// </summary>
+        /// <returns>The current position within the stream.</returns>
         public override long Position
         {
             get
@@ -152,6 +159,9 @@ namespace Ookii.Jumbo.Dfs
         /// <summary>
         /// Gets the number of errors encountered while reading data from the data servers.
         /// </summary>
+        /// <value>
+        /// The number of errors encountered while reading data from the data servers.
+        /// </value>
         /// <remarks>
         /// If the read operation completes successfully, and this value is higher than zero, it means the error was
         /// recovered from.
@@ -161,13 +171,17 @@ namespace Ookii.Jumbo.Dfs
         /// <summary>
         /// Gets the number of blocks read.
         /// </summary>
-        /// <value>The blocks read.</value>
+        /// <value>
+        /// The number of blocks read.
+        /// </value>
         public int BlocksRead { get; private set; }
 
         /// <summary>
         /// Gets the record options applied to this stream.
         /// </summary>
-        /// <value>One or more of the <see cref="RecordStreamOptions"/> values.</value>
+        /// <value>
+        /// One or more of the <see cref="RecordStreamOptions" /> values indicating the record options applied to this stream.
+        /// </value>
         public RecordStreamOptions RecordOptions
         {
             get { return _file.RecordOptions; }
@@ -327,7 +341,7 @@ namespace Ookii.Jumbo.Dfs
         /// <summary>
         /// Not supported.
         /// </summary>
-        /// <param name="value"></param>
+        /// <param name="value">The desired length of the current stream in bytes.</param>
         public override void SetLength(long value)
         {
             throw new NotSupportedException();
@@ -336,9 +350,9 @@ namespace Ookii.Jumbo.Dfs
         /// <summary>
         /// Not supported.
         /// </summary>
-        /// <param name="buffer"></param>
-        /// <param name="offset"></param>
-        /// <param name="count"></param>
+        /// <param name="buffer">An array of bytes. This method copies <paramref name="count" /> bytes from <paramref name="buffer" /> to the current stream.</param>
+        /// <param name="offset">The zero-based byte offset in <paramref name="buffer" /> at which to begin copying bytes to the current stream.</param>
+        /// <param name="count">The number of bytes to be written to the current stream.</param>
         public override void Write(byte[] buffer, int offset, int count)
         {
             throw new NotSupportedException();

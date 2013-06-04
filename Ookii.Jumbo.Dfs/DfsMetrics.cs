@@ -75,21 +75,33 @@ namespace Ookii.Jumbo.Dfs
         /// <summary>
         /// Gets or sets the total number of blocks. This does not include pending blocks.
         /// </summary>
+        /// <value>
+        /// The the total number of non-pending blocks.
+        /// </value>
         public int TotalBlockCount { get; set; }
 
         /// <summary>
         /// Gets or sets the total number of blocks that are not fully replicated.
         /// </summary>
+        /// <value>
+        /// The total number of blocks that are not fully replicated.
+        /// </value>
         public int UnderReplicatedBlockCount { get; set; }
 
         /// <summary>
         /// Gets or sets the total number of blocks that have not yet been committed.
         /// </summary>
+        /// <value>
+        /// The total number of blocks that have not yet been committed.
+        /// </value>
         public int PendingBlockCount { get; set; }
 
         /// <summary>
-        /// Gets or sets a list of all data servers registered with the system.
+        /// Gets metrics for all data servers registered with the system.
         /// </summary>
+        /// <value>
+        /// A list of <see cref="DataServerMetrics"/> objects for each data server.
+        /// </value>
         public Collection<DataServerMetrics> DataServers
         {
             get { return _dataServers; }

@@ -28,13 +28,16 @@ namespace Ookii.Jumbo.Dfs
         /// <summary>
         /// Gets the command that the NameServer is giving to the DataServer.
         /// </summary>
+        /// <value>
+        /// A <see cref="DataServerHeartbeatCommand"/> value that indicates the command issued to the DataServer.
+        /// </value>
         public DataServerHeartbeatCommand Command { get; private set; }
 
         /// <summary>
-        /// Gets the file system id.
+        /// Gets the file system ID.
         /// </summary>
         /// <value>
-        /// The file system id.
+        /// A <see cref="Guid"/> that uniquely identifies this file system.
         /// </value>
         public Guid FileSystemId { get; private set; }
     }

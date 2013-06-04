@@ -25,10 +25,17 @@ namespace Ookii.Jumbo.Dfs
         /// <summary>
         /// Gets or sets the command issued to the data server.
         /// </summary>
+        /// <value>
+        /// One of the <see cref="DataServerCommand"/> values indicating which command is issued to the data server.
+        /// </value>
         public DataServerCommand Command { get; private set; }
+
         /// <summary>
         /// Gets or sets the block ID to be read or written.
         /// </summary>
+        /// <value>
+        /// The ID of the block to be read or written.
+        /// </value>
         public Guid BlockId { get; set; }
     }
 }

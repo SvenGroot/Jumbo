@@ -244,7 +244,7 @@ namespace Ookii.Jumbo.IO
         protected abstract bool ReadRecordInternal();
 
         /// <summary>
-        /// Raises the <see cref="E:HasRecordsChanged"/> event.
+        /// Raises the <see cref="HasRecordsChanged"/> event.
         /// </summary>
         /// <param name="e">The <see cref="System.EventArgs"/> instance containing the event data.</param>
         protected virtual void OnHasRecordsChanged(EventArgs e)

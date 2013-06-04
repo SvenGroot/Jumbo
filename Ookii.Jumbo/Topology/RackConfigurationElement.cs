@@ -16,7 +16,7 @@ namespace Ookii.Jumbo.Topology
         /// <summary>
         /// Gets or sets the ID of the rack.
         /// </summary>
-        [ConfigurationProperty("id", DefaultValue = "", IsRequired = true, IsKey = true)]
+        [ConfigurationProperty("id", IsRequired = true, IsKey = true)]
         public string RackId
         {
             get { return (string)this["id"]; }
@@ -26,7 +26,7 @@ namespace Ookii.Jumbo.Topology
         /// <summary>
         /// Gets or sets the pattern used to identify nodes of this rack.
         /// </summary>
-        [ConfigurationProperty("pattern", DefaultValue = "", IsRequired = true, IsKey = false)]
+        [ConfigurationProperty("pattern", IsRequired = true, IsKey = false)]
         public string Pattern
         {
             get { return (string)this["pattern"]; }

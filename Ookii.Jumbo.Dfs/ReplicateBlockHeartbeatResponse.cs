@@ -31,6 +31,9 @@ namespace Ookii.Jumbo.Dfs
         /// <summary>
         /// Gets the new assignment information for the block to be replicated.
         /// </summary>
+        /// <value>
+        /// The <see cref="BlockAssignment"/> that contains the new assignment information for the block to be replicated.
+        /// </value>
         public BlockAssignment BlockAssignment { get; private set; }
     }
 }
