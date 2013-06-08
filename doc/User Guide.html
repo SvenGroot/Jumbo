@@ -1,0 +1,904 @@
+<!DOCTYPE html >
+<html xml:lang="en" xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <title>Jumbo User Guide</title>
+    <style type="text/css">
+html,
+body {
+  font-size: 100%; }
+
+body {
+  background: white;
+  color: #222222;
+  margin: 2em;
+  font-family: "Segoe UI", "Helvetica Neue", "Helvetica", Helvetica, Arial, sans-serif, "Meiryo UI", "Meiryo";
+  font-weight: normal;
+  font-style: normal;
+  line-height: 1;
+  max-width: 62.5em; }
+
+a:focus {
+  outline: none; }
+
+/* Typography resets */
+div,
+dl,
+dt,
+dd,
+ul,
+ol,
+li,
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+pre,
+form,
+p,
+blockquote,
+th,
+td {
+  margin: 0;
+  padding: 0;
+  direction: ltr; }
+
+/* Default Link Styles */
+a {
+  color: #2ba6cb;
+  text-decoration: none;
+  line-height: inherit; }
+  a:hover, a:focus {
+    color: #2795b6; }
+  a img {
+    border: none; }
+
+/* Default paragraph styles */
+p {
+  font-family: inherit;
+  font-weight: normal;
+  font-size: 1em;
+  line-height: 1.6;
+  margin-bottom: 1.25em;
+  text-rendering: optimizeLegibility; }
+  p aside {
+    font-size: 0.875em;
+    line-height: 1.35;
+    font-style: italic; }
+
+  p.subtitle {
+      font-style: italic;
+      color: #888;
+      text-indent: 0;
+  }
+
+
+/* Default header styles */
+h1, h2, h3, h4, h5, h6 {
+  font-family: "Segoe UI Light", "Segoe UI", "Helvetica Neue", "Helvetica", Helvetica, Arial, sans-serif, "Meiryo UI", "Meiryo";
+  font-weight: lighter;
+  font-style: normal;
+  color: #222222;
+  text-rendering: optimizeLegibility;
+  margin-top: 0.2em;
+  margin-bottom: 0.5em;
+  line-height: 1.2125em; }
+  h1 small, h2 small, h3 small, h4 small, h5 small, h6 small {
+    font-size: 60%;
+    color: #6f6f6f;
+    line-height: 0; }
+
+h1 {
+  font-size: 2.125em; }
+
+h2 {
+  font-size: 1.6875em; }
+
+h3 {
+  font-size: 1.375em; }
+
+h4 {
+  font-size: 1.125em; }
+
+h5 {
+  font-size: 1.125em; }
+
+h6 {
+  font-size: 1em; }
+
+pre {
+    font-family: Consolas, "Liberation Mono", Courier, monospace;
+    margin: 1em 0;
+}
+
+code {
+  font-family: Consolas, "Liberation Mono", Courier, monospace;
+}
+
+ul,
+ol,
+dl {
+  font-size: 1em;
+  line-height: 1.6;
+  margin-bottom: 1.25em;
+  list-style-position: outside;
+  font-family: inherit; }
+ul,
+ol {
+    margin-left: 1.25em;
+}
+/* Unordered Lists */
+ul li ul,
+ul li ol {
+  margin-left: 1.25em;
+  margin-bottom: 0;
+  font-size: 1em;
+  /* Override nested font-size change */ }
+ul.square li ul, ul.circle li ul, ul.disc li ul {
+  list-style: inherit; }
+ul.square {
+  list-style-type: square; }
+ul.circle {
+  list-style-type: circle; }
+ul.disc {
+  list-style-type: disc; }
+ul.no-bullet {
+  list-style: none; }
+
+/* Tables */
+table {
+  background: white;
+  margin-bottom: 1.25em;
+  border: solid 1px #dddddd; }
+  table thead,
+  table tfoot {
+    background: whitesmoke;
+    font-weight: bold; }
+    table thead tr th,
+    table thead tr td,
+    table tfoot tr th,
+    table tfoot tr td {
+      padding: 0.5em 0.625em 0.625em;
+      font-size: 0.875em;
+      color: #222222;
+      text-align: left; }
+  table tr th,
+  table tr td {
+    padding: 0.5625em 0.625em;
+    font-size: 0.875em;
+    color: #222222;
+    vertical-align: top;
+    text-align: left }
+  table tr.even, table tr.alt, table tr:nth-of-type(even) {
+    background: #f9f9f9; }
+  table thead tr th,
+  table tfoot tr th,
+  table tbody tr td,
+  table tr td,
+  table tfoot tr td {
+    display: table-cell;
+    line-height: 1.125em; }
+    table tr th p, table tr td p {
+    margin: 0;
+    padding: 0;
+    line-height: inherit;
+    font-size: inherit;
+  }
+
+.code {
+    background-color: #fafafa;
+    border: solid 1px black;
+    padding: 5px;
+    overflow: auto;
+    font-family: Consolas, monospace;
+}
+    .code .keyword, .code .preprocessor
+    {
+	    color: #00F;
+    }
+    .code .operator
+    {
+	    color: #C63;
+    }
+    .code .comment
+    {
+	    color: #008000;
+    }
+    .code .xmlLiteral .comment
+    {
+	    color: #629755;
+    }
+    .code .string
+    {
+	    color: #A31515;
+    }
+    .code .entity
+    {
+	    color: #F00;
+    }
+    .code .tagDelimiter, .code .attributeDelimiter
+    {
+	    color: #00F;
+    }
+    .code .xmlLiteral .tagDelimiter, .code .xmlLiteral .attributeDelimiter, .code .xmlDelimiter, .code .xmlImportAttributeDelimiter
+    {
+	    color: #6464B9;
+    }
+    .code .tagName
+    {
+	    color: #A31515;
+    }
+    .code .xmlLiteral .tagName
+    {
+	    color: #844646;
+    }
+    .code .attributeName
+    {
+	    color: #F00;	
+    }
+    .code .xmlLiteral .attributeName, .code .xmlImportAttributeName
+    {
+	    color: #B96464;
+    }
+    .code .attributeValue
+    {
+	    color: #00F
+    }
+    .code .xmlLiteral .attributeValue, .code .xmlImportAttributeValue
+    {
+	    color: #6464B9;
+    }
+    .code .cdata
+    {
+	    color: #808080;
+    }
+    .code .xmlLiteral .cdata
+    {
+	    color: #C0C0C0;
+    }
+    .code .type
+    {
+	    color: #2B91AF;
+    }
+    .code .xmlLiteral .embeddedExpressionDelimiter
+    {
+	    color: #555;
+	    background-color: #FFFEBF;
+    }
+    .code .sqlString
+    {
+	    color: #F00;
+    }
+    .code .sqlSystemFunction
+    {
+	    color: #F0F;
+    }
+    .code .sqlOperator
+    {
+	    color: #808080;
+    }
+    .code .psVariable
+    {
+        color: #FF4511;
+    }
+    .code .psComment
+    {
+        color: #006400;
+    }
+    .code .psString
+    {
+        color: #8B0000;
+    }
+    .code .psOperator
+    {
+        color: #A9A9A9
+    }
+    .code .psCommand
+    {
+        color: #0000FF;
+    }
+    .code .psCommandParameter
+    {
+        color: #000080;
+    }
+    .code .psCommandArgument
+    {
+        color: #8D2BE2;
+    }
+    .code .psAttribute
+    {
+        color: #ADD8E6;
+    }
+    .code .psNumber
+    {
+        color: #800080;
+    }
+    .code .psType
+    {
+        color: #008080;
+    }
+    .code .psKeyword, .code .psLoopLabel
+    {
+        color: #26008B;
+    }
+
+@media print
+{
+    * {
+        background: transparent !important;
+        color: black !important;
+    }
+    body
+    {
+        margin: 0;
+        max-width: auto;
+    }
+    p,
+    h2,
+    h3 {
+      orphans: 3;
+      widows: 3; }
+
+    h1,
+    h2,
+    h3 {
+      page-break-after: avoid; }
+
+    a,
+    a:visited {
+      text-decoration: underline; }
+}        
+</style>
+  </head>
+  <body>
+    <h1>Jumbo</h1>
+    <p class="subtitle">User guide</p>
+    <h2>Introduction</h2>
+    <p>If you’ve gone through the quick start guide, by this point you will have installed Jumbo and run some jobs using the provided samples. In this document we will look at how to create your own data processing jobs. First, a sample will be used to introduce the basic programming concepts. Then, the features of Jumbo Jet are explained in more detail. Finally, a more advanced sample is given that demonstrates some of these features.</p>
+    <p>A data processing job in Jumbo Jet consists of a linear sequence of <em>stages</em>, connected by <em>channels</em>. A stage performs some processing operation on the data, and the channels control how data is transferred between stages. Stages are responsible for the bulk of the data processing work, while channels transfer data and can do some additional intermediate processing such as sorting and partitioning.</p>
+    <p>If you are familiar with MapReduce, you can consider MapReduce to be a two-stage job where the first stage runs the map function, the second runs the reduce function, and the channel between the two stages sorts and partitions the data. In fact, that is exactly how you create MapReduce jobs in Jumbo. But Jumbo is not limited to MapReduce; it can use any kind of job structure.</p>
+    <p>A stage reads data either from a <em>data input</em> (typically a file or multiple files on the DFS) or a channel, and writes data either to a channel or a <em>data output</em> (typically a directory on the DFS). A stage can also have multiple channels as input, for example to perform a join.</p>
+    <p>Stages are divided into tasks, where each task processes a part of the data. Tasks are run in parallel on multiple systems in a cluster. For stages reading a data input (file), the input is split linearly to divide it across tasks. For stages reading a channel input, the channel partitions the data across the tasks.</p>
+    <p>Tasks run a user-defined piece of code to do their processing. This code doesn’t need to be aware of most of the details. Regardless of whether the task is reading from or writing to a file or a channel, the code is the same. Input is provided via a <code>RecordReader</code> and output is written to a <code>RecordWriter</code>, which take care of the details. Since partitioning (and optionally, things like sorting) are handled by the Jumbo Jet infrastructure, you don’t have to worry about how to perform those operations; you simply need to specify you want them to happen.</p>
+    <p>The typical way to create a job in Jumbo is to use the <code>JobBuilder</code>, which allows you to specify a sequence of operations which are then translated into a job configuration of stages and channels. This means you can create jobs without worrying too much about their actual structure during execution (although of course this is available if you want to do more complex processing).</p>
+    <h2>Tutorial: creating a data processing job using the JobBuilder</h2>
+    <p>In order to introduce data processing with Jumbo, we are going to look how to create the WordCount sample job. WordCount reads an input file and counts how often each word occurs in the input. It’s a pretty standard example for MapReduce style data processing.</p>
+    <p>If you’re using Visual Studio to do this tutorial, you should create a new C# class library project called JumboSample (note: you can use any Mono or .Net language, but this example is in C#), and add references to Ookii.Jumbo.dll, Ookii.Jumbo.Dfs.dll, Ookii.Jumbo.Jet.dll, and Ookii.CommandLine.dll. Add a new class called WordCount.</p>
+    <p>If not using Visual Studio, create a new C# file called WordCount.cs. How to compile this file is explained later.</p>
+    <h3>Creating a JobRunner</h3>
+    <p>Although you can write your own client application that submits jobs to Jumbo, the easiest way is to create a <code>JobRunner</code>.</p>
+    <p>A <code>JobRunner</code> is a class that creates the job configuration, and specify command line arguments for the job’s invocation. These <code>JobRunner</code><code>s</code> are invoked using the JetShell job command that we used in the quick start guide.</p>
+    <p>A <code>JobRunner</code> is any class that implements the <code>IJobRunner</code> interface, although typically you’ll probably want to inherit from the <code>BaseJobRunner</code> class, which defines a number of standard command line arguments and behaviors for <code>JobRunners</code>. Because we’re going to use the JobBuilder to build our job, we’ll use the JobBuilderJob class as the base class for our job runner.</p>
+    <p>So, start out a new C# file as follows:</p>
+    <pre class="code">
+<span class="keyword">using</span> System;
+<span class="keyword">using</span> Ookii.CommandLine;
+<span class="keyword">using</span> Ookii.Jumbo.IO;
+<span class="keyword">using</span> Ookii.Jumbo.Jet.Jobs.Builder;
+
+<span class="keyword">namespace</span> JumboSample
+{
+    <span class="keyword">public</span> <span class="keyword">class</span> <span class="type">WordCount</span> : <span class="type">JobBuilderJob</span>
+    {
+    }
+}</pre>
+    <p>That’s our job builder class. The first thing we need to add is the arguments. This job is going to need to know the input and output path, so we’ll have to create command line arguments for that. Jumbo uses <a href="http://ookiicommandline.codeplex.com">Ookii.CommandLine</a> for defining command line arguments, so we need to add properties and mark them as command line arguments:</p>
+    <pre class="code">
+[<span class="type">CommandLineArgument</span>(IsRequired = <span class="keyword">true</span>, Position = 0)]
+<span class="keyword">public</span> <span class="keyword">string</span> InputPath { <span class="keyword">get</span>; <span class="keyword">set</span>; }
+
+[<span class="type">CommandLineArgument</span>(IsRequired = <span class="keyword">true</span>, Position = 1)]
+<span class="keyword">public</span> <span class="keyword">string</span> OutputPath { <span class="keyword">get</span>; <span class="keyword">set</span>; }</pre>
+    <p>This creates two required positional arguments, so it is now possible to specify the input and output path on the command line when invoking this job.</p>
+    <h3>Data processing functions</h3>
+    <p>In order to create a job, we need to write functions that process the data for each of the stages. WordCount is a distributed counting operation, which consists of two operations: the first operation extracts the tokens (words) and initializes their count to 1. The second step aggregates the counts for each token (word).</p>
+    <p>For this job, we’re going to read the input line-by-line, so the function for the first operation should split that line into words, and then generate key/value pairs with the word as the key and a count of 1 as the value. For that purpose, we’ll write a map function, much like you’ll see in Hadoop MapReduce jobs (only here it’s just a function; unlike in Hadoop there is no need to create full classes for each task if you’re using the <code>JobBuilder</code>):</p>
+    <pre class="code">
+<span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> MapWords(<span class="type">Utf8String</span> line, <span class="type">RecordWriter</span>&lt;<span class="type">Pair</span>&lt;<span class="type">Utf8String</span>, <span class="keyword">int</span>&gt;&gt; output)
+{
+    <span class="keyword">string</span>[] words = line.ToString().Split(<span class="keyword">new</span>[] { <span class="string">' '</span> }, <span class="type">StringSplitOptions</span>.RemoveEmptyEntries);
+    <span class="keyword">foreach</span>( <span class="keyword">string</span> word <span class="keyword">in</span> words )
+        output.WriteRecord(<span class="type">Pair</span>.MakePair(<span class="keyword">new</span> <span class="type">Utf8String</span>(word), 1));
+}</pre>
+    <p>First of all, notice that this is a public static method. This is preferred for processing functions. Although you can use private methods or even lambdas, these must be called through a delegate which is slower than the direct call that’s possible with public static methods. Keep in mind that this code will be executed in an entirely different process than the one that is building the job, so none of the state that’s available during job creation will still be intact during execution. Preferably, processing functions should not use any external state.</p>
+    <p>Let’s see how this function works. The function will be called for each record in the input, which in this case are the lines of text in the input (unlike Hadoop, records don’t have to be key/value pairs, so the input record in this case is not). That line is passed in the first parameter, <code>line</code>.</p>
+    <p>The type of this parameter is <code>Utf8String</code>. This is a special string type used by Jumbo; unlike the regular <code>String</code> class, it is mutable and also uses a more compact in-memory representation for most strings (as the name suggests, text is stored in utf-8 encoding). These two features make <code>Utf8String</code> more efficient for Jumbo’s purposes. Although Jumbo can use regular strings, it’s recommended to use <code>Utf8String</code> unless you have a good reason not to. In this case, we’ll be reading the input using the <code>LineRecordReader</code>, which returns <code>Utf8String</code> records, so we have to use it for the input.</p>
+    <p>The second parameter is the <code>RecordWriter</code> to which the output should be written. This record writer can be connected to a channel, a file, and can use a host of different output serialization options. The processing function doesn’t need to care; it just writes records to the writer.</p>
+    <p>The type of our output records is <code>Pair&lt;Utf8String, int&gt;</code>. Note that you <em>cannot</em> use the regular <code>KeyValuePair</code> structure with Jumbo; <code>Pair</code> provides a number of additional features that Jumbo needs.</p>
+    <p>The function body simply splits the input on spaces, and creates a key/value pair for each word with the key as the word, and a value of 1.</p>
+    <p>For the second step, we’re going to use Jumbo’s support for hash table aggregation (rather than a typical reduce task). This means we need to define a function that takes the current value of a key, a new value, and returns the updated value. In this case, we need to sum the values:</p>
+    <pre class="code">
+<span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">int</span> AggregateCounts(<span class="type">Utf8String</span> key, <span class="keyword">int</span> oldValue, <span class="keyword">int</span> newValue)
+{
+    <span class="keyword">return</span> oldValue + newValue;
+}</pre>
+    <p>Note that we’re not using the <code>key</code> parameter; this function just adds the values, and doesn’t need the key. However, this is the signature that the <code>JobBuilder</code> requires, so the parameter must be included.</p>
+    <p>In this case, it’s not necessary to write output. Jumbo has a built-in task type (<code>AccumulatorTask</code>) that performs aggregation which takes care of all of that. This function is called by that task to update the values, so that’s all the code we need to write for aggregation functions.</p>
+    <h3>Creating the job</h3>
+    <p>Now that we have the functions that will process the data, we need to tell Jumbo which order to apply them in. This is where the <code>JobBuilder</code> comes in. It provides a number of methods to construct a sequence of various types of data processing operations. The resulting job configuration can be customized to specify things like the number of partitions or channel types, or you can just use <code>JobBuilder</code>’s defaults, which automatically decide on a number of partitions based on the input data size and task capacity of your cluster.</p>
+    <p>In order to create the job with a <code>JobRunner</code> derived from <code>JobBuilderJob</code>, you need to override the <code>BuildJob</code> function. Here’s that function for our word count sample:</p>
+    <pre class="code">
+<span class="keyword">protected</span> <span class="keyword">override</span> <span class="keyword">void</span> BuildJob(<span class="type">JobBuilder</span> job)
+{
+    <span class="keyword">var</span> input = job.Read(InputPath, <span class="keyword">typeof</span>(<span class="type">LineRecordReader</span>));
+    <span class="keyword">var</span> words = job.Map&lt;<span class="type">Utf8String</span>, <span class="type">Pair</span>&lt;<span class="type">Utf8String</span>, <span class="keyword">int</span>&gt;&gt;(input, MapWords);
+    <span class="keyword">var</span> aggregated = job.GroupAggregate&lt;<span class="type">Utf8String</span>, <span class="keyword">int</span>&gt;(words, AggregateCounts);
+    WriteOutput(aggregated, OutputPath, <span class="keyword">typeof</span>(<span class="type">TextRecordWriter</span>&lt;&gt;));
+}</pre>
+    <p>Let’s see what this function does. The first thing to remember is that none of the operations are actually executed here. Each of these functions doesn’t actually perform the specified operation, but adds a stage to the job configuration that will perform that operation. Only when the job is submitted to the cluster will this be executed.</p>
+    <p>The first line tells Jumbo to read input from the specified path (which we get from the command line argument) using the <code>LineRecordReader</code>. This record reader reads utf-8 text input and provides a <code>Utf8String</code> record for each line. Since we didn’t specify any options, Jumbo will split the input file based on the DFS block size for the file (if the input is being read from the Jumbo DFS), and create a single task for each block. The <code>LineRecordReader</code> handles those splits and makes sure that all records are read by exactly one task (no records are missed and none are read by two tasks), even when those records cross a block boundary. Your code doesn’t need to worry about that.</p>
+    <p>It is possible to use the properties on the <code>input</code> variable to customize the split sizes to create more or fewer tasks, but in this simple example, we just use the defaults.</p>
+    <p>The second line of the <code>BuildJob</code> function tells Jumbo to invoke a map function (the <code>MapWords</code> function we defined earlier) for each record in the input. Unfortunately, limitations in C#’s type argument inference when it comes to delegates means that it’s necessary to explicitly specify the generic arguments for the <code>JobBuilder.Map</code> function. This is true for all JobBuilder functions that use delegates.</p>
+    <p>The <code>Map</code> function creates a stage that reads from the input, and executes the specified function on each record. What to do with the output is specified later. As indicated before, Jumbo will automatically create multiple tasks in the stage based on the input split size.</p>
+    <p>The third line calls the <code>GroupAggregate</code> function, which tells Jumbo to group data by key and run the specified aggregation function (the <code>AggregateCounts</code> function we wrote earlier). Because the input here is the output from another operation, the <code>JobBuilder</code> will create a channel and set defaults for the number of partitions, which you can of course override if you want.</p>
+    <p>GroupAggregate actually creates two stages, both performing the aggregation operation. The first does it locally for each task in the input stage, and the second aggregates the data from all tasks. This is similar to using a combiner with MapReduce in Hadoop, and helps reduce the amount of data that needs to be transferred over the network.</p>
+    <p>The final line tells Jumbo to write the output to the specified path using the specified <code>RecordWriter</code> (in this case, we’re writing the output as text). Note that we’re not calling the <code>JobBuilder.Write</code> method directly, but instead use the <code>JobBuilderJob.WriteOutput</code> method. This method applies some settings from command line arguments that are common to each <code>JobBuilderJob</code> to the output. These command line arguments allow the user to specify things like the block size and replication factor for the output.</p>
+    <p>And that’s it. Putting it all together gives us this:</p>
+    <pre class="code">
+<span class="keyword">using</span> System;
+<span class="keyword">using</span> Ookii.CommandLine;
+<span class="keyword">using</span> Ookii.Jumbo.IO;
+<span class="keyword">using</span> Ookii.Jumbo.Jet.Jobs.Builder;
+
+<span class="keyword">namespace</span> JumboSample
+{
+    <span class="keyword">public</span> <span class="keyword">class</span> <span class="type">WordCount</span> : <span class="type">JobBuilderJob</span>
+    {
+        [<span class="type">CommandLineArgument</span>(IsRequired = <span class="keyword">true</span>, Position = 0)]
+        <span class="keyword">public</span> <span class="keyword">string</span> InputPath { <span class="keyword">get</span>; <span class="keyword">set</span>; }
+
+        [<span class="type">CommandLineArgument</span>(IsRequired = <span class="keyword">true</span>, Position = 1)]
+        <span class="keyword">public</span> <span class="keyword">string</span> OutputPath { <span class="keyword">get</span>; <span class="keyword">set</span>; }
+
+        <span class="keyword">protected</span> <span class="keyword">override</span> <span class="keyword">void</span> BuildJob(<span class="type">JobBuilder</span> job)
+        {
+            <span class="keyword">var</span> input = job.Read(InputPath, <span class="keyword">typeof</span>(<span class="type">LineRecordReader</span>));
+            <span class="keyword">var</span> words = job.Map&lt;<span class="type">Utf8String</span>, <span class="type">Pair</span>&lt;<span class="type">Utf8String</span>, <span class="keyword">int</span>&gt;&gt;(input, MapWords);
+            <span class="keyword">var</span> aggregated = job.GroupAggregate&lt;<span class="type">Utf8String</span>, <span class="keyword">int</span>&gt;(words, AggregateCounts);
+            WriteOutput(aggregated, OutputPath, <span class="keyword">typeof</span>(<span class="type">TextRecordWriter</span>&lt;&gt;));
+        }
+
+        <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> MapWords(<span class="type">Utf8String</span> line, RecordWriter&lt;<span class="type">Pair</span>&lt;<span class="type">Utf8String</span>, <span class="keyword">int</span>&gt;&gt; output)
+        {
+            <span class="keyword">string</span>[] words = line.ToString().Split(<span class="keyword">new</span>[] { <span class="string">' '</span> }, <span class="type">StringSplitOptions</span>.RemoveEmptyEntries);
+            <span class="keyword">foreach</span>( <span class="keyword">string</span> word <span class="keyword">in</span> words )
+                output.WriteRecord(<span class="type">Pair</span>.MakePair(<span class="keyword">new</span> <span class="type">Utf8String</span>(word), 1));
+        }
+
+        <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">int</span> AggregateCounts(<span class="type">Utf8String</span> key, <span class="keyword">int</span> oldValue, <span class="keyword">int</span> newValue)
+        {
+            <span class="keyword">return</span> oldValue + newValue;
+        }
+    }
+}</pre>
+    <h3>Compiling and running your job</h3>
+    <p>If you are using Visual Studio, simply build your solution. If not, compile the WordCount.cs file as follows:</p>
+    <pre>$ mcs WordCount.cs -target:library -out:JumboSample.dll -r:/home/sgroot/jumbo/build/bin/Ookii.Jumbo.dll,/home/sgroot/jumbo/build/bin/Ookii.Jumbo.Dfs.dll,/home/sgroot/jumbo/build/bin/Ookii.Jumbo.Jet.dll,/home/sgroot/jumbo/build/bin/Ookii.CommandLine.dll</pre>
+    <p>This assumes you’re using Mono 3.0 or later. If using Mono 2.8, use dmcs instead of mcs. On Windows with .Net, use csc. Also make sure to adjust the paths to Jumbo’s DLLs.</p>
+    <p>To run a job, use the JetShell command line utility, which is in the directly where you installed Jumbo (the build directory if you build it from source). The examples below are for Linux; on Windows, replace <code>./</code><code>JetShell</code> with <code>bin\JetShell.exe</code>.</p>
+    <p>To work with jobs, we use JetShell’s <code>job</code> command. The first argument of this command is the path of the DLL containing the job. Next, you specify the job name, and then any arguments for the job itself. To see which jobs are defined by a DLL, omit the job name:</p>
+    <pre>$ ./JetShell job ~/jumbosample/JumboSample.dll<br />Usage: JetShell job &lt;assemblyName&gt; &lt;jobName&gt; [job arguments...]<br /><br />The assembly JumboSample defines the following jobs:<br /><br />    WordCount</pre>
+    <p>There is no description for the job, because we didn’t specify any. To add a description to a job, apply the <code>System.ComponentModel.DescriptionAttribute</code> to the job’s class.</p>
+    <p>To see which arguments are accepted by a job, specify the job name but no arguments (note: this only works if the job has at least one required arguments; otherwise, just specify a non-existing argument):</p>
+    <pre>$ ./JetShell job ~/jumbosample/JumboSample.dll wordcount<br />The required argument 'InputPath' was not supplied.<br />Usage: JetShell job JumboSample.dll WordCount  [-InputPath] &lt;String&gt; [-OutputPath]<br />   &lt;String&gt; [-BlockSize &lt;BinarySize&gt;] [-ConfigOnly &lt;FileName&gt;] [-Interactive]<br />   [-OverwriteOutput] [-Property &lt;[Stage:]Property=Value&gt;...] [-ReplicationFactor<br />   &lt;Int32&gt;] [-Setting &lt;[Stage:]Setting=Value&gt;...]<br />   <br />    -BlockSize &lt;BinarySize&gt;<br />        Block size of the job's output files.<br />        <br />    -ConfigOnly &lt;FileName&gt;<br />        Don't run the job, but only create the configuration and write it to the<br />        specified file. Use this to test if your job builder job is creating the correct<br />        configuration without running the job. Note there can still be side-effects such<br />        as output directories on the file system being created. If the OverwriteOutput<br />        switch is specified, the output directory will still be erased!<br />        <br />    -Interactive [&lt;Boolean&gt;]<br />        Wait for user confirmation before starting the job and before exiting.<br />        <br />    -OverwriteOutput [&lt;Boolean&gt;]<br />        Delete the output directory before running the job, if it exists.<br />        <br />    -Property &lt;[Stage:]Property=Value&gt;<br />        Modifies the value of one of the properties in the job configuration after the<br />        job has been created. Uses the format "PropertyName=value" or<br />        "CompoundStageId:PropertyName=value". You can access properties more than one<br />        level deep, e.g. "MyStage:OutputChannel.PartitionsPerTask=2". Can be specified<br />        more than once.<br />        <br />    -ReplicationFactor &lt;Int32&gt;<br />        Replication factor of the job's output files.<br />        <br />    -Setting &lt;[Stage:]Setting=Value&gt;<br />        Defines or overrides a job or stage setting in the job configuration. Uses the<br />        format "SettingName=value" or "CompoundStageId:SettingName=value". Can be<br />        specified more than once. </pre>
+    <p>As you can see, the WordCount job accepts far more arguments than the two we defined in the sample. These arguments are defined by <code>JobBuilderJob</code>, and are common to all jobs that inherit from that class. Note that the two properties we defined (InputPath and OutputPath) are not in the long list of arguments because they have no descriptions. Apply the <code>System.ComponentModel.DescriptionAttribute</code> to the property that defines the argument to add a description.</p>
+    <p>Running the job is done the same way as with the built-in WordCount sample in the quick start guide:</p>
+    <pre>$ ./JetShell job ~/jumbosample/JumboSample.dll wordcount /mobydick.txt /sampleoutput<br />228 [1] INFO Ookii.Jumbo.Jet.Jobs.JobRunnerInfo (null) - Created job runner for job WordCount, InputPath = /mobydick.txt, OutputPath = /sampleoutput<br />474 [1] INFO Ookii.Jumbo.Jet.JetClient (null) - Saving job configuration to DFS file /JumboJet/job_{9b832d24-fc89-4dbf-8f7f-0ae44f94bcec}/job.xml.<br />703 [1] INFO Ookii.Jumbo.Jet.JetClient (null) - Uploading local file /home/sgroot/jumbosample/JumboSample.dll to DFS directory /JumboJet/job_{9b832d24-fc89-4dbf-8f7f-0ae44f94bcec}.<br />751 [1] INFO Ookii.Jumbo.Jet.JetClient (null) - Uploading local file /tmp/Ookii.Jumbo.Jet.Generated.fb08f0e1a18f419a879c8dfd3a22d935.dll to DFS directory /JumboJet/job_{9b832d24-fc89-4dbf-8f7f-0ae44f94bcec}.<br />835 [1] INFO Ookii.Jumbo.Jet.JetClient (null) - Running job 9b832d24-fc89-4dbf-8f7f-0ae44f94bcec.<br />0.0 %; finished: 0/1 tasks; MapWordsTaskStage: 0.0 %<br />100.0 %; finished: 1/1 tasks; MapWordsTaskStage: 100.0 %<br /><br />Job completed.<br />Start time: 2013-06-03 03:45:39.555<br />End time:   2013-06-03 03:45:42.851<br />Duration:   00:00:03.2967750 (3.296775s)</pre>
+    <p>You may have noted that the JetClient class uploaded two DLLs to the DFS: your JumboSample.dll, but also a generated file. This is because the JobBuilder generates task classes to invoke the task functions (<code>MapWords</code> and <code>AggregateWordCounts</code>) that we used.</p>
+    <p>Despite having two stages in the job, this sample execution had only 1 task. This is because the input file has only one block, so there is only one task for the MapWords stage. Because of this, the JobBuilder realizes that there is no need to aggregate data across tasks, and only performs local aggregation. If you use larger input data with more than one input split, you will see more tasks and two distinct stages in the job execution.</p>
+    <h2>MapReduce jobs</h2>
+    <p>As you have seen, Jumbo supports a number of features that take it beyond just MapReduce, like the hash table aggregation used in the word count sample, or the ability to have jobs with more than two stages.</p>
+    <p>It is however possible to create a normal MapReduce job. Essentially, all that’s needed is two-stage job where the first stage runs a map function, the second stage runs a reduce function, and the channel between them sorts the data by key. The <code>JobBuilder</code> provides methods for all these operations.</p>
+    <p>For example, to convert the word count sample to MapReduce, all we need to do is replace the <code>AggregateCounts</code> function with a reduce function:</p>
+    <pre class="code">
+<span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> ReduceWordCount(<span class="type">Utf8String</span> key, <span class="type">IEnumerable</span>&lt;<span class="keyword">int</span>&gt; values, <span class="type">RecordWriter</span>&lt;<span class="type">Pair</span>&lt;<span class="type">Utf8String</span>, <span class="keyword">int</span>&gt;&gt; output)
+{
+    output.WriteRecord(<span class="type">Pair</span>.MakePair(key, values.Sum()));
+}</pre>
+    <p>This is pretty much exactly like the reduce function you’d write in Hadoop (except for convenience I used the <code>Sum</code> method provided by LINQ in .Net, rather than summing the values manually as you’d have to do in Java).</p>
+    <p>The <code>BuildJob</code> function for the MapReduce version would look as follows:</p>
+    <pre class="code">
+<span class="keyword">var</span> input = job.Read(InputPath, <span class="keyword">typeof</span>(<span class="type">LineRecordReader</span>));
+<span class="keyword">var</span> words = job.Map&lt;<span class="type">Utf8String</span>, <span class="type">Pair</span>&lt;<span class="type">Utf8String</span>, <span class="keyword">int</span>&gt;&gt;(input, MapWords);
+<span class="keyword">var</span> sorted = job.SpillSortCombine&lt;<span class="type">Utf8String</span>, <span class="keyword">int</span>&gt;(words, ReduceWordCount);
+<span class="keyword">var</span> counted = job.Reduce&lt;<span class="type">Utf8String</span>, <span class="keyword">int</span>, <span class="type">Pair</span>&lt;<span class="type">Utf8String</span>, <span class="keyword">int</span>&gt;&gt;(sorted, ReduceWordCount);
+WriteOutput(counted, OutputPath, <span class="keyword">typeof</span>(<span class="type">TextRecordWriter</span>&lt;&gt;));</pre>
+    <p>It starts off the same as the previous version: reads the input, and runs the map function. It then calls <code>SpillSortCombine</code>, which performs an external merge sort using multiple passes on the sending stage’s side, and merging the data on the receiving stage’s side. This is identical to the sorting method used by Hadoop 1.0, and can handle very large amounts of data without putting too much pressure on memory usage. Like Hadoop, it’s possible to run a combiner during the sort, for which in this case we use the <code>ReduceWordCount</code> function. Note that <code>SpillSortCombine</code> doesn’t add an extra stage, but configures the channel to perform the sorting operation.</p>
+    <p>After sorting, we call the <code>Reduce</code> function to add a stage that runs the <code>ReduceWordCount</code> function, and finally we write the output as in the previous sample.</p>
+    <p>The end result is a job that runs almost exactly like a Hadoop job would. Which in the case of this WordCount example is likely slower than the version we built earlier.</p>
+    <h2>Jumbo features</h2>
+    <p>This section provides more detail about the major features of Jumbo Jet.</p>
+    <h3>Job Configuration</h3>
+    <p>The configuration for a job is specified as an XML file, which indicates for every stage what its inputs and outputs are, what its task type is, and other options such as the partitioner or multi-input record reader for each channel. You can also add settings to the configuration which can be accessed by your tasks.</p>
+    <p>When you work with the <code>JobBuilder</code>, it constructs a sequence of operations from the methods you call which is then translated into a configuration. It is possible to manually configure a job using the <code>JobConfiguration</code> class, or if you really want you could manually write the XML file. However, usually using the <code>JobBuilder</code> is the best option. If you’re using a job runner derived from JobBuilderJob, you can override the <code>OnJobCreated</code> method to customize elements of the configuration after the job configuration has been created.</p>
+    <h3>Tasks</h3>
+    <p>A task executes a data processing operation over a portion of the stage’s input data. The operation to execute is implemented by a class that implements the <code>ITask&lt;TInput, TOutput&gt;</code> generic interface. The Run method receives a <code>RecordReader</code> that it can use to read records from the input, and a <code>RecordWriter</code> to write records to the output.</p>
+    <p>A task class can implement <code>IConfigurable</code> (or inherit from Configurable to use a default implementation) to access various aspects of the job and task configuration during execution.</p>
+    <p>Jumbo provides several built-in task types. One important task type is <code>PushTask&lt;TInput, TOutput&gt;</code>, which defines a method that will be called for each record (similar to a map function). If the receiving stage of a pipeline channel (see below) inherits from <code>PushTask</code>, the <code>RecordWriter</code> for the channel will directly call the <code>ProcessRecord</code> function for each record, bypassing the <code>Run</code> method. This provides better performance for pipeline channels.</p>
+    <p>The other built-in task types are utility task types for things like aggregation or reduce tasks, and are not treated specially.</p>
+    <p>When using the <code>JobBuilder</code> methods that take a delegate, the <code>JobBuilder</code> generates a task type that calls the target method of the delegate (directly if the method is <code>public</code> and <code>static</code>, or through the delegate if not).</p>
+    <h3>Record Reuse</h3>
+    <p>In order to reduce the number of objects created to alleviate the pressure on the Garbage Collector and improve performance, it is desirable to be able to reuse the same object instance for every record a task. For this reason, most <code>RecordReader</code>s that can be used with Jumbo Jet are able to reuse the same object instance every time you read a record.</p>
+    <p>However, Jumbo doesn’t know automatically when that is safe to do. It doesn’t know if the task type stores record object instances in memory or something similar that may make record reuse unsafe. Because of this, a task must declare that it can handle reused object instances for the input by applying the <code>AllowRecordReuseAttribute</code> to the task type (with the <code>JobBuilder</code> methods that use delegates, you can apply this attribute to the delegate’s target method, or use an overload that takes a <code>RecordReuseMode</code>). In general, you should always apply this attribute unless you have a reason not to do so.</p>
+    <p>Output records can also be reused. All record writers that can be used with Jumbo Jet are required to support receiving the same object instance for each record. The record writers for the channels also satisfy this criteria. The only situation where you need to take care is with pipeline channels, where Jumbo will directly pass the output record objects to the receiving task of the pipeline channel. Therefore, reusing output records is only safe if the receiving stage of the pipeline channel allows record reuse. If you’re writing a task for use in a single job, you’ll probably know when that is safe or not. If you’re writing a reusable task type, check the <code>TaskContext.StageConfiguration.AllowOutputRecordReuse</code> property and alter your task’s behavior accordingly.</p>
+    <p>If your task passes record object instances from the input directly to the output, you should set the <code>PassThrough</code> property of the <code>AllowRecordReuseAttribute</code> to true, in which case Jumbo will only reuse input records if the output of the stage that uses the task also allows record reuse.</p>
+    <p>Record reuse is not an issue if the record type is a value type (a basic type or a struct).</p>
+    <h3>Channels</h3>
+    <p>Channels determine how data is transferred between the tasks of different stages. Channels are responsible for transferring the data, but also for partitioning output between different tasks, and merging input from different tasks.</p>
+    <p>The stage that writes to a channel is called the <em>sending stage</em>, and the stage that reads from it the <em>receiving stage</em>.</p>
+    <p>Jumbo has three types of channel, file, TCP, and pipeline:</p>
+    <ul>
+      <li>
+        <strong>File channels</strong> store intermediate data in a file on the local disk of each task of the sending stage, and the tasks in the receiving stage shuffle these files across the network. This behavior is similar to how the shuffle stage is Hadoop 1.0 works, and offers the best fault tolerance. File channels should be used in most cases.</li>
+      <li>
+        <strong>TCP channels</strong> make a direct connection between tasks to transfer data directly without materializing it. TCP channels put limitations on the job structure, because it is required that all tasks in the receiving stage can be executed simultaneously. TCP channels also disable task level fault tolerance. Because I didn’t use this feature often, they are also not as well tested as file channels.</li>
+      <li>
+        <strong>Pipeline channels</strong> (also referred to as in-process channels) are used to combine two tasks into one. Unlike file and TCP channels, it therefore connects only two tasks, rather than reading data from all tasks in the sending stage. Two tasks connected by pipeline channel run on the same node, in the same process (and are treated by the scheduler as a single task), so object instances are directly passed between the two tasks. The receiving stage of a pipeline channel is also called a <em>child stage</em> of the sending stage.</li>
+    </ul>
+    <p>You can specify a partitioner for a channel that is responsible for dividing the data over the receiving stage’s tasks. The default partitioner hashes the records (by key if it’s a key/value pair). You can implement custom partitioners by creating a class that implements <code>IPartitioner&lt;T&gt;</code>.</p>
+    <p>You can also specify a multi-input record reader that is responsible for merging the data from all the tasks in the sending stage (more about this below).</p>
+    <h3>Record types</h3>
+    <p>The basic .Net Framework types <code>SByte</code>, <code>Byte</code>, <code>UInt16</code>, <code>Int16</code>, <code>UInt32</code>, <code>Int32</code>, <code>UInt64</code>, <code>Int64</code>, <code>Single</code>, <code>Double</code>, <code>Decimal</code>, <code>DateTime</code> and <code>String</code> can all be used as record types in Jumbo. In addition, Jumbo provide the <code>Utf8String</code>, <code>Pair&lt;TKey, TValue&gt;</code>, and <code>WritableCollection&lt;T&gt;</code> record types.</p>
+    <p>In order to use a custom type as a record, that type must either implement <code>IWritable</code> or provide a <code>ValueWriter</code>. Typically, you use <code>IWritable</code> for reference types (classes), and <code>ValueWriter</code> for value types (structs). You <em>cannot</em> use <code>IWritable</code> for value types.</p>
+    <p>In certain circumstances, additional interfaces may be required by tasks or channels. In general, it is good practice to implement <code>IComparable&lt;T&gt;</code>, <code>IEquatable&lt;T&gt;</code>, and (for reference types only) <code>ICloneable</code> on all record types. You should also implement the <code>Object.Equals</code>, <code>Object.GetHashCode</code> and <code>Object.ToString</code> methods.</p>
+    <h4>Implementing IWritable</h4>
+    <p>The <code>IWritable</code> interface provides two methods, <code>Read</code> and <code>Write</code>.</p>
+    <p>The <code>Read</code> method must read the object’s entire state from a <code>BinaryReader</code>. Jumbo constructs object instances using <code>System.Runtime.Serialization.FormatterServices.GetUninitializedObject</code>, so the constructor will not be called. Therefore, <code>Read</code> may not assume any prior state and must place the object in a valid state. Because the same object instance may be reused for multiple records, the <code>Read</code> method may not leave any state from the previous record intact, but must replace the entire state for the next record. A call to <code>Read</code> must read exactly all data written by the <code>Write</code> data of the same object, and no more.</p>
+    <p>The <code>Write</code> method must serialize the objects entire state to a <code>BinaryWriter</code>. All state belonging to the record must be serialized, and a call to the <code>Read</code> method on the same type using the data written must reconstruct the state of the object that <code>Write</code> was called on.</p>
+    <h4>Creating a ValueWriter</h4>
+    <p>
+      <code>IWritable</code> cannot be used with immutable types or value types. In those case, create a separate type that implements <code>IValueWriter&lt;T&gt;</code>, whose <code>Read</code> and <code>Write</code> methods follow the same rules as those of <code>IWritable</code>. Apply the <code>ValueWriterAttribute</code> to the record type to indicate the type of its <code>ValueWriter</code>.</p>
+    <h4>Raw comparers</h4>
+    <p>For the <code>SpillSort</code> operation (used by MapReduce jobs, as seen above), Jumbo serializes the records into an in-memory buffer to control the task’s memory usage, and then sorts that in-memory buffer. To avoid having to deserialize each record for comparison, Jumbo uses raw comparers that can directly compare the binary representation of a type.</p>
+    <p>When you create a custom record type, it’s recommended that you also create a raw comparer for that type. This is done by creating a class that implements the <code>IRawComparer</code> interface and applying the <code>RawComparerAttribute</code> to the record type. The raw comparer receives byte arrays for each record and should compare the values of those arrays directly.</p>
+    <p>Creating a raw comparer for a custom record type is not required, but if you use a record type that doesn’t have one with <code>SpillSort</code> these records must be deserialized for every comparison, which can reduce performance significantly. If you don’t intend to use <code>SpillSort</code>, it doesn’t matter.</p>
+    <h3>Record readers and writers</h3>
+    <p>Record readers and writers control the file format of the input and output of a job. Jumbo provides the built-in <code>LineRecordReader</code> and <code>TextRecordWriter&lt;T&gt;</code> to read and write text data, and the <code>RecordFileReader&lt;T&gt;</code> and <code>RecordFileWriter&lt;T&gt;</code> to read and write data from a structured format similar to sequence files in Hadoop. The <code>BinaryRecordReader&lt;T&gt;</code> and <code>BinaryRecordWriter&lt;T&gt;</code> are used for intermediate data; it’s not recommended to use these as input or output formats.</p>
+    <h4>Custom record writers</h4>
+    <p>A custom record writer must inherit from the <code>RecordWriter&lt;T&gt;</code> class (it is not sufficient to implement <code>IRecordWriter</code>, which is only provided for code that must handle a record writer without knowing the record type). If you write records to a stream, it’s recommended to inherit from <code>StreamRecordWriter&lt;T&gt;</code>. </p>
+    <p>A record writer may use any formatting it wants. There is no requirement to use <code>IWritable</code>, or that the format can be read back. It is not necessary for a record writer to have an accompanying record reader.</p>
+    <p>In order to use a record writer for output data in a Jumbo Jet job, it must satisfy the following criteria:</p>
+    <ul>
+      <li>It must have a public constructor that takes a single parameter of type <code>System.IO.Stream</code>, and write records to that stream.</li>
+      <li>It must support record reuse, which means it can handle it if every call to <code>WriteRecord</code> uses the same object instance.</li>
+    </ul>
+    <h4>Custom record readers</h4>
+    <p>A custom record reader must inherit from the <code>RecordReader&lt;T&gt;</code> class (it is not sufficient to implement <code>IRecordReader</code>, which is only provided for code that must handle a record reader without knowing the record type). If you read records from a stream, it’s recommended to inherit from <code>StreamRecordReader&lt;T&gt;</code>.</p>
+    <p>A record reader may use any formatting it wants. There is no requirement to use <code>IWritable</code>, or that there is a corresponding record writer.</p>
+    <p>In order to use a record reader for input data in a Jumbo Jet job, it must satisfy the following criteria:</p>
+    <ul>
+      <li>It must have a public constructor taking the following arguments: <br /><em>inputStream</em>: A <code>System.IO.Stream</code> to read the records from.<br /><em>offset</em>: A <code>System.Int64</code> (<code>long</code>) that is the offset at which to start reading from the stream.<br /><em>size</em>: A <code>System.Int64</code> (<code>long</code>) that is the number of bytes to read from the stream.<br /><em>allowRecordReuse</em>: A <code>System.Boolean</code> that indicates whether or not record reuse is allowed.</li>
+      <li>On the first call of <code>ReadRecord</code>, it must seek to <em>offset</em> and then find the start of the first record after that position, and start reading from there.</li>
+      <li>It must continue reading until the start of the next record is after <em>offset</em> + <em>size</em>, or until the end of the stream is reached. After this, <code>ReadRecord </code>must return false.</li>
+      <li>Given a particular <em>offset</em> and <em>size</em>, and two record <code>readers a = new TheRecordReader(stream, offset, size, allowRecordReuse)</code> and <code>b = new TheRecordReader(stream, offset + size, size, allowRecordReuse)</code>, all records between <em>offset</em> and <em>offset</em> + <em>size</em> * 2 must be read by either a or b, and there must be no record read by both a and b.</li>
+      <li>It should minimize the amount of data read beyond <em>offset</em> + <em>size</em>, because that data may be in another DFS block that may not be local.</li>
+      <li>It should behave correctly if the stream is a record stream that uses <code>RecordStreamOptions.DoNotCrossBoundary</code>.</li>
+      <li>If and only if <em>allowRecordReuse</em> is true, it is allowed to use the same object instance for every record. If <em>allowRecordReuse</em> is false, it must create a new instance to assign to <code>CurrentRecord</code> on every call to <code>ReadRecord</code>. Note that it is not required to reuse object instances if <em>allowRecordReuse</em> is true, although it is strongly recommended to support this.</li>
+    </ul>
+    <p>Note that these requirements (particularly number 2) mean that a record reader that cannot find the start of the next record from an arbitrary stream offset cannot be used for input for a Jumbo Jet job. For example, <code>BinaryRecordReader&lt;T&gt;</code> does not meet this requirement.</p>
+    <h4>Multi-input record readers</h4>
+    <p>A multi-input record reader is a record reader that combines input from multiple record readers. They are used by channels to combine the input of all the tasks in the sending stage, and are also used to combine the input from multiple channels in the case of a join.</p>
+    <p>Jumbo provides the following multi-input record readers for use with channels: <code>MultiInputRecordReader&lt;T&gt;</code> reads the input segments in the order they arrive, <code>RoundRobinRecordReader&lt;T&gt;</code> reads input records from all currently available segments in round-robin order, skipping segments that are waiting on input (this record reader is used for TCP channels), and <code>MergeRecordReader&lt;T&gt;</code> merges already sorted input segments into a completely sorted sequence (the <code>JobBuilder.SpillSort</code> method automatically uses this multi-input record reader type). The only multi-input record reader provided for reading input from multiple channels is the <code>InnerJoinRecordReader&lt;TOuter, TInner, TResult&gt;</code> which performs an inner join between exactly two stages.</p>
+    <p>To create a custom multi-input record reader, inherit from the <code>MultiInputRecordReader&lt;T&gt;</code> class (it is not sufficient to just implement <code>IMultiInputRecordReader</code>). Jumbo will call <code>AddInput</code> for every new input that becomes available. The order of inputs is not guaranteed. The input of a multi-input record reader may contain multiple partitions, which must be processed one by one. Additional partitions may be added after the multi-input record reader was created with the <code>AssignAdditionalPartitions</code> method.</p>
+    <p>For a channel multi-input record reader, the type of the records for all inputs will be the same as the record type of the multi-input record reader. For a stage multi-input record reader (which receives data from multiple channels), the input record types may be different, and the multi-input record reader should use the <code>InputTypeAttribute</code> to indicate which types it accepts.</p>
+    <h2>Job execution life cycle</h2>
+    <p>In order to better understand how Jumbo works, it can be useful to know what happens when you run a job. In this section, we’ll look at how JetShell submits a job, and how it gets executed by Jumbo. This example assumes you’re using a <code>JobBuilderJob</code>; for other types of job runners, the first few steps may be slightly different, though the concept is the same.</p>
+    <ul>
+      <li>When you invoke JetShell with the job argument, it will first load the specified assembly and search its classes for a job runner matching the specified name. It instantiates the job runner, and calls the <code>IJobRunner.RunJob</code> method.</li>
+      <li>For a <code>JobBuilderJob</code>, the <code>RunJob</code> method calls the user-specified <code>BuildJob</code> method. The <code>JobBuilder</code> compiles the sequence of operations into a job configuration.</li>
+      <li>It calls <code>JetClient.JobServer.CreateJob</code>, which tells the JobServer to assign a new job ID and creates a directory on the DFS for the job’s files. It then calls <code>JobBuilderJob.OnJobCreated</code> to give the job runner a chance to modify the job configuration and upload additional files.</li>
+      <li>It calls <code>JetClient.RunJob</code>, passing the job ID, configuration, and list of assemblies. This method saves the configuration to the DFS, uploads the assembly files, and instructs the JobServer to start the job.</li>
+      <li>The job ID is returned to JetShell, which calls <code>JetClient.WaitForJobCompletion</code> to wait until the job finishes, printing progress to the console occasionally.</li>
+      <li>When starting a job, the <code>JobServer</code> loads the job configuration and constructs a list of all tasks, adding input data locality information if applicable. The list is ordered based on dependencies between the stages.</li>
+      <li>The JobServer runs the task scheduler, which assigns tasks to TaskServers, using locality if applicable.</li>
+      <li>When a TaskServer sends a heartbeat to the JobServer, it receives as response all new tasks that have been assigned to it.</li>
+      <li>When the TaskServer receives a new task and this is the first task for that job that the TaskServer has run, it downloads all of the job’s files (configuration, assemblies, and any additional files that the user uploaded to the job’s directory on the DFS) to a local cache.</li>
+      <li>The TaskServer launches a new TaskHost.exe process for the task (note: when a debugger is attached to the TaskServer or the <code>TaskServer.RunTaskHostInAppDomain</code> configuration option is set to true, tasks are executed in an AppDomain rather than a new process).</li>
+      <li>The task host loads the job configuration, and finds the configuration for the task it has been instructed to run.</li>
+      <li>The task host instantiates the task’s class, opens input and output files on the DFS and sets up channels to other tasks. Note that DFS output is written to a temporary file, not the final output path. If the stage for this task has a child stage connected via a pipeline channel, these are also instantiated.</li>
+      <li>The task host calls ITask.Run for the task.</li>
+      <li>Periodically, the task host informs the TaskServer of the task’s progress. The TaskServer forwards this information to the JobServer during heartbeats. If a task does not send progress updates for a configurable time-out, it is killed by the TaskServer.</li>
+      <li>When the task finishes, the task host finalizes any output and closes all input and output files and channels. If the output is a DFS file, the temporary file is renamed to the final output file.</li>
+      <li>The task host notifies the TaskServer of task completion, and terminates.</li>
+      <li>When the TaskServer gets the completion notification, it notifies the JobServer on the next heartbeat (if immediate completed task notification is enabled, a heartbeat is sent immediately without waiting for the timeout).</li>
+      <li>If a task encounters an error or terminated without notifying the TaskServer of success, the TaskServer notifies the JobServer of task failure, which will then reset the task to schedule it again. If too many task failures occur, the job is failed.</li>
+      <li>When a TaskServer notifies the JobServer it has finished a task, the JobServer runs the scheduler again to find new tasks to run on that TaskServer.</li>
+      <li>The JobServer updates the state of the job, so that other tasks that depend on this task (for example, if the completed task had a file channel output the tasks of the receiving stage of that channel will periodically check which tasks are finished to retrieve their output). If enabled and applicable, a UDP task completion broadcast message is sent.</li>
+      <li>When all tasks in a job have finished, a job cleanup command is sent to all TaskServers that ran tasks for the job so they can delete any temporary and intermediate files that still remain.</li>
+      <li>The <code>JetClient.WaitForJobCompletion</code> method returns once the job is finished, and JetShell terminates.</li>
+    </ul>
+    <h2>Tutorial 2: advanced WordCount</h2>
+    <p>Now that you have a better insight into how Jumbo works and some of its features, let’s create a more complicated job. We’ll create a new version of WordCount that:</p>
+    <ul>
+      <li>Uses a custom comparer for aggregation to allow case insensitive word count.</li>
+      <li>Creates a job with more stages that sorts the result by descending frequency (something which with Hadoop would require more than one job).</li>
+      <li>Customizes channel and stage configuration.</li>
+      <li>Uses job settings to specify a list of patterns to ignore while counting.</li>
+    </ul>
+    <p>To start off, create a new class called AdvancedWordCount in the file AdvancedWordCount.cs:</p>
+    <pre class="code">
+<span class="keyword">using</span> System;
+<span class="keyword">using</span> System.ComponentModel;
+<span class="keyword">using</span> System.IO;
+<span class="keyword">using</span> System.Linq;
+<span class="keyword">using</span> System.Text.RegularExpressions;
+<span class="keyword">using</span> Ookii.CommandLine;
+<span class="keyword">using</span> Ookii.Jumbo.IO;
+<span class="keyword">using</span> Ookii.Jumbo.Jet;
+<span class="keyword">using</span> Ookii.Jumbo.Jet.Channels;
+<span class="keyword">using</span> Ookii.Jumbo.Jet.Jobs;
+<span class="keyword">using</span> Ookii.Jumbo.Jet.Jobs.Builder;
+
+<span class="keyword">namespace</span> JumboSample
+{
+    [<span class="type">Description</span>(<span class="string">"Alternative version of WordCount that demonstrates some more advanced features of Jumbo."</span>)]
+    <span class="keyword">public</span> <span class="keyword">class</span> <span class="type">AdvancedWordCount</span> : <span class="type">JobBuilderJob</span>
+    {
+    }
+}</pre>
+    <p>Note that I’ve added a description to the class, which will be displayed by JetShell.</p>
+    <p>This version of WordCount will have four command line parameters:</p>
+    <pre class="code">
+[<span class="type">CommandLineArgument</span>(IsRequired = <span class="keyword">true</span>, Position = 0), <span class="type">Description</span>(<span class="string">"The input file or directory containing the input text (must be utf-8)."</span>)]
+<span class="keyword">public</span> <span class="keyword">string</span> InputPath { <span class="keyword">get</span>; <span class="keyword">set</span>; }
+
+[<span class="type">CommandLineArgument</span>(IsRequired = <span class="keyword">true</span>, Position = 1), <span class="type">Description</span>(<span class="string">"The directory where the output will be written."</span>)]
+<span class="keyword">public</span> <span class="keyword">string</span> OutputPath { <span class="keyword">get</span>; <span class="keyword">set</span>; }
+
+[<span class="type">CommandLineArgument</span>, <span class="type">JobSetting</span>, <span class="type">Description</span>(<span class="string">"Perform a case-insensitive comparison on the words."</span>)]
+<span class="keyword">public</span> <span class="keyword">bool</span> CaseInsensitive { <span class="keyword">get</span>; <span class="keyword">set</span>; }
+
+[<span class="type">CommandLineArgument</span>, <span class="type">JobSetting</span>, <span class="type">Description</span>(<span class="string">"The path of a file containing regular expression patterns that define text that should be ignored while counting."</span>)]
+<span class="keyword">public</span> <span class="keyword">string</span> IgnorePatternsFile { <span class="keyword">get</span>; <span class="keyword">set</span>; }</pre>
+    <p>Besides the input and output path, we also have a switch argument that indicates whether or not to use case-insensitive comparisons on the word, and finally a parameter that specifies a text file containing a list of patterns to ignore. Note that I’ve added descriptions to all of these, which will be used by JetShell when displaying command line usage information for the job.</p>
+    <p>The CaseInsensitive and IgnorePatternsFile properties also have the <code>JobSettingAttribute</code> applied. While you can manually add job settings via the JobBuilder.Settings property, for convenience <code>JobBuilderJob</code> will add the value of every property marked with the <code>JobSettingAttribute</code> to the job settings, using ClassName.PropertyName as the setting’s key. This allows our tasks to get the value of these arguments during job execution.</p>
+    <h3>Data processing functions</h3>
+    <p>Next, we have to specify the task functions. This time, we need to keep some state in between records (the list of ignored patterns), so instead of using a map function (which processes a single record), we use a function that will process all records:</p>
+    <pre class="code">
+[<span class="type">AllowRecordReuse</span>]
+<span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> MapWords(<span class="type">RecordReader</span>&lt;<span class="type">Utf8String</span>&gt; input, <span class="type">RecordWriter</span>&lt;<span class="type">Pair</span>&lt;<span class="keyword">string</span>, <span class="keyword">int</span>&gt;&gt; output, <span class="type">TaskContext</span> context)
+{</pre>
+    <p>This function signature takes a <code>RecordReader</code> from which the input is read, instead of a record instance. It also has a <code>TaskContext</code> parameter, which we’ll need to access the job settings. Note that I’ve applied the AllowRecordReuseAttribute to the method, to tell Jumbo it’s okay to reuse record object instances for the input, which improves performance by reducing object creation.</p>
+    <p>One interesting thing to note is that for the output record type, we’re using <code>Pair&lt;string, int&gt;</code>, so we’re using <code>String</code> instead of <code>Utf8String</code>. This is because we want to be able to use a case-insensitive string comparer, and there is none for <code>Utf8String</code>. Of course, you could write one, but since the .Net <code>String</code> class already has one we’ll use that instead.</p>
+    <p>The first thing the method should do is read the list of ignore patterns:</p>
+    <pre class="code">
+<span class="type">Regex</span> ignorePattern = GetIgnorePattern(context);</pre>
+    <p>We’ll get back to the details of the GetIgnorePattern function in a bit.</p>
+    <p>Since we’re keeping state between the records, we might as well reuse the output record object instance as well, and the array containing the separator for <code>String.Split</code>.</p>
+    <pre class="code">
+<span class="type">Pair</span>&lt;<span class="keyword">string</span>, <span class="keyword">int</span>&gt; outputRecord = <span class="type">Pair</span>.MakePair((<span class="keyword">string</span>)<span class="keyword">null</span>, 1);
+<span class="keyword">char</span>[] separator = <span class="keyword">new</span> <span class="keyword">char</span>[] { <span class="string">' '</span> };</pre>
+    <p>In this case we know that output record reuse is safe without checking <code>TaskContext.StageConfiguration.AllowOutputRecordReuse</code> because the output of this stage will be a pipeline channel to an aggregation task, which also supports record reuse.</p>
+    <p>The only thing remaining is to process the records:</p>
+    <pre class="code">
+<span class="keyword">foreach</span>( <span class="type">Utf8String</span> record <span class="keyword">in</span> input.EnumerateRecords() )
+{
+    <span class="keyword">string</span> line = record.ToString();
+    <span class="keyword">if</span>( ignorePattern != <span class="keyword">null</span> )
+        line = ignorePattern.Replace(line, <span class="string">" "</span>);
+
+    <span class="keyword">string</span>[] words = line.Split(separator, <span class="type">StringSplitOptions</span>.RemoveEmptyEntries);
+    <span class="keyword">foreach</span>( <span class="keyword">string</span> word <span class="keyword">in</span> words )
+    {
+        outputRecord.Key = word;
+        output.WriteRecord(outputRecord);
+    }
+}</pre>
+    <p>This basically does the same thing as the map function from our first version of WordCount, except it removes words from the line that match the ignore pattern, and reuses the same instance of <code>Pair</code> for every record.</p>
+    <p>Let’s look at that GetIgnorePattern function, which loads the ignore patterns file:</p>
+    <pre>$lang; C#; Regex TaskContext File RegexOptions$<br />private static Regex GetIgnorePattern(TaskContext context)<br />{<br />    string dfsPath = context.JobConfiguration.GetSetting("AdvancedWordCount.IgnorePatternsFile", null);<br />    if( dfsPath == null )<br />        return null;<br />    bool caseInsensitive = context.JobConfiguration.GetTypedSetting("AdvancedWordCount.CaseInsensitive", false);<br /><br />    string path = context.DownloadDfsFile(dfsPath);<br />    var patterns = File.ReadLines(path).Where(line =&gt; !string.IsNullOrWhiteSpace(line)).Select(line =&gt; "(" + line.Trim() + ")");<br />    return new Regex(string.Join("|", patterns), caseInsensitive ? RegexOptions.IgnoreCase : RegexOptions.None);<br />}</pre>
+    <p>The function checks the job configuration to get the value of the setting that was added by our <code>IgnorePatternsFile</code> property. That file is then loaded by using the <code>TaskContext.DownloadDfsFile</code> helper function. The task could of course use <code>FileSystemClient</code> directly to read the file from the DFS, but this method will cache the file locally on the task server so that if multiple tasks on that server need the file it doesn’t need to read it from the DFS every time. This function returns a local path where the cached file is stored. The method then reads that file and constructs a regular expression for the ignored patterns, optionally making it case-insensitive.</p>
+    <p>Note that in this case it would probably have made more sense to add the ignore patterns themselves to the job configuration, but I wanted to demonstrate the <code>DownloadDfsFile</code> function, so there you are.</p>
+    <p>We also need an aggregation function, which is the same as before:</p>
+    <pre class="code">
+[<span class="type">AllowRecordReuse</span>]
+<span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">int</span> AggregateCounts(<span class="keyword">string</span> key, <span class="keyword">int</span> oldValue, <span class="keyword">int</span> newValue)
+{
+    <span class="keyword">return</span> oldValue + newValue;
+}</pre>
+    <p>The only difference is the key type (<code>String</code> instead of <code>Utf8String</code>), and the AllowRecordReuse attribute. Allowing record reuse for an aggregation function is safe as long as the types of the key and value are either value types or implement <code>ICloneable</code>. Since <code>String</code> implements <code>ICloneable</code> and <code>int</code> is a value type, we can do it here.</p>
+    <p>In this version of WordCount, we want to sort the result by descending word frequency. However, word frequency is the value of the key/value pair, and the default comparer for Pair sorts by key. We could write a custom comparer, but it’s easier to add an additional stage that inverts the key and value:</p>
+    <pre class="code">
+[<span class="type">AllowRecordReuse</span>]
+<span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> ReversePair&lt;TKey, TValue&gt;(<span class="type">Pair</span>&lt;TKey, TValue&gt; record, <span class="type">RecordWriter</span>&lt;<span class="type">Pair</span>&lt;TValue, TKey&gt;&gt; output)
+{
+    output.WriteRecord(<span class="type">Pair</span>.MakePair(record.Value, record.Key));
+}</pre>
+    <p>We’re going to use this function twice, first to put the frequency as the key, and after sorting to swap the key and value back. Therefore, I’ve made the function generic so we can use the same function both times.</p>
+    <h3>Creating the job</h3>
+    <p>Next, we have to implement the BuildJob function:</p>
+    <pre class="code">
+<span class="keyword">protected</span> <span class="keyword">override</span> <span class="keyword">void</span> BuildJob(<span class="type">JobBuilder</span> job)
+{
+    <span class="keyword">var</span> input = job.Read(InputPath, <span class="keyword">typeof</span>(<span class="type">LineRecordReader</span>));
+
+    <span class="keyword">var</span> words = job.Process&lt;<span class="type">Utf8String</span>, <span class="type">Pair</span>&lt;<span class="keyword">string</span>, <span class="keyword">int</span>&gt;&gt;(input, MapWords);
+    words.StageId = <span class="string">"WordCount"</span>;</pre>
+    <p>As before, we read the input using a <code>LineRecordReader</code>. Because we’re using a function that processes all records rather than a map function, we call <code>JobBuilder.Process</code> rather than <code>JobBuilder.Map</code> for the first operation. We’re also assigning an explicit stage ID, which makes the job progress in JetShell and the Jet web administration application look a bit nicer than using the auto-generated stage ID (which you may have noticed was MapWordsTaskStage for this stage in the previous example).</p>
+    <p>Since we want to support case-insensitive comparisons, we need to select which comparer to use for aggregation based on the <code>CaseInsensitive</code> property:</p>
+    <pre class="code">
+<span class="type">Type</span> comparerType = CaseInsensitive ? <span class="keyword">typeof</span>(<span class="type">OrdinalIgnoreCaseStringComparer</span>) : <span class="keyword">null</span>;</pre>
+    <p>Now add the aggregation step to the JobBuilder:</p>
+    <pre>var aggregated = job.GroupAggregate&lt;string, int&gt;(words, AggregateCounts, comparerType);<br />words.StageId = "WordCountAggregation";</pre>
+    <p>Again, we’re assigning an explicit stage ID just to make it look nice. We’re also passing the custom comparer type.</p>
+    <p>Next, we need to change the <code>Pair&lt;string, int&gt;</code> records into <code>Pair&lt;int, string&gt;</code>, so we can sort them by frequency.</p>
+    <pre class="code">
+<span class="keyword">var</span> reversed = job.Map&lt;<span class="type">Pair</span>&lt;<span class="keyword">string</span>, <span class="keyword">int</span>&gt;, <span class="type">Pair</span>&lt;<span class="keyword">int</span>, <span class="keyword">string</span>&gt;&gt;(aggregated, ReversePair&lt;<span class="keyword">string</span>, <span class="keyword">int</span>&gt;);
+reversed.InputChannel.ChannelType = <span class="type">ChannelType</span>.Pipeline;</pre>
+    <p>Because this is a simple map function applied to each of the output records of the WordCountAggregation stage, there really is no sense in re-partitioning and re-shuffling the records. Therefore, we tell Jumbo to use a pipeline channel so that this step is performed immediately for each record in the same process that’s running the WordCountAggregation task.</p>
+    <p>Next, we need to sort the records:</p>
+    <pre class="code">
+<span class="keyword">var</span> sorted = job.SpillSort(reversed, <span class="keyword">typeof</span>(<span class="type">InvertedRawComparer</span>&lt;&gt;));
+sorted.InputChannel.TaskCount = 1;</pre>
+    <p>We use the <code>InvertedRawComparer&lt;T&gt;</code>, which inverts the default raw comparer for a type so we can sort by descending rather than ascending frequency.</p>
+    <p>Normally, a file channel partitions the data over multiple tasks, but that would give us multiple output files that are each individually sorted by frequency, while what we want is a single sorted list. Therefore, we indicate explicitly that we want only one task (and thus one partition). This is probably not a good idea for very large amounts of data, but for this sample it shouldn’t be a problem.</p>
+    <p>Finally, we turn the records back into <code>Pair&lt;string, int&gt;</code> (again using a pipelined task), and write them to the output:</p>
+    <pre class="code">
+<span class="keyword">var</span> output = job.Map&lt;<span class="type">Pair</span>&lt;<span class="keyword">int</span>, <span class="keyword">string</span>&gt;, <span class="type">Pair</span>&lt;<span class="keyword">string</span>, <span class="keyword">int</span>&gt;&gt;(sorted, ReversePair&lt;<span class="keyword">int</span>, <span class="keyword">string</span>&gt;);
+output.StageId = <span class="string">"WordCountOutput"</span>;
+output.InputChannel.ChannelType = <span class="type">ChannelType</span>.Pipeline;
+
+WriteOutput(output, OutputPath, <span class="keyword">typeof</span>(<span class="type">TextRecordWriter</span>&lt;&gt;));</pre>
+    <p>One additional thing to note is the <code>OrdinalIgnoreCaseStringComparer</code>, which is not a standard type. Basically, we want to use <code>StringComparer.OrdinalIgnoreCase</code>, but that’s a property, and the type of that property is internal so we can’t use that. So we create a type that wraps it:</p>
+    <pre class="code">
+<span class="keyword">private</span> <span class="keyword">class</span> <span class="type">OrdinalIgnoreCaseStringComparer</span> : <span class="type">StringComparer</span>
+{
+    <span class="keyword">public</span> <span class="keyword">override</span> <span class="keyword">int</span> Compare(<span class="keyword">string</span> x, <span class="keyword">string</span> y)
+    {
+        <span class="keyword">return</span> OrdinalIgnoreCase.Compare(x, y);
+    }
+
+    <span class="keyword">public</span> <span class="keyword">override</span> <span class="keyword">bool</span> Equals(<span class="keyword">string</span> x, <span class="keyword">string</span> y)
+    {
+        <span class="keyword">return</span> OrdinalIgnoreCase.Equals(x, y);
+    }
+
+    <span class="keyword">public</span> <span class="keyword">override</span> <span class="keyword">int</span> GetHashCode(<span class="keyword">string</span> obj)
+    {
+        <span class="keyword">return</span> OrdinalIgnoreCase.GetHashCode(obj);
+    }
+}</pre>
+    <p>Putting everything together, we now have the following file:</p>
+    <pre class="code">
+<span class="keyword">using</span> System;
+<span class="keyword">using</span> System.ComponentModel;
+<span class="keyword">using</span> System.IO;
+<span class="keyword">using</span> System.Linq;
+<span class="keyword">using</span> System.Text.RegularExpressions;
+<span class="keyword">using</span> Ookii.CommandLine;
+<span class="keyword">using</span> Ookii.Jumbo.IO;
+<span class="keyword">using</span> Ookii.Jumbo.Jet;
+<span class="keyword">using</span> Ookii.Jumbo.Jet.Channels;
+<span class="keyword">using</span> Ookii.Jumbo.Jet.Jobs;
+<span class="keyword">using</span> Ookii.Jumbo.Jet.Jobs.Builder;
+
+<span class="keyword">namespace</span> JumboSample
+{
+    [<span class="type">Description</span>(<span class="string">"Alternative version of WordCount that demonstrates some more advanced features of Jumbo."</span>)]
+    <span class="keyword">public</span> <span class="keyword">class</span> <span class="type">AdvancedWordCount</span> : <span class="type">JobBuilderJob</span>
+    {
+        <span class="keyword">private</span> <span class="keyword">class</span> <span class="type">OrdinalIgnoreCaseStringComparer</span> : <span class="type">StringComparer</span>
+        {
+            <span class="keyword">public</span> <span class="keyword">override</span> <span class="keyword">int</span> Compare(<span class="keyword">string</span> x, <span class="keyword">string</span> y)
+            {
+                <span class="keyword">return</span> OrdinalIgnoreCase.Compare(x, y);
+            }
+
+            <span class="keyword">public</span> <span class="keyword">override</span> <span class="keyword">bool</span> Equals(<span class="keyword">string</span> x, <span class="keyword">string</span> y)
+            {
+                <span class="keyword">return</span> OrdinalIgnoreCase.Equals(x, y);
+            }
+
+            <span class="keyword">public</span> <span class="keyword">override</span> <span class="keyword">int</span> GetHashCode(<span class="keyword">string</span> obj)
+            {
+                <span class="keyword">return</span> OrdinalIgnoreCase.GetHashCode(obj);
+            }
+        }
+
+        [<span class="type">CommandLineArgument</span>(IsRequired = <span class="keyword">true</span>, Position = 0), <span class="type">Description</span>(<span class="string">"The input file or directory containing the input text (must be utf-8)."</span>)]
+        <span class="keyword">public</span> <span class="keyword">string</span> InputPath { <span class="keyword">get</span>; <span class="keyword">set</span>; }
+
+        [<span class="type">CommandLineArgument</span>(IsRequired = <span class="keyword">true</span>, Position = 1), <span class="type">Description</span>(<span class="string">"The directory where the output will be written."</span>)]
+        <span class="keyword">public</span> <span class="keyword">string</span> OutputPath { <span class="keyword">get</span>; <span class="keyword">set</span>; }
+
+        [<span class="type">CommandLineArgument</span>, <span class="type">JobSetting</span>, <span class="type">Description</span>(<span class="string">"Perform a case-insensitive comparison on the words."</span>)]
+        <span class="keyword">public</span> <span class="keyword">bool</span> CaseInsensitive { <span class="keyword">get</span>; <span class="keyword">set</span>; }
+
+        [<span class="type">CommandLineArgument</span>, <span class="type">JobSetting</span>, <span class="type">Description</span>(<span class="string">"The path of a file containing regular expression patterns that define text that should be ignored while counting."</span>)]
+        <span class="keyword">public</span> <span class="keyword">string</span> IgnorePatternsFile { <span class="keyword">get</span>; <span class="keyword">set</span>; }
+
+        <span class="keyword">protected</span> <span class="keyword">override</span> <span class="keyword">void</span> BuildJob(<span class="type">JobBuilder</span> job)
+        {
+            <span class="keyword">var</span> input = job.Read(InputPath, <span class="keyword">typeof</span>(<span class="type">LineRecordReader</span>));
+
+            <span class="keyword">var</span> words = job.Process&lt;<span class="type">Utf8String</span>, <span class="type">Pair</span>&lt;<span class="keyword">string</span>, <span class="keyword">int</span>&gt;&gt;(input, MapWords);
+            words.StageId = <span class="string">"WordCount"</span>;
+
+            Type comparerType = CaseInsensitive ? <span class="keyword">typeof</span>(<span class="type">OrdinalIgnoreCaseStringComparer</span>) : <span class="keyword">null</span>;
+
+            <span class="keyword">var</span> aggregated = job.GroupAggregate&lt;<span class="keyword">string</span>, <span class="keyword">int</span>&gt;(words, AggregateCounts, comparerType);
+            words.StageId = <span class="string">"WordCountAggregation"</span>;
+
+            <span class="keyword">var</span> reversed = job.Map&lt;<span class="type">Pair</span>&lt;<span class="keyword">string</span>, <span class="keyword">int</span>&gt;, <span class="type">Pair</span>&lt;<span class="keyword">int</span>, <span class="keyword">string</span>&gt;&gt;(aggregated, ReversePair&lt;<span class="keyword">string</span>, <span class="keyword">int</span>&gt;);
+            reversed.InputChannel.<span class="type">ChannelType</span> = <span class="type">ChannelType</span>.Pipeline;
+
+            <span class="keyword">var</span> sorted = job.SpillSort(reversed, <span class="keyword">typeof</span>(<span class="type">InvertedRawComparer</span>&lt;&gt;));
+            sorted.InputChannel.TaskCount = 1;
+
+            <span class="keyword">var</span> output = job.Map&lt;<span class="type">Pair</span>&lt;<span class="keyword">int</span>, <span class="keyword">string</span>&gt;, <span class="type">Pair</span>&lt;<span class="keyword">string</span>, <span class="keyword">int</span>&gt;&gt;(sorted, ReversePair&lt;<span class="keyword">int</span>, <span class="keyword">string</span>&gt;);
+            output.StageId = <span class="string">"WordCountOutput"</span>;
+            output.InputChannel.<span class="type">ChannelType</span> = <span class="type">ChannelType</span>.Pipeline;
+
+            WriteOutput(output, OutputPath, <span class="keyword">typeof</span>(<span class="type">TextRecordWriter</span>&lt;&gt;));
+        }
+
+        [<span class="type">AllowRecordReuse</span>]
+        <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> MapWords(<span class="type">RecordReader</span>&lt;<span class="type">Utf8String</span>&gt; input, <span class="type">RecordWriter</span>&lt;<span class="type">Pair</span>&lt;<span class="keyword">string</span>, <span class="keyword">int</span>&gt;&gt; output, <span class="type">TaskContext</span> context)
+        {
+            <span class="type">Regex</span> ignorePattern = GetIgnorePattern(context);
+
+            <span class="type">Pair</span>&lt;<span class="keyword">string</span>, <span class="keyword">int</span>&gt; outputRecord = <span class="type">Pair</span>.MakePair((<span class="keyword">string</span>)<span class="keyword">null</span>, 1);
+            <span class="keyword">char</span>[] separator = <span class="keyword">new</span> <span class="keyword">char</span>[] { <span class="string">' '</span> };
+            <span class="keyword">foreach</span>( <span class="type">Utf8String</span> record <span class="keyword">in</span> input.EnumerateRecords() )
+            {
+                <span class="keyword">string</span> line = record.ToString();
+                <span class="keyword">if</span>( ignorePattern != <span class="keyword">null</span> )
+                    line = ignorePattern.Replace(line, <span class="string">" "</span>);
+
+                <span class="keyword">string</span>[] words = line.Split(separator, <span class="type">StringSplitOptions</span>.RemoveEmptyEntries);
+                <span class="keyword">foreach</span>( <span class="keyword">string</span> word <span class="keyword">in</span> words )
+                {
+                    outputRecord.Key = word;
+                    output.WriteRecord(outputRecord);
+                }
+            }
+        }
+
+        [<span class="type">AllowRecordReuse</span>]
+        <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">int</span> AggregateCounts(<span class="keyword">string</span> key, <span class="keyword">int</span> oldValue, <span class="keyword">int</span> newValue)
+        {
+            <span class="keyword">return</span> oldValue + newValue;
+        }
+
+        [<span class="type">AllowRecordReuse</span>]
+        <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> ReversePair&lt;TKey, TValue&gt;(<span class="type">Pair</span>&lt;TKey, TValue&gt; record, <span class="type">RecordWriter</span>&lt;<span class="type">Pair</span>&lt;TValue, TKey&gt;&gt; output)
+        {
+            output.WriteRecord(<span class="type">Pair</span>.MakePair(record.Value, record.Key));
+        }
+
+        <span class="keyword">private</span> <span class="keyword">static</span> <span class="type">Regex</span> GetIgnorePattern(<span class="type">TaskContext</span> context)
+        {
+            <span class="keyword">string</span> dfsPath = context.JobConfiguration.GetSetting(<span class="string">"AdvancedWordCount.IgnorePatternsFile"</span>, <span class="keyword">null</span>);
+            <span class="keyword">if</span>( dfsPath == <span class="keyword">null</span> )
+                <span class="keyword">return</span> <span class="keyword">null</span>;
+            <span class="keyword">bool</span> caseInsensitive = context.JobConfiguration.GetTypedSetting(<span class="string">"AdvancedWordCount.CaseInsensitive"</span>, <span class="keyword">false</span>);
+
+            <span class="keyword">string</span> path = context.DownloadDfsFile(dfsPath);
+            <span class="keyword">var</span> patterns = <span class="type">File</span>.ReadLines(path).Where(line =&gt; !<span class="keyword">string</span>.IsNullOrWhiteSpace(line)).Select(line =&gt; <span class="string">"("</span> + line.Trim() + <span class="string">")"</span>);
+            <span class="keyword">return</span> <span class="keyword">new</span> <span class="type">Regex</span>(<span class="keyword">string</span>.Join(<span class="string">"|"</span>, patterns), caseInsensitive ? <span class="type">RegexOptions</span>.IgnoreCase : <span class="type">RegexOptions</span>.None);
+        }
+    }
+}</pre>
+    <h3>Compiling and running the job</h3>
+    <p>Compiling the job is the same as with the first sample. If you’re using Mono 3.0, the command line is:</p>
+    <pre>$ mcs AdvancedWordCount.cs -target:library -out:JumboSample.dll -r:/home/sgroot/jumbo/build/bin/Ookii.Jumbo.dll,/home/sgroot/jumbo/build/bin/Ookii.Jumbo.Dfs.dll,/home/sgroot/jumbo/build/bin/Ookii.Jumbo.Jet.dll,/home/sgroot/jumbo/build/bin/Ookii.CommandLine.dll</pre>
+    <p>Now, when we inspect the assembly using JetShell, you should see the following:</p>
+    <pre>$ ./JetShell job ~/jumbosample/JumboSample.dll <br />Usage: JetShell job &lt;assemblyName&gt; &lt;jobName&gt; [job arguments...]<br /><br />The assembly JumboSample defines the following jobs:<br /><br />    AdvancedWordCount<br />        Alternative version of WordCount that demonstrates some more advanced<br />        features of Jumbo.</pre>
+    <p>Note how the description of the job was included in the output.</p>
+    <p>We can also check the parameters for our job:</p>
+    <pre>$ ./JetShell job ~/jumbosample/JumboSample.dll advancedwordcount<br />The required argument 'InputPath' was not supplied.<br />Alternative version of WordCount that demonstrates some more advanced features<br />of Jumbo.<br /><br />Usage: JetShell job JumboSample.dll AdvancedWordCount  [-InputPath] &lt;String&gt;<br />   [-OutputPath] &lt;String&gt; [-BlockSize &lt;BinarySize&gt;] [-CaseInsensitive]<br />   [-ConfigOnly &lt;FileName&gt;] [-IgnorePatternsFile &lt;String&gt;] [-Interactive]<br />   [-OverwriteOutput] [-Property &lt;[Stage:]Property=Value&gt;...]<br />   [-ReplicationFactor &lt;Int32&gt;] [-Setting &lt;[Stage:]Setting=Value&gt;...]<br />   <br />    -InputPath &lt;String&gt;<br />        The input file or directory containing the input text (must be utf-8).<br />        <br />    -OutputPath &lt;String&gt;<br />        The directory where the output will be written.<br />        <br />    -BlockSize &lt;BinarySize&gt;<br />        Block size of the job's output files.<br />        <br />    -CaseInsensitive [&lt;Boolean&gt;]<br />        Perform a case-insensitive comparison on the words.<br />        <br />    -ConfigOnly &lt;FileName&gt;<br />        Don't run the job, but only create the configuration and write it to<br />        the specified file. Use this to test if your job builder job is<br />        creating the correct configuration without running the job. Note there<br />        can still be side-effects such as output directories on the file<br />        system being created. If the OverwriteOutput switch is specified, the<br />        output directory will still be erased!<br />        <br />    -IgnorePatternsFile &lt;String&gt;<br />        The path of a file containing regular expression patterns that define<br />        text that should be ignored while counting.<br />        <br />    -Interactive [&lt;Boolean&gt;]<br />        Wait for user confirmation before starting the job and before exiting.<br />        <br />    -OverwriteOutput [&lt;Boolean&gt;]<br />        Delete the output directory before running the job, if it exists.<br />        <br />    -Property &lt;[Stage:]Property=Value&gt;<br />        Modifies the value of one of the properties in the job configuration<br />        after the job has been created. Uses the format "PropertyName=value"<br />        or "CompoundStageId:PropertyName=value". You can access properties<br />        more than one level deep, e.g.<br />        "MyStage:OutputChannel.PartitionsPerTask=2". Can be specified more<br />        than once.<br />        <br />    -ReplicationFactor &lt;Int32&gt;<br />        Replication factor of the job's output files.<br />        <br />    -Setting &lt;[Stage:]Setting=Value&gt;<br />        Defines or overrides a job or stage setting in the job configuration.<br />        Uses the format "SettingName=value" or<br />        "CompoundStageId:SettingName=value". Can be specified more than once.</pre>
+    <p>Notice that out custom parameters are now listed, along with their description, in the long list of arguments.</p>
+    <p>Now we can run the job, but before doing that, let’s create a file with ignore patterns, and store it on the DFS as /ignore.txt:</p>
+    <pre>\bIshmael\b<br />\bwh.*\b</pre>
+    <p>This will ignore the word “Ishmael”, and any word starting with “wh” (like “whale”).</p>
+    <pre>$ ./JetShell job ~/jumbosample/JumboSample.dll advancedwordcount /mobydick.txt /sampleoutput -ignorepatternsfile /ignore.txt -caseinsensitive -overwriteoutput<br />237 [1] INFO Ookii.Jumbo.Jet.Jobs.JobRunnerInfo (null) - Created job runner for job AdvancedWordCount, InputPath = /mobydick.txt, OutputPath = /sampleoutput, CaseInsensitive = True, IgnorePatternsFile = /ignore.txt, OverwriteOutput = True<br />430 [1] INFO Ookii.Jumbo.Jet.JetClient (null) - Saving job configuration to DFS file /JumboJet/job_{c44c00b5-5168-49ea-beb7-b8b68eb8374e}/job.xml.<br />665 [1] INFO Ookii.Jumbo.Jet.JetClient (null) - Uploading local file /home/sgroot/jumbosample/JumboSample.dll to DFS directory /JumboJet/job_{c44c00b5-5168-49ea-beb7-b8b68eb8374e}.<br />713 [1] INFO Ookii.Jumbo.Jet.JetClient (null) - Uploading local file /tmp/Ookii.Jumbo.Jet.Generated.8feaf9721e2a462490336d9a7891163a.dll to DFS directory /JumboJet/job_{c44c00b5-5168-49ea-beb7-b8b68eb8374e}.<br />782 [1] INFO Ookii.Jumbo.Jet.JetClient (null) - Running job c44c00b5-5168-49ea-beb7-b8b68eb8374e.<br />0.0 %; finished: 0/2 tasks; WordCountAggregation: 0.0 %; WordCountOutput: 0.0 %<br />50.0 %; finished: 1/2 tasks; WordCountAggregation: 100.0 %; WordCountOutput: 0.0 %<br />100.0 %; finished: 2/2 tasks; WordCountAggregation: 100.0 %; WordCountOutput: 100.0 %<br /><br />Job completed.<br />Start time: 2013-06-03 08:10:35.023<br />End time:   2013-06-03 08:10:38.695<br />Duration:   00:00:03.6723330 (3.672333s)</pre>
+    <p>Note that this job had two stages despite there being only one block in the input, which is because the <code>SpillSort</code> operation cannot be rolled into one stage. With more input blocks, the <code>JobBuilder</code> would create a three-stage job in this example.</p>
+    <p>If you view the output, you can see that it did indeed ignore case and is sorted by frequency (and the patterns we specified were ignored):</p>
+    <pre>$ ./DfsShell cat /sampleoutput/WordCountOutput-00001<br />[The, 12465]<br />[of, 5870]<br />[and, 5605]<br />[a, 3979]<br />[to, 3970]<br />[In, 3536]<br />[that, 2410]<br />[his, 2164]<br />[with, 1530]<br />[it, 1511]<br />[but, 1493]<br />[As, 1491]<br />…</pre>
+    <h2>More information</h2>
+    <p>The information in this document represents just a small part of Jumbo’s full capabilities. In order to learn more, check out the <a href="http://www.ookii.org/Link/JumboDoc">class library documentation</a>. Jumbo also comes with several more samples besides word count, including the well-known TeraSort benchmark, and Parallel FP Growth as an example of a very complex job with many stages performing non-trivial operations. The source code for those samples can be a guide to learning more about Jumbo’s functionality. And of course, feel free to check out the source code for Jumbo itself.</p>
+  </body>
+</html>

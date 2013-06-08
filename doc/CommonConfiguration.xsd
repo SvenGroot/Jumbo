@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:doc="http://www.ookii.org/documentation" doc:title="Jumbo.config documentation">
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:doc="http://www.ookii.org/documentation" doc:title="Jumbo configuration (common.config)">
   <xs:annotation>
     <xs:documentation>
       The <h:code>jumbo.config</h:code> configuration file provides configuration that is common to the Jumbo DFS and Jumbo Jet.

@@ -1,0 +1,501 @@
+<!DOCTYPE html >
+<html xml:lang="en" xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <title>Jumbo Quick Start Guide</title>
+    <style type="text/css">
+html,
+body {
+  font-size: 100%; }
+
+body {
+  background: white;
+  color: #222222;
+  margin: 2em;
+  font-family: "Segoe UI", "Helvetica Neue", "Helvetica", Helvetica, Arial, sans-serif, "Meiryo UI", "Meiryo";
+  font-weight: normal;
+  font-style: normal;
+  line-height: 1;
+  max-width: 62.5em; }
+
+a:focus {
+  outline: none; }
+
+/* Typography resets */
+div,
+dl,
+dt,
+dd,
+ul,
+ol,
+li,
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+pre,
+form,
+p,
+blockquote,
+th,
+td {
+  margin: 0;
+  padding: 0;
+  direction: ltr; }
+
+/* Default Link Styles */
+a {
+  color: #2ba6cb;
+  text-decoration: none;
+  line-height: inherit; }
+  a:hover, a:focus {
+    color: #2795b6; }
+  a img {
+    border: none; }
+
+/* Default paragraph styles */
+p {
+  font-family: inherit;
+  font-weight: normal;
+  font-size: 1em;
+  line-height: 1.6;
+  margin-bottom: 1.25em;
+  text-rendering: optimizeLegibility; }
+  p aside {
+    font-size: 0.875em;
+    line-height: 1.35;
+    font-style: italic; }
+
+  p.subtitle {
+      font-style: italic;
+      color: #888;
+      text-indent: 0;
+  }
+
+
+/* Default header styles */
+h1, h2, h3, h4, h5, h6 {
+  font-family: "Segoe UI Light", "Segoe UI", "Helvetica Neue", "Helvetica", Helvetica, Arial, sans-serif, "Meiryo UI", "Meiryo";
+  font-weight: lighter;
+  font-style: normal;
+  color: #222222;
+  text-rendering: optimizeLegibility;
+  margin-top: 0.2em;
+  margin-bottom: 0.5em;
+  line-height: 1.2125em; }
+  h1 small, h2 small, h3 small, h4 small, h5 small, h6 small {
+    font-size: 60%;
+    color: #6f6f6f;
+    line-height: 0; }
+
+h1 {
+  font-size: 2.125em; }
+
+h2 {
+  font-size: 1.6875em; }
+
+h3 {
+  font-size: 1.375em; }
+
+h4 {
+  font-size: 1.125em; }
+
+h5 {
+  font-size: 1.125em; }
+
+h6 {
+  font-size: 1em; }
+
+pre {
+    font-family: Consolas, "Liberation Mono", Courier, monospace;
+    margin: 1em 0;
+}
+
+code {
+  font-family: Consolas, "Liberation Mono", Courier, monospace;
+}
+
+ul,
+ol,
+dl {
+  font-size: 1em;
+  line-height: 1.6;
+  margin-bottom: 1.25em;
+  list-style-position: outside;
+  font-family: inherit; }
+ul,
+ol {
+    margin-left: 1.25em;
+}
+/* Unordered Lists */
+ul li ul,
+ul li ol {
+  margin-left: 1.25em;
+  margin-bottom: 0;
+  font-size: 1em;
+  /* Override nested font-size change */ }
+ul.square li ul, ul.circle li ul, ul.disc li ul {
+  list-style: inherit; }
+ul.square {
+  list-style-type: square; }
+ul.circle {
+  list-style-type: circle; }
+ul.disc {
+  list-style-type: disc; }
+ul.no-bullet {
+  list-style: none; }
+
+/* Tables */
+table {
+  background: white;
+  margin-bottom: 1.25em;
+  border: solid 1px #dddddd; }
+  table thead,
+  table tfoot {
+    background: whitesmoke;
+    font-weight: bold; }
+    table thead tr th,
+    table thead tr td,
+    table tfoot tr th,
+    table tfoot tr td {
+      padding: 0.5em 0.625em 0.625em;
+      font-size: 0.875em;
+      color: #222222;
+      text-align: left; }
+  table tr th,
+  table tr td {
+    padding: 0.5625em 0.625em;
+    font-size: 0.875em;
+    color: #222222;
+    vertical-align: top;
+    text-align: left }
+  table tr.even, table tr.alt, table tr:nth-of-type(even) {
+    background: #f9f9f9; }
+  table thead tr th,
+  table tfoot tr th,
+  table tbody tr td,
+  table tr td,
+  table tfoot tr td {
+    display: table-cell;
+    line-height: 1.125em; }
+    table tr th p, table tr td p {
+    margin: 0;
+    padding: 0;
+    line-height: inherit;
+    font-size: inherit;
+  }
+
+.code {
+    background-color: #fafafa;
+    border: solid 1px black;
+    padding: 5px;
+    overflow: auto;
+    font-family: Consolas, monospace;
+}
+    .code .keyword, .code .preprocessor
+    {
+	    color: #00F;
+    }
+    .code .operator
+    {
+	    color: #C63;
+    }
+    .code .comment
+    {
+	    color: #008000;
+    }
+    .code .xmlLiteral .comment
+    {
+	    color: #629755;
+    }
+    .code .string
+    {
+	    color: #A31515;
+    }
+    .code .entity
+    {
+	    color: #F00;
+    }
+    .code .tagDelimiter, .code .attributeDelimiter
+    {
+	    color: #00F;
+    }
+    .code .xmlLiteral .tagDelimiter, .code .xmlLiteral .attributeDelimiter, .code .xmlDelimiter, .code .xmlImportAttributeDelimiter
+    {
+	    color: #6464B9;
+    }
+    .code .tagName
+    {
+	    color: #A31515;
+    }
+    .code .xmlLiteral .tagName
+    {
+	    color: #844646;
+    }
+    .code .attributeName
+    {
+	    color: #F00;	
+    }
+    .code .xmlLiteral .attributeName, .code .xmlImportAttributeName
+    {
+	    color: #B96464;
+    }
+    .code .attributeValue
+    {
+	    color: #00F
+    }
+    .code .xmlLiteral .attributeValue, .code .xmlImportAttributeValue
+    {
+	    color: #6464B9;
+    }
+    .code .cdata
+    {
+	    color: #808080;
+    }
+    .code .xmlLiteral .cdata
+    {
+	    color: #C0C0C0;
+    }
+    .code .type
+    {
+	    color: #2B91AF;
+    }
+    .code .xmlLiteral .embeddedExpressionDelimiter
+    {
+	    color: #555;
+	    background-color: #FFFEBF;
+    }
+    .code .sqlString
+    {
+	    color: #F00;
+    }
+    .code .sqlSystemFunction
+    {
+	    color: #F0F;
+    }
+    .code .sqlOperator
+    {
+	    color: #808080;
+    }
+    .code .psVariable
+    {
+        color: #FF4511;
+    }
+    .code .psComment
+    {
+        color: #006400;
+    }
+    .code .psString
+    {
+        color: #8B0000;
+    }
+    .code .psOperator
+    {
+        color: #A9A9A9
+    }
+    .code .psCommand
+    {
+        color: #0000FF;
+    }
+    .code .psCommandParameter
+    {
+        color: #000080;
+    }
+    .code .psCommandArgument
+    {
+        color: #8D2BE2;
+    }
+    .code .psAttribute
+    {
+        color: #ADD8E6;
+    }
+    .code .psNumber
+    {
+        color: #800080;
+    }
+    .code .psType
+    {
+        color: #008080;
+    }
+    .code .psKeyword, .code .psLoopLabel
+    {
+        color: #26008B;
+    }
+
+@media print
+{
+    * {
+        background: transparent !important;
+        color: black !important;
+    }
+    body
+    {
+        margin: 0;
+        max-width: auto;
+    }
+    p,
+    h2,
+    h3 {
+      orphans: 3;
+      widows: 3; }
+
+    h1,
+    h2,
+    h3 {
+      page-break-after: avoid; }
+
+    a,
+    a:visited {
+      text-decoration: underline; }
+}        
+</style>
+  </head>
+  <body>
+    <h1>Jumbo</h1>
+    <p class="subtitle">Quick Start guide</p>
+    <h2>Introduction</h2>
+    <p>Jumbo is a distributed data processing system for Microsoft .Net and Mono, in a similar style as Apache Hadoop. Jumbo allows the user to create a pipeline of processing steps (stages), where each stage is broken into tasks that are executed in parallel on a cluster of machines. Jumbo supports MapReduce, but has more flexibility and also allows for alternate processing pipelines.</p>
+    <p>Jumbo consists of a distributed file system in the spirit of Google File System and the Hadoop DFS, and a processing engine called Jumbo Jet.</p>
+    <p>The Jumbo DFS uses a single NameServer (analogous to the Hadoop Namenode) that stores file system metadata, and numerous DataServers (Hadoop Datanodes) that store file data. Jumbo Jet uses a central JobServer responsible for fault tolerance and scheduling (the Jobtracker in Hadoop 1.0) and numerous TaskServers responsible for task execution (Hadoop Tasktrackers).</p>
+    <p>The purpose of this release is for distributed systems enthusiasts who would like to experiment with a data processing system besides Hadoop. Check the source to see what design alternatives I used. Or maybe you’d like to see how .Net’s capabilities over Java (such as proper generics or LINQ) influenced the code.</p>
+    <p>
+      <strong>Jumbo is not production quality code!</strong> Jumbo was created as a case study on the design of MapReduce-style systems. It is not a full-fledged alternative for Hadoop and lacks many of the features that would be required in a real environment. Features were added as I needed them or if I felt like adding them. Some features were added but rarely used, so may not perform well or have bugs.</p>
+    <p>Jumbo’s primary purpose was to help me understand how Hadoop works. It is loosely based on Hadoop, and blatantly borrows a number of design elements from Hadoop, while differing in some other areas. It was not designed to compete with Hadoop, and not originally intended to be released. I am releasing it now because I think some people may find it interesting, but it should not be used for production systems.</p>
+    <p>Jumbo works pretty well. It can be significantly faster than Hadoop for certain workloads, especially on small clusters (Jumbo has been tested up to approximately 50 nodes). I’ve also tried to make creating data processing applications for Jumbo easy and a pleasant experience. By all means, use it to run processing jobs to see how it compares to Hadoop; you can even use it for some non-critical real workloads if you really like. But please don’t entrust Jumbo to hold your mission-critical company data. It’ll probably work fine 99% of the time, but I won’t be responsible if it breaks and you lose your stuff.</p>
+    <p>If you have any questions, please contact me through <a href="http://www.ookii.org">http://www.ookii.org</a>. I will try to help you if I can, but please understand that I’m not officially supporting this release.</p>
+    <p>This section helps you to get Jumbo running on your system. This document assumes you have some knowledge about systems like Hadoop; it is not a full introduction to distributed data processing in general.</p>
+    <h2>Prerequisites</h2>
+    <p>Jumbo can run on Windows using Microsoft .Net, and on Linux using Mono. Most of the scale and performance testing was done on Linux; Windows support was used mainly for debugging.</p>
+    <h3>Windows prerequisites</h3>
+    <ul>
+      <li>Microsoft .Net 4.0 or newer</li>
+      <li>PowerShell 3.0 (optional)</li>
+      <li>IIS 8.0 Express (optional)</li>
+    </ul>
+    <p>PowerShell is only needed to run the scripts used to start Jumbo. Jumbo can also be started manually.</p>
+    <p>IIS Express is used to run the Jumbo administration web sites locally. It is not needed if you intend to host those web sites in a full IIS instance.</p>
+    <p>Using Mono on Windows is not supported.</p>
+    <h3>Linux prerequisites</h3>
+    <ul>
+      <li>Mono 2.8 or 3.0 (3.0 is recommended)</li>
+      <li>Mono XSP (optional)</li>
+      <li>Password-less SSH to all the servers in your cluster (optional)</li>
+      <li>Gcc (to build the native library)</li>
+    </ul>
+    <p>Jumbo was only tested using Mono 2.8 and 3.0. It may work on other versions, but I cannot guarantee it.</p>
+    <p>XSP is used to host the administration websites. It is not needed if you intend to manually host those (e.g. in Apache with mod_mono).</p>
+    <p>The scripts used to deploy and start Jumbo use SSH to connect to all the nodes needed. Jumbo can also be started manually, in which case this is not needed.</p>
+    <h2>Building Jumbo</h2>
+    <p>On Windows, it is not necessary to build Jumbo as all the required binaries are provided. On 32 bit systems, it is recommended that you remove the existing Ookii.Jumbo.Native.dll and replace it with Ookii.Jumbo.Native.x86.dll (rename this file to Ookii.Jumbo.Native.dll).</p>
+    <p>If you do wish to build Jumbo on Windows, open the solution in Visual Studio 2012, or build it with MSBuild.</p>
+    <p>On Linux, it is recommended to build from source because the Jumbo native library is not provided in the binary distribution. Jumbo can run without the native library, but may be slower if this library is not present.</p>
+    <p>To build Jumbo on Linux, simply run build.sh.</p>
+    <h2>Configuration</h2>
+    <h3>Quick configuration for one node</h3>
+    <p>Want to simply try Jumbo on one node? Here’s what you do:</p>
+    <ul>
+      <li>In <code>Jumbo-Config.ps1</code> (<code>jumbo-config.sh</code> on Linux), set <code>JUMBO_HOME</code> to the location of Jumbo’s files.</li>
+      <li>In <code>bin/dfs.config</code>, set the NameServer image directory and the DataServer block directory to local directories (not the same directory, and they should be empty before you first use Jumbo).</li>
+      <li>In <code>bin/jet.config</code>, set the JobServer archive directory and TaskServer task directory.</li>
+    </ul>
+    <p>That’s it, you can now run Jumbo on one node (see “Running Jumbo” below).</p>
+    <h3>Basic configuration and deployment</h3>
+    <p>In order to run Jumbo, you must first configure some values in <code>Jumbo-Config.ps1</code> (<code>jumbo-config.sh</code> on Linux). You must set the <code>JUMBO_HOME</code> directory to the directory where Jumbo is installed (this path must be the same on all nodes). If you change the <code>JUMBO_LOG</code> directory, also make the corresponding modifications in <code>bin/common.config</code>. Check the comments in the file for further available configuration options.</p>
+    <p>Using <code>bin/common.config</code>, you can modify the log directory and configure rack-awareness (used by the task scheduler to get data locality).</p>
+    <p>In order to start Jumbo using the provided scripts, you must also specify which nodes it will run on. Jumbo uses a two-level configuration system for this: the <code>groups</code> file specifies groups of nodes, and files matching the group names contain the actual node names. By default, there are two groups defined: <code>masters</code>, and <code>slaves</code>. Groups are only used for deployment; when running Jumbo, no distinction is made between the different groups.</p>
+    <p>The <code>masters</code> group is special and is only used during deployment. You only need to modify the <code>masters</code> file if you intend to use the deployment script (see below). This group should contain the node(s) that run the NameServer and JobServer. The contents of the <code>masters</code> file are ignored when running Jumbo.</p>
+    <p>Specify all nodes that should run DataServers and TaskServers in the <code>slaves</code> file. Alternatively, you can define your own groups.</p>
+    <p>If you only wish to evaluate Jumbo on a single node, you can leave the content of these files at “localhost”.</p>
+    <p>On Linux, you can deploy Jumbo to multiple nodes using the <code>deploy.sh</code> script, which will copy all Jumbo files including the configuration to <code>JUMBO_HOME</code> on all the nodes. This way, <code>JUMBO_HOME</code> does not need to be an NFS path available on all the nodes. Deployment is not available on Windows.</p>
+    <p>When deploying, you can use different configuration files for each group (this is the purpose of groups). To do this, create files names <code>common.groupname.config</code>, <code>dfs.groupname.config</code> and <code>jet.groupname.config</code> (replace groupname with the name of the group) in the same directory as deploy.sh. If any of those files does not exist for a group, that group uses the default configuration.</p>
+    <h3>Configuring the Jumbo DFS</h3>
+    <h4>Running without the DFS</h4>
+    <p>It is not required to use the Jumbo DFS to run data processing jobs. You can also use the local file system. To do this, modify the <code>bin/dfs.config</code> file and set the file system URL to <code>file:///root/path</code>, where /root/path is the root of the file system as visible by Jumbo. If this path is a file share accessible on every node, you can even use this when running Jumbo on multiple nodes.</p>
+    <p>Certain features are not available when the Jumbo DFS is not used. It’s generally recommended to use the Jumbo DFS instead of the local file system except for debugging purposes.</p>
+    <h4>Configuring the DFS</h4>
+    <p>There are four values that you must specify in <code>bin/dfs.config</code> to use the DFS:</p>
+    <ul>
+      <li>Set the file system URL to the host name and port of the NameServer.</li>
+      <li>Set the NameServer image directory to a local directory where the NameServer’s metadata will be stored.</li>
+      <li>Set the replicationFactor to an appropriate value. It’s recommended to use 3 replicas unless you have fewer than 3 data servers (in which case set it to the number of data servers).</li>
+      <li>Set the DataServer block directory to a local directory where the file data for each node will be stored.</li>
+    </ul>
+    <p>See the configuration file documentation for information on the other options that are available.</p>
+    <p>The below is an example of a typical <code>bin/dfs.config</code>:</p>
+    <pre class="code">
+<span class="tagDelimiter">&lt;?</span><span class="tagName">xml</span> <span class="attributeName">version</span><span class="attributeDelimiter">=</span><span class="attributeValue">"1.0"</span> <span class="attributeName">encoding</span><span class="attributeDelimiter">=</span><span class="attributeValue">"utf-8"</span><span class="tagDelimiter">?&gt;</span>
+<span class="tagDelimiter">&lt;</span><span class="tagName">ookii.jumbo.dfs</span><span class="tagDelimiter">&gt;</span>
+  <span class="tagDelimiter">&lt;</span><span class="tagName">fileSystem</span> <span class="attributeName">url</span><span class="attributeDelimiter">=</span><span class="attributeValue">"jdfs://somenode:9000"</span><span class="tagDelimiter">/&gt;</span>
+  <span class="tagDelimiter">&lt;</span><span class="tagName">nameServer</span> <span class="attributeName">blockSize</span><span class="attributeDelimiter">=</span><span class="attributeValue">"128MB"</span>
+              <span class="attributeName">replicationFactor</span><span class="attributeDelimiter">=</span><span class="attributeValue">"3"</span>
+              <span class="attributeName">imageDirectory</span><span class="attributeDelimiter">=</span><span class="attributeValue">"/jumbo/nameserver"</span> <span class="tagDelimiter">/&gt;</span>
+  <span class="tagDelimiter">&lt;</span><span class="tagName">dataServer</span> <span class="attributeName">port</span><span class="attributeDelimiter">=</span><span class="attributeValue">"9001"</span>
+              <span class="attributeName">blockStoragePath</span><span class="attributeDelimiter">=</span><span class="attributeValue">"/jumbo/dataserver"</span><span class="tagDelimiter">/&gt;</span>
+<span class="tagDelimiter">&lt;/</span><span class="tagName">ookii.jumbo.dfs</span><span class="tagDelimiter">&gt;</span></pre>
+    <h3>Configuring Jumbo Jet</h3>
+    <p>There are two values that you must specify in <code>bin/j</code><code>et.config</code>:</p>
+    <ul>
+      <li>Set the JobServer host name and port.</li>
+      <li>Set the TaskServer task directory to a local directory where configuration, task log and intermediate data files will be stored on each node.</li>
+    </ul>
+    <p>See the configuration file documentation for information on the other options that are available.</p>
+    <p>The below is an example of a typical <code>bin/jet.config</code>:</p>
+    <pre class="code">
+<span class="tagDelimiter">&lt;?</span><span class="tagName">xml</span> <span class="attributeName">version</span><span class="attributeDelimiter">=</span><span class="attributeValue">"1.0"</span> <span class="attributeName">encoding</span><span class="attributeDelimiter">=</span><span class="attributeValue">"utf-8"</span><span class="tagDelimiter">?&gt;</span>
+<span class="tagDelimiter">&lt;</span><span class="tagName">ookii.jumbo.jet</span><span class="tagDelimiter">&gt;</span>
+  <span class="tagDelimiter">&lt;</span><span class="tagName">jobServer</span> <span class="attributeName">hostName</span><span class="attributeDelimiter">=</span><span class="attributeValue">"somenode"</span>
+             <span class="attributeName">port</span><span class="attributeDelimiter">=</span><span class="attributeValue">"9500"</span>
+             <span class="attributeName">archiveDirectory</span><span class="attributeDelimiter">=</span><span class="attributeValue">"/jumbo/jobarchive"</span>
+             <span class="attributeName">broadcastAddress</span><span class="attributeDelimiter">=</span><span class="attributeValue">"192.168.0.255"</span>
+             <span class="attributeName">broadcastPort</span><span class="attributeDelimiter">=</span><span class="attributeValue">"9550"</span> <span class="tagDelimiter">/&gt;</span>
+  <span class="tagDelimiter">&lt;</span><span class="tagName">taskServer</span> <span class="attributeName">port</span><span class="attributeDelimiter">=</span><span class="attributeValue">"9501"</span>
+              <span class="attributeName">taskDirectory</span><span class="attributeDelimiter">=</span><span class="attributeValue">"/jumbo/taskserver"</span>
+              <span class="attributeName">taskSlots</span><span class="attributeDelimiter">=</span><span class="attributeValue">"2"</span>
+              <span class="attributeName">fileServerPort</span><span class="attributeDelimiter">=</span><span class="attributeValue">"9502"</span>
+              <span class="attributeName">fileServerMaxConnections</span><span class="attributeDelimiter">=</span><span class="attributeValue">"4"</span>
+              <span class="attributeName">immediateCompletedTaskNotification</span><span class="attributeDelimiter">=</span><span class="attributeValue">"true"</span><span class="tagDelimiter">/&gt;</span>
+  <span class="tagDelimiter">&lt;</span><span class="tagName">fileChannel</span> <span class="attributeName">memoryStorageSize</span><span class="attributeDelimiter">=</span><span class="attributeValue">"2GB"</span>
+               <span class="attributeName">spillBufferSize</span><span class="attributeDelimiter">=</span><span class="attributeValue">"100MB"</span><span class="tagDelimiter">/&gt;</span>
+  <span class="tagDelimiter">&lt;</span><span class="tagName">mergeRecordReader</span> <span class="attributeName">maxFileInputs</span><span class="attributeDelimiter">=</span><span class="attributeValue">"10"</span><span class="tagDelimiter">/&gt;</span>
+<span class="tagDelimiter">&lt;/</span><span class="tagName">ookii.jumbo.jet</span><span class="tagDelimiter">&gt;</span></pre>
+    <h2>Running Jumbo</h2>
+    <p>Before you can run Jumbo, you must format the file system (you can skip this step if you’re not using the DFS). To do this, run <code>bin\NameServer.exe -format</code> (or <code>mono bin/NameServer.exe –format</code> on Linux) on the node that will run the NameServer.</p>
+    <p>Once Jumbo is configured, run it by running <code>.\Run-Dfs.ps1 start</code> and <code>.\Run-Jet.ps1 start</code> (<code>./run-dfs.sh start</code> and <code>./run-jet.sh start</code> on Linux).</p>
+    <p>If all went well, Jumbo should be running now. If not, check the log directory you specified and check the log files to see what went wrong.</p>
+    <p>Open your browser to <a href="http://localhost:35000">http://localhost:35000</a> to see the DFS administration page, and <a href="http://localhost:36000">http://localhost:36000</a> for the Jet administration page. If you changed the configuration, are not hosting the administration sites using the default method, or are accessing the pages from a computer other than the one running the NameServer and JobServer respectively you may need to use different URLs.</p>
+    <h2>Running your first data processing job</h2>
+    <p>To help you get started, this demonstrates how to upload a text file to the DFS and run WordCount on the job.</p>
+    <p>To run this job, you need some utf-8 plain text files to use as input. You can generate some random text using another Jumbo sample job (which we’ll do below), but if you want some non-random text, why not use <a href="http://www.gutenberg.org/">Project Gutenberg</a>? For example, you could use <a href="http://www.gutenberg.org/cache/epub/2701/pg2701.txt">Moby Dick</a>.</p>
+    <p>All the command line examples use <code>./</code><code>DfsShell</code> and <code>./JetShell</code> in this section; on Windows, use <code>bin\DfsShell.exe</code> and <code>bin\JetShell.exe</code> instead.</p>
+    <p>First, you must upload a text file. Any plain text file stored as utf-8 will do. If your file is named mobydick.txt and is stored in the current directory, use the following:</p>
+    <pre>$ ./DfsShell put mobydick.txt /</pre>
+    <p>This will store the file somefile.txt in the root of the DFS. Verify it by running <code>./</code><code>DfsShell ls</code>. The output should look something like this:</p>
+    <pre>$ ./DfsShell ls<br />Directory listing for /<br /><br />2013-02-16 20:53        1,257,260  mobydick.txt</pre>
+    <p>DfsShell is your key to interacting with the DFS. Use it to upload and download files, manipulate the namespace, view status, and more. You can also use the “Browse file system namespace” option in the DFS administration website to view the contents of the file system.</p>
+    <p>Note you can also upload a bunch of files to a directory and use the whole directory as input for the job (don’t use the root in this case; use <code>./</code><code>DfsShell mkdir</code> to create a directory).</p>
+    <p>Now we’ll run the job:</p>
+    <pre>$ ./JetShell job bin/Ookii.Jumbo.Jet.Samples.dll wordcount /mobydick.txt /wcoutput<br />236 [1] INFO Ookii.Jumbo.Jet.Jobs.JobRunnerInfo (null) - Created job runner for job WordCount, InputPath = /mobydick.txt, OutputPath = /wcoutput<br />427 [1] INFO Ookii.Jumbo.Jet.JetClient (null) - Saving job configuration to DFS file /JumboJet/job_{56f57c95-f6e4-445a-b87d-8fd1ce408db5}/job.xml.<br />977 [1] INFO Ookii.Jumbo.Jet.JetClient (null) - Uploading local file /home/sgroot/jumbo/build/bin/Ookii.Jumbo.Jet.Samples.dll to DFS directory /JumboJet/job_{56f57c95-f6e4-445a-b87d-8fd1ce408db5}.<br />1051 [1] INFO Ookii.Jumbo.Jet.JetClient (null) - Running job 56f57c95-f6e4-445a-b87d-8fd1ce408db5.<br />0.0 %; finished: 0/1 tasks; WordCount: 0.0 %<br />100.0 %; finished: 1/1 tasks; WordCount: 100.0 %<br /><br />Job completed.<br />Start time: 2013-02-16 20:56:42.397<br />End time:   2013-02-16 20:56:44.016<br />Duration:   00:00:01.6193970 (1.619397s)</pre>
+    <p>Let’s examine what we did here. The JetShell script is used to launch jobs, which we’re doing here by specifying the job command. The next argument specifies the assembly file containing the job (in this case, the included assembly with sample jobs), followed by the name of the job. The remaining arguments are specific to the job; for WordCount here we’re specifying the input and output path.</p>
+    <p>Tip: want to see what jobs are available in an assembly? Simply omit all the arguments after the assembly name. Similarly, you can typically omit all the arguments after the job name to see the arguments for the job.</p>
+    <p>Let’s see what that did to the file system:</p>
+    <pre>$ ./DfsShell ls<br />Directory listing for /<br /><br />2012-07-11 17:15            &lt;DIR&gt;  JumboJet<br />2013-02-16 20:53        1,257,260  mobydick.txt<br />2013-02-16 20:56            &lt;DIR&gt;  wcoutput</pre>
+    <p>You can see there are two new directories. JumboJet is a working directory for the Jet execution engine; it’s not important for the user. The wcoutput directory contains the output. Let’s check it out:</p>
+    <pre>$ ./DfsShell ls /wcoutput<br />Directory listing for /wcoutput<br /><br />2013-02-16 20:56          468,008  WordCountAggregation-00001</pre>
+    <p>As you can see, there is one file. The files are named after the tasks that produced them, and in this sample there was only one task because the input file was quite small. You can view the results using DfsShell as well:</p>
+    <pre>$ ./DfsShell cat /wcoutput/WordCountAggregation-00001<br />[The, 549]<br />[Project, 79]<br />[Gutenberg, 20]<br />[EBook, 1]<br />[of, 6587]<br />[Moby, 79]<br />[Dick;, 9]<br />[or, 758]<br />[Whale,, 39]<br />[by, 1113]<br />[Herman, 4]<br />[Melville, 4]<br />[This, 102]<br />[eBook, 5]<br />[is, 1586]<br />...</pre>
+    <p>That probably kept going for a while, depending on the size of the file. That tells you exactly how often each word occurred in your text file. Note: the WordCount sample just splits the text on spaces, so if you uploaded something that isn’t just plain text (like an HTML file), the results might be a bit weird. Even in this case you’ll notice that some of the “words” include punctuation marks, and that different capitalizations of the same word are counted separately. That’s a limitation of the sample, not of Jumbo. The user guide will introduce a more advanced version of WordCount that overcomes some of these limitations.</p>
+    <p>Don’t forget to check out your job in the Jet administration website. You can see lots of cool statistics there.</p>
+    <p>And that’s your very first job! But wait a second? Isn’t Jumbo for distributed processing? But unless you uploaded a very large text file (larger than the block size for the file system), the job probably only had one task. </p>
+    <p>We can make this more interesting by using another sample job included with Jumbo, GenerateText, to generate some larger input for the WordCount job:</p>
+    <pre>$ ./JetShell job bin/Ookii.Jumbo.Jet.Samples.dll generatetext /bigtext 64 256MB<br />256 [1] INFO Ookii.Jumbo.Jet.Jobs.JobRunnerInfo (null) - Created job runner for job GenerateText, OutputPath = /bigtext, SizePerTask = 256MB, TaskCount = 64<br />411 [1] INFO Ookii.Jumbo.Jet.JetClient (null) - Saving job configuration to DFS file /JumboJet/job_{b4c04385-df32-458b-8b74-f41e0364e05e}/job.xml.<br />518 [1] INFO Ookii.Jumbo.Jet.JetClient (null) - Uploading local file /home/sgroot/jumbo/build/bin/Ookii.Jumbo.Jet.Samples.dll to DFS directory /JumboJet/job_{b4c04385-df32-458b-8b74-f41e0364e05e}.<br />596 [1] INFO Ookii.Jumbo.Jet.JetClient (null) - Uploading local file /tmp/Ookii.Jumbo.Jet.Generated.9ee75f0181f24f6691303f8106e79503.dll to DFS directory /JumboJet/job_{b4c04385-df32-458b-8b74-f41e0364e05e}.<br />647 [1] INFO Ookii.Jumbo.Jet.JetClient (null) - Running job b4c04385-df32-458b-8b74-f41e0364e05e.<br />0.0 %; finished: 0/64 tasks; GenerateTaskStage: 0.0 %<br />3.1 %; finished: 2/64 tasks; GenerateTaskStage: 3.1 %<br />24.8 %; finished: 15/64 tasks; GenerateTaskStage: 24.8 %<br />94.5 %; finished: 58/64 tasks; GenerateTaskStage: 94.5 %<br />100.0 %; finished: 64/64 tasks; GenerateTaskStage: 100.0 %<br /><br />Job completed.<br />Start time: 2013-02-16 21:13:10.875<br />End time:   2013-02-16 21:13:20.624<br />Duration:   00:00:09.7494140 (9.749414s)</pre>
+    <p>The parameters for this job indicate the output path, the number of tasks, and the size to generate per task. So we generated 16GB of random text, using 64 tasks each generating 256MB. I’m running this example on 32 nodes; if you’re using a smaller cluster, you may want to scale down the size accordingly. Just make sure you use more than one generator task or a total size that’s larger than the DFS block size. You can see the files it created by running <code>./</code><code>DfsShell ls /bigtext</code>.</p>
+    <p>Then, we can simply run WordCount as before:</p>
+    <pre>$ ./JetShell job bin/Ookii.Jumbo.Jet.Samples.dll wordcount /bigtext /wcoutput<br />236 [1] INFO Ookii.Jumbo.Jet.Jobs.JobRunnerInfo (null) - Created job runner for job WordCount, InputPath = /bigtext, OutputPath = /wcoutput<br />496 [1] INFO Ookii.Jumbo.Jet.JetClient (null) - Saving job configuration to DFS file /JumboJet/job_{db8b43d7-6446-4d88-b2a9-6647031d98a9}/job.xml.<br />665 [1] INFO Ookii.Jumbo.Jet.JetClient (null) - Uploading local file /home/sgroot/jumbo/build/bin/Ookii.Jumbo.Jet.Samples.dll to DFS directory /JumboJet/job_{db8b43d7-6446-4d88-b2a9-6647031d98a9}.<br />710 [1] INFO Ookii.Jumbo.Jet.JetClient (null) - Running job db8b43d7-6446-4d88-b2a9-6647031d98a9.<br />0.0 %; finished: 0/320 tasks; WordCount: 0.0 %; WordCountAggregation: 0.0 %<br />3.8 %; finished: 12/320 tasks; WordCount: 4.7 %; WordCountAggregation: 0.0 %<br />15.9 %; finished: 51/320 tasks; WordCount: 19.9 %; WordCountAggregation: 0.0 %<br />20.0 %; finished: 64/320 tasks; WordCount: 25.0 %; WordCountAggregation: 0.0 %<br />28.8 %; finished: 92/320 tasks; WordCount: 35.9 %; WordCountAggregation: 0.0 %<br />38.8 %; finished: 124/320 tasks; WordCount: 48.4 %; WordCountAggregation: 0.0 %<br />40.0 %; finished: 128/320 tasks; WordCount: 50.0 %; WordCountAggregation: 0.0 %<br />41.9 %; finished: 134/320 tasks; WordCount: 52.3 %; WordCountAggregation: 0.0 %<br />52.2 %; finished: 167/320 tasks; WordCount: 65.2 %; WordCountAggregation: 0.0 %<br />59.7 %; finished: 191/320 tasks; WordCount: 74.6 %; WordCountAggregation: 0.0 %<br />60.0 %; finished: 192/320 tasks; WordCount: 75.0 %; WordCountAggregation: 0.0 %<br />67.8 %; finished: 217/320 tasks; WordCount: 84.8 %; WordCountAggregation: 0.0 %<br />76.3 %; finished: 244/320 tasks; WordCount: 95.3 %; WordCountAggregation: 0.0 %<br />80.0 %; finished: 256/320 tasks; WordCount: 100.0 %; WordCountAggregation: 0.0 %<br />85.3 %; finished: 272/320 tasks; WordCount: 100.0 %; WordCountAggregation: 26.7 %<br />94.1 %; finished: 301/320 tasks; WordCount: 100.0 %; WordCountAggregation: 70.4 %<br />100.0 %; finished: 320/320 tasks; WordCount: 100.0 %; WordCountAggregation: 100.0 %<br /><br />Job completed.<br />Start time: 2013-02-16 21:18:57.619<br />End time:   2013-02-16 21:19:18.695<br />Duration:   00:00:21.0754110 (21.075411s)</pre>
+    <p>Now we had quite a few more tasks, with two stages: WordCount, which reads a piece of the input and counts the words locally, and WordCountAggregation, which aggregates all the pieces of the first stage. You could compare the WordCount stage with a map stage, and the WordCountAggregation stage with a reduce stage (except that this version of WordCount actually uses hash table aggregation, which is not possible with the current version of Hadoop).</p>
+    <p>Depending on the cluster configuration, you’ll probably also find that there’s more than one output file this time, because each task in the WordCountAggregation stage creates its own output file.</p>
+    <p>Want to know more about how this example works and how to create your own processing jobs? Move on to the user guide!</p>
+  </body>
+</html>

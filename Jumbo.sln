@@ -25,7 +25,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		deploy.sh = deploy.sh
 		dfs.config = dfs.config
 		DfsConfiguration.xsd = DfsConfiguration.xsd
-		documentation.html = documentation.html
 		Gen-Version.ps1 = Gen-Version.ps1
 		gen-version.sh = gen-version.sh
 		groups = groups
