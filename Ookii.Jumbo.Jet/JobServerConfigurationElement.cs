@@ -20,7 +20,7 @@ namespace Ookii.Jumbo.Jet
         /// <summary>
         /// Gets or sets the host name of the JobServer.
         /// </summary>
-        [ConfigurationProperty("hostName", DefaultValue = "localhost", IsRequired = true, IsKey = false)]
+        [ConfigurationProperty("hostName", DefaultValue = "localhost", IsRequired = false, IsKey = false)]
         public string HostName
         {
             get { return (string)this["hostName"]; }
@@ -30,7 +30,7 @@ namespace Ookii.Jumbo.Jet
         /// <summary>
         /// Gets or sets the port number on which the JobServer's RPC server listens.
         /// </summary>
-        [ConfigurationProperty("port", DefaultValue = 9500, IsRequired = true, IsKey = false)]
+        [ConfigurationProperty("port", DefaultValue = 9500, IsRequired = false, IsKey = false)]
         public int Port
         {
             get { return (int)this["port"]; }
@@ -209,7 +209,7 @@ namespace Ookii.Jumbo.Jet
         /// <remarks>
         /// Set to zero to disable broadcasting.
         /// </remarks>
-        [ConfigurationProperty("broadcastPort", DefaultValue = 9550, IsRequired = false, IsKey = false)]
+        [ConfigurationProperty("broadcastPort", DefaultValue = 0, IsRequired = false, IsKey = false)]
         public int BroadcastPort
         {
             get { return (int)this["broadcastPort"]; }

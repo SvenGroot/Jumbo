@@ -67,7 +67,6 @@ namespace Ookii.Jumbo.Test.Jet
             jetConfig.TaskServer.TaskSlots = taskSlots;
             jetConfig.TaskServer.FileServerPort = TaskServerFileServerPort;
             jetConfig.FileChannel.CompressionType = compressionType;
-            jetConfig.FileChannel.DownloadThreads = 2;
             jetConfig.FileChannel.DeleteIntermediateFiles = false;
             if( Environment.OSVersion.Platform == PlatformID.Unix )
                 jetConfig.TaskServer.ListenIPv4AndIPv6 = false;

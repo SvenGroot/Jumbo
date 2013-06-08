@@ -1,0 +1,46 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+  <!-- This schema is provided for informational purposes only; it is not used by Jumbo to validate the XML files -->
+  <xs:complexType name="JumboConfiguration">
+    <xs:all>
+      <xs:element name="networkTopology" type="NetworkTopologyConfigurationElement" minOccurs="0" maxOccurs="1" />
+      <xs:element name="patternTopologyResolver" type="PatternTopologyResolverConfigurationElement" minOccurs="0" maxOccurs="1" />
+      <xs:element name="log" type="LogConfigurationElement" minOccurs="0" maxOccurs="1" />
+    </xs:all>
+  </xs:complexType>
+  <xs:complexType name="NetworkTopologyConfigurationElement">
+    <xs:attribute name="resolver" type="xs:string" use="optional" default="Ookii.Jumbo.Topology.PatternTopologyResolver, Ookii.Jumbo" />
+  </xs:complexType>
+  <xs:complexType name="PatternTopologyResolverConfigurationElement">
+    <xs:all>
+      <xs:element name="racks" type="RackConfigurationElementCollection" minOccurs="1" maxOccurs="1" />
+    </xs:all>
+    <xs:attribute name="patternType" type="PatternType" use="optional" default="RegularExpression" />
+  </xs:complexType>
+  <xs:simpleType name="PatternType">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="RegularExpression" />
+      <xs:enumeration value="RangeExpression" />
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:complexType name="LogConfigurationElement">
+    <xs:attribute name="directory" type="xs:string" use="optional" default="./log/" />
+  </xs:complexType>
+  <xs:complexType name="RackConfigurationElementCollection">
+    <xs:choice minOccurs="0" maxOccurs="unbounded">
+      <xs:element name="rack" type="RackConfigurationElement" />
+      <xs:element name="remove" type="RackConfigurationElementCollectionKey" />
+      <xs:element name="clear">
+        <xs:complexType />
+      </xs:element>
+    </xs:choice>
+  </xs:complexType>
+  <xs:complexType name="RackConfigurationElementCollectionKey">
+    <xs:attribute name="id" type="xs:string" use="required" />
+  </xs:complexType>
+  <xs:complexType name="RackConfigurationElement">
+    <xs:attribute name="id" type="xs:string" use="required" />
+    <xs:attribute name="pattern" type="xs:string" use="required" />
+  </xs:complexType>
+  <xs:element name="ookii.jumbo" type="JumboConfiguration" />
+</xs:schema>

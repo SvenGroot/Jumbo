@@ -23,7 +23,7 @@ namespace Ookii.Jumbo.Dfs
         ///   and "file://" is used for the local file system.
         /// </para>
         /// </remarks>
-        [ConfigurationProperty("url", DefaultValue = "jdfs://localhost:9000", IsRequired = true, IsKey = false)]
+        [ConfigurationProperty("url", DefaultValue = "jdfs://localhost:9000", IsRequired = false, IsKey = false)]
         public Uri Url
         {
             get { return (Uri)this["url"]; }

@@ -17,7 +17,7 @@ namespace Ookii.Jumbo.Jet
         /// <summary>
         /// Gets configuration for the job server.
         /// </summary>
-        [ConfigurationProperty("jobServer", IsRequired = true, IsKey = false)]
+        [ConfigurationProperty("jobServer", IsRequired = false, IsKey = false)]
         public JobServerConfigurationElement JobServer
         {
             get { return (JobServerConfigurationElement)this["jobServer"]; }
@@ -26,7 +26,7 @@ namespace Ookii.Jumbo.Jet
         /// <summary>
         /// Gets configuration for the task server.
         /// </summary>
-        [ConfigurationProperty("taskServer", IsRequired = true, IsKey = false)]
+        [ConfigurationProperty("taskServer", IsRequired = false, IsKey = false)]
         public TaskServerConfigurationElement TaskServer
         {
             get { return (TaskServerConfigurationElement)this["taskServer"]; }

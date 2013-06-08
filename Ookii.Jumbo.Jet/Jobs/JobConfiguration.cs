@@ -27,7 +27,7 @@ namespace Ookii.Jumbo.Jet.Jobs
         /// <summary>
         /// The XML namespace for the job configuration XML.
         /// </summary>
-        public const string XmlNamespace = "http://www.ookii.iis.u-tokyo.ac.jp/schema/Jumbo/JobConfiguration";
+        public const string XmlNamespace = "http://www.ookii.org/schema/Jumbo/JobConfiguration";
         private static readonly XmlSerializer _serializer = new XmlSerializer(typeof(JobConfiguration));
         private readonly ExtendedCollection<string> _assemblyFileNames = new ExtendedCollection<string>();
         private readonly ExtendedCollection<StageConfiguration> _stages = new ExtendedCollection<StageConfiguration>();

@@ -75,17 +75,7 @@ namespace Ookii.Jumbo.Jet
         }
 
         /// <summary>
-        /// Gets or sets the number of download threads to use.
-        /// </summary>
-        [ConfigurationProperty("downloadThreads", DefaultValue = 1, IsRequired = false, IsKey = false)]
-        public int DownloadThreads
-        {
-            get { return (int)this["downloadThreads"]; }
-            set { this["downloadThreads"] = value; }
-        }
-
-        /// <summary>
-        /// Gets or sets the size of the spill buffer used for <see cref="FileChannelOutputType.Spill"/> and <see cref="FileChannelOutputType.SortSpill"/>.
+        /// Gets or sets the size of the spill buffer used for file output channels.
         /// </summary>
         /// <value>The size of the single file output buffer.</value>
         [ConfigurationProperty("spillBufferSize", DefaultValue = "100MB", IsRequired = false, IsKey = false)]

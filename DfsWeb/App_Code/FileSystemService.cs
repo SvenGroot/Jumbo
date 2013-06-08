@@ -11,7 +11,7 @@ using Ookii.Jumbo.Dfs.FileSystem;
 /// <summary>
 /// Summary description for FileSystemService
 /// </summary>
-[WebService(Namespace = "http://www.ookii.iis.u-tokyo.ac.jp/schema/Jumbo/FileSystemService")]
+[WebService(Namespace = "http://www.ookii.org/schema/Jumbo/FileSystemService")]
 [WebServiceBinding(ConformsTo = WsiProfiles.BasicProfile1_1)]
 // To allow this Web Service to be called from script, using ASP.NET AJAX, uncomment the following line. 
 [System.Web.Script.Services.ScriptService]

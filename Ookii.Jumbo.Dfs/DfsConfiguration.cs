@@ -20,7 +20,7 @@ namespace Ookii.Jumbo.Dfs
         /// <value>
         /// The configuration element for the file system.
         /// </value>
-        [ConfigurationProperty("fileSystem", IsRequired = true, IsKey = false)]
+        [ConfigurationProperty("fileSystem", IsRequired = false, IsKey = false)]
         public FileSystemConfigurationElement FileSystem
         {
             get { return (FileSystemConfigurationElement)this["fileSystem"]; }
@@ -32,7 +32,7 @@ namespace Ookii.Jumbo.Dfs
         /// <value>
         /// The configuration element that configures the name server.
         /// </value>
-        [ConfigurationProperty("nameServer", IsRequired = true, IsKey = false)]
+        [ConfigurationProperty("nameServer", IsRequired = false, IsKey = false)]
         public NameServerConfigurationElement NameServer
         {
             get { return (NameServerConfigurationElement)this["nameServer"]; }

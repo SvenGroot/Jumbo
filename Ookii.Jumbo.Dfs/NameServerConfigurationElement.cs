@@ -74,7 +74,7 @@ namespace Ookii.Jumbo.Dfs
         /// <value>
         /// The directory in which the file system image and edit log are stored.
         /// </value>
-        [ConfigurationProperty("imageDirectory", DefaultValue = "", IsRequired = false, IsKey = false)]
+        [ConfigurationProperty("imageDirectory", IsRequired = true, IsKey = false)]
         public string ImageDirectory
         {
             get { return (string)this["imageDirectory"]; }

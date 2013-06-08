@@ -23,7 +23,7 @@ namespace Ookii.Jumbo.Dfs
         /// If you change this attribute on an existing file system it may prevent you from reading
         /// the existing files.
         /// </remarks>
-        [ConfigurationProperty("enabled", DefaultValue = true, IsRequired = true, IsKey = false)]
+        [ConfigurationProperty("enabled", DefaultValue = true, IsRequired = false, IsKey = false)]
         public bool IsEnabled
         {
             get { return (bool)this["enabled"]; }

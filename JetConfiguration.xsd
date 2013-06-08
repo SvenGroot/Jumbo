@@ -1,0 +1,89 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+  <!-- This schema is provided for informational purposes only; it is not used by Jumbo to validate the XML files -->
+  <xs:complexType name="JetConfiguration">
+    <xs:all>
+      <xs:element name="jobServer" type="JobServerConfigurationElement" minOccurs="0" maxOccurs="1" />
+      <xs:element name="taskServer" type="TaskServerConfigurationElement" minOccurs="0" maxOccurs="1" />
+      <xs:element name="fileChannel" type="FileChannelConfigurationElement" minOccurs="0" maxOccurs="1" />
+      <xs:element name="tcpChannel" type="TcpChannelConfigurationElement" minOccurs="0" maxOccurs="1" />
+      <xs:element name="mergeRecordReader" type="MergeRecordReaderConfigurationElement" minOccurs="0" maxOccurs="1" />
+    </xs:all>
+  </xs:complexType>
+  <xs:complexType name="JobServerConfigurationElement">
+    <xs:attribute name="hostName" type="xs:string" use="optional" default="localhost" />
+    <xs:attribute name="port" type="xs:int" use="optional" default="9500" />
+    <xs:attribute name="listenIPv4AndIPv6" type="xs:boolean" use="optional" />
+    <xs:attribute name="jetDfsPath" type="xs:string" use="optional" default="/JumboJet" />
+    <xs:attribute name="archiveDirectory" type="xs:string" use="optional" />
+    <xs:attribute name="scheduler" type="xs:string" use="optional" default="Ookii.Jumbo.Jet.Scheduling.DefaultScheduler, Ookii.Jumbo.Jet" />
+    <xs:attribute name="maxTaskAttempts" type="xs:int" use="optional" default="5" />
+    <xs:attribute name="maxTaskFailures" type="xs:int" use="optional" default="20" />
+    <xs:attribute name="taskServerTimeout" type="xs:int" use="optional" default="600000" />
+    <xs:attribute name="taskServerSoftTimeout" type="xs:int" use="optional" default="60000" />
+    <xs:attribute name="dataInputSchedulingMode" type="SchedulingMode" use="optional" default="MoreServers" />
+    <xs:attribute name="nonDataInputSchedulingMode" type="SchedulingMode" use="optional" default="MoreServers" />
+    <xs:attribute name="schedulingThreshold" type="xs:float" use="optional" default="0.4" />
+    <xs:attribute name="broadcastAddress" type="xs:string" use="optional" default="255.255.255.255" />
+    <xs:attribute name="broadcastPort" type="xs:int" use="optional" default="0" />
+  </xs:complexType>
+  <xs:simpleType name="SchedulingMode">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="Default" />
+      <xs:enumeration value="MoreServers" />
+      <xs:enumeration value="FewerServers" />
+      <xs:enumeration value="OptimalLocality" />
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:complexType name="TaskServerConfigurationElement">
+    <xs:attribute name="taskDirectory" type="xs:string" use="required" />
+    <xs:attribute name="port" type="xs:int" use="optional" default="9501" />
+    <xs:attribute name="listenIPv4AndIPv6" type="xs:boolean" use="optional" />
+    <xs:attribute name="taskSlots" type="xs:int" use="optional" default="2" />
+    <xs:attribute name="fileServerPort" type="xs:int" use="optional" default="9502" />
+    <xs:attribute name="fileServerMaxConnections" type="xs:int" use="optional" default="10" />
+    <xs:attribute name="fileServerMaxIndexCacheSize" type="xs:int" use="optional" default="25" />
+    <xs:attribute name="processCreationDelay" type="xs:int" use="optional" default="0" />
+    <xs:attribute name="runTaskHostInAppDomain" type="xs:boolean" use="optional" default="false" />
+    <xs:attribute name="logSystemStatus" type="xs:boolean" use="optional" default="false" />
+    <xs:attribute name="progressInterval" type="xs:int" use="optional" default="3000" />
+    <xs:attribute name="heartbeatInterval" type="xs:int" use="optional" default="3000" />
+    <xs:attribute name="taskTimeout" type="xs:int" use="optional" default="600000" />
+    <xs:attribute name="immediateCompletedTaskNotification" type="xs:boolean" use="optional" default="true" />
+  </xs:complexType>
+  <xs:complexType name="FileChannelConfigurationElement">
+    <xs:attribute name="readBufferSize" type="BinarySize" use="optional" default="64KB" />
+    <xs:attribute name="writeBufferSize" type="BinarySize" use="optional" default="64KB" />
+    <xs:attribute name="deleteIntermediateFiles" type="xs:boolean" use="optional" default="true" />
+    <xs:attribute name="memoryStorageSize" type="BinarySize" use="optional" default="100MB" />
+    <xs:attribute name="memoryStorageWaitTimeout" type="xs:int" use="optional" default="60000" />
+    <xs:attribute name="compressionType" type="CompressionType" use="optional" default="None" />
+    <xs:attribute name="spillBufferSize" type="BinarySize" use="optional" default="100MB" />
+    <xs:attribute name="spillBufferLimit" type="xs:float" use="optional" default="0.8" />
+    <xs:attribute name="spillSortMinSpillsForCombineDuringMerge" type="xs:int" use="optional" default="3" />
+    <xs:attribute name="enableChecksum" type="xs:boolean" use="optional" default="true" />
+  </xs:complexType>
+  <xs:simpleType name="BinarySize">
+    <xs:restriction base="xs:string">
+      <xs:pattern value="[0-9\.]+([kKmMgGtTpP][iI]?)?[bB]?" />
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:simpleType name="CompressionType">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="None" />
+      <xs:enumeration value="GZip" />
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:complexType name="TcpChannelConfigurationElement">
+    <xs:attribute name="spillBufferSize" type="BinarySize" use="optional" default="20MB" />
+    <xs:attribute name="spillBufferLimit" type="xs:float" use="optional" default="0.6" />
+    <xs:attribute name="reuseConnections" type="xs:boolean" use="optional" default="false" />
+  </xs:complexType>
+  <xs:complexType name="MergeRecordReaderConfigurationElement">
+    <xs:attribute name="maxFileInputs" type="xs:int" use="optional" default="100" />
+    <xs:attribute name="memoryStorageTriggerLevel" type="xs:float" use="optional" default="0.6" />
+    <xs:attribute name="mergeStreamReadBufferSize" type="BinarySize" use="optional" default="1MB" />
+    <xs:attribute name="purgeMemoryBeforeFinalPass" type="xs:boolean" use="optional" default="false" />
+  </xs:complexType>
+  <xs:element name="ookii.jumbo.jet" type="JetConfiguration" />
+</xs:schema>

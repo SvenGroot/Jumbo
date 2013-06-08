@@ -19,7 +19,7 @@ namespace Ookii.Jumbo.Dfs
         /// <value>
         /// The port number on which the data server listens for client connections. The default value is 9001.
         /// </value>
-        [ConfigurationProperty("port", DefaultValue = 9001, IsRequired = true, IsKey = false)]
+        [ConfigurationProperty("port", DefaultValue = 9001, IsRequired = false, IsKey = false)]
         public int Port
         {
             get { return (int)this["port"]; }
@@ -32,7 +32,7 @@ namespace Ookii.Jumbo.Dfs
         /// <value>
         /// The path to the directory where the data server stores block files.
         /// </value>
-        [ConfigurationProperty("blockStorageDirectory", DefaultValue = "", IsRequired = true, IsKey = false)]
+        [ConfigurationProperty("blockStorageDirectory", IsRequired = true, IsKey = false)]
         public string BlockStorageDirectory
         {
             get { return (string)this["blockStorageDirectory"]; }

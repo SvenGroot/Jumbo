@@ -22,7 +22,7 @@ namespace Ookii.Jumbo.Jet
         /// <summary>
         /// Gets or sets the local directory for task files.
         /// </summary>
-        [ConfigurationProperty("taskDirectory", DefaultValue = "", IsRequired = true, IsKey = false)]
+        [ConfigurationProperty("taskDirectory", IsRequired = true, IsKey = false)]
         public string TaskDirectory
         {
             get { return (string)this["taskDirectory"]; }
@@ -32,7 +32,7 @@ namespace Ookii.Jumbo.Jet
         /// <summary>
         /// Gets or sets the port number on which the task server's RPC server listens.
         /// </summary>
-        [ConfigurationProperty("port", DefaultValue = 9501, IsRequired = true, IsKey = false)]
+        [ConfigurationProperty("port", DefaultValue = 9501, IsRequired = false, IsKey = false)]
         public int Port
         {
             get { return (int)this["port"]; }
@@ -76,7 +76,7 @@ namespace Ookii.Jumbo.Jet
         /// <summary>
         /// The port number that the TCP server for file channels listens on.
         /// </summary>
-        [ConfigurationProperty("fileServerPort", DefaultValue = 9502, IsRequired = true, IsKey = false)]
+        [ConfigurationProperty("fileServerPort", DefaultValue = 9502, IsRequired = false, IsKey = false)]
         public int FileServerPort
         {
             get { return (int)this["fileServerPort"]; }

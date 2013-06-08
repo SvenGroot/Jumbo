@@ -1,0 +1,40 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+  <!-- This schema is provided for informational purposes only; it is not used by Jumbo to validate the XML files -->
+  <xs:complexType name="DfsConfiguration">
+    <xs:all>
+      <xs:element name="fileSystem" type="FileSystemConfigurationElement" minOccurs="0" maxOccurs="1" />
+      <xs:element name="nameServer" type="NameServerConfigurationElement" minOccurs="0" maxOccurs="1" />
+      <xs:element name="dataServer" type="DataServerConfigurationElement" minOccurs="0" maxOccurs="1" />
+      <xs:element name="checksum" type="ChecksumConfigurationElement" minOccurs="0" maxOccurs="1" />
+    </xs:all>
+  </xs:complexType>
+  <xs:complexType name="FileSystemConfigurationElement">
+    <xs:attribute name="url" type="xs:anyURI" use="optional" default="jdfs://localhost:9000" />
+  </xs:complexType>
+  <xs:complexType name="NameServerConfigurationElement">
+    <xs:attribute name="blockSize" type="BinarySize" use="optional" default="64MB" />
+    <xs:attribute name="replicationFactor" type="xs:int" use="optional" default="1" />
+    <xs:attribute name="listenIPv4AndIPv6" type="xs:boolean" use="optional" />
+    <xs:attribute name="imageDirectory" type="xs:string" use="required" />
+    <xs:attribute name="dataServerTimeout" type="xs:int" use="optional" default="300" />
+    <xs:attribute name="dataServerFreeSpaceThreshold" type="BinarySize" use="optional" default="1GB" />
+  </xs:complexType>
+  <xs:simpleType name="BinarySize">
+    <xs:restriction base="xs:string">
+      <xs:pattern value="[0-9\.]+([kKmMgGtTpP][iI]?)?[bB]?" />
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:complexType name="DataServerConfigurationElement">
+    <xs:attribute name="port" type="xs:int" use="optional" default="9001" />
+    <xs:attribute name="blockStorageDirectory" type="xs:string" use="required" />
+    <xs:attribute name="listenIPv4AndIPv6" type="xs:boolean" use="optional" />
+    <xs:attribute name="statusUpdateInterval" type="xs:int" use="optional" default="60" />
+    <xs:attribute name="writeBufferSize" type="BinarySize" use="optional" default="128KB" />
+    <xs:attribute name="readBufferSize" type="BinarySize" use="optional" default="128KB" />
+  </xs:complexType>
+  <xs:complexType name="ChecksumConfigurationElement">
+    <xs:attribute name="enabled" type="xs:boolean" use="optional" default="true" />
+  </xs:complexType>
+  <xs:element name="ookii.jumbo.dfs" type="DfsConfiguration" />
+</xs:schema>

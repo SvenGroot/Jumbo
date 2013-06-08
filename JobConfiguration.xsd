@@ -1,0 +1,114 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<xs:schema targetNamespace="http://www.ookii.org/schema/Jumbo/JobConfiguration"
+    elementFormDefault="qualified"
+    xmlns="http://www.ookii.org/schema/Jumbo/JobConfiguration"
+    xmlns:mstns="http://www.ookii.org/schema/Jumbo/JobConfiguration"
+    xmlns:xs="http://www.w3.org/2001/XMLSchema">
+  <!-- This schema is provided for informational purposes only; it is not used by Jumbo to validate the XML files -->
+  <xs:complexType name="JobConfiguration">
+    <xs:sequence minOccurs="1" maxOccurs="1">
+      <xs:element name="AssemblyFileNames" type="StringCollection" minOccurs="1" maxOccurs="1" />
+      <xs:element name="Stages" minOccurs="1" maxOccurs="1">
+        <xs:complexType>
+          <xs:choice minOccurs="0" maxOccurs="unbounded">
+            <xs:element name="Stage" type="StageConfiguration" />
+          </xs:choice>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="AdditionalProgressCounters" minOccurs="1" maxOccurs="1">
+        <xs:complexType>
+          <xs:choice minOccurs="0" maxOccurs="unbounded">
+            <xs:element name="AdditionalProgressCounter" type="AdditionalProgressCounter" />
+          </xs:choice>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="SchedulerOptions" type="SchedulerOptions" minOccurs="0" maxOccurs="1" />
+      <xs:element name="JobSettings" type="SettingsDictionary" minOccurs="0" maxOccurs="1" />
+    </xs:sequence>
+    <xs:attribute name="name" use="optional" type="xs:string" />
+  </xs:complexType>
+  <xs:complexType name="StageConfiguration">
+    <xs:sequence minOccurs="1" maxOccurs="1">
+      <xs:element name="TaskType" type="xs:string" minOccurs="1" maxOccurs="1" />
+      <xs:element name="DataInputType" type="xs:string" minOccurs="0" maxOccurs="1" />
+      <xs:element name="DataOutputType" type="xs:string" minOccurs="0" maxOccurs="1" />
+      <xs:element name="ChildStage" type="StageConfiguration" minOccurs="0" maxOccurs="1" />
+      <xs:element name="ChildStagePartitionerType" type="xs:string" minOccurs="0" maxOccurs="1" />
+      <xs:element name="StageSettings" type="SettingsDictionary" minOccurs="0" maxOccurs="1" />
+      <xs:element name="OutputChannel" type="ChannelConfiguration" minOccurs="0" maxOccurs="1" />
+      <xs:element name="MultiInputRecordReaderType" type="xs:string" minOccurs="0" maxOccurs="1" />
+      <xs:element name="DependentStages" type="StageIdCollection" minOccurs="0" maxOccurs="1" />
+    </xs:sequence>
+    <xs:attribute name="id" use="required" type="StageId" />
+    <xs:attribute name="taskCount" use="required" type="xs:int" />
+  </xs:complexType>
+  <xs:complexType name="StringCollection">
+    <xs:choice minOccurs="0" maxOccurs="unbounded">
+      <xs:element name="string" type="xs:string" />
+    </xs:choice>
+  </xs:complexType>
+  <xs:complexType name="StageIdCollection">
+    <xs:choice minOccurs="0" maxOccurs="unbounded">
+      <xs:element name="string" type="StageId" />
+    </xs:choice>
+  </xs:complexType>
+  <xs:complexType name="AdditionalProgressCounter">
+    <xs:sequence minOccurs="1" maxOccurs="1">
+      <xs:element name="TypeName" type="xs:string" minOccurs="1" maxOccurs="1" />
+      <xs:element name="DisplayName" type="xs:string" minOccurs="1" maxOccurs="1" />
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="SchedulerOptions">
+    <xs:attribute name="maximumDataDistance" type="xs:int" use="required" />
+    <xs:attribute name="dfsInputSchedulingMode" type="SchedulingMode" use="required" />
+    <xs:attribute name="nonInputSchedulingMode" type="SchedulingMode" use="required" />
+  </xs:complexType>
+  <xs:complexType name="SettingsDictionary">
+    <xs:choice minOccurs="0" maxOccurs="unbounded">
+      <xs:element name="Setting">
+        <xs:complexType>
+          <xs:attribute name="key" type="xs:string" use="required" />
+          <xs:attribute name="value" type="xs:string" use="required" />
+        </xs:complexType>
+      </xs:element>
+    </xs:choice>
+  </xs:complexType>
+  <xs:complexType name="ChannelConfiguration">
+    <xs:sequence>
+      <xs:element name="MultiInputRecordReaderType" type="xs:string" minOccurs="1" maxOccurs="1" />
+      <xs:element name="OutputStage" type="StageId" minOccurs="1" maxOccurs="1" />
+      <xs:element name="PartitionerType" type="xs:string" minOccurs="1" maxOccurs="1" />
+    </xs:sequence>
+    <xs:attribute name="type" type="ChannelType" use="required" />
+    <xs:attribute name="partitionsPerTask" type="xs:int" use="required" />
+    <xs:attribute name="disableDynamicPartitionAssignment" type="xs:boolean" use="required" />
+    <xs:attribute name="partitionAssignmentMethod" type="PartitionAssignmentMethod" use="required" />
+    <xs:attribute name="forceFileDownload" type="xs:boolean" use="required" />
+  </xs:complexType>
+  <xs:simpleType name="SchedulingMode">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="Default" />
+      <xs:enumeration value="MoreServers" />
+      <xs:enumeration value="FewerServers" />
+      <xs:enumeration value="OptimalLocality" />
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:simpleType name="ChannelType">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="File" />
+      <xs:enumeration value="Tcp" />
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:simpleType name="PartitionAssignmentMethod">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="Linear" />
+      <xs:enumeration value="Striped" />
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:simpleType name="StageId">
+    <xs:restriction base="xs:string">
+      <xs:pattern value="[^\._-]+" />
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:element name="Job" type="JobConfiguration" />
+</xs:schema>
