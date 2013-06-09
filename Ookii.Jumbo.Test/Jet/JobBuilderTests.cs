@@ -419,9 +419,9 @@ namespace Ookii.Jumbo.Test.Jet
             VerifyChannel(config.Stages[0], config.Stages[1], ChannelType.File, multiInputRecordReaderType: typeof(MergeRecordReader<Utf8String>));
             VerifyStage(config.Stages[1], 2, "MergeStage", typeof(EmptyTask<Utf8String>));
             VerifyDataOutput(config.Stages[1], typeof(TextRecordWriter<Utf8String>));
-            VerifyStageSetting(config.Stages[0], FileOutputChannel.OutputTypeSettingKey, FileChannelOutputType.SortSpill.ToString());
-            VerifyStageSetting(config.Stages[0], FileOutputChannel.SpillSortComparerTypeSettingKey, null);
-            VerifyStageSetting(config.Stages[1], FileOutputChannel.OutputTypeSettingKey, null);
+            VerifyStageSetting(config.Stages[0], JumboSettings.FileChannel.StageOrJob.ChannelOutputType, FileChannelOutputType.SortSpill.ToString());
+            VerifyStageSetting(config.Stages[0], JumboSettings.FileChannel.Stage.SpillSortComparerType, null);
+            VerifyStageSetting(config.Stages[1], JumboSettings.FileChannel.StageOrJob.ChannelOutputType, null);
             config.Validate();
         }
 
@@ -444,9 +444,9 @@ namespace Ookii.Jumbo.Test.Jet
             VerifyChannel(config.Stages[0], config.Stages[1], ChannelType.File, multiInputRecordReaderType: typeof(MergeRecordReader<Utf8String>));
             VerifyStage(config.Stages[1], 2, "MergeStage", typeof(EmptyTask<Utf8String>));
             VerifyDataOutput(config.Stages[1], typeof(TextRecordWriter<Utf8String>));
-            VerifyStageSetting(config.Stages[0], FileOutputChannel.OutputTypeSettingKey, FileChannelOutputType.SortSpill.ToString());
-            VerifyStageSetting(config.Stages[0], FileOutputChannel.SpillSortComparerTypeSettingKey, typeof(FakeRawComparer<Utf8String>).AssemblyQualifiedName);
-            VerifyStageSetting(config.Stages[1], FileOutputChannel.OutputTypeSettingKey, null);
+            VerifyStageSetting(config.Stages[0], JumboSettings.FileChannel.StageOrJob.ChannelOutputType, FileChannelOutputType.SortSpill.ToString());
+            VerifyStageSetting(config.Stages[0], JumboSettings.FileChannel.Stage.SpillSortComparerType, typeof(FakeRawComparer<Utf8String>).AssemblyQualifiedName);
+            VerifyStageSetting(config.Stages[1], JumboSettings.FileChannel.StageOrJob.ChannelOutputType, null);
             VerifyStageSetting(config.Stages[0], TaskConstants.SortTaskComparerSettingKey, null);
             VerifyStageSetting(config.Stages[1], TaskConstants.SortTaskComparerSettingKey, null);
             config.Validate();
@@ -471,11 +471,11 @@ namespace Ookii.Jumbo.Test.Jet
             VerifyChannel(config.Stages[0], config.Stages[1], ChannelType.File, multiInputRecordReaderType: typeof(MergeRecordReader<Utf8String>));
             VerifyStage(config.Stages[1], 2, "MergeStage", typeof(EmptyTask<Utf8String>));
             VerifyDataOutput(config.Stages[1], typeof(TextRecordWriter<Utf8String>));
-            VerifyStageSetting(config.Stages[0], FileOutputChannel.OutputTypeSettingKey, FileChannelOutputType.SortSpill.ToString());
-            VerifyStageSetting(config.Stages[1], FileOutputChannel.OutputTypeSettingKey, null);
-            VerifyStageSetting(config.Stages[0], FileOutputChannel.SpillSortComparerTypeSettingKey, null);
-            VerifyStageSetting(config.Stages[0], FileOutputChannel.SpillSortCombinerTypeSettingKey, typeof(FakeCombiner<Utf8String>).AssemblyQualifiedName);
-            VerifyStageSetting(config.Stages[1], FileOutputChannel.SpillSortCombinerTypeSettingKey, null);
+            VerifyStageSetting(config.Stages[0], JumboSettings.FileChannel.StageOrJob.ChannelOutputType, FileChannelOutputType.SortSpill.ToString());
+            VerifyStageSetting(config.Stages[1], JumboSettings.FileChannel.StageOrJob.ChannelOutputType, null);
+            VerifyStageSetting(config.Stages[0], JumboSettings.FileChannel.Stage.SpillSortComparerType, null);
+            VerifyStageSetting(config.Stages[0], JumboSettings.FileChannel.Stage.SpillSortCombinerType, typeof(FakeCombiner<Utf8String>).AssemblyQualifiedName);
+            VerifyStageSetting(config.Stages[1], JumboSettings.FileChannel.Stage.SpillSortCombinerType, null);
             config.Validate();
         }
 
@@ -500,11 +500,11 @@ namespace Ookii.Jumbo.Test.Jet
             VerifyChannel(config.Stages[0], config.Stages[1], ChannelType.File, multiInputRecordReaderType: typeof(MergeRecordReader<Pair<Utf8String, int>>));
             VerifyStage(config.Stages[1], 2, "MergeStage", typeof(EmptyTask<Pair<Utf8String, int>>));
             VerifyDataOutput(config.Stages[1], typeof(TextRecordWriter<Pair<Utf8String, int>>));
-            VerifyStageSetting(config.Stages[0], FileOutputChannel.OutputTypeSettingKey, FileChannelOutputType.SortSpill.ToString());
-            VerifyStageSetting(config.Stages[1], FileOutputChannel.OutputTypeSettingKey, null);
-            VerifyStageSetting(config.Stages[0], FileOutputChannel.SpillSortComparerTypeSettingKey, null);
-            VerifyStageSetting(config.Stages[0], FileOutputChannel.SpillSortCombinerTypeSettingKey, sort.CombinerType.AssemblyQualifiedName);
-            VerifyStageSetting(config.Stages[1], FileOutputChannel.SpillSortCombinerTypeSettingKey, null);
+            VerifyStageSetting(config.Stages[0], JumboSettings.FileChannel.StageOrJob.ChannelOutputType, FileChannelOutputType.SortSpill.ToString());
+            VerifyStageSetting(config.Stages[1], JumboSettings.FileChannel.StageOrJob.ChannelOutputType, null);
+            VerifyStageSetting(config.Stages[0], JumboSettings.FileChannel.Stage.SpillSortComparerType, null);
+            VerifyStageSetting(config.Stages[0], JumboSettings.FileChannel.Stage.SpillSortCombinerType, sort.CombinerType.AssemblyQualifiedName);
+            VerifyStageSetting(config.Stages[1], JumboSettings.FileChannel.Stage.SpillSortCombinerType, null);
             config.Validate();
             builder.TaskBuilder.DeleteAssembly();
         }
@@ -530,11 +530,11 @@ namespace Ookii.Jumbo.Test.Jet
             VerifyChannel(config.Stages[0], config.Stages[1], ChannelType.File, multiInputRecordReaderType: typeof(MergeRecordReader<Pair<Utf8String, int>>));
             VerifyStage(config.Stages[1], 2, "MergeStage", typeof(EmptyTask<Pair<Utf8String, int>>));
             VerifyDataOutput(config.Stages[1], typeof(TextRecordWriter<Pair<Utf8String, int>>));
-            VerifyStageSetting(config.Stages[0], FileOutputChannel.OutputTypeSettingKey, FileChannelOutputType.SortSpill.ToString());
-            VerifyStageSetting(config.Stages[1], FileOutputChannel.OutputTypeSettingKey, null);
-            VerifyStageSetting(config.Stages[0], FileOutputChannel.SpillSortComparerTypeSettingKey, null);
-            VerifyStageSetting(config.Stages[0], FileOutputChannel.SpillSortCombinerTypeSettingKey, sort.CombinerType.AssemblyQualifiedName);
-            VerifyStageSetting(config.Stages[1], FileOutputChannel.SpillSortCombinerTypeSettingKey, null);
+            VerifyStageSetting(config.Stages[0], JumboSettings.FileChannel.StageOrJob.ChannelOutputType, FileChannelOutputType.SortSpill.ToString());
+            VerifyStageSetting(config.Stages[1], JumboSettings.FileChannel.StageOrJob.ChannelOutputType, null);
+            VerifyStageSetting(config.Stages[0], JumboSettings.FileChannel.Stage.SpillSortComparerType, null);
+            VerifyStageSetting(config.Stages[0], JumboSettings.FileChannel.Stage.SpillSortCombinerType, sort.CombinerType.AssemblyQualifiedName);
+            VerifyStageSetting(config.Stages[1], JumboSettings.FileChannel.Stage.SpillSortCombinerType, null);
             config.Validate();
             builder.TaskBuilder.DeleteAssembly();
         }
@@ -691,7 +691,7 @@ namespace Ookii.Jumbo.Test.Jet
             VerifyDataInput(config, config.Stages[0], typeof(LineRecordReader));
             VerifyStage(config.Stages[0], 3, "MapRecordsTaskStage", mapped.TaskType.TaskType);
             VerifyChannel(config.Stages[0], config.Stages[1], ChannelType.File, multiInputRecordReaderType: typeof(MergeRecordReader<Pair<Utf8String, int>>));
-            VerifyStageSetting(config.Stages[0], FileOutputChannel.OutputTypeSettingKey, FileChannelOutputType.SortSpill.ToString());
+            VerifyStageSetting(config.Stages[0], JumboSettings.FileChannel.StageOrJob.ChannelOutputType, FileChannelOutputType.SortSpill.ToString());
             VerifyStage(config.Stages[1], 2, "ReduceRecordsTaskStage", reduced.TaskType.TaskType);
             VerifyDataOutput(config.Stages[1], typeof(TextRecordWriter<int>));
             config.Validate();
@@ -719,7 +719,7 @@ namespace Ookii.Jumbo.Test.Jet
             VerifyDataInput(config, config.Stages[0], typeof(LineRecordReader));
             VerifyStage(config.Stages[0], 3, "MapRecordsNoContextTaskStage", mapped.TaskType.TaskType);
             VerifyChannel(config.Stages[0], config.Stages[1], ChannelType.File, multiInputRecordReaderType: typeof(MergeRecordReader<Pair<Utf8String, int>>));
-            VerifyStageSetting(config.Stages[0], FileOutputChannel.OutputTypeSettingKey, FileChannelOutputType.SortSpill.ToString());
+            VerifyStageSetting(config.Stages[0], JumboSettings.FileChannel.StageOrJob.ChannelOutputType, FileChannelOutputType.SortSpill.ToString());
             VerifyStage(config.Stages[1], 2, "ReduceRecordsNoContextTaskStage", reduced.TaskType.TaskType);
             VerifyDataOutput(config.Stages[1], typeof(TextRecordWriter<int>));
             config.Validate();
@@ -835,15 +835,15 @@ namespace Ookii.Jumbo.Test.Jet
             VerifyDataInput(config, config.Stages[0], typeof(RecordFileReader<double>));
             VerifyStage(config.Stages[0], 3, "OuterReadStage", typeof(EmptyTask<double>));
             VerifyChannel(config.Stages[0], config.Stages[2], ChannelType.File, multiInputRecordReaderType: typeof(MergeRecordReader<double>));
-            VerifyStageSetting(config.Stages[0], FileOutputChannel.OutputTypeSettingKey, FileChannelOutputType.SortSpill.ToString());
-            VerifyStageSetting(config.Stages[0], FileOutputChannel.SpillSortComparerTypeSettingKey, typeof(FakeJoinComparer<double>).AssemblyQualifiedName);
+            VerifyStageSetting(config.Stages[0], JumboSettings.FileChannel.StageOrJob.ChannelOutputType, FileChannelOutputType.SortSpill.ToString());
+            VerifyStageSetting(config.Stages[0], JumboSettings.FileChannel.Stage.SpillSortComparerType, typeof(FakeJoinComparer<double>).AssemblyQualifiedName);
             VerifyStageSetting(config.Stages[0], PartitionerConstants.EqualityComparerSetting, typeof(FakeJoinComparer<double>).AssemblyQualifiedName);
 
             VerifyDataInput(config, config.Stages[1], typeof(RecordFileReader<int>), _inputPath2);
             VerifyStage(config.Stages[1], 3, "InnerReadStage", typeof(EmptyTask<int>));
             VerifyChannel(config.Stages[1], config.Stages[2], ChannelType.File, multiInputRecordReaderType: typeof(MergeRecordReader<int>));
-            VerifyStageSetting(config.Stages[1], FileOutputChannel.OutputTypeSettingKey, FileChannelOutputType.SortSpill.ToString());
-            VerifyStageSetting(config.Stages[1], FileOutputChannel.SpillSortComparerTypeSettingKey, typeof(FakeJoinComparer<int>).AssemblyQualifiedName);
+            VerifyStageSetting(config.Stages[1], JumboSettings.FileChannel.StageOrJob.ChannelOutputType, FileChannelOutputType.SortSpill.ToString());
+            VerifyStageSetting(config.Stages[1], JumboSettings.FileChannel.Stage.SpillSortComparerType, typeof(FakeJoinComparer<int>).AssemblyQualifiedName);
             VerifyStageSetting(config.Stages[1], PartitionerConstants.EqualityComparerSetting, typeof(FakeJoinComparer<int>).AssemblyQualifiedName);
 
             VerifyStage(config.Stages[2], 2, "JoinStage", typeof(EmptyTask<Utf8String>), typeof(FakeInnerJoinRecordReader));
@@ -941,8 +941,8 @@ namespace Ookii.Jumbo.Test.Jet
             Assert.AreEqual(outputType.AssemblyQualifiedName, stage.DataOutputType.TypeName);
             Assert.AreEqual(recordWriterType.AssemblyQualifiedName, stage.GetSetting(FileDataOutput.RecordWriterTypeSettingKey, null));
             Assert.AreEqual(_fileSystemClient.Path.Combine(_outputPath, stage.StageId + "-{0:00000}"), stage.GetSetting(FileDataOutput.OutputPathFormatSettingKey, null));
-            Assert.AreEqual(blockSize, stage.GetTypedSetting(FileDataOutput.BlockSizeSettingKey, 0));
-            Assert.AreEqual(replicationFactor, stage.GetTypedSetting(FileDataOutput.ReplicationFactorSettingKey, 0));
+            Assert.AreEqual(blockSize, stage.GetSetting(FileDataOutput.BlockSizeSettingKey, 0));
+            Assert.AreEqual(replicationFactor, stage.GetSetting(FileDataOutput.ReplicationFactorSettingKey, 0));
         }
 
         private static void VerifyChannel(StageConfiguration sender, StageConfiguration receiver, ChannelType channelType, Type partitionerType = null, Type multiInputRecordReaderType = null, int partitionsPerTask = 1, PartitionAssignmentMethod assigmentMethod = PartitionAssignmentMethod.Linear)

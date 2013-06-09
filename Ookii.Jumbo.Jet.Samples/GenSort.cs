@@ -90,8 +90,8 @@ namespace Ookii.Jumbo.Jet.Samples
         /// <param name="context">The context.</param>
         public static void Generate(RecordWriter<GenSortRecord> output, ProgressContext context)
         {
-            ulong startRecord = context.TaskContext.GetTypedSetting("GenSort.StartRecord", 0UL);
-            ulong count = context.TaskContext.GetTypedSetting("GenSort.RecordCount", 0UL);
+            ulong startRecord = context.TaskContext.GetSetting("GenSort.StartRecord", 0UL);
+            ulong count = context.TaskContext.GetSetting("GenSort.RecordCount", 0UL);
 
             ulong countPerTask = count / (ulong)context.TaskContext.StageConfiguration.TaskCount;
             int taskNum = context.TaskContext.TaskId.TaskNumber;

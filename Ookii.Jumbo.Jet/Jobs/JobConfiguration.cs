@@ -623,18 +623,6 @@ namespace Ookii.Jumbo.Jet.Jobs
             }
         }
 
-        private static Type FindGenericBaseType(Type type, Type baseType)
-        {
-            Type current = type.BaseType;
-            while( current != null )
-            {
-                if( current.IsGenericType && current.GetGenericTypeDefinition() == baseType )
-                    return current;
-                current = current.BaseType;
-            }
-            throw new ArgumentException(string.Format(System.Globalization.CultureInfo.CurrentCulture, "Type {0} does not inherit from {1}.", type, baseType));
-        }
-
         /// <summary>
         /// Gets a setting with the specified type and default value.
         /// </summary>
@@ -642,12 +630,12 @@ namespace Ookii.Jumbo.Jet.Jobs
         /// <param name="key">The name of the setting.</param>
         /// <param name="defaultValue">The value to use if the setting is not present in the <see cref="SettingsDictionary"/>.</param>
         /// <returns>The value of the setting, or <paramref name="defaultValue"/> if the setting was not present in the <see cref="SettingsDictionary"/>.</returns>
-        public T GetTypedSetting<T>(string key, T defaultValue)
+        public T GetSetting<T>(string key, T defaultValue)
         {
             if( JobSettings == null )
                 return defaultValue;
             else
-                return JobSettings.GetTypedSetting(key, defaultValue);
+                return JobSettings.GetSetting(key, defaultValue);
         }
 
         /// <summary>
@@ -657,7 +645,7 @@ namespace Ookii.Jumbo.Jet.Jobs
         /// <param name="key">The name of the setting..</param>
         /// <param name="value">If the function returns <see langword="true"/>, receives the value of the setting.</param>
         /// <returns><see langword="true"/> if the settings dictionary contained the specified setting; otherwise, <see langword="false"/>.</returns>
-        public bool TryGetTypedSetting<T>(string key, out T value)
+        public bool TryGetSetting<T>(string key, out T value)
         {
             if( JobSettings == null )
             {
@@ -665,7 +653,7 @@ namespace Ookii.Jumbo.Jet.Jobs
                 return false;
             }
             else
-                return JobSettings.TryGetTypedSetting(key, out value);
+                return JobSettings.TryGetSetting(key, out value);
         }
 
         /// <summary>

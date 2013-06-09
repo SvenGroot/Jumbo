@@ -193,7 +193,7 @@ namespace Ookii.Jumbo.Jet.Samples
 
             foreach( ValSortRecord record in input.EnumerateRecords() )
             {
-                bool verbose = context.GetTypedSetting("ValSort.VerboseLogging", false);
+                bool verbose = context.GetSetting("ValSort.VerboseLogging", false);
 
                 if( prev != null )
                 {

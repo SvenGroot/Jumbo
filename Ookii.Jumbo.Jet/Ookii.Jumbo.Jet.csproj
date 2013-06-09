@@ -169,6 +169,7 @@
     <Compile Include="Jobs\JobSettingAttribute.cs" />
     <Compile Include="Jobs\Builder\RecordReuseMode.cs" />
     <Compile Include="Jobs\TaskRecordReuse.cs" />
+    <Compile Include="JumboSettings.cs" />
     <Compile Include="KillTaskJetHeartbeatResponse.cs" />
     <Compile Include="MergeHelper.cs" />
     <Compile Include="MergeRecordReaderConfigurationElement.cs" />

@@ -283,10 +283,10 @@ namespace Ookii.Jumbo.Jet.Samples.FPGrowth
             if( input.ReadRecord() )
             {
                 // job settings
-                int minSupport = config.JobConfiguration.GetTypedSetting("PFPGrowth.MinSupport", 2);
-                int k = config.JobConfiguration.GetTypedSetting("PFPGrowth.PatternCount", 50);
+                int minSupport = config.JobConfiguration.GetSetting("PFPGrowth.MinSupport", 2);
+                int k = config.JobConfiguration.GetSetting("PFPGrowth.PatternCount", 50);
                 // stage settings
-                int numGroups = config.StageConfiguration.GetTypedSetting("PFPGrowth.Groups", 50);
+                int numGroups = config.StageConfiguration.GetSetting("PFPGrowth.Groups", 50);
                 int itemCount = LoadFGList(config, null).Count;
 
                 int maxPerGroup = itemCount / numGroups;
@@ -331,8 +331,8 @@ namespace Ookii.Jumbo.Jet.Samples.FPGrowth
         /// </remarks>
         public static void AggregatePatterns(RecordReader<Pair<int, WritableCollection<MappedFrequentPattern>>> input, RecordWriter<Pair<Utf8String, WritableCollection<FrequentPattern>>> output, TaskContext config)
         {
-            int k = config.JobConfiguration.GetTypedSetting("PFPGrowth.PatternCount", 50);
-            int minSupport = config.JobConfiguration.GetTypedSetting("PFPGrowth.MinSupport", 2);
+            int k = config.JobConfiguration.GetSetting("PFPGrowth.PatternCount", 50);
+            int minSupport = config.JobConfiguration.GetSetting("PFPGrowth.MinSupport", 2);
 
             List<FGListItem> fgList = LoadFGList(config, null);
             FrequentPatternMaxHeap[] heaps = new FrequentPatternMaxHeap[fgList.Count]; // TODO: Create a smaller list based on the number of partitions.

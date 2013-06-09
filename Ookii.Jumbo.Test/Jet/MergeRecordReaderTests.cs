@@ -86,8 +86,8 @@ namespace Ookii.Jumbo.Test.Jet
             const int recordCountMax = 10000;
             MergeRecordReader<int> reader = new MergeRecordReader<int>(Enumerable.Range(0, partitions), inputCount, false, 4096, compression);
             StageConfiguration stageConfig = new StageConfiguration();
-            stageConfig.AddTypedSetting(MergeRecordReaderConstants.MaxFileInputsSetting, maxMergeInputs);
-            stageConfig.AddTypedSetting(MergeRecordReaderConstants.PurgeMemorySettingKey, purgeMemory);
+            stageConfig.AddSetting(MergeRecordReaderConstants.MaxFileInputsSetting, maxMergeInputs);
+            stageConfig.AddSetting(MergeRecordReaderConstants.PurgeMemorySettingKey, purgeMemory);
             stageConfig.StageId = "Merge";
             reader.JetConfiguration = new JetConfiguration();
             reader.TaskContext = new TaskContext(Guid.Empty, new JobConfiguration(), new TaskAttemptId(new TaskId(stageConfig.StageId, 1), 1), stageConfig, Utilities.TestOutputPath, "");

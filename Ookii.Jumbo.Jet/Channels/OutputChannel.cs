@@ -57,7 +57,7 @@ namespace Ookii.Jumbo.Jet.Channels
                 }
             }
 
-            CompressionType = taskExecution.Context.GetTypedSetting(CompressionTypeSetting, taskExecution.JetClient.Configuration.FileChannel.CompressionType);
+            CompressionType = taskExecution.Context.GetSetting(CompressionTypeSetting, taskExecution.JetClient.Configuration.FileChannel.CompressionType);
         }
 
         /// <summary>

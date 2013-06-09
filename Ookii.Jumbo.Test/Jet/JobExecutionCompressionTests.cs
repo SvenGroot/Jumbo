@@ -21,7 +21,7 @@ namespace Ookii.Jumbo.Test.Jet
         {
             FileSystemClient client = Cluster.FileSystemClient;
             JobConfiguration config = CreateMemorySortJob(client, null, ChannelType.File, 1);
-            config.AddSetting(FileOutputChannel.SpillBufferSizeSettingKey, "3MB");
+            config.AddSetting(JumboSettings.FileChannel.StageOrJob.SpillBufferSize, "3MB");
             config.AddTypedSetting(MergeRecordReaderConstants.PurgeMemorySettingKey, true);
             RunJob(client, config);
             VerifySortOutput(client, config);
@@ -49,10 +49,10 @@ namespace Ookii.Jumbo.Test.Jet
         {
             FileSystemClient client = Cluster.FileSystemClient;
             JobConfiguration config = CreateSpillSortJob(client, null, 1, forceFileDownload);
-            config.AddSetting(FileOutputChannel.SpillBufferSizeSettingKey, "3MB");
+            config.AddSetting(JumboSettings.FileChannel.StageOrJob.SpillBufferSize, "3MB");
             config.AddTypedSetting(MergeRecordReaderConstants.PurgeMemorySettingKey, true);
             if( !useMemoryStorage )
-                config.AddTypedSetting(FileInputChannel.MemoryStorageSizeSetting, 0L);
+                config.AddTypedSetting(JumboSettings.FileChannel.StageOrJob.MemoryStorageSize, 0L);
             JobStatus status = RunJob(client, config);
             VerifySortOutput(client, config);
             return status;

@@ -29,8 +29,8 @@ namespace JobServerApplication
 
             if( job != null )
             {
-                if( !configuration.TryGetTypedSetting(JobConfiguration.SchedulingThresholdSettingKey, out _schedulingThreshold) )
-                    _schedulingThreshold = job.Configuration.GetTypedSetting(JobConfiguration.SchedulingThresholdSettingKey, JobServer.Instance.Configuration.JobServer.SchedulingThreshold);
+                if( !configuration.TryGetSetting(JobConfiguration.SchedulingThresholdSettingKey, out _schedulingThreshold) )
+                    _schedulingThreshold = job.Configuration.GetSetting(JobConfiguration.SchedulingThresholdSettingKey, JobServer.Instance.Configuration.JobServer.SchedulingThreshold);
 
                 if( _schedulingThreshold < 0 || _schedulingThreshold > 1 )
                 {

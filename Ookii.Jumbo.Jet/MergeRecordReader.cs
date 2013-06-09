@@ -213,15 +213,15 @@ namespace Ookii.Jumbo.Jet
             if( !Directory.Exists(_mergeIntermediateOutputPath) )
                 Directory.CreateDirectory(_mergeIntermediateOutputPath);
 
-            _maxDiskInputsPerMergePass = TaskContext.GetTypedSetting(MergeRecordReaderConstants.MaxFileInputsSetting, JetConfiguration.MergeRecordReader.MaxFileInputs);
+            _maxDiskInputsPerMergePass = TaskContext.GetSetting(MergeRecordReaderConstants.MaxFileInputsSetting, JetConfiguration.MergeRecordReader.MaxFileInputs);
             if( _maxDiskInputsPerMergePass <= 1 )
                 throw new InvalidOperationException("The maximum number of file inputs per pass must be larger than one.");
 
-            _memoryStorageTriggerLevel = TaskContext.GetTypedSetting(MergeRecordReaderConstants.MemoryStorageTriggerLevelSetting, JetConfiguration.MergeRecordReader.MemoryStorageTriggerLevel);
+            _memoryStorageTriggerLevel = TaskContext.GetSetting(MergeRecordReaderConstants.MemoryStorageTriggerLevelSetting, JetConfiguration.MergeRecordReader.MemoryStorageTriggerLevel);
             if( _memoryStorageTriggerLevel < 0 || _memoryStorageTriggerLevel > 1 )
                 throw new InvalidOperationException("The memory storage trigger level must be between 0 and 1.");
 
-            _purgeMemoryBeforeFinalPass = TaskContext.GetTypedSetting(MergeRecordReaderConstants.PurgeMemorySettingKey, JetConfiguration.MergeRecordReader.PurgeMemoryBeforeFinalPass);
+            _purgeMemoryBeforeFinalPass = TaskContext.GetSetting(MergeRecordReaderConstants.PurgeMemorySettingKey, JetConfiguration.MergeRecordReader.PurgeMemoryBeforeFinalPass);
 
             StartMergeThread(PartitionNumbers);
         }
@@ -377,8 +377,8 @@ namespace Ookii.Jumbo.Jet
             string comparerTypeName = TaskContext.StageConfiguration.GetSetting(MergeRecordReaderConstants.ComparerSetting, null);
             if( comparerTypeName == null && !(Channel == null || Channel.InputStage == null) )
             {
-                if( Channel.InputStage.GetTypedSetting(FileOutputChannel.OutputTypeSettingKey, FileChannelOutputType.Spill) == FileChannelOutputType.SortSpill )
-                    comparerTypeName = Channel.InputStage.GetSetting(FileOutputChannel.SpillSortComparerTypeSettingKey, null);
+                if( Ookii.Jumbo.Jet.Jobs.SettingsDictionary.GetJobOrStageSetting(TaskContext.JobConfiguration, Channel.InputStage, JumboSettings.FileChannel.StageOrJob.ChannelOutputType, FileChannelOutputType.Spill) == FileChannelOutputType.SortSpill )
+                    comparerTypeName = Channel.InputStage.GetSetting(JumboSettings.FileChannel.Stage.SpillSortComparerType, null);
                 else
                     comparerTypeName = Channel.InputStage.GetSetting(Tasks.TaskConstants.SortTaskComparerSettingKey, null);
             }

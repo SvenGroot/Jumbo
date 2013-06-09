@@ -40,7 +40,7 @@ namespace Ookii.Jumbo.Test.Jet
             Action<RecordReader<int>, RecordWriter<int>, TaskContext> taskDelegate = TaskMethod;
             Type taskType = target.CreateDynamicTask(typeof(ITask<int, int>).GetMethod("Run"), taskDelegate, 0, RecordReuseMode.Allow);
             TaskContext context = CreateConfiguration(taskType);
-            context.StageConfiguration.AddTypedSetting("Factor", 2);
+            context.StageConfiguration.AddSetting("Factor", 2);
             ITask<int, int> task = (ITask<int, int>)JetActivator.CreateInstance(taskType, null, null, context);
             List<int> data = Utilities.GenerateNumberData(10);
             List<int> result;
@@ -152,7 +152,7 @@ namespace Ookii.Jumbo.Test.Jet
             Action<RecordWriter<int>, TaskContext> taskDelegate = TaskMethodNoInput;
             Type taskType = target.CreateDynamicTask(typeof(ITask<int, int>).GetMethod("Run"), taskDelegate, 1, RecordReuseMode.Allow);
             TaskContext context = CreateConfiguration(taskType);
-            context.StageConfiguration.AddTypedSetting("Count", 6);
+            context.StageConfiguration.AddSetting("Count", 6);
             ITask<int, int> task = (ITask<int, int>)JetActivator.CreateInstance(taskType, null, null, context);
             List<int> result;
             using( ListRecordWriter<int> output = new ListRecordWriter<int>() )
@@ -209,7 +209,7 @@ namespace Ookii.Jumbo.Test.Jet
         
         public static void TaskMethod(RecordReader<int> input, RecordWriter<int> output, TaskContext context)
         {
-            int factor = context.GetTypedSetting("Factor", 0);
+            int factor = context.GetSetting("Factor", 0);
             output.WriteRecords(input.EnumerateRecords().Select(i => i * factor));
         }
 
@@ -221,7 +221,7 @@ namespace Ookii.Jumbo.Test.Jet
 
         public static void TaskMethodNoInput(RecordWriter<int> output, TaskContext context)
         {
-            int count = context.GetTypedSetting("Count", 0);
+            int count = context.GetSetting("Count", 0);
             output.WriteRecords(Enumerable.Range(0, count));
         }
 

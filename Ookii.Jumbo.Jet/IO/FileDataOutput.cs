@@ -141,11 +141,11 @@ namespace Ookii.Jumbo.Jet.IO
             string outputPathFormat = FileSystemClient.Create(DfsConfiguration).Path.Combine(_outputPath, stage.StageId + "-{0:00000}");
             stage.AddSetting(OutputPathFormatSettingKey, outputPathFormat);
             if( _blockSize != 0 )
-                stage.AddTypedSetting(BlockSizeSettingKey, _blockSize);
+                stage.AddSetting(BlockSizeSettingKey, _blockSize);
             if( _replicationFactor != 0 )
-                stage.AddTypedSetting(ReplicationFactorSettingKey, _replicationFactor);
+                stage.AddSetting(ReplicationFactorSettingKey, _replicationFactor);
             if( _recordOptions != RecordStreamOptions.None )
-                stage.AddTypedSetting(RecordOptionsSettingKey, _recordOptions);
+                stage.AddSetting(RecordOptionsSettingKey, _recordOptions);
         }
 
         /// <summary>
@@ -158,9 +158,9 @@ namespace Ookii.Jumbo.Jet.IO
             if( TaskContext != null )
             {
                 _recordWriterType = Type.GetType(TaskContext.StageConfiguration.GetSetting(RecordWriterTypeSettingKey, null), true);
-                _blockSize = TaskContext.StageConfiguration.GetTypedSetting(FileDataOutput.BlockSizeSettingKey, 0);
-                _replicationFactor = TaskContext.StageConfiguration.GetTypedSetting(FileDataOutput.ReplicationFactorSettingKey, 0);
-                _recordOptions = TaskContext.StageConfiguration.GetTypedSetting(FileDataOutput.RecordOptionsSettingKey, RecordStreamOptions.None);
+                _blockSize = TaskContext.StageConfiguration.GetSetting(FileDataOutput.BlockSizeSettingKey, 0);
+                _replicationFactor = TaskContext.StageConfiguration.GetSetting(FileDataOutput.ReplicationFactorSettingKey, 0);
+                _recordOptions = TaskContext.StageConfiguration.GetSetting(FileDataOutput.RecordOptionsSettingKey, RecordStreamOptions.None);
             }
         }
 

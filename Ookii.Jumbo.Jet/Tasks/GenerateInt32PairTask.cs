@@ -63,7 +63,7 @@ namespace Ookii.Jumbo.Jet.Tasks
         {
             if( TaskContext != null )
             {
-                _value = TaskContext.StageConfiguration.GetTypedSetting(TaskConstants.GeneratePairTaskDefaultValueKey, 1);
+                _value = TaskContext.StageConfiguration.GetSetting(TaskConstants.GeneratePairTaskDefaultValueKey, 1);
             }
         }
     }

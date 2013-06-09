@@ -18,45 +18,6 @@ namespace Ookii.Jumbo.Jet.Channels
     {
         private static readonly log4net.ILog _log = log4net.LogManager.GetLogger(typeof(FileOutputChannel));
 
-        /// <summary>
-        /// The key to use in the stage or job settings to override the default write buffer size. Stage settings take precedence over job settings. The setting should have type <see cref="BinarySize"/>.
-        /// </summary>
-        public const string WriteBufferSizeSettingKey = "FileOutputChannel.WriteBufferSize";
-        /// <summary>
-        /// The key to use in the job or stage settings to select between a sorting or non-sorting channel.
-        /// Stage settings take precedence over job settings. The setting should have type <see cref="FileChannelOutputType"/>.
-        /// </summary>
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Naming", "CA1702:CompoundWordsShouldBeCasedCorrectly", MessageId = "TypeSetting")]
-        public const string OutputTypeSettingKey = "FileOutputChannel.OutputType";
-        /// <summary>
-        /// The key to use in the job or stage settings to override the default spill buffer size specified in <see cref="FileChannelConfigurationElement.SpillBufferSize"/>.
-        /// Stage settings take precedence over job settings. The setting should have type <see cref="BinarySize"/>.
-        /// </summary>
-        public const string SpillBufferSizeSettingKey = "FileOutputChannel.SpillBufferSize";
-        /// <summary>
-        /// The key to use in the job or stage settings to override the default spill output buffer limit specified in <see cref="FileChannelConfigurationElement.SpillBufferLimit"/>.
-        /// Stage settings take precedence over job settings. The setting should have type <see cref="Single"/>.
-        /// </summary>
-        public const string SpillBufferLimitSettingKey = "FileOutputChannel.SpillBufferLimit";
-        /// <summary>
-        /// The key to use in the stage settings to specify the type of a <see cref="IRawComparer{T}"/> or <see cref="IComparer{T}"/> to use when the output type is <see cref="FileChannelOutputType.SortSpill"/>. It's ignored
-        /// for other output types. The setting should be an assembly-qualified type name of a type implementing <see cref="IRawComparer{T}"/> or <see cref="IComparer{T}"/>. Using a <see cref="IRawComparer{T}"/> is strongly recommended.
-        /// </summary>
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Naming", "CA1702:CompoundWordsShouldBeCasedCorrectly", MessageId = "TypeSetting")]
-        public const string SpillSortComparerTypeSettingKey = "FileOutputChannel.SpillSortComparer";
-        /// <summary>
-        /// The key to use in the stage settings to specify the type of a combiner to use when the output type is <see cref="FileChannelOutputType.SortSpill"/>. It's ignored
-        /// for other output types. The setting should be an assembly-qualified type name of a type implementing <see cref="ITask{TInput,TOutput}"/>.
-        /// </summary>
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Naming", "CA1702:CompoundWordsShouldBeCasedCorrectly", MessageId = "TypeSetting")]
-        public const string SpillSortCombinerTypeSettingKey = "FileOutputChannel.SpillSortCombiner";
-        /// <summary>
-        /// The key to use in the job or stage settings to override the minimum number of spills needed for the combiner to be run during the merge specified in 
-        /// <see cref="FileChannelConfigurationElement.SpillSortMinSpillsForCombineDuringMerge"/>. This value is only used when the output type is <see cref="FileChannelOutputType.SortSpill"/>
-        /// and a combiner is specified. Stage settings take precedence over job settings. The setting should have type <see cref="Int32"/>.
-        /// </summary>
-        public const string SpillSortMinSpillsForCombineDuringMergeSettingKey = "FileOutputChannel.SpillSortMinSpillsForCombineDuringMerge";
-
         private readonly string _localJobDirectory;
         private IRecordWriter _writer;
         private readonly FileChannelOutputType _outputType;
@@ -80,7 +41,7 @@ namespace Ookii.Jumbo.Jet.Channels
             if( !Directory.Exists(directory) )
                 Directory.CreateDirectory(directory);
 
-            _outputType = taskExecution.Context.GetTypedSetting(OutputTypeSettingKey, FileChannelOutputType.Spill);
+            _outputType = taskExecution.Context.GetSetting(JumboSettings.FileChannel.StageOrJob.ChannelOutputType, FileChannelOutputType.Spill);
             _log.DebugFormat("File channel output type: {0}", _outputType);
         }
 
@@ -142,7 +103,7 @@ namespace Ookii.Jumbo.Jet.Channels
             if( _writer != null )
                 throw new InvalidOperationException("The channel record writer has already been created.");
 
-            BinarySize writeBufferSize = TaskExecution.Context.GetTypedSetting(WriteBufferSizeSettingKey, TaskExecution.JetClient.Configuration.FileChannel.WriteBufferSize);
+            BinarySize writeBufferSize = TaskExecution.Context.GetSetting(JumboSettings.FileChannel.StageOrJob.WriteBufferSize, TaskExecution.JetClient.Configuration.FileChannel.WriteBufferSize);
 
             return CreateSpillRecordWriter<T>(writeBufferSize);
         }
@@ -162,8 +123,8 @@ namespace Ookii.Jumbo.Jet.Channels
         {
             // We're using single file output
 
-            BinarySize outputBufferSize = TaskExecution.Context.GetTypedSetting(SpillBufferSizeSettingKey, TaskExecution.JetClient.Configuration.FileChannel.SpillBufferSize);
-            float outputBufferLimit = TaskExecution.Context.GetTypedSetting(SpillBufferLimitSettingKey, TaskExecution.JetClient.Configuration.FileChannel.SpillBufferLimit);
+            BinarySize outputBufferSize = TaskExecution.Context.GetSetting(JumboSettings.FileChannel.StageOrJob.SpillBufferSize, TaskExecution.JetClient.Configuration.FileChannel.SpillBufferSize);
+            float outputBufferLimit = TaskExecution.Context.GetSetting(JumboSettings.FileChannel.StageOrJob.SpillBufferLimit, TaskExecution.JetClient.Configuration.FileChannel.SpillBufferLimit);
             if( outputBufferSize.Value < 0 || outputBufferSize.Value > Int32.MaxValue )
                 throw new ConfigurationErrorsException("Invalid output buffer size: " + outputBufferSize.Value);
             if( outputBufferLimit < 0.1f || outputBufferLimit > 1.0f )
@@ -178,10 +139,10 @@ namespace Ookii.Jumbo.Jet.Channels
             string fileName = CreateChannelFileName(TaskExecution.RootTask.Context.TaskAttemptId.ToString());
             if( _outputType == FileChannelOutputType.SortSpill )
             {
-                int maxDiskInputsPerMergePass = TaskExecution.Context.GetTypedSetting(MergeRecordReaderConstants.MaxFileInputsSetting, TaskExecution.JetClient.Configuration.MergeRecordReader.MaxFileInputs);
+                int maxDiskInputsPerMergePass = TaskExecution.Context.GetSetting(MergeRecordReaderConstants.MaxFileInputsSetting, TaskExecution.JetClient.Configuration.MergeRecordReader.MaxFileInputs);
                 ITask<T, T> combiner = (ITask<T, T>)CreateCombiner();
                 IComparer<T> comparer = (IComparer<T>)CreateComparer();
-                int minSpillCountForCombineDuringMerge = TaskExecution.Context.GetTypedSetting(SpillSortMinSpillsForCombineDuringMergeSettingKey, TaskExecution.JetClient.Configuration.FileChannel.SpillSortMinSpillsForCombineDuringMerge);
+                int minSpillCountForCombineDuringMerge = TaskExecution.Context.GetSetting(JumboSettings.FileChannel.StageOrJob.SpillSortMinSpillsForCombineDuringMerge, TaskExecution.JetClient.Configuration.FileChannel.SpillSortMinSpillsForCombineDuringMerge);
                 result = new SortSpillRecordWriter<T>(Path.Combine(_localJobDirectory, fileName), partitioner, (int)outputBufferSize.Value, outputBufferLimitSize, (int)writeBufferSize.Value, TaskExecution.JetClient.Configuration.FileChannel.EnableChecksum, CompressionType, maxDiskInputsPerMergePass, comparer, combiner, minSpillCountForCombineDuringMerge);
             }
             else
@@ -192,7 +153,7 @@ namespace Ookii.Jumbo.Jet.Channels
 
         private object CreateCombiner()
         {
-            string combinerTypeName = TaskExecution.Context.StageConfiguration.GetSetting(SpillSortCombinerTypeSettingKey, null);
+            string combinerTypeName = TaskExecution.Context.StageConfiguration.GetSetting(JumboSettings.FileChannel.Stage.SpillSortCombinerType, null);
             if( combinerTypeName == null )
                 return null;
 
@@ -202,7 +163,7 @@ namespace Ookii.Jumbo.Jet.Channels
 
         private object CreateComparer()
         {
-            string comparerTypeName = TaskExecution.Context.StageConfiguration.GetSetting(SpillSortComparerTypeSettingKey, null);
+            string comparerTypeName = TaskExecution.Context.StageConfiguration.GetSetting(JumboSettings.FileChannel.Stage.SpillSortComparerType, null);
             if( comparerTypeName == null )
                 return null;
 

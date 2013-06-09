@@ -92,9 +92,9 @@ namespace Ookii.Jumbo.Jet.Samples
         /// <param name="context">The context.</param>
         public static void Generate(RecordWriter<Utf8String> output, ProgressContext context)
         {
-            long sizePerTask = context.TaskContext.GetTypedSetting("GenerateText.SizePerTask", BinarySize.Zero).Value;
-            int wordsPerLine = context.TaskContext.GetTypedSetting("GenerateText.WordsPerLine", 10);
-            int wordsPerLineRandomization = context.TaskContext.GetTypedSetting("GenerateText.WordsPerLineRandomization", 5);
+            long sizePerTask = context.TaskContext.GetSetting("GenerateText.SizePerTask", BinarySize.Zero).Value;
+            int wordsPerLine = context.TaskContext.GetSetting("GenerateText.WordsPerLine", 10);
+            int wordsPerLineRandomization = context.TaskContext.GetSetting("GenerateText.WordsPerLineRandomization", 5);
 
             Utf8String[] words = LoadWords();
 

@@ -155,9 +155,9 @@ namespace Ookii.Jumbo.Test.Jet
             var sorted = job.MemorySort(converted);
             // Set spill buffer to ensure multiple spills
             if( channelType == ChannelType.Tcp )
-                sorted.InputChannel.Settings.AddTypedSetting(TcpOutputChannel.SpillBufferSizeSettingKey, "1MB");
+                sorted.InputChannel.Settings.AddSetting(TcpOutputChannel.SpillBufferSizeSettingKey, "1MB");
             else
-                sorted.InputChannel.Settings.AddTypedSetting(FileOutputChannel.SpillBufferSizeSettingKey, "1MB");
+                sorted.InputChannel.Settings.AddSetting(JumboSettings.FileChannel.StageOrJob.SpillBufferSize, "1MB");
             sorted.InputChannel.ChannelType = channelType;
             sorted.InputChannel.PartitionsPerTask = partitionsPerTask;
             job.Write(sorted, outputPath, typeof(BinaryRecordWriter<>));
@@ -196,7 +196,7 @@ namespace Ookii.Jumbo.Test.Jet
             var converted = job.Process(input, typeof(StringConversionTask));
             var sorted = job.SpillSort(converted);
             // Set spill buffer to ensure multiple spills
-            sorted.InputChannel.Settings.AddTypedSetting(FileOutputChannel.SpillBufferSizeSettingKey, "1MB");
+            sorted.InputChannel.Settings.AddSetting(JumboSettings.FileChannel.StageOrJob.SpillBufferSize, "1MB");
             sorted.InputChannel.PartitionsPerTask = partitionsPerTask;
             sorted.InputChannel.PartitionerType = partitionerType;
             job.Write(sorted, outputPath, typeof(BinaryRecordWriter<>));

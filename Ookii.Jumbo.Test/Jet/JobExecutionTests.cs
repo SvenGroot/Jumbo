@@ -159,7 +159,7 @@ namespace Ookii.Jumbo.Test.Jet
             var multiplied = job.Process(input, typeof(MultiplierTask));
             job.Write(multiplied, outputPath, typeof(TextRecordWriter<>));
             int factor = new Random().Next(2, 100);
-            job.Settings.AddTypedSetting("factor", factor);
+            job.Settings.AddSetting("factor", factor);
 
             JobConfiguration config = job.CreateJob();
             RunJob(client, config);

@@ -174,11 +174,7 @@ namespace Ookii.Jumbo.Jet
         /// <returns>The value of the setting, or <paramref name="defaultValue"/> if the setting was not present in either the stage or job settings.</returns>
         public string GetSetting(string key, string defaultValue)
         {
-            string value = StageConfiguration.GetSetting(key, null);
-            if( value == null )
-                value = JobConfiguration.GetSetting(key, defaultValue);
-
-            return value;
+            return SettingsDictionary.GetJobOrStageSetting(JobConfiguration, StageConfiguration, key, defaultValue);
         }        
         
         /// <summary>
@@ -188,13 +184,9 @@ namespace Ookii.Jumbo.Jet
         /// <param name="key">The name of the setting.</param>
         /// <param name="defaultValue">The value to use if the setting is not present in the <see cref="SettingsDictionary"/>.</param>
         /// <returns>The value of the setting, or <paramref name="defaultValue"/> if the setting was not present in either the stage or job settings.</returns>
-        public T GetTypedSetting<T>(string key, T defaultValue)
+        public T GetSetting<T>(string key, T defaultValue)
         {
-            T value;
-            if( !StageConfiguration.TryGetTypedSetting(key, out value) && !JobConfiguration.TryGetTypedSetting(key, out value) )
-                return defaultValue;
-            else
-                return value;
+            return SettingsDictionary.GetJobOrStageSetting(JobConfiguration, StageConfiguration, key, defaultValue);
         }
 
         internal TaskExecutionUtility TaskExecution { get; set; }

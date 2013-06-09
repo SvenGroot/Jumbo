@@ -50,7 +50,7 @@ namespace TaskServerApplication
             JobDirectory = jobDirectory;
             DfsJobDirectory = dfsJobDirectory;
             _taskServer = taskServer;
-            TaskTimeout = jobConfiguration.GetTypedSetting(TaskServerConfigurationElement.TaskTimeoutJobSettingKey, taskServer.Configuration.TaskServer.TaskTimeout);
+            TaskTimeout = jobConfiguration.GetSetting(TaskServerConfigurationElement.TaskTimeoutJobSettingKey, taskServer.Configuration.TaskServer.TaskTimeout);
         }
 
         public TaskAttemptStatus State { get; set; }

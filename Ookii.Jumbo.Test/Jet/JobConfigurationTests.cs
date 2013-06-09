@@ -305,8 +305,8 @@ namespace Ookii.Jumbo.Test.Jet
                 Assert.AreEqual(outputType.AssemblyQualifiedName, stage.DataOutputType.TypeName);
                 Assert.AreEqual(typeof(TextRecordWriter<int>).AssemblyQualifiedName, stage.GetSetting(FileDataOutput.RecordWriterTypeSettingKey, null));
                 Assert.AreEqual(DfsPath.Combine(outputPath, stage.StageId + "-{0:00000}"), stage.GetSetting(FileDataOutput.OutputPathFormatSettingKey, null));
-                Assert.AreEqual(0, stage.GetTypedSetting(FileDataOutput.BlockSizeSettingKey, 0));
-                Assert.AreEqual(0, stage.GetTypedSetting(FileDataOutput.ReplicationFactorSettingKey, 0));
+                Assert.AreEqual(0, stage.GetSetting(FileDataOutput.BlockSizeSettingKey, 0));
+                Assert.AreEqual(0, stage.GetSetting(FileDataOutput.ReplicationFactorSettingKey, 0));
             }
             else
             {

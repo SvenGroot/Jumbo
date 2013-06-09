@@ -56,9 +56,9 @@ namespace Ookii.Jumbo.Jet.Channels
             if( _writer != null )
                 throw new InvalidOperationException("Channel record writer was already created.");
 
-            bool reuseConnections = TaskExecution.Context.GetTypedSetting(ReuseConnectionsSettingKey, TaskExecution.JetClient.Configuration.TcpChannel.ReuseConnections);
-            BinarySize spillBufferSize = TaskExecution.Context.GetTypedSetting(SpillBufferSizeSettingKey, TaskExecution.JetClient.Configuration.TcpChannel.SpillBufferSize);
-            float spillBufferLimit = TaskExecution.Context.GetTypedSetting(SpillBufferLimitSettingKey, TaskExecution.JetClient.Configuration.TcpChannel.SpillBufferLimit);
+            bool reuseConnections = TaskExecution.Context.GetSetting(ReuseConnectionsSettingKey, TaskExecution.JetClient.Configuration.TcpChannel.ReuseConnections);
+            BinarySize spillBufferSize = TaskExecution.Context.GetSetting(SpillBufferSizeSettingKey, TaskExecution.JetClient.Configuration.TcpChannel.SpillBufferSize);
+            float spillBufferLimit = TaskExecution.Context.GetSetting(SpillBufferLimitSettingKey, TaskExecution.JetClient.Configuration.TcpChannel.SpillBufferLimit);
             if( spillBufferSize.Value < 0 || spillBufferSize.Value > Int32.MaxValue )
                 throw new ConfigurationErrorsException("Invalid output buffer size: " + spillBufferSize.Value);
             if( spillBufferLimit < 0.1f || spillBufferLimit > 1.0f )

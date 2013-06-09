@@ -89,12 +89,15 @@ namespace Ookii.Jumbo.Jet.Jobs
         /// <summary>
         /// Adds a setting with the specified type.
         /// </summary>
-        /// <typeparam name="T">The type of the setting.</typeparam>
         /// <param name="key">The name of the setting.</param>
         /// <param name="value">The value of the setting.</param>
-        public void AddTypedSetting<T>(string key, T value)
+        public void AddSetting(string key, object value)
         {
-            AddSetting(key, value);
+            if( key == null )
+                throw new ArgumentNullException("key");
+            if( value == null )
+                throw new ArgumentNullException("value");
+            Add(key, (string)TypeDescriptor.GetConverter(value).ConvertTo(null, System.Globalization.CultureInfo.InvariantCulture, value, typeof(string)));
         }
 
         /// <summary>
@@ -104,7 +107,7 @@ namespace Ookii.Jumbo.Jet.Jobs
         /// <param name="key">The name of the setting.</param>
         /// <param name="defaultValue">The value to use if the setting is not present in the <see cref="SettingsDictionary"/>.</param>
         /// <returns>The value of the setting, or <paramref name="defaultValue"/> if the setting was not present in the <see cref="SettingsDictionary"/>.</returns>
-        public T GetTypedSetting<T>(string key, T defaultValue)
+        public T GetSetting<T>(string key, T defaultValue)
         {
             string value;
             if( TryGetValue(key, out value) )
@@ -122,7 +125,7 @@ namespace Ookii.Jumbo.Jet.Jobs
         /// <param name="key">The name of the setting..</param>
         /// <param name="value">If the function returns <see langword="true"/>, receives the value of the setting.</param>
         /// <returns><see langword="true"/> if the settings dictionary contained the specified setting; otherwise, <see langword="false"/>.</returns>
-        public bool TryGetTypedSetting<T>(string key, out T value)
+        public bool TryGetSetting<T>(string key, out T value)
         {
             string stringValue;
             if( TryGetValue(key, out stringValue) )
@@ -153,13 +156,41 @@ namespace Ookii.Jumbo.Jet.Jobs
                 return defaultValue;
         }
 
-        internal void AddSetting(string key, object value)
+        /// <summary>
+        /// Gets a setting's string value with the specified default value, checking first in the stage settings and then in the job settings.
+        /// </summary>
+        /// <param name="job">The job configuration.</param>
+        /// <param name="stage">The stage stage configuration.</param>
+        /// <param name="key">The name of the setting.</param>
+        /// <param name="defaultValue">The value to use if the setting is not present in the <see cref="SettingsDictionary"/>.</param>
+        /// <returns>The value of the setting, or <paramref name="defaultValue"/> if the setting was not present in either the stage or job settings.</returns>
+        public static string GetJobOrStageSetting(JobConfiguration job, StageConfiguration stage, string key, string defaultValue)
         {
-            if( key == null )
-                throw new ArgumentNullException("key");
+            string value = stage.GetSetting(key, null);
             if( value == null )
-                throw new ArgumentNullException("value");
-            Add(key, (string)TypeDescriptor.GetConverter(value).ConvertTo(null, System.Globalization.CultureInfo.InvariantCulture, value, typeof(string)));
+                value = job.GetSetting(key, defaultValue);
+
+            return value;
+        }
+
+        /// <summary>
+        /// Gets a setting with the specified type and default value, checking first in the stage settings and then in the job settings.
+        /// </summary>
+        /// <typeparam name="T">The type of the setting.</typeparam>
+        /// <param name="job">The job configuration.</param>
+        /// <param name="stage">The stage stage configuration.</param>
+        /// <param name="key">The name of the setting.</param>
+        /// <param name="defaultValue">The value to use if the setting is not present in the <see cref="SettingsDictionary" />.</param>
+        /// <returns>
+        /// The value of the setting, or <paramref name="defaultValue" /> if the setting was not present in either the stage or job settings.
+        /// </returns>
+        public static T GetJobOrStageSetting<T>(JobConfiguration job, StageConfiguration stage, string key, T defaultValue)
+        {
+            T value;
+            if( !stage.TryGetSetting(key, out value) && !job.TryGetSetting(key, out value) )
+                return defaultValue;
+            else
+                return value;
         }
     }
 }

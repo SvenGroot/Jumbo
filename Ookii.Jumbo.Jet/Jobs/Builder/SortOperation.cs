@@ -129,11 +129,11 @@ namespace Ookii.Jumbo.Jet.Jobs.Builder
                 if( input.ChannelType != ChannelType.File )
                     throw new NotSupportedException("Spill sort can only be used on file channels.");
 
-                input.InputStage.AddTypedSetting(FileOutputChannel.OutputTypeSettingKey, FileChannelOutputType.SortSpill);
+                input.InputStage.AddSetting(JumboSettings.FileChannel.StageOrJob.ChannelOutputType, FileChannelOutputType.SortSpill);
                 if( _comparerType != null )
-                    input.InputStage.AddSetting(FileOutputChannel.SpillSortComparerTypeSettingKey, _comparerType.AssemblyQualifiedName);
+                    input.InputStage.AddSetting(JumboSettings.FileChannel.Stage.SpillSortComparerType, _comparerType.AssemblyQualifiedName);
                 if( _combinerType != null )
-                    input.InputStage.AddSetting(FileOutputChannel.SpillSortCombinerTypeSettingKey, _combinerType.AssemblyQualifiedName);
+                    input.InputStage.AddSetting(JumboSettings.FileChannel.Stage.SpillSortCombinerType, _combinerType.AssemblyQualifiedName);
                 return compiler.CreateStage("MergeStage", SecondStepTaskType.TaskType, InputChannel.TaskCount, input, Output, true, InputChannel.Settings);
             }
             else

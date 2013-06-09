@@ -27,15 +27,15 @@ namespace Ookii.Jumbo.Jet.Samples.FPGrowth
         public void Run(RecordReader<Pair<int, Transaction>> input, RecordWriter<Pair<int, WritableCollection<MappedFrequentPattern>>> output)
         {
             _partitionReader = input as MultiPartitionRecordReader<Pair<int, Transaction>>;
-            bool reuseHeaps = TaskContext.GetTypedSetting("PFPGrowth.ReusePatternHeaps", true);
+            bool reuseHeaps = TaskContext.GetSetting("PFPGrowth.ReusePatternHeaps", true);
 
             if( input.ReadRecord() )
             {
                 TaskContext config = TaskContext;
                 // job settings
-                int minSupport = config.JobConfiguration.GetTypedSetting("PFPGrowth.MinSupport", 2);
-                int k = config.JobConfiguration.GetTypedSetting("PFPGrowth.PatternCount", 50);
-                int numGroups = config.JobConfiguration.GetTypedSetting("PFPGrowth.Groups", 50);
+                int minSupport = config.JobConfiguration.GetSetting("PFPGrowth.MinSupport", 2);
+                int k = config.JobConfiguration.GetSetting("PFPGrowth.PatternCount", 50);
+                int numGroups = config.JobConfiguration.GetSetting("PFPGrowth.Groups", 50);
 
                 List<FGListItem> fglist = PFPGrowth.LoadFGList(TaskContext, null);
 

@@ -450,12 +450,12 @@ namespace Ookii.Jumbo.Jet.Jobs
         /// <param name="key">The name of the setting.</param>
         /// <param name="defaultValue">The value to use if the setting is not present in the <see cref="SettingsDictionary"/>.</param>
         /// <returns>The value of the setting, or <paramref name="defaultValue"/> if the setting was not present in the <see cref="SettingsDictionary"/>.</returns>
-        public T GetTypedSetting<T>(string key, T defaultValue)
+        public T GetSetting<T>(string key, T defaultValue)
         {
             if( StageSettings == null )
                 return defaultValue;
             else
-                return StageSettings.GetTypedSetting(key, defaultValue);
+                return StageSettings.GetSetting(key, defaultValue);
         }
 
         /// <summary>
@@ -465,7 +465,7 @@ namespace Ookii.Jumbo.Jet.Jobs
         /// <param name="key">The name of the setting..</param>
         /// <param name="value">If the function returns <see langword="true"/>, receives the value of the setting.</param>
         /// <returns><see langword="true"/> if the settings dictionary contained the specified setting; otherwise, <see langword="false"/>.</returns>
-        public bool TryGetTypedSetting<T>(string key, out T value)
+        public bool TryGetSetting<T>(string key, out T value)
         {
             if( StageSettings == null )
             {
@@ -473,7 +473,7 @@ namespace Ookii.Jumbo.Jet.Jobs
                 return false;
             }
             else
-                return StageSettings.TryGetTypedSetting(key, out value);
+                return StageSettings.TryGetSetting(key, out value);
         }
 
         /// <summary>
@@ -495,24 +495,11 @@ namespace Ookii.Jumbo.Jet.Jobs
         /// </summary>
         /// <param name="key">The name of the setting.</param>
         /// <param name="value">The value of the setting.</param>
-        public void AddSetting(string key, string value)
+        public void AddSetting(string key, object value)
         {
             if( StageSettings == null )
                 StageSettings = new SettingsDictionary();
-            StageSettings.Add(key, value);
-        }
-
-        /// <summary>
-        /// Adds a setting with the specified type.
-        /// </summary>
-        /// <typeparam name="T">The type of the setting.</typeparam>
-        /// <param name="key">The name of the setting.</param>
-        /// <param name="value">The value of the setting.</param>
-        public void AddTypedSetting<T>(string key, T value)
-        {
-            if( StageSettings == null )
-                StageSettings = new SettingsDictionary();
-            StageSettings.AddTypedSetting(key, value);
+            StageSettings.AddSetting(key, value);
         }
 
         /// <summary>

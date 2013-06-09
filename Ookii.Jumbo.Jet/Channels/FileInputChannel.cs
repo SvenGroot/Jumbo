@@ -257,16 +257,6 @@ namespace Ookii.Jumbo.Jet.Channels
 
         #endregion
 
-        /// <summary>
-        /// The name of the setting in <see cref="JobConfiguration.JobSettings"/> that overrides the global memory storage size setting.
-        /// </summary>
-        public const string MemoryStorageSizeSetting = "FileChannel.MemoryStorageSize";
-
-        /// <summary>
-        /// The name of the setting in <see cref="JobConfiguration.JobSettings"/> that overrides the global memory storage wait timeout setting.
-        /// </summary>
-        public const string MemoryStorageWaitTimeoutSetting = "FileChannel.MemoryStorageWaitTimeout";
-
         private const int _pollingInterval = 5000;
         private const int _downloadRetryInterval = 500;
         private const int _downloadRetryIntervalRandomization = 2000;
@@ -322,16 +312,15 @@ namespace Ookii.Jumbo.Jet.Channels
             _inputReaderType = typeof(BinaryRecordReader<>).MakeGenericType(InputRecordType);
             _writeBufferSize = (int)taskExecution.JetClient.Configuration.FileChannel.WriteBufferSize;
 
-            if( !inputStage.TryGetTypedSetting(FileOutputChannel.OutputTypeSettingKey, out _channelInputType) )
-                _channelInputType = taskExecution.Context.JobConfiguration.GetTypedSetting(FileOutputChannel.OutputTypeSettingKey, FileChannelOutputType.Spill);
+            _channelInputType = SettingsDictionary.GetJobOrStageSetting(taskExecution.Context.JobConfiguration, inputStage, JumboSettings.FileChannel.StageOrJob.ChannelOutputType, FileChannelOutputType.Spill);
 
-            long memoryStorageSize = TaskExecution.Context.JobConfiguration.GetTypedSetting(MemoryStorageSizeSetting, (long)TaskExecution.JetClient.Configuration.FileChannel.MemoryStorageSize);
+            long memoryStorageSize = (long)TaskExecution.Context.GetSetting(JumboSettings.FileChannel.StageOrJob.MemoryStorageSize, TaskExecution.JetClient.Configuration.FileChannel.MemoryStorageSize);
             if( memoryStorageSize > 0 )
             {
                 _memoryStorage = FileChannelMemoryStorageManager.GetInstance(memoryStorageSize);
                 _memoryStorage.StreamRemoved += new EventHandler(_memoryStorage_StreamRemoved);
                 _memoryStorage.WaitingForBuffer += _memoryStorage_WaitingForBuffer;
-                _memoryStorageWaitTimeout = TaskExecution.Context.JobConfiguration.GetTypedSetting(MemoryStorageWaitTimeoutSetting, TaskExecution.JetClient.Configuration.FileChannel.MemoryStorageWaitTimeout);
+                _memoryStorageWaitTimeout = TaskExecution.Context.GetSetting(JumboSettings.FileChannel.StageOrJob.MemoryStorageWaitTimeout, TaskExecution.JetClient.Configuration.FileChannel.MemoryStorageWaitTimeout);
             }
         }
 

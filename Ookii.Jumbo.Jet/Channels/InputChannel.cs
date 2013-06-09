@@ -53,10 +53,10 @@ namespace Ookii.Jumbo.Jet.Channels
             InputStage = inputStage;
             // Match the compression type of the input stage.
             CompressionType type;
-            if( inputStage.TryGetTypedSetting(FileOutputChannel.CompressionTypeSetting, out type) )
+            if( inputStage.TryGetSetting(FileOutputChannel.CompressionTypeSetting, out type) )
                 CompressionType = type;
             else
-                CompressionType = taskExecution.Context.JobConfiguration.GetTypedSetting(FileOutputChannel.CompressionTypeSetting, taskExecution.JetClient.Configuration.FileChannel.CompressionType);
+                CompressionType = taskExecution.Context.JobConfiguration.GetSetting(FileOutputChannel.CompressionTypeSetting, taskExecution.JetClient.Configuration.FileChannel.CompressionType);
             // The type of the records in the intermediate files will be the output type of the input stage, which usually matches the input type of the output stage but
             // in the case of a join it may not.
             InputRecordType = inputStage.TaskType.ReferencedType.FindGenericInterfaceType(typeof(ITask<,>)).GetGenericArguments()[1];

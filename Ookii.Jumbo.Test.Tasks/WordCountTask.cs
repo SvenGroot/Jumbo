@@ -16,7 +16,7 @@ namespace Ookii.Jumbo.Test.Tasks
         public void Run(RecordReader<Utf8String> input, RecordWriter<Pair<Utf8String, int>> output)
         {
             // Delay used for task timeout test
-            int delayTime = TaskContext.GetTypedSetting(DelayTimeSettingKey, 0);
+            int delayTime = TaskContext.GetSetting(DelayTimeSettingKey, 0);
             if( delayTime > 0 && TaskContext.TaskId.TaskNumber == 1 && TaskContext.TaskAttemptId.Attempt == 1 )
                 Thread.Sleep(delayTime);
 

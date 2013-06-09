@@ -133,11 +133,11 @@ namespace Ookii.Jumbo.Jet.Jobs.Builder
             Channel channel = new Channel(input, this);
             channel.ChannelType = ChannelType.File;
             channel.MultiInputRecordReaderType = typeof(MergeRecordReader<>);
-            channel.Settings.AddTypedSetting(FileOutputChannel.OutputTypeSettingKey, FileChannelOutputType.SortSpill);
+            channel.Settings.AddSetting(JumboSettings.FileChannel.StageOrJob.ChannelOutputType, FileChannelOutputType.SortSpill);
             if( comparerType != null )
             {
                 comparerType = MakeComparerType(comparerType, input.RecordType);
-                channel.Settings.Add(FileOutputChannel.SpillSortComparerTypeSettingKey, comparerType.AssemblyQualifiedName);
+                channel.Settings.Add(JumboSettings.FileChannel.Stage.SpillSortComparerType, comparerType.AssemblyQualifiedName);
                 if( comparerType.GetInterfaces().Contains(typeof(IEqualityComparer<>).MakeGenericType(input.RecordType)) )
                     channel.Settings.Add(PartitionerConstants.EqualityComparerSetting, comparerType.AssemblyQualifiedName);
                 builder.AddAssembly(comparerType.Assembly);
