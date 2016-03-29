@@ -1,0 +1,116 @@
+
+# /
+/*.bak
+/*.sdf
+/*.suo
+/AssemblyInfoCommon.cs
+/Debug
+/Jumbo.suo
+/Release
+/build
+/build.log
+/packages
+/start-dfs - Debug.cmd
+/start-dfs.cmd
+/x64
+
+# /DataServer/
+/DataServer/DataServer.csproj.user
+/DataServer/bin
+/DataServer/obj
+/DataServer/build
+
+# /DfsShell/
+/DfsShell/DfsShell.csproj.user
+/DfsShell/bin
+/DfsShell/obj
+/DfsShell/build
+
+# /DfsWeb/Bin/
+/DfsWeb/Bin/*
+
+# /JetShell/
+/JetShell/JetShell.csproj.user
+/JetShell/bin
+/JetShell/obj
+/JetShell/build
+
+# /JetWeb/
+/JetWeb/Bin
+
+# /JetWeb/Bin/
+/JetWeb/Bin/*
+
+# /JobServer/
+/JobServer/JobServer.csproj.user
+/JobServer/bin
+/JobServer/obj
+/JobServer/build
+
+# /NameServer/
+/NameServer/NameServer.csproj.user
+/NameServer/bin
+/NameServer/obj
+/NameServer/build
+
+# /Ookii.Jumbo/
+/Ookii.Jumbo/Ookii.Jumbo.csproj.user
+/Ookii.Jumbo/bin
+/Ookii.Jumbo/obj
+/Ookii.Jumbo/build
+
+# /Ookii.Jumbo.Dfs/
+/Ookii.Jumbo.Dfs/Ookii.Jumbo.Dfs.csproj.user
+/Ookii.Jumbo.Dfs/bin
+/Ookii.Jumbo.Dfs/obj
+/Ookii.Jumbo.Dfs/build
+
+# /Ookii.Jumbo.Jet/
+/Ookii.Jumbo.Jet/Ookii.Jumbo.Jet.csproj.user
+/Ookii.Jumbo.Jet/bin
+/Ookii.Jumbo.Jet/obj
+/Ookii.Jumbo.Jet/build
+
+# /Ookii.Jumbo.Jet.Samples/
+/Ookii.Jumbo.Jet.Samples/Ookii.Jumbo.Jet.Samples.csproj.user
+/Ookii.Jumbo.Jet.Samples/bin
+/Ookii.Jumbo.Jet.Samples/obj
+/Ookii.Jumbo.Jet.Samples/build
+
+# /Ookii.Jumbo.Native/
+/Ookii.Jumbo.Native/*.user
+/Ookii.Jumbo.Native/Debug
+/Ookii.Jumbo.Native/Release
+/Ookii.Jumbo.Native/build
+/Ookii.Jumbo.Native/x64
+
+# /Ookii.Jumbo.Test/
+/Ookii.Jumbo.Test/Ookii.Jumbo.Test.VisualState.xml
+/Ookii.Jumbo.Test/Ookii.Jumbo.Test.csproj.user
+/Ookii.Jumbo.Test/TestResult.xml
+/Ookii.Jumbo.Test/bin
+/Ookii.Jumbo.Test/build
+/Ookii.Jumbo.Test/obj
+
+# /Ookii.Jumbo.Test.Tasks/
+/Ookii.Jumbo.Test.Tasks/Ookii.Jumbo.Test.Tasks.csproj.user
+/Ookii.Jumbo.Test.Tasks/bin
+/Ookii.Jumbo.Test.Tasks/obj
+/Ookii.Jumbo.Test.Tasks/build
+
+# /TaskHost/
+/TaskHost/TaskHost.csproj.user
+/TaskHost/bin
+/TaskHost/obj
+/TaskHost/build
+
+# /TaskServer/
+/TaskServer/TaskServer.csproj.user
+/TaskServer/bin
+/TaskServer/obj
+/TaskServer/build
+
+# /doc/
+/doc/*.bak
+/doc/Help
+/doc/Jumbo.shfbproj_sgroot
