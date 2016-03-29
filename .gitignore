@@ -114,3 +114,8 @@
 /doc/*.bak
 /doc/Help
 /doc/Jumbo.shfbproj_sgroot
+
+# Visual Studio rules
+/.vs
+/*.VC.db
+/*.VC.VC.opendb
